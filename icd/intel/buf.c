@@ -88,7 +88,7 @@ void intel_buf_destroy(struct intel_buf *buf)
     intel_base_destroy(&buf->obj.base);
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBuffer(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateBuffer(
     VkDevice                                  device,
     const VkBufferCreateInfo*               pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -99,7 +99,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBuffer(
     return intel_buf_create(dev, pCreateInfo, (struct intel_buf **) pBuffer);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyBuffer(
+VKAPI_ATTR void VKAPI_CALL vkDestroyBuffer(
     VkDevice                                device,
     VkBuffer                                buffer,
     const VkAllocationCallbacks*                     pAllocator)

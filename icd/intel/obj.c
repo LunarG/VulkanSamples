@@ -309,7 +309,7 @@ void intel_base_destroy(struct intel_base *base)
     intel_free(base, base);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetBufferMemoryRequirements(
+VKAPI_ATTR void VKAPI_CALL vkGetBufferMemoryRequirements(
     VkDevice                                    device,
     VkBuffer                                    buffer,
     VkMemoryRequirements*                       pRequirements)
@@ -319,7 +319,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetBufferMemoryRequirements(
     base->get_memory_requirements(base, pRequirements);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageMemoryRequirements(
+VKAPI_ATTR void VKAPI_CALL vkGetImageMemoryRequirements(
     VkDevice                                    device,
     VkImage                                     image,
     VkMemoryRequirements*                       pRequirements)
@@ -329,7 +329,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageMemoryRequirements(
     base->get_memory_requirements(base, pRequirements);
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(
+VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(
     VkDevice                                    device,
     VkBuffer                                    buffer,
     VkDeviceMemory                              mem_,
@@ -343,7 +343,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
+VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
     VkDevice                                    device,
     VkImage                                     image,
     VkDeviceMemory                              mem_,
@@ -357,7 +357,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
+VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
     VkQueue                                     queue,
     uint32_t                                    bindInfoCount,
     const VkBindSparseInfo*                     pBindInfo,

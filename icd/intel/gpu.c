@@ -454,7 +454,7 @@ enum intel_phy_dev_ext_type intel_gpu_lookup_phy_dev_extension(
     return type;
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceProperties(
+VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceProperties(
     VkPhysicalDevice gpu_,
     VkPhysicalDeviceProperties* pProperties)
 {
@@ -463,7 +463,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceProperties(
     intel_gpu_get_props(gpu, pProperties);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceQueueFamilyProperties(
+VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice gpu_,
     uint32_t* pQueueFamilyPropertyCount,
     VkQueueFamilyProperties* pProperties)
@@ -482,7 +482,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceQueueFamilyProperties(
    }
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceMemoryProperties(
+VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceMemoryProperties(
     VkPhysicalDevice gpu_,
     VkPhysicalDeviceMemoryProperties* pProperties)
 {
@@ -491,7 +491,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceMemoryProperties(
    intel_gpu_get_memory_props(gpu, pProperties);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFeatures(
+VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFeatures(
                                                VkPhysicalDevice physicalDevice,
                                                VkPhysicalDeviceFeatures* pFeatures)
 {
@@ -505,7 +505,7 @@ void intel_gpu_get_sparse_properties(VkPhysicalDeviceSparseProperties *pProps)
     memset(pProps, 0, sizeof(*pProps));
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
+VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
         VkPhysicalDevice                            physicalDevice,
         const char*                                 pLayerName,
         uint32_t*                                   pPropertyCount,
@@ -529,7 +529,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
+VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
         uint32_t*                                   pPropertyCount,
         VkLayerProperties*                          pProperties)
@@ -538,7 +538,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceSparseImageFormatProperties(
+VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceSparseImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkImageType                                 type,

@@ -264,7 +264,7 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
     cmd_batch_flush(cmd, flush_flags);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(
+VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(
     VkCommandBuffer                                 commandBuffer,
     uint32_t                                    eventCount,
     const VkEvent*                              pEvents,
@@ -292,7 +292,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(
             memoryBarrierCount, ppMemoryBarriers);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(
+VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(
         VkCommandBuffer                                 commandBuffer,
         VkPipelineStageFlags                        srcStageMask,
         VkPipelineStageFlags                        dstStageMask,

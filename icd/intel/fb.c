@@ -209,7 +209,7 @@ void intel_render_pass_destroy(struct intel_render_pass *rp)
     intel_base_destroy(&rp->obj.base);
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(
     VkDevice                                  device,
     const VkFramebufferCreateInfo*          pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -221,7 +221,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(
             (struct intel_fb **) pFramebuffer);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFramebuffer(
+VKAPI_ATTR void VKAPI_CALL vkDestroyFramebuffer(
     VkDevice                                device,
     VkFramebuffer                           framebuffer,
     const VkAllocationCallbacks*                     pAllocator)
@@ -232,7 +232,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFramebuffer(
     obj->destroy(obj);
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(
     VkDevice                                  device,
     const VkRenderPassCreateInfo*          pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -244,7 +244,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(
             (struct intel_render_pass **) pRenderPass);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyRenderPass(
+VKAPI_ATTR void VKAPI_CALL vkDestroyRenderPass(
     VkDevice                                device,
     VkRenderPass                           renderPass,
     const VkAllocationCallbacks*                     pAllocator)

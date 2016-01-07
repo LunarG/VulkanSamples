@@ -1039,7 +1039,7 @@ VkResult intel_wsi_fence_wait(struct intel_fence *fence,
 // directly, without the common Vulkan loader:
 //
 // Create a VkSurfaceKHR object for XCB window connections:
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     VkInstance                              instance,
     const VkXcbSurfaceCreateInfoKHR*        pCreateInfo,
     const VkAllocationCallbacks*            pAllocator,
@@ -1050,7 +1050,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
                               (VkIcdSurfaceXcb **) pSurface);
 }
 
-ICD_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentationSupportKHR(
+VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentationSupportKHR(
     VkPhysicalDevice                            physicalDevice,
     uint32_t                                    queueFamilyIndex,
     xcb_connection_t*                           connection,
@@ -1069,7 +1069,7 @@ ICD_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentationSupp
 // directly, without the common Vulkan loader:
 //
 // Create a VkSurfaceKHR object for XLIB window connections:
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
     VkInstance                              instance,
     const VkXlibSurfaceCreateInfoKHR*       pCreateInfo,
     const VkAllocationCallbacks*            pAllocator,
@@ -1080,7 +1080,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
                               (VkIcdSurfaceXlib **) pSurface);
 }
 
-ICD_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentationSupportKHR(
+VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentationSupportKHR(
     VkPhysicalDevice                            physicalDevice,
     uint32_t                                    queueFamilyIndex,
     Display*                                    dpy,
@@ -1095,7 +1095,7 @@ ICD_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentationSup
 }
 #endif // VK_USE_PLATFORM_XLIB_KHR
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(
+VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(
     VkInstance                               instance,
     VkSurfaceKHR                             surface,
     const VkAllocationCallbacks*             pAllocator)
@@ -1103,7 +1103,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(
     x11_surface_destroy(surface);
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
     VkPhysicalDevice                        physicalDevice,
     uint32_t                                queueFamilyIndex,
     VkSurfaceKHR                            surface,
@@ -1182,7 +1182,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(
     return ret;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkDevice                                device,
     const VkSwapchainCreateInfoKHR*         pCreateInfo,
     const VkAllocationCallbacks*            pAllocator,
@@ -1204,7 +1204,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
             (struct intel_x11_swap_chain **) pSwapchain);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
+VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
     VkDevice                                 device,
     VkSwapchainKHR                           swapchain,
     const VkAllocationCallbacks*             pAllocator)
@@ -1217,7 +1217,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
     x11_swap_chain_destroy_end(sc);
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     VkDevice                                 device,
     VkSwapchainKHR                           swapchain,
     uint32_t*                                pCount,
@@ -1245,7 +1245,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     return ret;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     VkDevice                                 device,
     VkSwapchainKHR                           swapchain,
     uint64_t                                 timeout,
@@ -1290,7 +1290,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
 }
 
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
     VkQueue                                  queue_,
     const VkPresentInfoKHR*                  pPresentInfo)
 {

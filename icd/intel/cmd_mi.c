@@ -108,7 +108,7 @@ static void cmd_query_pipeline_statistics(struct intel_cmd *cmd,
     }
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginQuery(
+VKAPI_ATTR void VKAPI_CALL vkCmdBeginQuery(
     VkCommandBuffer                                 commandBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    slot,
@@ -133,7 +133,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginQuery(
     }
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(
+VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(
     VkCommandBuffer                                 commandBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    slot)
@@ -157,7 +157,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(
     }
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(
+VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(
     VkCommandBuffer                                 commandBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    firstQuery,
@@ -182,7 +182,7 @@ static void cmd_write_event_value(struct intel_cmd *cmd, struct intel_event *eve
     cmd_batch_immediate(cmd, pipe_control_flags, event->obj.mem->bo, 0, value);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetEvent(
+VKAPI_ATTR void VKAPI_CALL vkCmdSetEvent(
     VkCommandBuffer                              commandBuffer,
     VkEvent                                  event_,
     VkPipelineStageFlags                     stageMask)
@@ -193,7 +193,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetEvent(
     cmd_write_event_value(cmd, event, stageMask, 1);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetEvent(
+VKAPI_ATTR void VKAPI_CALL vkCmdResetEvent(
     VkCommandBuffer                              commandBuffer,
     VkEvent                                  event_,
     VkPipelineStageFlags                     stageMask)
@@ -204,7 +204,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetEvent(
     cmd_write_event_value(cmd, event, stageMask, 0);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(
+VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(
     VkCommandBuffer                                 commandBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    firstQuery,
@@ -217,7 +217,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(
     /* TODO: Fill in functionality here */
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWriteTimestamp(
+VKAPI_ATTR void VKAPI_CALL vkCmdWriteTimestamp(
     VkCommandBuffer                              commandBuffer,
     VkPipelineStageFlagBits                     pipelineStage,
     VkQueryPool                                 queryPool,

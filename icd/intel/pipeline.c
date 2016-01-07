@@ -1371,7 +1371,7 @@ static VkResult graphics_pipeline_create(struct intel_dev *dev,
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineCache(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineCache(
     VkDevice                                    device,
     const VkPipelineCacheCreateInfo*            pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1383,14 +1383,14 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineCache(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyPipelineCache(
+VKAPI_ATTR void VKAPI_CALL vkDestroyPipelineCache(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,
     const VkAllocationCallbacks*                     pAllocator)
 {
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPipelineCacheData(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPipelineCacheData(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,
     size_t*                                     pDataSize,
@@ -1399,7 +1399,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPipelineCacheData(
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMergePipelineCaches(
+VKAPI_ATTR VkResult VKAPI_CALL vkMergePipelineCaches(
     VkDevice                                    device,
     VkPipelineCache                             dstCache,
     uint32_t                                    srcCacheCount,
@@ -1408,7 +1408,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMergePipelineCaches(
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(
     VkDevice                                  device,
     VkPipelineCache                           pipelineCache,
     uint32_t                                  createInfoCount,
@@ -1437,7 +1437,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(
         return res;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateComputePipelines(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateComputePipelines(
     VkDevice                                  device,
     VkPipelineCache                           pipelineCache,
     uint32_t                                  createInfoCount,
@@ -1448,7 +1448,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateComputePipelines(
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyPipeline(
+VKAPI_ATTR void VKAPI_CALL vkDestroyPipeline(
     VkDevice                                device,
     VkPipeline                              pipeline,
     const VkAllocationCallbacks*                     pAllocator)

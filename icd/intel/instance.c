@@ -217,7 +217,7 @@ enum intel_global_ext_type intel_gpu_lookup_global_extension(
     return type;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     const VkInstanceCreateInfo*               pCreateInfo,
     const VkAllocationCallbacks*              pAllocator,
     VkInstance*                               pInstance)
@@ -226,7 +226,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
             (struct intel_instance **) pInstance);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
+VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
     VkInstance                                pInstance,
     const VkAllocationCallbacks*              pAllocator)
 {
@@ -235,7 +235,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
     intel_instance_destroy(instance);
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
+VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
         const char*                           pLayerName,
         uint32_t*                             pPropertyCount,
         VkExtensionProperties*                pProperties)
@@ -257,7 +257,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
+VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
         uint32_t*                             pPropertyCount,
         VkLayerProperties*                    pProperties)
 {
@@ -265,7 +265,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(
+VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(
     VkInstance                                instance_,
     uint32_t*                                 pPhysicalDeviceCount,
     VkPhysicalDevice*                         pPhysicalDevices)
@@ -318,7 +318,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
     VkInstance                                instance,
     const VkDebugReportCallbackCreateInfoEXT  *pCreateInfo,
     const VkAllocationCallbacks*              pAllocator,
@@ -329,7 +329,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
     return icd_instance_create_logger(inst->icd, pCreateInfo, pAllocator, pCallback);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(
+VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(
     VkInstance                                instance,
     VkDebugReportCallbackEXT                  callback,
     const VkAllocationCallbacks               *pAllocator)
@@ -339,7 +339,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(
     icd_instance_destroy_logger(inst->icd, callback, pAllocator);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(
+VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(
     VkInstance                                instance,
     VkDebugReportFlagsEXT                     flags,
     VkDebugReportObjectTypeEXT                objType,

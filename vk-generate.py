@@ -170,7 +170,7 @@ class IcdDummyEntrypointsSubcommand(Subcommand):
             self.qual = "static"
         else:
             self.prefix = "vk"
-            self.qual = "ICD_EXPORT"
+            self.qual = ""
 
         super().run()
 
@@ -178,7 +178,10 @@ class IcdDummyEntrypointsSubcommand(Subcommand):
         return "#include \"icd.h\""
 
     def _generate_stub_decl(self, proto):
-        return proto.c_pretty_decl(self.prefix + proto.name, attr="VKAPI")
+        if proto.name == "GetInstanceProcAddr":
+            return proto.c_pretty_decl(self.prefix + "_icd" + proto.name, attr="ICD_EXPORT VKAPI")
+        else:
+            return proto.c_pretty_decl(self.prefix + proto.name, attr="VKAPI")
 
     def _generate_stubs(self):
         stubs = []
@@ -215,8 +218,12 @@ class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
         for proto in self.protos:
             lookups.append("if (!strcmp(%s, \"%s\"))" %
                     (gpa_pname, proto.name))
-            lookups.append("    return (%s) %s%s;" %
+            if proto.name != "GetInstanceProcAddr":
+                lookups.append("    return (%s) %s%s;" %
                     (gpa_proto.ret, self.prefix, proto.name))
+            else:
+                lookups.append("    return (%s) %s%s;" %
+                    (gpa_proto.ret, self.prefix, "_icdGetInstanceProcAddr"))
 
         body = []
         body.append("%s %s" % (self.qual, gpa_instance_decl))
@@ -247,11 +254,7 @@ class WinDefFileSubcommand(Subcommand):
         library_exports = {
                 "all": [],
                 "icd": [
-                    "vkEnumeratePhysicalDevices",
-                    "vkCreateInstance",
-                    "vkDestroyInstance",
-                    "vkGetDeviceProcAddr",
-                    "vkGetInstanceProcAddr",
+                    "vk_icdGetInstanceProcAddr",
                 ],
                 "layer": [
                     "vkGetInstanceProcAddr",

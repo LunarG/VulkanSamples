@@ -140,7 +140,7 @@ void intel_img_destroy(struct intel_img *img)
     intel_base_destroy(&img->obj.base);
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(
     VkDevice                                  device,
     const VkImageCreateInfo*                pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -152,7 +152,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(
             (struct intel_img **) pImage);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(
+VKAPI_ATTR void VKAPI_CALL vkDestroyImage(
     VkDevice                                device,
     VkImage                                 image,
     const VkAllocationCallbacks*                     pAllocator)
@@ -163,7 +163,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(
     obj->destroy(obj);
  }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageSubresourceLayout(
+VKAPI_ATTR void VKAPI_CALL vkGetImageSubresourceLayout(
     VkDevice                                    device,
     VkImage                                     image,
     const VkImageSubresource*                   pSubresource,

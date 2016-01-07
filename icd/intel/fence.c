@@ -119,7 +119,7 @@ VkResult intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFence(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateFence(
     VkDevice                                  device,
     const VkFenceCreateInfo*                pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -131,7 +131,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFence(
             (struct intel_fence **) pFence);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFence(
+VKAPI_ATTR void VKAPI_CALL vkDestroyFence(
     VkDevice                                device,
     VkFence                                 fence,
     const VkAllocationCallbacks*                     pAllocator)
@@ -142,7 +142,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFence(
     obj->destroy(obj);
  }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(
     VkDevice                                  device,
     VkFence                                   fence_)
 {
@@ -151,7 +151,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(
     return intel_fence_wait(fence, 0);
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(
+VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(
     VkDevice                                  device,
     uint32_t                                    fenceCount,
     const VkFence*                            pFences,
@@ -183,7 +183,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(
 
     return ret;
 }
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(
+VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(
     VkDevice                                  device,
     uint32_t                                  fenceCount,
     const VkFence*                            pFences)

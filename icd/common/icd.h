@@ -43,4 +43,7 @@
 #  define ICD_EXPORT
 #endif
 
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vk_icdGetInstanceProcAddr(
+    VkInstance                                  instance,
+    const char*                                 pName);
 #endif /* ICD_H */
