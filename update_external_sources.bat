@@ -1,6 +1,29 @@
 @echo off
 REM Update source for glslang, LunarGLASS, spirv-tools
 
+REM Determine the appropriate CMake strings for the current version of Visual Studio
+echo Determining VS version
+python .\determine_vs_version.py > vsversion.tmp
+set /p VS_VERSION=< vsversion.tmp
+echo Detected Visual Studio Version as %VS_VERSION%
+
+REM from that information set the appropriate MSBUILD machine target as weell.
+echo Determining MSBUILD target
+set MSBUILD_MACHINE_TARGET=x64
+@setlocal
+@echo off
+echo.%VS_VERSION% | findstr /C:"Win32" 1>nul
+if errorlevel 1 (
+  echo.
+) ELSE (
+  set MSBUILD_MACHINE_TARGET=x86
+)
+endlocal
+echo Detected MSBuild target as %MSBUILD_MACHINE_TARGET%
+
+REM Cleanup the file we used to collect the VS version output since it's no longer needed.
+del /Q /F vsversion.tmp
+
 setlocal EnableDelayedExpansion
 set errorCode=0
 set BUILD_DIR=%~dp0
@@ -17,7 +40,7 @@ REM // ======== Parameter parsing ======== //
       echo Available options:
       echo   --sync-glslang      just pull glslang_revision
       echo   --sync-LunarGLASS   just pull LunarGLASS_revision
-	  echo   --sync-spirv-tools  just pull spirv-tools_revision
+      echo   --sync-spirv-tools  just pull spirv-tools_revision
       echo   --build-glslang     pulls glslang_revision, configures CMake, builds Release and Debug
       echo   --build-LunarGLASS  pulls LunarGLASS_revision, configures CMake, builds Release and Debug
       echo   --build-spirv-tools pulls spirv-tools_revision, configures CMake, builds Release and Debug
@@ -402,15 +425,18 @@ goto:eof
    mkdir build
    set GLSLANG_BUILD_DIR=%GLSLANG_DIR%\build
    cd %GLSLANG_BUILD_DIR%
-   cmake -G"Visual Studio 12 2013 Win64" -DCMAKE_INSTALL_PREFIX=install ..
-   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   echo Generating Glslang CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
+   cmake -G"Visual Studio %VS_VERSION%" -DCMAKE_INSTALL_PREFIX=install ..
+   echo Building Glslang: MSBuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
+   msbuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
    REM Check for existence of one lib, even though we should check for all results
    if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslang.lib (
       echo.
       echo glslang Debug build failed!
       set errorCode=1
    )
-   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
+   echo Building Glslang: MSBuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
+   msbuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
    REM Check for existence of one lib, even though we should check for all results
    if not exist %GLSLANG_BUILD_DIR%\glslang\Release\glslang.lib (
       echo.
@@ -427,8 +453,10 @@ goto:eof
    mkdir build
    set LLVM_BUILD_DIR=%LLVM_DIR%\build
    cd %LLVM_BUILD_DIR%
-   cmake -G"Visual Studio 12 2013 Win64" -DCMAKE_INSTALL_PREFIX=install ..
-   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
+   echo Generating LLVM CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
+   cmake -G"Visual Studio %VS_VERSION%" -DCMAKE_INSTALL_PREFIX=install ..
+   echo Building LLVM: MSBuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
+   msbuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
    REM Check for existence of one lib, even though we should check for all results
    if not exist %LLVM_BUILD_DIR%\lib\Release\LLVMCore.lib (
       echo.
@@ -439,7 +467,8 @@ goto:eof
    REM disable Debug build of LLVM until LunarGLASS cmake files are updated to
    REM handle Debug and Release builds of glslang simultaneously, instead of
    REM whatever last lands in "./build/install"
-   REM   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   REM   echo Building LLVM: MSBuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
+   REM   msbuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
    REM Check for existence of one lib, even though we should check for all results
    REM   if not exist %LLVM_BUILD_DIR%\lib\Debug\LLVMCore.lib (
    REM      echo.
@@ -451,8 +480,10 @@ goto:eof
    mkdir build
    set LUNARGLASS_BUILD_DIR=%LUNARGLASS_DIR%\build
    cd %LUNARGLASS_BUILD_DIR%
-   cmake -G"Visual Studio 12 2013 Win64" -DCMAKE_INSTALL_PREFIX=install ..
-   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
+   echo Generating LunarGlass CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
+   cmake -G"Visual Studio %VS_VERSION%" -DCMAKE_INSTALL_PREFIX=install ..
+   echo Building LunarGlass: MSBuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
+   msbuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
    REM Check for existence of one lib, even though we should check for all results
    if not exist %LUNARGLASS_BUILD_DIR%\Core\Release\core.lib (
       echo.
@@ -463,7 +494,8 @@ goto:eof
    REM disable Debug build of LunarGLASS until its cmake file can be updated to
    REM handle Debug and Release builds of glslang simultaneously, instead of
    REM whatever last lands in "./build/install"
-   REM   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   REM   echo Building LunarGlass: MSBuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
+   REM   msbuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
    REM Check for existence of one lib, even though we should check for all results
    REM  if not exist %LUNARGLASS_BUILD_DIR%\Core\Debug\core.lib (
    REM     echo.
@@ -480,15 +512,18 @@ goto:eof
    mkdir build
    set SPIRV_TOOLS_BUILD_DIR=%SPIRV_TOOLS_DIR%\build
    cd %SPIRV_TOOLS_BUILD_DIR%
-   cmake -G "Visual Studio 12 2013 Win64" ..
-   msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   echo Generating Spirv-tools CMake files for Visual Studio %VS_VERSION% ..
+   cmake -G "Visual Studio %VS_VERSION%" ..
+   echo Building Spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
+   msbuild ALL_BUILD.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
    REM Check for existence of one lib, even though we should check for all results
    if not exist %SPIRV_TOOLS_BUILD_DIR%\Debug\SPIRV-Tools.lib (
       echo.
       echo spirv-tools Debug build failed!
       set errorCode=1
    )
-   msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release
+   echo Building Spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
+   msbuild ALL_BUILD.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
    REM Check for existence of one lib, even though we should check for all results
    if not exist %SPIRV_TOOLS_BUILD_DIR%\Release\SPIRV-Tools.lib (
       echo.
