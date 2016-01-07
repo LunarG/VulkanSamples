@@ -269,8 +269,6 @@ protected:
         instance_layer_names.push_back("VK_LAYER_LUNARG_draw_state");
         instance_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
         instance_layer_names.push_back("VK_LAYER_LUNARG_image");
-        // IMPORTANT - UniqueObject layer should always be on the bottom of the layer stack
-        instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
 
         device_layer_names.push_back("VK_LAYER_LUNARG_threading");
         device_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
@@ -278,8 +276,6 @@ protected:
         device_layer_names.push_back("VK_LAYER_LUNARG_draw_state");
         device_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
         device_layer_names.push_back("VK_LAYER_LUNARG_image");
-        // IMPORTANT - UniqueObject layer should always be on the bottom of the layer stack
-        device_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;

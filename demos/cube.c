@@ -2142,8 +2142,6 @@ static void demo_init_vk(struct demo *demo)
         "VK_LAYER_LUNARG_swapchain",
         "VK_LAYER_LUNARG_device_limits",
         "VK_LAYER_LUNARG_image",
-        /* IMPORTANT : UniqueObjects should be at bottom of layer stack */
-        "VK_LAYER_GOOGLE_unique_objects",
     };
 
     char *device_validation_layers[] = {
@@ -2155,8 +2153,6 @@ static void demo_init_vk(struct demo *demo)
         "VK_LAYER_LUNARG_swapchain",
         "VK_LAYER_LUNARG_device_limits",
         "VK_LAYER_LUNARG_image",
-        /* IMPORTANT : UniqueObjects should be at bottom of layer stack */
-        "VK_LAYER_GOOGLE_unique_objects",
     };
 
     /* Look for validation layers */
