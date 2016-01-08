@@ -110,11 +110,10 @@ void ext_init_create_instance(
 void ext_init_create_device(
         layer_device_data               *devData,
         VkDevice                        dev,
+        PFN_vkGetDeviceProcAddr         gpa,
         uint32_t                        extension_count,
         const char*const*               ppEnabledExtensions)  // extension names to be enabled
 {
-    PFN_vkGetDeviceProcAddr gpa = devData->devTable.GetDeviceProcAddr;
-   
     devData->devTable.CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(dev, "vkCreateSwapchainKHR");
     devData->devTable.DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(dev, "vkDestroySwapchainKHR");
     devData->devTable.GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(dev, "vkGetSwapchainImagesKHR");

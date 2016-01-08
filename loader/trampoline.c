@@ -176,24 +176,28 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
         loader_heap_free(ptr_instance, ptr_instance);
         return res;
     }
-    loader_activate_instance_layers(ptr_instance);
-
-    wsi_create_instance(ptr_instance, pCreateInfo);
-    debug_report_create_instance(ptr_instance, pCreateInfo);
 
     created_instance = (VkInstance) ptr_instance;
-    res = ptr_instance->disp->CreateInstance(pCreateInfo, pAllocator, &created_instance);
+    res = loader_create_instance_chain(pCreateInfo, pAllocator, ptr_instance);
 
     if (res == VK_SUCCESS) {
+        wsi_create_instance(ptr_instance, pCreateInfo);
+        debug_report_create_instance(ptr_instance, pCreateInfo);
+
         *pInstance = created_instance;
+
         /*
+         * TODO: This can go away now?
          * Finally have the layers in place and everyone has seen
          * the CreateInstance command go by. This allows the layer's
          * GetInstanceProcAddr functions to return valid extension functions
          * if enabled.
          */
         loader_activate_instance_layer_extensions(ptr_instance, *pInstance);
+    } else {
+        // TODO: cleanup here.
     }
+
     /* Remove temporary debug_report callback */
     util_DestroyDebugReportCallback(ptr_instance, instance_callback, pAllocator);
 

@@ -29,10 +29,11 @@
 
 typedef std::unordered_map<void *, VkLayerDispatchTable *> device_table_map;
 typedef std::unordered_map<void *, VkLayerInstanceDispatchTable *> instance_table_map;
-VkLayerDispatchTable * initDeviceTable(const VkBaseLayerObject *devw);
-VkLayerDispatchTable * initDeviceTable(device_table_map &map, const VkBaseLayerObject *devw);
-VkLayerInstanceDispatchTable * initInstanceTable(const VkBaseLayerObject *instancew);
-VkLayerInstanceDispatchTable * initInstanceTable(instance_table_map &map, const VkBaseLayerObject *instancew);
+VkLayerDispatchTable * initDeviceTable(VkDevice device, const PFN_vkGetDeviceProcAddr gpa, device_table_map &map);
+VkLayerDispatchTable * initDeviceTable(VkDevice device, const PFN_vkGetDeviceProcAddr gpa);
+VkLayerInstanceDispatchTable * initInstanceTable(VkInstance instance, const PFN_vkGetInstanceProcAddr gpa, instance_table_map &map);
+VkLayerInstanceDispatchTable * initInstanceTable(VkInstance instance, const PFN_vkGetInstanceProcAddr gpa);
+
 
 typedef void *dispatch_key;
 
@@ -49,8 +50,8 @@ VkLayerDispatchTable *get_dispatch_table(device_table_map &map, void* object);
 
 VkLayerInstanceDispatchTable *get_dispatch_table(instance_table_map &map, void* object);
 
-VkLayerInstanceCreateInfo *get_chain_info(const VkInstanceCreateInfo *pCreateInfo);
-VkLayerDeviceCreateInfo *get_chain_info(const VkDeviceCreateInfo *pCreateInfo);
+VkLayerInstanceCreateInfo *get_chain_info(const VkInstanceCreateInfo *pCreateInfo, VkLayerFunction func);
+VkLayerDeviceCreateInfo *get_chain_info(const VkDeviceCreateInfo *pCreateInfo, VkLayerFunction func);
 
 void destroy_device_dispatch_table(dispatch_key key);
 void destroy_instance_dispatch_table(dispatch_key key);

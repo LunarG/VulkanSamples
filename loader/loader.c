@@ -1140,21 +1140,19 @@ static void loader_destroy_logical_device(const struct loader_instance *inst,
 
 static struct loader_device *loader_add_logical_device(
                                         const struct loader_instance *inst,
-                                        const VkDevice dev,
                                         struct loader_device **device_list)
 {
     struct loader_device *new_dev;
 
     new_dev = loader_heap_alloc(inst, sizeof(struct loader_device), VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
     if (!new_dev) {
-        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Failed to alloc struct laoder-device");
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Failed to alloc struct loader-device");
         return NULL;
     }
 
     memset(new_dev, 0, sizeof(struct loader_device));
 
     new_dev->next = *device_list;
-    new_dev->device = dev;
     *device_list = new_dev;
     return new_dev;
 }
@@ -2295,15 +2293,19 @@ void loader_layer_scan(
 
 static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL loader_gpa_instance_internal(VkInstance inst, const char * pName)
 {
+    if (!strcmp(pName, "vkGetInstanceProcAddr"))
+        return (void *) loader_gpa_instance_internal;
+    if (!strcmp(pName, "vkCreateInstance"))
+        return (void *) loader_CreateInstance;
+    if (!strcmp(pName, "vkCreateDevice"))
+        return (void *) loader_create_device_terminator;
+
     // inst is not wrapped
     if (inst == VK_NULL_HANDLE) {
         return NULL;
     }
     VkLayerInstanceDispatchTable* disp_table = * (VkLayerInstanceDispatchTable **) inst;
     void *addr;
-
-    if (!strcmp(pName, "vkGetInstanceProcAddr"))
-        return (void *) loader_gpa_instance_internal;
 
     if (disp_table == NULL)
         return NULL;
@@ -2785,19 +2787,17 @@ VkResult loader_enable_instance_layers(
     }
 
     /* Add any implicit layers first */
-    loader_add_layer_implicit(
-                                inst,
-                                VK_LAYER_TYPE_INSTANCE_IMPLICIT,
-                                &inst->activated_layer_list,
-                                instance_layers);
+    loader_add_layer_implicit(inst,
+                              VK_LAYER_TYPE_INSTANCE_IMPLICIT,
+                              &inst->activated_layer_list,
+                              instance_layers);
 
     /* Add any layers specified via environment variable next */
-    loader_add_layer_env(
-                            inst,
-                            VK_LAYER_TYPE_INSTANCE_EXPLICIT,
-                            "VK_INSTANCE_LAYERS",
-                            &inst->activated_layer_list,
-                            instance_layers);
+    loader_add_layer_env(inst,
+                         VK_LAYER_TYPE_INSTANCE_EXPLICIT,
+                         "VK_INSTANCE_LAYERS",
+                         &inst->activated_layer_list,
+                         instance_layers);
 
     /* Add layers specified by the application */
     err = loader_add_layer_names_to_list(
@@ -2810,87 +2810,116 @@ VkResult loader_enable_instance_layers(
     return err;
 }
 
-uint32_t loader_activate_instance_layers(struct loader_instance *inst)
+/*
+ * Given the list of layers to activate in the loader_instance
+ * structure. This function will add a VkLayerInstanceCreateInfo
+ * structure to the VkInstanceCreateInfo.pNext pointer.
+ * Each activated layer will have it's own VkLayerInstanceLink
+ * structure that tells the layer what Get*ProcAddr to call to
+ * get function pointers to the next layer down.
+ * Once the chain info has been created this function will
+ * execute the CreateInstance call chain. Each layer will
+ * then have an opportunity in it's CreateInstance function
+ * to setup it's dispatch table when the lower layer returns
+ * successfully.
+ * Each layer can wrap or not-wrap the returned VkInstance object
+ * as it sees fit.
+ * The instance chain is terminated by a loader function
+ * that will call CreateInstance on all available ICD's and
+ * cache those VkInstance objects for future use.
+ */
+VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
+                                      const VkAllocationCallbacks* pAllocator,
+                                      struct loader_instance *inst)
 {
-    uint32_t layer_idx;
-    VkBaseLayerObject *wrappedInstance;
+    uint32_t activated_layers = 0;
+    VkLayerInstanceCreateInfo chain_info;
+    VkLayerInstanceLink *layer_instance_link_info = NULL;
+    VkInstanceCreateInfo loader_create_info;
+    VkResult res;
 
-    if (inst == NULL) {
-        return 0;
-    }
+    PFN_vkGetInstanceProcAddr nextGIPA = loader_gpa_instance_internal;
+    PFN_vkGetInstanceProcAddr fpGIPA = loader_gpa_instance_internal;
 
-    // NOTE inst is unwrapped at this point in time
-    void* baseObj = (void*) inst;
-    void* nextObj = (void*) inst;
-    VkBaseLayerObject *nextInstObj;
-    PFN_vkGetInstanceProcAddr nextGPA = loader_gpa_instance_internal;
+    memcpy(&loader_create_info, pCreateInfo, sizeof(VkInstanceCreateInfo));
 
-    if (!inst->activated_layer_list.count) {
-        loader_init_instance_core_dispatch_table(inst->disp, nextGPA, (VkInstance) nextObj, (VkInstance) baseObj);
-        return 0;
-    }
+    if (inst->activated_layer_list.count > 0) {
 
-    wrappedInstance = loader_stack_alloc(sizeof(VkBaseLayerObject)
-                                   * inst->activated_layer_list.count);
-    if (!wrappedInstance) {
-        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Failed to alloc Instance objects for layer");
-        return 0;
-    }
+        chain_info.u.pLayerInfo = NULL;
+        chain_info.pNext = pCreateInfo->pNext;
+        chain_info.sType = VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO;
+        chain_info.function = VK_LAYER_LINK_INFO;
+        loader_create_info.pNext = &chain_info;
 
-    /* Create instance chain of enabled layers */
-    layer_idx = inst->activated_layer_list.count - 1;
-    for (int32_t i = inst->activated_layer_list.count - 1; i >= 0; i--) {
-        struct loader_layer_properties *layer_prop = &inst->activated_layer_list.list[i];
-        loader_platform_dl_handle lib_handle;
-
-         /*
-         * Note: An extension's Get*ProcAddr should not return a function pointer for
-         * any extension entry points until the extension has been enabled.
-         * To do this requires a different behavior from Get*ProcAddr functions implemented
-         * in layers.
-         * The very first call to a layer will be it's Get*ProcAddr function requesting
-         * the layer's vkGet*ProcAddr. The layer should initialize its internal dispatch table
-         * with the wrapped object given (either Instance or Device) and return the layer's
-         * Get*ProcAddr function. The layer should also use this opportunity to record the
-         * baseObject so that it can find the correct local dispatch table on future calls.
-         * Subsequent calls to Get*ProcAddr, CreateInstance, CreateDevice
-         * will not use a wrapped object and must look up their local dispatch table from
-         * the given baseObject.
-         */
-        nextInstObj = (wrappedInstance + layer_idx);
-        nextInstObj->pGPA = (PFN_vkGPA) nextGPA;
-        nextInstObj->baseObject = baseObj;
-        nextInstObj->nextObject = nextObj;
-        nextObj = (void*) nextInstObj;
-
-        lib_handle = loader_add_layer_lib(inst, "instance", layer_prop);
-        if (!lib_handle)
-            continue;   // TODO what should we do in this case
-        if ((nextGPA = layer_prop->functions.get_instance_proc_addr) == NULL) {
-            if (layer_prop->functions.str_gipa == NULL || strlen(layer_prop->functions.str_gipa) == 0) {
-                nextGPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetInstanceProcAddr");
-                layer_prop->functions.get_instance_proc_addr = nextGPA;
-            } else
-                nextGPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, layer_prop->functions.str_gipa);
-            if (!nextGPA) {
-                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Failed to find vkGetInstanceProcAddr in layer %s", layer_prop->lib_name);
-
-                /* TODO: Should we return nextObj, nextGPA to previous? or decrement layer_list count*/
-                continue;
-            }
+        layer_instance_link_info = loader_stack_alloc(sizeof(VkLayerInstanceLink)
+                                       * inst->activated_layer_list.count);
+        if (!layer_instance_link_info) {
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Failed to alloc Instance objects for layer");
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
 
-        loader_log(inst, VK_DEBUG_REPORT_INFO_BIT_EXT, 0,
-                   "Insert instance layer %s (%s)",
-                   layer_prop->info.layerName,
-                   layer_prop->lib_name);
+        /* Create instance chain of enabled layers */
+        for (int32_t i = inst->activated_layer_list.count - 1; i >= 0; i--) {
+            struct loader_layer_properties *layer_prop = &inst->activated_layer_list.list[i];
+            loader_platform_dl_handle lib_handle;
 
-        layer_idx--;
+            lib_handle = loader_add_layer_lib(inst, "instance", layer_prop);
+            if (!lib_handle)
+                continue;   // TODO what should we do in this case
+            if ((fpGIPA = layer_prop->functions.get_instance_proc_addr) == NULL) {
+                if (layer_prop->functions.str_gipa == NULL || strlen(layer_prop->functions.str_gipa) == 0) {
+                    fpGIPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetInstanceProcAddr");
+                    layer_prop->functions.get_instance_proc_addr = fpGIPA;
+                } else
+                    fpGIPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, layer_prop->functions.str_gipa);
+                if (!fpGIPA) {
+                    loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Failed to find vkGetInstanceProcAddr in layer %s", layer_prop->lib_name);
+
+                    /* TODO: Should we return nextObj, nextGPA to previous? or decrement layer_list count*/
+                    continue;
+                }
+            }
+
+            layer_instance_link_info[activated_layers].pNext = chain_info.u.pLayerInfo;
+            layer_instance_link_info[activated_layers].pfnNextGetInstanceProcAddr = nextGIPA;
+            chain_info.u.pLayerInfo = &layer_instance_link_info[activated_layers];
+            nextGIPA = fpGIPA;
+
+	    loader_log(inst, VK_DEBUG_REPORT_INFO_BIT_EXT, 0,
+		       "Insert instance layer %s (%s)",
+		       layer_prop->info.layerName,
+		       layer_prop->lib_name);
+
+            activated_layers++;
+        }
     }
 
-    loader_init_instance_core_dispatch_table(inst->disp, nextGPA, (VkInstance) nextObj, (VkInstance) baseObj);
+    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) nextGIPA(VK_NULL_HANDLE, "vkCreateInstance");
+    if (fpCreateInstance) {
+        VkLayerInstanceCreateInfo instance_create_info;
 
-    return inst->activated_layer_list.count;
+        instance_create_info.sType = VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO;
+        instance_create_info.function = VK_LAYER_INSTANCE_INFO;
+
+        instance_create_info.u.instanceInfo.instance_info = inst;
+        instance_create_info.u.instanceInfo.pfnNextGetInstanceProcAddr= nextGIPA;
+
+        instance_create_info.pNext = loader_create_info.pNext;
+        loader_create_info.pNext = &instance_create_info;
+
+        res = fpCreateInstance(&loader_create_info, pAllocator, &inst->instance);
+    } else {
+        // Couldn't find CreateInstance function!
+        res = VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    if (res != VK_SUCCESS) {
+        // TODO: Need to clean up here
+    } else {
+        loader_init_instance_core_dispatch_table(inst->disp, nextGIPA, inst->instance);
+    }
+
+    return res;
 }
 
 void loader_activate_instance_layer_extensions(struct loader_instance *inst, VkInstance created_inst)
@@ -2948,100 +2977,164 @@ static VkResult loader_enable_device_layers(
     return err;
 }
 
-/*
- * This function terminates the device chain for CreateDevice.
- * CreateDevice is a special case and so the loader call's
- * the ICD's CreateDevice before creating the chain. Since
- * we can't call CreateDevice twice we must terminate the
- * device chain with something else.
- */
-static VKAPI_ATTR VkResult VKAPI_CALL scratch_vkCreateDevice(
-    VkPhysicalDevice          physicalDevice,
-    const VkDeviceCreateInfo *pCreateInfo,
-    const VkAllocationCallbacks*   pAllocator,
-    VkDevice                 *pDevice)
+VkResult loader_create_device_terminator(
+        VkPhysicalDevice                            physicalDevice,
+        const VkDeviceCreateInfo*                   pCreateInfo,
+        const VkAllocationCallbacks*                pAllocator,
+        VkDevice*                                   pDevice)
 {
-    return VK_SUCCESS;
+    struct loader_physical_device *phys_dev;
+    phys_dev = loader_get_physical_device(physicalDevice);
+
+    VkLayerDeviceCreateInfo *chain_info = (VkLayerDeviceCreateInfo *) pCreateInfo->pNext;
+    while (chain_info && !(chain_info->sType == VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO
+           && chain_info->function == VK_LAYER_DEVICE_INFO)) {
+        chain_info = (VkLayerDeviceCreateInfo *) chain_info->pNext;
+    }
+    assert(chain_info != NULL);
+
+    struct loader_device *dev = (struct loader_device *) chain_info->u.deviceInfo.device_info;
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.deviceInfo.pfnNextGetInstanceProcAddr;
+    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) fpGetInstanceProcAddr(phys_dev->this_icd->instance, "vkCreateDevice");
+    if (fpCreateDevice == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    VkDeviceCreateInfo localCreateInfo;
+    memcpy(&localCreateInfo, pCreateInfo, sizeof(localCreateInfo));
+    localCreateInfo.pNext = NULL;
+    // ICDs do not support layers
+    localCreateInfo.enabledLayerCount = 0;
+    localCreateInfo.ppEnabledLayerNames = NULL;
+
+    VkDevice localDevice;
+    VkResult res = fpCreateDevice(phys_dev->phys_dev, &localCreateInfo, pAllocator, &localDevice);
+
+    if (res != VK_SUCCESS) {
+        return res;
+    }
+
+    *pDevice = localDevice;
+
+    /* Init dispatch pointer in new device object */
+    loader_init_dispatch(*pDevice, &dev->loader_dispatch);
+
+    return res;
 }
 
-static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL loader_GetDeviceChainProcAddr(VkDevice device, const char * name)
+VkResult loader_create_device_chain(
+        VkPhysicalDevice physicalDevice,
+        const VkDeviceCreateInfo *pCreateInfo,
+        const VkAllocationCallbacks* pAllocator,
+        struct loader_instance *inst,
+        struct loader_icd *icd,
+        struct loader_device *dev)
 {
-    if (!strcmp(name, "vkGetDeviceProcAddr"))
-        return (PFN_vkVoidFunction) loader_GetDeviceChainProcAddr;
-    if (!strcmp(name, "vkCreateDevice"))
-        return (PFN_vkVoidFunction) scratch_vkCreateDevice;
+    uint32_t activated_layers = 0;
+    VkLayerDeviceLink *layer_device_link_info;
+    VkLayerDeviceCreateInfo chain_info;
+    VkLayerDeviceCreateInfo device_info;
+    VkDeviceCreateInfo loader_create_info;
+    VkResult res;
 
-    struct loader_device *found_dev;
-    struct loader_icd *icd = loader_get_icd_and_device(device, &found_dev);
-    return icd->GetDeviceProcAddr(device, name);
-}
+    PFN_vkGetDeviceProcAddr fpGDPA, nextGDPA = icd->GetDeviceProcAddr;
+    PFN_vkGetInstanceProcAddr fpGIPA, nextGIPA = loader_gpa_instance_internal;
 
-static uint32_t loader_activate_device_layers(
-        const struct loader_instance *inst,
-        struct loader_device *dev,
-        VkDevice device)
-{
-    if (!dev) {
-        return 0;
+    memcpy(&loader_create_info, pCreateInfo, sizeof(VkDeviceCreateInfo));
+
+    chain_info.sType = VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO;
+    chain_info.function = VK_LAYER_LINK_INFO;
+    chain_info.u.pLayerInfo = NULL;
+    chain_info.pNext = pCreateInfo->pNext;
+
+    layer_device_link_info = loader_stack_alloc(sizeof(VkLayerDeviceLink)
+                                   * dev->activated_layer_list.count);
+    if (!layer_device_link_info) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Failed to alloc Device objects for layer");
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
-    /* activate any layer libraries */
-    void* nextObj = (void*) device;
-    void* baseObj = nextObj;
-    VkBaseLayerObject *nextGpuObj;
-    PFN_vkGetDeviceProcAddr nextGPA = loader_GetDeviceChainProcAddr;
-    VkBaseLayerObject *wrappedGpus;
+    /*
+     * This structure is used by loader_create_device_terminator
+     * so that it can intialize the device dispatch table pointer
+     * in the device object returned by the ICD. Without this
+     * structure the code wouldn't know where the loader's device_info
+     * structure is located.
+     */
+    device_info.sType = VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO;
+    device_info.function = VK_LAYER_DEVICE_INFO;
+    device_info.pNext = &chain_info;
+    device_info.u.deviceInfo.device_info = dev;
+    device_info.u.deviceInfo.pfnNextGetInstanceProcAddr = icd->this_icd_lib->GetInstanceProcAddr;
 
-    if (!dev->activated_layer_list.count) {
-        loader_init_device_dispatch_table(&dev->loader_dispatch, nextGPA,
-            (VkDevice) nextObj, (VkDevice) baseObj);
-        return 0;
-    }
+    loader_create_info.pNext = &device_info;
 
-    wrappedGpus = loader_heap_alloc(inst,
-                    sizeof (VkBaseLayerObject) * dev->activated_layer_list.count,
-                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    if (!wrappedGpus) {
-        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Failed to alloc Gpu objects for layer");
-        return 0;
-    }
+    if (dev->activated_layer_list.count > 0) {
+        /* Create instance chain of enabled layers */
+        for (int32_t i = dev->activated_layer_list.count - 1; i >= 0; i--) {
+            struct loader_layer_properties *layer_prop = &dev->activated_layer_list.list[i];
+            loader_platform_dl_handle lib_handle;
 
-    for (int32_t i = dev->activated_layer_list.count - 1; i >= 0; i--) {
+            lib_handle = loader_add_layer_lib(inst, "device", layer_prop);
+            if (!lib_handle)
+                continue;   // TODO what should we do in this case
+            if ((fpGIPA = layer_prop->functions.get_instance_proc_addr) == NULL) {
+                if (layer_prop->functions.str_gipa == NULL || strlen(layer_prop->functions.str_gipa) == 0) {
+                    fpGIPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetInstanceProcAddr");
+                    layer_prop->functions.get_instance_proc_addr = fpGIPA;
+                } else
+                    fpGIPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, layer_prop->functions.str_gipa);
+                if (!fpGIPA) {
+                    loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Failed to find vkGetInstanceProcAddr in layer %s", layer_prop->lib_name);
 
-        struct loader_layer_properties *layer_prop = &dev->activated_layer_list.list[i];
-        loader_platform_dl_handle lib_handle;
-
-        nextGpuObj = (wrappedGpus + i);
-        nextGpuObj->pGPA = (PFN_vkGPA)nextGPA;
-        nextGpuObj->baseObject = baseObj;
-        nextGpuObj->nextObject = nextObj;
-        nextObj = (void*) nextGpuObj;
-
-        lib_handle = loader_add_layer_lib(inst, "device", layer_prop);
-        if ((nextGPA = layer_prop->functions.get_device_proc_addr) == NULL) {
-            if (layer_prop->functions.str_gdpa == NULL || strlen(layer_prop->functions.str_gdpa) == 0) {
-                nextGPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetDeviceProcAddr");
-                layer_prop->functions.get_device_proc_addr = nextGPA;
-            } else
-                nextGPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, layer_prop->functions.str_gdpa);
-            if (!nextGPA) {
-                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Failed to find vkGetDeviceProcAddr in layer %s", layer_prop->lib_name);
-                continue;
+                    /* TODO: Should we return nextObj, nextGPA to previous? or decrement layer_list count*/
+                    continue;
+                }
             }
+            if ((fpGDPA = layer_prop->functions.get_device_proc_addr) == NULL) {
+                if (layer_prop->functions.str_gdpa == NULL || strlen(layer_prop->functions.str_gdpa) == 0) {
+                    fpGDPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetDeviceProcAddr");
+                    layer_prop->functions.get_device_proc_addr = fpGDPA;
+                } else
+                    fpGDPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, layer_prop->functions.str_gdpa);
+                if (!fpGDPA) {
+                    loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Failed to find vkGetDeviceProcAddr in layer %s", layer_prop->lib_name);
+
+                    /* TODO: Should we return nextObj, nextGPA to previous? or decrement layer_list count*/
+                    continue;
+                }
+            }
+
+            layer_device_link_info[activated_layers].pNext = chain_info.u.pLayerInfo;
+            layer_device_link_info[activated_layers].pfnNextGetInstanceProcAddr = nextGIPA;
+            layer_device_link_info[activated_layers].pfnNextGetDeviceProcAddr = nextGDPA;
+            chain_info.u.pLayerInfo = &layer_device_link_info[activated_layers];
+            nextGIPA = fpGIPA;
+            nextGDPA = fpGDPA;
+
+            loader_log(inst, VK_DEBUG_REPORT_INFO_BIT_EXT, 0,
+                       "Insert device layer %s (%s)",
+                       layer_prop->info.layerName,
+                       layer_prop->lib_name);
+
+            activated_layers++;
         }
-
-        loader_log(inst, VK_DEBUG_REPORT_INFO_BIT_EXT, 0,
-                   "Insert device layer library %s (%s)",
-                   layer_prop->info.layerName,
-                   layer_prop->lib_name);
-
     }
 
-    loader_init_device_dispatch_table(&dev->loader_dispatch, nextGPA,
-            (VkDevice) nextObj, (VkDevice) baseObj);
-    loader_heap_free(inst, wrappedGpus);
+    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) nextGIPA(VK_NULL_HANDLE, "vkCreateDevice");
+    if (fpCreateDevice) {
+        res = fpCreateDevice(physicalDevice, &loader_create_info, pAllocator, &dev->device);
+    } else {
+        // Couldn't find CreateDevice function!
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
 
-    return dev->activated_layer_list.count;
+    /* Initialize device dispatch table */
+    loader_init_device_dispatch_table(&dev->loader_dispatch,
+                                      nextGDPA,
+                                      dev->device);
+
+    return res;
 }
 
 VkResult loader_validate_layers(
@@ -3149,7 +3242,6 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateInstance(
         const VkAllocationCallbacks*    pAllocator,
         VkInstance*                     pInstance)
 {
-    struct loader_instance *ptr_instance = *(struct loader_instance **) pInstance;
     struct loader_icd *icd;
     VkExtensionProperties *prop;
     char **filtered_extension_names = NULL;
@@ -3157,10 +3249,21 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateInstance(
     VkResult res = VK_SUCCESS;
     bool success = false;
 
+    VkLayerInstanceCreateInfo *chain_info = (VkLayerInstanceCreateInfo *) pCreateInfo->pNext;
+    while (chain_info && !(chain_info->sType == VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO
+           && chain_info->function == VK_LAYER_INSTANCE_INFO)) {
+        chain_info = (VkLayerInstanceCreateInfo *) chain_info->pNext;
+    }
+    assert(chain_info != NULL);
+
+    struct loader_instance *ptr_instance = (struct loader_instance *) chain_info->u.instanceInfo.instance_info;
     memcpy(&icd_create_info, pCreateInfo, sizeof(icd_create_info));
 
     icd_create_info.enabledLayerCount = 0;
     icd_create_info.ppEnabledLayerNames = NULL;
+
+    // TODO: Should really strip off the VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO entries
+    icd_create_info.pNext = NULL;
 
     /*
      * NOTE: Need to filter the extensions to only those
@@ -3232,6 +3335,8 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateInstance(
             return res;
         }
     }
+
+    *pInstance = (VkInstance) ptr_instance;
 
     return VK_SUCCESS;
 }
@@ -3362,6 +3467,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_EnumeratePhysicalDevices(
         VkPhysicalDevice*                       pPhysicalDevices)
 {
     uint32_t i;
+    uint32_t copy_count = 0;
     struct loader_instance *ptr_instance = (struct loader_instance *) instance;
     VkResult res = VK_SUCCESS;
 
@@ -3374,8 +3480,14 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_EnumeratePhysicalDevices(
         return res;
     }
 
-    for (i = 0; i < ptr_instance->total_gpu_count; i++) {
+    copy_count = (ptr_instance->total_gpu_count < *pPhysicalDeviceCount) ? ptr_instance->total_gpu_count : *pPhysicalDeviceCount;
+    for (i = 0; i < copy_count; i++) {
         pPhysicalDevices[i] = (VkPhysicalDevice) &ptr_instance->phys_devs[i];
+    }
+    *pPhysicalDeviceCount = copy_count;
+
+    if (copy_count < ptr_instance->total_gpu_count) {
+        return VK_INCOMPLETE;
     }
 
     return res;
@@ -3578,21 +3690,12 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
         }
     }
 
-    // since physicalDevice object maybe wrapped by a layer need to get unwrapped version
-    // we haven't yet called down the chain for the layer to unwrap the object
-    res = icd->CreateDevice(phys_dev->phys_dev, &device_create_info, pAllocator, pDevice);
-    if (res != VK_SUCCESS) {
-        loader_destroy_generic_list(inst, (struct loader_generic_list *) &activated_layer_list);
-        return res;
-    }
-
-    dev = loader_add_logical_device(inst, *pDevice, &icd->logical_device_list);
+    dev = loader_add_logical_device(inst, &icd->logical_device_list);
     if (dev == NULL) {
         loader_destroy_generic_list(inst, (struct loader_generic_list *) &activated_layer_list);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
-    loader_init_dispatch(*pDevice, &dev->loader_dispatch);
 
     /* move the locally filled layer list into the device, and pass ownership of the memory */
     dev->activated_layer_list.capacity = activated_layer_list.capacity;
@@ -3600,11 +3703,20 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
     dev->activated_layer_list.list = activated_layer_list.list;
     memset(&activated_layer_list, 0, sizeof(activated_layer_list));
 
-   /* activate any layers on device chain which terminates with device*/
-    loader_activate_device_layers(inst, dev, *pDevice);
+    /* activate any layers on device chain which terminates with device*/
+    res = loader_enable_device_layers(inst, icd, &dev->activated_layer_list, pCreateInfo, &inst->device_layer_list);
+    if (res != VK_SUCCESS) {
+        loader_destroy_logical_device(inst, dev);
+        return res;
+    }
 
-    /* finally can call down the chain */
-    res = dev->loader_dispatch.core_dispatch.CreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
+    res = loader_create_device_chain(physicalDevice, pCreateInfo, pAllocator, inst, icd, dev);
+    if (res != VK_SUCCESS) {
+        loader_destroy_logical_device(inst, dev);
+        return res;
+    }
+
+    *pDevice = dev->device;
 
     /* initialize any device extension dispatch entry's from the instance list*/
     loader_init_dispatch_dev_ext(inst, dev);
@@ -3614,7 +3726,6 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
     loader_init_device_extension_dispatch_table(&dev->loader_dispatch,
                                                 dev->loader_dispatch.core_dispatch.GetDeviceProcAddr,
                                                 *pDevice);
-    dev->loader_dispatch.core_dispatch.CreateDevice = icd->CreateDevice;
 
     return res;
 }

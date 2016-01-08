@@ -1760,18 +1760,34 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     const VkAllocationCallbacks* pAllocator,
     VkInstance* pInstance)
 {
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, *pInstance);
-    VkResult result = pTable->CreateInstance(pCreateInfo, pAllocator, pInstance);
+    VkLayerInstanceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
-    if (result == VK_SUCCESS) {
-        layer_data *data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
-        data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->enabledExtensionCount,
-            pCreateInfo->ppEnabledExtensionNames);
-
-        InitParamChecker(data, pAllocator);
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) fpGetInstanceProcAddr(NULL, "vkCreateInstance");
+    if (fpCreateInstance == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
 
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
+    if (result != VK_SUCCESS)
         return result;
+
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+    VkLayerInstanceDispatchTable *pTable = initInstanceTable(*pInstance, fpGetInstanceProcAddr, pc_instance_table_map);
+
+    my_data->report_data = debug_report_create_instance(
+                               pTable,
+                               *pInstance,
+                               pCreateInfo->enabledExtensionCount,
+                               pCreateInfo->ppEnabledExtensionNames);
+
+    InitParamChecker(my_data, pAllocator);
+
+    return result;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
@@ -2035,20 +2051,31 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     VkDevice* pDevice)
 {
     /*
-     * NOTE: The loader fills in the ICD's device object in *pDevice.
-     * Use that object to get the dispatch table.
-     *
      * NOTE: We do not validate physicalDevice or any dispatchable
      * object as the first parameter. We couldn't get here if it was wrong!
      */
-    VkLayerDispatchTable *pTable = get_dispatch_table(pc_device_table_map, *pDevice);
-    VkResult result = pTable->CreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
-    if(result == VK_SUCCESS)
-    {
-        layer_data *instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-        layer_data *device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
-        device_data->report_data = layer_debug_report_create_device(instance_data->report_data, *pDevice);
+    VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
+    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) fpGetInstanceProcAddr(NULL, "vkCreateDevice");
+    if (fpCreateDevice == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
+
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    VkResult result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+    my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
+    initDeviceTable(*pDevice, fpGetDeviceProcAddr, pc_device_table_map);
 
     return result;
 }
@@ -6437,18 +6464,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)
 {
-    if (device == NULL) {
-        return NULL;
-    }
-
-    /* loader uses this to force layer initialization; device object is wrapped */
-    if (!strcmp(funcName, "vkGetDeviceProcAddr")) {
-        initDeviceTable(pc_device_table_map, (const VkBaseLayerObject *) device);
+    if (!strcmp(funcName, "vkGetDeviceProcAddr"))
         return (PFN_vkVoidFunction) vkGetDeviceProcAddr;
-    }
-
-    if (!strcmp(funcName, "vkCreateDevice"))
-        return (PFN_vkVoidFunction) vkCreateDevice;
     if (!strcmp(funcName, "vkDestroyDevice"))
         return (PFN_vkVoidFunction) vkDestroyDevice;
     if (!strcmp(funcName, "vkGetDeviceQueue"))
@@ -6608,29 +6625,25 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
     if (!strcmp(funcName, "vkCmdNextSubpass"))
         return (PFN_vkVoidFunction) vkCmdNextSubpass;
 
-    {
-        if (get_dispatch_table(pc_device_table_map, device)->GetDeviceProcAddr == NULL)
-            return NULL;
-        return get_dispatch_table(pc_device_table_map, device)->GetDeviceProcAddr(device, funcName);
+    if (device == NULL) {
+        return NULL;
     }
+
+    if (get_dispatch_table(pc_device_table_map, device)->GetDeviceProcAddr == NULL)
+        return NULL;
+    return get_dispatch_table(pc_device_table_map, device)->GetDeviceProcAddr(device, funcName);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
-    if (instance == NULL) {
-        return NULL;
-    }
-
-    /* loader uses this to force layer initialization; instance object is wrapped */
-    if (!strcmp(funcName, "vkGetInstanceProcAddr")) {
-        initInstanceTable(pc_instance_table_map, (const VkBaseLayerObject *) instance);
+    if (!strcmp(funcName, "vkGetInstanceProcAddr"))
         return (PFN_vkVoidFunction) vkGetInstanceProcAddr;
-    }
-
     if (!strcmp(funcName, "vkCreateInstance"))
         return (PFN_vkVoidFunction) vkCreateInstance;
     if (!strcmp(funcName, "vkDestroyInstance"))
         return (PFN_vkVoidFunction) vkDestroyInstance;
+    if (!strcmp(funcName, "vkCreateDevice"))
+        return (PFN_vkVoidFunction) vkCreateDevice;
     if (!strcmp(funcName, "vkEnumeratePhysicalDevices"))
         return (PFN_vkVoidFunction) vkEnumeratePhysicalDevices;
     if (!strcmp(funcName, "vkGetPhysicalDeviceProperties"))
@@ -6648,14 +6661,16 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
     if (!strcmp(funcName, "vkEnumerateDeviceExtensionProperties"))
         return (PFN_vkVoidFunction) vkEnumerateDeviceExtensionProperties;
 
+    if (instance == NULL) {
+        return NULL;
+    }
+
     layer_data *data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     PFN_vkVoidFunction fptr = debug_report_get_instance_proc_addr(data->report_data, funcName);
     if(fptr)
         return fptr;
 
-    {
-        if (get_dispatch_table(pc_instance_table_map, instance)->GetInstanceProcAddr == NULL)
-            return NULL;
-        return get_dispatch_table(pc_instance_table_map, instance)->GetInstanceProcAddr(instance, funcName);
-    }
+    if (get_dispatch_table(pc_instance_table_map, instance)->GetInstanceProcAddr == NULL)
+        return NULL;
+    return get_dispatch_table(pc_instance_table_map, instance)->GetInstanceProcAddr(instance, funcName);
 }

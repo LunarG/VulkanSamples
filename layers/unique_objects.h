@@ -141,13 +141,27 @@ explicit_CreateInstance(
     const VkAllocationCallbacks *pAllocator,
     VkInstance                  *pInstance)
 {
+    VkLayerInstanceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
-    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(unique_objects_instance_table_map, *pInstance);
-    VkResult result = pInstanceTable->CreateInstance(pCreateInfo, pAllocator, pInstance);
-
-    if (result == VK_SUCCESS) {
-        createInstanceRegisterExtensions(pCreateInfo, *pInstance);
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) fpGetInstanceProcAddr(NULL, "vkCreateInstance");
+    if (fpCreateInstance == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
+
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    initInstanceTable(*pInstance, fpGetInstanceProcAddr, unique_objects_instance_table_map);
+
+    createInstanceRegisterExtensions(pCreateInfo, *pInstance);
+
     return result;
 }
 
@@ -176,11 +190,29 @@ explicit_CreateDevice(
     const VkAllocationCallbacks   *pAllocator,
     VkDevice                 *pDevice)
 {
-    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(unique_objects_device_table_map, *pDevice);
-    VkResult result = pDeviceTable->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
-    if (result == VK_SUCCESS) {
-        createDeviceRegisterExtensions(pCreateInfo, *pDevice);
+    VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
+    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) fpGetInstanceProcAddr(NULL, "vkCreateDevice");
+    if (fpCreateDevice == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
+
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    VkResult result = fpCreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    // Setup layer's device dispatch table
+    initDeviceTable(*pDevice, fpGetDeviceProcAddr, unique_objects_device_table_map);
+
+    createDeviceRegisterExtensions(pCreateInfo, *pDevice);
+
     return result;
 }
 

@@ -125,3 +125,34 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     }
 }
 
+VkResult
+explicit_CreateDevice(
+    VkPhysicalDevice         gpu,
+    const VkDeviceCreateInfo *pCreateInfo,
+    const VkAllocationCallbacks   *pAllocator,
+    VkDevice                 *pDevice)
+{
+    VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
+    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) fpGetInstanceProcAddr(NULL, "vkCreateDevice");
+    if (fpCreateDevice == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    VkResult result = fpCreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    initDeviceTable(*pDevice, fpGetDeviceProcAddr);
+
+    createDeviceRegisterExtensions(pCreateInfo, *pDevice);
+
+    return result;
+}

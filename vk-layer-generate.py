@@ -473,6 +473,8 @@ class Subcommand(object):
 
             if not proto in intercepted:
                 continue
+            if proto.name == "CreateInstance":
+                continue
             if proto.name == "CreateDevice":
                 continue
             lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
@@ -508,17 +510,15 @@ class Subcommand(object):
             func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
-                             "    if (device == VK_NULL_HANDLE) {\n"
-                             "        return NULL;\n"
-                             "    }\n"
-                             "    /* loader uses this to force layer initialization; device object is wrapped */\n"
                              "    if (!strcmp(\"vkGetDeviceProcAddr\", funcName)) {\n"
-                             "        initDeviceTable(%s_device_table_map, (const VkBaseLayerObject *) device);\n"
                              "        return (PFN_vkVoidFunction) vkGetDeviceProcAddr;\n"
                              "    }\n\n"
                              "    addr = layer_intercept_proc(funcName);\n"
                              "    if (addr)\n"
-                             "        return addr;" % self.layer_name)
+                             "        return addr;\n"
+                             "    if (device == VK_NULL_HANDLE) {\n"
+                             "        return NULL;\n"
+                             "    }\n")
             if 0 != len(extensions):
                 func_body.append('%s' % self.lineinfo.get())
                 func_body.append('    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);')
@@ -539,18 +539,20 @@ class Subcommand(object):
             func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
-                             "    if (instance == VK_NULL_HANDLE) {\n"
-                             "        return NULL;\n"
-                             "    }\n"
-                             "    /* loader uses this to force layer initialization; instance object is wrapped */\n"
-                             "    if (!strcmp(\"vkGetInstanceProcAddr\", funcName)) {\n"
-                             "        initInstanceTable(%s_instance_table_map, (const VkBaseLayerObject *) instance);\n"
+                             "    if (!strcmp(funcName, \"vkGetInstanceProcAddr\"))\n"
                              "        return (PFN_vkVoidFunction) vkGetInstanceProcAddr;\n"
-                             "    }\n\n"
+                             "    if (!strcmp(funcName, \"vkCreateInstance\"))\n"
+                             "        return (PFN_vkVoidFunction) vkCreateInstance;\n"
+                             "    if (!strcmp(funcName, \"vkCreateDevice\"))\n"
+                             "        return (PFN_vkVoidFunction) vkCreateDevice;\n"
                              "    addr = layer_intercept_instance_proc(funcName);\n"
                              "    if (addr) {\n"
                              "        return addr;"
-                             "    }\n" % self.layer_name)
+                             "    }\n"
+                             "    if (instance == VK_NULL_HANDLE) {\n"
+                             "        return NULL;\n"
+                             "    }\n"
+                             )
 
             table_declared = False
             if 0 != len(instance_extensions):
@@ -590,15 +592,10 @@ class Subcommand(object):
             func_body.append('%s' % self.lineinfo.get())
             func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                              "{\n"
-                             "    PFN_vkVoidFunction addr;\n"
-                             "    if (device == VK_NULL_HANDLE) {\n"
-                             "        return NULL;\n"
-                             "    }\n")
+                             "    PFN_vkVoidFunction addr;\n")
             if self.layer_name == 'generic':
                 func_body.append("\n"
-                             "    /* loader uses this to force layer initialization; device object is wrapped */\n"
                              "    if (!strcmp(\"vkGetDeviceProcAddr\", funcName)) {\n"
-                             "        initDeviceTable((const VkBaseLayerObject *) device);\n"
                              "        return (PFN_vkVoidFunction) vkGetDeviceProcAddr;\n"
                              "    }\n\n"
                              "    addr = layer_intercept_proc(funcName);\n"
@@ -607,14 +604,15 @@ class Subcommand(object):
             else:
                 func_body.append("\n"
                              "    loader_platform_thread_once(&initOnce, init%s);\n\n"
-                             "    /* loader uses this to force layer initialization; device object is wrapped */\n"
                              "    if (!strcmp(\"vkGetDeviceProcAddr\", funcName)) {\n"
-                             "        initDeviceTable((const VkBaseLayerObject *) device);\n"
                              "        return (PFN_vkVoidFunction) vkGetDeviceProcAddr;\n"
                              "    }\n\n"
                              "    addr = layer_intercept_proc(funcName);\n"
                              "    if (addr)\n"
                              "        return addr;" % self.layer_name)
+            func_body.append("    if (device == VK_NULL_HANDLE) {\n"
+                             "        return NULL;\n"
+                             "    }\n")
             func_body.append('')
             func_body.append('    VkLayerDispatchTable *pDisp =  device_dispatch_table(device);')
             if 0 != len(extensions):
@@ -640,32 +638,29 @@ class Subcommand(object):
             func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
-                             "    if (instance == VK_NULL_HANDLE) {\n"
-                             "        return NULL;\n"
-                             "    }\n")
+                             "    if (!strcmp(funcName, \"vkGetInstanceProcAddr\"))\n"
+                             "        return (PFN_vkVoidFunction) vkGetInstanceProcAddr;\n"
+                             "    if (!strcmp(funcName, \"vkCreateInstance\"))\n"
+                             "        return (PFN_vkVoidFunction) vkCreateInstance;\n"
+                             "    if (!strcmp(funcName, \"vkCreateDevice\"))\n"
+                             "        return (PFN_vkVoidFunction) vkCreateDevice;\n"
+                             )
             if self.layer_name == 'generic':
                 func_body.append("\n"
-                             "    /* loader uses this to force layer initialization; instance object is wrapped */\n"
-                             "    if (!strcmp(\"vkGetInstanceProcAddr\", funcName)) {\n"
-                             "        initInstanceTable((const VkBaseLayerObject *) instance);\n"
-                             "        return (PFN_vkVoidFunction) vkGetInstanceProcAddr;\n"
-                             "    }\n\n"
                              "    addr = layer_intercept_instance_proc(funcName);\n"
                              "    if (addr)\n"
                              "        return addr;")
             else:
                 func_body.append(
                              "    loader_platform_thread_once(&initOnce, init%s);\n\n"
-                             "    /* loader uses this to force layer initialization; instance object is wrapped */\n"
-                             "    if (!strcmp(\"vkGetInstanceProcAddr\", funcName)) {\n"
-                             "        initInstanceTable((const VkBaseLayerObject *) instance);\n"
-                             "        return (PFN_vkVoidFunction) vkGetInstanceProcAddr;\n"
-                             "    }\n\n"
                              "    addr = layer_intercept_instance_proc(funcName);\n"
                              "    if (addr)\n"
                              "        return addr;" % self.layer_name)
+            func_body.append("    if (instance == VK_NULL_HANDLE) {\n"
+                             "        return NULL;\n"
+                             "    }\n")
             func_body.append("")
-            func_body.append("    VkLayerInstanceDispatchTable* pTable = instance_dispatch_table(instance);")
+            func_body.append("    VkLayerInstanceDispatchTable* pTable = instance_dispatch_table(instance);\n")
             if 0 != len(instance_extensions):
                 extra_space = ""
                 for (ext_enable, ext_list) in instance_extensions:
@@ -837,20 +832,32 @@ class GenericLayerSubcommand(Subcommand):
             funcs.append('%s' % self.lineinfo.get())
             funcs.append('%s%s\n'
                      '{\n'
+                     '    layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);\n'
                      '    char str[1024];\n'
-                     '    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);\n'
                      '    sprintf(str, "At start of Generic layered %s\\n");\n'
-                     '    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,'
+                     '    log_msg(my_instance_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,'
                      '            (uint64_t)physicalDevice, __LINE__, 0, (char *) "generic", "%%s", (char *) str);\n'
-                     '    %sdevice_dispatch_table(*pDevice)->%s;\n'
-                     '    if (result == VK_SUCCESS) {\n'
-                     '        my_data->report_data = layer_debug_report_create_device(my_data->report_data, *pDevice);\n'
-                     '        createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
+                     '    VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);\n'
+                     '    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;\n'
+                     '    PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;\n'
+                     '    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) fpGetInstanceProcAddr(NULL, "vkCreateDevice");\n'
+                     '    if (fpCreateDevice == NULL) {\n'
+                     '        return VK_ERROR_INITIALIZATION_FAILED;\n'
                      '    }\n'
+                     '    // Advance the link info for the next element on the chain\n'
+                     '    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;\n'
+                     '    VkResult result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);\n'
+                     '    if (result != VK_SUCCESS) {\n'
+                     '        return result;\n'
+                     '    }\n'
+                     '    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);\n'
+                     '    initDeviceTable(*pDevice, fpGetDeviceProcAddr);\n'
+                     '    my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);\n'
+                     '    createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
                      '    sprintf(str, "Completed generic layered %s\\n");\n'
-                     '    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, (uint64_t)physicalDevice, __LINE__, 0, (char *) "generic", "%%s", (char *) str);\n'
+                     '    log_msg(my_device_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, (uint64_t)physicalDevice, __LINE__, 0, (char *) "generic", "%%s", (char *) str);\n'
                      '    %s'
-                     '}' % (qual, decl, proto.name, ret_val, proto.c_call(), proto.name, stmt))
+                     '}' % (qual, decl, proto.name, proto.name, stmt))
         elif proto.name == "DestroyDevice":
             funcs.append('%s' % self.lineinfo.get())
             funcs.append('%s%s\n'
@@ -884,21 +891,31 @@ class GenericLayerSubcommand(Subcommand):
             funcs.append('%s%s\n'
                          '{\n'
                          '    char str[1024];\n'
-                         '    %sinstance_dispatch_table(*pInstance)->%s;\n'
-                         '    if (result == VK_SUCCESS) {\n'
-                         '        createInstanceRegisterExtensions(pCreateInfo, *pInstance);\n'
-                         '        layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);\n'
-                         '        my_data->report_data = debug_report_create_instance(\n'
-                         '                                   instance_dispatch_table(*pInstance),\n'
-                         '                                   *pInstance,\n'
-                         '                                   pCreateInfo->enabledExtensionCount,\n'
-                         '                                   pCreateInfo->ppEnabledExtensionNames);\n'
-                         '        init_generic(my_data, pAllocator);\n'
-                         '        sprintf(str, "Completed generic layered %s\\n");\n'
-                         '        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, (uint64_t)*pInstance, __LINE__, 0, (char *) "generic", "%%s", (char *) str);\n'
+                         '    VkLayerInstanceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);\n'
+                         '    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;\n'
+                         '    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) fpGetInstanceProcAddr(NULL, "vkCreateInstance");\n'
+                         '    if (fpCreateInstance == NULL) {\n'
+                         '        return VK_ERROR_INITIALIZATION_FAILED;\n'
                          '    }\n'
+                         '    // Advance the link info for the next element on the chain\n'
+                         '    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;\n'
+                         '    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);\n'
+                         '    if (result != VK_SUCCESS) {\n'
+                         '        return result;\n'
+                         '    }\n'
+                         '    VkLayerInstanceDispatchTable *pTable = initInstanceTable(*pInstance, fpGetInstanceProcAddr);\n'
+                         '    createInstanceRegisterExtensions(pCreateInfo, *pInstance);\n'
+                         '    layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);\n'
+                         '    my_data->report_data = debug_report_create_instance(\n'
+                         '            pTable,\n'
+                         '            *pInstance,\n'
+                         '            pCreateInfo->enabledExtensionCount,\n'
+                         '            pCreateInfo->ppEnabledExtensionNames);\n'
+                         '    init_generic(my_data, pAllocator);\n'
+                         '    sprintf(str, "Completed generic layered %s\\n");\n'
+                         '    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, (uint64_t)*pInstance, __LINE__, 0, (char *) "generic", "%%s", (char *) str);\n'
                          '    return result;\n'
-                         '}\n' % (qual, decl, ret_val, proto.c_call(), proto.name))
+                         '}\n' % (qual, decl, proto.name))
         else:
             if wsi_name(proto.name):
                 funcs.append('%s' % wsi_ifdef(proto.name))
@@ -1248,25 +1265,34 @@ class APIDumpSubcommand(Subcommand):
             funcs.append('%s%s\n'
                      '{\n'
                      '    using namespace StreamControl;\n'
-                     '    %sinstance_dispatch_table(*pInstance)->%s;\n'
-                     '    if (result == VK_SUCCESS) {\n'
-                     '        createInstanceRegisterExtensions(pCreateInfo, *pInstance);\n'
+                     '    loader_platform_thread_once(&initOnce, initapi_dump);\n'
+                     '    VkLayerInstanceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);\n'
+                     '    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;\n'
+                     '    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) fpGetInstanceProcAddr(NULL, "vkCreateInstance");\n'
+                     '    if (fpCreateInstance == NULL) {\n'
+                     '                return VK_ERROR_INITIALIZATION_FAILED;\n'
                      '    }\n'
+                     '    // Advance the link info for the next element on the chain\n'
+                     '    assert(chain_info->u.pLayerInfo);\n'
+                     '    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;\n'
+                     '    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);\n'
+                     '    if (result != VK_SUCCESS)\n'
+                     '        return result;\n'
+                     '    initInstanceTable(*pInstance, fpGetInstanceProcAddr);\n'
+                     '    createInstanceRegisterExtensions(pCreateInfo, *pInstance);\n'
                      '    %s%s%s\n'
                      '%s'
-                     '}\n' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
+                     '}\n' % (qual, decl, f_open, log_func, f_close, stmt))
 
         elif proto.name == "CreateDevice":
             funcs.append('%s\n' % self.lineinfo.get())
             funcs.append('%s%s\n'
                      '{\n'
                      '    using namespace StreamControl;\n'
-                     '    %sdevice_dispatch_table(*pDevice)->%s;\n'
-                     '    if (result == VK_SUCCESS)\n'
-                     '        createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
+                     '    %sexplicit_CreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);\n'
                      '    %s%s%s\n'
                      '%s'
-                     '}' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
+                     '}' % (qual, decl, ret_val, f_open, log_func, f_close, stmt))
         elif proto.name == "DestroyDevice":
             funcs.append('%s%s\n'
                  '{\n'
@@ -2408,16 +2434,25 @@ class ThreadingSubcommand(Subcommand):
             funcs.append('%s' % self.lineinfo.get())
             funcs.append('%s%s\n' % (qual, decl) +
                      '{\n'
-                     '    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(threading_device_table_map, (void *) *pDevice);\n'
-                     '    VkResult result = pDeviceTable->%s;\n' % (proto.c_call()) +
-                     '    if (result == VK_SUCCESS) {\n'
-                     '        layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(%s), layer_data_map);\n' % proto.params[0].name +
-                     '        layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);\n'
-                     '        my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);\n'
+                     '    VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);\n'
+                     '    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;\n'
+                     '    PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;\n'
+                     '    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) fpGetInstanceProcAddr(NULL, "vkCreateDevice");\n'
+                     '    if (fpCreateDevice == NULL) {\n'
+                     '        return VK_ERROR_INITIALIZATION_FAILED;\n'
                      '    }\n'
-                     '\n'
-                     '    return result;'
-                     '}')
+                     '    // Advance the link info for the next element on the chain\n'
+                     '    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;\n'
+                     '    VkResult result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);\n'
+                     '    if (result != VK_SUCCESS) {\n'
+                     '        return result;\n'
+                     '    }\n'
+                     '    layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);\n'
+                     '    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);\n'
+                     '    initDeviceTable(*pDevice, fpGetDeviceProcAddr, threading_device_table_map);\n'
+                     '    my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);\n'
+                     '    return result;\n'
+                     '}\n')
             return "\n".join(funcs)
         elif proto.params[0].ty == "VkPhysicalDevice":
             return None
@@ -2473,18 +2508,26 @@ class ThreadingSubcommand(Subcommand):
         elif proto.name == "CreateInstance":
             funcs.append('%s%s\n'
                          '{\n'
-                         '    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(threading_instance_table_map, *pInstance);\n'
-                         '    VkResult result = pInstanceTable->CreateInstance(pCreateInfo, pAllocator, pInstance);\n'
-                         '\n'
-                         '    if (result == VK_SUCCESS) {\n'
-                         '        layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);\n'
-                         '        my_data->report_data = debug_report_create_instance(\n'
-                         '                                   pInstanceTable,\n'
-                         '                                   *pInstance,\n'
-                         '                                   pCreateInfo->enabledExtensionCount,\n'
-                         '                                   pCreateInfo->ppEnabledExtensionNames);\n'
-                         '        init_threading(my_data, pAllocator);\n'
+                         '    VkLayerInstanceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);\n'
+                         '    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;\n'
+                         '    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) fpGetInstanceProcAddr(NULL, "vkCreateInstance");\n'
+                         '    if (fpCreateInstance == NULL) {\n'
+                         '        return VK_ERROR_INITIALIZATION_FAILED;\n'
                          '    }\n'
+                         '    // Advance the link info for the next element on the chain\n'
+                         '    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;\n'
+                         '    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);\n'
+                         '    if (result != VK_SUCCESS) {\n'
+                         '        return result;\n'
+                         '    }\n'
+                         '    VkLayerInstanceDispatchTable *pTable = initInstanceTable(*pInstance, fpGetInstanceProcAddr, threading_instance_table_map);\n'
+                         '    layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);\n'
+                         '    my_data->report_data = debug_report_create_instance(\n'
+                         '            pTable,\n'
+                         '            *pInstance,\n'
+                         '            pCreateInfo->enabledExtensionCount,\n'
+                         '            pCreateInfo->ppEnabledExtensionNames);\n'
+                         '    init_threading(my_data, pAllocator);\n'
                          '    return result;\n'
                          '}\n' % (qual, decl))
             return "\n".join(funcs);

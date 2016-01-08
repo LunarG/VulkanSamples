@@ -38,17 +38,14 @@ static VkResult vkDevExtError(VkDevice dev)
 
 static inline void loader_init_device_dispatch_table(struct loader_dev_dispatch_table *dev_table,
                                                     PFN_vkGetDeviceProcAddr gpa,
-                                                    VkDevice dev_next,
                                                     VkDevice dev)
 {
     VkLayerDispatchTable *table = &dev_table->core_dispatch;
     for (uint32_t i = 0; i < MAX_NUM_DEV_EXTS; i++)
         dev_table->ext_dispatch.DevExt[i] = (PFN_vkDevExt) vkDevExtError;
-    // If layer is next, this will trigger layers to initialize their dispatch tables
-    //then use the gpa in their dispatch for subsequent layers in the chain
-    table->GetDeviceProcAddr = (PFN_vkGetDeviceProcAddr) gpa(dev_next, "vkGetDeviceProcAddr");
 
-    table->CreateDevice = (PFN_vkCreateDevice) gpa(dev, "vkCreateDevice");
+    table->GetDeviceProcAddr = (PFN_vkGetDeviceProcAddr) gpa(dev, "vkGetDeviceProcAddr");
+//    table->CreateDevice = (PFN_vkCreateDevice) gpa(dev, "vkCreateDevice");
     table->DestroyDevice = (PFN_vkDestroyDevice) gpa(dev, "vkDestroyDevice");
     table->GetDeviceQueue = (PFN_vkGetDeviceQueue) gpa(dev, "vkGetDeviceQueue");
     table->QueueSubmit = (PFN_vkQueueSubmit) gpa(dev, "vkQueueSubmit");
@@ -194,8 +191,8 @@ static inline void *loader_lookup_device_dispatch_table(
     name += 2;
     if (!strcmp(name, "GetDeviceProcAddr"))
         return (void *) table->GetDeviceProcAddr;
-    if (!strcmp(name, "CreateDevice"))
-        return (void *) table->CreateDevice;
+//    if (!strcmp(name, "CreateDevice"))
+//        return (void *) table->CreateDevice;
     if (!strcmp(name, "DestroyDevice"))
         return (void *) table->DestroyDevice;
     if (!strcmp(name, "GetDeviceQueue"))
@@ -440,17 +437,15 @@ static inline void *loader_lookup_device_dispatch_table(
     return NULL;
 }
 
-static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispatchTable *table,
-                                                PFN_vkGetInstanceProcAddr gpa,
-                                                VkInstance inst_next,
-                                                VkInstance inst)
+static inline void loader_init_instance_core_dispatch_table(
+        VkLayerInstanceDispatchTable *table,
+        PFN_vkGetInstanceProcAddr gpa,
+        VkInstance inst)
 {
-    // If layer is next, this will trigger layers to initialize their dispatch tables
-    //then use the gpa in their dispatch for subsequent layers in the chain
-    table->GetInstanceProcAddr = (PFN_vkGetInstanceProcAddr) gpa(inst_next, "vkGetInstanceProcAddr");
-
+    table->GetInstanceProcAddr = (PFN_vkGetInstanceProcAddr) gpa(inst, "vkGetInstanceProcAddr");
     table->CreateInstance = (PFN_vkCreateInstance) gpa(inst, "vkCreateInstance");
     table->DestroyInstance = (PFN_vkDestroyInstance) gpa(inst, "vkDestroyInstance");
+    table->CreateDevice = (PFN_vkCreateDevice) gpa(inst, "vkCreateDevice");
     table->EnumeratePhysicalDevices = (PFN_vkEnumeratePhysicalDevices) gpa(inst, "vkEnumeratePhysicalDevices");
     table->GetPhysicalDeviceFeatures = (PFN_vkGetPhysicalDeviceFeatures) gpa(inst, "vkGetPhysicalDeviceFeatures");
     table->GetPhysicalDeviceImageFormatProperties = (PFN_vkGetPhysicalDeviceImageFormatProperties) gpa(inst, "vkGetPhysicalDeviceImageFormatProperties");
@@ -510,6 +505,8 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->CreateInstance;
     if (!strcmp(name, "DestroyInstance"))
         return (void *) table->DestroyInstance;
+    if (!strcmp(name, "CreateDevice"))
+        return (void *) table->CreateDevice;
     if (!strcmp(name, "EnumeratePhysicalDevices"))
         return (void *) table->EnumeratePhysicalDevices;
     if (!strcmp(name, "GetPhysicalDeviceFeatures"))

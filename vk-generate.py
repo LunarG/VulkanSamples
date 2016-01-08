@@ -116,41 +116,34 @@ class DispatchTableOpsSubcommand(Subcommand):
         func = []
         if type == "device":
             # GPA has to be first one and uses wrapped object
-            stmts.append("VkDevice device = (VkDevice) devw->nextObject;")
-            stmts.append("PFN_vkGetDeviceProcAddr gpa = (PFN_vkGetDeviceProcAddr) devw->pGPA;")
-            stmts.append("VkDevice baseDevice = (VkDevice) devw->baseObject;")
-            stmts.append("// GPA has to be first entry inited and uses wrapped object since it triggers init")
             stmts.append("memset(table, 0, sizeof(*table));")
             stmts.append("table->GetDeviceProcAddr =(PFN_vkGetDeviceProcAddr)  gpa(device,\"vkGetDeviceProcAddr\");")
             for proto in self.protos:
-                if proto.name == "CreateInstance" or proto.name == "EnumerateInstanceExtensionProperties" or proto.name == "EnumerateInstanceLayerProperties" or proto.params[0].ty == "VkInstance" or (proto.params[0].ty == "VkPhysicalDevice" and proto.name != "CreateDevice"):
+                if proto.name == "CreateInstance" or proto.name == "EnumerateInstanceExtensionProperties" or proto.name == "EnumerateInstanceLayerProperties" or proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice":
                     continue
                 if proto.name != "GetDeviceProcAddr" and 'KHR' not in proto.name:
-                    stmts.append("table->%s = (PFN_vk%s) gpa(baseDevice, \"vk%s\");" %
+                    stmts.append("table->%s = (PFN_vk%s) gpa(device, \"vk%s\");" %
                         (proto.name, proto.name, proto.name))
-            func.append("static inline void %s_initialize_dispatch_table(VkLayerDispatchTable *table,"
+            func.append("static inline void %s_init_device_dispatch_table(VkDevice device,"
                 % self.prefix)
-            func.append("%s                                              const VkBaseLayerObject *devw)"
+            func.append("%s                                               VkLayerDispatchTable *table,"
+                % (" " * len(self.prefix)))
+            func.append("%s                                               PFN_vkGetDeviceProcAddr gpa)"
                 % (" " * len(self.prefix)))
         else:
-            # GPA has to be first one and uses wrapped object
-            stmts.append("VkInstance instance = (VkInstance) instw->nextObject;")
-            stmts.append("PFN_vkGetInstanceProcAddr gpa = (PFN_vkGetInstanceProcAddr) instw->pGPA;")
-            stmts.append("VkInstance baseInstance = (VkInstance) instw->baseObject;")
-            stmts.append("// GPA has to be first entry inited and uses wrapped object since it triggers init")
             stmts.append("table->GetInstanceProcAddr =(PFN_vkGetInstanceProcAddr)  gpa(instance,\"vkGetInstanceProcAddr\");")
             for proto in self.protos:
-                if proto.name != "CreateInstance"  and proto.params[0].ty != "VkInstance" and proto.params[0].ty != "VkPhysicalDevice":
+                if proto.params[0].ty != "VkInstance" and proto.params[0].ty != "VkPhysicalDevice":
                     continue
                 if proto.name == "CreateDevice":
                     continue
                 if proto.name != "GetInstanceProcAddr" and 'KHR' not in proto.name:
-                    stmts.append("table->%s = (PFN_vk%s) gpa(baseInstance, \"vk%s\");" %
+                    stmts.append("table->%s = (PFN_vk%s) gpa(instance, \"vk%s\");" %
                           (proto.name, proto.name, proto.name))
-            func.append("static inline void %s_init_instance_dispatch_table(VkLayerInstanceDispatchTable *table,"
-                % self.prefix)
-            func.append("%s                                              const VkBaseLayerObject *instw)"
-                % (" " * len(self.prefix)))
+            func.append("static inline void %s_init_instance_dispatch_table(" % self.prefix)
+            func.append("%s        VkInstance instance," % (" " * len(self.prefix)))
+            func.append("%s        VkLayerInstanceDispatchTable *table," % (" " * len(self.prefix)))
+            func.append("%s        PFN_vkGetInstanceProcAddr gpa)" % (" " * len(self.prefix)))
         func.append("{")
         func.append("    %s" % "\n    ".join(stmts))
         func.append("}")

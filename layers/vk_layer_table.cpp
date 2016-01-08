@@ -100,9 +100,9 @@ VkLayerDispatchTable *get_dispatch_table(device_table_map &map, void* object)
     device_table_map::const_iterator it = map.find((void *) key);
 #if DISPATCH_MAP_DEBUG
     if (it != map.end()) {
-        fprintf(stderr, "instance_dispatch_table: map: %p, object: %p, key: %p, table: %p\n", &tableInstanceMap, object, key, it->second);
+        fprintf(stderr, "device_dispatch_table: map: %p, object: %p, key: %p, table: %p\n", &tableInstanceMap, object, key, it->second);
     } else {
-        fprintf(stderr, "instance_dispatch_table: map: %p, object: %p, key: %p, table: UNKNOWN\n", &tableInstanceMap, object, key);
+        fprintf(stderr, "device_dispatch_table: map: %p, object: %p, key: %p, table: UNKNOWN\n", &tableInstanceMap, object, key);
     }
 #endif
     assert(it != map.end() && "Not able to find device dispatch entry");
@@ -125,20 +125,22 @@ VkLayerInstanceDispatchTable *get_dispatch_table(instance_table_map &map, void* 
     return it->second;
 }
 
-VkLayerInstanceCreateInfo *get_chain_info(const VkInstanceCreateInfo *pCreateInfo)
+VkLayerInstanceCreateInfo *get_chain_info(const VkInstanceCreateInfo *pCreateInfo, VkLayerFunction func)
 {
     VkLayerInstanceCreateInfo *chain_info = (VkLayerInstanceCreateInfo *) pCreateInfo->pNext;
-    while (chain_info && chain_info->sType != VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO) {
+    while (chain_info && !(chain_info->sType == VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO
+           && chain_info->function == func)) {
         chain_info = (VkLayerInstanceCreateInfo *) chain_info->pNext;
     }
     assert(chain_info != NULL);
     return chain_info;
 }
 
-VkLayerDeviceCreateInfo *get_chain_info(const VkDeviceCreateInfo *pCreateInfo)
+VkLayerDeviceCreateInfo *get_chain_info(const VkDeviceCreateInfo *pCreateInfo, VkLayerFunction func)
 {
     VkLayerDeviceCreateInfo *chain_info = (VkLayerDeviceCreateInfo *) pCreateInfo->pNext;
-    while (chain_info && chain_info->sType != VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO) {
+    while (chain_info && !(chain_info->sType == VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO
+           && chain_info->function == func)) {
         chain_info = (VkLayerDeviceCreateInfo *) chain_info->pNext;
     }
     assert(chain_info != NULL);
@@ -152,67 +154,64 @@ VkLayerDeviceCreateInfo *get_chain_info(const VkDeviceCreateInfo *pCreateInfo)
  *    Device -> CommandBuffer or Queue
  * If use the object themselves as key to map then implies Create entrypoints have to be intercepted
  * and a new key inserted into map */
-VkLayerInstanceDispatchTable * initInstanceTable(instance_table_map &map, const VkBaseLayerObject *instancew)
+VkLayerInstanceDispatchTable * initInstanceTable(VkInstance instance, const PFN_vkGetInstanceProcAddr gpa, instance_table_map &map)
 {
     VkLayerInstanceDispatchTable *pTable;
-    assert(instancew);
-    VkLayerInstanceDispatchTable **ppDisp = (VkLayerInstanceDispatchTable **) instancew->baseObject;
+    dispatch_key key = get_dispatch_key(instance);
+    instance_table_map::const_iterator it = map.find((void *) key);
 
-    std::unordered_map<void *, VkLayerInstanceDispatchTable *>::const_iterator it = map.find((void *) *ppDisp);
     if (it == map.end())
     {
         pTable =  new VkLayerInstanceDispatchTable;
-        map[(void *) *ppDisp] = pTable;
+        map[(void *) key] = pTable;
 #if DISPATCH_MAP_DEBUG
-        fprintf(stderr, "New, Instance: map: %p, base object: %p, key: %p, table: %p\n", &map, instancew, *ppDisp, pTable);
+        fprintf(stderr, "New, Instance: map: %p, key: %p, table: %p\n", &map, key, pTable);
 #endif
     } else
     {
 #if DISPATCH_MAP_DEBUG
-        fprintf(stderr, "Instance: map: %p, base object: %p, key: %p, table: %p\n", &map, instancew, *ppDisp, it->second);
+        fprintf(stderr, "Instance: map: %p, key: %p, table: %p\n", &map, key, it->second);
 #endif
         return it->second;
     }
 
-    layer_init_instance_dispatch_table(pTable, instancew);
+    layer_init_instance_dispatch_table(instance, pTable, gpa);
 
     return pTable;
 }
 
-VkLayerInstanceDispatchTable * initInstanceTable(const VkBaseLayerObject *instancew)
+VkLayerInstanceDispatchTable * initInstanceTable(VkInstance instance, const PFN_vkGetInstanceProcAddr gpa)
 {
-    return initInstanceTable(tableInstanceMap, instancew);
+    return initInstanceTable(instance, gpa, tableInstanceMap);
 }
 
-VkLayerDispatchTable * initDeviceTable(device_table_map &map, const VkBaseLayerObject *devw)
+VkLayerDispatchTable * initDeviceTable(VkDevice device, const PFN_vkGetDeviceProcAddr gpa, device_table_map &map)
 {
-    VkLayerDispatchTable *layer_device_table = NULL;
-    assert(devw);
-    VkLayerDispatchTable **ppDisp = (VkLayerDispatchTable **) (devw->baseObject);
-    VkLayerDispatchTable *base_device_table = *ppDisp;
+    VkLayerDispatchTable *pTable;
+    dispatch_key key = get_dispatch_key(device);
+    device_table_map::const_iterator it = map.find((void *) key);
 
-    std::unordered_map<void *, VkLayerDispatchTable *>::const_iterator it = map.find((void *) base_device_table);
     if (it == map.end())
     {
-        layer_device_table =  new VkLayerDispatchTable;
-        map[(void *) base_device_table] = layer_device_table;
+        pTable =  new VkLayerDispatchTable;
+        map[(void *) key] = pTable;
 #if DISPATCH_MAP_DEBUG
-        fprintf(stderr, "New, Device: map: %p, base object: %p, key: %p, table: %p\n", &map, devw, *ppDisp, layer_device_table);
+        fprintf(stderr, "New, Device: map: %p, key: %p, table: %p\n", &map, key, pTable);
 #endif
     } else
     {
 #if DISPATCH_MAP_DEBUG
-        fprintf(stderr, "Device: map: %p, base object: %p, key: %p, table: %p\n", &map, devw, *ppDisp, it->second);
+        fprintf(stderr, "Device: map: %p, key: %p, table: %p\n", &map, key, it->second);
 #endif
         return it->second;
     }
 
-    layer_initialize_dispatch_table(layer_device_table, devw);
+    layer_init_device_dispatch_table(device, pTable, gpa);
 
-    return layer_device_table;
+    return pTable;
 }
 
-VkLayerDispatchTable * initDeviceTable(const VkBaseLayerObject *devw)
+VkLayerDispatchTable * initDeviceTable(VkDevice device, const PFN_vkGetDeviceProcAddr gpa)
 {
-    return initDeviceTable(tableMap, devw);
+    return initDeviceTable(device, gpa, tableMap);
 }

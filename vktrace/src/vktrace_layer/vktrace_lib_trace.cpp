@@ -87,16 +87,19 @@ static layer_instance_data *initInstanceData(std::unordered_map<void *, layer_in
         return it->second;
     }
 
-    layer_init_instance_dispatch_table(&pTable->instTable, instancew);
+    // TODO: Convert to new init method
+//    layer_init_instance_dispatch_table(&pTable->instTable, instancew);
 
     return pTable;
 }
 
-static layer_device_data *initDeviceData(std::unordered_map<void *, layer_device_data *> &map, const VkBaseLayerObject *devw)
+static layer_device_data *initDeviceData(
+        VkDevice device,
+        const PFN_vkGetDeviceProcAddr gpa,
+        std::unordered_map<void *, layer_device_data *> &map)
 {
     layer_device_data *pTable;
-    assert(devw);
-    dispatch_key key = get_dispatch_key(devw->baseObject);
+    dispatch_key key = get_dispatch_key(device);
 
     std::unordered_map<void *, layer_device_data *>::const_iterator it = map.find(key);
     if (it == map.end())
@@ -108,7 +111,7 @@ static layer_device_data *initDeviceData(std::unordered_map<void *, layer_device
         return it->second;
     }
 
-    layer_initialize_dispatch_table(&pTable->devTable, devw);
+    layer_init_device_dispatch_table(device, &pTable->devTable, gpa);
 
     return pTable;
 }
@@ -350,6 +353,17 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateDescriptorPool(
     return result;
 }
 
+VkLayerDeviceCreateInfo *get_chain_info(const VkDeviceCreateInfo *pCreateInfo, VkLayerFunction func)
+{
+    VkLayerDeviceCreateInfo *chain_info = (VkLayerDeviceCreateInfo *) pCreateInfo->pNext;
+    while (chain_info && !(chain_info->sType == VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO
+           && chain_info->function == func)) {
+        chain_info = (VkLayerDeviceCreateInfo *) chain_info->pNext;
+    }
+    assert(chain_info != NULL);
+    return chain_info;
+}
+
 VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateDevice(
     VkPhysicalDevice physicalDevice,
     const VkDeviceCreateInfo* pCreateInfo,
@@ -361,9 +375,25 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateDevice(
     packet_vkCreateDevice* pPacket = NULL;
 
     CREATE_TRACE_PACKET(vkCreateDevice, get_struct_chain_size((void*)pCreateInfo) + sizeof(VkDevice));
-    result = mdd(*pDevice)->devTable.CreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
-    if (result == VK_SUCCESS)
-        ext_init_create_device(mdd(*pDevice), *pDevice, pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
+
+    VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
+    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) fpGetInstanceProcAddr(NULL, "vkCreateDevice");
+    if (fpCreateDevice == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
+    if (result == VK_SUCCESS) {
+        // Setup device dispatch table
+        ext_init_create_device(mdd(*pDevice), *pDevice, fpGetDeviceProcAddr, pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
+    }
 
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCreateDevice(pHeader);
@@ -408,6 +438,17 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateFramebuffer(
     return result;
 }
 
+VkLayerInstanceCreateInfo *get_chain_info(const VkInstanceCreateInfo *pCreateInfo, VkLayerFunction func)
+{
+    VkLayerInstanceCreateInfo *chain_info = (VkLayerInstanceCreateInfo *) pCreateInfo->pNext;
+    while (chain_info && chain_info->sType != VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO
+           && chain_info->function != func) {
+        chain_info = (VkLayerInstanceCreateInfo *) chain_info->pNext;
+    }
+    assert(chain_info != NULL);
+    return chain_info;
+}
+
 VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateInstance(
     const VkInstanceCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -421,8 +462,27 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateInstance(
     uint64_t vktraceStartTime = vktrace_get_time();
     SEND_ENTRYPOINT_ID(vkCreateInstance);
     startTime = vktrace_get_time();
-    result = mid(*pInstance)->instTable.CreateInstance(pCreateInfo, pAllocator, pInstance);
+
+//    result = mid(*pInstance)->instTable.CreateInstance(pCreateInfo, pAllocator, pInstance);
+    VkLayerInstanceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) fpGetInstanceProcAddr(NULL, "vkCreateInstance");
+    if (fpCreateInstance == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
     endTime = vktrace_get_time();
+
     if (result == VK_SUCCESS)
         ext_init_create_instance(mid(*pInstance), *pInstance, pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
 
@@ -1645,14 +1705,7 @@ VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vktraceGetDeviceProcAdd
 /* GDPA with no trace packet creation */
 VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetDeviceProcAddr(VkDevice device, const char* funcName)
 {
-    PFN_vkVoidFunction addr;
-    if (device == VK_NULL_HANDLE) {
-        return NULL;
-    }
-
-    /* loader uses this to force layer initialization; device object is wrapped */
     if (!strcmp("vkGetDeviceProcAddr", funcName)) {
-        initDeviceData(g_deviceDataMap, (VkBaseLayerObject *) device);
         if (gMessageStream != NULL) {
             return (PFN_vkVoidFunction) vktraceGetDeviceProcAddr;
         } else {
@@ -1660,10 +1713,14 @@ VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetDevicePro
         }
     }
 
+    if (device == VK_NULL_HANDLE) {
+        return NULL;
+    }
 
     layer_device_data  *devData = mdd(device);
     if (gMessageStream != NULL) {
 
+        PFN_vkVoidFunction addr;
         addr = layer_intercept_proc(funcName);
         if (addr)
             return addr;

@@ -29,6 +29,7 @@
 #include "vulkan/vk_layer.h"
 #include "vk_layer_extension_utils.h"
 #include "vk_enum_string_helper.h"
+#include "vk_layer_table.h"
 
 // Object Tracker ERROR codes
 typedef enum _OBJECT_TRACK_ERROR
@@ -689,22 +690,38 @@ explicit_CreateInstance(
     const VkAllocationCallbacks *pAllocator,
     VkInstance                  *pInstance)
 {
+    VkLayerInstanceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
-    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(object_tracker_instance_table_map, *pInstance);
-    VkResult result = pInstanceTable->CreateInstance(pCreateInfo, pAllocator, pInstance);
-
-    if (result == VK_SUCCESS) {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
-        my_data->report_data = debug_report_create_instance(
-                                   pInstanceTable,
-                                   *pInstance,
-                                   pCreateInfo->enabledExtensionCount,
-                                   pCreateInfo->ppEnabledExtensionNames);
-        createInstanceRegisterExtensions(pCreateInfo, *pInstance);
-
-        initObjectTracker(my_data, pAllocator);
-        create_instance(*pInstance, *pInstance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT);
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) fpGetInstanceProcAddr(NULL, "vkCreateInstance");
+    if (fpCreateInstance == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
+
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+    initInstanceTable(*pInstance, fpGetInstanceProcAddr, object_tracker_instance_table_map);
+    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(object_tracker_instance_table_map, *pInstance);
+
+    my_data->report_data = debug_report_create_instance(
+                               pInstanceTable,
+                               *pInstance,
+                               pCreateInfo->enabledExtensionCount,
+                               pCreateInfo->ppEnabledExtensionNames);
+
+    initObjectTracker(my_data, pAllocator);
+    createInstanceRegisterExtensions(pCreateInfo, *pInstance);
+
+    create_instance(*pInstance, *pInstance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT);
+
     return result;
 }
 
@@ -730,15 +747,35 @@ explicit_CreateDevice(
     VkDevice                 *pDevice)
 {
     loader_platform_thread_lock_mutex(&objLock);
-    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(object_tracker_device_table_map, *pDevice);
-    VkResult result = pDeviceTable->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
-    if (result == VK_SUCCESS) {
-        layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
-        layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
-        my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
-        create_device(*pDevice, *pDevice, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT);
-        createDeviceRegisterExtensions(pCreateInfo, *pDevice);
+    VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
+    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) fpGetInstanceProcAddr(NULL, "vkCreateDevice");
+    if (fpCreateDevice == NULL) {
+        loader_platform_thread_unlock_mutex(&objLock);
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
+
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    VkResult result = fpCreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
+    if (result != VK_SUCCESS) {
+        loader_platform_thread_unlock_mutex(&objLock);
+        return result;
+    }
+
+    layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
+    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+    my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
+
+    initDeviceTable(*pDevice, fpGetDeviceProcAddr, object_tracker_device_table_map);
+
+    createDeviceRegisterExtensions(pCreateInfo, *pDevice);
+
+    create_device(*pDevice, *pDevice, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT);
 
     loader_platform_thread_unlock_mutex(&objLock);
     return result;

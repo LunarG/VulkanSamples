@@ -80,28 +80,22 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL multi1CreateGraphicsPipelines(
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL multi1GetDeviceProcAddr(VkDevice device, const char* pName)
 {
-
-    if (device == NULL)
-        return NULL;
-
-    /* loader uses this to force layer initialization; device object is wrapped */
-    if (!strcmp(pName, "multi1GetDeviceProcAddr") || !strcmp(pName, "vkGetDeviceProcAddr")) {
-        initDeviceTable(multi1_device_table_map, (const VkBaseLayerObject *) device);
+    if (!strcmp(pName, "multi1GetDeviceProcAddr") || !strcmp(pName, "vkGetDeviceProcAddr"))
         return (PFN_vkVoidFunction) multi1GetDeviceProcAddr;
-    }
-
     if (!strcmp("vkDestroyDevice", pName))
         return (PFN_vkVoidFunction) multi1DestroyDevice;
     if (!strcmp("vkCreateSampler", pName))
         return (PFN_vkVoidFunction) multi1CreateSampler;
     if (!strcmp("vkCreateGraphicsPipelines", pName))
         return (PFN_vkVoidFunction) multi1CreateGraphicsPipelines;
-    else {
-        VkLayerDispatchTable *pTable = get_dispatch_table(multi1_device_table_map, device);
-        if (pTable->GetDeviceProcAddr == NULL)
-            return NULL;
-        return pTable->GetDeviceProcAddr(device, pName);
-    }
+
+    if (device == NULL)
+        return NULL;
+
+    VkLayerDispatchTable *pTable = get_dispatch_table(multi1_device_table_map, device);
+    if (pTable->GetDeviceProcAddr == NULL)
+        return NULL;
+    return pTable->GetDeviceProcAddr(device, pName);
 }
 
 
@@ -154,15 +148,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL multi2DestroyInstance(VkInstance inst
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL multi2GetInstanceProcAddr(VkInstance inst, const char* pName)
 {
-    if (inst == NULL)
-        return NULL;
-
-    /* loader uses this to force layer initialization; device object is wrapped */
-    if (!strcmp(pName, "multi2GetInstanceProcAddr") || !strcmp(pName, "vkGetInstanceProcAddr")) {
-        initInstanceTable(multi2_instance_table_map, (const VkBaseLayerObject *) inst);
+    if (!strcmp(pName, "multi2GetInstanceProcAddr") || !strcmp(pName, "vkGetInstanceProcAddr"))
         return (PFN_vkVoidFunction) multi2GetInstanceProcAddr;
-    }
-
     if (!strcmp("vkEnumeratePhysicalDevices", pName))
         return (PFN_vkVoidFunction) multi2EnumeratePhysicalDevices;
     if (!strcmp("GetPhysicalDeviceProperties", pName))
@@ -171,12 +158,14 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL multi2GetInstanceProcAd
         return (PFN_vkVoidFunction) multi2GetPhysicalDeviceFeatures;
     if (!strcmp("vkDestroyInstance", pName))
         return (PFN_vkVoidFunction) multi2DestroyInstance;
-    else {
-        VkLayerInstanceDispatchTable *pTable = get_dispatch_table(multi2_instance_table_map, inst);
-        if (pTable->GetInstanceProcAddr == NULL)
-            return NULL;
-        return pTable->GetInstanceProcAddr(inst, pName);
-    }
+
+    if (inst == NULL)
+        return NULL;
+
+    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(multi2_instance_table_map, inst);
+    if (pTable->GetInstanceProcAddr == NULL)
+        return NULL;
+    return pTable->GetInstanceProcAddr(inst, pName);
 }
 
 #ifdef __cplusplus

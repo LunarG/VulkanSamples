@@ -95,6 +95,32 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionPropert
     }
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL basic_CreateInstance(
+    const VkInstanceCreateInfo* pCreateInfo,
+    const VkAllocationCallbacks* pAllocator,
+    VkInstance* pInstance)
+{
+    VkLayerInstanceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) fpGetInstanceProcAddr(NULL, "vkCreateInstance");
+    if (fpCreateInstance == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
+    if (result != VK_SUCCESS)
+        return result;
+
+    initInstanceTable(*pInstance, fpGetInstanceProcAddr);
+
+    return result;
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL basic_EnumeratePhysicalDevices(
                                             VkInstance instance,
                                             uint32_t* pPhysicalDeviceCount,
@@ -106,11 +132,31 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL basic_EnumeratePhysicalDevices(
     return result;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL basic_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL basic_CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
 {
-    printf("At start of wrapped vkCreateDevice() call w/ gpu: %p\n", (void*)gpu);
-    VkResult result = device_dispatch_table(*pDevice)->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
-    printf("Completed wrapped vkCreateDevice() call w/ pDevice, Device %p: %p\n", (void*)pDevice, (void *) *pDevice);
+    printf("VK_LAYER_LUNARG_Basic: At start of vkCreateDevice() call w/ gpu: %p\n", (void*)physicalDevice);
+
+    VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
+    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) fpGetInstanceProcAddr(NULL, "vkCreateDevice");
+    if (fpCreateDevice == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    VkResult result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    initDeviceTable(*pDevice, fpGetDeviceProcAddr);
+
+    printf("VK_LAYER_LUNARG_Basic: Completed vkCreateDevice() call w/ pDevice, Device %p: %p\n", (void*)pDevice, (void *) *pDevice);
     return result;
 }
 
@@ -139,50 +185,42 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL basic_GetPhysicalDeviceFormatProperti
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* pName)
 {
-    if (device == NULL)
-        return NULL;
-
-    /* loader uses this to force layer initialization; device object is wrapped */
-    if (!strcmp("vkGetDeviceProcAddr", pName)) {
-        initDeviceTable((const VkBaseLayerObject *) device);
+    if (!strcmp("vkGetDeviceProcAddr", pName))
         return (PFN_vkVoidFunction) vkGetDeviceProcAddr;
-    }
-
-    if (!strcmp("vkCreateDevice", pName))
-        return (PFN_vkVoidFunction) basic_CreateDevice;
     if (!strcmp("vkDestroyDevice", pName))
         return (PFN_vkVoidFunction) basic_DestroyDevice;
     if (!strcmp("vkLayerExtension1", pName))
         return (PFN_vkVoidFunction) vkLayerExtension1;
-    else
-    {
-        if (device_dispatch_table(device)->GetDeviceProcAddr == NULL)
-            return NULL;
-        return device_dispatch_table(device)->GetDeviceProcAddr(device, pName);
-    }
+
+    if (device == NULL)
+        return NULL;
+
+    if (device_dispatch_table(device)->GetDeviceProcAddr == NULL)
+        return NULL;
+    return device_dispatch_table(device)->GetDeviceProcAddr(device, pName);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* pName)
 {
-    if (instance == NULL)
-        return NULL;
-
-    /* loader uses this to force layer initialization; instance object is wrapped */
-    if (!strcmp("vkGetInstanceProcAddr", pName)) {
-        initInstanceTable((const VkBaseLayerObject *) instance);
+    if (!strcmp("vkGetInstanceProcAddr", pName))
         return (PFN_vkVoidFunction) vkGetInstanceProcAddr;
-    }
-
     if (!strcmp("vkEnumerateDeviceLayerProperties", pName))
         return (PFN_vkVoidFunction) vkEnumerateDeviceLayerProperties;
     if (!strcmp("vkEnumerateDeviceExtensionProperties", pName))
         return (PFN_vkVoidFunction) vkEnumerateDeviceExtensionProperties;
     if (!strcmp("vkGetPhysicalDeviceFormatProperties", pName))
         return (PFN_vkVoidFunction) basic_GetPhysicalDeviceFormatProperties;
+    if (!strcmp("vkCreateInstance", pName))
+        return (PFN_vkVoidFunction) basic_CreateInstance;
     if (!strcmp("vkDestroyInstance", pName))
         return (PFN_vkVoidFunction) basic_DestroyInstance;
+    if (!strcmp("vkCreateDevice", pName))
+        return (PFN_vkVoidFunction) basic_CreateDevice;
     if (!strcmp("vkEnumeratePhysicalDevices", pName))
         return (PFN_vkVoidFunction) basic_EnumeratePhysicalDevices;
+
+    if (instance == NULL)
+        return NULL;
 
     if (instance_dispatch_table(instance)->GetInstanceProcAddr == NULL)
         return NULL;

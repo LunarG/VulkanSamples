@@ -450,7 +450,7 @@ static void initVktraceSnapshot(void)
     fpNextGPA = pCurObj->pGPA;
     assert(fpNextGPA);
 
-    layer_initialize_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);
+    layer_init_device_dispatch_table(&nextTable, fpNextGPA, (VkPhysicalDevice) pCurObj->nextObject);
     if (!objLockInitialized)
     {
         // TODO/TBD: Need to delete this mutex sometime.  How???

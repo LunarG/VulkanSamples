@@ -40,5 +40,6 @@ void ext_init_create_instance(
 void ext_init_create_device(
         layer_device_data               *devData,
         VkDevice                        dev,
+        PFN_vkGetDeviceProcAddr         gpa,
         uint32_t                        extension_count,
         const char*const*               ppEnabledExtensions);

@@ -26,7 +26,6 @@ typedef struct VkBaseLayerObject_
 typedef struct VkLayerDispatchTable_
 {
     PFN_vkGetDeviceProcAddr GetDeviceProcAddr;
-    PFN_vkCreateDevice CreateDevice;
     PFN_vkDestroyDevice DestroyDevice;
     PFN_vkGetDeviceQueue GetDeviceQueue;
     PFN_vkQueueSubmit QueueSubmit;
@@ -159,6 +158,7 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
     PFN_vkCreateInstance CreateInstance;
     PFN_vkDestroyInstance DestroyInstance;
+    PFN_vkCreateDevice CreateDevice;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
     PFN_vkGetPhysicalDeviceFeatures GetPhysicalDeviceFeatures;
     PFN_vkGetPhysicalDeviceImageFormatProperties GetPhysicalDeviceImageFormatProperties;
@@ -223,15 +223,51 @@ typedef enum VkLayerDbgAction_
 
 // ------------------------------------------------------------------------------------------------
 // CreateInstance and CreateDevice support structures
+
+typedef enum VkLayerFunction_
+{
+    VK_LAYER_LINK_INFO = 0,
+    VK_LAYER_DEVICE_INFO = 1,
+    VK_LAYER_INSTANCE_INFO = 2
+} VkLayerFunction;
+
+/*
+ * When creating the device chain the loader needs to pass
+ * down information about it's device structure needed at
+ * the end of the chain. Passing the data via the
+ * VkLayerDeviceInfo avoids issues with finding the
+ * exact instance being used.
+ */
+typedef struct VkLayerInstanceInfo_ {
+    void *instance_info;
+    PFN_vkGetInstanceProcAddr pfnNextGetInstanceProcAddr;
+} VkLayerInstanceInfo;
+
 typedef struct VkLayerInstanceLink_ {
     struct VkLayerInstanceLink_* pNext;
     PFN_vkGetInstanceProcAddr pfnNextGetInstanceProcAddr;
 } VkLayerInstanceLink;
 
+/*
+ * When creating the device chain the loader needs to pass
+ * down information about it's device structure needed at
+ * the end of the chain. Passing the data via the
+ * VkLayerDeviceInfo avoids issues with finding the
+ * exact instance being used.
+ */
+typedef struct VkLayerDeviceInfo_ {
+    void *device_info;
+    PFN_vkGetInstanceProcAddr pfnNextGetInstanceProcAddr;
+} VkLayerDeviceInfo;
+
 typedef struct {
     VkStructureType sType; // VK_STRUCTURE_TYPE_LAYER_INSTANCE_CREATE_INFO
     const void* pNext;
-    VkLayerInstanceLink* pLayerInfo;
+    VkLayerFunction function;
+    union {
+        VkLayerInstanceLink* pLayerInfo;
+        VkLayerInstanceInfo instanceInfo;
+    } u;
 } VkLayerInstanceCreateInfo;
 
 typedef struct VkLayerDeviceLink_ {
@@ -243,7 +279,11 @@ typedef struct VkLayerDeviceLink_ {
 typedef struct {
     VkStructureType sType; // VK_STRUCTURE_TYPE_LAYER_DEVICE_CREATE_INFO
     const void* pNext;
-    VkLayerDeviceLink* pLayerInfo;
+    VkLayerFunction function;
+    union {
+        VkLayerDeviceLink* pLayerInfo;
+        VkLayerDeviceInfo deviceInfo;
+    } u;
 } VkLayerDeviceCreateInfo;
 
 // ------------------------------------------------------------------------------------------------

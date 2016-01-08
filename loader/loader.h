@@ -241,6 +241,8 @@ struct loader_instance {
 
     struct loader_layer_list activated_layer_list;
 
+    VkInstance instance;
+
     bool debug_report_enabled;
     VkLayerDbgFunctionNode *DbgFunctionHead;
 
@@ -425,6 +427,12 @@ VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceMemoryProperties (
         VkPhysicalDevice physicalDevice,
         VkPhysicalDeviceMemoryProperties * pProperties);
 
+VkResult loader_create_device_terminator(
+        VkPhysicalDevice                            physicalDevice,
+        const VkDeviceCreateInfo*                   pCreateInfo,
+        const VkAllocationCallbacks*                pAllocator,
+        VkDevice*                                   pDevice);
+
 VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
         VkPhysicalDevice                        gpu,
         const VkDeviceCreateInfo*               pCreateInfo,
@@ -490,7 +498,11 @@ VkResult loader_enable_instance_layers(
         const VkInstanceCreateInfo *pCreateInfo,
         const struct loader_layer_list *instance_layers);
 void loader_deactivate_instance_layers(struct loader_instance *instance);
-uint32_t loader_activate_instance_layers(struct loader_instance *inst);
+
+VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
+                                      const VkAllocationCallbacks* pAllocator,
+                                      struct loader_instance *inst);
+
 void loader_activate_instance_layer_extensions(struct loader_instance *inst, VkInstance created_inst);
 
 void* loader_heap_alloc(

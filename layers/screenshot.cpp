@@ -406,20 +406,35 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     const VkAllocationCallbacks* pAllocator,
     VkDevice                 *pDevice)
 {
-    VkLayerDispatchTable *pDisp  = get_dispatch_table(screenshot_device_table_map, *pDevice);
-    VkResult result = pDisp->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
+    VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
-    if (result == VK_SUCCESS) {
-        init_screenshot();
-        createDeviceRegisterExtensions(pCreateInfo, *pDevice);
-        // Create a mapping from a device to a physicalDevice
-        if (deviceMap[*pDevice] == NULL)
-        {
-            DeviceMapStruct *deviceMapElem = new DeviceMapStruct;
-            deviceMap[*pDevice] = deviceMapElem;
-        }
-        deviceMap[*pDevice]->physicalDevice = gpu;
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
+    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) fpGetInstanceProcAddr(NULL, "vkCreateDevice");
+    if (fpCreateDevice == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
+
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    VkResult result = fpCreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    initDeviceTable(*pDevice, fpGetDeviceProcAddr, screenshot_device_table_map);
+
+    init_screenshot();
+    createDeviceRegisterExtensions(pCreateInfo, *pDevice);
+    // Create a mapping from a device to a physicalDevice
+    if (deviceMap[*pDevice] == NULL)
+    {
+        DeviceMapStruct *deviceMapElem = new DeviceMapStruct;
+        deviceMap[*pDevice] = deviceMapElem;
+    }
+    deviceMap[*pDevice]->physicalDevice = gpu;
 
     return result;
 }
@@ -743,23 +758,19 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
     VkDevice         dev,
     const char       *funcName)
 {
-    if (dev == NULL) {
-        return NULL;
-    }
-
-    /* loader uses this to force layer initialization; device object is wrapped */
     if (!strcmp(funcName, "vkGetDeviceProcAddr")) {
-        initDeviceTable(screenshot_device_table_map, (const VkBaseLayerObject *) dev);
         return (PFN_vkVoidFunction)vkGetDeviceProcAddr;
     }
-    if (!strcmp(funcName, "vkCreateDevice"))
-        return (PFN_vkVoidFunction) vkCreateDevice;
 
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (PFN_vkVoidFunction) vkGetDeviceQueue;
 
     if (!strcmp(funcName, "vkCreateCommandPool"))
         return (PFN_vkVoidFunction) vkCreateCommandPool;
+
+    if (dev == NULL) {
+        return NULL;
+    }
 
     VkLayerDispatchTable *pDisp =  get_dispatch_table(screenshot_device_table_map, dev);
     if (deviceExtMap.size() != 0 && deviceExtMap[pDisp].wsi_enabled)
@@ -780,20 +791,18 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
-    if (instance == VK_NULL_HANDLE) {
-        return NULL;
-    }
-
-    /* loader uses this to force layer initialization; instance object is wrapped */
-    if (!strcmp("vkGetInstanceProcAddr", funcName)) {
-        initInstanceTable((const VkBaseLayerObject *) instance);
+    if (!strcmp("vkGetInstanceProcAddr", funcName))
         return (PFN_vkVoidFunction) vkGetInstanceProcAddr;
-    }
-
+    if (!strcmp(funcName, "vkCreateDevice"))
+        return (PFN_vkVoidFunction) vkCreateDevice;
     if (!strcmp(funcName, "vkEnumeratePhysicalDevices"))
 		return (PFN_vkVoidFunction)vkEnumeratePhysicalDevices;
     if (!strcmp(funcName, "vkEnumerateDeviceExtensionProperties"))
 		return (PFN_vkVoidFunction)vkEnumerateDeviceExtensionProperties;
+
+    if (instance == VK_NULL_HANDLE) {
+        return NULL;
+    }
 
     VkLayerInstanceDispatchTable* pTable = instance_dispatch_table(instance);
     if (pTable->GetInstanceProcAddr == NULL)
