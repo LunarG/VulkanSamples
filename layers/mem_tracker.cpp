@@ -1344,7 +1344,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(
             }
         }
         for (uint32_t i = 0; i < submit->signalSemaphoreCount; i++) {
-            VkSemaphore sem = submit->pWaitSemaphores[i];
+            VkSemaphore sem = submit->pSignalSemaphores[i];
 
             if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {
                 if (my_data->semaphoreMap[sem] != MEMTRACK_SEMAPHORE_STATE_UNSET) {
