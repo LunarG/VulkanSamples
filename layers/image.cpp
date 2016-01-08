@@ -506,11 +506,33 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device
             skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
         }
 
-        // Validate correct image aspect bits for desired formats and format consistency
         VkFormat           imageFormat = imageEntry->second.format;
         VkFormat           ivciFormat  = pCreateInfo->format;
         VkImageAspectFlags aspectMask  = pCreateInfo->subresourceRange.aspectMask;
 
+        // Validate VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT state
+        if (pCreateInfo->flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) {
+            // Format MUST be compatible (in the same format compatibility class) as the format the image was created with
+            if (vk_format_get_compatibility_class(imageFormat) != vk_format_get_compatibility_class(ivciFormat)) {
+                std::stringstream ss;
+                ss << "vkCreateImageView(): ImageView format " << string_VkFormat(ivciFormat) << " is not in the same format compatibility class as image ("    <<
+                    (uint64_t)pCreateInfo->image << ")  format " << string_VkFormat(imageFormat) << ".  Images created with the VK_IMAGE_CREATE_MUTABLE_FORMAT BIT " <<
+                    "can support ImageViews with differing formats but they must be in the same compatibility class.";
+                skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                    IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
+            }
+        } else {
+            // Format MUST be IDENTICAL to the format the image was created with
+            if (imageFormat != ivciFormat) {
+                std::stringstream ss;
+                ss << "vkCreateImageView() format " << string_VkFormat(ivciFormat) << " differs from image " << (uint64_t)pCreateInfo->image << " format " <<
+                    string_VkFormat(imageFormat) << ".  Formats MUST be IDENTICAL unless VK_IMAGE_CREATE_MUTABLE_FORMAT BIT was set on image creation.";
+                skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                    IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
+            }
+        }
+
+        // Validate correct image aspect bits for desired formats and format consistency
         if (vk_format_is_color(imageFormat)) {
             if ((aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) != VK_IMAGE_ASPECT_COLOR_BIT) {
                 std::stringstream ss;
@@ -576,8 +598,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device
         }
     }
 
-    if (skipCall)
+    if (skipCall) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
 
     VkResult result = device_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pAllocator, pView);
     return result;
