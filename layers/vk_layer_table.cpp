@@ -125,6 +125,26 @@ VkLayerInstanceDispatchTable *get_dispatch_table(instance_table_map &map, void* 
     return it->second;
 }
 
+VkLayerInstanceCreateInfo *get_chain_info(const VkInstanceCreateInfo *pCreateInfo)
+{
+    VkLayerInstanceCreateInfo *chain_info = (VkLayerInstanceCreateInfo *) pCreateInfo->pNext;
+    while (chain_info && chain_info->sType != VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO) {
+        chain_info = (VkLayerInstanceCreateInfo *) chain_info->pNext;
+    }
+    assert(chain_info != NULL);
+    return chain_info;
+}
+
+VkLayerDeviceCreateInfo *get_chain_info(const VkDeviceCreateInfo *pCreateInfo)
+{
+    VkLayerDeviceCreateInfo *chain_info = (VkLayerDeviceCreateInfo *) pCreateInfo->pNext;
+    while (chain_info && chain_info->sType != VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO) {
+        chain_info = (VkLayerDeviceCreateInfo *) chain_info->pNext;
+    }
+    assert(chain_info != NULL);
+    return chain_info;
+}
+
 /* Various dispatchable objects will use the same underlying dispatch table if they
  * are created from that "parent" object. Thus use pointer to dispatch table
  * as the key to these table maps.
