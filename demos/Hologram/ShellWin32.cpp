@@ -23,9 +23,9 @@ ShellWin32::~ShellWin32()
     game_.detach_shell();
 
     cleanup_vk();
-    FreeLibrary(lib_module_);
+    FreeLibrary(hmodule_);
 
-    DestroyWindow(win_);
+    DestroyWindow(hwnd_);
 }
 
 void ShellWin32::init_window()
@@ -35,7 +35,7 @@ void ShellWin32::init_window()
     hinstance_ = GetModuleHandle(nullptr);
 
     WNDCLASSEX win_class = {};
-    win_class.cbSize = sizeof(WMDCLASSEX);
+    win_class.cbSize = sizeof(WNDCLASSEX);
     win_class.style = CS_HREDRAW | CS_VREDRAW;
     win_class.lpfnWndProc = window_proc;
     win_class.hInstance = hinstance_;
@@ -74,7 +74,7 @@ PFN_vkGetInstanceProcAddr ShellWin32::load_vk()
 #ifndef VULKAN_LOADER
 #define VULKAN_LOADER "vulkan-0.dll"
 #endif
-    mod = LoadLibrary(TEXT(VULKAN_LOADER));
+    mod = LoadLibrary("vulkan-0.dll");
     if (mod) {
         get_proc = reinterpret_cast<PFN_vkGetInstanceProcAddr>(GetProcAddress(
                     mod, "vkGetInstanceProcAddr"));
@@ -98,11 +98,11 @@ PFN_vkGetInstanceProcAddr ShellWin32::load_vk()
 VkSurfaceKHR ShellWin32::create_surface(VkInstance instance)
 {
     VkSurfaceKHR surface;
-    vk::assert_success(vk::CreateWin32SurfaceKHR(instance, hintance_, hwnd_, nullptr, &surface));
+    vk::assert_success(vk::CreateWin32SurfaceKHR(instance, hinstance_, hwnd_, nullptr, &surface));
     return surface;
 }
 
-LRESULT ShellWin32::handle_message(UINT msg, WPARAM wparam, LPARAM lparam)
+LRESULT ShellWin32::handle_message(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     switch (msg) {
     case WM_DESTROY:
@@ -117,15 +117,15 @@ LRESULT ShellWin32::handle_message(UINT msg, WPARAM wparam, LPARAM lparam)
         return 0;
     case WM_KEYUP:
         switch (wparam) {
-        case VK_ESC:
-            SendMessage(hwnd_, WM_CLOSE, 0, 0);
+        case VK_ESCAPE:
+            SendMessage(hwnd, WM_CLOSE, 0, 0);
             break;
         default:
             break;
         }
         return 0;
     default:
-        return DefWindowProc(hwnd_, msg, wparam, lparam);
+        return DefWindowProc(hwnd, msg, wparam, lparam);
     }
 }
 

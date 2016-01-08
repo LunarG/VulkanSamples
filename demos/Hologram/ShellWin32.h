@@ -20,9 +20,9 @@ private:
     static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
         ShellWin32 *shell = reinterpret_cast<ShellWin32 *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-        shell->handle_message(uMsg, wParam, lParam);
+        return(shell->handle_message(hwnd, uMsg, wParam, lParam));
     }
-    LRESULT handle_message(UINT msg, WPARAM wparam, LPARAM lparam);
+    LRESULT handle_message(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 
     float get_time();
 
@@ -31,7 +31,7 @@ private:
     HINSTANCE hinstance_;
     HWND hwnd_;
 
-    HMODULE *hmodule_;
+    HMODULE hmodule_;
 };
 
 #endif // SHELLWIN32_H
