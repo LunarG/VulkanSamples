@@ -884,6 +884,22 @@ class StructWrapperGen:
                             else:
                                 sh_funcs.append('%sif (pStruct->sharingMode == VK_SHARING_MODE_CONCURRENT) {' % (indent))
                             indent += '    '
+                        if (stp_list[index]['name'] == 'pImageInfo'):
+                            sh_funcs.append('%sif ((pStruct->descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER)                ||' % (indent))
+                            sh_funcs.append('%s    (pStruct->descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) ||' % (indent))
+                            sh_funcs.append('%s    (pStruct->descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)          ||' % (indent))
+                            sh_funcs.append('%s    (pStruct->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE))           {' % (indent))
+                            indent += '    '
+                        elif (stp_list[index]['name'] == 'pBufferInfo'):
+                            sh_funcs.append('%sif ((pStruct->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)         ||' % (indent))
+                            sh_funcs.append('%s    (pStruct->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)         ||' % (indent))
+                            sh_funcs.append('%s    (pStruct->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||' % (indent))
+                            sh_funcs.append('%s    (pStruct->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC))  {' % (indent))
+                            indent += '    '
+                        elif (stp_list[index]['name'] == 'pTexelBufferView'):
+                            sh_funcs.append('%sif ((pStruct->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) ||' % (indent))
+                            sh_funcs.append('%s    (pStruct->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER))  {' % (indent))
+                            indent += '    '
                         sh_funcs.append('%sif (pStruct->%s) {' % (indent, stp_list[index]['name']))
                         indent += '    '
                         sh_funcs.append('%sfor (uint32_t i = 0; i < %s; i++) {' % (indent, array_count))
@@ -921,7 +937,7 @@ class StructWrapperGen:
                         indent = indent[4:]
                         sh_funcs.append('%s}' % (indent))
                         #endif
-                        if (stp_list[index]['name'] == 'pQueueFamilyIndices'):
+                        if (stp_list[index]['name'] == 'pQueueFamilyIndices') or (stp_list[index]['name'] == 'pImageInfo') or (stp_list[index]['name'] == 'pBufferInfo') or (stp_list[index]['name'] == 'pTexelBufferView'):
                             indent = indent[4:]
                             sh_funcs.append('%s}' % (indent))
                     elif (stp_list[index]['ptr']):
