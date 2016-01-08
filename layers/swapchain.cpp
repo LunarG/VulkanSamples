@@ -1346,13 +1346,13 @@ static VkBool32 validateCreateSwapchainKHR(
         }
         // Validate pCreateInfo->imageArraySize against
         // VkSurfaceCapabilitiesKHR::maxImageArraySize:
-        if ((pCreateInfo->imageArrayLayers > 0) &&
+        if ((pCreateInfo->imageArrayLayers < 1) ||
             (pCreateInfo->imageArrayLayers > pCapabilities->maxImageArrayLayers)) {
             skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                                   SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_SIZE,
                                   "%s() called with a non-supported "
                                   "pCreateInfo->imageArraySize (i.e. %d).  "
-                                  "Maximum value is %d.",
+                                  "Minimum value is 1, maximum value is %d.",
                                   fn,
                                   pCreateInfo->imageArrayLayers,
                                   pCapabilities->maxImageArrayLayers);
