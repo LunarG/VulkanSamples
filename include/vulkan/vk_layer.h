@@ -222,4 +222,29 @@ typedef enum VkLayerDbgAction_
 } VkLayerDbgAction;
 
 // ------------------------------------------------------------------------------------------------
+// CreateInstance and CreateDevice support structures
+typedef struct VkLayerInstanceLink_ {
+    struct VkLayerInstanceLink_* pNext;
+    PFN_vkGetInstanceProcAddr pfnNextGetInstanceProcAddr;
+} VkLayerInstanceLink;
+
+typedef struct {
+    VkStructureType sType; // VK_STRUCTURE_TYPE_LAYER_INSTANCE_CREATE_INFO
+    const void* pNext;
+    VkLayerInstanceLink* pLayerInfo;
+} VkLayerInstanceCreateInfo;
+
+typedef struct VkLayerDeviceLink_ {
+    struct VkLayerDeviceLink_* pNext;
+    PFN_vkGetInstanceProcAddr pfnNextGetInstanceProcAddr;
+    PFN_vkGetDeviceProcAddr pfnNextGetDeviceProcAddr;
+} VkLayerDeviceLink;
+
+typedef struct {
+    VkStructureType sType; // VK_STRUCTURE_TYPE_LAYER_DEVICE_CREATE_INFO
+    const void* pNext;
+    VkLayerDeviceLink* pLayerInfo;
+} VkLayerDeviceCreateInfo;
+
+// ------------------------------------------------------------------------------------------------
 // API functions
