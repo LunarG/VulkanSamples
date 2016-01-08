@@ -1938,7 +1938,7 @@ verifyFenceStatus(
     auto pFenceInfo = my_data->fenceMap.find(fence);
     if (pFenceInfo != my_data->fenceMap.end()) {
         if (pFenceInfo->second.firstTimeFlag != VK_TRUE) {
-            if ((pFenceInfo->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT) & pFenceInfo->second.firstTimeFlag!= VK_TRUE) {
+            if ((pFenceInfo->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT) && pFenceInfo->second.firstTimeFlag != VK_TRUE) {
                 skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, (uint64_t) fence, __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                     "%s specified fence %#" PRIxLEAST64 " already in SIGNALED state.", apiCall, (uint64_t) fence);
             }
