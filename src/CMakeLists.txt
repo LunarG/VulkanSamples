@@ -3,6 +3,11 @@ set(SAMPLES_DATA_DIR ${SAMPLES_DATA_DIR} "${PROJECT_SOURCE_DIR}/data")
 set(SHADER_FILES ${SHADER_FILES} "")
 include_directories( ${SAMPLES_DATA_DIR} ${GLSLANG_PREFIX} ${GLMINC_PREFIX})
 
+# Additional includes for spirv-tools
+include_directories("${CMAKE_SOURCE_DIR}/../spirv-tools/include"
+                    "${CMAKE_SOURCE_DIR}/../spirv-tools/external/include")
+
+
 # function to build a single-source-file sample that uses glsl shaders;
 #   - assumes VULKAN_VERSION set (i.e. vk0.10)
 #   - assumes SAMPLE_GLSL_VERT_SHADERS and SAMPLE_GLSL_FRAG_SHADERS is set to
@@ -53,10 +58,10 @@ function(sampleWithSingleFile)
         set(SAMPLE_NAME ${VULKAN_VERSION}-${TARG})
         if(UNIX)
             add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}.cpp)
-            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD})
+            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD} ${SPIRV_TOOLS_LIBRARIES})
         else()
             add_executable(${SAMPLE_NAME} WIN32 ${SAMPLE_NAME}.cpp)
-            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${VULKAN_LOADER} ${WINLIBS})
+            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${VULKAN_LOADER} ${WINLIBS} ${SPIRV_TOOLS_LIBRARIES})
         endif()
     endforeach(TARG)
 endfunction(sampleWithSingleFile)
@@ -141,8 +146,10 @@ if (WIN32)
                              "${CMAKE_SOURCE_DIR}/../glslang/build/glslang/OSDependent/Windows/Release"
                              "${CMAKE_SOURCE_DIR}/../glslang/build/OGLCompilersDLL/Release"
                              "${CMAKE_SOURCE_DIR}/../glslang/build/SPIRV/Release" )
+    set (SPIRV_TOOLS_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../spirv-tools/build/Release")
 else()
     set (GLSLANG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/build/install/lib" "${CMAKE_SOURCE_DIR}/../x86_64/lib/glslang" )
+    set (SPIRV_TOOLS_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../spirv-tools/build" )
 endif()
 
 find_library(GLSLANG_LIB NAMES glslang
@@ -157,17 +164,23 @@ find_library(OSDependent_LIB NAMES OSDependent
 find_library(SPIRV_LIB NAMES SPIRV
              HINTS ${GLSLANG_SEARCH_PATH} )
 
+find_library(SPIRV_TOOLS_LIB NAMES SPIRV-Tools
+             HINTS ${SPIRV_TOOLS_SEARCH_PATH} )
+
 # On Windows, we must pair Debug and Release appropriately
 if (WIN32)
     set (GLSLANG_DEBUG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/build/glslang/Debug"
                                    "${CMAKE_SOURCE_DIR}/../glslang/build/glslang/OSDependent/Windows/Debug"
                                    "${CMAKE_SOURCE_DIR}/../glslang/build/OGLCompilersDLL/Debug"
                                    "${CMAKE_SOURCE_DIR}/../glslang/build/SPIRV/Debug")
+    set (SPIRV_TOOLS_DEBUG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../spirv-tools/build/Debug")
+
     add_library(glslang     STATIC IMPORTED)
     add_library(OGLCompiler STATIC IMPORTED)
     add_library(OSDependent STATIC IMPORTED)
     add_library(SPIRV       STATIC IMPORTED)
     add_library(Loader      STATIC IMPORTED)
+    add_library(SPIRV-Tools STATIC IMPORTED)
 
     find_library(GLSLANG_DLIB NAMES glslang
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
@@ -180,6 +193,8 @@ if (WIN32)
     find_library(LOADER_DLIB NAMES vulkan-0
                  HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader/Debug"
                        "${PROJECT_SOURCE_DIR}\\..\\Bin\\Debug" )
+    find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Tools
+                 HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH} )
 
     set_target_properties(glslang PROPERTIES
                          IMPORTED_LOCATION       "${GLSLANG_LIB}"
@@ -196,10 +211,15 @@ if (WIN32)
     set_target_properties(Loader PROPERTIES
                          IMPORTED_LOCATION       "${VULKAN_LOADER}"
                          IMPORTED_LOCATION_DEBUG "${LOADER_DLIB}")
+    set_target_properties(SPIRV-Tools PROPERTIES
+                         IMPORTED_LOCATION       "${SPIRV_TOOLS_LIB}"
+                         IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_DLIB}")
 
     set (GLSLANG_LIBRARIES glslang OGLCompiler OSDependent SPIRV Loader)
+    set (SPIRV_TOOLS_LIBRARIES SPIRV-Tools)
 else ()
     set (GLSLANG_LIBRARIES ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${SPIRV_LIB})
+    set (SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_LIB})
 endif()
 
 #
@@ -220,7 +240,8 @@ set (S_TARGETS instance device enumerate enumerate-adv
     instance_layer_extension_properties dbgcreatemsgcallback
     enable_validation_with_callback multiple_sets
     copyblitimage template separate_image_sampler
-    immutable_sampler push_constants)
+    immutable_sampler push_constants spirv_assembly
+    spirv_specialization)
 sampleWithSingleFile()
 
 # targets that use spv shaders
