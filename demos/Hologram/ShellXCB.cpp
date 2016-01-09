@@ -50,13 +50,10 @@ ShellXCB::ShellXCB(Game &game) : Shell(game)
 
     global_extensions_.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
     init_vk();
-
-    game_.attach_shell(*this);
 }
 
 ShellXCB::~ShellXCB()
-{ game_.detach_shell();
-
+{
     cleanup_vk();
 
     dlclose(lib_handle_);
@@ -242,6 +239,4 @@ void ShellXCB::run()
 
     xcb_unmap_window(c_, win_);
     xcb_flush(c_);
-
-    game_.detach_swapchain();
 }

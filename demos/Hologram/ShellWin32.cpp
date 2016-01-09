@@ -14,14 +14,10 @@ ShellWin32::ShellWin32(Game &game) : Shell(game), hwnd_(nullptr)
 
     global_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     init_vk();
-
-    game_.attach_shell(*this);
 }
 
 ShellWin32::~ShellWin32()
 {
-    game_.detach_shell();
-
     cleanup_vk();
     FreeLibrary(hmodule_);
 
@@ -169,6 +165,4 @@ void ShellWin32::run()
 
         present(get_time() - game_time_base);
     }
-
-    game_.detach_swapchain();
 }
