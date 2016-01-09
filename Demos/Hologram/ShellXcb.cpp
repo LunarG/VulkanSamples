@@ -48,13 +48,10 @@ ShellXcb::ShellXcb(Game &game) : Shell(game)
 
     init_connection();
     init_vk();
-
-    game_.attach_shell(*this);
 }
 
 ShellXCB::~ShellXCB()
-{ game_.detach_shell();
-
+{
     cleanup_vk();
     dlclose(lib_handle_);
 
@@ -246,6 +243,4 @@ void ShellXCB::run()
 
     xcb_destroy_window(c_, win_);
     xcb_flush(c_);
-
-    game_.detach_swapchain();
 }
