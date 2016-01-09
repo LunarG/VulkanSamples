@@ -28,11 +28,18 @@ void Shell::init_vk()
     vk::GetDeviceQueue(ctx_.dev, ctx_.present_queue_family, 0, &ctx_.present_queue);
 
     init_swapchain();
+
+    game_.attach_shell(*this);
 }
 
 void Shell::cleanup_vk()
 {
     vk::DeviceWaitIdle(ctx_.dev);
+
+    if (ctx_.swapchain != VK_NULL_HANDLE)
+        game_.detach_swapchain();
+
+    game_.detach_shell();
 
     vk::DestroySwapchainKHR(ctx_.dev, ctx_.swapchain, nullptr);
     vk::DestroyDevice(ctx_.dev, nullptr);
