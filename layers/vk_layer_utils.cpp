@@ -601,3 +601,48 @@ VkDeviceSize vk_safe_modulo(VkDeviceSize dividend, VkDeviceSize divisor)
 }
 
 
+static const char UTF8_ONE_BYTE_CODE   = 0xC0;
+static const char UTF8_ONE_BYTE_MASK   = 0xE0;
+static const char UTF8_TWO_BYTE_CODE   = 0xE0;
+static const char UTF8_TWO_BYTE_MASK   = 0xF0;
+static const char UTF8_THREE_BYTE_CODE = 0xF0;
+static const char UTF8_THREE_BYTE_MASK = 0xF8;
+static const char UTF8_DATA_BYTE_CODE  = 0x80;
+static const char UTF8_DATA_BYTE_MASK  = 0xC0;
+
+VkStringErrorFlags vk_string_validate(const int max_length, char *utf8)
+{
+    VkStringErrorFlags result     = VK_STRING_ERROR_NONE;
+    int code;
+    int num_char_bytes;
+    int i,j;
+
+    for (i = 0; i < max_length; i++)
+    {
+        if (utf8[i] == 0) {
+            break;
+        } else if ((utf8[i] > 0x20) && (utf8[i] < 0x7f)) {
+            num_char_bytes = 0;
+        } else if ((utf8[i] & UTF8_ONE_BYTE_MASK)   == UTF8_ONE_BYTE_CODE) {
+            num_char_bytes = 1;
+        } else if ((utf8[i] & UTF8_TWO_BYTE_MASK)   == UTF8_TWO_BYTE_CODE)   {
+            num_char_bytes = 2;
+        } else if ((utf8[i] & UTF8_THREE_BYTE_MASK) == UTF8_THREE_BYTE_CODE) {
+            num_char_bytes = 3;
+        } else {
+            result = VK_STRING_ERROR_BAD_DATA;
+        }
+
+        // Validate the following num_char_bytes of data
+        for (j = 0; (j < num_char_bytes) && (i < max_length); j++) {
+            if (++i == max_length) {
+                result |= VK_STRING_ERROR_LENGTH;
+                break;
+            }
+            if ((utf8[i] & UTF8_DATA_BYTE_MASK) != UTF8_DATA_BYTE_CODE) {
+                result |= VK_STRING_ERROR_BAD_DATA;
+            }
+        }
+    }
+    return result;
+}
