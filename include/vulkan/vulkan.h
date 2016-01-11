@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 222, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(1, 0, 0)
 
 
 #define VK_NULL_HANDLE 0
@@ -1115,392 +1115,392 @@ typedef void (VKAPI_PTR *PFN_vkInternalFreeNotification)(
 typedef void (VKAPI_PTR *PFN_vkVoidFunction)(void);
 
 typedef struct VkApplicationInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    const char*                                 pApplicationName;
-    uint32_t                                    applicationVersion;
-    const char*                                 pEngineName;
-    uint32_t                                    engineVersion;
-    uint32_t                                    apiVersion;
+    VkStructureType    sType;
+    const void*        pNext;
+    const char*        pApplicationName;
+    uint32_t           applicationVersion;
+    const char*        pEngineName;
+    uint32_t           engineVersion;
+    uint32_t           apiVersion;
 } VkApplicationInfo;
 
 typedef struct VkInstanceCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkInstanceCreateFlags                       flags;
-    const VkApplicationInfo*                    pApplicationInfo;
-    uint32_t                                    enabledLayerCount;
-    const char* const*                          ppEnabledLayerNames;
-    uint32_t                                    enabledExtensionCount;
-    const char* const*                          ppEnabledExtensionNames;
+    VkStructureType             sType;
+    const void*                 pNext;
+    VkInstanceCreateFlags       flags;
+    const VkApplicationInfo*    pApplicationInfo;
+    uint32_t                    enabledLayerCount;
+    const char* const*          ppEnabledLayerNames;
+    uint32_t                    enabledExtensionCount;
+    const char* const*          ppEnabledExtensionNames;
 } VkInstanceCreateInfo;
 
 typedef struct VkAllocationCallbacks {
-    void*                                       pUserData;
-    PFN_vkAllocationFunction                    pfnAllocation;
-    PFN_vkReallocationFunction                  pfnReallocation;
-    PFN_vkFreeFunction                          pfnFree;
-    PFN_vkInternalAllocationNotification        pfnInternalAllocation;
-    PFN_vkInternalFreeNotification              pfnInternalFree;
+    void*                                   pUserData;
+    PFN_vkAllocationFunction                pfnAllocation;
+    PFN_vkReallocationFunction              pfnReallocation;
+    PFN_vkFreeFunction                      pfnFree;
+    PFN_vkInternalAllocationNotification    pfnInternalAllocation;
+    PFN_vkInternalFreeNotification          pfnInternalFree;
 } VkAllocationCallbacks;
 
 typedef struct VkPhysicalDeviceFeatures {
-    VkBool32                                    robustBufferAccess;
-    VkBool32                                    fullDrawIndexUint32;
-    VkBool32                                    imageCubeArray;
-    VkBool32                                    independentBlend;
-    VkBool32                                    geometryShader;
-    VkBool32                                    tessellationShader;
-    VkBool32                                    sampleRateShading;
-    VkBool32                                    dualSrcBlend;
-    VkBool32                                    logicOp;
-    VkBool32                                    multiDrawIndirect;
-    VkBool32                                    drawIndirectFirstInstance;
-    VkBool32                                    depthClamp;
-    VkBool32                                    depthBiasClamp;
-    VkBool32                                    fillModeNonSolid;
-    VkBool32                                    depthBounds;
-    VkBool32                                    wideLines;
-    VkBool32                                    largePoints;
-    VkBool32                                    alphaToOne;
-    VkBool32                                    multiViewport;
-    VkBool32                                    samplerAnisotropy;
-    VkBool32                                    textureCompressionETC2;
-    VkBool32                                    textureCompressionASTC_LDR;
-    VkBool32                                    textureCompressionBC;
-    VkBool32                                    occlusionQueryPrecise;
-    VkBool32                                    pipelineStatisticsQuery;
-    VkBool32                                    vertexPipelineStoresAndAtomics;
-    VkBool32                                    fragmentStoresAndAtomics;
-    VkBool32                                    shaderTessellationAndGeometryPointSize;
-    VkBool32                                    shaderImageGatherExtended;
-    VkBool32                                    shaderStorageImageExtendedFormats;
-    VkBool32                                    shaderStorageImageMultisample;
-    VkBool32                                    shaderStorageImageReadWithoutFormat;
-    VkBool32                                    shaderStorageImageWriteWithoutFormat;
-    VkBool32                                    shaderUniformBufferArrayDynamicIndexing;
-    VkBool32                                    shaderSampledImageArrayDynamicIndexing;
-    VkBool32                                    shaderStorageBufferArrayDynamicIndexing;
-    VkBool32                                    shaderStorageImageArrayDynamicIndexing;
-    VkBool32                                    shaderClipDistance;
-    VkBool32                                    shaderCullDistance;
-    VkBool32                                    shaderFloat64;
-    VkBool32                                    shaderInt64;
-    VkBool32                                    shaderInt16;
-    VkBool32                                    shaderResourceResidency;
-    VkBool32                                    shaderResourceMinLod;
-    VkBool32                                    sparseBinding;
-    VkBool32                                    sparseResidencyBuffer;
-    VkBool32                                    sparseResidencyImage2D;
-    VkBool32                                    sparseResidencyImage3D;
-    VkBool32                                    sparseResidency2Samples;
-    VkBool32                                    sparseResidency4Samples;
-    VkBool32                                    sparseResidency8Samples;
-    VkBool32                                    sparseResidency16Samples;
-    VkBool32                                    sparseResidencyAliased;
-    VkBool32                                    variableMultisampleRate;
-    VkBool32                                    inheritedQueries;
+    VkBool32    robustBufferAccess;
+    VkBool32    fullDrawIndexUint32;
+    VkBool32    imageCubeArray;
+    VkBool32    independentBlend;
+    VkBool32    geometryShader;
+    VkBool32    tessellationShader;
+    VkBool32    sampleRateShading;
+    VkBool32    dualSrcBlend;
+    VkBool32    logicOp;
+    VkBool32    multiDrawIndirect;
+    VkBool32    drawIndirectFirstInstance;
+    VkBool32    depthClamp;
+    VkBool32    depthBiasClamp;
+    VkBool32    fillModeNonSolid;
+    VkBool32    depthBounds;
+    VkBool32    wideLines;
+    VkBool32    largePoints;
+    VkBool32    alphaToOne;
+    VkBool32    multiViewport;
+    VkBool32    samplerAnisotropy;
+    VkBool32    textureCompressionETC2;
+    VkBool32    textureCompressionASTC_LDR;
+    VkBool32    textureCompressionBC;
+    VkBool32    occlusionQueryPrecise;
+    VkBool32    pipelineStatisticsQuery;
+    VkBool32    vertexPipelineStoresAndAtomics;
+    VkBool32    fragmentStoresAndAtomics;
+    VkBool32    shaderTessellationAndGeometryPointSize;
+    VkBool32    shaderImageGatherExtended;
+    VkBool32    shaderStorageImageExtendedFormats;
+    VkBool32    shaderStorageImageMultisample;
+    VkBool32    shaderStorageImageReadWithoutFormat;
+    VkBool32    shaderStorageImageWriteWithoutFormat;
+    VkBool32    shaderUniformBufferArrayDynamicIndexing;
+    VkBool32    shaderSampledImageArrayDynamicIndexing;
+    VkBool32    shaderStorageBufferArrayDynamicIndexing;
+    VkBool32    shaderStorageImageArrayDynamicIndexing;
+    VkBool32    shaderClipDistance;
+    VkBool32    shaderCullDistance;
+    VkBool32    shaderFloat64;
+    VkBool32    shaderInt64;
+    VkBool32    shaderInt16;
+    VkBool32    shaderResourceResidency;
+    VkBool32    shaderResourceMinLod;
+    VkBool32    sparseBinding;
+    VkBool32    sparseResidencyBuffer;
+    VkBool32    sparseResidencyImage2D;
+    VkBool32    sparseResidencyImage3D;
+    VkBool32    sparseResidency2Samples;
+    VkBool32    sparseResidency4Samples;
+    VkBool32    sparseResidency8Samples;
+    VkBool32    sparseResidency16Samples;
+    VkBool32    sparseResidencyAliased;
+    VkBool32    variableMultisampleRate;
+    VkBool32    inheritedQueries;
 } VkPhysicalDeviceFeatures;
 
 typedef struct VkFormatProperties {
-    VkFormatFeatureFlags                        linearTilingFeatures;
-    VkFormatFeatureFlags                        optimalTilingFeatures;
-    VkFormatFeatureFlags                        bufferFeatures;
+    VkFormatFeatureFlags    linearTilingFeatures;
+    VkFormatFeatureFlags    optimalTilingFeatures;
+    VkFormatFeatureFlags    bufferFeatures;
 } VkFormatProperties;
 
 typedef struct VkExtent3D {
-    uint32_t                                    width;
-    uint32_t                                    height;
-    uint32_t                                    depth;
+    uint32_t    width;
+    uint32_t    height;
+    uint32_t    depth;
 } VkExtent3D;
 
 typedef struct VkImageFormatProperties {
-    VkExtent3D                                  maxExtent;
-    uint32_t                                    maxMipLevels;
-    uint32_t                                    maxArrayLayers;
-    VkSampleCountFlags                          sampleCounts;
-    VkDeviceSize                                maxResourceSize;
+    VkExtent3D            maxExtent;
+    uint32_t              maxMipLevels;
+    uint32_t              maxArrayLayers;
+    VkSampleCountFlags    sampleCounts;
+    VkDeviceSize          maxResourceSize;
 } VkImageFormatProperties;
 
 typedef struct VkPhysicalDeviceLimits {
-    uint32_t                                    maxImageDimension1D;
-    uint32_t                                    maxImageDimension2D;
-    uint32_t                                    maxImageDimension3D;
-    uint32_t                                    maxImageDimensionCube;
-    uint32_t                                    maxImageArrayLayers;
-    uint32_t                                    maxTexelBufferElements;
-    uint32_t                                    maxUniformBufferRange;
-    uint32_t                                    maxStorageBufferRange;
-    uint32_t                                    maxPushConstantsSize;
-    uint32_t                                    maxMemoryAllocationCount;
-    uint32_t                                    maxSamplerAllocationCount;
-    VkDeviceSize                                bufferImageGranularity;
-    VkDeviceSize                                sparseAddressSpaceSize;
-    uint32_t                                    maxBoundDescriptorSets;
-    uint32_t                                    maxPerStageDescriptorSamplers;
-    uint32_t                                    maxPerStageDescriptorUniformBuffers;
-    uint32_t                                    maxPerStageDescriptorStorageBuffers;
-    uint32_t                                    maxPerStageDescriptorSampledImages;
-    uint32_t                                    maxPerStageDescriptorStorageImages;
-    uint32_t                                    maxPerStageDescriptorInputAttachments;
-    uint32_t                                    maxPerStageResources;
-    uint32_t                                    maxDescriptorSetSamplers;
-    uint32_t                                    maxDescriptorSetUniformBuffers;
-    uint32_t                                    maxDescriptorSetUniformBuffersDynamic;
-    uint32_t                                    maxDescriptorSetStorageBuffers;
-    uint32_t                                    maxDescriptorSetStorageBuffersDynamic;
-    uint32_t                                    maxDescriptorSetSampledImages;
-    uint32_t                                    maxDescriptorSetStorageImages;
-    uint32_t                                    maxDescriptorSetInputAttachments;
-    uint32_t                                    maxVertexInputAttributes;
-    uint32_t                                    maxVertexInputBindings;
-    uint32_t                                    maxVertexInputAttributeOffset;
-    uint32_t                                    maxVertexInputBindingStride;
-    uint32_t                                    maxVertexOutputComponents;
-    uint32_t                                    maxTessellationGenerationLevel;
-    uint32_t                                    maxTessellationPatchSize;
-    uint32_t                                    maxTessellationControlPerVertexInputComponents;
-    uint32_t                                    maxTessellationControlPerVertexOutputComponents;
-    uint32_t                                    maxTessellationControlPerPatchOutputComponents;
-    uint32_t                                    maxTessellationControlTotalOutputComponents;
-    uint32_t                                    maxTessellationEvaluationInputComponents;
-    uint32_t                                    maxTessellationEvaluationOutputComponents;
-    uint32_t                                    maxGeometryShaderInvocations;
-    uint32_t                                    maxGeometryInputComponents;
-    uint32_t                                    maxGeometryOutputComponents;
-    uint32_t                                    maxGeometryOutputVertices;
-    uint32_t                                    maxGeometryTotalOutputComponents;
-    uint32_t                                    maxFragmentInputComponents;
-    uint32_t                                    maxFragmentOutputAttachments;
-    uint32_t                                    maxFragmentDualSrcAttachments;
-    uint32_t                                    maxFragmentCombinedOutputResources;
-    uint32_t                                    maxComputeSharedMemorySize;
-    uint32_t                                    maxComputeWorkGroupCount[3];
-    uint32_t                                    maxComputeWorkGroupInvocations;
-    uint32_t                                    maxComputeWorkGroupSize[3];
-    uint32_t                                    subPixelPrecisionBits;
-    uint32_t                                    subTexelPrecisionBits;
-    uint32_t                                    mipmapPrecisionBits;
-    uint32_t                                    maxDrawIndexedIndexValue;
-    uint32_t                                    maxDrawIndirectCount;
-    float                                       maxSamplerLodBias;
-    float                                       maxSamplerAnisotropy;
-    uint32_t                                    maxViewports;
-    uint32_t                                    maxViewportDimensions[2];
-    float                                       viewportBoundsRange[2];
-    uint32_t                                    viewportSubPixelBits;
-    size_t                                      minMemoryMapAlignment;
-    VkDeviceSize                                minTexelBufferOffsetAlignment;
-    VkDeviceSize                                minUniformBufferOffsetAlignment;
-    VkDeviceSize                                minStorageBufferOffsetAlignment;
-    int32_t                                     minTexelOffset;
-    uint32_t                                    maxTexelOffset;
-    int32_t                                     minTexelGatherOffset;
-    uint32_t                                    maxTexelGatherOffset;
-    float                                       minInterpolationOffset;
-    float                                       maxInterpolationOffset;
-    uint32_t                                    subPixelInterpolationOffsetBits;
-    uint32_t                                    maxFramebufferWidth;
-    uint32_t                                    maxFramebufferHeight;
-    uint32_t                                    maxFramebufferLayers;
-    VkSampleCountFlags                          framebufferColorSampleCounts;
-    VkSampleCountFlags                          framebufferDepthSampleCounts;
-    VkSampleCountFlags                          framebufferStencilSampleCounts;
-    VkSampleCountFlags                          framebufferNoAttachmentsSampleCounts;
-    uint32_t                                    maxColorAttachments;
-    VkSampleCountFlags                          sampledImageColorSampleCounts;
-    VkSampleCountFlags                          sampledImageIntegerSampleCounts;
-    VkSampleCountFlags                          sampledImageDepthSampleCounts;
-    VkSampleCountFlags                          sampledImageStencilSampleCounts;
-    VkSampleCountFlags                          storageImageSampleCounts;
-    uint32_t                                    maxSampleMaskWords;
-    VkBool32                                    timestampComputeAndGraphics;
-    float                                       timestampPeriod;
-    uint32_t                                    maxClipDistances;
-    uint32_t                                    maxCullDistances;
-    uint32_t                                    maxCombinedClipAndCullDistances;
-    uint32_t                                    discreteQueuePriorities;
-    float                                       pointSizeRange[2];
-    float                                       lineWidthRange[2];
-    float                                       pointSizeGranularity;
-    float                                       lineWidthGranularity;
-    VkBool32                                    strictLines;
-    VkBool32                                    standardSampleLocations;
-    VkDeviceSize                                optimalBufferCopyOffsetAlignment;
-    VkDeviceSize                                optimalBufferCopyRowPitchAlignment;
-    VkDeviceSize                                nonCoherentAtomSize;
+    uint32_t              maxImageDimension1D;
+    uint32_t              maxImageDimension2D;
+    uint32_t              maxImageDimension3D;
+    uint32_t              maxImageDimensionCube;
+    uint32_t              maxImageArrayLayers;
+    uint32_t              maxTexelBufferElements;
+    uint32_t              maxUniformBufferRange;
+    uint32_t              maxStorageBufferRange;
+    uint32_t              maxPushConstantsSize;
+    uint32_t              maxMemoryAllocationCount;
+    uint32_t              maxSamplerAllocationCount;
+    VkDeviceSize          bufferImageGranularity;
+    VkDeviceSize          sparseAddressSpaceSize;
+    uint32_t              maxBoundDescriptorSets;
+    uint32_t              maxPerStageDescriptorSamplers;
+    uint32_t              maxPerStageDescriptorUniformBuffers;
+    uint32_t              maxPerStageDescriptorStorageBuffers;
+    uint32_t              maxPerStageDescriptorSampledImages;
+    uint32_t              maxPerStageDescriptorStorageImages;
+    uint32_t              maxPerStageDescriptorInputAttachments;
+    uint32_t              maxPerStageResources;
+    uint32_t              maxDescriptorSetSamplers;
+    uint32_t              maxDescriptorSetUniformBuffers;
+    uint32_t              maxDescriptorSetUniformBuffersDynamic;
+    uint32_t              maxDescriptorSetStorageBuffers;
+    uint32_t              maxDescriptorSetStorageBuffersDynamic;
+    uint32_t              maxDescriptorSetSampledImages;
+    uint32_t              maxDescriptorSetStorageImages;
+    uint32_t              maxDescriptorSetInputAttachments;
+    uint32_t              maxVertexInputAttributes;
+    uint32_t              maxVertexInputBindings;
+    uint32_t              maxVertexInputAttributeOffset;
+    uint32_t              maxVertexInputBindingStride;
+    uint32_t              maxVertexOutputComponents;
+    uint32_t              maxTessellationGenerationLevel;
+    uint32_t              maxTessellationPatchSize;
+    uint32_t              maxTessellationControlPerVertexInputComponents;
+    uint32_t              maxTessellationControlPerVertexOutputComponents;
+    uint32_t              maxTessellationControlPerPatchOutputComponents;
+    uint32_t              maxTessellationControlTotalOutputComponents;
+    uint32_t              maxTessellationEvaluationInputComponents;
+    uint32_t              maxTessellationEvaluationOutputComponents;
+    uint32_t              maxGeometryShaderInvocations;
+    uint32_t              maxGeometryInputComponents;
+    uint32_t              maxGeometryOutputComponents;
+    uint32_t              maxGeometryOutputVertices;
+    uint32_t              maxGeometryTotalOutputComponents;
+    uint32_t              maxFragmentInputComponents;
+    uint32_t              maxFragmentOutputAttachments;
+    uint32_t              maxFragmentDualSrcAttachments;
+    uint32_t              maxFragmentCombinedOutputResources;
+    uint32_t              maxComputeSharedMemorySize;
+    uint32_t              maxComputeWorkGroupCount[3];
+    uint32_t              maxComputeWorkGroupInvocations;
+    uint32_t              maxComputeWorkGroupSize[3];
+    uint32_t              subPixelPrecisionBits;
+    uint32_t              subTexelPrecisionBits;
+    uint32_t              mipmapPrecisionBits;
+    uint32_t              maxDrawIndexedIndexValue;
+    uint32_t              maxDrawIndirectCount;
+    float                 maxSamplerLodBias;
+    float                 maxSamplerAnisotropy;
+    uint32_t              maxViewports;
+    uint32_t              maxViewportDimensions[2];
+    float                 viewportBoundsRange[2];
+    uint32_t              viewportSubPixelBits;
+    size_t                minMemoryMapAlignment;
+    VkDeviceSize          minTexelBufferOffsetAlignment;
+    VkDeviceSize          minUniformBufferOffsetAlignment;
+    VkDeviceSize          minStorageBufferOffsetAlignment;
+    int32_t               minTexelOffset;
+    uint32_t              maxTexelOffset;
+    int32_t               minTexelGatherOffset;
+    uint32_t              maxTexelGatherOffset;
+    float                 minInterpolationOffset;
+    float                 maxInterpolationOffset;
+    uint32_t              subPixelInterpolationOffsetBits;
+    uint32_t              maxFramebufferWidth;
+    uint32_t              maxFramebufferHeight;
+    uint32_t              maxFramebufferLayers;
+    VkSampleCountFlags    framebufferColorSampleCounts;
+    VkSampleCountFlags    framebufferDepthSampleCounts;
+    VkSampleCountFlags    framebufferStencilSampleCounts;
+    VkSampleCountFlags    framebufferNoAttachmentsSampleCounts;
+    uint32_t              maxColorAttachments;
+    VkSampleCountFlags    sampledImageColorSampleCounts;
+    VkSampleCountFlags    sampledImageIntegerSampleCounts;
+    VkSampleCountFlags    sampledImageDepthSampleCounts;
+    VkSampleCountFlags    sampledImageStencilSampleCounts;
+    VkSampleCountFlags    storageImageSampleCounts;
+    uint32_t              maxSampleMaskWords;
+    VkBool32              timestampComputeAndGraphics;
+    float                 timestampPeriod;
+    uint32_t              maxClipDistances;
+    uint32_t              maxCullDistances;
+    uint32_t              maxCombinedClipAndCullDistances;
+    uint32_t              discreteQueuePriorities;
+    float                 pointSizeRange[2];
+    float                 lineWidthRange[2];
+    float                 pointSizeGranularity;
+    float                 lineWidthGranularity;
+    VkBool32              strictLines;
+    VkBool32              standardSampleLocations;
+    VkDeviceSize          optimalBufferCopyOffsetAlignment;
+    VkDeviceSize          optimalBufferCopyRowPitchAlignment;
+    VkDeviceSize          nonCoherentAtomSize;
 } VkPhysicalDeviceLimits;
 
 typedef struct VkPhysicalDeviceSparseProperties {
-    VkBool32                                    residencyStandard2DBlockShape;
-    VkBool32                                    residencyStandard2DMultisampleBlockShape;
-    VkBool32                                    residencyStandard3DBlockShape;
-    VkBool32                                    residencyAlignedMipSize;
-    VkBool32                                    residencyNonResidentStrict;
+    VkBool32    residencyStandard2DBlockShape;
+    VkBool32    residencyStandard2DMultisampleBlockShape;
+    VkBool32    residencyStandard3DBlockShape;
+    VkBool32    residencyAlignedMipSize;
+    VkBool32    residencyNonResidentStrict;
 } VkPhysicalDeviceSparseProperties;
 
 typedef struct VkPhysicalDeviceProperties {
-    uint32_t                                    apiVersion;
-    uint32_t                                    driverVersion;
-    uint32_t                                    vendorID;
-    uint32_t                                    deviceID;
-    VkPhysicalDeviceType                        deviceType;
-    char                                        deviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
-    uint8_t                                     pipelineCacheUUID[VK_UUID_SIZE];
-    VkPhysicalDeviceLimits                      limits;
-    VkPhysicalDeviceSparseProperties            sparseProperties;
+    uint32_t                            apiVersion;
+    uint32_t                            driverVersion;
+    uint32_t                            vendorID;
+    uint32_t                            deviceID;
+    VkPhysicalDeviceType                deviceType;
+    char                                deviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
+    uint8_t                             pipelineCacheUUID[VK_UUID_SIZE];
+    VkPhysicalDeviceLimits              limits;
+    VkPhysicalDeviceSparseProperties    sparseProperties;
 } VkPhysicalDeviceProperties;
 
 typedef struct VkQueueFamilyProperties {
-    VkQueueFlags                                queueFlags;
-    uint32_t                                    queueCount;
-    uint32_t                                    timestampValidBits;
-    VkExtent3D                                  minImageTransferGranularity;
+    VkQueueFlags    queueFlags;
+    uint32_t        queueCount;
+    uint32_t        timestampValidBits;
+    VkExtent3D      minImageTransferGranularity;
 } VkQueueFamilyProperties;
 
 typedef struct VkMemoryType {
-    VkMemoryPropertyFlags                       propertyFlags;
-    uint32_t                                    heapIndex;
+    VkMemoryPropertyFlags    propertyFlags;
+    uint32_t                 heapIndex;
 } VkMemoryType;
 
 typedef struct VkMemoryHeap {
-    VkDeviceSize                                size;
-    VkMemoryHeapFlags                           flags;
+    VkDeviceSize         size;
+    VkMemoryHeapFlags    flags;
 } VkMemoryHeap;
 
 typedef struct VkPhysicalDeviceMemoryProperties {
-    uint32_t                                    memoryTypeCount;
-    VkMemoryType                                memoryTypes[VK_MAX_MEMORY_TYPES];
-    uint32_t                                    memoryHeapCount;
-    VkMemoryHeap                                memoryHeaps[VK_MAX_MEMORY_HEAPS];
+    uint32_t        memoryTypeCount;
+    VkMemoryType    memoryTypes[VK_MAX_MEMORY_TYPES];
+    uint32_t        memoryHeapCount;
+    VkMemoryHeap    memoryHeaps[VK_MAX_MEMORY_HEAPS];
 } VkPhysicalDeviceMemoryProperties;
 
 typedef struct VkDeviceQueueCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkDeviceQueueCreateFlags                    flags;
-    uint32_t                                    queueFamilyIndex;
-    uint32_t                                    queueCount;
-    const float*                                pQueuePriorities;
+    VkStructureType             sType;
+    const void*                 pNext;
+    VkDeviceQueueCreateFlags    flags;
+    uint32_t                    queueFamilyIndex;
+    uint32_t                    queueCount;
+    const float*                pQueuePriorities;
 } VkDeviceQueueCreateInfo;
 
 typedef struct VkDeviceCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkDeviceCreateFlags                         flags;
-    uint32_t                                    queueCreateInfoCount;
-    const VkDeviceQueueCreateInfo*              pQueueCreateInfos;
-    uint32_t                                    enabledLayerCount;
-    const char* const*                          ppEnabledLayerNames;
-    uint32_t                                    enabledExtensionCount;
-    const char* const*                          ppEnabledExtensionNames;
-    const VkPhysicalDeviceFeatures*             pEnabledFeatures;
+    VkStructureType                    sType;
+    const void*                        pNext;
+    VkDeviceCreateFlags                flags;
+    uint32_t                           queueCreateInfoCount;
+    const VkDeviceQueueCreateInfo*     pQueueCreateInfos;
+    uint32_t                           enabledLayerCount;
+    const char* const*                 ppEnabledLayerNames;
+    uint32_t                           enabledExtensionCount;
+    const char* const*                 ppEnabledExtensionNames;
+    const VkPhysicalDeviceFeatures*    pEnabledFeatures;
 } VkDeviceCreateInfo;
 
 typedef struct VkExtensionProperties {
-    char                                        extensionName[VK_MAX_EXTENSION_NAME_SIZE];
-    uint32_t                                    specVersion;
+    char        extensionName[VK_MAX_EXTENSION_NAME_SIZE];
+    uint32_t    specVersion;
 } VkExtensionProperties;
 
 typedef struct VkLayerProperties {
-    char                                        layerName[VK_MAX_EXTENSION_NAME_SIZE];
-    uint32_t                                    specVersion;
-    uint32_t                                    implementationVersion;
-    char                                        description[VK_MAX_DESCRIPTION_SIZE];
+    char        layerName[VK_MAX_EXTENSION_NAME_SIZE];
+    uint32_t    specVersion;
+    uint32_t    implementationVersion;
+    char        description[VK_MAX_DESCRIPTION_SIZE];
 } VkLayerProperties;
 
 typedef struct VkSubmitInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    uint32_t                                    waitSemaphoreCount;
-    const VkSemaphore*                          pWaitSemaphores;
-    const VkPipelineStageFlags*                 pWaitDstStageMask;
-    uint32_t                                    commandBufferCount;
-    const VkCommandBuffer*                      pCommandBuffers;
-    uint32_t                                    signalSemaphoreCount;
-    const VkSemaphore*                          pSignalSemaphores;
+    VkStructureType                sType;
+    const void*                    pNext;
+    uint32_t                       waitSemaphoreCount;
+    const VkSemaphore*             pWaitSemaphores;
+    const VkPipelineStageFlags*    pWaitDstStageMask;
+    uint32_t                       commandBufferCount;
+    const VkCommandBuffer*         pCommandBuffers;
+    uint32_t                       signalSemaphoreCount;
+    const VkSemaphore*             pSignalSemaphores;
 } VkSubmitInfo;
 
 typedef struct VkMemoryAllocateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkDeviceSize                                allocationSize;
-    uint32_t                                    memoryTypeIndex;
+    VkStructureType    sType;
+    const void*        pNext;
+    VkDeviceSize       allocationSize;
+    uint32_t           memoryTypeIndex;
 } VkMemoryAllocateInfo;
 
 typedef struct VkMappedMemoryRange {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkDeviceMemory                              memory;
-    VkDeviceSize                                offset;
-    VkDeviceSize                                size;
+    VkStructureType    sType;
+    const void*        pNext;
+    VkDeviceMemory     memory;
+    VkDeviceSize       offset;
+    VkDeviceSize       size;
 } VkMappedMemoryRange;
 
 typedef struct VkMemoryRequirements {
-    VkDeviceSize                                size;
-    VkDeviceSize                                alignment;
-    uint32_t                                    memoryTypeBits;
+    VkDeviceSize    size;
+    VkDeviceSize    alignment;
+    uint32_t        memoryTypeBits;
 } VkMemoryRequirements;
 
 typedef struct VkSparseImageFormatProperties {
-    VkImageAspectFlags                          aspectMask;
-    VkExtent3D                                  imageGranularity;
-    VkSparseImageFormatFlags                    flags;
+    VkImageAspectFlags          aspectMask;
+    VkExtent3D                  imageGranularity;
+    VkSparseImageFormatFlags    flags;
 } VkSparseImageFormatProperties;
 
 typedef struct VkSparseImageMemoryRequirements {
-    VkSparseImageFormatProperties               formatProperties;
-    uint32_t                                    imageMipTailFirstLod;
-    VkDeviceSize                                imageMipTailSize;
-    VkDeviceSize                                imageMipTailOffset;
-    VkDeviceSize                                imageMipTailStride;
+    VkSparseImageFormatProperties    formatProperties;
+    uint32_t                         imageMipTailFirstLod;
+    VkDeviceSize                     imageMipTailSize;
+    VkDeviceSize                     imageMipTailOffset;
+    VkDeviceSize                     imageMipTailStride;
 } VkSparseImageMemoryRequirements;
 
 typedef struct VkSparseMemoryBind {
-    VkDeviceSize                                resourceOffset;
-    VkDeviceSize                                size;
-    VkDeviceMemory                              memory;
-    VkDeviceSize                                memoryOffset;
-    VkSparseMemoryBindFlags                     flags;
+    VkDeviceSize               resourceOffset;
+    VkDeviceSize               size;
+    VkDeviceMemory             memory;
+    VkDeviceSize               memoryOffset;
+    VkSparseMemoryBindFlags    flags;
 } VkSparseMemoryBind;
 
 typedef struct VkSparseBufferMemoryBindInfo {
-    VkBuffer                                    buffer;
-    uint32_t                                    bindCount;
-    const VkSparseMemoryBind*                   pBinds;
+    VkBuffer                     buffer;
+    uint32_t                     bindCount;
+    const VkSparseMemoryBind*    pBinds;
 } VkSparseBufferMemoryBindInfo;
 
 typedef struct VkSparseImageOpaqueMemoryBindInfo {
-    VkImage                                     image;
-    uint32_t                                    bindCount;
-    const VkSparseMemoryBind*                   pBinds;
+    VkImage                      image;
+    uint32_t                     bindCount;
+    const VkSparseMemoryBind*    pBinds;
 } VkSparseImageOpaqueMemoryBindInfo;
 
 typedef struct VkImageSubresource {
-    VkImageAspectFlags                          aspectMask;
-    uint32_t                                    mipLevel;
-    uint32_t                                    arrayLayer;
+    VkImageAspectFlags    aspectMask;
+    uint32_t              mipLevel;
+    uint32_t              arrayLayer;
 } VkImageSubresource;
 
 typedef struct VkOffset3D {
-    int32_t                                     x;
-    int32_t                                     y;
-    int32_t                                     z;
+    int32_t    x;
+    int32_t    y;
+    int32_t    z;
 } VkOffset3D;
 
 typedef struct VkSparseImageMemoryBind {
-    VkImageSubresource                          subresource;
-    VkOffset3D                                  offset;
-    VkExtent3D                                  extent;
-    VkDeviceMemory                              memory;
-    VkDeviceSize                                memoryOffset;
-    VkSparseMemoryBindFlags                     flags;
+    VkImageSubresource         subresource;
+    VkOffset3D                 offset;
+    VkExtent3D                 extent;
+    VkDeviceMemory             memory;
+    VkDeviceSize               memoryOffset;
+    VkSparseMemoryBindFlags    flags;
 } VkSparseImageMemoryBind;
 
 typedef struct VkSparseImageMemoryBindInfo {
-    VkImage                                     image;
-    uint32_t                                    bindCount;
-    const VkSparseImageMemoryBind*              pBinds;
+    VkImage                           image;
+    uint32_t                          bindCount;
+    const VkSparseImageMemoryBind*    pBinds;
 } VkSparseImageMemoryBindInfo;
 
 typedef struct VkBindSparseInfo {
@@ -1519,155 +1519,155 @@ typedef struct VkBindSparseInfo {
 } VkBindSparseInfo;
 
 typedef struct VkFenceCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkFenceCreateFlags                          flags;
+    VkStructureType       sType;
+    const void*           pNext;
+    VkFenceCreateFlags    flags;
 } VkFenceCreateInfo;
 
 typedef struct VkSemaphoreCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkSemaphoreCreateFlags                      flags;
+    VkStructureType           sType;
+    const void*               pNext;
+    VkSemaphoreCreateFlags    flags;
 } VkSemaphoreCreateInfo;
 
 typedef struct VkEventCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkEventCreateFlags                          flags;
+    VkStructureType       sType;
+    const void*           pNext;
+    VkEventCreateFlags    flags;
 } VkEventCreateInfo;
 
 typedef struct VkQueryPoolCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkQueryPoolCreateFlags                      flags;
-    VkQueryType                                 queryType;
-    uint32_t                                    queryCount;
-    VkQueryPipelineStatisticFlags               pipelineStatistics;
+    VkStructureType                  sType;
+    const void*                      pNext;
+    VkQueryPoolCreateFlags           flags;
+    VkQueryType                      queryType;
+    uint32_t                         queryCount;
+    VkQueryPipelineStatisticFlags    pipelineStatistics;
 } VkQueryPoolCreateInfo;
 
 typedef struct VkBufferCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkBufferCreateFlags                         flags;
-    VkDeviceSize                                size;
-    VkBufferUsageFlags                          usage;
-    VkSharingMode                               sharingMode;
-    uint32_t                                    queueFamilyIndexCount;
-    const uint32_t*                             pQueueFamilyIndices;
+    VkStructureType        sType;
+    const void*            pNext;
+    VkBufferCreateFlags    flags;
+    VkDeviceSize           size;
+    VkBufferUsageFlags     usage;
+    VkSharingMode          sharingMode;
+    uint32_t               queueFamilyIndexCount;
+    const uint32_t*        pQueueFamilyIndices;
 } VkBufferCreateInfo;
 
 typedef struct VkBufferViewCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkBufferViewCreateFlags                     flags;
-    VkBuffer                                    buffer;
-    VkFormat                                    format;
-    VkDeviceSize                                offset;
-    VkDeviceSize                                range;
+    VkStructureType            sType;
+    const void*                pNext;
+    VkBufferViewCreateFlags    flags;
+    VkBuffer                   buffer;
+    VkFormat                   format;
+    VkDeviceSize               offset;
+    VkDeviceSize               range;
 } VkBufferViewCreateInfo;
 
 typedef struct VkImageCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkImageCreateFlags                          flags;
-    VkImageType                                 imageType;
-    VkFormat                                    format;
-    VkExtent3D                                  extent;
-    uint32_t                                    mipLevels;
-    uint32_t                                    arrayLayers;
-    VkSampleCountFlagBits                       samples;
-    VkImageTiling                               tiling;
-    VkImageUsageFlags                           usage;
-    VkSharingMode                               sharingMode;
-    uint32_t                                    queueFamilyIndexCount;
-    const uint32_t*                             pQueueFamilyIndices;
-    VkImageLayout                               initialLayout;
+    VkStructureType          sType;
+    const void*              pNext;
+    VkImageCreateFlags       flags;
+    VkImageType              imageType;
+    VkFormat                 format;
+    VkExtent3D               extent;
+    uint32_t                 mipLevels;
+    uint32_t                 arrayLayers;
+    VkSampleCountFlagBits    samples;
+    VkImageTiling            tiling;
+    VkImageUsageFlags        usage;
+    VkSharingMode            sharingMode;
+    uint32_t                 queueFamilyIndexCount;
+    const uint32_t*          pQueueFamilyIndices;
+    VkImageLayout            initialLayout;
 } VkImageCreateInfo;
 
 typedef struct VkSubresourceLayout {
-    VkDeviceSize                                offset;
-    VkDeviceSize                                size;
-    VkDeviceSize                                rowPitch;
-    VkDeviceSize                                arrayPitch;
-    VkDeviceSize                                depthPitch;
+    VkDeviceSize    offset;
+    VkDeviceSize    size;
+    VkDeviceSize    rowPitch;
+    VkDeviceSize    arrayPitch;
+    VkDeviceSize    depthPitch;
 } VkSubresourceLayout;
 
 typedef struct VkComponentMapping {
-    VkComponentSwizzle                          r;
-    VkComponentSwizzle                          g;
-    VkComponentSwizzle                          b;
-    VkComponentSwizzle                          a;
+    VkComponentSwizzle    r;
+    VkComponentSwizzle    g;
+    VkComponentSwizzle    b;
+    VkComponentSwizzle    a;
 } VkComponentMapping;
 
 typedef struct VkImageSubresourceRange {
-    VkImageAspectFlags                          aspectMask;
-    uint32_t                                    baseMipLevel;
-    uint32_t                                    levelCount;
-    uint32_t                                    baseArrayLayer;
-    uint32_t                                    layerCount;
+    VkImageAspectFlags    aspectMask;
+    uint32_t              baseMipLevel;
+    uint32_t              levelCount;
+    uint32_t              baseArrayLayer;
+    uint32_t              layerCount;
 } VkImageSubresourceRange;
 
 typedef struct VkImageViewCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkImageViewCreateFlags                      flags;
-    VkImage                                     image;
-    VkImageViewType                             viewType;
-    VkFormat                                    format;
-    VkComponentMapping                          components;
-    VkImageSubresourceRange                     subresourceRange;
+    VkStructureType            sType;
+    const void*                pNext;
+    VkImageViewCreateFlags     flags;
+    VkImage                    image;
+    VkImageViewType            viewType;
+    VkFormat                   format;
+    VkComponentMapping         components;
+    VkImageSubresourceRange    subresourceRange;
 } VkImageViewCreateInfo;
 
 typedef struct VkShaderModuleCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkShaderModuleCreateFlags                   flags;
-    size_t                                      codeSize;
-    const uint32_t*                             pCode;
+    VkStructureType              sType;
+    const void*                  pNext;
+    VkShaderModuleCreateFlags    flags;
+    size_t                       codeSize;
+    const uint32_t*              pCode;
 } VkShaderModuleCreateInfo;
 
 typedef struct VkPipelineCacheCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkPipelineCacheCreateFlags                  flags;
-    size_t                                      initialDataSize;
-    const void*                                 pInitialData;
+    VkStructureType               sType;
+    const void*                   pNext;
+    VkPipelineCacheCreateFlags    flags;
+    size_t                        initialDataSize;
+    const void*                   pInitialData;
 } VkPipelineCacheCreateInfo;
 
 typedef struct VkSpecializationMapEntry {
-    uint32_t                                    constantID;
-    uint32_t                                    offset;
-    size_t                                      size;
+    uint32_t    constantID;
+    uint32_t    offset;
+    size_t      size;
 } VkSpecializationMapEntry;
 
 typedef struct VkSpecializationInfo {
-    uint32_t                                    mapEntryCount;
-    const VkSpecializationMapEntry*             pMapEntries;
-    size_t                                      dataSize;
-    const void*                                 pData;
+    uint32_t                           mapEntryCount;
+    const VkSpecializationMapEntry*    pMapEntries;
+    size_t                             dataSize;
+    const void*                        pData;
 } VkSpecializationInfo;
 
 typedef struct VkPipelineShaderStageCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkPipelineShaderStageCreateFlags            flags;
-    VkShaderStageFlagBits                       stage;
-    VkShaderModule                              module;
-    const char*                                 pName;
-    const VkSpecializationInfo*                 pSpecializationInfo;
+    VkStructureType                     sType;
+    const void*                         pNext;
+    VkPipelineShaderStageCreateFlags    flags;
+    VkShaderStageFlagBits               stage;
+    VkShaderModule                      module;
+    const char*                         pName;
+    const VkSpecializationInfo*         pSpecializationInfo;
 } VkPipelineShaderStageCreateInfo;
 
 typedef struct VkVertexInputBindingDescription {
-    uint32_t                                    binding;
-    uint32_t                                    stride;
-    VkVertexInputRate                           inputRate;
+    uint32_t             binding;
+    uint32_t             stride;
+    VkVertexInputRate    inputRate;
 } VkVertexInputBindingDescription;
 
 typedef struct VkVertexInputAttributeDescription {
-    uint32_t                                    location;
-    uint32_t                                    binding;
-    VkFormat                                    format;
-    uint32_t                                    offset;
+    uint32_t    location;
+    uint32_t    binding;
+    VkFormat    format;
+    uint32_t    offset;
 } VkVertexInputAttributeDescription;
 
 typedef struct VkPipelineVertexInputStateCreateInfo {
@@ -1681,512 +1681,512 @@ typedef struct VkPipelineVertexInputStateCreateInfo {
 } VkPipelineVertexInputStateCreateInfo;
 
 typedef struct VkPipelineInputAssemblyStateCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkPipelineInputAssemblyStateCreateFlags     flags;
-    VkPrimitiveTopology                         topology;
-    VkBool32                                    primitiveRestartEnable;
+    VkStructureType                            sType;
+    const void*                                pNext;
+    VkPipelineInputAssemblyStateCreateFlags    flags;
+    VkPrimitiveTopology                        topology;
+    VkBool32                                   primitiveRestartEnable;
 } VkPipelineInputAssemblyStateCreateInfo;
 
 typedef struct VkPipelineTessellationStateCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkPipelineTessellationStateCreateFlags      flags;
-    uint32_t                                    patchControlPoints;
+    VkStructureType                           sType;
+    const void*                               pNext;
+    VkPipelineTessellationStateCreateFlags    flags;
+    uint32_t                                  patchControlPoints;
 } VkPipelineTessellationStateCreateInfo;
 
 typedef struct VkViewport {
-    float                                       x;
-    float                                       y;
-    float                                       width;
-    float                                       height;
-    float                                       minDepth;
-    float                                       maxDepth;
+    float    x;
+    float    y;
+    float    width;
+    float    height;
+    float    minDepth;
+    float    maxDepth;
 } VkViewport;
 
 typedef struct VkOffset2D {
-    int32_t                                     x;
-    int32_t                                     y;
+    int32_t    x;
+    int32_t    y;
 } VkOffset2D;
 
 typedef struct VkExtent2D {
-    uint32_t                                    width;
-    uint32_t                                    height;
+    uint32_t    width;
+    uint32_t    height;
 } VkExtent2D;
 
 typedef struct VkRect2D {
-    VkOffset2D                                  offset;
-    VkExtent2D                                  extent;
+    VkOffset2D    offset;
+    VkExtent2D    extent;
 } VkRect2D;
 
 typedef struct VkPipelineViewportStateCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkPipelineViewportStateCreateFlags          flags;
-    uint32_t                                    viewportCount;
-    const VkViewport*                           pViewports;
-    uint32_t                                    scissorCount;
-    const VkRect2D*                             pScissors;
+    VkStructureType                       sType;
+    const void*                           pNext;
+    VkPipelineViewportStateCreateFlags    flags;
+    uint32_t                              viewportCount;
+    const VkViewport*                     pViewports;
+    uint32_t                              scissorCount;
+    const VkRect2D*                       pScissors;
 } VkPipelineViewportStateCreateInfo;
 
 typedef struct VkPipelineRasterizationStateCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkPipelineRasterizationStateCreateFlags     flags;
-    VkBool32                                    depthClampEnable;
-    VkBool32                                    rasterizerDiscardEnable;
-    VkPolygonMode                               polygonMode;
-    VkCullModeFlags                             cullMode;
-    VkFrontFace                                 frontFace;
-    VkBool32                                    depthBiasEnable;
-    float                                       depthBiasConstantFactor;
-    float                                       depthBiasClamp;
-    float                                       depthBiasSlopeFactor;
-    float                                       lineWidth;
+    VkStructureType                            sType;
+    const void*                                pNext;
+    VkPipelineRasterizationStateCreateFlags    flags;
+    VkBool32                                   depthClampEnable;
+    VkBool32                                   rasterizerDiscardEnable;
+    VkPolygonMode                              polygonMode;
+    VkCullModeFlags                            cullMode;
+    VkFrontFace                                frontFace;
+    VkBool32                                   depthBiasEnable;
+    float                                      depthBiasConstantFactor;
+    float                                      depthBiasClamp;
+    float                                      depthBiasSlopeFactor;
+    float                                      lineWidth;
 } VkPipelineRasterizationStateCreateInfo;
 
 typedef struct VkPipelineMultisampleStateCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkPipelineMultisampleStateCreateFlags       flags;
-    VkSampleCountFlagBits                       rasterizationSamples;
-    VkBool32                                    sampleShadingEnable;
-    float                                       minSampleShading;
-    const VkSampleMask*                         pSampleMask;
-    VkBool32                                    alphaToCoverageEnable;
-    VkBool32                                    alphaToOneEnable;
+    VkStructureType                          sType;
+    const void*                              pNext;
+    VkPipelineMultisampleStateCreateFlags    flags;
+    VkSampleCountFlagBits                    rasterizationSamples;
+    VkBool32                                 sampleShadingEnable;
+    float                                    minSampleShading;
+    const VkSampleMask*                      pSampleMask;
+    VkBool32                                 alphaToCoverageEnable;
+    VkBool32                                 alphaToOneEnable;
 } VkPipelineMultisampleStateCreateInfo;
 
 typedef struct VkStencilOpState {
-    VkStencilOp                                 failOp;
-    VkStencilOp                                 passOp;
-    VkStencilOp                                 depthFailOp;
-    VkCompareOp                                 compareOp;
-    uint32_t                                    compareMask;
-    uint32_t                                    writeMask;
-    uint32_t                                    reference;
+    VkStencilOp    failOp;
+    VkStencilOp    passOp;
+    VkStencilOp    depthFailOp;
+    VkCompareOp    compareOp;
+    uint32_t       compareMask;
+    uint32_t       writeMask;
+    uint32_t       reference;
 } VkStencilOpState;
 
 typedef struct VkPipelineDepthStencilStateCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkPipelineDepthStencilStateCreateFlags      flags;
-    VkBool32                                    depthTestEnable;
-    VkBool32                                    depthWriteEnable;
-    VkCompareOp                                 depthCompareOp;
-    VkBool32                                    depthBoundsTestEnable;
-    VkBool32                                    stencilTestEnable;
-    VkStencilOpState                            front;
-    VkStencilOpState                            back;
-    float                                       minDepthBounds;
-    float                                       maxDepthBounds;
+    VkStructureType                           sType;
+    const void*                               pNext;
+    VkPipelineDepthStencilStateCreateFlags    flags;
+    VkBool32                                  depthTestEnable;
+    VkBool32                                  depthWriteEnable;
+    VkCompareOp                               depthCompareOp;
+    VkBool32                                  depthBoundsTestEnable;
+    VkBool32                                  stencilTestEnable;
+    VkStencilOpState                          front;
+    VkStencilOpState                          back;
+    float                                     minDepthBounds;
+    float                                     maxDepthBounds;
 } VkPipelineDepthStencilStateCreateInfo;
 
 typedef struct VkPipelineColorBlendAttachmentState {
-    VkBool32                                    blendEnable;
-    VkBlendFactor                               srcColorBlendFactor;
-    VkBlendFactor                               dstColorBlendFactor;
-    VkBlendOp                                   colorBlendOp;
-    VkBlendFactor                               srcAlphaBlendFactor;
-    VkBlendFactor                               dstAlphaBlendFactor;
-    VkBlendOp                                   alphaBlendOp;
-    VkColorComponentFlags                       colorWriteMask;
+    VkBool32                 blendEnable;
+    VkBlendFactor            srcColorBlendFactor;
+    VkBlendFactor            dstColorBlendFactor;
+    VkBlendOp                colorBlendOp;
+    VkBlendFactor            srcAlphaBlendFactor;
+    VkBlendFactor            dstAlphaBlendFactor;
+    VkBlendOp                alphaBlendOp;
+    VkColorComponentFlags    colorWriteMask;
 } VkPipelineColorBlendAttachmentState;
 
 typedef struct VkPipelineColorBlendStateCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkPipelineColorBlendStateCreateFlags        flags;
-    VkBool32                                    logicOpEnable;
-    VkLogicOp                                   logicOp;
-    uint32_t                                    attachmentCount;
-    const VkPipelineColorBlendAttachmentState*  pAttachments;
-    float                                       blendConstants[4];
+    VkStructureType                               sType;
+    const void*                                   pNext;
+    VkPipelineColorBlendStateCreateFlags          flags;
+    VkBool32                                      logicOpEnable;
+    VkLogicOp                                     logicOp;
+    uint32_t                                      attachmentCount;
+    const VkPipelineColorBlendAttachmentState*    pAttachments;
+    float                                         blendConstants[4];
 } VkPipelineColorBlendStateCreateInfo;
 
 typedef struct VkPipelineDynamicStateCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkPipelineDynamicStateCreateFlags           flags;
-    uint32_t                                    dynamicStateCount;
-    const VkDynamicState*                       pDynamicStates;
+    VkStructureType                      sType;
+    const void*                          pNext;
+    VkPipelineDynamicStateCreateFlags    flags;
+    uint32_t                             dynamicStateCount;
+    const VkDynamicState*                pDynamicStates;
 } VkPipelineDynamicStateCreateInfo;
 
 typedef struct VkGraphicsPipelineCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkPipelineCreateFlags                       flags;
-    uint32_t                                    stageCount;
-    const VkPipelineShaderStageCreateInfo*      pStages;
-    const VkPipelineVertexInputStateCreateInfo* pVertexInputState;
-    const VkPipelineInputAssemblyStateCreateInfo* pInputAssemblyState;
-    const VkPipelineTessellationStateCreateInfo* pTessellationState;
-    const VkPipelineViewportStateCreateInfo*    pViewportState;
-    const VkPipelineRasterizationStateCreateInfo* pRasterizationState;
-    const VkPipelineMultisampleStateCreateInfo* pMultisampleState;
-    const VkPipelineDepthStencilStateCreateInfo* pDepthStencilState;
-    const VkPipelineColorBlendStateCreateInfo*  pColorBlendState;
-    const VkPipelineDynamicStateCreateInfo*     pDynamicState;
-    VkPipelineLayout                            layout;
-    VkRenderPass                                renderPass;
-    uint32_t                                    subpass;
-    VkPipeline                                  basePipelineHandle;
-    int32_t                                     basePipelineIndex;
+    VkStructureType                                  sType;
+    const void*                                      pNext;
+    VkPipelineCreateFlags                            flags;
+    uint32_t                                         stageCount;
+    const VkPipelineShaderStageCreateInfo*           pStages;
+    const VkPipelineVertexInputStateCreateInfo*      pVertexInputState;
+    const VkPipelineInputAssemblyStateCreateInfo*    pInputAssemblyState;
+    const VkPipelineTessellationStateCreateInfo*     pTessellationState;
+    const VkPipelineViewportStateCreateInfo*         pViewportState;
+    const VkPipelineRasterizationStateCreateInfo*    pRasterizationState;
+    const VkPipelineMultisampleStateCreateInfo*      pMultisampleState;
+    const VkPipelineDepthStencilStateCreateInfo*     pDepthStencilState;
+    const VkPipelineColorBlendStateCreateInfo*       pColorBlendState;
+    const VkPipelineDynamicStateCreateInfo*          pDynamicState;
+    VkPipelineLayout                                 layout;
+    VkRenderPass                                     renderPass;
+    uint32_t                                         subpass;
+    VkPipeline                                       basePipelineHandle;
+    int32_t                                          basePipelineIndex;
 } VkGraphicsPipelineCreateInfo;
 
 typedef struct VkComputePipelineCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkPipelineCreateFlags                       flags;
-    VkPipelineShaderStageCreateInfo             stage;
-    VkPipelineLayout                            layout;
-    VkPipeline                                  basePipelineHandle;
-    int32_t                                     basePipelineIndex;
+    VkStructureType                    sType;
+    const void*                        pNext;
+    VkPipelineCreateFlags              flags;
+    VkPipelineShaderStageCreateInfo    stage;
+    VkPipelineLayout                   layout;
+    VkPipeline                         basePipelineHandle;
+    int32_t                            basePipelineIndex;
 } VkComputePipelineCreateInfo;
 
 typedef struct VkPushConstantRange {
-    VkShaderStageFlags                          stageFlags;
-    uint32_t                                    offset;
-    uint32_t                                    size;
+    VkShaderStageFlags    stageFlags;
+    uint32_t              offset;
+    uint32_t              size;
 } VkPushConstantRange;
 
 typedef struct VkPipelineLayoutCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkPipelineLayoutCreateFlags                 flags;
-    uint32_t                                    setLayoutCount;
-    const VkDescriptorSetLayout*                pSetLayouts;
-    uint32_t                                    pushConstantRangeCount;
-    const VkPushConstantRange*                  pPushConstantRanges;
+    VkStructureType                 sType;
+    const void*                     pNext;
+    VkPipelineLayoutCreateFlags     flags;
+    uint32_t                        setLayoutCount;
+    const VkDescriptorSetLayout*    pSetLayouts;
+    uint32_t                        pushConstantRangeCount;
+    const VkPushConstantRange*      pPushConstantRanges;
 } VkPipelineLayoutCreateInfo;
 
 typedef struct VkSamplerCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkSamplerCreateFlags                        flags;
-    VkFilter                                    magFilter;
-    VkFilter                                    minFilter;
-    VkSamplerMipmapMode                         mipmapMode;
-    VkSamplerAddressMode                        addressModeU;
-    VkSamplerAddressMode                        addressModeV;
-    VkSamplerAddressMode                        addressModeW;
-    float                                       mipLodBias;
-    VkBool32                                    anisotropyEnable;
-    float                                       maxAnisotropy;
-    VkBool32                                    compareEnable;
-    VkCompareOp                                 compareOp;
-    float                                       minLod;
-    float                                       maxLod;
-    VkBorderColor                               borderColor;
-    VkBool32                                    unnormalizedCoordinates;
+    VkStructureType         sType;
+    const void*             pNext;
+    VkSamplerCreateFlags    flags;
+    VkFilter                magFilter;
+    VkFilter                minFilter;
+    VkSamplerMipmapMode     mipmapMode;
+    VkSamplerAddressMode    addressModeU;
+    VkSamplerAddressMode    addressModeV;
+    VkSamplerAddressMode    addressModeW;
+    float                   mipLodBias;
+    VkBool32                anisotropyEnable;
+    float                   maxAnisotropy;
+    VkBool32                compareEnable;
+    VkCompareOp             compareOp;
+    float                   minLod;
+    float                   maxLod;
+    VkBorderColor           borderColor;
+    VkBool32                unnormalizedCoordinates;
 } VkSamplerCreateInfo;
 
 typedef struct VkDescriptorSetLayoutBinding {
-    uint32_t                                    binding;
-    VkDescriptorType                            descriptorType;
-    uint32_t                                    descriptorCount;
-    VkShaderStageFlags                          stageFlags;
-    const VkSampler*                            pImmutableSamplers;
+    uint32_t              binding;
+    VkDescriptorType      descriptorType;
+    uint32_t              descriptorCount;
+    VkShaderStageFlags    stageFlags;
+    const VkSampler*      pImmutableSamplers;
 } VkDescriptorSetLayoutBinding;
 
 typedef struct VkDescriptorSetLayoutCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkDescriptorSetLayoutCreateFlags            flags;
-    uint32_t                                    bindingCount;
-    const VkDescriptorSetLayoutBinding*         pBindings;
+    VkStructureType                        sType;
+    const void*                            pNext;
+    VkDescriptorSetLayoutCreateFlags       flags;
+    uint32_t                               bindingCount;
+    const VkDescriptorSetLayoutBinding*    pBindings;
 } VkDescriptorSetLayoutCreateInfo;
 
 typedef struct VkDescriptorPoolSize {
-    VkDescriptorType                            type;
-    uint32_t                                    descriptorCount;
+    VkDescriptorType    type;
+    uint32_t            descriptorCount;
 } VkDescriptorPoolSize;
 
 typedef struct VkDescriptorPoolCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkDescriptorPoolCreateFlags                 flags;
-    uint32_t                                    maxSets;
-    uint32_t                                    poolSizeCount;
-    const VkDescriptorPoolSize*                 pPoolSizes;
+    VkStructureType                sType;
+    const void*                    pNext;
+    VkDescriptorPoolCreateFlags    flags;
+    uint32_t                       maxSets;
+    uint32_t                       poolSizeCount;
+    const VkDescriptorPoolSize*    pPoolSizes;
 } VkDescriptorPoolCreateInfo;
 
 typedef struct VkDescriptorSetAllocateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkDescriptorPool                            descriptorPool;
-    uint32_t                                    descriptorSetCount;
-    const VkDescriptorSetLayout*                pSetLayouts;
+    VkStructureType                 sType;
+    const void*                     pNext;
+    VkDescriptorPool                descriptorPool;
+    uint32_t                        descriptorSetCount;
+    const VkDescriptorSetLayout*    pSetLayouts;
 } VkDescriptorSetAllocateInfo;
 
 typedef struct VkDescriptorImageInfo {
-    VkSampler                                   sampler;
-    VkImageView                                 imageView;
-    VkImageLayout                               imageLayout;
+    VkSampler        sampler;
+    VkImageView      imageView;
+    VkImageLayout    imageLayout;
 } VkDescriptorImageInfo;
 
 typedef struct VkDescriptorBufferInfo {
-    VkBuffer                                    buffer;
-    VkDeviceSize                                offset;
-    VkDeviceSize                                range;
+    VkBuffer        buffer;
+    VkDeviceSize    offset;
+    VkDeviceSize    range;
 } VkDescriptorBufferInfo;
 
 typedef struct VkWriteDescriptorSet {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkDescriptorSet                             dstSet;
-    uint32_t                                    dstBinding;
-    uint32_t                                    dstArrayElement;
-    uint32_t                                    descriptorCount;
-    VkDescriptorType                            descriptorType;
-    const VkDescriptorImageInfo*                pImageInfo;
-    const VkDescriptorBufferInfo*               pBufferInfo;
-    const VkBufferView*                         pTexelBufferView;
+    VkStructureType                  sType;
+    const void*                      pNext;
+    VkDescriptorSet                  dstSet;
+    uint32_t                         dstBinding;
+    uint32_t                         dstArrayElement;
+    uint32_t                         descriptorCount;
+    VkDescriptorType                 descriptorType;
+    const VkDescriptorImageInfo*     pImageInfo;
+    const VkDescriptorBufferInfo*    pBufferInfo;
+    const VkBufferView*              pTexelBufferView;
 } VkWriteDescriptorSet;
 
 typedef struct VkCopyDescriptorSet {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkDescriptorSet                             srcSet;
-    uint32_t                                    srcBinding;
-    uint32_t                                    srcArrayElement;
-    VkDescriptorSet                             dstSet;
-    uint32_t                                    dstBinding;
-    uint32_t                                    dstArrayElement;
-    uint32_t                                    descriptorCount;
+    VkStructureType    sType;
+    const void*        pNext;
+    VkDescriptorSet    srcSet;
+    uint32_t           srcBinding;
+    uint32_t           srcArrayElement;
+    VkDescriptorSet    dstSet;
+    uint32_t           dstBinding;
+    uint32_t           dstArrayElement;
+    uint32_t           descriptorCount;
 } VkCopyDescriptorSet;
 
 typedef struct VkFramebufferCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkFramebufferCreateFlags                    flags;
-    VkRenderPass                                renderPass;
-    uint32_t                                    attachmentCount;
-    const VkImageView*                          pAttachments;
-    uint32_t                                    width;
-    uint32_t                                    height;
-    uint32_t                                    layers;
+    VkStructureType             sType;
+    const void*                 pNext;
+    VkFramebufferCreateFlags    flags;
+    VkRenderPass                renderPass;
+    uint32_t                    attachmentCount;
+    const VkImageView*          pAttachments;
+    uint32_t                    width;
+    uint32_t                    height;
+    uint32_t                    layers;
 } VkFramebufferCreateInfo;
 
 typedef struct VkAttachmentDescription {
-    VkAttachmentDescriptionFlags                flags;
-    VkFormat                                    format;
-    VkSampleCountFlagBits                       samples;
-    VkAttachmentLoadOp                          loadOp;
-    VkAttachmentStoreOp                         storeOp;
-    VkAttachmentLoadOp                          stencilLoadOp;
-    VkAttachmentStoreOp                         stencilStoreOp;
-    VkImageLayout                               initialLayout;
-    VkImageLayout                               finalLayout;
+    VkAttachmentDescriptionFlags    flags;
+    VkFormat                        format;
+    VkSampleCountFlagBits           samples;
+    VkAttachmentLoadOp              loadOp;
+    VkAttachmentStoreOp             storeOp;
+    VkAttachmentLoadOp              stencilLoadOp;
+    VkAttachmentStoreOp             stencilStoreOp;
+    VkImageLayout                   initialLayout;
+    VkImageLayout                   finalLayout;
 } VkAttachmentDescription;
 
 typedef struct VkAttachmentReference {
-    uint32_t                                    attachment;
-    VkImageLayout                               layout;
+    uint32_t         attachment;
+    VkImageLayout    layout;
 } VkAttachmentReference;
 
 typedef struct VkSubpassDescription {
-    VkSubpassDescriptionFlags                   flags;
-    VkPipelineBindPoint                         pipelineBindPoint;
-    uint32_t                                    inputAttachmentCount;
-    const VkAttachmentReference*                pInputAttachments;
-    uint32_t                                    colorAttachmentCount;
-    const VkAttachmentReference*                pColorAttachments;
-    const VkAttachmentReference*                pResolveAttachments;
-    const VkAttachmentReference*                pDepthStencilAttachment;
-    uint32_t                                    preserveAttachmentCount;
-    const uint32_t*                             pPreserveAttachments;
+    VkSubpassDescriptionFlags       flags;
+    VkPipelineBindPoint             pipelineBindPoint;
+    uint32_t                        inputAttachmentCount;
+    const VkAttachmentReference*    pInputAttachments;
+    uint32_t                        colorAttachmentCount;
+    const VkAttachmentReference*    pColorAttachments;
+    const VkAttachmentReference*    pResolveAttachments;
+    const VkAttachmentReference*    pDepthStencilAttachment;
+    uint32_t                        preserveAttachmentCount;
+    const uint32_t*                 pPreserveAttachments;
 } VkSubpassDescription;
 
 typedef struct VkSubpassDependency {
-    uint32_t                                    srcSubpass;
-    uint32_t                                    dstSubpass;
-    VkPipelineStageFlags                        srcStageMask;
-    VkPipelineStageFlags                        dstStageMask;
-    VkAccessFlags                               srcAccessMask;
-    VkAccessFlags                               dstAccessMask;
-    VkDependencyFlags                           dependencyFlags;
+    uint32_t                srcSubpass;
+    uint32_t                dstSubpass;
+    VkPipelineStageFlags    srcStageMask;
+    VkPipelineStageFlags    dstStageMask;
+    VkAccessFlags           srcAccessMask;
+    VkAccessFlags           dstAccessMask;
+    VkDependencyFlags       dependencyFlags;
 } VkSubpassDependency;
 
 typedef struct VkRenderPassCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkRenderPassCreateFlags                     flags;
-    uint32_t                                    attachmentCount;
-    const VkAttachmentDescription*              pAttachments;
-    uint32_t                                    subpassCount;
-    const VkSubpassDescription*                 pSubpasses;
-    uint32_t                                    dependencyCount;
-    const VkSubpassDependency*                  pDependencies;
+    VkStructureType                   sType;
+    const void*                       pNext;
+    VkRenderPassCreateFlags           flags;
+    uint32_t                          attachmentCount;
+    const VkAttachmentDescription*    pAttachments;
+    uint32_t                          subpassCount;
+    const VkSubpassDescription*       pSubpasses;
+    uint32_t                          dependencyCount;
+    const VkSubpassDependency*        pDependencies;
 } VkRenderPassCreateInfo;
 
 typedef struct VkCommandPoolCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkCommandPoolCreateFlags                    flags;
-    uint32_t                                    queueFamilyIndex;
+    VkStructureType             sType;
+    const void*                 pNext;
+    VkCommandPoolCreateFlags    flags;
+    uint32_t                    queueFamilyIndex;
 } VkCommandPoolCreateInfo;
 
 typedef struct VkCommandBufferAllocateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkCommandPool                               commandPool;
-    VkCommandBufferLevel                        level;
-    uint32_t                                    commandBufferCount;
+    VkStructureType         sType;
+    const void*             pNext;
+    VkCommandPool           commandPool;
+    VkCommandBufferLevel    level;
+    uint32_t                commandBufferCount;
 } VkCommandBufferAllocateInfo;
 
 typedef struct VkCommandBufferInheritanceInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkRenderPass                                renderPass;
-    uint32_t                                    subpass;
-    VkFramebuffer                               framebuffer;
-    VkBool32                                    occlusionQueryEnable;
-    VkQueryControlFlags                         queryFlags;
-    VkQueryPipelineStatisticFlags               pipelineStatistics;
+    VkStructureType                  sType;
+    const void*                      pNext;
+    VkRenderPass                     renderPass;
+    uint32_t                         subpass;
+    VkFramebuffer                    framebuffer;
+    VkBool32                         occlusionQueryEnable;
+    VkQueryControlFlags              queryFlags;
+    VkQueryPipelineStatisticFlags    pipelineStatistics;
 } VkCommandBufferInheritanceInfo;
 
 typedef struct VkCommandBufferBeginInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkCommandBufferUsageFlags                   flags;
-    const VkCommandBufferInheritanceInfo*       pInheritanceInfo;
+    VkStructureType                          sType;
+    const void*                              pNext;
+    VkCommandBufferUsageFlags                flags;
+    const VkCommandBufferInheritanceInfo*    pInheritanceInfo;
 } VkCommandBufferBeginInfo;
 
 typedef struct VkBufferCopy {
-    VkDeviceSize                                srcOffset;
-    VkDeviceSize                                dstOffset;
-    VkDeviceSize                                size;
+    VkDeviceSize    srcOffset;
+    VkDeviceSize    dstOffset;
+    VkDeviceSize    size;
 } VkBufferCopy;
 
 typedef struct VkImageSubresourceLayers {
-    VkImageAspectFlags                          aspectMask;
-    uint32_t                                    mipLevel;
-    uint32_t                                    baseArrayLayer;
-    uint32_t                                    layerCount;
+    VkImageAspectFlags    aspectMask;
+    uint32_t              mipLevel;
+    uint32_t              baseArrayLayer;
+    uint32_t              layerCount;
 } VkImageSubresourceLayers;
 
 typedef struct VkImageCopy {
-    VkImageSubresourceLayers                    srcSubresource;
-    VkOffset3D                                  srcOffset;
-    VkImageSubresourceLayers                    dstSubresource;
-    VkOffset3D                                  dstOffset;
-    VkExtent3D                                  extent;
+    VkImageSubresourceLayers    srcSubresource;
+    VkOffset3D                  srcOffset;
+    VkImageSubresourceLayers    dstSubresource;
+    VkOffset3D                  dstOffset;
+    VkExtent3D                  extent;
 } VkImageCopy;
 
 typedef struct VkImageBlit {
-    VkImageSubresourceLayers                    srcSubresource;
-    VkOffset3D                                  srcOffsets[2];
-    VkImageSubresourceLayers                    dstSubresource;
-    VkOffset3D                                  dstOffsets[2];
+    VkImageSubresourceLayers    srcSubresource;
+    VkOffset3D                  srcOffsets[2];
+    VkImageSubresourceLayers    dstSubresource;
+    VkOffset3D                  dstOffsets[2];
 } VkImageBlit;
 
 typedef struct VkBufferImageCopy {
-    VkDeviceSize                                bufferOffset;
-    uint32_t                                    bufferRowLength;
-    uint32_t                                    bufferImageHeight;
-    VkImageSubresourceLayers                    imageSubresource;
-    VkOffset3D                                  imageOffset;
-    VkExtent3D                                  imageExtent;
+    VkDeviceSize                bufferOffset;
+    uint32_t                    bufferRowLength;
+    uint32_t                    bufferImageHeight;
+    VkImageSubresourceLayers    imageSubresource;
+    VkOffset3D                  imageOffset;
+    VkExtent3D                  imageExtent;
 } VkBufferImageCopy;
 
 typedef union VkClearColorValue {
-    float                                       float32[4];
-    int32_t                                     int32[4];
-    uint32_t                                    uint32[4];
+    float       float32[4];
+    int32_t     int32[4];
+    uint32_t    uint32[4];
 } VkClearColorValue;
 
 typedef struct VkClearDepthStencilValue {
-    float                                       depth;
-    uint32_t                                    stencil;
+    float       depth;
+    uint32_t    stencil;
 } VkClearDepthStencilValue;
 
 typedef union VkClearValue {
-    VkClearColorValue                           color;
-    VkClearDepthStencilValue                    depthStencil;
+    VkClearColorValue           color;
+    VkClearDepthStencilValue    depthStencil;
 } VkClearValue;
 
 typedef struct VkClearAttachment {
-    VkImageAspectFlags                          aspectMask;
-    uint32_t                                    colorAttachment;
-    VkClearValue                                clearValue;
+    VkImageAspectFlags    aspectMask;
+    uint32_t              colorAttachment;
+    VkClearValue          clearValue;
 } VkClearAttachment;
 
 typedef struct VkClearRect {
-    VkRect2D                                    rect;
-    uint32_t                                    baseArrayLayer;
-    uint32_t                                    layerCount;
+    VkRect2D    rect;
+    uint32_t    baseArrayLayer;
+    uint32_t    layerCount;
 } VkClearRect;
 
 typedef struct VkImageResolve {
-    VkImageSubresourceLayers                    srcSubresource;
-    VkOffset3D                                  srcOffset;
-    VkImageSubresourceLayers                    dstSubresource;
-    VkOffset3D                                  dstOffset;
-    VkExtent3D                                  extent;
+    VkImageSubresourceLayers    srcSubresource;
+    VkOffset3D                  srcOffset;
+    VkImageSubresourceLayers    dstSubresource;
+    VkOffset3D                  dstOffset;
+    VkExtent3D                  extent;
 } VkImageResolve;
 
 typedef struct VkMemoryBarrier {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkAccessFlags                               srcAccessMask;
-    VkAccessFlags                               dstAccessMask;
+    VkStructureType    sType;
+    const void*        pNext;
+    VkAccessFlags      srcAccessMask;
+    VkAccessFlags      dstAccessMask;
 } VkMemoryBarrier;
 
 typedef struct VkBufferMemoryBarrier {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkAccessFlags                               srcAccessMask;
-    VkAccessFlags                               dstAccessMask;
-    uint32_t                                    srcQueueFamilyIndex;
-    uint32_t                                    dstQueueFamilyIndex;
-    VkBuffer                                    buffer;
-    VkDeviceSize                                offset;
-    VkDeviceSize                                size;
+    VkStructureType    sType;
+    const void*        pNext;
+    VkAccessFlags      srcAccessMask;
+    VkAccessFlags      dstAccessMask;
+    uint32_t           srcQueueFamilyIndex;
+    uint32_t           dstQueueFamilyIndex;
+    VkBuffer           buffer;
+    VkDeviceSize       offset;
+    VkDeviceSize       size;
 } VkBufferMemoryBarrier;
 
 typedef struct VkImageMemoryBarrier {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkAccessFlags                               srcAccessMask;
-    VkAccessFlags                               dstAccessMask;
-    VkImageLayout                               oldLayout;
-    VkImageLayout                               newLayout;
-    uint32_t                                    srcQueueFamilyIndex;
-    uint32_t                                    dstQueueFamilyIndex;
-    VkImage                                     image;
-    VkImageSubresourceRange                     subresourceRange;
+    VkStructureType            sType;
+    const void*                pNext;
+    VkAccessFlags              srcAccessMask;
+    VkAccessFlags              dstAccessMask;
+    VkImageLayout              oldLayout;
+    VkImageLayout              newLayout;
+    uint32_t                   srcQueueFamilyIndex;
+    uint32_t                   dstQueueFamilyIndex;
+    VkImage                    image;
+    VkImageSubresourceRange    subresourceRange;
 } VkImageMemoryBarrier;
 
 typedef struct VkRenderPassBeginInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkRenderPass                                renderPass;
-    VkFramebuffer                               framebuffer;
-    VkRect2D                                    renderArea;
-    uint32_t                                    clearValueCount;
-    const VkClearValue*                         pClearValues;
+    VkStructureType        sType;
+    const void*            pNext;
+    VkRenderPass           renderPass;
+    VkFramebuffer          framebuffer;
+    VkRect2D               renderArea;
+    uint32_t               clearValueCount;
+    const VkClearValue*    pClearValues;
 } VkRenderPassBeginInfo;
 
 typedef struct VkDispatchIndirectCommand {
-    uint32_t                                    x;
-    uint32_t                                    y;
-    uint32_t                                    z;
+    uint32_t    x;
+    uint32_t    y;
+    uint32_t    z;
 } VkDispatchIndirectCommand;
 
 typedef struct VkDrawIndexedIndirectCommand {
-    uint32_t                                    indexCount;
-    uint32_t                                    instanceCount;
-    uint32_t                                    firstIndex;
-    int32_t                                     vertexOffset;
-    uint32_t                                    firstInstance;
+    uint32_t    indexCount;
+    uint32_t    instanceCount;
+    uint32_t    firstIndex;
+    int32_t     vertexOffset;
+    uint32_t    firstInstance;
 } VkDrawIndexedIndirectCommand;
 
 typedef struct VkDrawIndirectCommand {
-    uint32_t                                    vertexCount;
-    uint32_t                                    instanceCount;
-    uint32_t                                    firstVertex;
-    uint32_t                                    firstInstance;
+    uint32_t    vertexCount;
+    uint32_t    instanceCount;
+    uint32_t    firstVertex;
+    uint32_t    firstInstance;
 } VkDrawIndirectCommand;
 
 
@@ -3176,21 +3176,21 @@ typedef enum VkCompositeAlphaFlagBitsKHR {
 typedef VkFlags VkCompositeAlphaFlagsKHR;
 
 typedef struct VkSurfaceCapabilitiesKHR {
-    uint32_t                                    minImageCount;
-    uint32_t                                    maxImageCount;
-    VkExtent2D                                  currentExtent;
-    VkExtent2D                                  minImageExtent;
-    VkExtent2D                                  maxImageExtent;
-    uint32_t                                    maxImageArrayLayers;
-    VkSurfaceTransformFlagsKHR                  supportedTransforms;
-    VkSurfaceTransformFlagBitsKHR               currentTransform;
-    VkCompositeAlphaFlagsKHR                    supportedCompositeAlpha;
-    VkImageUsageFlags                           supportedUsageFlags;
+    uint32_t                         minImageCount;
+    uint32_t                         maxImageCount;
+    VkExtent2D                       currentExtent;
+    VkExtent2D                       minImageExtent;
+    VkExtent2D                       maxImageExtent;
+    uint32_t                         maxImageArrayLayers;
+    VkSurfaceTransformFlagsKHR       supportedTransforms;
+    VkSurfaceTransformFlagBitsKHR    currentTransform;
+    VkCompositeAlphaFlagsKHR         supportedCompositeAlpha;
+    VkImageUsageFlags                supportedUsageFlags;
 } VkSurfaceCapabilitiesKHR;
 
 typedef struct VkSurfaceFormatKHR {
-    VkFormat                                    format;
-    VkColorSpaceKHR                             colorSpace;
+    VkFormat           format;
+    VkColorSpaceKHR    colorSpace;
 } VkSurfaceFormatKHR;
 
 
@@ -3239,35 +3239,35 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSwapchainKHR)
 typedef VkFlags VkSwapchainCreateFlagsKHR;
 
 typedef struct VkSwapchainCreateInfoKHR {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkSwapchainCreateFlagsKHR                   flags;
-    VkSurfaceKHR                                surface;
-    uint32_t                                    minImageCount;
-    VkFormat                                    imageFormat;
-    VkColorSpaceKHR                             imageColorSpace;
-    VkExtent2D                                  imageExtent;
-    uint32_t                                    imageArrayLayers;
-    VkImageUsageFlags                           imageUsage;
-    VkSharingMode                               imageSharingMode;
-    uint32_t                                    queueFamilyIndexCount;
-    const uint32_t*                             pQueueFamilyIndices;
-    VkSurfaceTransformFlagBitsKHR               preTransform;
-    VkCompositeAlphaFlagBitsKHR                 compositeAlpha;
-    VkPresentModeKHR                            presentMode;
-    VkBool32                                    clipped;
-    VkSwapchainKHR                              oldSwapchain;
+    VkStructureType                  sType;
+    const void*                      pNext;
+    VkSwapchainCreateFlagsKHR        flags;
+    VkSurfaceKHR                     surface;
+    uint32_t                         minImageCount;
+    VkFormat                         imageFormat;
+    VkColorSpaceKHR                  imageColorSpace;
+    VkExtent2D                       imageExtent;
+    uint32_t                         imageArrayLayers;
+    VkImageUsageFlags                imageUsage;
+    VkSharingMode                    imageSharingMode;
+    uint32_t                         queueFamilyIndexCount;
+    const uint32_t*                  pQueueFamilyIndices;
+    VkSurfaceTransformFlagBitsKHR    preTransform;
+    VkCompositeAlphaFlagBitsKHR      compositeAlpha;
+    VkPresentModeKHR                 presentMode;
+    VkBool32                         clipped;
+    VkSwapchainKHR                   oldSwapchain;
 } VkSwapchainCreateInfoKHR;
 
 typedef struct VkPresentInfoKHR {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    uint32_t                                    waitSemaphoreCount;
-    const VkSemaphore*                          pWaitSemaphores;
-    uint32_t                                    swapchainCount;
-    const VkSwapchainKHR*                       pSwapchains;
-    const uint32_t*                             pImageIndices;
-    VkResult*                                   pResults;
+    VkStructureType          sType;
+    const void*              pNext;
+    uint32_t                 waitSemaphoreCount;
+    const VkSemaphore*       pWaitSemaphores;
+    uint32_t                 swapchainCount;
+    const VkSwapchainKHR*    pSwapchains;
+    const uint32_t*          pImageIndices;
+    VkResult*                pResults;
 } VkPresentInfoKHR;
 
 
@@ -3327,60 +3327,60 @@ typedef VkFlags VkDisplayPlaneAlphaFlagsKHR;
 typedef VkFlags VkDisplaySurfaceCreateFlagsKHR;
 
 typedef struct VkDisplayPropertiesKHR {
-    VkDisplayKHR                                display;
-    const char*                                 displayName;
-    VkExtent2D                                  physicalDimensions;
-    VkExtent2D                                  physicalResolution;
-    VkSurfaceTransformFlagsKHR                  supportedTransforms;
-    VkBool32                                    planeReorderPossible;
-    VkBool32                                    persistentContent;
+    VkDisplayKHR                  display;
+    const char*                   displayName;
+    VkExtent2D                    physicalDimensions;
+    VkExtent2D                    physicalResolution;
+    VkSurfaceTransformFlagsKHR    supportedTransforms;
+    VkBool32                      planeReorderPossible;
+    VkBool32                      persistentContent;
 } VkDisplayPropertiesKHR;
 
 typedef struct VkDisplayModeParametersKHR {
-    VkExtent2D                                  visibleRegion;
-    uint32_t                                    refreshRate;
+    VkExtent2D    visibleRegion;
+    uint32_t      refreshRate;
 } VkDisplayModeParametersKHR;
 
 typedef struct VkDisplayModePropertiesKHR {
-    VkDisplayModeKHR                            displayMode;
-    VkDisplayModeParametersKHR                  parameters;
+    VkDisplayModeKHR              displayMode;
+    VkDisplayModeParametersKHR    parameters;
 } VkDisplayModePropertiesKHR;
 
 typedef struct VkDisplayModeCreateInfoKHR {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkDisplayModeCreateFlagsKHR                 flags;
-    VkDisplayModeParametersKHR                  parameters;
+    VkStructureType                sType;
+    const void*                    pNext;
+    VkDisplayModeCreateFlagsKHR    flags;
+    VkDisplayModeParametersKHR     parameters;
 } VkDisplayModeCreateInfoKHR;
 
 typedef struct VkDisplayPlaneCapabilitiesKHR {
-    VkDisplayPlaneAlphaFlagsKHR                 supportedAlpha;
-    VkOffset2D                                  minSrcPosition;
-    VkOffset2D                                  maxSrcPosition;
-    VkExtent2D                                  minSrcExtent;
-    VkExtent2D                                  maxSrcExtent;
-    VkOffset2D                                  minDstPosition;
-    VkOffset2D                                  maxDstPosition;
-    VkExtent2D                                  minDstExtent;
-    VkExtent2D                                  maxDstExtent;
+    VkDisplayPlaneAlphaFlagsKHR    supportedAlpha;
+    VkOffset2D                     minSrcPosition;
+    VkOffset2D                     maxSrcPosition;
+    VkExtent2D                     minSrcExtent;
+    VkExtent2D                     maxSrcExtent;
+    VkOffset2D                     minDstPosition;
+    VkOffset2D                     maxDstPosition;
+    VkExtent2D                     minDstExtent;
+    VkExtent2D                     maxDstExtent;
 } VkDisplayPlaneCapabilitiesKHR;
 
 typedef struct VkDisplayPlanePropertiesKHR {
-    VkDisplayKHR                                currentDisplay;
-    uint32_t                                    currentStackIndex;
+    VkDisplayKHR    currentDisplay;
+    uint32_t        currentStackIndex;
 } VkDisplayPlanePropertiesKHR;
 
 typedef struct VkDisplaySurfaceCreateInfoKHR {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkDisplaySurfaceCreateFlagsKHR              flags;
-    VkDisplayModeKHR                            displayMode;
-    uint32_t                                    planeIndex;
-    uint32_t                                    planeStackIndex;
-    VkSurfaceTransformFlagBitsKHR               transform;
-    float                                       globalAlpha;
-    VkDisplayPlaneAlphaFlagBitsKHR              alphaMode;
-    VkExtent2D                                  imageExtent;
+    VkStructureType                   sType;
+    const void*                       pNext;
+    VkDisplaySurfaceCreateFlagsKHR    flags;
+    VkDisplayModeKHR                  displayMode;
+    uint32_t                          planeIndex;
+    uint32_t                          planeStackIndex;
+    VkSurfaceTransformFlagBitsKHR     transform;
+    float                             globalAlpha;
+    VkDisplayPlaneAlphaFlagBitsKHR    alphaMode;
+    VkExtent2D                        imageExtent;
 } VkDisplaySurfaceCreateInfoKHR;
 
 
@@ -3440,11 +3440,11 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateDisplayPlaneSurfaceKHR(
 #define VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME "VK_KHR_display_swapchain"
 
 typedef struct VkDisplayPresentInfoKHR {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkRect2D                                    srcRect;
-    VkRect2D                                    dstRect;
-    VkBool32                                    persistent;
+    VkStructureType    sType;
+    const void*        pNext;
+    VkRect2D           srcRect;
+    VkRect2D           dstRect;
+    VkBool32           persistent;
 } VkDisplayPresentInfoKHR;
 
 
@@ -3469,11 +3469,11 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateSharedSwapchainsKHR(
 typedef VkFlags VkXlibSurfaceCreateFlagsKHR;
 
 typedef struct VkXlibSurfaceCreateInfoKHR {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkXlibSurfaceCreateFlagsKHR                 flags;
-    Display*                                    dpy;
-    Window                                      window;
+    VkStructureType                sType;
+    const void*                    pNext;
+    VkXlibSurfaceCreateFlagsKHR    flags;
+    Display*                       dpy;
+    Window                         window;
 } VkXlibSurfaceCreateInfoKHR;
 
 
@@ -3505,11 +3505,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentationSupportKHR(
 typedef VkFlags VkXcbSurfaceCreateFlagsKHR;
 
 typedef struct VkXcbSurfaceCreateInfoKHR {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkXcbSurfaceCreateFlagsKHR                  flags;
-    xcb_connection_t*                           connection;
-    xcb_window_t                                window;
+    VkStructureType               sType;
+    const void*                   pNext;
+    VkXcbSurfaceCreateFlagsKHR    flags;
+    xcb_connection_t*             connection;
+    xcb_window_t                  window;
 } VkXcbSurfaceCreateInfoKHR;
 
 
@@ -3541,11 +3541,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentationSupportKHR(
 typedef VkFlags VkWaylandSurfaceCreateFlagsKHR;
 
 typedef struct VkWaylandSurfaceCreateInfoKHR {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkWaylandSurfaceCreateFlagsKHR              flags;
-    struct wl_display*                          display;
-    struct wl_surface*                          surface;
+    VkStructureType                   sType;
+    const void*                       pNext;
+    VkWaylandSurfaceCreateFlagsKHR    flags;
+    struct wl_display*                display;
+    struct wl_surface*                surface;
 } VkWaylandSurfaceCreateInfoKHR;
 
 
@@ -3576,11 +3576,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWaylandPresentationSupportKHR(
 typedef VkFlags VkMirSurfaceCreateFlagsKHR;
 
 typedef struct VkMirSurfaceCreateInfoKHR {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkMirSurfaceCreateFlagsKHR                  flags;
-    MirConnection*                              connection;
-    MirSurface*                                 mirSurface;
+    VkStructureType               sType;
+    const void*                   pNext;
+    VkMirSurfaceCreateFlagsKHR    flags;
+    MirConnection*                connection;
+    MirSurface*                   mirSurface;
 } VkMirSurfaceCreateInfoKHR;
 
 
@@ -3611,10 +3611,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceMirPresentationSupportKHR(
 typedef VkFlags VkAndroidSurfaceCreateFlagsKHR;
 
 typedef struct VkAndroidSurfaceCreateInfoKHR {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkAndroidSurfaceCreateFlagsKHR              flags;
-    ANativeWindow*                              window;
+    VkStructureType                   sType;
+    const void*                       pNext;
+    VkAndroidSurfaceCreateFlagsKHR    flags;
+    ANativeWindow*                    window;
 } VkAndroidSurfaceCreateInfoKHR;
 
 
@@ -3639,11 +3639,11 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
 typedef VkFlags VkWin32SurfaceCreateFlagsKHR;
 
 typedef struct VkWin32SurfaceCreateInfoKHR {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkWin32SurfaceCreateFlagsKHR                flags;
-    HINSTANCE                                   hinstance;
-    HWND                                        hwnd;
+    VkStructureType                 sType;
+    const void*                     pNext;
+    VkWin32SurfaceCreateFlagsKHR    flags;
+    HINSTANCE                       hinstance;
+    HWND                            hwnd;
 } VkWin32SurfaceCreateInfoKHR;
 
 
