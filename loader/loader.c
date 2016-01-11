@@ -1279,6 +1279,7 @@ static void loader_scanned_icd_add(
 
     fp_get_proc_addr = loader_platform_get_proc_address(handle, "vk_icdGetInstanceProcAddr");
     if (!fp_get_proc_addr) {
+        // Use deprecated interface
         fp_get_proc_addr = loader_platform_get_proc_address(handle, "vkGetInstanceProcAddr");
         if (!fp_get_proc_addr) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, loader_platform_get_proc_address_error("vk_icdGetInstanceProcAddr"));
@@ -1286,16 +1287,29 @@ static void loader_scanned_icd_add(
         } else {
             loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0, "Using deprecated ICD interface of vkGetInstanceProcAddr instead of vk_icdGetInstanceProcAddr");
         }
+        fp_create_inst = loader_platform_get_proc_address(handle, "vkCreateInstance");
+        if (!fp_create_inst) {
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Couldn't get vkCreateInstance via dlsym/loadlibrary from ICD");
+            return;
+        }
+        fp_get_inst_ext_props = loader_platform_get_proc_address(handle, "vkEnumerateInstanceExtensionProperties");
+        if (!fp_get_inst_ext_props) {
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Couldn't get vkEnumerateInstanceExtensionProperties via dlsym/loadlibrary from ICD");
+            return;
+        }
     }
-    fp_create_inst = (PFN_vkCreateInstance) fp_get_proc_addr(NULL, "vkCreateInstance");
-    if (!fp_create_inst) {
-        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Couldn't get vkCreateInstance via vkGetInstanceProcAddr from ICD");
-        return;
-    }
-    fp_get_inst_ext_props = (PFN_vkEnumerateInstanceExtensionProperties) fp_get_proc_addr(NULL, "vkEnumerateInstanceExtensionProperties");
-    if (!fp_get_inst_ext_props) {
-        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Couldn't get vkEnumerateInstanceExtensionProperties via vkGetInstanceProcAddr from ICD");
-        return;
+    else {
+        // Use newer interface
+        fp_create_inst = (PFN_vkCreateInstance) fp_get_proc_addr(NULL, "vkCreateInstance");
+        if (!fp_create_inst) {
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Couldn't get vkCreateInstance via vk_icdGetInstanceProcAddr from ICD");
+            return;
+        }
+        fp_get_inst_ext_props = (PFN_vkEnumerateInstanceExtensionProperties)fp_get_proc_addr(NULL, "vkEnumerateInstanceExtensionProperties");
+        if (!fp_get_inst_ext_props) {
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Couldn't get vkEnumerateInstanceExtensionProperties via vk_icdGetInstanceProcAddr from ICD");
+            return;
+        }
     }
 
     // check for enough capacity
