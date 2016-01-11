@@ -625,9 +625,9 @@ void Hologram::prepare_framebuffers()
     }
 }
 
-void Hologram::step_object(Object &obj, Worker &worker) const
+void Hologram::step_object(Object &obj, float obj_time) const
 {
-    glm::vec3 pos = obj.path.position(worker.frame_time_);
+    glm::vec3 pos = obj.path.position(obj_time);
     glm::vec3 scale = glm::vec3(0.01f);
 
     obj.model = glm::mat4(1.0f);
@@ -644,7 +644,16 @@ void Hologram::draw_object(const Object &obj, VkCommandBuffer cmd) const
     meshes_->cmd_draw(cmd, obj.mesh);
 }
 
-void Hologram::update_objects(Worker &worker)
+void Hologram::step_objects(const Worker &worker)
+{
+    for (int i = worker.object_begin_; i < worker.object_end_; i++) {
+        auto &obj = objects_[i];
+
+        step_object(obj, worker.object_time_);
+    }
+}
+
+void Hologram::draw_objects(Worker &worker)
 {
     auto &data = frame_data_[frame_data_index_];
     auto cmd = data.worker_cmds[worker.index_];
@@ -671,7 +680,6 @@ void Hologram::update_objects(Worker &worker)
     for (int i = worker.object_begin_; i < worker.object_end_; i++) {
         auto &obj = sim_.objects()[i];
 
-        step_object(obj, worker);
         draw_object(obj, cmd);
     }
 
@@ -690,16 +698,23 @@ void Hologram::on_key(Key key)
     }
 }
 
-void Hologram::on_frame(float frame_time, int fb)
+void Hologram::on_tick()
 {
     if (sim_paused_)
         return;
 
     for (auto &worker : workers_)
-        worker->render(frame_time, fb);
+        worker->step_objects();
+}
+
+void Hologram::on_frame(float frame_pred, int fb)
+{
+    // ignore frame_pred
+    for (auto &worker : workers_)
+        worker->draw_objects(fb);
 
     for (auto &worker : workers_)
-        worker->wait_render();
+        worker->wait_idle();
 
     VkResult res = vk::BeginCommandBuffer(data.primary_cmd, &primary_cmd_begin_info_);
 
@@ -720,13 +735,15 @@ void Hologram::on_frame(float frame_time, int fb)
 }
 
 Hologram::Worker::Worker(Hologram &hologram, int object_begin, int object_end)
-    : hologram_(hologram), object_begin_(object_begin), object_end_(object_end), state_(INIT)
+    : hologram_(hologram), object_begin_(object_begin), object_end_(object_end),
+      object_time_(0.0f), state_(INIT),
+      tick_interval_(1.0f / hologram.settings_.ticks_per_second)
 {
 }
 
 void Hologram::Worker::start()
 {
-    state_ = WAIT;
+    state_ = IDLE;
     thread_ = std::thread(Hologram::Worker::thread_loop, this);
 }
 
@@ -741,47 +758,67 @@ void Hologram::Worker::stop()
     thread_.join();
 }
 
-void Hologram::Worker::render(float frame_time, int fb)
+void Hologram::Worker::step_objects()
 {
     {
         std::lock_guard<std::mutex> lock(mutex_);
         bool started = (state_ != INIT);
 
-        frame_time_ = frame_time;
-        fb_ = fb;
-        state_ = RENDER;
+        object_time_ += tick_interval_;
+        state_ = STEP;
 
-        // render directly
+        // step directly
         if (!started) {
-            hologram_.update_objects(*this);
+            hologram_.step_objects(*this);
             state_ = INIT;
         }
     }
     state_cv_.notify_one();
 }
 
-void Hologram::Worker::wait_render()
+void Hologram::Worker::draw_objects(int fb)
+{
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        bool started = (state_ != INIT);
+
+        fb_ = fb;
+        state_ = DRAW;
+
+        // render directly
+        if (!started) {
+            hologram_.draw_objects(*this);
+            state_ = INIT;
+        }
+    }
+    state_cv_.notify_one();
+}
+
+void Hologram::Worker::wait_idle()
 {
     std::unique_lock<std::mutex> lock(mutex_);
     bool started = (state_ != INIT);
 
     if (started)
-        state_cv_.wait(lock, [this] { return (state_ == WAIT); });
+        state_cv_.wait(lock, [this] { return (state_ == IDLE); });
 }
 
-void Hologram::Worker::render_loop()
+void Hologram::Worker::update_loop()
 {
     while (true) {
         std::unique_lock<std::mutex> lock(mutex_);
 
-        state_cv_.wait(lock, [this] { return (state_ != WAIT); });
+        state_cv_.wait(lock, [this] { return (state_ != IDLE); });
         if (state_ == INIT)
             break;
 
-        assert(state_ == RENDER);
-        hologram_.update_objects(*this);
+        assert(state_ == STEP || state_ == DRAW);
+        if (state_ == STEP)
+            hologram_.step_objects(*this);
+        else
+            hologram_.draw_objects(*this);
 
-        state_ = WAIT;
+        state_ = IDLE;
         lock.unlock();
         state_cv_.notify_one();
     }
