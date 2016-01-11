@@ -15,6 +15,7 @@ public:
         int initial_width;
         int initial_height;
         int queue_count;
+        int back_buffer_count;
         int ticks_per_second;
         bool vsync;
         bool animate;
@@ -47,6 +48,7 @@ protected:
         settings_.initial_width = 1280;
         settings_.initial_height = 1024;
         settings_.queue_count = 1;
+        settings_.back_buffer_count = 1;
         settings_.ticks_per_second = 30;
         settings_.vsync = true;
         settings_.animate = true;
