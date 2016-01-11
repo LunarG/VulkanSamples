@@ -27,13 +27,16 @@ finds ICD driver libraries.
 Currently two supported methods of the loader finding ICD entry points are supported:
 1) Recommended
 - vk_icdGetInstanceProcAddr exported in the ICD library and returns valid function pointers for all the VK API entrypoints
-  both core entry points and any instance or device entrypoints
+  both core entry points and any instance or device extension entrypoints
+- ICD supports NULL instance handle for the global Vulkan entrypoints when called from vk_icdGetInstanceProcAddr
 - all other Vulkan entrypoints either NOT exported from the ICD library or else will not use the official Vulkan function names
  if they are exported. (NOTE: this requirement is for ICD libraries that include other functionality (such as OpenGL library)
  and thus could be loaded prior to when the Vulkan loader library is loaded by the app.  Thus the ICD library exported Vulkan symbols must not
  clash with the loader's exported Vulkan symbols).
  2) Deprecated
- - vkGetInstanceProcAddr exported in the ICD library and returns valid function pointers for all the VK API entrypoints
+ - vkGetInstanceProcAddr exported in the ICD library and returns valid function pointers for all the VK API entrypoints.
+ - vkCreateInstance exported in the ICD library
+ - vkEnumerateInstanceExtensionProperties exported in the ICD library
  
 - WSI surface extensions (vk_KHR_*surface) handling:
   1. Loader handles the vkCreate*SurfaceKHR() and vkDestroySurfaceKHR()  functions including creating/destroying the VkSurfaceKHR object
