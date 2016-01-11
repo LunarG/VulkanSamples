@@ -10,11 +10,11 @@ public:
     ~ShellXcb();
 
     void run();
+    void quit() { quit_ = true; }
 
 private:
     enum Action {
         NONE,
-        QUIT,
         DRAW,
     };
 
@@ -36,6 +36,8 @@ private:
     xcb_atom_t wm_delete_window_;
 
     void *lib_handle_;
+
+    bool quit_;
 };
 
 #endif // SHELL_XCB_H
