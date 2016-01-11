@@ -4260,7 +4260,7 @@ TEST_F(VkRenderTest, RenderPassAttachmentClear)
     color_attachment.clearValue.color.float32[2] = 0;
     color_attachment.clearValue.color.float32[3] = 0;
     color_attachment.colorAttachment = 0;
-    VkClearRect clear_rect = { { { 0, 0 }, { (int)m_width, (int)m_height } } };
+    VkClearRect clear_rect = { { { 0, 0 }, { (uint32_t)m_width, (uint32_t)m_height } } };
     vkCmdClearAttachments(m_commandBuffer->handle(), 1, &color_attachment,
                           1, &clear_rect);
 

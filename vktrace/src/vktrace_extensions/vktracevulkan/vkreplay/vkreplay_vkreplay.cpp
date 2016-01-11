@@ -226,7 +226,7 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
                 //                    // Third, check extensions requested by the application
                 //                    if (bCheckIfNeeded)
                 //                    {
-                //                        for (uint32_t j = 0; j < pPacket->pCreateInfo->enabledExtensionNameCount; j++)
+                //                        for (uint32_t j = 0; j < pPacket->pCreateInfo->enabledExtensionCount; j++)
                 //                        {
                 //                            if (memcmp(&pPacket->pCreateInfo->pEnabledExtensions[j], &extProp, sizeof(VkExtensionProperties)) == 0)
                 //                            {
@@ -248,9 +248,9 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
             createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
             createInfo.pNext = NULL;
             createInfo.pApplicationInfo = pPacket->pCreateInfo->pApplicationInfo;
-            createInfo.enabledLayerNameCount = 0;
+            createInfo.enabledLayerCount = 0;
             createInfo.ppEnabledLayerNames = NULL;
-            createInfo.enabledExtensionNameCount = instance_extension_count;
+            createInfo.enabledExtensionCount = instance_extension_count;
             //                createInfo.ppEnabledExtensionNames = requiredLayerNames;
 
             // make the call
@@ -264,7 +264,7 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
             if (g_pReplaySettings->screenshotList != NULL) {
                 // enable screenshot layer if it is available and not already in list
                 bool found_ss = false;
-                for (uint32_t i = 0; i < pCreateInfo->enabledLayerNameCount; i++) {
+                for (uint32_t i = 0; i < pCreateInfo->enabledLayerCount; i++) {
                     if (!strcmp(pCreateInfo->ppEnabledLayerNames[i], strScreenShot)) {
                         found_ss = true;
                         break;
@@ -286,12 +286,12 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
                     }
                     if (found_ss) {
                         // screenshot layer is available so enable it
-                        ppEnabledLayerNames = (char **) vktrace_malloc((pCreateInfo->enabledLayerNameCount + 1) * sizeof (char *));
-                        for (uint32_t i = 0; i < pCreateInfo->enabledLayerNameCount && ppEnabledLayerNames; i++) {
+                        ppEnabledLayerNames = (char **) vktrace_malloc((pCreateInfo->enabledLayerCount + 1) * sizeof (char *));
+                        for (uint32_t i = 0; i < pCreateInfo->enabledLayerCount && ppEnabledLayerNames; i++) {
                             ppEnabledLayerNames[i] = (char *) pCreateInfo->ppEnabledLayerNames[i];
                         }
-                        ppEnabledLayerNames[pCreateInfo->enabledLayerNameCount] = (char *) vktrace_malloc(strlen(strScreenShot) + 1);
-                        strcpy(ppEnabledLayerNames[pCreateInfo->enabledLayerNameCount++], strScreenShot);
+                        ppEnabledLayerNames[pCreateInfo->enabledLayerCount] = (char *) vktrace_malloc(strlen(strScreenShot) + 1);
+                        strcpy(ppEnabledLayerNames[pCreateInfo->enabledLayerCount++], strScreenShot);
                         saved_ppLayers = (char **) pCreateInfo->ppEnabledLayerNames;
                         pCreateInfo->ppEnabledLayerNames = ppEnabledLayerNames;
                     }
@@ -301,7 +301,7 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
             replayResult = m_vkFuncs.real_vkCreateInstance(pPacket->pCreateInfo, NULL, &inst);
             if (ppEnabledLayerNames) {
                 // restore the packets CreateInfo struct
-                vktrace_free(ppEnabledLayerNames[pCreateInfo->enabledLayerNameCount - 1]);
+                vktrace_free(ppEnabledLayerNames[pCreateInfo->enabledLayerCount - 1]);
                 vktrace_free(ppEnabledLayerNames);
                 pCreateInfo->ppEnabledLayerNames = saved_ppLayers;
             }
@@ -337,7 +337,7 @@ VkResult vkReplay::manually_replay_vkCreateDevice(packet_vkCreateDevice* pPacket
         if (g_pReplaySettings->screenshotList != NULL) {
             // enable screenshot layer if it is available and not already in list
             bool found_ss = false;
-            for (uint32_t i = 0; i < pCreateInfo->enabledLayerNameCount; i++) {
+            for (uint32_t i = 0; i < pCreateInfo->enabledLayerCount; i++) {
                 if (!strcmp(pCreateInfo->ppEnabledLayerNames[i], strScreenShot)) {
                     found_ss = true;
                     break;
@@ -359,13 +359,13 @@ VkResult vkReplay::manually_replay_vkCreateDevice(packet_vkCreateDevice* pPacket
                 }
                 if (found_ss) {
                     // screenshot layer is available so enable it
-                    ppEnabledLayerNames = (char **) vktrace_malloc((pCreateInfo->enabledLayerNameCount+1) * sizeof(char *));
-                    for (uint32_t i = 0; i < pCreateInfo->enabledLayerNameCount && ppEnabledLayerNames; i++)
+                    ppEnabledLayerNames = (char **) vktrace_malloc((pCreateInfo->enabledLayerCount+1) * sizeof(char *));
+                    for (uint32_t i = 0; i < pCreateInfo->enabledLayerCount && ppEnabledLayerNames; i++)
                     {
                         ppEnabledLayerNames[i] = (char *) pCreateInfo->ppEnabledLayerNames[i];
                     }
-                    ppEnabledLayerNames[pCreateInfo->enabledLayerNameCount] = (char *) vktrace_malloc(strlen(strScreenShot) + 1);
-                    strcpy(ppEnabledLayerNames[pCreateInfo->enabledLayerNameCount++], strScreenShot);
+                    ppEnabledLayerNames[pCreateInfo->enabledLayerCount] = (char *) vktrace_malloc(strlen(strScreenShot) + 1);
+                    strcpy(ppEnabledLayerNames[pCreateInfo->enabledLayerCount++], strScreenShot);
                     saved_ppLayers = (char **) pCreateInfo->ppEnabledLayerNames;
                     pCreateInfo->ppEnabledLayerNames = ppEnabledLayerNames;
                 }
@@ -376,7 +376,7 @@ VkResult vkReplay::manually_replay_vkCreateDevice(packet_vkCreateDevice* pPacket
         if (ppEnabledLayerNames)
         {
             // restore the packets CreateInfo struct
-            vktrace_free(ppEnabledLayerNames[pCreateInfo->enabledLayerNameCount-1]);
+            vktrace_free(ppEnabledLayerNames[pCreateInfo->enabledLayerCount-1]);
             vktrace_free(ppEnabledLayerNames);
             pCreateInfo->ppEnabledLayerNames = saved_ppLayers;
         }
@@ -1058,7 +1058,7 @@ VkResult vkReplay::manually_replay_vkAllocateDescriptorSets(packet_vkAllocateDes
                        pDescriptorSets);
     if(replayResult == VK_SUCCESS)
     {
-        for(uint32_t i = 0; i < pPacket->pAllocateInfo->setLayoutCount; ++i)
+        for(uint32_t i = 0; i < pPacket->pAllocateInfo->descriptorSetCount; ++i)
         {
            m_objMapper.add_to_descriptorsets_map(pPacket->pDescriptorSets[i], pDescriptorSets[i]);
         }
@@ -1319,32 +1319,29 @@ void vkReplay::manually_replay_vkCmdWaitEvents(packet_vkCmdWaitEvents* pPacket)
         *pEvent = m_objMapper.remap_events(pPacket->pEvents[idx]);
     }
 
-    VkBuffer* saveBuf = VKTRACE_NEW_ARRAY(VkBuffer, pPacket->memoryBarrierCount);
-    VkImage* saveImg = VKTRACE_NEW_ARRAY(VkImage, pPacket->memoryBarrierCount);
-    for (idx = 0; idx < pPacket->memoryBarrierCount; idx++)
+    VkBuffer* saveBuf = VKTRACE_NEW_ARRAY(VkBuffer, pPacket->bufferMemoryBarrierCount);
+    for (idx = 0; idx < pPacket->bufferMemoryBarrierCount; idx++)
     {
-        VkMemoryBarrier *pNext = (VkMemoryBarrier *) pPacket->ppMemoryBarriers[idx];
-        assert(pNext);
-        if (pNext->sType == VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER) {
-            VkBufferMemoryBarrier *pNextBuf = (VkBufferMemoryBarrier *) pPacket->ppMemoryBarriers[idx];
-            saveBuf[numRemapBuf++] = pNextBuf->buffer;
-            pNextBuf->buffer = m_objMapper.remap_buffers(pNextBuf->buffer);
-        } else if (pNext->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
-            VkImageMemoryBarrier *pNextImg = (VkImageMemoryBarrier *) pPacket->ppMemoryBarriers[idx];
-            saveImg[numRemapImg++] = pNextImg->image;
-            pNextImg->image = m_objMapper.remap_images(pNextImg->image);
-        }
+        VkBufferMemoryBarrier *pNextBuf = (VkBufferMemoryBarrier *)& (pPacket->pBufferMemoryBarriers[idx]);
+        saveBuf[numRemapBuf++] = pNextBuf->buffer;
+        pNextBuf->buffer = m_objMapper.remap_buffers(pNextBuf->buffer);
     }
-    m_vkFuncs.real_vkCmdWaitEvents(remappedCommandBuffer, pPacket->eventCount, pPacket->pEvents, pPacket->srcStageMask, pPacket->dstStageMask, pPacket->memoryBarrierCount, pPacket->ppMemoryBarriers);
+    VkImage* saveImg = VKTRACE_NEW_ARRAY(VkImage, pPacket->imageMemoryBarrierCount);
+    for (idx = 0; idx < pPacket->imageMemoryBarrierCount; idx++)
+    {
+        VkImageMemoryBarrier *pNextImg = (VkImageMemoryBarrier *) &(pPacket->pImageMemoryBarriers[idx]);
+        saveImg[numRemapImg++] = pNextImg->image;
+        pNextImg->image = m_objMapper.remap_images(pNextImg->image);
+    }
+    m_vkFuncs.real_vkCmdWaitEvents(remappedCommandBuffer, pPacket->eventCount, pPacket->pEvents, pPacket->srcStageMask, pPacket->dstStageMask, pPacket->memoryBarrierCount, pPacket->pMemoryBarriers, pPacket->bufferMemoryBarrierCount, pPacket->pBufferMemoryBarriers, pPacket->imageMemoryBarrierCount, pPacket->pImageMemoryBarriers);
+
+    for (idx = 0; idx < pPacket->bufferMemoryBarrierCount; idx++) {
+        VkBufferMemoryBarrier *pNextBuf = (VkBufferMemoryBarrier *) &(pPacket->pBufferMemoryBarriers[idx]);
+        pNextBuf->buffer = saveBuf[idx];
+    }
     for (idx = 0; idx < pPacket->memoryBarrierCount; idx++) {
-        VkMemoryBarrier *pNext = (VkMemoryBarrier *) pPacket->ppMemoryBarriers[idx];
-        if (pNext->sType == VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER) {
-            VkBufferMemoryBarrier *pNextBuf = (VkBufferMemoryBarrier *) pPacket->ppMemoryBarriers[idx];
-            pNextBuf->buffer = saveBuf[idx];
-        } else if (pNext->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
-            VkImageMemoryBarrier *pNextImg = (VkImageMemoryBarrier *) pPacket->ppMemoryBarriers[idx];
-            pNextImg->image = saveImg[idx];
-        }
+        VkImageMemoryBarrier *pNextImg = (VkImageMemoryBarrier *) &(pPacket->pImageMemoryBarriers[idx]);
+        pNextImg->image = saveImg[idx];
     }
     for (idx = 0; idx < pPacket->eventCount; idx++) {
         VkEvent *pEvent = (VkEvent *) &(pPacket->pEvents[idx]);
@@ -1368,32 +1365,29 @@ void vkReplay::manually_replay_vkCmdPipelineBarrier(packet_vkCmdPipelineBarrier*
     uint32_t idx = 0;
     uint32_t numRemapBuf = 0;
     uint32_t numRemapImg = 0;
-    VkBuffer* saveBuf = VKTRACE_NEW_ARRAY(VkBuffer, pPacket->memoryBarrierCount);
-    VkImage* saveImg = VKTRACE_NEW_ARRAY(VkImage, pPacket->memoryBarrierCount);
-    for (idx = 0; idx < pPacket->memoryBarrierCount; idx++)
+    VkBuffer* saveBuf = VKTRACE_NEW_ARRAY(VkBuffer, pPacket->bufferMemoryBarrierCount);
+    VkImage* saveImg = VKTRACE_NEW_ARRAY(VkImage, pPacket->imageMemoryBarrierCount);
+    for (idx = 0; idx < pPacket->bufferMemoryBarrierCount; idx++)
     {
-        VkMemoryBarrier *pNext = (VkMemoryBarrier *) pPacket->ppMemoryBarriers[idx];
-        assert(pNext);
-        if (pNext->sType == VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER) {
-            VkBufferMemoryBarrier *pNextBuf = (VkBufferMemoryBarrier *) pPacket->ppMemoryBarriers[idx];
-            saveBuf[numRemapBuf++] = pNextBuf->buffer;
-            pNextBuf->buffer = m_objMapper.remap_buffers(pNextBuf->buffer);
-        } else if (pNext->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
-            VkImageMemoryBarrier *pNextImg = (VkImageMemoryBarrier *) pPacket->ppMemoryBarriers[idx];
-            saveImg[numRemapImg++] = pNextImg->image;
-            pNextImg->image = m_objMapper.remap_images(pNextImg->image);
-        }
+        VkBufferMemoryBarrier *pNextBuf = (VkBufferMemoryBarrier *) &(pPacket->pBufferMemoryBarriers[idx]);
+        saveBuf[numRemapBuf++] = pNextBuf->buffer;
+        pNextBuf->buffer = m_objMapper.remap_buffers(pNextBuf->buffer);
     }
-    m_vkFuncs.real_vkCmdPipelineBarrier(remappedCommandBuffer, pPacket->srcStageMask, pPacket->dstStageMask, pPacket->dependencyFlags, pPacket->memoryBarrierCount, pPacket->ppMemoryBarriers);
-    for (idx = 0; idx < pPacket->memoryBarrierCount; idx++) {
-        VkMemoryBarrier *pNext = (VkMemoryBarrier *) pPacket->ppMemoryBarriers[idx];
-        if (pNext->sType == VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER) {
-            VkBufferMemoryBarrier *pNextBuf = (VkBufferMemoryBarrier *) pPacket->ppMemoryBarriers[idx];
-            pNextBuf->buffer = saveBuf[idx];
-        } else if (pNext->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
-            VkImageMemoryBarrier *pNextImg = (VkImageMemoryBarrier *) pPacket->ppMemoryBarriers[idx];
-            pNextImg->image = saveImg[idx];
-        }
+    for (idx = 0; idx < pPacket->imageMemoryBarrierCount; idx++)
+    {
+        VkImageMemoryBarrier *pNextImg = (VkImageMemoryBarrier *) &(pPacket->pImageMemoryBarriers[idx]);
+        saveImg[numRemapImg++] = pNextImg->image;
+        pNextImg->image = m_objMapper.remap_images(pNextImg->image);
+    }
+    m_vkFuncs.real_vkCmdPipelineBarrier(remappedCommandBuffer, pPacket->srcStageMask, pPacket->dstStageMask, pPacket->dependencyFlags, pPacket->memoryBarrierCount, pPacket->pMemoryBarriers, pPacket->bufferMemoryBarrierCount, pPacket->pBufferMemoryBarriers, pPacket->imageMemoryBarrierCount, pPacket->pImageMemoryBarriers);
+
+    for (idx = 0; idx < pPacket->bufferMemoryBarrierCount; idx++) {
+        VkBufferMemoryBarrier *pNextBuf = (VkBufferMemoryBarrier *) &(pPacket->pBufferMemoryBarriers[idx]);
+        pNextBuf->buffer = saveBuf[idx];
+    }
+    for (idx = 0; idx < pPacket->imageMemoryBarrierCount; idx++) {
+        VkImageMemoryBarrier *pNextImg = (VkImageMemoryBarrier *) &(pPacket->pImageMemoryBarriers[idx]);
+        pNextImg->image = saveImg[idx];
     }
     VKTRACE_DELETE(saveBuf);
     VKTRACE_DELETE(saveImg);
@@ -1483,22 +1477,23 @@ VkResult vkReplay::manually_replay_vkBeginCommandBuffer(packet_vkBeginCommandBuf
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkCommandBufferBeginInfo* pInfo = (VkCommandBufferBeginInfo*)pPacket->pBeginInfo;
+    VkCommandBufferInheritanceInfo *pHinfo = (VkCommandBufferInheritanceInfo *) ((pInfo) ? pInfo->pInheritanceInfo : NULL);
     // Save the original RP & FB, then overwrite packet with remapped values
     VkRenderPass savedRP, *pRP;
     VkFramebuffer savedFB, *pFB;
-    if (pInfo != NULL)
+    if (pInfo != NULL && pHinfo != NULL)
     {
-        savedRP = pInfo->renderPass;
-        savedFB = pInfo->framebuffer;
-        pRP = &(pInfo->renderPass);
-        pFB = &(pInfo->framebuffer);
+        savedRP = pHinfo->renderPass;
+        savedFB = pHinfo->framebuffer;
+        pRP = &(pHinfo->renderPass);
+        pFB = &(pHinfo->framebuffer);
         *pRP = m_objMapper.remap_renderpasss(savedRP);
         *pFB = m_objMapper.remap_framebuffers(savedFB);
     }
     replayResult = m_vkFuncs.real_vkBeginCommandBuffer(remappedCommandBuffer, pPacket->pBeginInfo);
-    if (pInfo != NULL) {
-        pInfo->renderPass = savedRP;
-        pInfo->framebuffer = savedFB;
+    if (pInfo != NULL && pHinfo != NULL) {
+        pHinfo->renderPass = savedRP;
+        pHinfo->framebuffer = savedFB;
     }
     return replayResult;
 }
@@ -2006,7 +2001,7 @@ VkResult vkReplay::manually_replay_vkAllocateCommandBuffers(packet_vkAllocateCom
 //        return vktrace_replay::VKTRACE_REPLAY_ERROR;
 //    }
 
-    VkCommandBuffer *local_pCommandBuffers = new VkCommandBuffer[pPacket->pAllocateInfo->bufferCount];
+    VkCommandBuffer *local_pCommandBuffers = new VkCommandBuffer[pPacket->pAllocateInfo->commandBufferCount];
     VkCommandPool local_CommandPool;
     local_CommandPool = pPacket->pAllocateInfo->commandPool;
     ((VkCommandBufferAllocateInfo *) pPacket->pAllocateInfo)->commandPool = m_objMapper.remap_commandpools(pPacket->pAllocateInfo->commandPool);
@@ -2016,7 +2011,7 @@ VkResult vkReplay::manually_replay_vkAllocateCommandBuffers(packet_vkAllocateCom
 
     if (replayResult == VK_SUCCESS)
     {
-        for (uint32_t i = 0; i < pPacket->pAllocateInfo->bufferCount; i++) {
+        for (uint32_t i = 0; i < pPacket->pAllocateInfo->commandBufferCount; i++) {
             m_objMapper.add_to_commandbuffers_map(pPacket->pCommandBuffers[i], local_pCommandBuffers[i]);
         }
     }

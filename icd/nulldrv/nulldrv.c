@@ -203,7 +203,7 @@ static VkResult nulldrv_dev_create(struct nulldrv_gpu *gpu,
     if (!dev)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    for (i = 0; i < info->enabledExtensionNameCount; i++) {
+    for (i = 0; i < info->enabledExtensionCount; i++) {
         const enum nulldrv_ext_type ext = nulldrv_gpu_lookup_extension(
                     gpu,
                     info->ppEnabledExtensionNames[i]);
@@ -478,7 +478,7 @@ static VkResult nulldrv_cmd_create(struct nulldrv_dev *dev,
     struct nulldrv_cmd *cmd;
     uint32_t num_allocated = 0;
 
-    for (uint32_t i = 0; i < info->bufferCount; i++) {
+    for (uint32_t i = 0; i < info->commandBufferCount; i++) {
         cmd = (struct nulldrv_cmd *) nulldrv_base_create(dev, sizeof(*cmd),
                 VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT);
         if (!cmd) {
@@ -1175,24 +1175,32 @@ VKAPI_ATTR void VKAPI_CALL vkCmdDispatchIndirect(
 }
 
 VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(
-    VkCommandBuffer                                 commandBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    eventCount,
     const VkEvent*                              pEvents,
     VkPipelineStageFlags                        sourceStageMask,
     VkPipelineStageFlags                        dstStageMask,
     uint32_t                                    memoryBarrierCount,
-    const void* const*                          ppMemoryBarriers)
+    const VkMemoryBarrier*                      pMemoryBarriers,
+    uint32_t                                    bufferMemoryBarrierCount,
+    const VkBufferMemoryBarrier*                pBufferMemoryBarriers,
+    uint32_t                                    imageMemoryBarrierCount,
+    const VkImageMemoryBarrier*                 pImageMemoryBarriers)
 {
     NULLDRV_LOG_FUNC;
 }
 
 VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(
-    VkCommandBuffer                                 commandBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkPipelineStageFlags                        srcStageMask,
     VkPipelineStageFlags                        dstStageMask,
     VkDependencyFlags                           dependencyFlags,
     uint32_t                                    memoryBarrierCount,
-    const void* const*                          ppMemoryBarriers)
+    const VkMemoryBarrier*                      pMemoryBarriers,
+    uint32_t                                    bufferMemoryBarrierCount,
+    const VkBufferMemoryBarrier*                pBufferMemoryBarriers,
+    uint32_t                                    imageMemoryBarrierCount,
+    const VkImageMemoryBarrier*                 pImageMemoryBarriers)
 {
     NULLDRV_LOG_FUNC;
 }
@@ -1982,7 +1990,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkResetDescriptorPool(
 
 VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(
     VkDevice                                device,
-    const VkDescriptorSetAllocateInfo*         pAllocateInfo,
+    const VkDescriptorSetAllocateInfo*      pAllocateInfo,
     VkDescriptorSet*                        pDescriptorSets)
 {
     NULLDRV_LOG_FUNC;
@@ -1991,7 +1999,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(
     VkResult ret = VK_SUCCESS;
     uint32_t i;
 
-    for (i = 0; i < pAllocateInfo->setLayoutCount; i++) {
+    for (i = 0; i < pAllocateInfo->descriptorSetCount; i++) {
         const struct nulldrv_desc_layout *layout =
             nulldrv_desc_layout(pAllocateInfo->pSetLayouts[i]);
 

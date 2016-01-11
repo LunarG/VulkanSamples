@@ -323,11 +323,12 @@ VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCommandBufferBeginInfo *
     cmd_reset(cmd);
 
     /* TODOVV: Check that render pass is defined */
+    const VkCommandBufferInheritanceInfo *hinfo = info->pInheritanceInfo;
     if (!cmd->primary) {
         cmd_begin_render_pass(cmd,
-                intel_render_pass(info->renderPass),
-                intel_fb(info->framebuffer),
-                info->subpass,
+                intel_render_pass(hinfo->renderPass),
+                intel_fb(hinfo->framebuffer),
+                hinfo->subpass,
                 VK_SUBPASS_CONTENTS_INLINE);
     }
 
@@ -472,9 +473,9 @@ void intel_cmd_pool_destroy(struct intel_cmd_pool *cmd_pool)
 
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(
     VkDevice                                    device,
-    const VkCommandPoolCreateInfo*                  pCreateInfo,
-    const VkAllocationCallbacks*                     pAllocator,
-    VkCommandPool*                                  pCommandPool)
+    const VkCommandPoolCreateInfo*              pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkCommandPool*                              pCommandPool)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -483,14 +484,14 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(
 }
 
 VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(
-    VkDevice                                    device,
+    VkDevice                                        device,
     VkCommandPool                                   commandPool,
-    const VkAllocationCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                    pAllocator)
 {
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
-    VkDevice                                    device,
+    VkDevice                                        device,
     VkCommandPool                                   commandPool,
     VkCommandPoolResetFlags                         flags)
 {
@@ -511,16 +512,16 @@ void intel_free_cmd_buffers(
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(
-    VkDevice                            device,
+    VkDevice                                   device,
     const VkCommandBufferAllocateInfo*         pAllocateInfo,
-    VkCommandBuffer*                        pCommandBuffers)
+    VkCommandBuffer*                           pCommandBuffers)
 {
     struct intel_dev *dev = intel_dev(device);
     struct intel_cmd_pool *pool = intel_cmd_pool(pAllocateInfo->commandPool);
     uint32_t num_allocated = 0;
     VkResult res;
 
-    for (uint32_t i = 0; i < pAllocateInfo->bufferCount; i++) {
+    for (uint32_t i = 0; i < pAllocateInfo->commandBufferCount; i++) {
         res = intel_cmd_create(dev, pAllocateInfo,
             (struct intel_cmd **) &pCommandBuffers[i]);
         if (res != VK_SUCCESS) {
@@ -536,9 +537,9 @@ VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(
 }
 
 VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(
-    VkDevice                            device,
+    VkDevice                                device,
     VkCommandPool                           commandPool,
-    uint32_t                            commandBufferCount,
+    uint32_t                                commandBufferCount,
     const VkCommandBuffer*                  pCommandBuffers)
 {
     intel_free_cmd_buffers(intel_cmd_pool(commandPool), commandBufferCount, pCommandBuffers);

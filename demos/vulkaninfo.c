@@ -447,9 +447,9 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
         .pNext = NULL,
         .queueCreateInfoCount = 0,
         .pQueueCreateInfos = NULL,
-        .enabledLayerNameCount = 0,
+        .enabledLayerCount = 0,
         .ppEnabledLayerNames = NULL,
-        .enabledExtensionNameCount = 0,
+        .enabledExtensionCount = 0,
         .ppEnabledExtensionNames = NULL,
     };
     VkResult U_ASSERT_ONLY err;
@@ -532,9 +532,9 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     info.queueCreateInfoCount = gpu->queue_count;
     info.pQueueCreateInfos = gpu->queue_reqs;
 
-    info.enabledLayerNameCount = 0;
+    info.enabledLayerCount = 0;
     info.ppEnabledLayerNames = NULL;
-    info.enabledExtensionNameCount = enabled_extension_count;
+    info.enabledExtensionCount = enabled_extension_count;
     info.ppEnabledExtensionNames = (const char*const*) known_extensions;
     dev->gpu = gpu;
     err = vkCreateDevice(gpu->obj, &info, NULL, &dev->obj);
@@ -589,9 +589,9 @@ static void app_create_instance(struct app_instance *inst)
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
         .pApplicationInfo = &app_info,
-        .enabledLayerNameCount = 0,
+        .enabledLayerCount = 0,
         .ppEnabledLayerNames = NULL,
-        .enabledExtensionNameCount = 0,
+        .enabledExtensionCount = 0,
         .ppEnabledExtensionNames = NULL,
     };
     VkResult U_ASSERT_ONLY err;
@@ -684,7 +684,7 @@ static void app_create_instance(struct app_instance *inst)
         }
     }
 
-    inst_info.enabledExtensionNameCount = global_extension_count;
+    inst_info.enabledExtensionCount = global_extension_count;
     inst_info.ppEnabledExtensionNames = (const char * const *) known_extensions;
 
     VkDebugReportCallbackCreateInfoEXT dbg_info;

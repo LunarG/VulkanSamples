@@ -1127,7 +1127,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
         my_data->report_data = debug_report_create_instance(
                                    pTable,
                                    *pInstance,
-                                   pCreateInfo->enabledExtensionNameCount,
+                                   pCreateInfo->enabledExtensionCount,
                                    pCreateInfo->ppEnabledExtensionNames);
 
         init_mem_tracker(my_data, pAllocator);
@@ -1149,7 +1149,7 @@ createDeviceRegisterExtensions(
     pDisp->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR) gpa(device, "vkAcquireNextImageKHR");
     pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");
     my_device_data->wsi_enabled = VK_FALSE;
-    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
             my_device_data->wsi_enabled = true;
     }
@@ -2107,7 +2107,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(
 
     loader_platform_thread_lock_mutex(&globalLock);
     if (VK_SUCCESS == result) {
-        for (uint32_t i = 0; i < pCreateInfo->bufferCount; i++) {
+        for (uint32_t i = 0; i < pCreateInfo->commandBufferCount; i++) {
             add_cmd_buf_info(my_data, pCreateInfo->commandPool, pCommandBuffer[i]);
         }
     }

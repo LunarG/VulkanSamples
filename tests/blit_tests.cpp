@@ -800,11 +800,11 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     // is this necessary?
     VkBufferMemoryBarrier memory_barrier = bufs[0].buffer_memory_barrier(
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, 0, 4);
-    VkBufferMemoryBarrier *pmemory_barrier = &memory_barrier;
+    const VkBufferMemoryBarrier *pmemory_barrier = &memory_barrier;
 
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
+    vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, 0, NULL, 1, pmemory_barrier, 0, NULL);
 
     VkBufferCopy region = {};
     region.size = 4;
@@ -813,7 +813,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     memory_barrier = bufs[1].buffer_memory_barrier(
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
-    vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
+    vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, 0, NULL, 1, pmemory_barrier, 0, NULL);
 
     vkCmdCopyBuffer(cmd_.handle(), bufs[1].handle(), bufs[2].handle(), 1, &region);
 
@@ -827,7 +827,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     memory_barrier = bufs[1].buffer_memory_barrier(
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_HOST_READ_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
-    vkCmdWaitEvents(cmd_.handle(), 1, &event, src_stages, dest_stages, 1, (const void **)&pmemory_barrier);
+    vkCmdWaitEvents(cmd_.handle(), 1, &event, src_stages, dest_stages, 0, NULL, 1, pmemory_barrier, 0, NULL);
 
     cmd_.end();
 
@@ -1252,13 +1252,13 @@ protected:
 
         VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
         VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, 1, (const void * const*)&p_to_clear[0]);
+        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, p_to_clear[0]);
 
         vkCmdClearColorImage(cmd_.handle(),
                               img.handle(), VK_IMAGE_LAYOUT_GENERAL,
                               &clear_color, ranges.size(), &ranges[0]);
 
-        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, 1, (const void * const*)&p_to_xfer[0]);
+        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, p_to_xfer[0]);
 
         cmd_.end();
 
@@ -1438,7 +1438,7 @@ protected:
 
         VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
         VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, to_clear.size(), (const void * const*) p_to_clear.data());
+        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, to_clear.size(), *(p_to_clear.data()));
 
         VkClearDepthStencilValue clear_value = {
             depth,
@@ -1449,7 +1449,7 @@ protected:
                                     &clear_value,
                                     ranges.size(), &ranges[0]);
 
-        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, to_xfer.size(), (const void * const*)p_to_xfer.data());
+        vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, to_xfer.size(), *(p_to_xfer.data()));
 
         cmd_.end();
 

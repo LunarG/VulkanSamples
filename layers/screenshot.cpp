@@ -146,8 +146,8 @@ static void writePPM( const char *filename, VkImage image1)
     VkPhysicalDevice physicalDevice = deviceMap[device]->physicalDevice;
     VkInstance instance = physDeviceMap[physicalDevice]->instance;
     VkQueue queue = deviceMap[device]->queue;
-    int width = imageMap[image1]->imageExtent.width;
-    int height = imageMap[image1]->imageExtent.height;
+    uint32_t width = imageMap[image1]->imageExtent.width;
+    uint32_t height = imageMap[image1]->imageExtent.height;
     VkFormat format = imageMap[image1]->format;
     const VkImageSubresource sr = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
     VkSubresourceLayout sr_layout;
@@ -326,7 +326,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     pDisp->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR) gpa(device, "vkAcquireNextImageKHR");
     pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");
     deviceExtMap[pDisp].wsi_enabled = false;
-    for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
+    for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
             deviceExtMap[pDisp].wsi_enabled = true;
     }

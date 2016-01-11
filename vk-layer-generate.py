@@ -891,7 +891,7 @@ class GenericLayerSubcommand(Subcommand):
                          '        my_data->report_data = debug_report_create_instance(\n'
                          '                                   instance_dispatch_table(*pInstance),\n'
                          '                                   *pInstance,\n'
-                         '                                   pCreateInfo->enabledExtensionNameCount,\n'
+                         '                                   pCreateInfo->enabledExtensionCount,\n'
                          '                                   pCreateInfo->ppEnabledExtensionNames);\n'
                          '        init_generic(my_data, pAllocator);\n'
                          '        sprintf(str, "Completed generic layered %s\\n");\n'
@@ -1021,35 +1021,6 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('    tidMapping[maxTID++] = tid;')
         header_txt.append('    assert(maxTID < MAX_TID);')
         header_txt.append('    return retVal;')
-        header_txt.append('}')
-        header_txt.append('')
-        header_txt.append('void interpret_memBarriers(const void* const* ppMemoryBarriers, uint32_t memoryBarrierCount)')
-        header_txt.append('{')
-        header_txt.append('    if (ppMemoryBarriers) {')
-        header_txt.append('        string tmp_str;')
-        header_txt.append('        for (uint32_t i = 0; i < memoryBarrierCount; i++) {')
-        header_txt.append('            switch(*(VkStructureType*)ppMemoryBarriers[i])')
-        header_txt.append('            {')
-        header_txt.append('                case VK_STRUCTURE_TYPE_MEMORY_BARRIER:')
-        header_txt.append('                    tmp_str = vk_print_vkmemorybarrier((VkMemoryBarrier*)ppMemoryBarriers[i], "    ");')
-        header_txt.append('                    break;')
-        header_txt.append('                case VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:')
-        header_txt.append('                    tmp_str = vk_print_vkbuffermemorybarrier((VkBufferMemoryBarrier*)ppMemoryBarriers[i], "    ");')
-        header_txt.append('                    break;')
-        header_txt.append('                case VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:')
-        header_txt.append('                    tmp_str = vk_print_vkimagememorybarrier((VkImageMemoryBarrier*)ppMemoryBarriers[i], "    ");')
-        header_txt.append('                    break;')
-        header_txt.append('                default:')
-        header_txt.append('                    break;')
-        header_txt.append('            }')
-        header_txt.append('')
-        header_txt.append('            if (StreamControl::writeAddress == true) {')
-        header_txt.append('                (*outputStream) << "   ppMemoryBarriers[" << i << "] (" << &ppMemoryBarriers[i] << ")" << endl << tmp_str << endl;')
-        header_txt.append('            } else {')
-        header_txt.append('                (*outputStream) << "   ppMemoryBarriers[" << i << "] (address)" << endl << "    address" << endl;')
-        header_txt.append('            }')
-        header_txt.append('        }')
-        header_txt.append('    }')
         header_txt.append('}')
         header_txt.append('')
         return "\n".join(header_txt)
@@ -1229,10 +1200,6 @@ class APIDumpSubcommand(Subcommand):
                     log_func += '\n%stmp_str = %s(%s, "    ");' % (indent, cis_print_func, local_name)
                     log_func += '\n%s(*outputStream) << "   %s (" << %s << ")" << endl << tmp_str << endl;' % (indent, local_name, local_name)
                     indent = indent[4:]
-                    log_func += '\n%s}' % (indent)
-                elif 'memoryBarrierCount' == sp_param_dict[sp_index]: # call helper function
-                    log_func += '\n%sif (ppMemoryBarriers) {' % (indent)
-                    log_func += '\n%s    interpret_memBarriers(ppMemoryBarriers, memoryBarrierCount);' % (indent)
                     log_func += '\n%s}' % (indent)
                 else: # We have a count value stored to iterate over an array
                     print_cast = ''
@@ -2123,7 +2090,7 @@ class UniqueObjectsSubcommand(Subcommand):
                                              'CreateGraphicsPipelines']
         # Give special treatment to create functions that return multiple new objects
         # This dict stores array name and size of array
-        custom_create_dict = {'pDescriptorSets' : 'pAllocateInfo->setLayoutCount'}
+        custom_create_dict = {'pDescriptorSets' : 'pAllocateInfo->descriptorSetCount'}
         if proto.name in explicit_object_tracker_functions:
             funcs.append('%s%s\n'
                      '{\n'
@@ -2489,7 +2456,7 @@ class ThreadingSubcommand(Subcommand):
                          '        my_data->report_data = debug_report_create_instance(\n'
                          '                                   pInstanceTable,\n'
                          '                                   *pInstance,\n'
-                         '                                   pCreateInfo->enabledExtensionNameCount,\n'
+                         '                                   pCreateInfo->enabledExtensionCount,\n'
                          '                                   pCreateInfo->ppEnabledExtensionNames);\n'
                          '        init_threading(my_data, pAllocator);\n'
                          '    }\n'

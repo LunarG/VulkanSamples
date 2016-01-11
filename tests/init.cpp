@@ -105,9 +105,9 @@ protected:
         inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         inst_info.pNext = NULL;
         inst_info.pApplicationInfo = &app_info;
-        inst_info.enabledLayerNameCount = 0;
+        inst_info.enabledLayerCount = 0;
         inst_info.ppEnabledLayerNames = NULL;
-        inst_info.enabledExtensionNameCount = 0;
+        inst_info.enabledExtensionCount = 0;
         inst_info.ppEnabledExtensionNames = NULL;
         err = vkCreateInstance(&inst_info, NULL, &inst);
         ASSERT_VK_SUCCESS(err);
@@ -446,7 +446,7 @@ void VkTest::CreateCommandBufferTest()
 
     info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     info.commandPool = commandPool;
-    info.bufferCount = 1;
+    info.commandBufferCount = 1;
     info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     err = vkAllocateCommandBuffers(device(), &info, &commandBuffer);
     ASSERT_VK_SUCCESS(err) << "vkAllocateCommandBuffers failed";

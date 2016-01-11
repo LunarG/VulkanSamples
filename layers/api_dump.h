@@ -76,7 +76,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");
 
     deviceExtMap[pDisp].wsi_enabled = false;
-    for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
+    for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
             deviceExtMap[pDisp].wsi_enabled = true;
 
@@ -118,7 +118,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
     instanceExtMap[pDisp].wsi_enabled = false;
-    for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
+    for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0)
             instanceExtMap[pDisp].wsi_enabled = true;
 

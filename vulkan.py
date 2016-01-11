@@ -943,7 +943,11 @@ core = Extension(
              Param("VkPipelineStageFlags", "srcStageMask"),
              Param("VkPipelineStageFlags", "dstStageMask"),
              Param("uint32_t", "memoryBarrierCount"),
-             Param("const void* const*", "ppMemoryBarriers")]),
+             Param("const VkMemoryBarrier*", "pMemoryBarriers"),
+             Param("uint32_t", "bufferMemoryBarrierCount"),
+             Param("const VkBufferMemoryBarrier*", "pBufferMemoryBarriers"),
+             Param("uint32_t", "imageMemoryBarrierCount"),
+             Param("const VkImageMemoryBarrier*", "pImageMemoryBarriers")]),
 
         Proto("void", "CmdPipelineBarrier",
             [Param("VkCommandBuffer", "commandBuffer"),
@@ -951,18 +955,22 @@ core = Extension(
              Param("VkPipelineStageFlags", "dstStageMask"),
              Param("VkDependencyFlags", "dependencyFlags"),
              Param("uint32_t", "memoryBarrierCount"),
-             Param("const void* const*", "ppMemoryBarriers")]),
+             Param("const VkMemoryBarrier*", "pMemoryBarriers"),
+             Param("uint32_t", "bufferMemoryBarrierCount"),
+             Param("const VkBufferMemoryBarrier*", "pBufferMemoryBarriers"),
+             Param("uint32_t", "imageMemoryBarrierCount"),
+             Param("const VkImageMemoryBarrier*", "pImageMemoryBarriers")]),
 
         Proto("void", "CmdBeginQuery",
             [Param("VkCommandBuffer", "commandBuffer"),
              Param("VkQueryPool", "queryPool"),
-             Param("uint32_t", "entry"),
+             Param("uint32_t", "query"),
              Param("VkQueryControlFlags", "flags")]),
 
         Proto("void", "CmdEndQuery",
             [Param("VkCommandBuffer", "commandBuffer"),
              Param("VkQueryPool", "queryPool"),
-             Param("uint32_t", "entry")]),
+             Param("uint32_t", "query")]),
 
         Proto("void", "CmdResetQueryPool",
             [Param("VkCommandBuffer", "commandBuffer"),
@@ -974,7 +982,7 @@ core = Extension(
             [Param("VkCommandBuffer", "commandBuffer"),
              Param("VkPipelineStageFlagBits", "pipelineStage"),
              Param("VkQueryPool", "queryPool"),
-             Param("uint32_t", "entry")]),
+             Param("uint32_t", "query")]),
 
         Proto("void", "CmdCopyQueryPoolResults",
             [Param("VkCommandBuffer", "commandBuffer"),
@@ -1008,7 +1016,7 @@ core = Extension(
 
         Proto("void", "CmdExecuteCommands",
             [Param("VkCommandBuffer", "commandBuffer"),
-             Param("uint32_t", "commandBuffersCount"),
+             Param("uint32_t", "commandBufferCount"),
              Param("const VkCommandBuffer*", "pCommandBuffers")]),
     ],
 )

@@ -174,8 +174,8 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
             size += src->pQueueCreateInfos[i].queueCount * sizeof(float);
         }
         size += sizeof(src->ppEnabledExtensionNames[0]) *
-            src->enabledExtensionNameCount;
-        for (uint32_t i = 0; i < src->enabledExtensionNameCount; i++) {
+            src->enabledExtensionCount;
+        for (uint32_t i = 0; i < src->enabledExtensionCount; i++) {
             size += strlen(src->ppEnabledExtensionNames[i]) + 1;
         }
 
@@ -201,11 +201,11 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         }
 
         size = sizeof(src->ppEnabledExtensionNames[0]) *
-            src->enabledExtensionNameCount;
+            src->enabledExtensionCount;
         dst->ppEnabledExtensionNames = (const char **) d;
         memcpy(d, src->ppEnabledExtensionNames, size);
         d += size;
-        for (uint32_t i = 0; i < src->enabledExtensionNameCount; i++) {
+        for (uint32_t i = 0; i < src->enabledExtensionCount; i++) {
             char **ptr = (char **) &dst->ppEnabledExtensionNames[i];
             strcpy((char *) d, src->ppEnabledExtensionNames[i]);
             *ptr = (char *) d;

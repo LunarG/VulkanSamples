@@ -648,7 +648,7 @@ void  TestFrameworkVkPresent::Display()
     memoryBarrier.image = m_buffers[m_current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &memoryBarrier;
     vkCmdPipelineBarrier(m_cmdbuf.handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                         0, 1, (const void * const*)&pmemory_barrier);
+                         0, 0, NULL, 0, NULL, 1, pmemory_barrier);
 
     VkBufferImageCopy region = {};
     region.bufferRowLength = m_display_image->m_width;
@@ -669,7 +669,7 @@ void  TestFrameworkVkPresent::Display()
     memoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     memoryBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
     vkCmdPipelineBarrier(m_cmdbuf.handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                         0, 1, (const void * const*)&pmemory_barrier);
+                         0, 0, NULL, 0, NULL, 1, pmemory_barrier);
     m_cmdbuf.end();
 
     VkCommandBuffer cmdBufs[1];
@@ -1092,15 +1092,19 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
     VkResult U_ASSERT_ONLY err;
 
     VkCommandBufferBeginInfo cmd_buf_info = {};
+    VkCommandBufferInheritanceInfo cmd_buf_hinfo = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
     cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    cmd_buf_info.renderPass = { VK_NULL_HANDLE };
-    cmd_buf_info.subpass = 0;
-    cmd_buf_info.framebuffer = { VK_NULL_HANDLE };
-    cmd_buf_info.occlusionQueryEnable = VK_FALSE;
-    cmd_buf_info.queryFlags = 0;
-    cmd_buf_info.pipelineStatistics = 0;
+    cmd_buf_info.pInheritanceInfo = &cmd_buf_hinfo;
+    cmd_buf_hinfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    cmd_buf_hinfo.pNext = NULL;
+    cmd_buf_hinfo.renderPass = { VK_NULL_HANDLE };
+    cmd_buf_hinfo.subpass = 0;
+    cmd_buf_hinfo.framebuffer = { VK_NULL_HANDLE };
+    cmd_buf_hinfo.occlusionQueryEnable = VK_FALSE;
+    cmd_buf_hinfo.queryFlags = 0;
+    cmd_buf_hinfo.pipelineStatistics = 0;
 
     err = vkBeginCommandBuffer(m_cmdbuf.handle(), &cmd_buf_info);
     assert(!err);
@@ -1134,7 +1138,7 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-    vkCmdPipelineBarrier(m_cmdbuf.handle(), src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
+    vkCmdPipelineBarrier(m_cmdbuf.handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, pmemory_barrier);
 
     err = vkEndCommandBuffer(m_cmdbuf.handle());
     assert(!err);

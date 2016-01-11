@@ -107,7 +107,7 @@ static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, cons
     // Record whether the WSI device extension was enabled for this VkDevice.
     // No need to check if the extension was advertised by
     // vkEnumerateDeviceExtensionProperties(), since the loader handles that.
-    for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
+    for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
 
             my_device_data->deviceMap[device].swapchainExtensionEnabled = true;
@@ -177,7 +177,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     // Record whether the WSI instance extension was enabled for this
     // VkInstance.  No need to check if the extension was advertised by
     // vkEnumerateInstanceExtensionProperties(), since the loader handles that.
-    for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
+    for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
 
             my_data->instanceMap[instance].surfaceExtensionEnabled = true;
@@ -296,7 +296,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstance
         my_data->report_data = debug_report_create_instance(
                                    pTable,
                                    *pInstance,
-                                   pCreateInfo->enabledExtensionNameCount,
+                                   pCreateInfo->enabledExtensionCount,
                                    pCreateInfo->ppEnabledExtensionNames);
         // Call the following function after my_data is initialized:
         createInstanceRegisterExtensions(pCreateInfo, *pInstance);

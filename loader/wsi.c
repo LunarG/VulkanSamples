@@ -130,7 +130,7 @@ void wsi_create_instance(
     ptr_instance->wsi_android_surface_enabled = false;
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
-    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
             ptr_instance->wsi_surface_enabled = true;
             continue;

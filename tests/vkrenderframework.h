@@ -181,7 +181,10 @@ public:
     VkResult BeginCommandBuffer();
     VkResult BeginCommandBuffer(VkCommandBufferBeginInfo *pInfo);
     VkResult EndCommandBuffer();
-    void PipelineBarrier(VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages, VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers);
+    void PipelineBarrier(VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages, VkDependencyFlags dependencyFlags,
+                         uint32_t memoryBarrierCount, const VkMemoryBarrier* pMemoryBarriers,
+                         uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier* pBufferMemoryBarriers,
+                         uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier* pImageMemoryBarriers);
     void AddRenderTarget(VkImageObj *renderTarget);
     void AddDepthStencil();
     void ClearAllBuffers(VkClearColorValue clear_color, float depth_clear_color, uint32_t stencil_clear_color, VkDepthStencilObj *depthStencilObj);

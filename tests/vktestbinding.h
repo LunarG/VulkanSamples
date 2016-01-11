@@ -653,7 +653,7 @@ inline VkQueryPoolCreateInfo QueryPool::create_info(VkQueryType type, uint32_t s
     VkQueryPoolCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
     info.queryType = type;
-    info.entryCount = slot_count;
+    info.queryCount = slot_count;
     return info;
 }
 
@@ -871,7 +871,7 @@ inline VkCommandBufferAllocateInfo CommandBuffer::create_info(VkCommandPool cons
     VkCommandBufferAllocateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     info.commandPool = pool;
-    info.bufferCount = 1;
+    info.commandBufferCount = 1;
     return info;
 }
 

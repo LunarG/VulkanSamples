@@ -48,7 +48,6 @@ static int translate_tex_mipmap_mode(VkSamplerMipmapMode mode)
    switch (mode) {
    case VK_SAMPLER_MIPMAP_MODE_NEAREST: return GEN6_MIPFILTER_NEAREST;
    case VK_SAMPLER_MIPMAP_MODE_LINEAR:  return GEN6_MIPFILTER_LINEAR;
-   case VK_SAMPLER_MIPMAP_MODE_BASE:    return GEN6_MIPFILTER_NONE;
    default:
       assert(!"unknown tex mipmap mode");
       return GEN6_MIPFILTER_NONE;
@@ -260,10 +259,6 @@ sampler_init(struct intel_sampler *sampler,
     * To achieve our goal, we just need to set MinLod to zero and set
     * MagFilter to MinFilter when mipmapping is disabled.
     */
-   if (info->mipmapMode == VK_SAMPLER_MIPMAP_MODE_BASE && min_lod) {
-      min_lod = 0;
-      mag_filter = min_filter;
-   }
 
    /* determine wrap s/t/r */
    wrap_s = translate_tex_addr(info->addressModeU);

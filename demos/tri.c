@@ -315,22 +315,27 @@ static void demo_set_image_layout(
             .pNext = NULL,
             .commandPool = demo->cmd_pool,
             .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            .bufferCount = 1,
+            .commandBufferCount = 1,
         };
 
         err = vkAllocateCommandBuffers(demo->device, &cmd, &demo->setup_cmd);
         assert(!err);
 
-        VkCommandBufferBeginInfo cmd_buf_info = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        VkCommandBufferInheritanceInfo cmd_buf_hinfo = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
             .pNext = NULL,
-            .flags = 0,
             .renderPass = VK_NULL_HANDLE,
             .subpass = 0,
             .framebuffer = VK_NULL_HANDLE,
             .occlusionQueryEnable = VK_FALSE,
             .queryFlags = 0,
             .pipelineStatistics = 0,
+        };
+        VkCommandBufferBeginInfo cmd_buf_info = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .pNext = NULL,
+            .flags = 0,
+            .pInheritanceInfo = &cmd_buf_hinfo,
         };
         err = vkBeginCommandBuffer(demo->setup_cmd, &cmd_buf_info);
         assert(!err);
@@ -370,21 +375,26 @@ static void demo_set_image_layout(
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-    vkCmdPipelineBarrier(demo->setup_cmd, src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
+    vkCmdPipelineBarrier(demo->setup_cmd, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, pmemory_barrier);
 }
 
 static void demo_draw_build_cmd(struct demo *demo)
 {
+        const VkCommandBufferInheritanceInfo cmd_buf_hinfo = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+            .pNext = NULL,
+            .renderPass = VK_NULL_HANDLE,
+            .subpass = 0,
+            .framebuffer = VK_NULL_HANDLE,
+            .occlusionQueryEnable = VK_FALSE,
+            .queryFlags = 0,
+            .pipelineStatistics = 0,
+        };
     const VkCommandBufferBeginInfo cmd_buf_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .pNext = NULL,
         .flags = 0,
-        .renderPass = VK_NULL_HANDLE,
-        .subpass = 0,
-        .framebuffer = VK_NULL_HANDLE,
-        .occlusionQueryEnable = VK_FALSE,
-        .queryFlags = 0,
-        .pipelineStatistics = 0,
+        .pInheritanceInfo = &cmd_buf_hinfo,
     };
     const VkClearValue clear_values[2] = {
         [0] = { .color.float32 = { 0.2f, 0.2f, 0.2f, 0.2f } },
@@ -450,7 +460,7 @@ static void demo_draw_build_cmd(struct demo *demo)
     prePresentBarrier.image = demo->buffers[demo->current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
     vkCmdPipelineBarrier(demo->draw_cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                         0, 1, (const void * const*)&pmemory_barrier);
+                         0, 0, NULL, 0, NULL, 1, pmemory_barrier);
 
     err = vkEndCommandBuffer(demo->draw_cmd);
     assert(!err);
@@ -578,7 +588,7 @@ static void demo_prepare_buffers(struct demo *demo)
 
     VkExtent2D swapchainExtent;
     // width and height are either both -1, or both not -1.
-    if (surfCapabilities.currentExtent.width == -1)
+    if (surfCapabilities.currentExtent.width == (uint32_t) -1)
     {
         // If the surface size is undefined, the size is set to
         // the size of the images requested.
@@ -951,7 +961,7 @@ static void demo_prepare_textures(struct demo *demo)
             .pNext = NULL,
             .magFilter = VK_FILTER_NEAREST,
             .minFilter = VK_FILTER_NEAREST,
-            .mipmapMode = VK_SAMPLER_MIPMAP_MODE_BASE,
+            .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
             .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
             .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
             .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
@@ -1382,7 +1392,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .pNext = NULL,
         .descriptorPool = demo->desc_pool,
-        .setLayoutCount = 1,
+        .descriptorSetCount = 1,
         .pSetLayouts = &demo->desc_layout
     };
     err = vkAllocateDescriptorSets(demo->device, &alloc_info, &demo->desc_set);
@@ -1451,7 +1461,7 @@ static void demo_prepare(struct demo *demo)
         .pNext = NULL,
         .commandPool = demo->cmd_pool,
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .bufferCount = 1,
+        .commandBufferCount = 1,
     };
     err = vkAllocateCommandBuffers(demo->device, &cmd, &demo->draw_cmd);
     assert(!err);
@@ -1832,9 +1842,9 @@ static void demo_init_vk(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
         .pApplicationInfo = &app,
-        .enabledLayerNameCount = enabled_layer_count,
+        .enabledLayerCount = enabled_layer_count,
         .ppEnabledLayerNames = (const char *const*) layer_names,
-        .enabledExtensionNameCount = enabled_extension_count,
+        .enabledExtensionCount = enabled_extension_count,
         .ppEnabledExtensionNames = (const char *const*) extension_names,
     };
     float queue_priorities[1] = { 0.0 };
@@ -1940,9 +1950,9 @@ static void demo_init_vk(struct demo *demo)
         .pNext = NULL,
         .queueCreateInfoCount = 1,
         .pQueueCreateInfos = &queue,
-        .enabledLayerNameCount = enabled_layer_count,
+        .enabledLayerCount = enabled_layer_count,
         .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? device_validation_layers : NULL),
-        .enabledExtensionNameCount = enabled_extension_count,
+        .enabledExtensionCount = enabled_extension_count,
         .ppEnabledExtensionNames = (const char *const*) extension_names,
     };
 

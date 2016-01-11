@@ -268,29 +268,6 @@ static void add_alloc_memory_to_trace_packet(vktrace_trace_packet_header* pHeade
     return;
 }
 
-static size_t calculate_memory_barrier_size(uint32_t mbCount, const void* const* ppMemoryBarriers)
-{
-    uint32_t i, siz=0;
-    for (i = 0; i < mbCount; i++) {
-        VkMemoryBarrier *pNext = (VkMemoryBarrier *) ppMemoryBarriers[i];
-        switch (pNext->sType) {
-            case VK_STRUCTURE_TYPE_MEMORY_BARRIER:
-                siz += sizeof(VkMemoryBarrier);
-                break;
-            case VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:
-                siz += sizeof(VkBufferMemoryBarrier);
-                break;
-            case VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:
-                siz += sizeof(VkImageMemoryBarrier);
-                break;
-            default:
-                assert(0);
-                break;
-        }
-    }
-    return siz;
-}
-
 static void add_VkPipelineShaderStageCreateInfo_to_trace_packet(vktrace_trace_packet_header* pHeader, VkPipelineShaderStageCreateInfo* packetShader, const VkPipelineShaderStageCreateInfo* paramShader)
 {
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&packetShader->pName, strlen(paramShader->pName) + 1, paramShader->pName);

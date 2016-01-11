@@ -112,7 +112,7 @@ VkResult intel_dev_create(struct intel_gpu *gpu,
     if (!dev)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    for (i = 0; i < info->enabledExtensionNameCount; i++) {
+    for (i = 0; i < info->enabledExtensionCount; i++) {
         const enum intel_phy_dev_ext_type ext =
             intel_gpu_lookup_phy_dev_extension(gpu,
                     info->ppEnabledExtensionNames[i]);

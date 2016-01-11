@@ -180,50 +180,46 @@ static uint32_t cmd_get_flush_flags(const struct intel_cmd *cmd,
 
 static void cmd_memory_barriers(struct intel_cmd *cmd,
                                 uint32_t flush_flags,
-                                uint32_t memory_barrier_count,
-                                const void* const* memory_barriers)
+                                uint32_t mem_barrier_count,
+                                const VkMemoryBarrier* mem_barriers,
+                                uint32_t buf_mem_barrier_count,
+                                const VkBufferMemoryBarrier* buf_mem_barriers,
+                                uint32_t image_mem_barrier_count,
+                                const VkImageMemoryBarrier* image_mem_barriers)
 {
     uint32_t i;
     VkFlags input_mask = 0;
     VkFlags output_mask = 0;
 
-    for (i = 0; i < memory_barrier_count; i++) {
+    for (i = 0; i < mem_barrier_count; i++) {
+        const VkMemoryBarrier *b = &mem_barriers[i];
+        assert(b->sType == VK_STRUCTURE_TYPE_MEMORY_BARRIER);
+        output_mask |= b->srcAccessMask;
+        input_mask  |= b->dstAccessMask;
+    }
 
-        const union {
-            VkStructureType type;
+    for (i = 0; i < buf_mem_barrier_count; i++) {
+        const VkBufferMemoryBarrier *b = &buf_mem_barriers[i];
+        assert(b->sType == VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER);
+        output_mask |= b->srcAccessMask;
+        input_mask  |= b->dstAccessMask;
+    }
 
-            VkMemoryBarrier mem;
-            VkBufferMemoryBarrier buf;
-            VkImageMemoryBarrier img;
-        } *u = memory_barriers[i];
-
-        switch(u->type)
+    for (i = 0; i < image_mem_barrier_count; i++) {
+        const VkImageMemoryBarrier *b = &image_mem_barriers[i];
+        assert(b->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER);
+        output_mask |= b->srcAccessMask;
+        input_mask  |= b->dstAccessMask;
         {
-        case VK_STRUCTURE_TYPE_MEMORY_BARRIER:
-            output_mask |= u->mem.srcAccessMask;
-            input_mask  |= u->mem.dstAccessMask;
-            break;
-        case VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:
-            output_mask |= u->buf.srcAccessMask;
-            input_mask  |= u->buf.dstAccessMask;
-            break;
-        case VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:
-            output_mask |= u->img.srcAccessMask;
-            input_mask  |= u->img.dstAccessMask;
-            {
-                struct intel_img *img = intel_img(u->img.image);
+            struct intel_img *img = intel_img(b->image);
 
-                cmd_resolve_depth(cmd, img, u->img.oldLayout,
-                        u->img.newLayout, &u->img.subresourceRange);
+            cmd_resolve_depth(cmd, img, b->oldLayout,
+                        b->newLayout, &b->subresourceRange);
 
-                flush_flags |= cmd_get_flush_flags(cmd,
-                        img_get_layout_caches(img, u->img.oldLayout),
-                        img_get_layout_caches(img, u->img.newLayout),
-                        icd_format_is_ds(img->layout.format));
-            }
-            break;
-        default:
-            break;
+            flush_flags |= cmd_get_flush_flags(cmd,
+                            img_get_layout_caches(img, b->oldLayout),
+                            img_get_layout_caches(img, b->newLayout),
+                            icd_format_is_ds(img->layout.format));
         }
     }
 
@@ -265,13 +261,17 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
 }
 
 VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(
-    VkCommandBuffer                                 commandBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    eventCount,
     const VkEvent*                              pEvents,
     VkPipelineStageFlags                        sourceStageMask,
     VkPipelineStageFlags                        dstStageMask,
     uint32_t                                    memoryBarrierCount,
-    const void* const*                          ppMemoryBarriers)
+    const VkMemoryBarrier*                      pMemoryBarriers,
+    uint32_t                                    bufferMemoryBarrierCount,
+    const VkBufferMemoryBarrier*                pBufferMemoryBarriers,
+    uint32_t                                    imageMemoryBarrierCount,
+    const VkImageMemoryBarrier*                 pImageMemoryBarriers)
 {
     struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
@@ -287,18 +287,23 @@ VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(
      * cmd_memory_barriers will wait for GEN6_PIPE_CONTROL_CS_STALL and perform
      * appropriate cache control.
      */
-    cmd_memory_barriers(cmd,
-            GEN6_PIPE_CONTROL_CS_STALL,
-            memoryBarrierCount, ppMemoryBarriers);
+    cmd_memory_barriers(cmd, GEN6_PIPE_CONTROL_CS_STALL,
+                        memoryBarrierCount, pMemoryBarriers,
+                        bufferMemoryBarrierCount, pBufferMemoryBarriers,
+                        imageMemoryBarrierCount, pImageMemoryBarriers);
 }
 
 VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(
-        VkCommandBuffer                                 commandBuffer,
+        VkCommandBuffer                             commandBuffer,
         VkPipelineStageFlags                        srcStageMask,
         VkPipelineStageFlags                        dstStageMask,
-    VkDependencyFlags                           dependencyFlags,
+        VkDependencyFlags                           dependencyFlags,
         uint32_t                                    memoryBarrierCount,
-        const void* const*                          ppMemoryBarriers)
+        const VkMemoryBarrier*                      pMemoryBarriers,
+        uint32_t                                    bufferMemoryBarrierCount,
+        const VkBufferMemoryBarrier*                pBufferMemoryBarriers,
+        uint32_t                                    imageMemoryBarrierCount,
+        const VkImageMemoryBarrier*                 pImageMemoryBarriers)
 {
     struct intel_cmd *cmd = intel_cmd(commandBuffer);
     uint32_t pipe_control_flags = 0;
@@ -321,7 +326,8 @@ VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(
     /* cmd_memory_barriers can wait for GEN6_PIPE_CONTROL_CS_STALL and perform
      * appropriate cache control.
      */
-    cmd_memory_barriers(cmd,
-            pipe_control_flags,
-            memoryBarrierCount, ppMemoryBarriers);
+    cmd_memory_barriers(cmd, pipe_control_flags,
+                        memoryBarrierCount, pMemoryBarriers,
+                        bufferMemoryBarrierCount, pBufferMemoryBarriers,
+                        imageMemoryBarrierCount, pImageMemoryBarriers);
 }

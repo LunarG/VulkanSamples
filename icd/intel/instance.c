@@ -170,7 +170,7 @@ static VkResult intel_instance_create(
 
     instance->icd = icd;
 
-    for (i = 0; i < info->enabledExtensionNameCount; i++) {
+    for (i = 0; i < info->enabledExtensionCount; i++) {
         const enum intel_global_ext_type ext =
             intel_gpu_lookup_global_extension(
                     info->ppEnabledExtensionNames[i]);
@@ -191,7 +191,7 @@ static VkResult intel_instance_create(
     /*
      * This ICD does not support any layers.
      */
-    if (info->enabledLayerNameCount > 0) {
+    if (info->enabledLayerCount > 0) {
         icd_instance_destroy(icd);
         intel_instance_destroy(instance);
         return VK_ERROR_LAYER_NOT_PRESENT;

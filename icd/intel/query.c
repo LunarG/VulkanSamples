@@ -90,7 +90,7 @@ VkResult intel_query_create(struct intel_dev *dev,
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     query->type = info->queryType;
-    query->slot_count = info->entryCount;
+    query->slot_count = info->queryCount;
 
     /*
      * For each query type, the GPU will be asked to write the values of some

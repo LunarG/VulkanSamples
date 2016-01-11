@@ -550,7 +550,7 @@ TEST_F(VkLayerTest, CallBeginCommandBufferBeforeCompletion)
     err = vkQueueSubmit( m_device->m_queue, 1, &submit_info, testFence.handle());
     ASSERT_VK_SUCCESS( err );
 
-
+    VkCommandBufferInheritanceInfo hinfo = {};
     VkCommandBufferBeginInfo info = {};
     info.flags       = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     info.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -958,7 +958,7 @@ TEST_F(VkLayerTest, PipelineNotBound)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -1369,7 +1369,7 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -1405,9 +1405,12 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
     VkCommandBufferObj commandBuffer(m_device, m_commandPool);
     VkCommandBufferBeginInfo cmd_buf_info = {};
     memset(&cmd_buf_info, 0, sizeof(VkCommandBufferBeginInfo));
+    VkCommandBufferInheritanceInfo cmd_buf_hinfo = {};
+    memset(&cmd_buf_hinfo, 0, sizeof(VkCommandBufferInheritanceInfo));
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
     cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    cmd_buf_info.pInheritanceInfo = &cmd_buf_hinfo;
 
     vkBeginCommandBuffer(commandBuffer.GetBufferHandle(), &cmd_buf_info);
     vkCmdBindPipeline(commandBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
@@ -1470,7 +1473,7 @@ TEST_F(VkLayerTest, AllocDescriptorFromEmptyPool)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -1532,7 +1535,7 @@ TEST_F(VkLayerTest, FreeDescriptorFromOneShotPool)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -1648,7 +1651,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -1730,7 +1733,7 @@ TEST_F(VkLayerTest, InvalidBufferViewObject)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -1805,7 +1808,7 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -2002,13 +2005,13 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     VkDescriptorSet descriptorSet[NUM_SETS] = {};
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = NUM_LAYOUTS;
+    alloc_info.descriptorSetCount = NUM_LAYOUTS;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, descriptorSet);
     ASSERT_VK_SUCCESS(err);
     VkDescriptorSet ds0_fs_only = {};
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.pSetLayouts = &ds_layout_fs_only;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &ds0_fs_only);
     ASSERT_VK_SUCCESS(err);
@@ -2300,34 +2303,7 @@ TEST_F(VkLayerTest, NoBeginCommandBuffer)
     }
 }
 
-TEST_F(VkLayerTest, PrimaryCommandBufferFramebufferAndRenderpass)
-{
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "may not specify framebuffer or renderpass parameters");
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    // Calls AllocateCommandBuffers
-    VkCommandBufferObj commandBuffer(m_device, m_commandPool);
-
-    // Force the failure by setting the Renderpass and Framebuffer fields with (fake) data
-    VkCommandBufferBeginInfo cmd_buf_info = {};
-    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    cmd_buf_info.renderPass = (VkRenderPass)((size_t)0xcadecade);
-    cmd_buf_info.framebuffer = (VkFramebuffer)((size_t)0xcadecade);
-
-
-    // The error should be caught by validation of the BeginCommandBuffer call
-    vkBeginCommandBuffer(commandBuffer.GetBufferHandle(), &cmd_buf_info);
-
-    if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not receive Error 'vkAllocateCommandBuffers():  Primary Command Buffer may not specify framebuffer or renderpass parameters'";
-        m_errorMonitor->DumpFailureMsgs();
-    }
-}
 
 TEST_F(VkLayerTest, SecondaryCommandBufferNullRenderpass)
 {
@@ -2344,16 +2320,18 @@ TEST_F(VkLayerTest, SecondaryCommandBufferNullRenderpass)
     cmd.pNext = NULL;
     cmd.commandPool = m_commandPool;
     cmd.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-    cmd.bufferCount = 1;
+    cmd.commandBufferCount = 1;
 
     err = vkAllocateCommandBuffers(m_device->device(), &cmd, &draw_cmd);
     ASSERT_VK_SUCCESS(err);
 
     // Force the failure by not setting the Renderpass and Framebuffer fields
     VkCommandBufferBeginInfo cmd_buf_info = {};
+    VkCommandBufferInheritanceInfo cmd_buf_hinfo = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
     cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+    cmd_buf_info.pInheritanceInfo = &cmd_buf_hinfo;
 
     // The error should be caught by validation of the BeginCommandBuffer call
     vkBeginCommandBuffer(draw_cmd, &cmd_buf_info);
@@ -2381,9 +2359,11 @@ TEST_F(VkLayerTest, CommandBufferResetErrors)
 
     // Force the failure by setting the Renderpass and Framebuffer fields with (fake) data
     VkCommandBufferBeginInfo cmd_buf_info = {};
+    VkCommandBufferInheritanceInfo cmd_buf_hinfo = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
     cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    cmd_buf_info.pInheritanceInfo = &cmd_buf_hinfo;
 
     // Begin CB to transition to recording state
     vkBeginCommandBuffer(commandBuffer.GetBufferHandle(), &cmd_buf_info);
@@ -2458,7 +2438,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -2681,7 +2661,7 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -2787,7 +2767,7 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -2892,7 +2872,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -3050,7 +3030,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -3493,7 +3473,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -3504,7 +3484,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
         sampler_ci.pNext = NULL;
         sampler_ci.magFilter = VK_FILTER_NEAREST;
         sampler_ci.minFilter = VK_FILTER_NEAREST;
-        sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_BASE;
+        sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -3591,7 +3571,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -3602,7 +3582,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
         sampler_ci.pNext = NULL;
         sampler_ci.magFilter = VK_FILTER_NEAREST;
         sampler_ci.minFilter = VK_FILTER_NEAREST;
-        sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_BASE;
+        sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -3689,7 +3669,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -3700,7 +3680,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
         sampler_ci.pNext = NULL;
         sampler_ci.magFilter = VK_FILTER_NEAREST;
         sampler_ci.minFilter = VK_FILTER_NEAREST;
-        sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_BASE;
+        sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -3787,7 +3767,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -3798,7 +3778,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
         sampler_ci.pNext = NULL;
         sampler_ci.magFilter = VK_FILTER_NEAREST;
         sampler_ci.minFilter = VK_FILTER_NEAREST;
-        sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_BASE;
+        sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -3884,7 +3864,7 @@ TEST_F(VkLayerTest, SampleDescriptorUpdateError)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -3959,7 +3939,7 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -3970,7 +3950,7 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError)
         sampler_ci.pNext = NULL;
         sampler_ci.magFilter = VK_FILTER_NEAREST;
         sampler_ci.minFilter = VK_FILTER_NEAREST;
-        sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_BASE;
+        sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -4067,7 +4047,7 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -4078,7 +4058,7 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
         sampler_ci.pNext = NULL;
         sampler_ci.magFilter = VK_FILTER_NEAREST;
         sampler_ci.minFilter = VK_FILTER_NEAREST;
-        sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_BASE;
+        sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -4209,7 +4189,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -4302,7 +4282,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -4347,7 +4327,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     color_attachment.clearValue.color.float32[2] = 1.0;
     color_attachment.clearValue.color.float32[3] = 1.0;
     color_attachment.colorAttachment = 0;
-    VkClearRect clear_rect = { { { 0, 0 }, { (int)m_width, (int)m_height } } };
+    VkClearRect clear_rect = { { { 0, 0 }, { (uint32_t)m_width, (uint32_t)m_height } } };
 
     vkCmdClearAttachments(m_commandBuffer->GetBufferHandle(), 1, &color_attachment, 1, &clear_rect);
 
@@ -4407,7 +4387,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
@@ -6281,7 +6261,7 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError)
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorSetCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);

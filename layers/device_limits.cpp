@@ -191,7 +191,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstance
         my_data->report_data = debug_report_create_instance(
                                    pTable,
                                    *pInstance,
-                                   pCreateInfo->enabledExtensionNameCount,
+                                   pCreateInfo->enabledExtensionCount,
                                    pCreateInfo->ppEnabledExtensionNames);
 
         init_device_limits(my_data, pAllocator);
@@ -377,7 +377,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     my_data->device_extensions.debug_marker_enabled = false;
 
-    for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
+    for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], DEBUG_MARKER_EXTENSION_NAME) == 0) {
             /* Found a matching extension name, mark it enabled and init dispatch table*/
             initDebugMarkerTable(device);

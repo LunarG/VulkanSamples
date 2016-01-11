@@ -87,7 +87,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     }
 
     /* Due to implicit layers need to get layer list even if
-     * enabledLayerNameCount == 0 and VK_INSTANCE_LAYERS is unset. For now always
+     * enabledLayerCount == 0 and VK_INSTANCE_LAYERS is unset. For now always
      * get layer list (both instance and device) via loader_layer_scan(). */
     memset(&ptr_instance->instance_layer_list, 0, sizeof(ptr_instance->instance_layer_list));
     memset(&ptr_instance->device_layer_list, 0, sizeof(ptr_instance->device_layer_list));
@@ -96,8 +96,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
                       &ptr_instance->device_layer_list);
 
     /* validate the app requested layers to be enabled */
-    if (pCreateInfo->enabledLayerNameCount > 0) {
-        res = loader_validate_layers(pCreateInfo->enabledLayerNameCount,
+    if (pCreateInfo->enabledLayerCount > 0) {
+        res = loader_validate_layers(pCreateInfo->enabledLayerCount,
                                      pCreateInfo->ppEnabledLayerNames,
                                      &ptr_instance->instance_layer_list);
         if (res != VK_SUCCESS) {
@@ -1026,7 +1026,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(
 
     res = disp->AllocateCommandBuffers(device, pAllocateInfo, pCommandBuffers);
     if (res == VK_SUCCESS) {
-        for (uint32_t i =0; i < pAllocateInfo->bufferCount; i++) {
+        for (uint32_t i =0; i < pAllocateInfo->commandBufferCount; i++) {
             if (pCommandBuffers[i]) {
                 loader_init_dispatch(pCommandBuffers[i], disp);
             }
@@ -1364,22 +1364,49 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetEvent(VkCommandBuffer command
     disp->CmdResetEvent(commandBuffer, event, stageMask);
 }
 
-LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags dstStageMask, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(
+                                VkCommandBuffer commandBuffer,
+                                uint32_t eventCount,
+                                const VkEvent* pEvents,
+                                VkPipelineStageFlags sourceStageMask,
+                                VkPipelineStageFlags dstStageMask,
+                                uint32_t memoryBarrierCount,
+                                const VkMemoryBarrier* pMemoryBarriers,
+                                uint32_t bufferMemoryBarrierCount,
+                                const VkBufferMemoryBarrier* pBufferMemoryBarriers,
+                                uint32_t imageMemoryBarrierCount,
+                                const VkImageMemoryBarrier* pImageMemoryBarriers)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(commandBuffer);
 
-    disp->CmdWaitEvents(commandBuffer, eventCount, pEvents, sourceStageMask, dstStageMask, memoryBarrierCount, ppMemoryBarriers);
+    disp->CmdWaitEvents(commandBuffer, eventCount, pEvents, sourceStageMask,
+                        dstStageMask, memoryBarrierCount, pMemoryBarriers,
+                        bufferMemoryBarrierCount, pBufferMemoryBarriers,
+                        imageMemoryBarrierCount, pImageMemoryBarriers);
 }
 
-LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(
+                                VkCommandBuffer commandBuffer,
+                                VkPipelineStageFlags srcStageMask,
+                                VkPipelineStageFlags dstStageMask,
+                                VkDependencyFlags dependencyFlags,
+                                uint32_t memoryBarrierCount,
+                                const VkMemoryBarrier* pMemoryBarriers,
+                                uint32_t bufferMemoryBarrierCount,
+                                const VkBufferMemoryBarrier* pBufferMemoryBarriers,
+                                uint32_t imageMemoryBarrierCount,
+                                const VkImageMemoryBarrier* pImageMemoryBarriers)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(commandBuffer);
 
-    disp->CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount, ppMemoryBarriers);
+    disp->CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask,
+                             dependencyFlags, memoryBarrierCount, pMemoryBarriers,
+                             bufferMemoryBarrierCount, pBufferMemoryBarriers,
+                             imageMemoryBarrierCount, pImageMemoryBarriers);
 }
 
 LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags)

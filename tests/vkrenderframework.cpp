@@ -99,9 +99,9 @@ void VkRenderFramework::InitFramework(
     instInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instInfo.pNext = NULL;
     instInfo.pApplicationInfo = &app_info;
-    instInfo.enabledLayerNameCount = instance_layer_names.size();
+    instInfo.enabledLayerCount = instance_layer_names.size();
     instInfo.ppEnabledLayerNames = instance_layer_names.data();
-    instInfo.enabledExtensionNameCount = instance_extension_names.size();
+    instInfo.enabledExtensionCount = instance_extension_names.size();
     instInfo.ppEnabledExtensionNames = instance_extension_names.data();
     err = vkCreateInstance(&instInfo, NULL, &this->inst);
     ASSERT_VK_SUCCESS(err);
@@ -576,7 +576,7 @@ void VkImageObj::ImageMemoryBarrier(
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
     // write barrier to the command buffer
-    vkCmdPipelineBarrier(cmd_buf->handle(), src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
+    vkCmdPipelineBarrier(cmd_buf->handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, pmemory_barrier);
 }
 
 void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
@@ -863,7 +863,7 @@ VkSamplerObj::VkSamplerObj(VkDeviceObj *device)
     samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
     samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
-    samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_BASE;
+    samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
     samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
@@ -970,15 +970,20 @@ void VkConstantBufferObj::BufferMemoryBarrier(
 
     // open the command buffer
     VkCommandBufferBeginInfo cmd_buf_info = {};
+    VkCommandBufferInheritanceInfo cmd_buf_hinfo= {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
     cmd_buf_info.flags = 0;
-    cmd_buf_info.renderPass = VK_NULL_HANDLE;
-    cmd_buf_info.subpass = 0;
-    cmd_buf_info.framebuffer = VK_NULL_HANDLE;
-    cmd_buf_info.occlusionQueryEnable = VK_FALSE;
-    cmd_buf_info.queryFlags = 0;
-    cmd_buf_info.pipelineStatistics = 0;
+    cmd_buf_info.pInheritanceInfo = &cmd_buf_hinfo;
+
+    cmd_buf_hinfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    cmd_buf_hinfo.pNext = NULL;
+    cmd_buf_hinfo.renderPass = VK_NULL_HANDLE;
+    cmd_buf_hinfo.subpass = 0;
+    cmd_buf_hinfo.framebuffer = VK_NULL_HANDLE;
+    cmd_buf_hinfo.occlusionQueryEnable = VK_FALSE;
+    cmd_buf_hinfo.queryFlags = 0;
+    cmd_buf_hinfo.pipelineStatistics = 0;
 
     err = m_commandBuffer->BeginCommandBuffer(&cmd_buf_info);
     ASSERT_VK_SUCCESS(err);
@@ -991,7 +996,7 @@ void VkConstantBufferObj::BufferMemoryBarrier(
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
     // write barrier to the command buffer
-    m_commandBuffer->PipelineBarrier(src_stages, dest_stages, 0, 1, (const void **)&pmemory_barrier);
+    m_commandBuffer->PipelineBarrier(src_stages, dest_stages, 0, 0, NULL, 1, pmemory_barrier, 0, NULL);
 
     // finish recording the command buffer
     err = m_commandBuffer->EndCommandBuffer();
@@ -1352,9 +1357,15 @@ VkResult VkCommandBufferObj::EndCommandBuffer()
     return VK_SUCCESS;
 }
 
-void VkCommandBufferObj::PipelineBarrier(VkPipelineStageFlags src_stages,  VkPipelineStageFlags dest_stages, VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers)
+void VkCommandBufferObj::PipelineBarrier(VkPipelineStageFlags src_stages,  VkPipelineStageFlags dest_stages,
+        VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers,
+        uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier *pBufferMemoryBarriers,
+        uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier *pImageMemoryBarriers)
 {
-    vkCmdPipelineBarrier(handle(), src_stages, dest_stages, dependencyFlags, memoryBarrierCount, ppMemoryBarriers);
+    vkCmdPipelineBarrier(handle(), src_stages, dest_stages, dependencyFlags,
+                         memoryBarrierCount, pMemoryBarriers,
+                         bufferMemoryBarrierCount, pBufferMemoryBarriers,
+                         imageMemoryBarrierCount, pImageMemoryBarriers);
 }
 
 void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float depth_clear_color, uint32_t stencil_clear_color,
@@ -1391,7 +1402,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
     for (i = 0; i < m_renderTargets.size(); i++) {
         memory_barrier.image = m_renderTargets[i]->image();
         memory_barrier.oldLayout = m_renderTargets[i]->layout();
-        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
+        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, pmemory_barrier);
         m_renderTargets[i]->layout(memory_barrier.newLayout);
 
         vkCmdClearColorImage(handle(),
@@ -1416,7 +1427,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
         memory_barrier.image = depthStencilObj->handle();
         memory_barrier.subresourceRange = dsRange;
 
-        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
+        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, pmemory_barrier);
 
         VkClearDepthStencilValue clear_value = {
             depth_clear_color,
@@ -1432,7 +1443,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
         memory_barrier.newLayout = memory_barrier.oldLayout;
         memory_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
         memory_barrier.subresourceRange = dsRange;
-        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
+        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, pmemory_barrier);
     }
 }
 
@@ -1498,7 +1509,7 @@ void VkCommandBufferObj::PrepareAttachments()
     {
         memory_barrier.image = m_renderTargets[i]->image();
         memory_barrier.oldLayout = m_renderTargets[i]->layout();
-        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
+        vkCmdPipelineBarrier( handle(), src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, pmemory_barrier);
         m_renderTargets[i]->layout(memory_barrier.newLayout);
     }
 }

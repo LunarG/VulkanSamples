@@ -440,7 +440,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(
     VkDevice                                device,
     const VkSemaphoreCreateInfo            *pCreateInfo,
-    const VkAllocationCallbacks*                     pAllocator,
+    const VkAllocationCallbacks            *pAllocator,
     VkSemaphore                            *pSemaphore)
 {
     /*

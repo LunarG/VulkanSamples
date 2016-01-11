@@ -193,7 +193,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     pDisp->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR) gpa(device, "vkAcquireNextImageKHR");
     pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");
     my_device_data->wsi_enabled = false;
-    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
             my_device_data->wsi_enabled = true;
 
@@ -237,7 +237,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
     instanceExtMap[pDisp].wsi_enabled = false;
-    for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
+    for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0)
             instanceExtMap[pDisp].wsi_enabled = true;
 
@@ -698,7 +698,7 @@ explicit_CreateInstance(
         my_data->report_data = debug_report_create_instance(
                                    pInstanceTable,
                                    *pInstance,
-                                   pCreateInfo->enabledExtensionNameCount,
+                                   pCreateInfo->enabledExtensionCount,
                                    pCreateInfo->ppEnabledExtensionNames);
         createInstanceRegisterExtensions(pCreateInfo, *pInstance);
 
@@ -867,7 +867,7 @@ explicit_AllocateCommandBuffers(
         device, pAllocateInfo, pCommandBuffers);
 
     loader_platform_thread_lock_mutex(&objLock);
-    for (uint32_t i = 0; i < pAllocateInfo->bufferCount; i++) {
+    for (uint32_t i = 0; i < pAllocateInfo->commandBufferCount; i++) {
         alloc_command_buffer(device, pAllocateInfo->commandPool, pCommandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT);
     }
     loader_platform_thread_unlock_mutex(&objLock);
@@ -885,7 +885,7 @@ explicit_AllocateDescriptorSets(
     loader_platform_thread_lock_mutex(&objLock);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     skipCall |= validate_descriptor_pool(device, pAllocateInfo->descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, false);
-    for (uint32_t i = 0; i < pAllocateInfo->setLayoutCount; i++) {
+    for (uint32_t i = 0; i < pAllocateInfo->descriptorSetCount; i++) {
         skipCall |= validate_descriptor_set_layout(device, pAllocateInfo->pSetLayouts[i], VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, false);
     }
     loader_platform_thread_unlock_mutex(&objLock);
@@ -896,7 +896,7 @@ explicit_AllocateDescriptorSets(
         device, pAllocateInfo, pDescriptorSets);
 
     loader_platform_thread_lock_mutex(&objLock);
-    for (uint32_t i = 0; i < pAllocateInfo->setLayoutCount; i++) {
+    for (uint32_t i = 0; i < pAllocateInfo->descriptorSetCount; i++) {
         alloc_descriptor_set(device, pAllocateInfo->descriptorPool, pDescriptorSets[i], VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT);
     }
     loader_platform_thread_unlock_mutex(&objLock);

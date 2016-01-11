@@ -847,7 +847,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(
     VkResult ret = VK_SUCCESS;
     uint32_t i;
 
-    for (i = 0; i < pAllocateInfo->setLayoutCount; i++) {
+    for (i = 0; i < pAllocateInfo->descriptorSetCount; i++) {
         const struct intel_desc_layout *layout =
             intel_desc_layout((VkDescriptorSetLayout) pAllocateInfo->pSetLayouts[i]);
 

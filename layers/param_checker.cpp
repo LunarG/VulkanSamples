@@ -1765,7 +1765,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
 
     if (result == VK_SUCCESS) {
         layer_data *data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
-        data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->enabledExtensionNameCount,
+        data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->enabledExtensionCount,
             pCreateInfo->ppEnabledExtensionNames);
 
         InitParamChecker(data, pAllocator);
@@ -4442,7 +4442,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(
 
     VkResult result = get_dispatch_table(pc_device_table_map, device)->AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
 
-    PostAllocateDescriptorSets(device, pAllocateInfo->descriptorPool, pAllocateInfo->setLayoutCount, pDescriptorSets, result);
+    PostAllocateDescriptorSets(device, pAllocateInfo->descriptorPool, pAllocateInfo->descriptorSetCount, pDescriptorSets, result);
 
     return result;
 }
@@ -4717,16 +4717,7 @@ bool PreCreateRenderPass(
         "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pDepthStencilAttachment->layout, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pSubpasses->pPreserveAttachments != nullptr)
-    {
-    if(pCreateInfo->pSubpasses->pPreserveAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->pSubpasses->pPreserveAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pPreserveAttachments->layout, is an unrecognized enumerator");
-        return false;
-    }
-    }
+
     }
     if(pCreateInfo->pDependencies != nullptr)
     {
@@ -6040,13 +6031,18 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetEvent(
 bool PreCmdWaitEvents(
     VkCommandBuffer commandBuffer,
     const VkEvent* pEvents,
-    const void* const* ppMemoryBarriers)
+    uint32_t                     memoryBarrierCount,
+    const VkMemoryBarrier       *pMemoryBarriers,
+    uint32_t                     bufferMemoryBarrierCount,
+    const VkBufferMemoryBarrier *pBufferMemoryBarriers,
+    uint32_t                     imageMemoryBarrierCount,
+    const VkImageMemoryBarrier  *pImageMemoryBarriers)
 {
     if(pEvents != nullptr)
     {
     }
 
-    if(ppMemoryBarriers != nullptr)
+    if(pMemoryBarriers != nullptr)
     {
     }
 
@@ -6069,26 +6065,35 @@ bool PostCmdWaitEvents(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(
-    VkCommandBuffer commandBuffer,
-    uint32_t eventCount,
-    const VkEvent* pEvents,
-    VkPipelineStageFlags srcStageMask,
-    VkPipelineStageFlags dstStageMask,
-    uint32_t memoryBarrierCount,
-    const void* const* ppMemoryBarriers)
+    VkCommandBuffer              commandBuffer,
+    uint32_t                     eventCount,
+    const VkEvent               *pEvents,
+    VkPipelineStageFlags         srcStageMask,
+    VkPipelineStageFlags         dstStageMask,
+    uint32_t                     memoryBarrierCount,
+    const VkMemoryBarrier       *pMemoryBarriers,
+    uint32_t                     bufferMemoryBarrierCount,
+    const VkBufferMemoryBarrier *pBufferMemoryBarriers,
+    uint32_t                     imageMemoryBarrierCount,
+    const VkImageMemoryBarrier  *pImageMemoryBarriers)
 {
-    PreCmdWaitEvents(commandBuffer, pEvents, ppMemoryBarriers);
+    PreCmdWaitEvents(commandBuffer, pEvents, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
 
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdWaitEvents(commandBuffer, eventCount, pEvents, srcStageMask, dstStageMask, memoryBarrierCount, ppMemoryBarriers);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdWaitEvents(commandBuffer, eventCount, pEvents, srcStageMask, dstStageMask, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
 
     PostCmdWaitEvents(commandBuffer, eventCount, srcStageMask, dstStageMask, memoryBarrierCount);
 }
 
 bool PreCmdPipelineBarrier(
-    VkCommandBuffer commandBuffer,
-    const void* const* ppMemoryBarriers)
+    VkCommandBuffer              commandBuffer,
+    uint32_t                     memoryBarrierCount,
+    const VkMemoryBarrier       *pMemoryBarriers,
+    uint32_t                     bufferMemoryBarrierCount,
+    const VkBufferMemoryBarrier *pBufferMemoryBarriers,
+    uint32_t                     imageMemoryBarrierCount,
+    const VkImageMemoryBarrier  *pImageMemoryBarriers)
 {
-    if(ppMemoryBarriers != nullptr)
+    if(pMemoryBarriers != nullptr)
     {
     }
 
@@ -6111,16 +6116,20 @@ bool PostCmdPipelineBarrier(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(
-    VkCommandBuffer commandBuffer,
-    VkPipelineStageFlags srcStageMask,
-    VkPipelineStageFlags dstStageMask,
-    VkDependencyFlags dependencyFlags,
-    uint32_t memoryBarrierCount,
-    const void* const* ppMemoryBarriers)
+    VkCommandBuffer              commandBuffer,
+    VkPipelineStageFlags         srcStageMask,
+    VkPipelineStageFlags         dstStageMask,
+    VkDependencyFlags            dependencyFlags,
+    uint32_t                     memoryBarrierCount,
+    const VkMemoryBarrier       *pMemoryBarriers,
+    uint32_t                     bufferMemoryBarrierCount,
+    const VkBufferMemoryBarrier *pBufferMemoryBarriers,
+    uint32_t                     imageMemoryBarrierCount,
+    const VkImageMemoryBarrier  *pImageMemoryBarriers)
 {
-    PreCmdPipelineBarrier(commandBuffer, ppMemoryBarriers);
+    PreCmdPipelineBarrier(commandBuffer, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
 
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount, ppMemoryBarriers);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
 
     PostCmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount);
 }

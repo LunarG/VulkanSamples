@@ -350,6 +350,7 @@ class Subcommand(object):
         func_body = []
         manually_written_hooked_funcs = ['AllocateMemory',
                                          'AllocateDescriptorSets',
+                                         'BeginCommandBuffer',
                                          'CreateDescriptorPool',
                                          'CreateDevice',
                                          'CreateFramebuffer',
@@ -563,20 +564,20 @@ class Subcommand(object):
         pid_enum.append('    add_VkApplicationInfo_to_packet(pHeader, (VkApplicationInfo**)&((*ppStruct)->pApplicationInfo), pInStruct->pApplicationInfo);')
         # TODO138 : This is an initial pass at getting the extension/layer arrays correct, needs to be validated.
         pid_enum.append('    uint32_t i, siz = 0;')
-        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledLayerNames), pInStruct->enabledLayerNameCount * sizeof(char*), pInStruct->ppEnabledLayerNames);')
-        pid_enum.append('    if (pInStruct->enabledLayerNameCount > 0) ')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledLayerNames), pInStruct->enabledLayerCount * sizeof(char*), pInStruct->ppEnabledLayerNames);')
+        pid_enum.append('    if (pInStruct->enabledLayerCount > 0) ')
         pid_enum.append('    {')
-        pid_enum.append('        for (i = 0; i < pInStruct->enabledLayerNameCount; i++) {')
+        pid_enum.append('        for (i = 0; i < pInStruct->enabledLayerCount; i++) {')
         pid_enum.append('            siz = (uint32_t) (1 + strlen(pInStruct->ppEnabledLayerNames[i]));')
         pid_enum.append('            vktrace_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledLayerNames[i]), siz, pInStruct->ppEnabledLayerNames[i]);')
         pid_enum.append('            vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledLayerNames[i]);')
         pid_enum.append('        }')
         pid_enum.append('    }')
         pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledLayerNames);')
-        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledExtensionNames), pInStruct->enabledExtensionNameCount * sizeof(char*), pInStruct->ppEnabledExtensionNames);')
-        pid_enum.append('    if (pInStruct->enabledExtensionNameCount > 0) ')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledExtensionNames), pInStruct->enabledExtensionCount * sizeof(char*), pInStruct->ppEnabledExtensionNames);')
+        pid_enum.append('    if (pInStruct->enabledExtensionCount > 0) ')
         pid_enum.append('    {')
-        pid_enum.append('        for (i = 0; i < pInStruct->enabledExtensionNameCount; i++) {')
+        pid_enum.append('        for (i = 0; i < pInStruct->enabledExtensionCount; i++) {')
         pid_enum.append('            siz = (uint32_t) (1 + strlen(pInStruct->ppEnabledExtensionNames[i]));')
         pid_enum.append('            vktrace_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledExtensionNames[i]), siz, pInStruct->ppEnabledExtensionNames[i]);')
         pid_enum.append('            vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames[i]);')
@@ -599,20 +600,20 @@ class Subcommand(object):
         pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)&(*ppStruct)->pQueueCreateInfos);')
         # TODO138 : This is an initial pass at getting the extension/layer arrays correct, needs to be validated.
         pid_enum.append('    uint32_t i, siz = 0;')
-        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledLayerNames), pInStruct->enabledLayerNameCount * sizeof(char*), pInStruct->ppEnabledLayerNames);')
-        pid_enum.append('    if (pInStruct->enabledLayerNameCount > 0) ')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledLayerNames), pInStruct->enabledLayerCount * sizeof(char*), pInStruct->ppEnabledLayerNames);')
+        pid_enum.append('    if (pInStruct->enabledLayerCount > 0) ')
         pid_enum.append('    {')
-        pid_enum.append('        for (i = 0; i < pInStruct->enabledLayerNameCount; i++) {')
+        pid_enum.append('        for (i = 0; i < pInStruct->enabledLayerCount; i++) {')
         pid_enum.append('            siz = (uint32_t) (1 + strlen(pInStruct->ppEnabledLayerNames[i]));')
         pid_enum.append('            vktrace_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledLayerNames[i]), siz, pInStruct->ppEnabledLayerNames[i]);')
         pid_enum.append('            vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledLayerNames[i]);')
         pid_enum.append('        }')
         pid_enum.append('    }')
         pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledLayerNames);')
-        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledExtensionNames), pInStruct->enabledExtensionNameCount * sizeof(char*), pInStruct->ppEnabledExtensionNames);')
-        pid_enum.append('    if (pInStruct->enabledExtensionNameCount > 0) ')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledExtensionNames), pInStruct->enabledExtensionCount * sizeof(char*), pInStruct->ppEnabledExtensionNames);')
+        pid_enum.append('    if (pInStruct->enabledExtensionCount > 0) ')
         pid_enum.append('    {')
-        pid_enum.append('        for (i = 0; i < pInStruct->enabledExtensionNameCount; i++) {')
+        pid_enum.append('        for (i = 0; i < pInStruct->enabledExtensionCount; i++) {')
         pid_enum.append('            siz = (uint32_t) (1 + strlen(pInStruct->ppEnabledExtensionNames[i]));')
         pid_enum.append('            vktrace_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledExtensionNames[i]), siz, pInStruct->ppEnabledExtensionNames[i]);')
         pid_enum.append('            vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames[i]);')
@@ -635,18 +636,18 @@ class Subcommand(object):
         pid_enum.append('        VkApplicationInfo** ppApplicationInfo = (VkApplicationInfo**) &pVkInstanceCreateInfo->pApplicationInfo;')
         pid_enum.append('        (*ppApplicationInfo)->pApplicationName = (const char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pApplicationInfo->pApplicationName);')
         pid_enum.append('        (*ppApplicationInfo)->pEngineName = (const char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pApplicationInfo->pEngineName);')
-        pid_enum.append('        if (pVkInstanceCreateInfo->enabledLayerNameCount > 0)')
+        pid_enum.append('        if (pVkInstanceCreateInfo->enabledLayerCount > 0)')
         pid_enum.append('        {')
         pid_enum.append('            pVkInstanceCreateInfo->ppEnabledLayerNames = (const char* const*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->ppEnabledLayerNames);')
-        pid_enum.append('            for (i = 0; i < pVkInstanceCreateInfo->enabledLayerNameCount; i++) {')
+        pid_enum.append('            for (i = 0; i < pVkInstanceCreateInfo->enabledLayerCount; i++) {')
         pid_enum.append('                char** ppTmp = (char**)&pVkInstanceCreateInfo->ppEnabledLayerNames[i];')
         pid_enum.append('                *ppTmp = (char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->ppEnabledLayerNames[i]);')
         pid_enum.append('            }')
         pid_enum.append('        }')
-        pid_enum.append('        if (pVkInstanceCreateInfo->enabledExtensionNameCount > 0)')
+        pid_enum.append('        if (pVkInstanceCreateInfo->enabledExtensionCount > 0)')
         pid_enum.append('        {')
         pid_enum.append('            pVkInstanceCreateInfo->ppEnabledExtensionNames = (const char* const*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->ppEnabledExtensionNames);')
-        pid_enum.append('            for (i = 0; i < pVkInstanceCreateInfo->enabledExtensionNameCount; i++) {')
+        pid_enum.append('            for (i = 0; i < pVkInstanceCreateInfo->enabledExtensionCount; i++) {')
         pid_enum.append('                char** ppTmp = (char**)&pVkInstanceCreateInfo->ppEnabledExtensionNames[i];')
         pid_enum.append('                *ppTmp = (char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->ppEnabledExtensionNames[i]);')
         pid_enum.append('            }')
@@ -662,18 +663,18 @@ class Subcommand(object):
         pid_enum.append('    if (pVkDeviceCreateInfo != NULL)')
         pid_enum.append('    {')
         pid_enum.append('        pVkDeviceCreateInfo->pQueueCreateInfos = (const VkDeviceQueueCreateInfo *)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->pQueueCreateInfos);\n')
-        pid_enum.append('        if (pVkDeviceCreateInfo->enabledLayerNameCount > 0)')
+        pid_enum.append('        if (pVkDeviceCreateInfo->enabledLayerCount > 0)')
         pid_enum.append('        {')
         pid_enum.append('            pVkDeviceCreateInfo->ppEnabledLayerNames = (const char* const*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->ppEnabledLayerNames);')
-        pid_enum.append('            for (i = 0; i < pVkDeviceCreateInfo->enabledLayerNameCount; i++) {')
+        pid_enum.append('            for (i = 0; i < pVkDeviceCreateInfo->enabledLayerCount; i++) {')
         pid_enum.append('                char** ppTmp = (char**)&pVkDeviceCreateInfo->ppEnabledLayerNames[i];')
         pid_enum.append('                *ppTmp = (char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->ppEnabledLayerNames[i]);')
         pid_enum.append('            }')
         pid_enum.append('        }')
-        pid_enum.append('        if (pVkDeviceCreateInfo->enabledExtensionNameCount > 0)')
+        pid_enum.append('        if (pVkDeviceCreateInfo->enabledExtensionCount > 0)')
         pid_enum.append('        {')
         pid_enum.append('            pVkDeviceCreateInfo->ppEnabledExtensionNames = (const char* const*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->ppEnabledExtensionNames);')
-        pid_enum.append('            for (i = 0; i < pVkDeviceCreateInfo->enabledExtensionNameCount; i++) {')
+        pid_enum.append('            for (i = 0; i < pVkDeviceCreateInfo->enabledExtensionCount; i++) {')
         pid_enum.append('                char** ppTmp = (char**)&pVkDeviceCreateInfo->ppEnabledExtensionNames[i];')
         pid_enum.append('                *ppTmp = (char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->ppEnabledExtensionNames[i]);')
         pid_enum.append('            }')
@@ -825,33 +826,9 @@ class Subcommand(object):
                                                                                          '     vktrace_LogError("CreateDescriptorSetLayout must have pCreateInfo->stype of VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO.");\n',
                                                                                          '     pPacket->header = NULL;\n',
                                                                                          '}']},
-#                             'BeginCommandBuffer' : {'param': 'pBeginInfo', 'txt': ['if (pPacket->pBeginInfo->sType == VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO) {\n',
-#                                                                                         '    // need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
-#                                                                                         '    VkCommandBufferGraphicsBeginInfo** ppNext = (VkCommandBufferGraphicsBeginInfo**)&(pPacket->pBeginInfo->pNext);\n',
-#                                                                                         '    *ppNext = (VkCommandBufferGraphicsBeginInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBeginInfo->pNext);\n',
-#                                                                                         '    VkCommandBufferGraphicsBeginInfo* pNext = *ppNext;\n',
-#                                                                                         '    while (NULL != pNext)\n', '    {\n',
-#                                                                                         '        switch(pNext->sType)\n', '        {\n',
-#                                                                                         '            case VK_STRUCTURE_TYPE_COMMAND_BUFFER_GRAPHICS_BEGIN_INFO:\n',
-#                                                                                         '            {\n',
-#                                                                                         '                ppNext = (VkCommandBufferGraphicsBeginInfo**) &pNext->pNext;\n',
-#                                                                                         '                *ppNext = (VkCommandBufferGraphicsBeginInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
-#                                                                                         '                break;\n',
-#                                                                                         '            }\n',
-#                                                                                         '            default:\n',
-#                                                                                         '            {\n',
-#                                                                                         '                vktrace_LogError("Encountered an unexpected type in begin command buffer list.");\n',
-#                                                                                         '                pPacket->header = NULL;\n',
-#                                                                                         '                pNext->pNext = NULL;\n',
-#                                                                                         '            }\n',
-#                                                                                         '        }\n',
-#                                                                                         '        pNext = (VkCommandBufferGraphicsBeginInfo*)pNext->pNext;\n',
-#                                                                                         '    }\n',
-#                                                                                         '} else {\n',
-#                                                                                         '    // This is unexpected.\n',
-#                                                                                         '    vktrace_LogError("BeginCommandBuffer must have BeginInfo stype of VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO.");\n',
-#                                                                                         '    pPacket->header = NULL;\n',
-#                                                                                         '}']},
+                             'BeginCommandBuffer' : {'param': 'pBeginInfo', 'txt': [
+                                                                                          'VkCommandBufferBeginInfo* pInfo = (VkCommandBufferBeginInfo*) pPacket->pBeginInfo;\n',
+                                                       'pInfo->pInheritanceInfo = (VkCommandBufferInheritanceInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBeginInfo->pInheritanceInfo);\n']},
                              'AllocateMemory' : {'param': 'pAllocateInfo', 'txt': ['if (pPacket->pAllocateInfo->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO) {\n',
                                                                                          '    VkMemoryAllocateInfo** ppNext = (VkMemoryAllocateInfo**) &(pPacket->pAllocateInfo->pNext);\n',
                                                                                          '    *ppNext = (VkMemoryAllocateInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAllocateInfo->pNext);\n',
@@ -1579,12 +1556,12 @@ class Subcommand(object):
                 elif create_func: # Declare local var to store created handle into
                     if 'AllocateDescriptorSets' == proto.name:
                         p_ty = proto.params[-1].ty.strip('*').replace('const ', '')
-                        rbody.append('            %s* local_%s = (%s*)malloc(pPacket->pAllocateInfo->setLayoutCount * sizeof(%s));' % (p_ty, proto.params[-1].name, p_ty, p_ty))
-                        rbody.append('            VkDescriptorSetLayout* local_pSetLayouts = (VkDescriptorSetLayout*)malloc(pPacket->pAllocateInfo->setLayoutCount * sizeof(VkDescriptorSetLayout));')
+                        rbody.append('            %s* local_%s = (%s*)malloc(pPacket->pAllocateInfo->descriptorSetCount * sizeof(%s));' % (p_ty, proto.params[-1].name, p_ty, p_ty))
+                        rbody.append('            VkDescriptorSetLayout* local_pSetLayouts = (VkDescriptorSetLayout*)malloc(pPacket->pAllocateInfo->descriptorSetCount * sizeof(VkDescriptorSetLayout));')
                         rbody.append('            VkDescriptorSetAllocateInfo local_AllocInfo, *local_pAllocateInfo = &local_AllocInfo;')
                         rbody.append('            VkDescriptorPool local_descPool;')
                         rbody.append('            local_descPool = m_objMapper.remap_descriptorpools(pPacket->pAllocateInfo->descriptorPool);')
-                        rbody.append('            for (uint32_t i = 0; i < pPacket->pAllocateInfo->setLayoutCount; i++)')
+                        rbody.append('            for (uint32_t i = 0; i < pPacket->pAllocateInfo->descriptorSetCount; i++)')
                         rbody.append('            {')
                         rbody.append('                local_pSetLayouts[i] = m_objMapper.remap_descriptorsetlayouts(pPacket->%s->pSetLayouts[i]);' % (proto.params[-2].name))
                         rbody.append('            }')
@@ -1714,7 +1691,7 @@ class Subcommand(object):
                 elif 'AllocateDescriptorSets' in proto.name:
                     rbody.append('            if (replayResult == VK_SUCCESS)')
                     rbody.append('            {')
-                    rbody.append('                for (uint32_t i = 0; i < pPacket->pAllocateInfo->setLayoutCount; i++) {')
+                    rbody.append('                for (uint32_t i = 0; i < pPacket->pAllocateInfo->descriptorSetCount; i++) {')
                     rbody.append('                    m_objMapper.add_to_descriptorsets_map(pPacket->%s[i], local_%s[i]);' % (proto.params[-1].name, proto.params[-1].name))
                     rbody.append('                }')
                     rbody.append('            }')

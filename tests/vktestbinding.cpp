@@ -290,9 +290,9 @@ void Device::init(std::vector<const char *> &layers, std::vector<const char *> &
     dev_info.pNext = NULL;
     dev_info.queueCreateInfoCount = queue_info.size();
     dev_info.pQueueCreateInfos = queue_info.data();
-    dev_info.enabledLayerNameCount = layers.size();
+    dev_info.enabledLayerCount = layers.size();
     dev_info.ppEnabledLayerNames = layers.data();
-    dev_info.enabledExtensionNameCount = extensions.size();
+    dev_info.enabledExtensionCount = extensions.size();
     dev_info.ppEnabledExtensionNames = extensions.data();
 
     init(dev_info);
@@ -736,7 +736,7 @@ std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev, const
 
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.setLayoutCount = layout_handles.size();
+    alloc_info.descriptorSetCount = layout_handles.size();
     alloc_info.descriptorPool = handle();
     alloc_info.pSetLayouts = layout_handles.data();
     VkResult err = vkAllocateDescriptorSets(device(), &alloc_info, set_handles.data());
@@ -811,14 +811,18 @@ void CommandBuffer::begin(const VkCommandBufferBeginInfo *info)
 void CommandBuffer::begin()
 {
     VkCommandBufferBeginInfo info = {};
+    VkCommandBufferInheritanceInfo hinfo = {};
     info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    info.renderPass = VK_NULL_HANDLE;
-    info.subpass = 0;
-    info.framebuffer = VK_NULL_HANDLE;
-    info.occlusionQueryEnable = VK_FALSE;
-    info.queryFlags = 0;
-    info.pipelineStatistics = 0;
+    info.pInheritanceInfo = &hinfo;
+    hinfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    hinfo.pNext = NULL;
+    hinfo.renderPass = VK_NULL_HANDLE;
+    hinfo.subpass = 0;
+    hinfo.framebuffer = VK_NULL_HANDLE;
+    hinfo.occlusionQueryEnable = VK_FALSE;
+    hinfo.queryFlags = 0;
+    hinfo.pipelineStatistics = 0;
 
     begin(&info);
 }

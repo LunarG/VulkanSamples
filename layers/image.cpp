@@ -151,7 +151,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstance
     VkResult result = pTable->CreateInstance(pCreateInfo, pAllocator, pInstance);
 
     if (result == VK_SUCCESS) {
-        my_data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->enabledExtensionNameCount,
+        my_data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->enabledExtensionCount,
             pCreateInfo->ppEnabledExtensionNames);
 
         InitImage(my_data, pAllocator);
@@ -986,14 +986,18 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(
     VkPipelineStageFlags                        dstStageMask,
     VkDependencyFlags                           dependencyFlags,
     uint32_t                                    memoryBarrierCount,
-    const void* const*                          ppMemoryBarriers)
+    const VkMemoryBarrier                      *pMemoryBarriers,
+    uint32_t                                    bufferMemoryBarrierCount,
+    const VkBufferMemoryBarrier                *pBufferMemoryBarriers,
+    uint32_t                                    imageMemoryBarrierCount,
+    const VkImageMemoryBarrier                 *pImageMemoryBarriers)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
 
-    for (uint32_t i = 0; i < memoryBarrierCount; ++i)
+    for (uint32_t i = 0; i < imageMemoryBarrierCount; ++i)
     {
-        VkImageMemoryBarrier const*const barrier = (VkImageMemoryBarrier const*const)ppMemoryBarriers[i];
+        VkImageMemoryBarrier const*const barrier = (VkImageMemoryBarrier const*const) &pImageMemoryBarriers[i];
         if (barrier->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
         {
             if (barrier->subresourceRange.layerCount == 0)
@@ -1012,7 +1016,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(
     }
 
     device_data->device_dispatch_table->CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags,
-        memoryBarrierCount, ppMemoryBarriers);
+                                            memoryBarrierCount, pMemoryBarriers,
+                                            bufferMemoryBarrierCount, pBufferMemoryBarriers,
+                                            imageMemoryBarrierCount, pImageMemoryBarriers);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResolveImage(
