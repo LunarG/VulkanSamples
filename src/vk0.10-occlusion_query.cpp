@@ -199,7 +199,7 @@ int main(int argc, char **argv)
     query_pool_info.pNext = NULL;
     query_pool_info.queryType = VK_QUERY_TYPE_OCCLUSION;
     query_pool_info.flags = 0;
-    query_pool_info.entryCount = 2;
+    query_pool_info.queryCount = 2;
     query_pool_info.pipelineStatistics = 0;
 
     res = vkCreateQueryPool(info.device,
@@ -279,9 +279,8 @@ int main(int argc, char **argv)
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
     vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         0, 1, (const void * const*)&pmemory_barrier);
+                         0, 0, NULL, 0, NULL, 1, &prePresentBarrier);
 
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = { info.cmd };

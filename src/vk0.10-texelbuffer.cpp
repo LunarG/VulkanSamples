@@ -227,7 +227,7 @@ int main(int argc, char **argv)
     desc_alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     desc_alloc_info[0].pNext = NULL;
     desc_alloc_info[0].descriptorPool = info.desc_pool;
-    desc_alloc_info[0].setLayoutCount = NUM_DESCRIPTOR_SETS;
+    desc_alloc_info[0].descriptorSetCount = NUM_DESCRIPTOR_SETS;
     desc_alloc_info[0].pSetLayouts = info.desc_layout.data();
 
     /* Allocate descriptor set with UNIFORM_BUFFER_DYNAMIC */

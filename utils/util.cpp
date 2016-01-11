@@ -155,12 +155,10 @@ void set_image_layout(
         image_memory_barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
     }
 
-    VkImageMemoryBarrier *pmemory_barrier = &image_memory_barrier;
-
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-    vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
+    vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
 }
 
 bool read_ppm(char const*const filename, int& width, int& height, uint64_t rowPitch, unsigned char* dataPtr)

@@ -255,9 +255,9 @@ VkResult init_instance(struct sample_info &info, char const*const app_short_name
     inst_info.pNext = NULL;
     inst_info.flags = 0;
     inst_info.pApplicationInfo = &app_info;
-    inst_info.enabledLayerNameCount = info.instance_layer_names.size();
+    inst_info.enabledLayerCount = info.instance_layer_names.size();
     inst_info.ppEnabledLayerNames = info.instance_layer_names.size() ? info.instance_layer_names.data() : NULL;
-    inst_info.enabledExtensionNameCount = info.instance_extension_names.size();
+    inst_info.enabledExtensionCount = info.instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
 
     VkResult res = vkCreateInstance(&inst_info, NULL, &info.inst);
@@ -311,12 +311,12 @@ VkResult init_device(struct sample_info &info)
     device_info.pNext = NULL;
     device_info.queueCreateInfoCount = 1;
     device_info.pQueueCreateInfos = &queue_info;
-    device_info.enabledLayerNameCount = info.device_layer_names.size();
+    device_info.enabledLayerCount = info.device_layer_names.size();
     device_info.ppEnabledLayerNames =
-            device_info.enabledLayerNameCount ? info.device_layer_names.data() : NULL;
-    device_info.enabledExtensionNameCount = info.device_extension_names.size();
+            device_info.enabledLayerCount ? info.device_layer_names.data() : NULL;
+    device_info.enabledExtensionCount = info.device_extension_names.size();
     device_info.ppEnabledExtensionNames =
-            device_info.enabledExtensionNameCount ? info.device_extension_names.data() : NULL;
+            device_info.enabledExtensionCount ? info.device_extension_names.data() : NULL;
     device_info.pEnabledFeatures = NULL;
 
     res = vkCreateDevice(info.gpus[0], &device_info, NULL, &info.device);
@@ -850,9 +850,8 @@ void execute_pre_present_barrier(struct sample_info &info)
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
     vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                         0, 1, (const void * const*)&pmemory_barrier);
+                         0, 0, NULL, 0, NULL, 1, &prePresentBarrier);
 }
 
 void execute_present_image(struct sample_info &info)
@@ -904,7 +903,7 @@ void init_swap_chain(struct sample_info &info)
 
     VkExtent2D swapChainExtent;
     // width and height are either both -1, or both not -1.
-    if (surfCapabilities.currentExtent.width == -1)
+    if (surfCapabilities.currentExtent.width == (uint32_t) -1)
     {
         // If the surface size is undefined, the size is set to
         // the size of the images requested.
@@ -1246,7 +1245,7 @@ void init_command_buffer(struct sample_info &info)
     cmd.pNext = NULL;
     cmd.commandPool = info.cmd_pool;
     cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cmd.bufferCount = 1;
+    cmd.commandBufferCount = 1;
 
     res = vkAllocateCommandBuffers(info.device, &cmd, &info.cmd);
     assert(res == VK_SUCCESS);
@@ -1255,16 +1254,13 @@ void execute_begin_command_buffer(struct sample_info &info)
 {
     /* DEPENDS on init_command_buffer() */
     VkResult U_ASSERT_ONLY res;
+
     VkCommandBufferBeginInfo cmd_buf_info = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
-    cmd_buf_info.renderPass = VK_NULL_HANDLE;  /* May only set renderPass and framebuffer */
-    cmd_buf_info.framebuffer = VK_NULL_HANDLE; /* for secondary command buffers           */
     cmd_buf_info.flags = 0;
-    cmd_buf_info.subpass = 0;
-    cmd_buf_info.occlusionQueryEnable = VK_FALSE;
-    cmd_buf_info.queryFlags = 0;
-    cmd_buf_info.pipelineStatistics = 0;
+    cmd_buf_info.pInheritanceInfo = NULL;
+
     res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
     assert(res == VK_SUCCESS);
 }
@@ -1421,7 +1417,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
     alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info[0].pNext = NULL;
     alloc_info[0].descriptorPool = info.desc_pool;
-    alloc_info[0].setLayoutCount = NUM_DESCRIPTOR_SETS;
+    alloc_info[0].descriptorSetCount = NUM_DESCRIPTOR_SETS;
     alloc_info[0].pSetLayouts = info.desc_layout.data();
 
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
@@ -1658,7 +1654,7 @@ void init_sampler(struct sample_info &info, VkSampler &sampler)
     samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
     samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
-    samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_BASE;
+    samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
     samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -1849,13 +1845,7 @@ void init_image(struct sample_info &info, texture_object &texObj, const char* te
         cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         cmd_buf_info.pNext = NULL;
         cmd_buf_info.flags = 0;
-        cmd_buf_info.renderPass = VK_NULL_HANDLE;
-        cmd_buf_info.framebuffer = VK_NULL_HANDLE;
-        cmd_buf_info.subpass = 0;
-        cmd_buf_info.occlusionQueryEnable = VK_FALSE;
-        cmd_buf_info.queryFlags = 0;
-        cmd_buf_info.pipelineStatistics = 0;
-        res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
+        cmd_buf_info.pInheritanceInfo = NULL;
 
         res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
         assert(res == VK_SUCCESS);

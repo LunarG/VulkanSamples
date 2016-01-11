@@ -163,22 +163,22 @@ int main(int argc, char **argv)
     region.srcSubresource.mipLevel = 0;
     region.srcSubresource.baseArrayLayer = 0;
     region.srcSubresource.layerCount = 1;
-    region.srcOffset.x = 0;
-    region.srcOffset.y = 0;
-    region.srcOffset.z = 0;
-    region.srcExtent.width = 32;
-    region.srcExtent.height = 32;
-    region.srcExtent.depth = 1;
+    region.srcOffsets[0].x = 0;
+    region.srcOffsets[0].y = 0;
+    region.srcOffsets[0].z = 0;
+    region.srcOffsets[1].x = 32;
+    region.srcOffsets[1].y = 32;
+    region.srcOffsets[1].z = 1;
     region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     region.dstSubresource.mipLevel = 0;
     region.dstSubresource.baseArrayLayer = 0;
     region.dstSubresource.layerCount = 1;
-    region.dstOffset.x = 0;
-    region.dstOffset.y = 0;
-    region.dstOffset.z = 0;
-    region.dstExtent.width = info.width;
-    region.dstExtent.height = info.height;
-    region.dstExtent.depth = 1;
+    region.dstOffsets[0].x = 0;
+    region.dstOffsets[0].y = 0;
+    region.dstOffsets[0].z = 0;
+    region.dstOffsets[1].x = info.width;
+    region.dstOffsets[1].y = info.height;
+    region.dstOffsets[1].z = 1;
 
     vkCmdBlitImage(info.cmd, bltSrcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, bltDstImage,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_LINEAR);
@@ -221,9 +221,8 @@ int main(int argc, char **argv)
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
     vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                         VK_FALSE, 1, (const void * const*)&pmemory_barrier);
+                         0, 0, NULL, 0, NULL, 1, &prePresentBarrier);
 
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = { info.cmd };

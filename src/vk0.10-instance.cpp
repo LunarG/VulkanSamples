@@ -56,9 +56,9 @@ int main(int argc, char **argv)
     inst_info.pNext = NULL;
     inst_info.flags = 0;
     inst_info.pApplicationInfo = &app_info;
-    inst_info.enabledExtensionNameCount = 0;
+    inst_info.enabledExtensionCount = 0;
     inst_info.ppEnabledExtensionNames = NULL;
-    inst_info.enabledLayerNameCount = 0;
+    inst_info.enabledLayerCount = 0;
     inst_info.ppEnabledLayerNames = NULL;
 
     VkInstance inst;

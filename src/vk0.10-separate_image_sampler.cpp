@@ -206,7 +206,7 @@ int main(int argc, char **argv)
     alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info[0].pNext = NULL;
     alloc_info[0].descriptorPool = descriptor_pool[0];
-    alloc_info[0].setLayoutCount = descriptor_set_count;
+    alloc_info[0].descriptorSetCount = descriptor_set_count;
     alloc_info[0].pSetLayouts = descriptor_layouts;
 
     // Populate descriptor sets
@@ -239,6 +239,7 @@ int main(int argc, char **argv)
     descriptor_writes[1].dstBinding = 1;
 
     // Populate with info about our sampler
+    descriptor_writes[2] = {};
     descriptor_writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptor_writes[2].pNext = NULL;
     descriptor_writes[2].dstSet = descriptor_sets[0];
