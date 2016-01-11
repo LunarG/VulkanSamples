@@ -105,28 +105,41 @@ VkSurfaceKHR ShellWin32::create_surface(VkInstance instance)
 LRESULT ShellWin32::handle_message(UINT msg, WPARAM wparam, LPARAM lparam)
 {
     switch (msg) {
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        return 0;
     case WM_SIZE:
         {
             UINT w = LOWORD(lparam);
             UINT h = HIWORD(lparam);
             resize_swapchain(w, h);
         }
-        return 0;
+        break;
     case WM_KEYUP:
-        switch (wparam) {
-        case VK_ESCAPE:
-            SendMessage(hwnd_, WM_CLOSE, 0, 0);
-            break;
-        default:
-            break;
+        {
+            Game::Key key;
+
+            switch (wparam) {
+            case VK_ESCAPE:
+                key = Game::KEY_ESC;
+                break;
+            default:
+                key = Game::KEY_UNKNOWN;
+                break;
+            }
+
+            game_.on_key(key);
         }
-        return 0;
+        break;
+    case WM_CLOSE:
+        game_.on_key(Game::KEY_SHUTDOWN);
+        break;
+    case WM_DESTROY:
+        quit();
+        break;
     default:
         return DefWindowProc(hwnd_, msg, wparam, lparam);
+        break;
     }
+
+    return 0;
 }
 
 float ShellWin32::get_time()
@@ -135,6 +148,11 @@ float ShellWin32::get_time()
     QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER *>(&count));
 
     return (float) count / perf_counter_freq_;
+}
+
+void ShellWin32::quit()
+{
+    PostQuitMessage(0);
 }
 
 void ShellWin32::run()

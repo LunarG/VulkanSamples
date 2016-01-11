@@ -31,6 +31,8 @@ public:
     void attach_swapchain();
     void detach_swapchain();
 
+    void on_key(Key key);
+
     void on_frame(float frame_time, int fb);
 
 private:

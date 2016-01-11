@@ -26,9 +26,16 @@ public:
     virtual void attach_swapchain() {}
     virtual void detach_swapchain() {}
 
+    enum Key {
+        // virtual keys
+        KEY_SHUTDOWN,
+        // physical keys
+        KEY_UNKNOWN,
+        KEY_ESC,
+    };
+    virtual void on_key(Key key) {}
+
     virtual void on_frame(float frame_time, int fb) {}
-    virtual void on_key(int key) {}
-    virtual void on_shutdown() {}
 
 protected:
     Game(const std::string &name, const std::vector<std::string> &args)
