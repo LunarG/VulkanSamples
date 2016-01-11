@@ -248,13 +248,13 @@ sampleWithSingleFile()
 # targets that use spv shaders
 
 # usespirvshader
-set(SAMPLE_SPIRV_SHADERS spirvshader-vert spirvshader-frag)
-sampleExtSPIRVShaders(usespirvshader)
+# set(SAMPLE_SPIRV_SHADERS spirvshader-vert spirvshader-frag)
+# sampleExtSPIRVShaders()
 
 # targets that require glsl to spv shader conversion
 
 # useglslshader
-set(SAMPLE_GLSL_FRAG_SHADERS glslshader)
-set(SAMPLE_GLSL_VERT_SHADERS glslshader)
-sampleExtGLSLShaders(useglslshader)
+# set(SAMPLE_GLSL_FRAG_SHADERS glslshader)
+# set(SAMPLE_GLSL_VERT_SHADERS glslshader)
+# sampleExtGLSLShaders()
 
