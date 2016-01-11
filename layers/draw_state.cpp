@@ -1405,9 +1405,15 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
                     result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)setHandle, __LINE__, DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, "DS",
                         "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u is not compatible with overlapping VkPipelineLayout %#" PRIxLEAST64 " due to: %s",
                             (uint64_t)setHandle, setIndex, (uint64_t)pPipe->graphicsPipelineCI.layout, errorString.c_str());
-                } else { // Valid set is bound and layout compatible, validate any dynamic offsets
-                    // Pull the set node, and for each dynamic descriptor, make sure dynamic offset doesn't overstep buffer
+                } else { // Valid set is bound and layout compatible, validate that it's updated and verify any dynamic offsets
+                    // Pull the set node
                     SET_NODE* pSet = getSetNode(my_data, pCB->boundDescriptorSets[setIndex]);
+                    // Make sure set has been updated
+                    if (!pSet->pUpdateStructs) {
+                        result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pSet->set, __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
+                            "DS %#" PRIxLEAST64 " bound but it was never updated. It is now being used to draw so this will result in undefined behavior.", (uint64_t) pSet->set);
+                    }
+                    // For each dynamic descriptor, make sure dynamic offset doesn't overstep buffer
                     result |= validate_dynamic_offsets(my_data, pSet);
                 }
             }
@@ -3696,6 +3702,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(VkDev
                 memcpy(*ppIS, pCreateInfo->pBindings[i].pImmutableSamplers, pCreateInfo->pBindings[i].descriptorCount*sizeof(VkSampler));
             }
         }
+        pNewNode->layout = *pSetLayout;
+        pNewNode->startIndex = 0;
         if (totalCount > 0) {
             pNewNode->descriptorTypes.resize(totalCount);
             pNewNode->stageFlags.resize(totalCount);
@@ -3714,11 +3722,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(VkDev
                 }
                 offset += j;
             }
+            pNewNode->endIndex = pNewNode->startIndex + totalCount - 1;
+        } else { // no descriptors
+            pNewNode->endIndex = 0;
         }
-        pNewNode->layout = *pSetLayout;
-        pNewNode->startIndex = 0;
-        pNewNode->endIndex = pNewNode->startIndex + totalCount - 1;
-        assert(pNewNode->endIndex >= pNewNode->startIndex);
         // Put new node at Head of global Layer list
         loader_platform_thread_lock_mutex(&globalLock);
         dev_data->descriptorSetLayoutMap[*pSetLayout] = pNewNode;
@@ -4255,8 +4262,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                         loader_platform_thread_unlock_mutex(&globalLock);
                         skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], __LINE__, DRAWSTATE_NONE, "DS",
                                 "DS %#" PRIxLEAST64 " bound on pipeline %s", (uint64_t) pDescriptorSets[i], string_VkPipelineBindPoint(pipelineBindPoint));
-                        if (!pSet->pUpdateStructs) {
-                            // TODO: Verify against Valid Usage
+                        if (!pSet->pUpdateStructs && (pSet->descriptorCount != 0)) {
                             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
                                     "DS %#" PRIxLEAST64 " bound but it was never updated. You may want to either update it or not bind it.", (uint64_t) pDescriptorSets[i]);
                         }
