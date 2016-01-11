@@ -490,6 +490,18 @@ void Hologram::update_objects(Worker &worker)
     vk::EndCommandBuffer(cmd);
 }
 
+void Hologram::on_key(Key key)
+{
+    switch (key) {
+    case KEY_SHUTDOWN:
+    case KEY_ESC:
+        shell_->quit();
+        break;
+    default:
+        break;
+    }
+}
+
 void Hologram::on_frame(float frame_time, int fb)
 {
     for (auto &worker : workers_)

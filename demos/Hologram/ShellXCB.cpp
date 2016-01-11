@@ -169,20 +169,29 @@ ShellXCB::Action ShellXCB::handle_event(const xcb_generic_event_t *ev)
         break;
     case XCB_KEY_RELEASE:
         {
-            // TODO translate xcb_keycode_t
             const xcb_key_release_event_t *release =
                 reinterpret_cast<const xcb_key_release_event_t *>(ev);
-            game_.on_key(release->detail);
+            Game::Key key;
+
+            // TODO translate xcb_keycode_t
+            switch (release->detail) {
+            case 0x9:
+                key = Game::KEY_ESC;
+                break;
+            default:
+                key = Game::KEY_UNKNOWN;
+                break;
+            }
+
+            game_.on_key(key);
         }
         break;
     case XCB_CLIENT_MESSAGE:
         {
             const xcb_client_message_event_t *msg =
                 reinterpret_cast<const xcb_client_message_event_t *>(ev);
-            if (msg->type == wm_protocols_ && msg->data.data32[0] == wm_delete_window_) {
-                game_.on_shutdown();
-                act = QUIT;
-            }
+            if (msg->type == wm_protocols_ && msg->data.data32[0] == wm_delete_window_)
+                game_.on_key(Game::KEY_SHUTDOWN);
         }
         break;
     default:
@@ -203,6 +212,7 @@ void ShellXCB::run()
     float profile_present_since = get_time();
     float game_time_base = get_time();
 
+    quit_ = false;
     while (true) {
         Action act = NONE;
 
@@ -219,9 +229,10 @@ void ShellXCB::run()
             free(ev);
         }
 
-        if (act == QUIT)
+        if (quit_)
             break;
-        else if (act == NONE)
+
+        if (act == NONE)
             continue;
 
         assert(act == DRAW);

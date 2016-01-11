@@ -35,6 +35,7 @@ public:
     const Context &context() const { return ctx_; }
 
     virtual void run() = 0;
+    virtual void quit() = 0;
 
 protected:
     Shell(Game &game) : game_(game), settings_(game.settings()), ctx_() {}

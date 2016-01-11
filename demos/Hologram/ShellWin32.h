@@ -10,6 +10,7 @@ public:
     ~ShellWin32();
 
     void run();
+    void quit();
 
 private:
     void init_window();
