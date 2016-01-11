@@ -180,15 +180,39 @@ int main(int argc, char **argv)
         //     16    VK_UUID_SIZE    a pipeline cache ID equal to VkPhysicalDeviceProperties::pipelineCacheUUID
         //
 
-
-        uint8_t pipelineCacheUUID[VK_UUID_SIZE] = {};
+        uint32_t headerLength = 0;
+        uint32_t cacheHeaderVersion = 0;
+        uint32_t vendorID = 0;
         uint32_t deviceID = 0;
+        uint8_t  pipelineCacheUUID[VK_UUID_SIZE] = {};
 
-        deviceID = *((uint32_t*)startCacheData);
-        memcpy(pipelineCacheUUID, (uint8_t *)startCacheData + 4, VK_UUID_SIZE);
+        memcpy(&headerLength,       (uint8_t *)startCacheData +  0, 4);
+        memcpy(&cacheHeaderVersion, (uint8_t *)startCacheData +  4, 4);
+        memcpy(&vendorID,           (uint8_t *)startCacheData +  8, 4);
+        memcpy(&deviceID,           (uint8_t *)startCacheData + 12, 4);
+        memcpy(pipelineCacheUUID,   (uint8_t *)startCacheData + 16, VK_UUID_SIZE);
 
         // Check each field and report bad values before freeing existing cache
         bool badCache = false;
+
+        if (headerLength <= 0) {
+            badCache = true;
+            printf("  Bad header length in %s.\n", readFileName);
+            printf("    Cache contains: 0x%.8x\n", headerLength);
+        }
+
+        if (cacheHeaderVersion != VK_PIPELINE_CACHE_HEADER_VERSION_ONE) {
+            badCache = true;
+            printf("  Unsupported cache header version in %s.\n", readFileName);
+            printf("    Cache contains: 0x%.8x\n", cacheHeaderVersion);
+        }
+
+        if (vendorID != info.gpu_props.vendorID) {
+            badCache = true;
+            printf("  Vendor ID mismatch in %s.\n", readFileName);
+            printf("    Cache contains: 0x%.8x\n", vendorID);
+            printf("    Driver expects: 0x%.8x\n", info.gpu_props.vendorID);
+        }
 
         if (deviceID != info.gpu_props.deviceID) {
             badCache = true;
