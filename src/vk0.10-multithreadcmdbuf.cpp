@@ -218,7 +218,7 @@ int main(int argc, char **argv)
     cmd.pNext = NULL;
     cmd.commandPool = info.cmd_pool;
     cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cmd.bufferCount = 4;
+    cmd.commandBufferCount = 4;
 
     res = vkAllocateCommandBuffers(info.device, &cmd, threadCmdBufs);
     assert(res == VK_SUCCESS);
@@ -231,13 +231,8 @@ int main(int argc, char **argv)
     VkCommandBufferBeginInfo cmd_buf_info = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
-    cmd_buf_info.renderPass = VK_NULL_HANDLE;  /* May only set renderPass and framebuffer */
-    cmd_buf_info.framebuffer = VK_NULL_HANDLE; /* for secondary command buffers           */
     cmd_buf_info.flags = 0;
-    cmd_buf_info.subpass = 0;
-    cmd_buf_info.occlusionQueryEnable = VK_FALSE;
-    cmd_buf_info.queryFlags = 0;
-    cmd_buf_info.pipelineStatistics = 0;
+    cmd_buf_info.pInheritanceInfo = NULL;
     res = vkBeginCommandBuffer(threadCmdBufs[3], &cmd_buf_info);
     assert(res == VK_SUCCESS);
 
@@ -256,9 +251,8 @@ int main(int argc, char **argv)
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
     vkCmdPipelineBarrier(threadCmdBufs[3], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                         0, 1, (const void * const*)&pmemory_barrier);
+                         0, 0, NULL, 0, NULL, 1, &prePresentBarrier);
 
     res = vkEndCommandBuffer(threadCmdBufs[3]);
     assert(res == VK_SUCCESS);
@@ -381,13 +375,9 @@ static void * per_thread_code(void *arg)
     VkCommandBufferBeginInfo cmd_buf_info = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
-    cmd_buf_info.renderPass = VK_NULL_HANDLE;  /* May only set renderPass and framebuffer */
-    cmd_buf_info.framebuffer = VK_NULL_HANDLE; /* for secondary command buffers           */
     cmd_buf_info.flags = 0;
-    cmd_buf_info.subpass = 0;
-    cmd_buf_info.occlusionQueryEnable = VK_FALSE;
-    cmd_buf_info.queryFlags = 0;
-    cmd_buf_info.pipelineStatistics = 0;
+    cmd_buf_info.pInheritanceInfo = NULL;
+
     res = vkBeginCommandBuffer(threadCmdBufs[threadNum], &cmd_buf_info);
     assert(res == VK_SUCCESS);
 

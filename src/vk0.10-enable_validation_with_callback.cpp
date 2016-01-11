@@ -113,9 +113,9 @@ int main(int argc, char **argv)
     inst_info.pNext = NULL;
     inst_info.flags = 0;
     inst_info.pApplicationInfo = &app_info;
-    inst_info.enabledLayerNameCount = info.instance_layer_names.size();
+    inst_info.enabledLayerCount = info.instance_layer_names.size();
     inst_info.ppEnabledLayerNames = info.instance_layer_names.size() ? info.instance_layer_names.data() : NULL;
-    inst_info.enabledExtensionNameCount = info.instance_extension_names.size();
+    inst_info.enabledExtensionCount = info.instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
 
     VkResult res = vkCreateInstance(&inst_info, NULL, &info.inst);
@@ -176,12 +176,12 @@ int main(int argc, char **argv)
     device_info.pNext = NULL;
     device_info.queueCreateInfoCount = 1;
     device_info.pQueueCreateInfos = &queue_info;
-    device_info.enabledLayerNameCount = info.device_layer_names.size();
+    device_info.enabledLayerCount = info.device_layer_names.size();
     device_info.ppEnabledLayerNames =
-            device_info.enabledLayerNameCount ? info.device_layer_names.data(): NULL;
-    device_info.enabledExtensionNameCount = info.device_extension_names.size();
+            device_info.enabledLayerCount ? info.device_layer_names.data(): NULL;
+    device_info.enabledExtensionCount = info.device_extension_names.size();
     device_info.ppEnabledExtensionNames =
-            device_info.enabledExtensionNameCount ? info.device_extension_names.data() : NULL;
+            device_info.enabledExtensionCount ? info.device_extension_names.data() : NULL;
     device_info.pEnabledFeatures = NULL;
 
     res = vkCreateDevice(info.gpus[0], &device_info, NULL, &info.device);

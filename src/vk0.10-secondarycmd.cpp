@@ -138,7 +138,7 @@ int main(int argc, char **argv)
     alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info[0].pNext = NULL;
     alloc_info[0].descriptorPool = info.desc_pool;
-    alloc_info[0].setLayoutCount = 2;
+    alloc_info[0].descriptorSetCount = 2;
     alloc_info[0].pSetLayouts = layouts;
 
     info.desc_set.resize(2);
@@ -180,7 +180,7 @@ int main(int argc, char **argv)
     cmdalloc.pNext = NULL;
     cmdalloc.commandPool = info.cmd_pool;
     cmdalloc.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-    cmdalloc.bufferCount = 4;
+    cmdalloc.commandBufferCount = 4;
 
     VkCommandBuffer secondary_cmds[4];
 
@@ -234,14 +234,21 @@ int main(int argc, char **argv)
     scissor.offset.y = 0;
 
     // now we record four separate command buffers, one for each quadrant of the screen
+    VkCommandBufferInheritanceInfo cmd_buf_inheritance_info = {};
+    cmd_buf_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+    cmd_buf_inheritance_info.pNext = NULL;
+    cmd_buf_inheritance_info.renderPass = info.render_pass;
+    cmd_buf_inheritance_info.subpass = 0;
+    cmd_buf_inheritance_info.framebuffer = info.framebuffers[info.current_buffer];
+    cmd_buf_inheritance_info.occlusionQueryEnable = VK_FALSE;
+    cmd_buf_inheritance_info.queryFlags = 0;
+    cmd_buf_inheritance_info.pipelineStatistics = 0;
 
     VkCommandBufferBeginInfo secondary_begin = {};
     secondary_begin.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     secondary_begin.pNext = NULL;
     secondary_begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT|VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
-    secondary_begin.renderPass = info.render_pass;
-    secondary_begin.subpass = 0;
-    secondary_begin.framebuffer = info.framebuffers[info.current_buffer];
+    secondary_begin.pInheritanceInfo = &cmd_buf_inheritance_info;
 
     for(int i=0; i < 4; i++)
     {
@@ -300,9 +307,8 @@ int main(int argc, char **argv)
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
     vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         0, 1, (const void * const*)&pmemory_barrier);
+                         0, 0, NULL, 0, NULL, 1, &prePresentBarrier);
 
     res = vkEndCommandBuffer(info.cmd);
     assert(res == VK_SUCCESS);

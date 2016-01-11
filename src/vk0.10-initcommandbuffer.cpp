@@ -68,7 +68,7 @@ int main(int argc, char **argv)
     cmd.pNext = NULL;
     cmd.commandPool = info.cmd_pool;
     cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cmd.bufferCount = 1;
+    cmd.commandBufferCount = 1;
 
     res = vkAllocateCommandBuffers(info.device, &cmd, &info.cmd);
     assert(res == VK_SUCCESS);

@@ -76,9 +76,9 @@ int main(int argc, char **argv)
     device_info.pNext = NULL;
     device_info.queueCreateInfoCount = 1;
     device_info.pQueueCreateInfos = &queue_info;
-    device_info.enabledExtensionNameCount = 0;
+    device_info.enabledExtensionCount = 0;
     device_info.ppEnabledExtensionNames = NULL;
-    device_info.enabledExtensionNameCount = 0;
+    device_info.enabledExtensionCount = 0;
     device_info.ppEnabledLayerNames = NULL;
     device_info.pEnabledFeatures = NULL;
 
