@@ -22,7 +22,7 @@ private:
         ShellWin32 *shell = reinterpret_cast<ShellWin32 *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 
         // called from constructor, CreateWindowEx specifically.  But why?
-        if (shell->hwnd_ != hwnd)
+        if (!shell)
             return DefWindowProc(hwnd, msg, wparam, lparam);
 
         return shell->handle_message(uMsg, wParam, lParam);
