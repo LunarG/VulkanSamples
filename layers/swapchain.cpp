@@ -1149,7 +1149,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresent
                 pPhysicalDevice->presentModeCount = *pPresentModeCount;
                 pPhysicalDevice->pPresentModes = (VkPresentModeKHR *)
                     malloc(*pPresentModeCount * sizeof(VkPresentModeKHR));
-                if (pPhysicalDevice->pSurfaceFormats) {
+                if (pPhysicalDevice->pPresentModes) {
                     for (uint32_t i = 0 ; i < *pPresentModeCount ; i++) {
                         pPhysicalDevice->pPresentModes[i] = pPresentModes[i];
                     }
