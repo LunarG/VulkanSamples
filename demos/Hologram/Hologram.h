@@ -32,8 +32,9 @@ public:
     void detach_swapchain();
 
     void on_key(Key key);
+    void on_tick();
 
-    void on_frame(float frame_time, int fb);
+    void on_frame(float frame_pred, int fb);
 
 private:
     class Worker {
@@ -42,8 +43,9 @@ private:
 
         void start();
         void stop();
-        void render(float frame_time, int fb);
-        void wait_render();
+        void step_objects();
+        void draw_objects(int fb);
+        void wait_idle();
 
         Hologram &hologram_;
 
@@ -52,24 +54,27 @@ private:
 
         VkCommandBuffer cmd_;
 
-        float frame_time_;
+        float object_time_;
         int fb_;
 
     private:
         enum State {
             INIT,
-            WAIT,
-            RENDER,
+            IDLE,
+            STEP,
+            DRAW,
         };
 
-        void render_loop();
+        void update_loop();
 
-        static void thread_loop(Worker *worker) { worker->render_loop(); }
+        static void thread_loop(Worker *worker) { worker->update_loop(); }
 
         std::thread thread_;
         std::mutex mutex_;
         std::condition_variable state_cv_;
         State state_;
+
+        const float tick_interval_;
     };
 
     struct Object {
@@ -138,9 +143,10 @@ private:
     std::vector<VkFramebuffer> framebuffers_;
 
     // called by workers
-    void step_object(Object &obj, Worker &worker) const;
+    void step_object(Object &obj, float obj_time) const;
     void draw_object(const Object &obj, VkCommandBuffer cmd) const;
-    void update_objects(Worker &worker);
+    void step_objects(const Worker &worker);
+    void draw_objects(Worker &worker);
 };
 
 #endif // HOLOGRAM_H

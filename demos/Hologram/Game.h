@@ -15,6 +15,7 @@ public:
         int initial_width;
         int initial_height;
         int queue_count;
+        int ticks_per_second;
         bool vsync;
         bool animate;
     };
@@ -34,8 +35,9 @@ public:
         KEY_ESC,
     };
     virtual void on_key(Key key) {}
+    virtual void on_tick() {}
 
-    virtual void on_frame(float frame_time, int fb) {}
+    virtual void on_frame(float frame_pred, int fb) {}
 
 protected:
     Game(const std::string &name, const std::vector<std::string> &args)
@@ -45,6 +47,7 @@ protected:
         settings_.initial_width = 1280;
         settings_.initial_height = 1024;
         settings_.queue_count = 1;
+        settings_.ticks_per_second = 30;
         settings_.vsync = true;
         settings_.animate = true;
 

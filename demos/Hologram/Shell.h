@@ -38,13 +38,17 @@ public:
     virtual void quit() = 0;
 
 protected:
-    Shell(Game &game) : game_(game), settings_(game.settings()), ctx_() {}
+    Shell(Game &game);
 
     void init_vk();
     void cleanup_vk();
 
     void resize_swapchain(int32_t width_hint, int32_t height_hint);
-    void present(float frame_time);
+
+    void add_game_time(float time);
+
+    uint32_t acquire_back_buffer();
+    void present_back_buffer(uint32_t back_buffer);
 
     Game &game_;
     const Game::Settings &settings_;
@@ -65,6 +69,9 @@ private:
     void init_swapchain();
 
     Context ctx_;
+
+    const float game_tick_;
+    float game_time_;
 };
 
 #endif // SHELL_H

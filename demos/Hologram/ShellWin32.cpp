@@ -159,7 +159,7 @@ void ShellWin32::run()
 {
     resize_swapchain(settings_.initial_width, settings_.initial_height);
 
-    float game_time_base = get_time();
+    float current_time = get_time();
 
     while (true) {
         bool quit = false;
@@ -181,6 +181,13 @@ void ShellWin32::run()
         if (quit)
             break;
 
-        present(get_time() - game_time_base);
+        uint32_t image_index = acquire_back_buffer();
+
+        float t = get_time();
+        add_game_time(t - current_time);
+
+        present_back_buffer(image_index);
+
+        current_time = t;
     }
 }

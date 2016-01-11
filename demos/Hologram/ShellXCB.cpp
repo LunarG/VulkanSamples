@@ -210,7 +210,7 @@ void ShellXCB::run()
 
     int profile_present_count = 0;
     float profile_present_since = get_time();
-    float game_time_base = get_time();
+    float current_time = get_time();
 
     quit_ = false;
     while (true) {
@@ -237,7 +237,14 @@ void ShellXCB::run()
 
         assert(act == DRAW);
 
-        present(get_time() - game_time_base);
+        uint32_t image_index = acquire_back_buffer();
+
+        float t = get_time();
+        add_game_time(t - current_time);
+
+        present_back_buffer(image_index);
+
+        current_time = t;
         profile_present_count++;
 
         float now = get_time();

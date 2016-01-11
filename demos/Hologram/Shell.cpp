@@ -7,6 +7,12 @@
 #include "Shell.h"
 #include "Game.h"
 
+Shell::Shell(Game &game)
+    : game_(game), settings_(game.settings()), ctx_(),
+      game_tick_(1.0f / settings_.ticks_per_second), game_time_(game_tick_)
+{
+}
+
 void Shell::init_vk()
 {
     // require generic WSI extensions
@@ -271,8 +277,17 @@ void Shell::resize_swapchain(int32_t width_hint, int32_t height_hint)
     game_.attach_swapchain();
 }
 
-// TODO we want the game to render multiple frames ahead
-void Shell::present(float frame_time)
+void Shell::add_game_time(float time)
+{
+    game_time_ += time;
+
+    while (game_time_ >= game_tick_) {
+        game_.on_tick();
+        game_time_ -= game_tick_;
+    }
+}
+
+uint32_t Shell::acquire_back_buffer()
 {
     // TODO workaround GPU hangs
     vk::DeviceWaitIdle(ctx_.dev);
@@ -281,13 +296,18 @@ void Shell::present(float frame_time)
     vk::assert_success(vk::AcquireNextImageKHR(ctx_.dev, ctx_.swapchain, UINT64_MAX,
             VK_NULL_HANDLE, VK_NULL_HANDLE, &index));
 
-    game_.on_frame(frame_time, index);
+    return index;
+}
+
+void Shell::present_back_buffer(uint32_t image_index)
+{
+    game_.on_frame(game_time_ / game_tick_, image_index);
 
     VkPresentInfoKHR present_info = {};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &ctx_.swapchain;
-    present_info.pImageIndices = &index;
+    present_info.pImageIndices = &image_index;
 
     // TODO semaphores
     assert(ctx_.game_queue_family == ctx_.present_queue_family);
