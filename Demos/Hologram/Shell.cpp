@@ -263,8 +263,8 @@ void Shell::init_back_buffers()
     // sync primitives are busy.  Having more BackBuffer's than swapchain
     // images may allows us to replace CPU wait on present_fence by GPU wait
     // on acquire_semaphore.
-    const int back_buffer_count = 1 + 1;
-    for (int i = 0; i < back_buffer_count; i++) {
+    const int count = settings_.back_buffer_count + 1;
+    for (int i = 0; i < count; i++) {
         BackBuffer buf = {};
         vk::assert_success(vk::CreateSemaphore(ctx_.dev, &sem_info, nullptr, &buf.acquire_semaphore));
         vk::assert_success(vk::CreateSemaphore(ctx_.dev, &sem_info, nullptr, &buf.render_semaphore));
@@ -343,6 +343,12 @@ void Shell::resize_swapchain(uint32_t width_hint, uint32_t height_hint)
     assert(caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR);
     assert(caps.supportedUsageFlags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
+    uint32_t image_count = settings_.back_buffer_count;
+    if (image_count < caps.minImageCount)
+        image_count = caps.minImageCount;
+    else if (image_count > caps.maxImageCount)
+        image_count = caps.maxImageCount;
+
     std::vector<VkPresentModeKHR> modes;
     vk::get(ctx_.physical_dev, ctx_.surface, modes);
 
@@ -359,7 +365,7 @@ void Shell::resize_swapchain(uint32_t width_hint, uint32_t height_hint)
     VkSwapchainCreateInfoKHR swapchain_info = {};
     swapchain_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_info.surface = ctx_.surface;
-    swapchain_info.minImageCount = caps.minImageCount;
+    swapchain_info.minImageCount = image_count;
     swapchain_info.imageFormat = ctx_.format.format;
     swapchain_info.imageColorSpace = ctx_.format.colorSpace;
     swapchain_info.imageExtent = extent;
