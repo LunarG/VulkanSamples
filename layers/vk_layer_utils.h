@@ -90,6 +90,12 @@ typedef enum VkFormatCompatibilityClass {
     VK_FORMAT_COMPATIBILITY_CLASS_MAX_ENUM          = 45
 } VkFormatCompatibilityClass;
 
+typedef enum VkStringErrorFlagBits {
+    VK_STRING_ERROR_NONE                            = 0x00000000,
+    VK_STRING_ERROR_LENGTH                          = 0x00000001,
+    VK_STRING_ERROR_BAD_DATA                        = 0x00000002,
+} VkStringErrorFlagBits;
+typedef VkFlags VkStringErrorFlags;
 
 static inline bool vk_format_is_undef(VkFormat format)
 {
@@ -117,6 +123,7 @@ size_t                     vk_format_get_size(VkFormat format);
 unsigned int               vk_format_get_channel_count(VkFormat format);
 VkFormatCompatibilityClass vk_format_get_compatibility_class(VkFormat format);
 VkDeviceSize               vk_safe_modulo(VkDeviceSize dividend, VkDeviceSize divisor);
+VkStringErrorFlags         vk_string_validate(const int max_length, char *char_array);
 
 static inline int u_ffs(int val)
 {
