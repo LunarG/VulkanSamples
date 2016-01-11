@@ -4516,8 +4516,9 @@ bool PreUpdateDescriptorSets(
     /* TODO: This test should probably only be done if descriptorType is correct type of descriptor */
     if(pDescriptorWrites->pImageInfo != nullptr)
     {
-    if(pDescriptorWrites->pImageInfo->imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pDescriptorWrites->pImageInfo->imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((pDescriptorWrites->pImageInfo->imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (pDescriptorWrites->pImageInfo->imageLayout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (pDescriptorWrites->pImageInfo->imageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkUpdateDescriptorSets parameter, VkImageLayout pDescriptorWrites->pDescriptors->imageLayout, is an unrecognized enumerator");
@@ -4655,15 +4656,17 @@ bool PreCreateRenderPass(
         "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->pAttachments->stencilStoreOp, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pAttachments->initialLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->pAttachments->initialLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((pCreateInfo->pAttachments->initialLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (pCreateInfo->pAttachments->initialLayout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (pCreateInfo->pAttachments->initialLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pAttachments->initialLayout, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pAttachments->finalLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->pAttachments->finalLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((pCreateInfo->pAttachments->initialLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (pCreateInfo->pAttachments->initialLayout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (pCreateInfo->pAttachments->initialLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pAttachments->finalLayout, is an unrecognized enumerator");
@@ -4681,8 +4684,9 @@ bool PreCreateRenderPass(
     }
     if(pCreateInfo->pSubpasses->pInputAttachments != nullptr)
     {
-    if(pCreateInfo->pSubpasses->pInputAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->pSubpasses->pInputAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((pCreateInfo->pSubpasses->pInputAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (pCreateInfo->pSubpasses->pInputAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (pCreateInfo->pSubpasses->pInputAttachments->layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pInputAttachments->layout, is an unrecognized enumerator");
@@ -4691,8 +4695,9 @@ bool PreCreateRenderPass(
     }
     if(pCreateInfo->pSubpasses->pColorAttachments != nullptr)
     {
-    if(pCreateInfo->pSubpasses->pColorAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->pSubpasses->pColorAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((pCreateInfo->pSubpasses->pColorAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (pCreateInfo->pSubpasses->pColorAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (pCreateInfo->pSubpasses->pColorAttachments->layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pColorAttachments->layout, is an unrecognized enumerator");
@@ -4701,8 +4706,9 @@ bool PreCreateRenderPass(
     }
     if(pCreateInfo->pSubpasses->pResolveAttachments != nullptr)
     {
-    if(pCreateInfo->pSubpasses->pResolveAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->pSubpasses->pResolveAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((pCreateInfo->pSubpasses->pResolveAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (pCreateInfo->pSubpasses->pResolveAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (pCreateInfo->pSubpasses->pResolveAttachments->layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pResolveAttachments->layout, is an unrecognized enumerator");
@@ -4710,14 +4716,14 @@ bool PreCreateRenderPass(
     }
     }
     if(pCreateInfo->pSubpasses->pDepthStencilAttachment &&
-        (pCreateInfo->pSubpasses->pDepthStencilAttachment->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-         pCreateInfo->pSubpasses->pDepthStencilAttachment->layout > VK_IMAGE_LAYOUT_END_RANGE))
+        ((pCreateInfo->pSubpasses->pDepthStencilAttachment->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (pCreateInfo->pSubpasses->pDepthStencilAttachment->layout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (pCreateInfo->pSubpasses->pDepthStencilAttachment->layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pDepthStencilAttachment->layout, is an unrecognized enumerator");
         return false;
     }
-
     }
     if(pCreateInfo->pDependencies != nullptr)
     {
@@ -5482,10 +5488,9 @@ bool PostCmdCopyImage(
     VkImageLayout dstImageLayout,
     uint32_t regionCount)
 {
-
-
-    if(srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (srcImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCmdCopyImage parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
@@ -5493,8 +5498,9 @@ bool PostCmdCopyImage(
     }
 
 
-    if(dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (dstImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCmdCopyImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
@@ -5557,8 +5563,9 @@ bool PostCmdBlitImage(
 {
 
 
-    if(srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (srcImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCmdBlitImage parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
@@ -5566,8 +5573,9 @@ bool PostCmdBlitImage(
     }
 
 
-    if(dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (dstImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCmdBlitImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
@@ -5631,8 +5639,9 @@ bool PostCmdCopyBufferToImage(
 
 
 
-    if(dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (dstImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCmdCopyBufferToImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
@@ -5685,8 +5694,9 @@ bool PostCmdCopyImageToBuffer(
 {
 
 
-    if(srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (srcImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCmdCopyImageToBuffer parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
@@ -5803,8 +5813,9 @@ bool PostCmdClearColorImage(
 {
 
 
-    if(imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (imageLayout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (imageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCmdClearColorImage parameter, VkImageLayout imageLayout, is an unrecognized enumerator");
@@ -5855,8 +5866,9 @@ bool PostCmdClearDepthStencilImage(
 {
 
 
-    if(imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (imageLayout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (imageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCmdClearDepthStencilImage parameter, VkImageLayout imageLayout, is an unrecognized enumerator");
@@ -5949,8 +5961,9 @@ bool PostCmdResolveImage(
 {
 
 
-    if(srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (srcImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCmdResolveImage parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
@@ -5958,8 +5971,9 @@ bool PostCmdResolveImage(
     }
 
 
-    if(dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if (((dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
+         (dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE))  &&
+        (dstImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
     {
         log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCmdResolveImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
