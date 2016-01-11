@@ -51,20 +51,22 @@ typedef enum _IMAGE_ERROR
 
 typedef struct _IMAGE_STATE
 {
-    uint32_t    mipLevels;
-    uint32_t    arraySize;
-    VkFormat    format;
+    uint32_t              mipLevels;
+    uint32_t              arraySize;
+    VkFormat              format;
     VkSampleCountFlagBits samples;
-    VkImageType imageType;
-    VkExtent3D  extent;
-    _IMAGE_STATE():mipLevels(0), arraySize(0), format(VK_FORMAT_UNDEFINED), samples(VK_SAMPLE_COUNT_1_BIT), imageType(VK_IMAGE_TYPE_RANGE_SIZE), extent{} {};
+    VkImageType           imageType;
+    VkExtent3D            extent;
+    VkImageCreateFlags    flags;
+    _IMAGE_STATE():mipLevels(0), arraySize(0), format(VK_FORMAT_UNDEFINED), samples(VK_SAMPLE_COUNT_1_BIT), imageType(VK_IMAGE_TYPE_RANGE_SIZE), extent{}, flags(0) {};
     _IMAGE_STATE(const VkImageCreateInfo* pCreateInfo):
         mipLevels(pCreateInfo->mipLevels),
         arraySize(pCreateInfo->arrayLayers),
         format(pCreateInfo->format),
         samples(pCreateInfo->samples),
         imageType(pCreateInfo->imageType),
-        extent(pCreateInfo->extent)
+        extent(pCreateInfo->extent),
+        flags(pCreateInfo->flags)
         {};
 } IMAGE_STATE;
 

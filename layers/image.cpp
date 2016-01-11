@@ -506,12 +506,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device
             skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
         }
 
+        VkImageCreateFlags imageFlags  = imageEntry->second.flags;
         VkFormat           imageFormat = imageEntry->second.format;
         VkFormat           ivciFormat  = pCreateInfo->format;
         VkImageAspectFlags aspectMask  = pCreateInfo->subresourceRange.aspectMask;
 
         // Validate VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT state
-        if (pCreateInfo->flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) {
+        if (imageFlags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) {
             // Format MUST be compatible (in the same format compatibility class) as the format the image was created with
             if (vk_format_get_compatibility_class(imageFormat) != vk_format_get_compatibility_class(ivciFormat)) {
                 std::stringstream ss;
