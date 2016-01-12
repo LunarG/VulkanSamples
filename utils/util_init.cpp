@@ -34,8 +34,20 @@ samples "init" utility functions
 #include "util_init.hpp"
 #include "cube_data.h"
 
+// Main entry point of samples
+int sample_main();
+
 #ifdef __ANDROID__
+// Android specific stuff.
+
+// Header files..
 #include <android_native_app_glue.h>
+// Forward decl.
+bool Android_LoadFile(const char* filePath, std::vector<unsigned int>& data);
+
+// Static variable that keeps ANativeWindow and asset manager instances.
+static ANativeWindow *platformWindow = nullptr;
+static AAssetManager* assetManager = nullptr;
 #endif
 
 using namespace std;
@@ -254,17 +266,18 @@ VkResult init_instance(struct sample_info &info, char const*const app_short_name
     app_info.pEngineName = app_short_name;
     app_info.engineVersion = 1;
     app_info.apiVersion = VK_API_VERSION;
-
     VkInstanceCreateInfo inst_info = {};
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_info.pNext = NULL;
     inst_info.flags = 0;
     inst_info.pApplicationInfo = &app_info;
+    // Temporarily extension parameters on Android.
+#ifndef __ANDROID__
     inst_info.enabledLayerCount = info.instance_layer_names.size();
     inst_info.ppEnabledLayerNames = info.instance_layer_names.size() ? info.instance_layer_names.data() : NULL;
     inst_info.enabledExtensionCount = info.instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
-
+#endif
     VkResult res = vkCreateInstance(&inst_info, NULL, &info.inst);
     assert(res == VK_SUCCESS);
 
@@ -316,12 +329,15 @@ VkResult init_device(struct sample_info &info)
     device_info.pNext = NULL;
     device_info.queueCreateInfoCount = 1;
     device_info.pQueueCreateInfos = &queue_info;
+    // Temporarily extension parameters on Android.
+#ifndef __ANDROID__
     device_info.enabledLayerCount = info.device_layer_names.size();
     device_info.ppEnabledLayerNames =
             device_info.enabledLayerCount ? info.device_layer_names.data() : NULL;
     device_info.enabledExtensionCount = info.device_extension_names.size();
     device_info.ppEnabledExtensionNames =
-            device_info.enabledExtensionCount ? info.device_extension_names.data() : NULL;
+    device_info.enabledExtensionCount ? info.device_extension_names.data() : NULL;
+#endif
     device_info.pEnabledFeatures = NULL;
 
     res = vkCreateDevice(info.gpus[0], &device_info, NULL, &info.device);
@@ -403,8 +419,8 @@ void destroy_debug_report_callback(struct sample_info &info)
 
 void init_connection(struct sample_info &info)
 {
-#ifndef _WIN32
-#elif defined(__ANDROID__)
+#ifdef __ANDROID__
+#else //__Android__
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
@@ -421,8 +437,9 @@ void init_connection(struct sample_info &info)
         xcb_screen_next(&iter);
 
     info.screen = iter.data;
-#endif // _WIN32
+#endif //__Android__
 }
+
 #ifdef _WIN32
 static void run(struct sample_info *info)
 {
@@ -511,6 +528,13 @@ void destroy_window(struct sample_info &info)
 }
 #elif defined(__ANDROID__)
 // Android implementation.
+void init_window(struct sample_info &info)
+{
+}
+
+void destroy_window(struct sample_info &info)
+{
+}
 #else
 void init_window(struct sample_info &info)
 {
@@ -581,8 +605,12 @@ void init_depth_buffer(struct sample_info &info)
     if(info.depth.format == VK_FORMAT_UNDEFINED)
         info.depth.format = VK_FORMAT_D16_UNORM;
 
+#ifdef __ANDROID__
+    // Depth format needs to be VK_FORMAT_D24_UNORM_S8_UINT on Android.
+    const VkFormat depth_format = VK_FORMAT_D24_UNORM_S8_UINT;
+#else
     const VkFormat depth_format = info.depth.format;
-
+#endif
     VkFormatProperties props;
     vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
     if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
@@ -690,6 +718,7 @@ void init_swapchain_extension(struct sample_info &info)
     GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceFormatsKHR);
     GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfacePresentModesKHR);
     GET_INSTANCE_PROC_ADDR(info.inst, DestroySurfaceKHR);
+    GET_INSTANCE_PROC_ADDR(info.inst, CreateAndroidSurfaceKHR);
     GET_DEVICE_PROC_ADDR(info.device, CreateSwapchainKHR);
     GET_DEVICE_PROC_ADDR(info.device, DestroySwapchainKHR);
     GET_DEVICE_PROC_ADDR(info.device, GetSwapchainImagesKHR);
@@ -706,7 +735,8 @@ void init_swapchain_extension(struct sample_info &info)
     res = vkCreateWin32SurfaceKHR(info.inst, &createInfo,
                                   NULL, &info.surface);
 #elif defined(__ANDROID__)
-#else  // _WIN32
+    res = info.fpCreateAndroidSurfaceKHR(info.inst, platformWindow, nullptr, &info.surface);
+#else  // !__ANDROID__ && !_WIN32
     VkXcbSurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
@@ -807,7 +837,7 @@ void init_presentable_image(struct sample_info &info)
     res = info.fpAcquireNextImageKHR(info.device, info.swap_chain,
                                       UINT64_MAX,
                                       info.presentCompleteSemaphore,
-                                     VK_NULL_HANDLE,
+                                      VK_NULL_HANDLE,
                                       &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
@@ -865,7 +895,7 @@ void execute_pre_present_barrier(struct sample_info &info)
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
 #ifdef TARGET_V210
     vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         0, 1, &prePresentBarrier);
+                         0, 1, (const void *const *)&prePresentBarrier);
 #else
   vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                        0, 0, NULL, 0, NULL, 1, &prePresentBarrier);
@@ -949,6 +979,10 @@ void init_swap_chain(struct sample_info &info)
             swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
         }
     }
+#ifdef __ANDROID__
+    // Current driver only support VK_PRESENT_MODE_FIFO_KHR.
+    swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+#endif
 
     // Determine the number of VkImage's to use in the swap chain (we desire to
     // own only 1 image at a time, besides the images being displayed and
@@ -976,6 +1010,7 @@ void init_swap_chain(struct sample_info &info)
     }
 #endif
 
+    uint32_t queueFamily = 0;
     VkSwapchainCreateInfoKHR swap_chain = {};
     swap_chain.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swap_chain.pNext = NULL;
@@ -989,12 +1024,16 @@ void init_swap_chain(struct sample_info &info)
     swap_chain.imageArrayLayers = 1;
     swap_chain.presentMode = swapchainPresentMode;
     swap_chain.oldSwapchain = VK_NULL_HANDLE;
+#ifndef __ANDROID__
     swap_chain.clipped = true;
-    swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+#else
+    swap_chain.clipped = false;
+#endif
     swap_chain.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    swap_chain.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swap_chain.queueFamilyIndexCount = 0;
     swap_chain.pQueueFamilyIndices = NULL;
+    swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+    swap_chain.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     res = info.fpCreateSwapchainKHR(info.device, &swap_chain, NULL, &info.swap_chain);
     assert(res == VK_SUCCESS);
@@ -1095,6 +1134,14 @@ void init_uniform_buffer(struct sample_info &info)
     assert(res == VK_SUCCESS);
 
     memcpy(pData, &info.MVP, sizeof(info.MVP));
+
+    VkMappedMemoryRange memRange;
+    memRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    memRange.pNext = NULL;
+    memRange.memory = info.uniform_data.mem;
+    memRange.offset = 0;
+    memRange.size = mem_reqs.size;
+    vkFlushMappedMemoryRanges(info.device, 1, &memRange);
 
     vkUnmapMemory(info.device, info.uniform_data.mem);
 
@@ -1276,8 +1323,11 @@ void init_command_buffer(struct sample_info &info)
     cmd.pNext = NULL;
     cmd.commandPool = info.cmd_pool;
     cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+#ifdef TARGET_V210
+    cmd.bufferCount = 1;
+#else
     cmd.commandBufferCount = 1;
-
+#endif
     res = vkAllocateCommandBuffers(info.device, &cmd, &info.cmd);
     assert(res == VK_SUCCESS);
 }
@@ -1290,7 +1340,10 @@ void execute_begin_command_buffer(struct sample_info &info)
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
     cmd_buf_info.flags = 0;
+#ifdef TARGET_V210
+#else
     cmd_buf_info.pInheritanceInfo = NULL;
+#endif
 
     res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
     assert(res == VK_SUCCESS);
@@ -1395,6 +1448,14 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
 
     memcpy(pData, vertexData, dataSize);
 
+    VkMappedMemoryRange memRange;
+    memRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    memRange.pNext = NULL;
+    memRange.memory = info.vertex_buffer.mem;
+    memRange.offset = 0;
+    memRange.size = mem_reqs.size;
+    vkFlushMappedMemoryRanges(info.device, 1, &memRange);
+
     vkUnmapMemory(info.device, info.vertex_buffer.mem);
 
     res = vkBindBufferMemory(info.device,
@@ -1452,7 +1513,11 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
     alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info[0].pNext = NULL;
     alloc_info[0].descriptorPool = info.desc_pool;
+#ifdef TARGET_V210
+    alloc_info[0].setLayoutCount = NUM_DESCRIPTOR_SETS;
+#else
     alloc_info[0].descriptorSetCount = NUM_DESCRIPTOR_SETS;
+#endif
     alloc_info[0].pSetLayouts = info.desc_layout.data();
 
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
@@ -1499,10 +1564,13 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     info.shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
     info.shaderStages[0].pName = "main";
 
+#ifdef __ANDROID__
+    retVal = Android_LoadFile(vertShaderText, vtx_spv);
+#else
     init_glslang();
     retVal = GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vertShaderText, vtx_spv);
+#endif
     assert(retVal);
-
     VkShaderModuleCreateInfo moduleCreateInfo;
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.pNext = NULL;
@@ -1520,7 +1588,11 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     info.shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     info.shaderStages[1].pName = "main";
 
+#ifdef __ANDROID__
+    retVal = Android_LoadFile(fragShaderText, frag_spv);
+#else
     retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText, frag_spv);
+#endif
     assert(retVal);
 
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -1617,13 +1689,39 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth, VkBool32 in
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp.pNext = NULL;
     vp.flags = 0;
+#ifndef __ANDROID__
     vp.viewportCount = NUM_VIEWPORTS;
     dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
     vp.scissorCount = NUM_SCISSORS;
     dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
     vp.pScissors = NULL;
     vp.pViewports = NULL;
+#else
+    // Temporary disabling dynamic viewport on Android.
+    VkViewport viewports {
+            .minDepth = 0.0f,
+            .maxDepth = 1.0f,
+            .x = 0,
+            .y = 0,
+            .width = (float)info.width,
+            .height = (float)info.height,
+    };
+    VkRect2D scissor = {
+            .extent = {
+                    .width = info.width,
+                    .height = info.height
+            },
+            .offset = {
+                    .x = 0,
+                    .y = 0,
+            }
+    };
 
+    vp.viewportCount = NUM_VIEWPORTS;
+    vp.scissorCount = NUM_SCISSORS;
+    vp.pScissors = &scissor;
+    vp.pViewports = &viewports;
+#endif
     VkPipelineDepthStencilStateCreateInfo ds;
     ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     ds.pNext = NULL;
@@ -1882,7 +1980,10 @@ void init_image(struct sample_info &info, texture_object &texObj, const char* te
         cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         cmd_buf_info.pNext = NULL;
         cmd_buf_info.flags = 0;
+#ifdef TARGET_V210
+#else
         cmd_buf_info.pInheritanceInfo = NULL;
+#endif
 
         res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
         assert(res == VK_SUCCESS);
@@ -1973,6 +2074,7 @@ void init_texture(struct sample_info &info, const char* textureName)
 
 void init_viewports(struct sample_info &info)
 {
+#ifndef __ANDROID__
     info.viewport.height = (float) info.height;
     info.viewport.width = (float) info.width;
     info.viewport.minDepth = (float) 0.0f;
@@ -1984,10 +2086,14 @@ void init_viewports(struct sample_info &info)
 #else
     vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &info.viewport);
 #endif
+#else
+    // Temporary disabling dynamic viewport on Android.
+#endif
 }
 
 void init_scissors(struct sample_info &info)
 {
+#ifndef __ANDROID__
     info.scissor.extent.width = info.width;
     info.scissor.extent.height = info.height;
     info.scissor.offset.x = 0;
@@ -1996,6 +2102,9 @@ void init_scissors(struct sample_info &info)
     vkCmdSetScissor(info.cmd, NUM_SCISSORS, &info.scissor);
 #else
     vkCmdSetScissor(info.cmd, 0, NUM_SCISSORS, &info.scissor);
+#endif
+#else
+    // Temporary disabling dynamic scissors on Android.
 #endif
 }
 
@@ -2160,16 +2269,122 @@ void destroy_textures(struct sample_info &info)
     }
 }
 
-// Main entry point of samples
-int sample_main();
 #ifdef __ANDROID__
-void android_main( struct android_app* app ) {
+// Process the next main command.
+void handle_cmd( android_app* app, int32_t cmd )
+{
+    switch( cmd ){
+        case APP_CMD_INIT_WINDOW:
+            // The window is being shown, get it ready.
+            platformWindow = app->window;
+            sample_main();
+            break;
+        case APP_CMD_TERM_WINDOW:
+            // The window is being hidden or closed, clean it up.
+            break;
+        default :
+            LOGI("event not handled: %d", cmd);
+    }
+}
+
+void android_main(struct android_app* app) {
     // Magic call, please ignore it (Android specific).
     app_dummy();
-    sample_main();
+    // Set static variables.
+    assetManager = app->activity->assetManager;
+    // Set the callback to process system events
+    app->onAppCmd = handle_cmd;
+
+    // Used to poll the events in the main loop
+    int events;
+    android_poll_source* source;
+
+    // This will contain the index of the framebuffer we should draw in
+    uint32_t nextIndex;
+
+    // Main loop
+    do {
+        // Poll all pending events.
+        if( ALooper_pollAll(0, NULL, &events, (void**)&source) >= 0 ){
+            // Process each polled events
+            if (source != NULL)
+                source->process(app, source);
+        }
+#if 0
+        // If vulkan is initialised we draw
+        if(initialised) {
+            // Get the framebuffer index we should draw in
+            // Acquire with fence not yet supported
+            CHECK(fn_vkAcquireNextImageKHR(tutorialDevice, tutorialSwapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &nextIndex) == VK_ERROR_OUT_OF_DATE_KHR);
+
+            // This fence will be used to make sure our draw command(s) complete before swapping the frame buffers
+            // We reset it to its default value: unsignaled
+            CHECK(vkResetFences(tutorialDevice, 1, &fence) < VK_SUCCESS);
+
+            // Wait to get the right to sue the framebuffer
+            VkSubmitInfo submit_info = {
+                    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                    .pNext = NULL,
+                    .waitSemaphoreCount = 1,
+                    .pWaitSemaphores = &semaphore,
+                    .commandBufferCount = 1,
+                    .pCommandBuffers = &cmdBuffer[nextIndex],
+                    .signalSemaphoreCount = 0,
+                    .pSignalSemaphores = NULL
+            };
+            CHECK(vkQueueSubmit(tutorialGraphicsQueue, 1, &submit_info, fence) < VK_SUCCESS);
+
+            // Before swapping the framebuffer we need to wait for our draw command to complete
+            CHECK(vkWaitForFences(tutorialDevice, 1, &fence, 1 /*true*/, 100000000) < VK_SUCCESS);
+
+            VkResult result;
+            // Require to swap the frames
+            VkPresentInfoKHR presentInfo{
+                    .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+                    .pNext = nullptr,
+                    .swapchainCount = 1,
+                    .pSwapchains = &tutorialSwapchain,
+                    .pImageIndices = &nextIndex,
+                    .waitSemaphoreCount = 0,
+                    .pWaitSemaphores = nullptr,
+                    .pResults = &result,
+            };
+            fn_vkQueuePresentKHR(tutorialGraphicsQueue, &presentInfo);
+
+        }
+#endif
+    } // Check if system requested to quit the application
+    while( app->destroyRequested == 0 );
+
     return;
 }
+
+bool Android_LoadFile(const char* filePath, std::vector<unsigned int> &data){
+    assert(assetManager != nullptr);
+    AAsset* file = AAssetManager_open(assetManager, filePath, AASSET_MODE_BUFFER);
+    size_t fileLength = AAsset_getLength(file);
+    LOGI("Loaded file:%s size:%d", filePath, fileLength);
+    if (fileLength == 0) {
+        return false;
+    }
+    data.resize((fileLength + sizeof(uint32_t) - 1)/ sizeof(uint32_t));
+    AAsset_read(file, &data[0], fileLength);
+    return true;
+}
+
+bool get_window_size(int32_t* width, int32_t* height) {
+#ifdef __ANDROID_API__
+    assert(platformWindow != nullptr);
+    *width = ANativeWindow_getWidth(platformWindow);
+    *height = ANativeWindow_getHeight(platformWindow);
+    return true;
 #else
+    *width = *height = 500;
+#endif
+};
+
+
+#else // __ANDROID__
 int main(int argc, char **argv) {
     return sample_main();
 }

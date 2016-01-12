@@ -39,6 +39,9 @@
 #define APP_NAME_STR_LEN 80
 #elif defined(__ANDROID__)
 #include <unistd.h>
+#include <android/log.h>
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "threaded_app", __VA_ARGS__))
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "threaded_app", __VA_ARGS__))
 #else //__ANDROID__
 #define VK_USE_PLATFORM_XCB_KHR
 #include <unistd.h>
@@ -179,6 +182,8 @@ struct sample_info {
     PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
     PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
     PFN_vkQueuePresentKHR fpQueuePresentKHR;
+    PFN_vkCreateAndroidSurfaceKHR fpCreateAndroidSurfaceKHR;
+
     uint32_t swapchainImageCount;
     VkSwapchainKHR swap_chain;
     std::vector<swap_chain_buffer> buffers;

@@ -107,5 +107,8 @@ void destroy_device(struct sample_info &info);
 void destroy_instance(struct sample_info &info);
 void destroy_window(struct sample_info &info);
 
+// Helper to retrieve Window size.
+bool get_window_size(int32_t* width, int32_t* height);
+
 #endif // UTIL_INIT
 

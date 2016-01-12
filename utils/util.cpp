@@ -34,7 +34,9 @@ samples utility functions
 #include <iomanip>
 #include <iostream>
 #include "util.hpp"
+#ifndef __ANDROID__
 #include "SPIRV/GlslangToSpv.h"
+#endif
 
 // For timestamp code (get_milliseconds)
 #ifdef WIN32
@@ -158,7 +160,11 @@ void set_image_layout(
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
+#ifndef TARGET_V210
     vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
+#else
+    vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, 0, 1, (const void *const *)&image_memory_barrier);
+#endif
 }
 
 bool read_ppm(char const*const filename, int& width, int& height, uint64_t rowPitch, unsigned char* dataPtr)
@@ -238,6 +244,7 @@ bool read_ppm(char const*const filename, int& width, int& height, uint64_t rowPi
     return true;
 }
 
+#ifndef __ANDROID__
 void init_resources(TBuiltInResource &Resources)
 {
     Resources.maxLights = 32;
@@ -360,6 +367,7 @@ EShLanguage FindLanguage(const VkShaderStageFlagBits shader_type)
         return EShLangVertex;
     }
 }
+#endif
 
 void init_glslang()
 {
