@@ -192,7 +192,6 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
      * if enabled.
      */
     loader_activate_instance_layer_extensions(ptr_instance, *pInstance);
-
     /* Remove temporary debug_report callback */
     util_DestroyDebugReportCallback(ptr_instance, instance_callback, pAllocator);
 
