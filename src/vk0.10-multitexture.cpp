@@ -24,10 +24,8 @@
 
 /*
 VULKAN_SAMPLE_SHORT_DESCRIPTION
-Draw Textured Cube
+Draw a Multitextured Quad who's coordinates dynamically change with time.
 */
-
-/* This is part of the draw cube progression */
 
 #include <util_init.hpp>
 #include <assert.h>
@@ -35,57 +33,99 @@ Draw Textured Cube
 #include <cstdlib>
 #include "cube_data.h"
 
-/* For this sample, we'll start with GLSL so the shader function is plain */
-/* and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for */
-/* the driver.  We do this for clarity rather than using pre-compiled     */
-/* SPIR-V                                                                 */
-
-const char *vertShaderText =
-        "#version 140\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "layout (std140, binding = 0) uniform buf {\n"
-        "        mat4 mvp;\n"
-        "} ubuf;\n"
-        "layout (location = 0) in vec4 pos;\n"
-        "layout (location = 1) in vec2 inTexCoords;\n"
-        "layout (location = 0) out vec2 texcoord;\n"
-        "void main() {\n"
-        "   texcoord = inTexCoords;\n"
-        "   gl_Position = ubuf.mvp * pos;\n"
-        "\n"
-        "   // GL->VK conventions\n"
-        "   gl_Position.y = -gl_Position.y;\n"
-        "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
-        "}\n";
-
-const char *fragShaderText=
-    "#version 140\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (binding = 1) uniform sampler2D tex;\n"
-    "layout (location = 0) in vec2 texcoord;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "   outColor = textureLod(tex, texcoord, 0.0);\n"
-    "}\n";
-
-int main(int argc, char **argv)
+static const VertexUV g_vb_textured_quad[] =
 {
-    VkResult U_ASSERT_ONLY res;
-    struct sample_info info = {};
-    char sample_title[] = "Draw Textured Cube";
-    const bool depthPresent = true;
+    { XYZ1(-1.5f, -1.5f, -1.0f), UV(0.f, 0.f) },
+    { XYZ1( 1.5f, -1.5f, -1.0f), UV(1.f, 0.f) },
+    { XYZ1(-1.5f,  1.5f, -1.0f), UV(0.f, 1.f) },
+    { XYZ1(-1.5f,  1.5f, -1.0f), UV(0.f, 0.f) },
+    { XYZ1( 1.5f, -1.5f, -1.0f), UV(1.f, 0.f) },
+    { XYZ1( 1.5f,  1.5f, -1.0f), UV(1.f, 1.f) },
+};
 
+// For this sample, we'll start with GLSL so the shader function is plain
+// and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for
+// the driver.  We do this for clarity rather than using pre-compiled    
+// SPIR-V                                                                
+//
+const char* vertShaderText =
+                "#version 400\n"
+                "#extension GL_ARB_separate_shader_objects  : require\n"
+                "#extension GL_ARB_shading_language_420pack : require\n"
+                "\n"
+                "layout (location = 0) in  vec4 pos;\n"
+                "layout (location = 1) in  vec2 inTexCoords;\n"
+                "layout (location = 0) out vec2 outTexCoords;\n"
+                "\n"
+                "void main() {\n"
+                "    outTexCoords = inTexCoords;\n"
+                "    gl_Position  = pos;\n"
+                "}\n";
+
+const char* fragShaderText=
+                "#version 400\n"
+                "#extension GL_ARB_separate_shader_objects  : require\n"
+                "#extension GL_ARB_shading_language_420pack : require\n"
+                "\n"
+                "layout (binding = 0) uniform buf\n"
+                "{\n"
+                "    float msSinceStart;\n"
+                "    float msMaxTime;\n"
+                "} ubuf;\n"
+                "\n"
+                "layout (binding = 1) uniform sampler2D tex0;   // Neighborhood\n"
+                "layout (binding = 2) uniform sampler2D tex1;   // Dusk Sky\n"
+                "layout (binding = 3) uniform sampler2D tex2;   // Clouds\n"
+                "layout (binding = 4) uniform sampler2D tex3;   // Neighborhood lights\n"
+                "layout (binding = 5) uniform sampler2D tex4;   // Stars\n"
+                "layout (binding = 6) uniform sampler2D tex5;   // Fog\n"
+                "layout (binding = 7) uniform sampler2D tex6;   // Moon\n"
+                "\n"
+                "layout (location = 0) in  vec2 texcoord;\n"
+                "layout (location = 0) out vec4 outColor;\n"
+                "\n"
+                "void main()\n"
+                "{\n"
+                "    vec4 curColor;\n"
+                "\n"
+                "    // Apply neighborhood texture\n"
+                "    curColor = textureLod(tex0, texcoord, 0.0);\n"
+                "\n"
+                "    // If neighborhood texture alpha is 0, then this is part of the sky\n"
+                "    if (curColor.a == 0.0)\n"
+                "    {\n"
+                "        curColor = textureLod(tex1, texcoord, 0.0);\n"
+                "    }\n"
+                "    outColor = curColor;"
+                "}\n";
+
+int main(
+    int     argc,
+    char**  argv)
+{
+    VkResult U_ASSERT_ONLY  res;
+    bool U_ASSERT_ONLY      pass;
+    struct sample_info      info            = {};
+    char                    sampleTitle[]   = "Draw Multitextured Quad";
+    const bool              depthPresent    = true;
+    float                   timeData[2]     = { 0.0f, 0.0f };
+
+    // Setup the instance and device.
+    //
     init_global_layer_properties(info);
     init_instance_extension_names(info);
     init_device_extension_names(info);
-    init_instance(info, sample_title);
+    init_instance(info, sampleTitle);
     init_enumerate_device(info);
     init_device(info);
-    info.width = info.height = 500;
+
+    // Setup the window width/height to something big
+    //
+    info.width  = 1000;
+    info.height = 1000;
     init_connection(info);
     init_window(info);
+
     init_swapchain_extension(info);
     init_command_pool(info);
     init_command_buffer(info);
@@ -94,13 +134,70 @@ int main(int argc, char **argv)
     init_swap_chain(info);
     init_depth_buffer(info);
     init_texture(info);
-    init_uniform_buffer(info);
+
+    // Setup the uniform buffer for the time data we need to pass to the app
+    //
+    VkBufferCreateInfo bufInfo      = {};
+    bufInfo.sType                   = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufInfo.pNext                   = NULL;
+    bufInfo.usage                   = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    bufInfo.size                    = sizeof(timeData) * 4;
+    bufInfo.queueFamilyIndexCount   = 0;
+    bufInfo.pQueueFamilyIndices     = NULL;
+    bufInfo.sharingMode             = VK_SHARING_MODE_EXCLUSIVE;
+    bufInfo.flags                   = 0;
+    res = vkCreateBuffer(info.device, &bufInfo, NULL, &info.uniform_data.buf);
+    assert(res == VK_SUCCESS);
+
+    VkMemoryRequirements memReqs;
+    vkGetBufferMemoryRequirements(info.device, info.uniform_data.buf, &memReqs);
+
+    VkMemoryAllocateInfo allocInfo = {};
+    allocInfo.sType                = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.pNext                = NULL;
+    allocInfo.memoryTypeIndex      = 0;
+    allocInfo.allocationSize       = memReqs.size;
+
+    pass = memory_type_from_properties(
+                info,
+                memReqs.memoryTypeBits,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                &allocInfo.memoryTypeIndex);
+    assert(pass);
+
+    res = vkAllocateMemory(info.device, &allocInfo, NULL, &(info.uniform_data.mem));
+    assert(res == VK_SUCCESS);
+
+    uint8_t *pData;
+    res = vkMapMemory(info.device, info.uniform_data.mem, 0, memReqs.size, 0, (void **)&pData);
+    assert(res == VK_SUCCESS);
+
+    memcpy(pData, &info.MVP, sizeof(timeData));
+
+    vkUnmapMemory(info.device, info.uniform_data.mem);
+
+    res = vkBindBufferMemory(
+                info.device,
+                info.uniform_data.buf,
+                info.uniform_data.mem, 0);
+    assert(res == VK_SUCCESS);
+
+    info.uniform_data.buffer_info.buffer = info.uniform_data.buf;
+    info.uniform_data.buffer_info.offset = 0;
+    info.uniform_data.buffer_info.range  = sizeof(timeData);
+
+
+
     init_descriptor_and_pipeline_layouts(info, true);
     init_renderpass(info, depthPresent);
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, depthPresent);
-    init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
-                       sizeof(g_vb_texture_Data[0]), true);
+    init_vertex_buffer(
+        info,
+        g_vb_textured_quad,
+        sizeof(g_vb_textured_quad),
+        sizeof(g_vb_textured_quad[0]),
+        true);
     init_descriptor_pool(info, true);
     init_descriptor_set(info, true);
     init_pipeline_cache(info);
@@ -108,16 +205,16 @@ int main(int argc, char **argv)
 
     /* VULKAN_KEY_START */
 
-    VkClearValue clear_values[2];
-    clear_values[0].color.float32[0] = 0.2f;
-    clear_values[0].color.float32[1] = 0.2f;
-    clear_values[0].color.float32[2] = 0.2f;
-    clear_values[0].color.float32[3] = 0.2f;
-    clear_values[1].depthStencil.depth     = 1.0f;
-    clear_values[1].depthStencil.stencil   = 0;
+    VkClearValue clearValues[2];
+    clearValues[0].color.float32[0]     = 0.2f;
+    clearValues[0].color.float32[1]     = 0.2f;
+    clearValues[0].color.float32[2]     = 0.2f;
+    clearValues[0].color.float32[3]     = 0.2f;
+    clearValues[1].depthStencil.depth   = 1.0f;
+    clearValues[1].depthStencil.stencil = 0;
 
-    VkSemaphore presentCompleteSemaphore;
-    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
+    VkSemaphore             presentCompleteSemaphore;
+    VkSemaphoreCreateInfo   presentCompleteSemaphoreCreateInfo;
     presentCompleteSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     presentCompleteSemaphoreCreateInfo.pNext = NULL;
     presentCompleteSemaphoreCreateInfo.flags = 0;
@@ -148,7 +245,7 @@ int main(int argc, char **argv)
     rp_begin.renderArea.extent.width = info.width;
     rp_begin.renderArea.extent.height = info.height;
     rp_begin.clearValueCount = 2;
-    rp_begin.pClearValues = clear_values;
+    rp_begin.pClearValues = clearValues;
 
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -181,16 +278,15 @@ int main(int argc, char **argv)
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         0, 1, (const void * const*)&pmemory_barrier);
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                         0, 0, NULL, 0, NULL, 1, &prePresentBarrier);
 
     res = vkEndCommandBuffer(info.cmd);
     assert(res == VK_SUCCESS);
 
     const VkCommandBuffer cmd_bufs[] = { info.cmd };
-    VkFenceCreateInfo fenceInfo;
-    VkFence drawFence;
+    VkFenceCreateInfo   fenceInfo;
+    VkFence             drawFence;
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.pNext = NULL;
     fenceInfo.flags = 0;
@@ -236,7 +332,7 @@ int main(int argc, char **argv)
     vkDestroySemaphore(info.device, presentCompleteSemaphore, NULL);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);
-    destroy_texture(info);
+    destroy_textures(info);
     destroy_descriptor_pool(info);
     destroy_vertex_buffer(info);
     destroy_framebuffers(info);
