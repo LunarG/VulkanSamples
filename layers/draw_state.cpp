@@ -588,16 +588,15 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
             int location = value_or_default(var_locations, code[word+2], -1);
             int builtin = value_or_default(var_builtins, code[word+2], -1);
 
-            if (location == -1 && builtin == -1) {
-                /* No location defined, and not bound to an API builtin.
-                 * The spec says nothing about how this case works (or doesn't)
-                 * for interface matching.
-                 */
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
-                        "var %d (type %d) in %s interface has no Location or Builtin decoration",
-                        code[word+2], code[word+1], storage_class_name(sinterface));
-            }
-            else if (location != -1) {
+            /* All variables and interface block members in the Input or Output storage classes
+             * must be decorated with either a builtin or an explicit location.
+             *
+             * TODO: integrate the interface block support here. For now, don't complain --
+             * a valid SPIRV module will only hit this path for the interface block case, as the
+             * individual members of the type are decorated, rather than variable declarations.
+             */
+
+            if (location != -1) {
                 /* A user-defined interface variable, with a location. Where a variable
                  * occupied multiple locations, emit one result for each. */
                 unsigned num_locations = get_locations_consumed_by_type(src, type,
@@ -610,7 +609,7 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
                     out[location + offset] = v;
                 }
             }
-            else {
+            else if (builtin != -1) {
                 /* A builtin interface variable */
                 /* Note that since builtin interface variables do not consume numbered
                  * locations, there is no larger-than-vec4 consideration as above
