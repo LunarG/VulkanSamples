@@ -109,11 +109,7 @@ else()
     endif()
 endif()
 
-if (WIN32)
-    set (LIBVK "vulkan-${MAJOR}")
-else ()
-    set (LIBVK "vulkan")
-endif()
+set (LIBVK "vulkan-${MAJOR}")
 
 add_executable(vkbase init.cpp ${COMMON_CPP})
 set_target_properties(vkbase

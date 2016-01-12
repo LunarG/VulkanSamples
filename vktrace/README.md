@@ -57,7 +57,7 @@ The Vktrace replayer takes  a trace file  and will launch an Vulkan session base
 on trace file.
 ```
 cd <vktrace build dir>
-export LD_LIBRARY_PATH=<path to libvulkan.so>
+export LD_LIBRARY_PATH=<path to libvulkan-1.so>
 ./vkreplay <options> -t trace_filename
 ```
 Example to replay trace file captured above

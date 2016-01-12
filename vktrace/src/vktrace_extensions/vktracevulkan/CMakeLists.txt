@@ -41,7 +41,7 @@ endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 set(VKTRACE_VULKAN_LIB
-    ${CMAKE_BINARY_DIR}/loader/libvulkan.so
+    ${CMAKE_BINARY_DIR}/loader/libvulkan-${MAJOR}.so
 )
 endif()
 
