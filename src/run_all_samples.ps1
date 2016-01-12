@@ -70,7 +70,15 @@ echo "Push Constants"
 & $dPath\vk0.10-push_constants
 echo "Separate image sampler"
 & $dPath\vk0.10-separate_image_sampler
-echo "Use GLSL Shader"
-& $dPath\vk0.10-useglslshader
-echo "Use SPIR-V Shader"
-& $dPath\vk0.10-usespirvshader
+echo "Draw Sub-passes"
+& $dPath\vk0.10-drawsubpasses
+echo "Occlusion Query"
+& $dPath\vk0.10-occlusion_query
+echo "Pipeline Cache"
+& $dPath\vk0.10-pipeline_cache
+echo "Pipeline Derivative"
+& $dPath\vk0.10-pipeline_derivative
+echo "Secondary Command Buffers"
+& $dPath\vk0.10-secondarycmd
+echo "SPIR-V Assembly"
+& $dPath\vk0.10-spirv_assembly
