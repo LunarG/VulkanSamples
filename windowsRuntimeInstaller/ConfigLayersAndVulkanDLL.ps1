@@ -39,27 +39,28 @@ $vulkandll = "vulkan-"+$majorabi+".dll"
 
 # The name of the versioned vulkan dll file is one of the following:
 #
-#   vulkan-<majorabi>-<major>-<minor>-<patch>-<prerelease>-<buildno>.dll
-#   vulkan-<majorabi>-<major>-<minor>-<patch>-<prerelease>.dll
+#   vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>-<prerelease>-<prebuildno>
+#   vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>-<prerelease>
+#   vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>-<prebuildno>
 #   vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll
-#   vulkan-<majorabi>-<major>-<minor>-<patch>.dll
 #
-# <majorabi>, <major>, <minor>, <patch>, and <buildno> are 1 to 10 digits.
-# <prerelease> is [A-Za-z0-9]*
-# If <buildno> is present, it identifies a prerelease, and will be
-# considered less recent than one with the same <major>, <minor>, and
-# <patch> numbers without the <buildno>.
+# <major>, <minor>, <patch>, <buildno> and <prebuildno> are 1 to 10 numeric digits.
+# <prerelease> is any combination of alpha and numeric characters.
+# If <prerelease> and/or <prebuildno> are present, this identifies a prerelease,
+# and the vulkan dll file will be considered less recent than one with the same
+# <major>, <minor>, <patch>, <buildno> numbers without the <prerelease> and/or
+# <prebuildno>.
 
 
 # We first create an array, with one array element for each vulkan-*dll in
 # C:\Windows\System32, with each element containing:
-#     <major>=<minor>=<patch>=<prerelease>=<buildno>=
+#    <major>=<minor>=<patch>=<buildno>=<prerelease>=<prebuildno>=
 #     filename
-#     @<major>@<minor>@<patch>@<prerelease>@<buildno>@
+#    @<major>@<minor>@<patch>@<buildno>@<prerelease>@<prebuildno>@
 # [Note that the above three lines are one element in the array.]
 # The build identifiers separated by "=" are suitable for sorting, i.e.
-# expanded to 10 digits with leading 0s. If <prerelease> or <buildno> are
-# not specified, 10 z characters are substituted for them, so that they sort
+# expanded to 10 digits with leading 0s. If <prerelease> or <prebuildno> are
+# not specified, "zzzzzzzzzz" is substituted for them, so that they sort
 # to a position after those that do specify them.
 # The build identifiers separated by "@" are the original values extracted
 # from the file name. They are used later to find the path to the SDK
@@ -74,50 +75,52 @@ dir -name vulkan-$majorabi-*.dll |
        $minor=$_.Split('-')[3]
        $minorOrig=$minor
        $patch=$_.Split('-')[4]
+       $patchOrig=$patch
+       $buildno=$_.Split('-')[5]
 
-       if ($patch -match ".dll") {
-           # <prerelease> and <buildno> are not in the name
-           $patch=$patch -replace ".dll",""
-           $patchOrig=$patch
+       if ($buildno -match ".dll") {
+           # <prerelease> and <prebuildno> are not in the name
+           $buildno=$buildno -replace ".dll",""
+           $buildnoOrig=$buildno
            $prerelease="z"*10
            $prereleaseOrig=""
-           $buildno="z"*10
-           $buildnoOrig=""
+           $prebuildno="z"*10
+           $prebuildnoOrig=""
        } else {
 
           # We assume we don't have more than 5 dashes
 
           $f=$_ -replace ".dll",""
-          $patch=$f.Split('-')[4]
-          $prerelease=$f.Split('-')[5]
-          $buildno=$f.Split('-')[6]
-          if ($buildno.Length -eq 0) {
+          $buildno=$f.Split('-')[5]
+          $prerelease=$f.Split('-')[6]
+          $prebuildno=$f.Split('-')[7]
+          if ($prebuildno.Length -eq 0) {
               if ($prerelease -match "^[0-9]") {
-                  # prerelease starts with a digit, it must be the buildno
-                  $buildno=$prerelease
+                  # prerelease starts with a digit, it must be the prebuildno
+                  $prebuildno=$prerelease
                   $prerelease=""
               }
           }
-          $patchOrig=$patch
           $prereleaseOrig=$prerelease
-          $buildnoOrig=$buildno
+          $prebuildnoOrig=$prebuildno
 
           if ($prerelease.Length -eq 0) {
               $prerelease="z"*10
           }
-          if ($buildno.Length -eq 0) {
-              $buildno="z"*10
+          if ($prebuildno.Length -eq 0) {
+              $prebuildno="z"*10
           }
        }
 
        $major = $major.padleft(10,'0')
        $minor = $minor.padleft(10,'0')
        $patch = $patch.padleft(10,'0')
-       $prerelease = $prerelease.padleft(10,'0')
        $buildno = $buildno.padleft(10,'0')
+       $prerelease = $prerelease.padleft(10,'0')
+       $prebuildno = $prebuildno.padleft(10,'0')
 
        # Add a new element to the $VulkanDllList array
-       $VulkanDllList+="$major=$minor=$patch=$prerelease=$buildno= $_ @$majorOrig@$minorOrig@$patchOrig@$prereleaseOrig@$buildnoOrig@"
+       $VulkanDllList+="$major=$minor=$patch=$buildno=$prerelease=$prebuildno= $_ @$majorOrig@$minorOrig@$patch@$buildnoOrig@$prereleaseOrig@$prebuildnoOrig@"
    }
 
 
@@ -146,14 +149,15 @@ if ($VulkanDllList.Length -gt 0) {
     $major=$VulkanDLLList[-1].Split('@')[1]
     $minor=$VulkanDLLList[-1].Split('@')[2]
     $patch=$VulkanDLLList[-1].Split('@')[3]
-    $prerelease=$VulkanDLLList[-1].Split('@')[4]
-    $buildno=$VulkanDLLList[-1].Split('@')[5]
+    $buildno=$VulkanDLLList[-1].Split('@')[4]
+    $prerelease=$VulkanDLLList[-1].Split('@')[5]
+    $prebuildno=$VulkanDLLList[-1].Split('@')[6]
     $sdkname="VulkanSDK"+$major + "." + $minor + "." + $patch
     if ($prerelease -ne "") {
         $sdkname=$sdkname + "." + $prerelease
     }
-    if ($buildno -ne "") {
-        $sdkname=$sdkname + "." + $buildno
+    if ($prebuildno -ne "") {
+        $sdkname=$sdkname + "." + $prebuildno
     }
 }
 

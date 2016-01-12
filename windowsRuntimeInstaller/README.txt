@@ -14,6 +14,7 @@ To build the Installer:
          !define VERSION_API_MAJOR
          !define VERSION_MINOR
          !define VERSION_PATCH
+         !define VERSION_BUILDNO
    
    4. Right click on the InstallerRT.nsi file and select "Compile NSIS Script".
       The Windows Vulkan Runtime Installer package file will be created in this

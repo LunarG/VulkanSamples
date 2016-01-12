@@ -25,16 +25,18 @@
 
 
 # Version information
-# Set VERSION_PATCH to:
-#    x.pre.y for prereleases
-#    a single number for releases
+# Set VERSION_BUILDNO to:
+#    x.pre.z for prereleases
+#    x for releases
+#
 !define PRODUCTNAME "VulkanRT"
 !define VERSION_ABI_MAJOR "1"
-!define VERSION_API_MAJOR "0"
-!define VERSION_MINOR "10"
-!define VERSION_PATCH "3.pre.1"
-#!define VERSION_PATCH "1"
-!define PRODUCTVERSION "${VERSION_API_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
+!define VERSION_API_MAJOR "1"
+!define VERSION_MINOR "0"
+!define VERSION_PATCH "1"
+!define VERSION_BUILDNO "0.pre.1"
+#!define VERSION_BUILDNO "0"
+!define PRODUCTVERSION "${VERSION_API_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_BUILDNO}"
 
 # Includes
 !include LogicLib.nsh
@@ -195,8 +197,8 @@ Section
     SetRegView 64
 
     # Set up version number for file names
-    ${StrRep} $0 ${VERSION_PATCH} "." "-"
-    StrCpy $FileVersion ${VERSION_ABI_MAJOR}-${VERSION_API_MAJOR}-${VERSION_MINOR}-$0
+    ${StrRep} $0 ${VERSION_BUILDNO} "." "-"
+    StrCpy $FileVersion ${VERSION_ABI_MAJOR}-${VERSION_API_MAJOR}-${VERSION_MINOR}-${VERSION_PATCH}-$0
 
     # Libraries
     SetOutPath $WINDIR\System32
@@ -243,7 +245,7 @@ Section
     WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "VersionABIMajor" ${VERSION_ABI_MAJOR}
     WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "VersionAPIMajor" ${VERSION_API_MAJOR}
     WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "VersionMinor" ${VERSION_MINOR}
-    WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "VersionMinor" ${VERSION_PATCH}
+    WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "VersionMinor" ${VERSION_PATCH}.${VERSION_BUILDNO}
     WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "EstimatedSize" ${ESTIMATEDSIZE}
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "DisplayIcon" "$\"$INSTDIR\${ICOFILE}$\""
 
@@ -267,8 +269,8 @@ Section "uninstall"
     SetOutPath "$INSTDIR"
 
     # Set up version number for file names
-    ${StrRep} $0 ${VERSION_PATCH} "." "-"
-    StrCpy $FileVersion ${VERSION_ABI_MAJOR}-${VERSION_API_MAJOR}-${VERSION_MINOR}-$0
+    ${StrRep} $0 ${VERSION_BUILDNO} "." "-"
+    StrCpy $FileVersion ${VERSION_ABI_MAJOR}-${VERSION_API_MAJOR}-${VERSION_MINOR}-${VERSION_PATCH}-$0
 
     # Decrement the number of times we have been installed.
     ReadRegDword $1 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "IC"
@@ -286,9 +288,8 @@ Section "uninstall"
         Delete /REBOOTOK $WINDIR\System32\vulkaninfo.exe
         Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
 
-        # Delete vullkan dll files: vulkan-<majorabi>.dll and vulkan-<majorabi>-<major>-<minor>-<patch>.dll
+        # Delete vullkan dll files: vulkan-<majorabi>.dll and vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll
         Delete /REBOOTOK $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
-        ${StrRep} $0 ${VERSION_PATCH} "." "-"
         Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
 
         # Run the ConfigLayersAndVulkanDLL.ps1 script to:
