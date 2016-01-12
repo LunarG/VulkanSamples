@@ -158,7 +158,7 @@ static VkResult intel_instance_create(
     if (!icd)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    instance = icd_instance_alloc(icd, sizeof(*instance), 0,
+    instance = icd_instance_alloc(icd, sizeof(*instance), sizeof(int),
             VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (!instance) {
         icd_instance_destroy(icd);
