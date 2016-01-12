@@ -499,7 +499,6 @@ void init_window(struct sample_info &info)
 void destroy_window(struct sample_info &info)
 {
     DestroyWindow(info.window);
-    info.fpDestroySurfaceKHR(info.inst, info.surface, NULL);
 }
 #else
 void init_window(struct sample_info &info)
