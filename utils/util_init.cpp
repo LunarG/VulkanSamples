@@ -959,6 +959,7 @@ void init_swap_chain(struct sample_info &info)
     swap_chain.imageExtent.width = swapChainExtent.width;
     swap_chain.imageExtent.height = swapChainExtent.height;
     swap_chain.preTransform = preTransform;
+    swap_chain.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     swap_chain.imageArrayLayers = 1;
     swap_chain.presentMode = swapchainPresentMode;
     swap_chain.oldSwapchain = VK_NULL_HANDLE;
