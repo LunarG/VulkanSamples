@@ -29,7 +29,7 @@ model {
         cppFlags.add("-std=c++11")
         toolchain = "clang"
         stl = "c++_static"
-        ldLibs.addAll(["log", "android", vulkan"])
+        ldLibs.addAll(["log", "android", "vulkan"])
         cppFlags.add("-I${file("${ndkDir}/sources/android/native_app_glue")}".toString())
         cppFlags.add("-I${file("../../../../../vulkan/includes")}".toString())
         cppFlags.add("-I${file("../../../../utils")}".toString())
@@ -52,6 +52,11 @@ model {
                     srcDir 'src/main/jni'
                     srcDir '../../../../utils'
                     srcDir '../../../../ext/'
+                }
+            }
+            assets {
+                source{
+                    srcDirs = ['../../../../data/vk0.10/pass-through']
                 }
             }
         }
