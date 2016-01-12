@@ -2892,12 +2892,12 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
     return inst->activated_layer_list.count;
 }
 
-void loader_activate_instance_layer_extensions(struct loader_instance *inst)
+void loader_activate_instance_layer_extensions(struct loader_instance *inst, VkInstance created_inst)
 {
 
     loader_init_instance_extension_dispatch_table(inst->disp,
                                                   inst->disp->GetInstanceProcAddr,
-                                                  (VkInstance) inst);
+                                                  created_inst);
 }
 
 static VkResult loader_enable_device_layers(

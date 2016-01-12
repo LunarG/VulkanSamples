@@ -491,7 +491,7 @@ VkResult loader_enable_instance_layers(
         const struct loader_layer_list *instance_layers);
 void loader_deactivate_instance_layers(struct loader_instance *instance);
 uint32_t loader_activate_instance_layers(struct loader_instance *inst);
-void loader_activate_instance_layer_extensions(struct loader_instance *inst);
+void loader_activate_instance_layer_extensions(struct loader_instance *inst, VkInstance created_inst);
 
 void* loader_heap_alloc(
         const struct loader_instance *instance,
