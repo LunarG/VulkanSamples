@@ -610,12 +610,12 @@ static const char UTF8_THREE_BYTE_MASK = 0xF8;
 static const char UTF8_DATA_BYTE_CODE  = 0x80;
 static const char UTF8_DATA_BYTE_MASK  = 0xC0;
 
-VkStringErrorFlags vk_string_validate(const int max_length, char *utf8)
+VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8)
 {
-    VkStringErrorFlags result     = VK_STRING_ERROR_NONE;
-    int code;
-    int num_char_bytes;
-    int i,j;
+    VkStringErrorFlags result = VK_STRING_ERROR_NONE;
+    int                code;
+    int                num_char_bytes;
+    int                i,j;
 
     for (i = 0; i < max_length; i++)
     {

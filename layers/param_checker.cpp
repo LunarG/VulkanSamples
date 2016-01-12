@@ -28,6 +28,7 @@
  *
  * Author: Jeremy Hayes <jeremy@lunarg.com>
  * Author: Tony Barbour <tony@LunarG.com>
+ * Author: Mark Lobodzinski <mark@LunarG.com>
  */
 
 #include <stdio.h>
@@ -51,6 +52,7 @@
 #include "vk_layer_data.h"
 #include "vk_layer_logging.h"
 #include "vk_layer_extension_utils.h"
+#include "vk_layer_utils.h"
 
 struct layer_data {
     debug_report_data *report_data;
@@ -231,12 +233,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
 {
+
     /* ParamChecker's physical device layers are the same as global */
     return util_GetLayerProperties(ARRAY_SIZE(pc_global_layers), pc_global_layers,
                                    pCount, pProperties);
 }
-
-// Version: 0.138.2
 
 static
 std::string EnumeratorString(VkResult const& enumerator)
@@ -1771,37 +1772,69 @@ std::string EnumeratorString(VkQueryControlFlagBits const& enumerator)
     return enumeratorString;
 }
 
+static const int MaxParamCheckerStringLength = 256;
+
+VkBool32 validate_string(layer_data *my_data, const char *apiName, const char *stringName, const char *validateString)
+{
+    VkBool32 skipCall = VK_FALSE;
+
+    VkStringErrorFlags result = vk_string_validate(MaxParamCheckerStringLength, validateString);
+
+    if (result == VK_STRING_ERROR_NONE) {
+        return skipCall;
+    } else if (result & VK_STRING_ERROR_LENGTH) {
+        skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+        "%s: string %s exceeds max length %d", apiName, stringName, MaxParamCheckerStringLength);
+    } else if (result & VK_STRING_ERROR_BAD_DATA) {
+        skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+        "%s: string %s contains invalid characters or is badly formed", apiName, stringName);
+    }
+    return skipCall;
+}
+
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     const VkInstanceCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
     VkInstance* pInstance)
 {
-    VkLayerInstanceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+    VkResult    result         = VK_ERROR_VALIDATION_FAILED_EXT;
+    VkBool32    skipCall       = VK_FALSE;
+    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
 
-    assert(chain_info->u.pLayerInfo);
-    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
-    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) fpGetInstanceProcAddr(NULL, "vkCreateInstance");
-    if (fpCreateInstance == NULL) {
-        return VK_ERROR_INITIALIZATION_FAILED;
+    skipCall |= validate_string(my_device_data, "vkCreateInstance()", "VkInstanceCreateInfo->VkApplicationInfo->pApplicationName",
+                                pCreateInfo->pApplicationInfo->pApplicationName);
+
+    skipCall |= validate_string(my_device_data, "vkCreateInstance()", "VkInstanceCreateInfo->VkApplicationInfo->pEngineName",
+                                pCreateInfo->pApplicationInfo->pEngineName);
+
+    if (skipCall == VK_FALSE) {
+        VkLayerInstanceCreateInfo *chain_info     = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+        assert(chain_info->u.pLayerInfo);
+        PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+        PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) fpGetInstanceProcAddr(NULL, "vkCreateInstance");
+        if (fpCreateInstance == NULL) {
+            return VK_ERROR_INITIALIZATION_FAILED;
+        }
+
+        // Advance the link info for the next element on the chain
+        chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+        result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
+        if (result != VK_SUCCESS)
+            return result;
+
+        layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+        VkLayerInstanceDispatchTable *pTable = initInstanceTable(*pInstance, fpGetInstanceProcAddr, pc_instance_table_map);
+
+        my_data->report_data = debug_report_create_instance(
+                                   pTable,
+                                   *pInstance,
+                                   pCreateInfo->enabledExtensionCount,
+                                   pCreateInfo->ppEnabledExtensionNames);
+
+        InitParamChecker(my_data, pAllocator);
     }
-
-    // Advance the link info for the next element on the chain
-    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
-
-    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
-    if (result != VK_SUCCESS)
-        return result;
-
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
-    VkLayerInstanceDispatchTable *pTable = initInstanceTable(*pInstance, fpGetInstanceProcAddr, pc_instance_table_map);
-
-    my_data->report_data = debug_report_create_instance(
-                               pTable,
-                               *pInstance,
-                               pCreateInfo->enabledExtensionCount,
-                               pCreateInfo->ppEnabledExtensionNames);
-
-    InitParamChecker(my_data, pAllocator);
 
     return result;
 }
@@ -1998,6 +2031,7 @@ bool PostGetPhysicalDeviceProperties(
         "vkGetPhysicalDeviceProperties parameter, VkPhysicalDeviceType pProperties->deviceType, is an unrecognized enumerator");
         return false;
     }
+
     }
 
     return true;
@@ -2107,36 +2141,51 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
      * NOTE: We do not validate physicalDevice or any dispatchable
      * object as the first parameter. We couldn't get here if it was wrong!
      */
-    VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
-    assert(chain_info->u.pLayerInfo);
-    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
-    PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
-    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) fpGetInstanceProcAddr(NULL, "vkCreateDevice");
-    if (fpCreateDevice == NULL) {
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
-
-    // Advance the link info for the next element on the chain
-    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
-
-    VkResult result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
-    if (result != VK_SUCCESS) {
-        return result;
-    }
-
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    VkBool32 skipCall = VK_FALSE;
     layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
-    my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
-    initDeviceTable(*pDevice, fpGetDeviceProcAddr, pc_device_table_map);
 
-    uint32_t count;
-    get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, nullptr);
-    std::vector<VkQueueFamilyProperties> properties(count);
-    get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, &properties[0]);
+    for (auto i = 0; i < pCreateInfo->enabledLayerCount; i++) {
+        skipCall |= validate_string(my_instance_data, "vkCreateDevice()", "VkDeviceCreateInfo->ppEnabledLayerNames",
+                                    pCreateInfo->ppEnabledLayerNames[i]);
+    }
 
-    validateDeviceCreateInfo(physicalDevice, pCreateInfo, properties);
-    storeCreateDeviceData(*pDevice, pCreateInfo);
+    for (auto i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+        skipCall |= validate_string(my_instance_data, "vkCreateDevice()", "VkDeviceCreateInfo->ppEnabledExtensionNames",
+                                    pCreateInfo->ppEnabledExtensionNames[i]);
+    }
+
+    if (skipCall == VK_FALSE) {
+        VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+        assert(chain_info->u.pLayerInfo);
+        PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+        PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
+        PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) fpGetInstanceProcAddr(NULL, "vkCreateDevice");
+        if (fpCreateDevice == NULL) {
+            return VK_ERROR_INITIALIZATION_FAILED;
+        }
+
+        // Advance the link info for the next element on the chain
+        chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+        result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
+        if (result != VK_SUCCESS) {
+            return result;
+        }
+
+        layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+        my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
+        initDeviceTable(*pDevice, fpGetDeviceProcAddr, pc_device_table_map);
+
+        uint32_t count;
+        get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, nullptr);
+        std::vector<VkQueueFamilyProperties> properties(count);
+        get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, &properties[0]);
+
+        validateDeviceCreateInfo(physicalDevice, pCreateInfo, properties);
+        storeCreateDeviceData(*pDevice, pCreateInfo);
+    }
 
     return result;
 }
@@ -3794,6 +3843,9 @@ bool PreCreateGraphicsPipelines(
     VkDevice device,
     const VkGraphicsPipelineCreateInfo* pCreateInfos)
 {
+    layer_data *data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    // TODO: Handle count
     if(pCreateInfos != nullptr)
     {
     if(pCreateInfos->sType != VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO)
@@ -4060,6 +4112,12 @@ bool PreCreateGraphicsPipelines(
         log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkRenderPass pCreateInfos->renderPass, is null pointer");
     }
+
+    int i = 0;
+    for (auto j = 0; j < pCreateInfos[i].stageCount; j++) {
+        validate_string(data, "vkCreateGraphicsPipelines()", "pCreateInfos[i].pStages[j].pName", pCreateInfos[i].pStages[j].pName);
+    }
+
     }
 
     return true;
@@ -4110,8 +4168,11 @@ bool PreCreateComputePipelines(
     VkDevice device,
     const VkComputePipelineCreateInfo* pCreateInfos)
 {
+    layer_data *data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
     if(pCreateInfos != nullptr)
     {
+    // TODO: Handle count!
     if(pCreateInfos->sType != VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
@@ -4133,6 +4194,9 @@ bool PreCreateComputePipelines(
     {
     }
     }
+
+    int i = 0;
+    validate_string(data, "vkCreateComputePipelines()", "pCreateInfos[i].stage.pName", pCreateInfos[i].stage.pName);
     }
 
     return true;
@@ -6547,6 +6611,12 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)
 {
+    layer_data *data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    if (validate_string(data, "vkGetDeviceProcAddr()", "funcName", funcName) == VK_TRUE) {
+        return NULL;
+    }
+
     if (!strcmp(funcName, "vkGetDeviceProcAddr"))
         return (PFN_vkVoidFunction) vkGetDeviceProcAddr;
     if (!strcmp(funcName, "vkDestroyDevice"))
@@ -6749,6 +6819,7 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
     }
 
     layer_data *data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+
     PFN_vkVoidFunction fptr = debug_report_get_instance_proc_addr(data->report_data, funcName);
     if(fptr)
         return fptr;
