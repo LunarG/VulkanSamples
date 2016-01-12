@@ -317,7 +317,7 @@ int main(int argc, char **argv)
 
     vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);
 
-    uni_offsets[0] = buf_size; /* The second draw should use the second matrix in the buffer */
+    uni_offsets[0] = (uint32_t) buf_size; /* The second draw should use the second matrix in the buffer */
     vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
             0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 1, uni_offsets);
     vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);

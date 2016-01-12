@@ -428,7 +428,7 @@ timestamp_t get_milliseconds()
 {
 #ifdef WIN32
     LARGE_INTEGER frequency;
-    bool useQPC = QueryPerformanceFrequency(&frequency);
+    BOOL useQPC = QueryPerformanceFrequency(&frequency);
     if (useQPC) {
         LARGE_INTEGER now;
         QueryPerformanceCounter(&now);
