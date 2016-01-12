@@ -65,7 +65,7 @@ typedef void (VKAPI_PTR *PFN_vkCmdDbgMarkerEnd)(VkCommandBuffer commandBuffer);
 typedef VkResult (VKAPI_PTR *PFN_vkDbgSetObjectTag)(VkDevice device, VkDebugReportObjectTypeEXT objType, uint64_t object, size_t tagSize, const void* pTag);
 typedef VkResult (VKAPI_PTR *PFN_vkDbgSetObjectName)(VkDevice device, VkDebugReportObjectTypeEXT objType, uint64_t object, size_t nameSize, const char* pName);
 
-#ifdef VK_PROTOTYPES
+#ifndef VK_NO_PROTOTYPES
 
 // DebugMarker extension entrypoints
 VKAPI_ATTR void VKAPI_CALL vkCmdDbgMarkerBegin(
@@ -89,7 +89,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDbgSetObjectName(
     size_t                              nameSize,
     const char*                         pName);
 
-#endif // VK_PROTOTYPES
+#endif // VK_NO_PROTOTYPES
 
 #ifdef __cplusplus
 } // extern "C"

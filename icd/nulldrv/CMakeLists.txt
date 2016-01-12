@@ -1,9 +1,9 @@
 # Create the nulldrv Vulkan DRI library
 
 if (WIN32)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
 else()
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 endif()
 
 add_custom_command(OUTPUT nulldrv_gpa.c

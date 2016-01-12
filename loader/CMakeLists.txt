@@ -33,7 +33,7 @@ set(LOADER_SRCS
 
 
 if (WIN32)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
 
     add_library(vulkan-${MAJOR} SHARED ${LOADER_SRCS} dirent_on_windows.c ${CMAKE_CURRENT_BINARY_DIR}/vulkan-${MAJOR}.def)
     set_target_properties(vulkan-${MAJOR} PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_BINARY_DIR}/vulkan-${MAJOR}.def")
@@ -42,7 +42,7 @@ if (WIN32)
     target_link_libraries(vulkan-${MAJOR} shlwapi)
 endif()
 if (NOT WIN32)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES -Wpointer-arith")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith")
 
     add_library(vulkan-${MAJOR} SHARED ${LOADER_SRCS})
     set_target_properties(vulkan-${MAJOR} PROPERTIES SOVERSION 0)
