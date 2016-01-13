@@ -37,7 +37,7 @@ public:
     virtual void on_key(Key key) {}
     virtual void on_tick() {}
 
-    virtual void on_frame(float frame_pred, int fb) {}
+    virtual void on_frame(float frame_pred) {}
 
 protected:
     Game(const std::string &name, const std::vector<std::string> &args)
