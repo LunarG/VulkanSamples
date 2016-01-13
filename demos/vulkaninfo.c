@@ -153,12 +153,9 @@ VkBool32 dbg_callback(
         sprintf(message,"DEBUG: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
     }
 
-#ifdef _WIN32
-    MessageBox(NULL, message, "Alert", MB_OK);
-#else
+
     printf("%s\n",message);
     fflush(stdout);
-#endif
     free(message);
 
     /*
