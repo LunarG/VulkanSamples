@@ -88,16 +88,38 @@ endfunction(sampleInlineGLSLShaders)
 
 if(NOT WIN32)
     find_package(XCB REQUIRED)
+    set (BUILDTGT_DIR build)
+else()
+    # For Windows, since 32-bit and 64-bit items can co-exist, we build each in its own build directory.
+    # 32-bit target data goes in build32, and 64-bit target data goes into build64.  So, include/link the
+    # appropriate data at build time.  However, there's a transition time from when the LoaderAndTools, 
+    # GLSLang, and SPIRV-Tools support this.  So, look into the GLSLang folder for the build name and use
+    # the appropriate one.
+    if (CMAKE_CL_64)
+        if (EXISTS "${CMAKE_SOURCE_DIR}/../glslang/build64")
+            set (BUILDTGT_DIR build64)
+        else()
+            set (BUILDTGT_DIR build)
+message(FATAL_ERROR "did not find build64")
+        endif()
+    else ()
+        if (EXISTS "${CMAKE_SOURCE_DIR}/../glslang/build32")
+            set (BUILDTGT_DIR build32)
+        else()
+message(FATAL_ERROR "did not find build32")
+            set (BUILDTGT_DIR build)
+        endif()
+    endif()
 endif()
 
 find_library(VULKAN_LOADER NAMES vulkan-1 vulkan
-             HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader"
-                   "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader/Release"
-                   "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader/Debug"
+             HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader"
+                   "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader/Release"
+                   "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader/Debug"
                    "${PROJECT_SOURCE_DIR}\\..\\Bin\\Release" )
 
 find_program(GLSLANG_VALIDATOR NAMES glslangValidator
-             HINTS "${CMAKE_SOURCE_DIR}/../glslang/build/install/bin"
+             HINTS "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/install/bin"
                    "${PROJECT_SOURCE_DIR}\\..\\Bin" )
 
 if(WIN32)
@@ -145,11 +167,11 @@ endif()
 
 
 if (WIN32)
-    set (GLSLANG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/build/glslang/Release"
-                             "${CMAKE_SOURCE_DIR}/../glslang/build/glslang/OSDependent/Windows/Release"
-                             "${CMAKE_SOURCE_DIR}/../glslang/build/OGLCompilersDLL/Release"
-                             "${CMAKE_SOURCE_DIR}/../glslang/build/SPIRV/Release" )
-    set (SPIRV_TOOLS_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../spirv-tools/build/Release")
+    set (GLSLANG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/glslang/Release"
+                             "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/glslang/OSDependent/Windows/Release"
+                             "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/OGLCompilersDLL/Release"
+                             "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/SPIRV/Release" )
+    set (SPIRV_TOOLS_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../spirv-tools/${BUILDTGT_DIR}/Release")
 else()
     set (GLSLANG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/build/install/lib" "${CMAKE_SOURCE_DIR}/../x86_64/lib/glslang" )
     set (SPIRV_TOOLS_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../spirv-tools/build" "${CMAKE_SOURCE_DIR}/../x86_64/lib/spirv-tools" )
@@ -172,11 +194,11 @@ find_library(SPIRV_TOOLS_LIB NAMES SPIRV-Tools
 
 # On Windows, we must pair Debug and Release appropriately
 if (WIN32)
-    set (GLSLANG_DEBUG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/build/glslang/Debug"
-                                   "${CMAKE_SOURCE_DIR}/../glslang/build/glslang/OSDependent/Windows/Debug"
-                                   "${CMAKE_SOURCE_DIR}/../glslang/build/OGLCompilersDLL/Debug"
-                                   "${CMAKE_SOURCE_DIR}/../glslang/build/SPIRV/Debug")
-    set (SPIRV_TOOLS_DEBUG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../spirv-tools/build/Debug")
+    set (GLSLANG_DEBUG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/glslang/Debug"
+                                   "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/glslang/OSDependent/Windows/Debug"
+                                   "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/OGLCompilersDLL/Debug"
+                                   "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/SPIRV/Debug")
+    set (SPIRV_TOOLS_DEBUG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../spirv-tools/${BUILDTGT_DIR}/Debug")
 
     add_library(glslang     STATIC IMPORTED)
     add_library(OGLCompiler STATIC IMPORTED)
@@ -194,7 +216,7 @@ if (WIN32)
     find_library(SPIRV_DLIB NAMES SPIRV
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
     find_library(LOADER_DLIB NAMES vulkan-1
-                 HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader/Debug"
+                 HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader/Debug"
                        "${PROJECT_SOURCE_DIR}\\..\\Bin\\Debug" )
     find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Tools
                  HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH} )

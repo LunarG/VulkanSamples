@@ -36,7 +36,7 @@ Provide a callback routine to be called when debug or error messages are reporte
 
 #define APP_SHORT_NAME "Debug Report Callback"
 
-VkBool32 dbgFunc(
+VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(
     VkDebugReportFlagsEXT               msgFlags,
     VkDebugReportObjectTypeEXT          objType,
     uint64_t                            srcObject,
