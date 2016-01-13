@@ -72,7 +72,7 @@ Next build spirv-tools:
   PS > cmake -G "Visual Studio 12 Win64" ..
   ```
 
-  Open the spirv-toolssln file in the build folder with Microsoft Visual Studio and build the solution in both Debug and Release mode.
+  Open the spirv-tools.sln file in the build folder with Microsoft Visual Studio and build the solution in both Debug and Release mode.
 
 Next build the Vulkan Samples:
   ```
