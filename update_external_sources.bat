@@ -536,7 +536,7 @@ goto:eof
    REM      set errorCode=1
    REM      goto:eof
    REM   )
-   
+
    cd ..
  
    echo Making 64-bit LLVM
@@ -559,7 +559,7 @@ goto:eof
    )
    REM disable Debug build of LLVM until LunarGLASS cmake files are updated to
    REM handle Debug and Release builds of glslang simultaneously, instead of
-   REM whatever last lands in "./build32/install"
+   REM whatever last lands in "./build/install"
    REM   echo Building 64-bit LLVM: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
    REM   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
    REM Check for existence of one lib, even though we should check for all results
@@ -658,6 +658,7 @@ goto:eof
    echo *************************
    mkdir build32
    set SPIRV_TOOLS_BUILD_DIR=%SPIRV_TOOLS_DIR%\build32
+
    cd %SPIRV_TOOLS_BUILD_DIR%
    
    echo Generating 32-bit spirv-tools CMake files for Visual Studio %VS_VERSION% ..
