@@ -92,6 +92,7 @@ dir -name vulkan-$majorabi-*.dll |
 
           $f=$_ -replace ".dll",""
           $buildno=$f.Split('-')[5]
+          $buildnoOrig=$buildno
           $prerelease=$f.Split('-')[6]
           $prebuildno=$f.Split('-')[7]
           if ($prebuildno.Length -eq 0) {
@@ -120,12 +121,12 @@ dir -name vulkan-$majorabi-*.dll |
        $prebuildno = $prebuildno.padleft(10,'0')
 
        # Add a new element to the $VulkanDllList array
-       $VulkanDllList+="$major=$minor=$patch=$buildno=$prerelease=$prebuildno= $_ @$majorOrig@$minorOrig@$patch@$buildnoOrig@$prereleaseOrig@$prebuildnoOrig@"
+       $VulkanDllList+="$major=$minor=$patch=$buildno=$prerelease=$prebuildno= $_ @$majorOrig@$minorOrig@$patchOrig@$buildnoOrig@$prereleaseOrig@$prebuildnoOrig@"
    }
 
 
 # If $VulkanDllList contains at least one element, there's at least one vulkan*.dll file.
-# Copy the most recent vulkan*.dll (named in the last element of $VulkanDllList) to vulkan-0.dll.
+# Copy the most recent vulkan*.dll (named in the last element of $VulkanDllList) to vulkan-$majorabi.dll.
 # Also copy the corresponding vulkaninfo-*.exe to vulkaninfo.exe.
 
 if ($VulkanDllList.Length -gt 0) {
@@ -152,7 +153,7 @@ if ($VulkanDllList.Length -gt 0) {
     $buildno=$VulkanDLLList[-1].Split('@')[4]
     $prerelease=$VulkanDLLList[-1].Split('@')[5]
     $prebuildno=$VulkanDLLList[-1].Split('@')[6]
-    $sdkname="VulkanSDK"+$major + "." + $minor + "." + $patch
+    $sdkname="VulkanSDK"+$major + "." + $minor + "." + $patch + "." + $buildno
     if ($prerelease -ne "") {
         $sdkname=$sdkname + "." + $prerelease
     }
