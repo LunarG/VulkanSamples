@@ -141,7 +141,7 @@ static void writePPM( const char *filename, VkImage image1)
     VkImage image2;
     VkResult err;
     bool pass;
-    int x, y;
+    uint32_t x, y;
     const char *ptr;
     VkDeviceMemory mem2;
     VkCommandBuffer commandBuffer;

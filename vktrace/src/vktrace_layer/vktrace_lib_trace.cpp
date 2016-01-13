@@ -214,8 +214,8 @@ VKTRACER_EXPORT VKAPI_ATTR void VKAPI_CALL __HOOKED_vkUnmapMemory(
         if (!entry->didFlush)
         {
             // no FlushMapped Memory
-            siz = entry->rangeSize;
-            off = entry->rangeOffset;
+            siz = (size_t)entry->rangeSize;
+            off = (size_t)entry->rangeOffset;
         }
     }
     CREATE_TRACE_PACKET(vkUnmapMemory, siz);
@@ -273,7 +273,7 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkFlushMappedMemoryRange
     {
         VkMappedMemoryRange* pRange = (VkMappedMemoryRange*)&pMemoryRanges[iter];
         rangesSize += vk_size_vkmappedmemoryrange(pRange);
-        dataSize += pRange->size;
+        dataSize += (size_t)pRange->size;
     }
 
     CREATE_TRACE_PACKET(vkFlushMappedMemoryRanges, rangesSize + sizeof(void*)*memoryRangeCount + dataSize);

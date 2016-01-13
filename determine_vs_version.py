@@ -75,7 +75,7 @@ if __name__ == '__main__':
 	# If not found, return an invalid number but in the appropriate format so it will
 	# fail if the program above tries to use it.
 	if foundExeName == None:
-		print('00 0000 Win32')
+		print('00 0000')
 		print('Executable ' + exeName + ' not found in PATH!')		
 	else:
 		sysCallOut = os.popen(versionCall).read()
@@ -115,13 +115,6 @@ if __name__ == '__main__':
 
 		# Determine the year associated with that version
 		year = determine_year(version)
-		
-		# TODO: Add detect to deteremine the OS target of current system.
-        #       Hard-code to Win64 for now since it's all we officially support.
-		#osTarget = 'Win32'
-		#if os.environ.get('PROCESSOR_ARCHITECTURE', '') == 'AMD64':
-		#	osTarget = 'Win64'
-		osTarget = 'Win64'
         
 		# Output the string we need for Cmake to properly build for this version
-		print(str(version) + ' ' + str(year) + ' ' + osTarget)
+		print(str(version) + ' ' + str(year))

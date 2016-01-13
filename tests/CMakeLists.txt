@@ -1,9 +1,21 @@
 cmake_minimum_required(VERSION 2.8.11)
 
-if(NOT WIN32)
+# On Windows, we must pair Debug and Release appropriately
+if (WIN32)
+   # For Windows, since 32-bit and 64-bit items can co-exist, we build each in its own build directory.
+   # 32-bit target data goes in build32, and 64-bit target data goes into build64.  So, include/link the
+   # appropriate data at build time.
+   if (CMAKE_CL_64)
+      set (BUILDTGT_DIR build64)
+   else ()
+      set (BUILDTGT_DIR build32)
+   endif()
+else()
     include (FindPkgConfig)
     find_package(XCB REQUIRED)
 endif()
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 find_package(ImageMagick COMPONENTS MagickWand)
 if(NOT ImageMagick_FOUND)
@@ -45,18 +57,19 @@ add_library(SPIRV       STATIC IMPORTED)
 
 # On Windows, we must pair Debug and Release appropriately
 if (WIN32)
+
    set_target_properties(glslang PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/glslang/Release/glslang.lib"
-                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/glslang/Debug/glslang.lib")
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/${BUILDTGT_DIR}/glslang/Release/glslang.lib"
+                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/${BUILDTGT_DIR}/glslang/Debug/glslang.lib")
    set_target_properties(OGLCompiler PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/OGLCompilersDLL/Release/OGLCompiler.lib"
-                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/OGLCompilersDLL/Debug/OGLCompiler.lib")
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/${BUILDTGT_DIR}/OGLCompilersDLL/Release/OGLCompiler.lib"
+                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/${BUILDTGT_DIR}/OGLCompilersDLL/Debug/OGLCompiler.lib")
    set_target_properties(OSDependent PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/glslang/OSDependent/Windows/Release/OSDependent.lib"
-                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/glslang/OSDependent/Windows/Debug/OSDependent.lib")
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/${BUILDTGT_DIR}/glslang/OSDependent/Windows/Release/OSDependent.lib"
+                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/${BUILDTGT_DIR}/glslang/OSDependent/Windows/Debug/OSDependent.lib")
    set_target_properties(SPIRV PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/SPIRV/Release/SPIRV.lib"
-                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/SPIRV/Debug/SPIRV.lib")
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/${BUILDTGT_DIR}/SPIRV/Release/SPIRV.lib"
+                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/${BUILDTGT_DIR}/SPIRV/Debug/SPIRV.lib")
 else ()
    set_target_properties(glslang PROPERTIES
                          IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/install/lib/libglslang.a")

@@ -24,6 +24,13 @@ echo Detected MSBuild target as %MSBUILD_MACHINE_TARGET%
 REM Cleanup the file we used to collect the VS version output since it's no longer needed.
 del /Q /F vsversion.tmp
 
+REM Determine if SVN exists, this is a requirement for LunarGLASS
+set SVN_EXE_FOUND=0
+for %%X in (svn.exe) do (set FOUND=%%~$PATH:X)
+if defined FOUND (
+ set SVN_EXE_FOUND=1
+)
+
 setlocal EnableDelayedExpansion
 set errorCode=0
 set BUILD_DIR=%~dp0
@@ -109,14 +116,18 @@ REM // ======== Parameter parsing ======== //
 
       if "%1" == "--all" (
          set sync-glslang=1
-         set sync-LunarGLASS=1
          set sync-spirv-tools=1
          set build-glslang=1
-         set build-LunarGLASS=1
          set build-spirv-tools=1
-         set check-LunarGLASS-fetch-dependencies=1
          set check-glslang-build-dependencies=1
-         set check-LunarGLASS-build-dependencies=1
+         
+         REM Only attempt to build LunarGLASS if we find SVN
+         if %SVN_EXE_FOUND% equ 1 (
+             set sync-LunarGLASS=1
+             set build-LunarGLASS=1
+             set check-LunarGLASS-fetch-dependencies=1
+             set check-LunarGLASS-build-dependencies=1
+         )
          shift
          goto:parameterLoop
       )
@@ -141,8 +152,7 @@ REM // ======== Dependency checking ======== //
    )
 
    if %check-LunarGLASS-fetch-dependencies% equ 1 (
-      for %%X in (svn.exe) do (set FOUND=%%~$PATH:X)
-      if not defined FOUND (
+      if %SVN_EXE_FOUND% equ 0 (
          echo Dependency check failed:
          echo   svn.exe not found
          echo   Get Subversion for Windows here:  http://sourceforge.net/projects/win32svn/
@@ -422,25 +432,66 @@ goto:eof
    echo.
    echo Building %GLSLANG_DIR%
    cd  %GLSLANG_DIR%
-   mkdir build
-   set GLSLANG_BUILD_DIR=%GLSLANG_DIR%\build
+
+   REM Cleanup any old directories lying around.
+   rmdir /s /q build32
+   rmdir /s /q build64
+   
+   echo Making 32-bit glslang
+   echo *************************
+   mkdir build32
+   set GLSLANG_BUILD_DIR=%GLSLANG_DIR%\build32
    cd %GLSLANG_BUILD_DIR%
-   echo Generating Glslang CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
-   cmake -G"Visual Studio %VS_VERSION%" -DCMAKE_INSTALL_PREFIX=install ..
-   echo Building Glslang: MSBuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
-   msbuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
+
+   echo Generating 32-bit Glslang CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
+   cmake -G "Visual Studio %VS_VERSION%" -DCMAKE_INSTALL_PREFIX=install ..
+   
+   echo Building 32-bit Glslang: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug
+   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug
+   
    REM Check for existence of one lib, even though we should check for all results
    if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslang.lib (
       echo.
-      echo glslang Debug build failed!
+      echo glslang 32-bit Debug build failed!
       set errorCode=1
    )
-   echo Building Glslang: MSBuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
-   msbuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
+   echo Building Glslang: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release
+   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release
+   
    REM Check for existence of one lib, even though we should check for all results
    if not exist %GLSLANG_BUILD_DIR%\glslang\Release\glslang.lib (
       echo.
-      echo glslang Release build failed!
+      echo glslang 32-bit Release build failed!
+      set errorCode=1
+   )
+   
+   cd ..
+ 
+   echo Making 64-bit glslang
+   echo *************************
+   mkdir build64
+   set GLSLANG_BUILD_DIR=%GLSLANG_DIR%\build64
+   cd %GLSLANG_BUILD_DIR%
+
+   echo Generating 64-bit Glslang CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
+   cmake -G "Visual Studio %VS_VERSION% Win64" -DCMAKE_INSTALL_PREFIX=install ..
+   
+   echo Building 64-bit Glslang: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   
+   REM Check for existence of one lib, even though we should check for all results
+   if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslang.lib (
+      echo.
+      echo glslang 64-bit Debug build failed!
+      set errorCode=1
+   )
+   echo Building Glslang: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
+   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
+   
+   REM Check for existence of one lib, even though we should check for all results
+   if not exist %GLSLANG_BUILD_DIR%\glslang\Release\glslang.lib (
+      echo.
+      echo glslang 64-bit Release build failed!
       set errorCode=1
    )
 goto:eof
@@ -450,56 +501,145 @@ goto:eof
    echo Building %LUNARGLASS_DIR%
    set LLVM_DIR=%LUNARGLASS_DIR%\Core\LLVM\llvm-3.4
    cd %LLVM_DIR%
-   mkdir build
-   set LLVM_BUILD_DIR=%LLVM_DIR%\build
+
+   REM Cleanup any old directories lying around.
+   rmdir /s /q build32
+   rmdir /s /q build64
+   
+   echo Making 32-bit LLVM
+   echo *************************
+   mkdir build32
+   set LLVM_BUILD_DIR=%LLVM_DIR%\build32
    cd %LLVM_BUILD_DIR%
-   echo Generating LLVM CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
-   cmake -G"Visual Studio %VS_VERSION%" -DCMAKE_INSTALL_PREFIX=install ..
-   echo Building LLVM: MSBuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
-   msbuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
+
+   echo Generating 32-bit LLVM CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
+   cmake -G "Visual Studio %VS_VERSION%" -DCMAKE_INSTALL_PREFIX=install ..
+   
+   echo Building 32-bit LLVM: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release
+   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release
    REM Check for existence of one lib, even though we should check for all results
    if not exist %LLVM_BUILD_DIR%\lib\Release\LLVMCore.lib (
       echo.
-      echo LLVM Release build failed!
+      echo LLVM 32-bit Release build failed!
       set errorCode=1
       goto:eof
    )
    REM disable Debug build of LLVM until LunarGLASS cmake files are updated to
    REM handle Debug and Release builds of glslang simultaneously, instead of
-   REM whatever last lands in "./build/install"
-   REM   echo Building LLVM: MSBuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
-   REM   msbuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
+   REM whatever last lands in "./build32/install"
+   REM   echo Building 32-bit LLVM: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug
+   REM   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug
    REM Check for existence of one lib, even though we should check for all results
    REM   if not exist %LLVM_BUILD_DIR%\lib\Debug\LLVMCore.lib (
    REM      echo.
-   REM      echo LLVM Debug build failed!
+   REM      echo LLVM 32-bit Debug build failed!
    REM      set errorCode=1
    REM      goto:eof
    REM   )
-   cd %LUNARGLASS_DIR%
-   mkdir build
-   set LUNARGLASS_BUILD_DIR=%LUNARGLASS_DIR%\build
-   cd %LUNARGLASS_BUILD_DIR%
-   echo Generating LunarGlass CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
-   cmake -G"Visual Studio %VS_VERSION%" -DCMAKE_INSTALL_PREFIX=install ..
-   echo Building LunarGlass: MSBuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
-   msbuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
+   
+   cd ..
+ 
+   echo Making 64-bit LLVM
+   echo *************************
+   mkdir build64
+   set LLVM_BUILD_DIR=%LLVM_DIR%\build64
+   cd %LLVM_BUILD_DIR%
+
+   echo Generating 64-bit LLVM CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
+   cmake -G "Visual Studio %VS_VERSION% Win64" -DCMAKE_INSTALL_PREFIX=install ..
+   
+   echo Building 64-bit LLVM: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
+   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
    REM Check for existence of one lib, even though we should check for all results
-   if not exist %LUNARGLASS_BUILD_DIR%\Core\Release\core.lib (
+   if not exist %LLVM_BUILD_DIR%\lib\Release\LLVMCore.lib (
       echo.
-      echo LunarGLASS build failed!
+      echo LLVM 64-bit Release build failed!
       set errorCode=1
       goto:eof
    )
+   REM disable Debug build of LLVM until LunarGLASS cmake files are updated to
+   REM handle Debug and Release builds of glslang simultaneously, instead of
+   REM whatever last lands in "./build32/install"
+   REM   echo Building 64-bit LLVM: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   REM   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   REM Check for existence of one lib, even though we should check for all results
+   REM   if not exist %LLVM_BUILD_DIR%\lib\Debug\LLVMCore.lib (
+   REM      echo.
+   REM      echo LLVM 64-bit Debug build failed!
+   REM      set errorCode=1
+   REM      goto:eof
+   REM   )
+
+   cd %LUNARGLASS_DIR%
+
+   REM Cleanup any old directories lying around.
+   rmdir /s /q build32
+   rmdir /s /q build64
+   
+   echo Making 32-bit LunarGLASS
+   echo *************************
+   mkdir build32
+   set LUNARGLASS_BUILD_DIR=%LUNARGLASS_DIR%\build32
+   cd %LUNARGLASS_BUILD_DIR%
+   
+   echo Generating 32-bit LunarGlass CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
+   cmake -G "Visual Studio %VS_VERSION%" -DCMAKE_INSTALL_PREFIX=install ..
+   
+   echo Building 32-bit LunarGlass: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release
+   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release
+   
+   REM Check for existence of one lib, even though we should check for all results
+   if not exist %LUNARGLASS_BUILD_DIR%\Core\Release\core.lib (
+      echo.
+      echo LunarGLASS 32-bit Release build failed!
+      set errorCode=1
+      goto:eof
+   )
+   
    REM disable Debug build of LunarGLASS until its cmake file can be updated to
    REM handle Debug and Release builds of glslang simultaneously, instead of
    REM whatever last lands in "./build/install"
-   REM   echo Building LunarGlass: MSBuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
-   REM   msbuild INSTALL.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
+   REM   echo Building 32-bit LunarGlass: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug
+   REM   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug
    REM Check for existence of one lib, even though we should check for all results
    REM  if not exist %LUNARGLASS_BUILD_DIR%\Core\Debug\core.lib (
    REM     echo.
-   REM     echo LunarGLASS build failed!
+   REM     echo LunarGLASS 32-bit Debug build failed!
+   REM     set errorCode=1
+   REM     goto:eof
+   REM  )
+   
+   cd ..
+   
+   echo Making 64-bit LunarGLASS
+   echo *************************
+   mkdir build64
+   set LUNARGLASS_BUILD_DIR=%LUNARGLASS_DIR%\build64
+   cd %LUNARGLASS_BUILD_DIR%
+   
+   echo Generating 64-bit LunarGlass CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
+   cmake -G "Visual Studio %VS_VERSION% Win64" -DCMAKE_INSTALL_PREFIX=install ..
+   
+   echo Building 64-bit LunarGlass: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
+   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
+   
+   REM Check for existence of one lib, even though we should check for all results
+   if not exist %LUNARGLASS_BUILD_DIR%\Core\Release\core.lib (
+      echo.
+      echo LunarGLASS 64-bit Release build failed!
+      set errorCode=1
+      goto:eof
+   )
+   
+   REM disable Debug build of LunarGLASS until its cmake file can be updated to
+   REM handle Debug and Release builds of glslang simultaneously, instead of
+   REM whatever last lands in "./build/install"
+   REM   echo Building 64-bit LunarGlass: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   REM   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   REM Check for existence of one lib, even though we should check for all results
+   REM  if not exist %LUNARGLASS_BUILD_DIR%\Core\Debug\core.lib (
+   REM     echo.
+   REM     echo LunarGLASS 64-bit Debug build failed!
    REM     set errorCode=1
    REM     goto:eof
    REM  )
@@ -509,25 +649,68 @@ goto:eof
    echo.
    echo Building %SPIRV_TOOLS_DIR%
    cd  %SPIRV_TOOLS_DIR%
-   mkdir build
-   set SPIRV_TOOLS_BUILD_DIR=%SPIRV_TOOLS_DIR%\build
+
+   REM Cleanup any old directories lying around.
+   rmdir /s /q build32
+   rmdir /s /q build64
+   
+   echo Making 32-bit spirv-tools
+   echo *************************
+   mkdir build32
+   set SPIRV_TOOLS_BUILD_DIR=%SPIRV_TOOLS_DIR%\build32
    cd %SPIRV_TOOLS_BUILD_DIR%
-   echo Generating Spirv-tools CMake files for Visual Studio %VS_VERSION% ..
+   
+   echo Generating 32-bit spirv-tools CMake files for Visual Studio %VS_VERSION% ..
    cmake -G "Visual Studio %VS_VERSION%" ..
-   echo Building Spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
-   msbuild ALL_BUILD.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Debug
+   
+   echo Building 32-bit spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug
+   msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug
+   
    REM Check for existence of one lib, even though we should check for all results
    if not exist %SPIRV_TOOLS_BUILD_DIR%\Debug\SPIRV-Tools.lib (
       echo.
-      echo spirv-tools Debug build failed!
+      echo spirv-tools 32-bit Debug build failed!
       set errorCode=1
    )
-   echo Building Spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
-   msbuild ALL_BUILD.vcxproj /p:Platform=%MSBUILD_MACHINE_TARGET% /p:Configuration=Release
+   
+   echo Building 32-bit spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release
+   msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release
+
    REM Check for existence of one lib, even though we should check for all results
    if not exist %SPIRV_TOOLS_BUILD_DIR%\Release\SPIRV-Tools.lib (
       echo.
-      echo spirv-tools Release build failed!
+      echo spirv-tools 32-bit Release build failed!
+      set errorCode=1
+   )
+   
+   cd ..
+ 
+   echo Making 64-bit spirv-tools  
+   echo *************************
+   mkdir build64
+   set SPIRV_TOOLS_BUILD_DIR=%SPIRV_TOOLS_DIR%\build64
+   cd %SPIRV_TOOLS_BUILD_DIR%
+   
+   echo Generating 64-bit spirv-tools CMake files for Visual Studio %VS_VERSION% ..
+   cmake -G "Visual Studio %VS_VERSION% Win64" ..
+   
+   echo Building 64-bit spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   
+   REM Check for existence of one lib, even though we should check for all results
+   if not exist %SPIRV_TOOLS_BUILD_DIR%\Debug\SPIRV-Tools.lib (
+      echo.
+      echo spirv-tools 64-bit Debug build failed!
+      set errorCode=1
+   )
+   
+   echo Building 64-bit spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release
+   msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release
+
+   REM Check for existence of one lib, even though we should check for all results
+   if not exist %SPIRV_TOOLS_BUILD_DIR%\Release\SPIRV-Tools.lib (
+      echo.
+      echo spirv-tools 64-bit Release build failed!
       set errorCode=1
    )
 goto:eof

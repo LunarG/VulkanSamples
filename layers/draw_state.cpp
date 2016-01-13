@@ -2235,15 +2235,15 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
         binding = pWDS[i].dstBinding;
         // Make sure that layout being updated has the binding being updated
         if (pLayout->bindings.find(binding) == pLayout->bindings.end()) {
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, reinterpret_cast<uint64_t>(ds), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
-                    "Descriptor Set %" PRIu64 " does not have binding to match update binding %u for update type %s!", reinterpret_cast<uint64_t>(ds), binding, string_VkStructureType(pUpdate->sType));
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)(ds), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
+                    "Descriptor Set %" PRIu64 " does not have binding to match update binding %u for update type %s!", (uint64_t)(ds), binding, string_VkStructureType(pUpdate->sType));
         } else {
             // Next verify that update falls within size of given binding
             endIndex = getUpdateEndIndex(my_data, device, pLayout, binding, pWDS[i].dstArrayElement, pUpdate);
             if (getBindingEndIndex(pLayout, binding) < endIndex) {
                 pLayoutCI = &pLayout->createInfo;
                 string DSstr = vk_print_vkdescriptorsetlayoutcreateinfo(pLayoutCI, "{DS}    ");
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) ds, __LINE__, DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS, "DS",
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)(ds), __LINE__, DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS, "DS",
                         "Descriptor update type of %s is out of bounds for matching binding %u in Layout w/ CI:\n%s!", string_VkStructureType(pUpdate->sType), binding, DSstr.c_str());
             } else { // TODO : should we skip update on a type mismatch or force it?
                 uint32_t startIndex;
@@ -2257,7 +2257,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
                         GENERIC_HEADER* pNewNode = NULL;
                         skipCall |= shadowUpdateNode(my_data, device, pUpdate, &pNewNode);
                         if (NULL == pNewNode) {
-                            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) ds, __LINE__, DRAWSTATE_OUT_OF_MEMORY, "DS",
+                            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)(ds), __LINE__, DRAWSTATE_OUT_OF_MEMORY, "DS",
                                     "Out of memory while attempting to allocate UPDATE struct in vkUpdateDescriptors()");
                         } else {
                             // Insert shadow node into LL of updates for this set
@@ -2708,7 +2708,7 @@ static VkBool32 printDSConfig(layer_data* my_data, const VkCommandBuffer cb)
         LAYOUT_NODE* pLayout = pSet->pLayout;
         // Print layout details
         skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
-                "Layout #%u, (object %#" PRIxLEAST64 ") for DS %#" PRIxLEAST64 ".", index+1, reinterpret_cast<uint64_t>(pLayout->layout), reinterpret_cast<uint64_t>(pSet->set));
+                "Layout #%u, (object %#" PRIxLEAST64 ") for DS %#" PRIxLEAST64 ".", index+1, (uint64_t)(pLayout->layout), (uint64_t)(pSet->set));
         sprintf(prefix, "  [L%u] ", index);
         string DSLstr = vk_print_vkdescriptorsetlayoutcreateinfo(&pLayout->createInfo, prefix).c_str();
         skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
@@ -3076,7 +3076,7 @@ VkBool32 ValidateCmdBufImageLayouts(VkCommandBuffer cmdBuffer) {
         auto image_data = dev_data->imageLayoutMap.find(cb_image_data.first);
         if (image_data == dev_data->imageLayoutMap.end()) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                 "Cannot submit cmd buffer using deleted image %" PRIu64 ".", reinterpret_cast<uint64_t>(cb_image_data.first));
+                                 "Cannot submit cmd buffer using deleted image %" PRIu64 ".", (uint64_t)(cb_image_data.first));
         } else {
             if (dev_data->imageLayoutMap[cb_image_data.first]->layout != cb_image_data.second.initialLayout) {
                 skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
@@ -3112,8 +3112,8 @@ VkBool32 validateAndIncrementResources(layer_data* my_data, GLOBAL_CB_NODE* pCB)
         for (auto buffer : drawDataElement.buffers) {
             auto buffer_data = my_data->bufferMap.find(buffer);
             if (buffer_data == my_data->bufferMap.end()) {
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, reinterpret_cast<uint64_t>(buffer), __LINE__, DRAWSTATE_INVALID_BUFFER, "DS",
-                                     "Cannot submit cmd buffer using deleted buffer %" PRIu64 ".", reinterpret_cast<uint64_t>(buffer));
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, (uint64_t)(buffer), __LINE__, DRAWSTATE_INVALID_BUFFER, "DS",
+                                     "Cannot submit cmd buffer using deleted buffer %" PRIu64 ".", (uint64_t)(buffer));
             } else {
                 buffer_data->second.in_use.fetch_add(1);
             }
@@ -3225,7 +3225,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
             } else {
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
                         "Queue %#" PRIx64 " is waiting on semaphore %#" PRIx64 " that has no way to be signaled.",
-                        reinterpret_cast<uint64_t>(queue), reinterpret_cast<uint64_t>(submit->pWaitSemaphores[i]));
+                        reinterpret_cast<uint64_t>(queue), (uint64_t)(submit->pWaitSemaphores[i]));
             }
         }
         for (uint32_t i=0; i < submit->signalSemaphoreCount; ++i) {
@@ -3284,7 +3284,7 @@ VkBool32 cleanInFlightCmdBuffer(layer_data* my_data, VkCommandBuffer cmdBuffer) 
             if (my_data->eventMap[event].needsSignaled) {
                 skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, 0, DRAWSTATE_INVALID_QUERY, "DS",
                                  "Cannot get query results on queryPool %" PRIu64 " with index %d which was guarded by unsignaled event %" PRIu64 ".",
-                                 reinterpret_cast<uint64_t>(queryEventsPair.first.pool), queryEventsPair.first.index, reinterpret_cast<uint64_t>(event));
+                                 (uint64_t)(queryEventsPair.first.pool), queryEventsPair.first.index, (uint64_t)(event));
             }
         }
     }
@@ -3436,7 +3436,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice device, VkQueryPoo
                 if (queryEventElement == pCB->waitedEventsBeforeQueryReset.end()) {
                     skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__,
                                          DRAWSTATE_INVALID_QUERY, "DS", "Cannot get query results on queryPool %" PRIu64 " with index %d which is in flight.",
-                                         reinterpret_cast<uint64_t>(queryPool), firstQuery + i);
+                                         (uint64_t)(queryPool), firstQuery + i);
                 } else {
                     for (auto event : queryEventElement->second) {
                         dev_data->eventMap[event].needsSignaled = true;
@@ -3454,18 +3454,18 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice device, VkQueryPoo
             if (!(((flags & VK_QUERY_RESULT_PARTIAL_BIT) || (flags & VK_QUERY_RESULT_WAIT_BIT)) && make_available)) {
                 skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
                                      "Cannot get query results on queryPool %" PRIu64 " with index %d which is unavailable.",
-                                     reinterpret_cast<uint64_t>(queryPool), firstQuery + i);
+                                     (uint64_t)(queryPool), firstQuery + i);
             }
         // Unavailable
         } else if (queryToStateElement != dev_data->queryToStateMap.end() && !queryToStateElement->second) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
                                  "Cannot get query results on queryPool %" PRIu64 " with index %d which is unavailable.",
-                                 reinterpret_cast<uint64_t>(queryPool), firstQuery + i);
+                                 (uint64_t)(queryPool), firstQuery + i);
         // Unitialized
         } else if (queryToStateElement == dev_data->queryToStateMap.end()) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
                                  "Cannot get query results on queryPool %" PRIu64 " with index %d which is uninitialized.",
-                                 reinterpret_cast<uint64_t>(queryPool), firstQuery + i);
+                                 (uint64_t)(queryPool), firstQuery + i);
         }
     }
     if (skip_call)
@@ -3477,12 +3477,12 @@ VkBool32 validateIdleBuffer(const layer_data* my_data, VkBuffer buffer) {
     VkBool32 skip_call = VK_FALSE;
     auto buffer_data = my_data->bufferMap.find(buffer);
     if (buffer_data == my_data->bufferMap.end()) {
-        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, reinterpret_cast<uint64_t>(buffer), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
-                             "Cannot free buffer %" PRIxLEAST64 " that has not been allocated.", reinterpret_cast<uint64_t>(buffer));
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, (uint64_t)(buffer), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
+                             "Cannot free buffer %" PRIxLEAST64 " that has not been allocated.", (uint64_t)(buffer));
     } else {
         if (buffer_data->second.in_use.load()) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, reinterpret_cast<uint64_t>(buffer), __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
-                                 "Cannot free buffer %" PRIxLEAST64 " that is in use by a command buffer.", reinterpret_cast<uint64_t>(buffer));
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, (uint64_t)(buffer), __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
+                                 "Cannot free buffer %" PRIxLEAST64 " that is in use by a command buffer.", (uint64_t)(buffer));
         }
     }
     return skip_call;
@@ -4238,7 +4238,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(VkCommandBuffer com
         } else {
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                                 (uint64_t) pipeline, __LINE__, DRAWSTATE_INVALID_PIPELINE, "DS",
-                                "Attempt to bind Pipeline %#" PRIxLEAST64 " that doesn't exist!", reinterpret_cast<uint64_t>(pipeline));
+                                "Attempt to bind Pipeline %#" PRIxLEAST64 " that doesn't exist!", (uint64_t)(pipeline));
         }
     }
     if (VK_FALSE == skipCall)
@@ -5310,7 +5310,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(VkCommandBu
             QueryObject query = {queryPool, firstQuery + i};
             if(!pCB->queryToStateMap[query]) {
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
-                                    "Requesting a copy from query to buffer with invalid query: queryPool %" PRIu64 ", index %d", reinterpret_cast<uint64_t>(queryPool), firstQuery + i);
+                                    "Requesting a copy from query to buffer with invalid query: queryPool %" PRIu64 ", index %d", (uint64_t)(queryPool), firstQuery + i);
             }
         }
         if (pCB->state == CB_RECORDING) {
@@ -6026,7 +6026,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
             } else {
                 skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
                         "Queue %#" PRIx64 " is waiting on semaphore %#" PRIx64 " that has no way to be signaled.",
-                        reinterpret_cast<uint64_t>(queue), reinterpret_cast<uint64_t>(bindInfo.pWaitSemaphores[i]));
+                        reinterpret_cast<uint64_t>(queue), (uint64_t)(bindInfo.pWaitSemaphores[i]));
             }
         }
         for (uint32_t i=0; i < bindInfo.signalSemaphoreCount; ++i) {

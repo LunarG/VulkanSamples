@@ -129,8 +129,8 @@ struct app_gpu {
     struct app_dev dev;
 };
 
-VkBool32 dbg_callback(
-    VkFlags                             msgFlags,
+static VKAPI_ATTR VkBool32 VKAPI_CALL dbg_callback(
+    VkDebugReportFlagsEXT               msgFlags,
     VkDebugReportObjectTypeEXT          objType,
     uint64_t                            srcObject,
     size_t                              location,
@@ -1091,7 +1091,7 @@ static void app_gpu_dump_memory_props(const struct app_gpu *gpu)
     printf("\tmemoryHeapCount       = %u\n",                props->memoryHeapCount);
     for (uint32_t i = 0; i < props->memoryHeapCount; i++) {
         printf("\tmemoryHeaps[%u] : \n", i);
-        printf("\t\tsize          = " PRINTF_SIZE_T_SPECIFIER "\n", props->memoryHeaps[i].size);
+        printf("\t\tsize          = " PRINTF_SIZE_T_SPECIFIER "\n", (size_t)props->memoryHeaps[i].size);
     }
     fflush(stdout);
 }
@@ -1248,7 +1248,7 @@ bool SetStdOutToNewConsole()
     return true;
 }
 
-int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, int nCmdShow)
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, int nCmdShow)
 {
     char *argv = pCmdLine;
     consoleCreated = SetStdOutToNewConsole();

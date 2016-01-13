@@ -203,7 +203,7 @@ VKAPI_ATTR void VKAPI_CALL loader_DestroySurfaceKHR(
 {
     struct loader_instance *ptr_instance = loader_get_instance(instance);
 
-    loader_heap_free(ptr_instance, surface);
+    loader_heap_free(ptr_instance, (void *)surface);
 }
 
 /*

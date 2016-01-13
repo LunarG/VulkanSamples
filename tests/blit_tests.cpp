@@ -205,9 +205,9 @@ bool ImageChecker::walk_region(Action action, const VkBufferImageCopy &region,
                                const VkSubresourceLayout &layout, void *data) const
 {
     //TODO  handle array layers > 1
-    for (int32_t z = 0; z < region.imageExtent.depth; z++) {
-        for (int32_t y = 0; y < region.imageExtent.height; y++) {
-            for (int32_t x = 0; x < region.imageExtent.width; x++) {
+    for (uint32_t z = 0; z < region.imageExtent.depth; z++) {
+        for (uint32_t y = 0; y < region.imageExtent.height; y++) {
+            for (uint32_t x = 0; x < region.imageExtent.width; x++) {
                 uint8_t *dst = static_cast<uint8_t *>(data);
                 dst += layout.offset + layout.depthPitch * z +
                     layout.rowPitch * y + buffer_cpp() * x;

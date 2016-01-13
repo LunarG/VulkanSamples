@@ -13,7 +13,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG -std=c++11")
 
 # LunarG TODO:  Get the llvm-config flags hooked up correctly and remove extra definitions from above
 
-execute_process(COMMAND ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/bin/llvm-config --libs engine bitwriter
+execute_process(COMMAND ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/${BUILDTGT_DIR}/install/usr/local/bin/llvm-config --libs engine bitwriter
   OUTPUT_VARIABLE LLVM_LIBS_ALL_1
   RESULT_VARIABLE LLVM_LIBS_RESULT)
 
@@ -25,24 +25,37 @@ if(NOT "${LLVM_LIBS_RESULT}" EQUAL "0")
   message(FATAL_ERROR "llvm-config failed: " ${LLVM_LIBS_RESULT})
 endif()
 
+if (WIN32)
+    # For Windows, since 32-bit and 64-bit items can co-exist, we build each in its own build directory.
+    # 32-bit target data goes in build32, and 64-bit target data goes into build64.  So, include/link the
+    # appropriate data at build time.
+    if (CMAKE_CL_64)
+        set (BUILDTGT_DIR build64)
+    else ()
+        set (BUILDTGT_DIR build32)
+    endif()
+else()
+    set (BUILDTGT_DIR build)
+endif()
+
 # Expect libraries to be in either the build (release build) or dbuild (debug) directories
-if(EXISTS ${GLSLANG_PREFIX}/build/install/lib)
-    set(GLSLANG_BUILD ${GLSLANG_PREFIX}/build)
+if(EXISTS ${GLSLANG_PREFIX}/${BUILDTGT_DIR}/install/lib)
+    set(GLSLANG_BUILD ${GLSLANG_PREFIX}/${BUILDTGT_DIR})
 elseif(EXISTS ${GLSLANG_PREFIX}/dbuild/install/lib)
     set(GLSLANG_BUILD ${GLSLANG_PREFIX}/dbuild)
 else()
     message(FATAL_ERROR "Necessary glslang libraries cannot be found: " ${GLSLANG_PREFIX})
 endif()
 
-if(EXISTS ${LUNARGLASS_PREFIX}/build/install/lib)
-    set(LUNARGLASS_BUILD ${LUNARGLASS_PREFIX}/build)
+if(EXISTS ${LUNARGLASS_PREFIX}/${BUILDTGT_DIR}/install/lib)
+    set(LUNARGLASS_BUILD ${LUNARGLASS_PREFIX}/${BUILDTGT_DIR})
 elseif(EXISTS ${LUNARGLASS_PREFIX}/dbuild/install/lib)
     set(LUNARGLASS_BUILD ${LUNARGLASS_PREFIX}/dbuild)
 else()
     message(FATAL_ERROR "Necessary LunarGLASS libraries cannot be found: " ${LUNARGLASS_PREFIX})
 endif()
 
-execute_process(COMMAND ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/bin/llvm-config --cxxflags
+execute_process(COMMAND ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/${BUILDTGT_DIR}/install/usr/local/bin/llvm-config --cxxflags
   OUTPUT_VARIABLE LLVM_CXX_CONFIG_ALL_1
   RESULT_VARIABLE LLVM_CXX_CONFIG_RESULT)
 
@@ -63,14 +76,14 @@ set_target_properties(icd
 
 SET(COMPILER_LINK_DIRS
     -L${GLSLANG_BUILD}/install/lib
-    -L${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/lib
-    -L${LUNARGLASS_PREFIX}/build/Core
-    -L${LUNARGLASS_PREFIX}/build/Frontends/glslang
-    -L${LUNARGLASS_PREFIX}/build/Frontends/SPIRV
-    -L${LUNARGLASS_PREFIX}/build/Core/Passes/Transforms
-    -L${LUNARGLASS_PREFIX}/build/Core/Passes/Immutable
-    -L${LUNARGLASS_PREFIX}/build/Core/Passes/Analysis
-    -L${LUNARGLASS_PREFIX}/build/Core/Passes/Util
+    -L${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/${BUILDTGT_DIR}/install/usr/local/lib
+    -L${LUNARGLASS_PREFIX}/${BUILDTGT_DIR}/Core
+    -L${LUNARGLASS_PREFIX}/${BUILDTGT_DIR}/Frontends/glslang
+    -L${LUNARGLASS_PREFIX}/${BUILDTGT_DIR}/Frontends/SPIRV
+    -L${LUNARGLASS_PREFIX}/${BUILDTGT_DIR}/Core/Passes/Transforms
+    -L${LUNARGLASS_PREFIX}/${BUILDTGT_DIR}/Core/Passes/Immutable
+    -L${LUNARGLASS_PREFIX}/${BUILDTGT_DIR}/Core/Passes/Analysis
+    -L${LUNARGLASS_PREFIX}/${BUILDTGT_DIR}/Core/Passes/Util
 )
 
 SET(COMPILER_LIBS
@@ -93,8 +106,8 @@ foreach(LIB ${LLVM_LIBS})
     #message(STATUS ${LIB})
     add_library(${LIB} STATIC IMPORTED)
     #message(STATUS "adding the following path")
-    #message(STATUS ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/lib/lib${LIB}.a)
-    set_target_properties(${LIB} PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/lib/lib${LIB}.a)
+    #message(STATUS ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/${BUILDTGT_DIR}/install/usr/local/lib/lib${LIB}.a)
+    set_target_properties(${LIB} PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/${BUILDTGT_DIR}/install/usr/local/lib/lib${LIB}.a)
 endforeach(LIB)
 add_library(glslangFrontend STATIC IMPORTED)
 add_library(SpvFrontend     STATIC IMPORTED)
@@ -103,17 +116,18 @@ add_library(LLVMipo         STATIC IMPORTED)
 add_library(glslang         STATIC IMPORTED)
 add_library(SPIRV           STATIC IMPORTED)
 add_library(OGLCompiler     STATIC IMPORTED)
-set_target_properties(glslangFrontend PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/build/Frontends/glslang/libglslangFrontend.a)
-set_target_properties(SpvFrontend     PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/build/Frontends/SPIRV/libSpvFrontend.a)
-set_target_properties(core            PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/build/Core/libcore.a)
-set_target_properties(LLVMipo         PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/lib/libLLVMipo.a)
+
+set_target_properties(glslangFrontend PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/${BUILDTGT_DIR}/Frontends/glslang/libglslangFrontend.a)
+set_target_properties(SpvFrontend     PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/${BUILDTGT_DIR}/Frontends/SPIRV/libSpvFrontend.a)
+set_target_properties(core            PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/${BUILDTGT_DIR}/Core/libcore.a)
+set_target_properties(LLVMipo         PROPERTIES IMPORTED_LOCATION ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/${BUILDTGT_DIR}/install/usr/local/lib/libLLVMipo.a)
 set_target_properties(glslang         PROPERTIES IMPORTED_LOCATION ${GLSLANG_BUILD}/install/lib/libglslang.a)
 set_target_properties(SPIRV           PROPERTIES IMPORTED_LOCATION ${GLSLANG_BUILD}/install/lib/libSPIRV.a)
 set_target_properties(OGLCompiler     PROPERTIES IMPORTED_LOCATION ${GLSLANG_BUILD}/install/lib/libOGLCompiler.a)
 
 SET(COMPILER_INCLUDE_DIRS
     ${GLSLANG_PREFIX}
-    ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/build/install/usr/local/include
+    ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/${BUILDTGT_DIR}/install/usr/local/include
     ${LUNARGLASS_PREFIX}
     shader
     pipeline

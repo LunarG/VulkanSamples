@@ -207,7 +207,7 @@ private:
     VkBool32                   m_msgFound;
 };
 
-static VkBool32 myDbgFunc(
+static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(
     VkFlags                    msgFlags,
     VkDebugReportObjectTypeEXT            objType,
     uint64_t                   srcObject,

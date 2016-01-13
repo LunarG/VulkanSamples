@@ -1612,7 +1612,7 @@ VkResult vkReplay::manually_replay_vkMapMemory(packet_vkMapMemory* pPacket)
         {
             if (local_mem.pGpuMem)
             {
-                local_mem.pGpuMem->setMemoryMapRange(pData, pPacket->size, pPacket->offset, false);
+                local_mem.pGpuMem->setMemoryMapRange(pData, (size_t)pPacket->size, (size_t)pPacket->offset, false);
             }
         }
     }
@@ -1620,7 +1620,7 @@ VkResult vkReplay::manually_replay_vkMapMemory(packet_vkMapMemory* pPacket)
     {
         if (local_mem.pGpuMem)
         {
-            local_mem.pGpuMem->setMemoryMapRange(NULL, pPacket->size, pPacket->offset, true);
+            local_mem.pGpuMem->setMemoryMapRange(NULL, (size_t)pPacket->size, (size_t)pPacket->offset, true);
         }
     }
     return replayResult;
@@ -1686,7 +1686,7 @@ VkResult vkReplay::manually_replay_vkFlushMappedMemoryRanges(packet_vkFlushMappe
         {
             if (pPacket->pMemoryRanges[i].size != 0)
             {
-                pLocalMems[i].pGpuMem->copyMappingData(pPacket->ppData[i], false, pPacket->pMemoryRanges[i].size, pPacket->pMemoryRanges[i].offset);
+                pLocalMems[i].pGpuMem->copyMappingData(pPacket->ppData[i], false, (size_t)pPacket->pMemoryRanges[i].size, (size_t)pPacket->pMemoryRanges[i].offset);
             }
         }
         else
@@ -1697,7 +1697,7 @@ VkResult vkReplay::manually_replay_vkFlushMappedMemoryRanges(packet_vkFlushMappe
                 vktrace_LogError("vkFlushMappedMemoryRanges() malloc failed.");
             }
             pLocalMems[i].pGpuMem->setMemoryDataAddr(pBuf);
-            pLocalMems[i].pGpuMem->copyMappingData(pPacket->ppData[i], false, pPacket->pMemoryRanges[i].size, pPacket->pMemoryRanges[i].offset);
+            pLocalMems[i].pGpuMem->copyMappingData(pPacket->ppData[i], false, (size_t)pPacket->pMemoryRanges[i].size, (size_t)pPacket->pMemoryRanges[i].offset);
         }
     }
 

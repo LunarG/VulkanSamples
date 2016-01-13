@@ -469,7 +469,7 @@ namespace std {
 template <>
 struct hash<QueryObject> {
     size_t operator()(QueryObject query) const throw() {
-        return hash<uint64_t>()(reinterpret_cast<uint64_t>(query.pool)) ^ hash<uint32_t>()(query.index);
+        return hash<uint64_t>()((uint64_t)(query.pool)) ^ hash<uint32_t>()(query.index);
     }
 };
 }

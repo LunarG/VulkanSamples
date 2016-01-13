@@ -92,7 +92,7 @@ protected:
 
     virtual void SetUp() {
         VkResult err;
-        int i;
+        size_t i;
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
@@ -127,7 +127,7 @@ protected:
         queue_props = this->m_device->phy().queue_properties();
         for (i = 0; i < queue_props.size(); i++) {
             if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-                graphics_queue_node_index = i;
+                graphics_queue_node_index = (uint32_t)i;
                 break;
             }
         }
@@ -163,7 +163,7 @@ TEST_F(VkTest, AllocateMemory) {
     err = vkMapMemory(device(), gpu_mem, 0, VK_WHOLE_SIZE, 0, (void **) &pData);
     ASSERT_VK_SUCCESS(err);
 
-    memset(pData, 0x55, alloc_info.allocationSize);
+    memset(pData, 0x55, (size_t)alloc_info.allocationSize);
     EXPECT_EQ(0x55, pData[0]) << "Memory read not same as write";
 
     vkUnmapMemory(device(), gpu_mem);

@@ -255,7 +255,7 @@ void dumpVec4(const char *note, vec4 vector)
     fflush(stdout);
 }
 
-VkBool32 dbgFunc(
+VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(
     VkFlags                             msgFlags,
     VkDebugReportObjectTypeEXT          objType,
     uint64_t                            srcObject,
@@ -686,7 +686,7 @@ static void demo_draw(struct demo *demo)
     err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain,
                                       UINT64_MAX,
                                       presentCompleteSemaphore,
-                                      NULL,// TODO: Show use of fence
+                                      (VkFence)0,// TODO: Show use of fence
                                       &demo->current_buffer);
     if (err == VK_ERROR_OUT_OF_DATE_KHR) {
         // demo->swapchain is out of date (e.g. the window was resized) and

@@ -469,19 +469,19 @@ add_mem_obj_info(
 
 static VkBool32 validate_memory_is_valid(layer_data *my_data, VkDeviceMemory mem, const char* functionName, VkImage image = VK_NULL_HANDLE) {
     if (mem == MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
-        MT_OBJ_BINDING_INFO* pBindInfo = get_object_binding_info(my_data, reinterpret_cast<uint64_t>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
+        MT_OBJ_BINDING_INFO* pBindInfo = get_object_binding_info(my_data, (uint64_t)(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
         if (pBindInfo && !pBindInfo->valid) {
             return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                reinterpret_cast<uint64_t>(mem), __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
-                "%s: Cannot read invalid swapchain image %" PRIx64 ", please fill the memory before using.", functionName, reinterpret_cast<uint64_t>(image));
+                (uint64_t)(mem), __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
+                "%s: Cannot read invalid swapchain image %" PRIx64 ", please fill the memory before using.", functionName, (uint64_t)(image));
         }
     }
     else {
         MT_MEM_OBJ_INFO *pMemObj = get_mem_obj_info(my_data, mem);
         if (pMemObj && !pMemObj->valid) {
             return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                reinterpret_cast<uint64_t>(mem), __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
-                "%s: Cannot read invalid memory %" PRIx64 ", please fill the memory before using.", functionName, reinterpret_cast<uint64_t>(mem));
+                (uint64_t)(mem), __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
+                "%s: Cannot read invalid memory %" PRIx64 ", please fill the memory before using.", functionName, (uint64_t)(mem));
         }
     }
     return false;
@@ -489,7 +489,7 @@ static VkBool32 validate_memory_is_valid(layer_data *my_data, VkDeviceMemory mem
 
 static void set_memory_valid(layer_data *my_data, VkDeviceMemory mem, bool valid, VkImage image = VK_NULL_HANDLE) {
     if (mem == MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
-        MT_OBJ_BINDING_INFO* pBindInfo = get_object_binding_info(my_data, reinterpret_cast<uint64_t>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
+        MT_OBJ_BINDING_INFO* pBindInfo = get_object_binding_info(my_data, (uint64_t)(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
         if (pBindInfo) {
             pBindInfo->valid = valid;
         }
@@ -967,7 +967,7 @@ print_mem_list(
         log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
             "    ===MemObjInfo at %p===", (void*)pInfo);
         log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
-                "    Mem object: %#" PRIxLEAST64, reinterpret_cast<uint64_t>(pInfo->mem));
+                "    Mem object: %#" PRIxLEAST64, (uint64_t)(pInfo->mem));
         log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
                 "    Ref Count: %u", pInfo->refCount);
         if (0 != pInfo->allocInfo.allocationSize) {
@@ -1032,7 +1032,7 @@ printCBList(
             continue;
         for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
             log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
-                    "      Mem obj %" PRIu64, reinterpret_cast<uint64_t>(*it));
+                    "      Mem obj %" PRIu64, (uint64_t)(*it));
         }
     }
 }
@@ -1233,7 +1233,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(
                 // Valid Usage: All child objects created on device must have been destroyed prior to destroying device
                 skipCall |= log_msg(my_device_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t) pInfo->mem, __LINE__, MEMTRACK_MEMORY_LEAK, "MEM",
                                  "Mem Object %" PRIu64 " has not been freed. You should clean up this memory by calling "
-                                 "vkFreeMemory(%" PRIu64 ") prior to vkDestroyDevice().", reinterpret_cast<uint64_t>(pInfo->mem), reinterpret_cast<uint64_t>(pInfo->mem));
+                                 "vkFreeMemory(%" PRIu64 ") prior to vkDestroyDevice().", (uint64_t)(pInfo->mem), (uint64_t)(pInfo->mem));
             }
         }
     }
@@ -1552,9 +1552,10 @@ initializeAndTrackMemory(
             if (size == VK_WHOLE_SIZE) {
                 size = mem_element->second.allocInfo.allocationSize;
             }
-            mem_element->second.pData = malloc(2 * size);
-            memset(mem_element->second.pData, NoncoherentMemoryFillValue, 2 * size);
-            *ppData = static_cast<char*>(mem_element->second.pData) + (size / 2);
+            size_t convSize = (size_t)(size);
+            mem_element->second.pData = malloc(2 * convSize);
+            memset(mem_element->second.pData, NoncoherentMemoryFillValue, 2 * convSize);
+            *ppData = static_cast<char*>(mem_element->second.pData) + (convSize / 2);
         }
     }
 }
@@ -1652,14 +1653,14 @@ validateAndCopyNoncoherentMemoryToDriver(
                                             __LINE__, MEMTRACK_INVALID_MAP, "MEM", "Memory overflow was detected on mem obj %" PRIxLEAST64, (uint64_t)pMemRanges[i].memory);
                     }
                 }
-                memcpy(mem_element->second.pDriverData, static_cast<void*>(data + half_size), size);
+                memcpy(mem_element->second.pDriverData, static_cast<void*>(data + (size_t)(half_size)), (size_t)(size));
             }
         }
     }
     return skipCall;
 }
 
-VK_LAYER_EXPORT VkResult vkFlushMappedMemoryRanges(
+VK_LAYER_EXPORT VkResult VKAPI_CALL vkFlushMappedMemoryRanges(
     VkDevice                   device,
     uint32_t                   memRangeCount,
     const VkMappedMemoryRange *pMemRanges)
@@ -1676,7 +1677,7 @@ VK_LAYER_EXPORT VkResult vkFlushMappedMemoryRanges(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult vkInvalidateMappedMemoryRanges(
+VK_LAYER_EXPORT VkResult VKAPI_CALL vkInvalidateMappedMemoryRanges(
     VkDevice                   device,
     uint32_t                   memRangeCount,
     const VkMappedMemoryRange *pMemRanges)
@@ -1797,7 +1798,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
-    uint64_t buffer_handle = reinterpret_cast<uint64_t>(buffer);
+    uint64_t buffer_handle = (uint64_t)(buffer);
     VkBool32 skipCall = set_mem_binding(my_data, device, mem, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory");
     add_object_binding_info(my_data, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, mem);
     {
@@ -1823,7 +1824,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
-    uint64_t image_handle = reinterpret_cast<uint64_t>(image);
+    uint64_t image_handle = (uint64_t)(image);
     VkBool32 skipCall = set_mem_binding(my_data, device, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory");
     add_object_binding_info(my_data, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, mem);
     {
@@ -2210,7 +2211,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(
         if (VK_FALSE == commandBufferComplete) {
             skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(*it), __LINE__,
                                 MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", "Destroying Command Pool 0x%" PRIxLEAST64 " before "
-                                "its command buffer (0x%" PRIxLEAST64 ") has completed.", reinterpret_cast<uint64_t>(commandPool),
+                                "its command buffer (0x%" PRIxLEAST64 ") has completed.", (uint64_t)(commandPool),
                                 reinterpret_cast<uint64_t>(*it));
         }
     }
@@ -2378,7 +2379,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     VkBool32 skip_call = false;
     for (uint32_t i = 0; i < bindingCount; ++i) {
         VkDeviceMemory mem;
-        skip_call |= get_mem_binding_from_object(my_data, commandBuffer, reinterpret_cast<uint64_t>(pBuffers[i]),
+        skip_call |= get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)(pBuffers[i]),
             VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
         auto cb_data = my_data->cbMap.find(commandBuffer);
         if (cb_data != my_data->cbMap.end()) {
@@ -2399,7 +2400,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkDeviceMemory mem;
-    VkBool32 skip_call = get_mem_binding_from_object(my_data, commandBuffer, reinterpret_cast<uint64_t>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
+    VkBool32 skip_call = get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     auto cb_data = my_data->cbMap.find(commandBuffer);
     if (cb_data != my_data->cbMap.end()) {
         std::function<VkBool32()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdBindIndexBuffer()"); };
@@ -2953,7 +2954,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
             if (mismatch) {
                 // TODO: Verify against Valid Usage section of extension
                 log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, (uint64_t) swapchain, __LINE__, MEMTRACK_NONE, "SWAP_CHAIN",
-                        "vkGetSwapchainInfoKHR(%" PRIu64 ", VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_KHR) returned mismatching data", reinterpret_cast<uint64_t>(swapchain));
+                        "vkGetSwapchainInfoKHR(%" PRIu64 ", VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_KHR) returned mismatching data", (uint64_t)(swapchain));
             }
         }
     }
@@ -3000,7 +3001,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
     for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
         MT_SWAP_CHAIN_INFO *pInfo = my_data->swapchainMap[pPresentInfo->pSwapchains[i]];
         VkImage image = pInfo->images[pPresentInfo->pImageIndices[i]];
-        skip_call |= get_mem_binding_from_object(my_data, queue, reinterpret_cast<uint64_t>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
+        skip_call |= get_mem_binding_from_object(my_data, queue, (uint64_t)(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
         skip_call |= validate_memory_is_valid(my_data, mem, "vkQueuePresentKHR()", image);
     }
     if (!skip_call) {
@@ -3067,7 +3068,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(
             continue;
         }
         MT_FB_ATTACHMENT_INFO fb_info;
-        get_mem_binding_from_object(my_data, device, reinterpret_cast<uint64_t>(view_data->second.image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &fb_info.mem);
+        get_mem_binding_from_object(my_data, device, (uint64_t)(view_data->second.image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &fb_info.mem);
         fb_info.image = view_data->second.image;
         my_data->fbMap[*pFramebuffer].attachments.push_back(fb_info);
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -3154,7 +3155,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(
             MT_PASS_INFO& pass_info = pass_data->second;
             pass_info.fb = pRenderPassBegin->framebuffer;
             auto cb_data = my_data->cbMap.find(cmdBuffer);
-            for (int i = 0; i < pass_info.attachments.size(); ++i) {
+            for (size_t i = 0; i < pass_info.attachments.size(); ++i) {
                 MT_FB_ATTACHMENT_INFO& fb_info = my_data->fbMap[pass_info.fb].attachments[i];
                 if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
                     if (cb_data != my_data->cbMap.end()) {
@@ -3165,7 +3166,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(
                     if (attachment_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL ||
                         attachment_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
                         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
-                                             reinterpret_cast<uint64_t>(pRenderPassBegin->renderPass), __LINE__, MEMTRACK_INVALID_LAYOUT, "MEM",
+                                             (uint64_t)(pRenderPassBegin->renderPass), __LINE__, MEMTRACK_INVALID_LAYOUT, "MEM",
                                              "Cannot clear attachment %d with invalid first layout %d.", pass_info.attachments[i].attachment, attachment_layout);
                     }
                 } else if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_DONT_CARE) {
@@ -3205,7 +3206,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndRenderPass(
         auto pass_data = my_data->passMap.find(cb_data->second.pass);
         if (pass_data != my_data->passMap.end()) {
             MT_PASS_INFO& pass_info = pass_data->second;
-            for (int i = 0; i < pass_info.attachments.size(); ++i) {
+            for (size_t i = 0; i < pass_info.attachments.size(); ++i) {
                 MT_FB_ATTACHMENT_INFO& fb_info = my_data->fbMap[pass_info.fb].attachments[i];
                 if (pass_info.attachments[i].store_op == VK_ATTACHMENT_STORE_OP_STORE) {
                     if (cb_data != my_data->cbMap.end()) {

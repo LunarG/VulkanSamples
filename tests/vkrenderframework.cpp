@@ -495,7 +495,7 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *commandBuffer
     // create VkDescriptorSetLayout
     vector<VkDescriptorSetLayoutBinding> bindings;
     bindings.resize(m_type_counts.size());
-    for (int i = 0; i < m_type_counts.size(); i++) {
+    for (size_t i = 0; i < m_type_counts.size(); i++) {
         bindings[i].binding = i;
         bindings[i].descriptorType = m_type_counts[i].type;
         bindings[i].descriptorCount = m_type_counts[i].descriptorCount;
@@ -807,7 +807,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
     uint32_t tex_colors[2] = { 0xffff0000, 0xff00ff00 };
     void *data;
-    int32_t x, y;
+    uint32_t x, y;
     VkImageObj stagingImage(device);
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
@@ -1272,7 +1272,7 @@ VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass r
     info.stageCount = m_shaderObjs.size();
     info.pStages = new VkPipelineShaderStageCreateInfo[info.stageCount];
 
-    for (int i=0; i<m_shaderObjs.size(); i++)
+    for (size_t i=0; i<m_shaderObjs.size(); i++)
     {
         ((VkPipelineShaderStageCreateInfo *) info.pStages)[i] =
             m_shaderObjs[i]->GetStageCreateInfo();

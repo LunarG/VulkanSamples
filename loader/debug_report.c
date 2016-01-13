@@ -259,7 +259,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDebugReportCallback(
  * This is the instance chain terminator function
  * for DestroyDebugReportCallback
  */
-VKAPI_ATTR void loader_DestroyDebugReportCallback(VkInstance instance,
+VKAPI_ATTR void VKAPI_CALL loader_DestroyDebugReportCallback(VkInstance instance,
         VkDebugReportCallbackEXT callback, const VkAllocationCallbacks *pAllocator)
 {
     uint32_t storage_idx;

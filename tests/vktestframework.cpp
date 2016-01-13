@@ -498,7 +498,7 @@ void VkTestFramework::Show(const char *comment, VkImageObj *image)
 
 void VkTestFramework::RecordImages(vector<VkImageObj *> images)
 {
-    for (int32_t i = 0; i < images.size(); i++) {
+    for (size_t i = 0; i < images.size(); i++) {
         RecordImage(images[i]);
     }
 }
@@ -904,7 +904,7 @@ void TestFrameworkVkPresent::CreateSwapchain()
     VkBool32 supportsPresent;
     m_present_queue_node_index = UINT32_MAX;
     std::vector<vk_testing::Queue *> queues = m_device.graphics_queues();
-    for (int i=0; i < queues.size(); i++)
+    for (size_t i=0; i < queues.size(); i++)
     {
         int family_index = queues[i]->get_family_index();
         m_fpGetPhysicalDeviceSurfaceSupportKHR(m_device.phy().handle(),

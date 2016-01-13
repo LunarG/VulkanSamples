@@ -276,15 +276,9 @@ static char *loader_get_registry_files(const struct loader_instance *inst, char 
         access_flags = KEY_QUERY_VALUE;
         rtn_value = RegOpenKeyEx(hive, loc, 0, access_flags, &key);
         if (rtn_value != ERROR_SUCCESS) {
-            // We didn't find the key.  Try the 32-bit hive (where we've seen the
-            // key end up on some people's systems):
-            access_flags |= KEY_WOW64_32KEY;
-            rtn_value = RegOpenKeyEx(hive, loc, 0, access_flags, &key);
-            if (rtn_value != ERROR_SUCCESS) {
-                // We still couldn't find the key, so give up:
-                loc = next;
-                continue;
-            }
+            // We still couldn't find the key, so give up:
+            loc = next;
+            continue;
         }
 
         while ((rtn_value = RegEnumValue(key, idx++, name, &name_size, NULL, NULL, (LPBYTE) &value, &value_size)) == ERROR_SUCCESS) {
@@ -1570,7 +1564,7 @@ static cJSON *loader_get_json(const struct loader_instance *inst, const char *fi
     FILE *file;
     char *json_buf;
     cJSON *json;
-    uint64_t len;
+    size_t len;
     file = fopen(filename,"rb");
     if (!file) {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Couldn't open JSON file %s", filename);

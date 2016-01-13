@@ -1437,14 +1437,14 @@ class ObjectTrackerSubcommand(Subcommand):
             else:
                 procs_txt.append('static void create_%s(VkDevice dispatchable_object, %s vkObj, VkDebugReportObjectTypeEXT objType)' % (name, o))
             procs_txt.append('{')
-            procs_txt.append('    log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), __LINE__, OBJTRACK_NONE, "OBJTRACK",')
+            procs_txt.append('    log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT_EXT, objType,(uint64_t)(vkObj), __LINE__, OBJTRACK_NONE, "OBJTRACK",')
             procs_txt.append('        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDebugReportObjectTypeEXT(objType),')
-            procs_txt.append('        reinterpret_cast<uint64_t>(vkObj));')
+            procs_txt.append('        (uint64_t)(vkObj));')
             procs_txt.append('')
             procs_txt.append('    OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;')
             procs_txt.append('    pNewObjNode->objType = objType;')
             procs_txt.append('    pNewObjNode->status  = OBJSTATUS_NONE;')
-            procs_txt.append('    pNewObjNode->vkObj  = reinterpret_cast<uint64_t>(vkObj);')
+            procs_txt.append('    pNewObjNode->vkObj  = (uint64_t)(vkObj);')
             procs_txt.append('    %sMap[(uint64_t)vkObj] = pNewObjNode;' % (o))
             procs_txt.append('    uint32_t objIndex = objTypeToIndex(objType);')
             procs_txt.append('    numObjs[objIndex]++;')
@@ -1457,7 +1457,7 @@ class ObjectTrackerSubcommand(Subcommand):
             else:
                 procs_txt.append('static void destroy_%s(VkDevice dispatchable_object, %s object)' % (name, o))
             procs_txt.append('{')
-            procs_txt.append('    uint64_t object_handle = reinterpret_cast<uint64_t>(object);')
+            procs_txt.append('    uint64_t object_handle = (uint64_t)(object);')
             procs_txt.append('    if (%sMap.find(object_handle) != %sMap.end()) {' % (o, o))
             procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[(uint64_t)object];' % (o))
             procs_txt.append('        uint32_t objIndex = objTypeToIndex(pNode->objType);')
@@ -1467,7 +1467,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('        numObjs[objIndex]--;')
             procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT_EXT, pNode->objType, object_handle, __LINE__, OBJTRACK_NONE, "OBJTRACK",')
             procs_txt.append('           "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",')
-            procs_txt.append('            string_VkDebugReportObjectTypeEXT(pNode->objType), reinterpret_cast<uint64_t>(object), numTotalObjs, numObjs[objIndex],')
+            procs_txt.append('            string_VkDebugReportObjectTypeEXT(pNode->objType), (uint64_t)(object), numTotalObjs, numObjs[objIndex],')
             procs_txt.append('            string_VkDebugReportObjectTypeEXT(pNode->objType));')
             procs_txt.append('        delete pNode;')
             procs_txt.append('        %sMap.erase(object_handle);' % (o))
@@ -1485,7 +1485,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 procs_txt.append('static VkBool32 set_%s_status(VkDevice dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, ObjectStatusFlags status_flag)' % (name, o))
             procs_txt.append('{')
             procs_txt.append('    if (object != VK_NULL_HANDLE) {')
-            procs_txt.append('        uint64_t object_handle = reinterpret_cast<uint64_t>(object);')
+            procs_txt.append('        uint64_t object_handle = (uint64_t)(object);')
             procs_txt.append('        if (%sMap.find(object_handle) != %sMap.end()) {' % (o, o))
             procs_txt.append('            OBJTRACK_NODE* pNode = %sMap[object_handle];' % (o))
             procs_txt.append('            pNode->status |= status_flag;')
@@ -1513,7 +1513,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    OBJECT_TRACK_ERROR  error_code,')
             procs_txt.append('    const char         *fail_msg)')
             procs_txt.append('{')
-            procs_txt.append('    uint64_t object_handle = reinterpret_cast<uint64_t>(object);')
+            procs_txt.append('    uint64_t object_handle = (uint64_t)(object);')
             procs_txt.append('    if (%sMap.find(object_handle) != %sMap.end()) {' % (o, o))
             procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[object_handle];' % (o))
             procs_txt.append('        if ((pNode->status & status_mask) != status_flag) {')
@@ -1539,7 +1539,7 @@ class ObjectTrackerSubcommand(Subcommand):
             else:
                 procs_txt.append('static VkBool32 reset_%s_status(VkDevice dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, ObjectStatusFlags status_flag)' % (name, o))
             procs_txt.append('{')
-            procs_txt.append('    uint64_t object_handle = reinterpret_cast<uint64_t>(object);')
+            procs_txt.append('    uint64_t object_handle = (uint64_t)(object);')
             procs_txt.append('    if (%sMap.find(object_handle) != %sMap.end()) {' % (o, o))
             procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[object_handle];' % (o))
             procs_txt.append('        pNode->status &= ~status_flag;')
@@ -1569,8 +1569,8 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    if (null_allowed && (object == VK_NULL_HANDLE))')
             procs_txt.append('        return VK_FALSE;')
             procs_txt.append('    if (%sMap.find((uint64_t)object) == %sMap.end()) {' % (do, do))
-            procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, objType, reinterpret_cast<uint64_t>(object), __LINE__, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
-            procs_txt.append('            "Invalid %s Object 0x%%" PRIx64 ,reinterpret_cast<uint64_t>(object));' % do)
+            procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, objType, (uint64_t)(object), __LINE__, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+            procs_txt.append('            "Invalid %s Object 0x%%" PRIx64 ,(uint64_t)(object));' % do)
             procs_txt.append('    }')
             procs_txt.append('    return VK_FALSE;')
             procs_txt.append('}')
@@ -1591,8 +1591,8 @@ class ObjectTrackerSubcommand(Subcommand):
                     procs_txt.append('        (swapchainImageMap.find((uint64_t)object) == swapchainImageMap.end())) {')
                 else:
                     procs_txt.append('    if (%sMap.find((uint64_t)object) == %sMap.end()) {' % (o, o))
-                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, objType, reinterpret_cast<uint64_t>(object), __LINE__, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
-                procs_txt.append('            "Invalid %s Object 0x%%" PRIx64, reinterpret_cast<uint64_t>(object));' % o)
+                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, objType, (uint64_t)(object), __LINE__, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+                procs_txt.append('            "Invalid %s Object 0x%%" PRIx64, (uint64_t)(object));' % o)
                 procs_txt.append('    }')
                 procs_txt.append('    return VK_FALSE;')
                 procs_txt.append('}')
@@ -1603,7 +1603,7 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_destroy_instance(self):
         gedi_txt = []
         gedi_txt.append('%s' % self.lineinfo.get())
-        gedi_txt.append('void vkDestroyInstance(')
+        gedi_txt.append('VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(')
         gedi_txt.append('VkInstance instance,')
         gedi_txt.append('const VkAllocationCallbacks* pAllocator)')
         gedi_txt.append('{')
@@ -1652,7 +1652,7 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_destroy_device(self):
         gedd_txt = []
         gedd_txt.append('%s' % self.lineinfo.get())
-        gedd_txt.append('void vkDestroyDevice(')
+        gedd_txt.append('VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(')
         gedd_txt.append('VkDevice device,')
         gedd_txt.append('const VkAllocationCallbacks* pAllocator)')
         gedd_txt.append('{')
@@ -2316,7 +2316,7 @@ class ThreadingSubcommand(Subcommand):
     def generate_useObject(self, ty):
         obj_type = self.thread_check_object_types[ty]
         key = "object"
-        msg_object = "reinterpret_cast<uint64_t>(object)"
+        msg_object = "(uint64_t)(object)"
         header_txt = []
         header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('static void use%s(const void* dispatchable_object, %s object)' % (ty, ty))
