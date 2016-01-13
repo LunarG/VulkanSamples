@@ -177,7 +177,7 @@ int main(int argc, char **argv)
 
     info.uniform_data.buffer_info.buffer = info.uniform_data.buf;
     info.uniform_data.buffer_info.offset = 0;
-    info.uniform_data.buffer_info.range = 2 * buf_size;
+    info.uniform_data.buffer_info.range = buf_size;
 
     /* Init desciptor and pipeline layouts - descriptor type is UNIFORM_BUFFER_DYNAMIC */
     VkDescriptorSetLayoutBinding layout_bindings[2];
