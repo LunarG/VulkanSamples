@@ -99,6 +99,8 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_DOUBLE_DESTROY,                   // Destroying an object twice
     DRAWSTATE_OBJECT_INUSE,                     // Destroying an object in use by a command buffer
     DRAWSTATE_QUEUE_FORWARD_PROGRESS,           // Queue cannot guarantee forward progress
+    DRAWSTATE_INVALID_UNIFORM_BUFFER_OFFSET,    // Dynamic Uniform Buffer Offsets violate device limit
+    DRAWSTATE_INVALID_STORAGE_BUFFER_OFFSET,    // Dynamic Storage Buffer Offsets violate device limit
 } DRAW_STATE_ERROR;
 
 typedef enum _SHADER_CHECKER_ERROR {
@@ -476,6 +478,7 @@ typedef struct _GLOBAL_CB_NODE {
     VkCommandBufferAllocateInfo  createInfo;
     VkCommandBufferBeginInfo     beginInfo;
     VkFence                      fence;    // fence tracking this cmd buffer
+    VkDevice                     device;   // device this DB belongs to
     uint64_t                     numCmds;  // number of cmds in this CB
     uint64_t                     drawCount[NUM_DRAW_TYPES]; // Count of each type of draw in this CB
     CB_STATE                     state;  // Track cmd buffer update state

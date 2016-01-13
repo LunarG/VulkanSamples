@@ -58,17 +58,18 @@ struct devExts {
 
 // This struct will be stored in a map hashed by the dispatchable object
 struct layer_data {
-    debug_report_data *report_data;
-    std::vector<VkDebugReportCallbackEXT> logging_callback;
-    VkLayerDispatchTable* device_dispatch_table;
-    VkLayerInstanceDispatchTable* instance_dispatch_table;
-    devExts device_extensions;
+    debug_report_data                                  *report_data;
+    std::vector<VkDebugReportCallbackEXT>               logging_callback;
+    VkLayerDispatchTable                               *device_dispatch_table;
+    VkLayerInstanceDispatchTable                       *instance_dispatch_table;
+    devExts                                             device_extensions;
     // Track state of each instance
-    unique_ptr<INSTANCE_STATE> instanceState;
-    unique_ptr<PHYSICAL_DEVICE_STATE> physicalDeviceState;
-    VkPhysicalDeviceFeatures actualPhysicalDeviceFeatures;
-    VkPhysicalDeviceFeatures requestedPhysicalDeviceFeatures;
-    VkPhysicalDeviceProperties physicalDeviceProperties;
+    unique_ptr<INSTANCE_STATE>                          instanceState;
+    unique_ptr<PHYSICAL_DEVICE_STATE>                   physicalDeviceState;
+    VkPhysicalDeviceFeatures                            actualPhysicalDeviceFeatures;
+    VkPhysicalDeviceFeatures                            requestedPhysicalDeviceFeatures;
+    unordered_map<VkDevice, VkPhysicalDeviceProperties> physDevPropertyMap;
+
     // Track physical device per logical device
     VkPhysicalDevice physicalDevice;
     // Vector indices correspond to queueFamilyIndex
@@ -81,7 +82,6 @@ struct layer_data {
         device_extensions(),
         instanceState(nullptr),
         physicalDeviceState(nullptr),
-        physicalDeviceProperties(),
         actualPhysicalDeviceFeatures(),
         requestedPhysicalDeviceFeatures(),
         physicalDevice()
@@ -257,7 +257,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInst
                 phy_dev_data->physicalDeviceState = unique_ptr<PHYSICAL_DEVICE_STATE>(new PHYSICAL_DEVICE_STATE());
                 // Init actual features for each physical device
                 my_data->instance_dispatch_table->GetPhysicalDeviceFeatures(pPhysicalDevices[i], &(phy_dev_data->actualPhysicalDeviceFeatures));
-                my_data->instance_dispatch_table->GetPhysicalDeviceProperties(pPhysicalDevices[i], &(phy_dev_data->physicalDeviceProperties));
             }
         }
         return result;
@@ -449,13 +448,17 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
-    VkResult result = my_device_data->device_dispatch_table->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
+    layer_data *device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+    VkResult result = device_data->device_dispatch_table->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
     if (result == VK_SUCCESS) {
-        my_device_data->report_data = layer_debug_report_create_device(phy_dev_data->report_data, *pDevice);
+        device_data->report_data = layer_debug_report_create_device(phy_dev_data->report_data, *pDevice);
         createDeviceRegisterExtensions(pCreateInfo, *pDevice);
-        my_device_data->physicalDevice = gpu;
+        device_data->physicalDevice = gpu;
+
+        // Get physical device properties for this device
+        phy_dev_data->instance_dispatch_table->GetPhysicalDeviceProperties(gpu, &(phy_dev_data->physDevPropertyMap[*pDevice]));
     }
+
     return result;
 }
 
@@ -515,6 +518,71 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(VkDevice device, uin
     if (skipCall)
         return;
     dev_data->device_dispatch_table->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(
+    VkDevice       device,
+    VkBuffer       buffer,
+    VkDeviceMemory mem,
+    VkDeviceSize   memoryOffset)
+{
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult    result   = VK_ERROR_VALIDATION_FAILED_EXT;
+    VkBool32    skipCall = VK_FALSE;
+
+    VkDeviceSize uniformAlignment = dev_data->physDevPropertyMap[device].limits.minUniformBufferOffsetAlignment;
+    if (vk_safe_modulo(memoryOffset, uniformAlignment) != 0) {
+        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
+        __LINE__, DEVLIMITS_INVALID_UNIFORM_BUFFER_OFFSET, "DL",
+        "vkBindBufferMemory(): memoryOffset %#" PRIxLEAST64 " must be a multiple of device limit minUniformBufferOffsetAlignment %#" PRIxLEAST64,
+        memoryOffset, uniformAlignment);
+    }
+
+    if (VK_FALSE == skipCall) {
+        result = dev_data->device_dispatch_table->BindBufferMemory(device, buffer, mem, memoryOffset);
+    }
+    return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUpdateDescriptorSets(
+    VkDevice                    device,
+    uint32_t                    descriptorWriteCount,
+    const VkWriteDescriptorSet *pDescriptorWrites,
+    uint32_t                    descriptorCopyCount,
+    const VkCopyDescriptorSet  *pDescriptorCopies)
+{
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult    result   = VK_ERROR_VALIDATION_FAILED_EXT;
+    VkBool32    skipCall = VK_FALSE;
+
+    for (auto i = 0; i < descriptorWriteCount; i++) {
+        if ((pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)         ||
+            (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC))  {
+            VkDeviceSize uniformAlignment = dev_data->physDevPropertyMap[device].limits.minUniformBufferOffsetAlignment;
+            for (auto j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
+                if (vk_safe_modulo(pDescriptorWrites[i].pBufferInfo[j].offset, uniformAlignment) != 0) {
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
+                    __LINE__, DEVLIMITS_INVALID_UNIFORM_BUFFER_OFFSET, "DL",
+                    "vkUpdateDescriptorSets(): pDescriptorWrites[%d].pBufferInfo[%d].offset (%#" PRIxLEAST64 ") must be a multiple of device limit minUniformBufferOffsetAlignment %#" PRIxLEAST64,
+                    i, j, pDescriptorWrites[i].pBufferInfo[j].offset, uniformAlignment);
+                }
+            }
+        } else if ((pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)         ||
+                   (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC))  {
+            VkDeviceSize storageAlignment = dev_data->physDevPropertyMap[device].limits.minStorageBufferOffsetAlignment;
+            for (auto j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
+                if (vk_safe_modulo(pDescriptorWrites[i].pBufferInfo[j].offset, storageAlignment) != 0) {
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
+                    __LINE__, DEVLIMITS_INVALID_STORAGE_BUFFER_OFFSET, "DL",
+                    "vkUpdateDescriptorSets(): pDescriptorWrites[%d].pBufferInfo[%d].offset (%#" PRIxLEAST64 ") must be a multiple of device limit minStorageBufferOffsetAlignment %#" PRIxLEAST64,
+                    i, j, pDescriptorWrites[i].pBufferInfo[j].offset, storageAlignment);
+                }
+            }
+        }
+    }
+    if (skipCall == VK_FALSE) {
+        dev_data->device_dispatch_table->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
+    }
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(
@@ -648,6 +716,10 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkFreeCommandBuffers;
     if (!strcmp(funcName, "vkCmdUpdateBuffer"))
         return (PFN_vkVoidFunction) vkCmdUpdateBuffer;
+    if (!strcmp(funcName, "vkBindBufferMemory"))
+        return (PFN_vkVoidFunction) vkBindBufferMemory;
+    if (!strcmp(funcName, "vkUpdateDescriptorSets"))
+        return (PFN_vkVoidFunction) vkUpdateDescriptorSets;
     if (!strcmp(funcName, "vkCmdFillBuffer"))
         return (PFN_vkVoidFunction) vkCmdFillBuffer;
 

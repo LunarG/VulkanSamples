@@ -41,6 +41,8 @@ typedef enum _DEV_LIMITS_ERROR
     DEVLIMITS_COUNT_MISMATCH,                   // App requesting a count value different than actual value
     DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST,     // Invalid queue requested based on queue family properties
     DEVLIMITS_LIMITS_VIOLATION,                 // Driver-specified limits/properties were exceeded
+    DEVLIMITS_INVALID_UNIFORM_BUFFER_OFFSET,    // Uniform buffer offset violates device limit granularity
+    DEVLIMITS_INVALID_STORAGE_BUFFER_OFFSET,    // Storage buffer offset violates device limit granularity
 } DEV_LIMITS_ERROR;
 
 typedef enum _CALL_STATE

@@ -123,6 +123,7 @@ struct layer_data {
     // Current render pass
     VkRenderPassBeginInfo                renderPassBeginInfo;
     uint32_t                             currentSubpass;
+    unordered_map<VkDevice,              VkPhysicalDeviceProperties>         physDevPropertyMap;
 
     layer_data() :
         report_data(nullptr),
@@ -2931,13 +2932,15 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
 {
-    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
-    // TODOSC : shouldn't need any customization here
+    layer_data *instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
+    layer_data *dev_data      = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+    VkResult    result        = dev_data->device_dispatch_table->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
+
     if (result == VK_SUCCESS) {
-        layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
-        dev_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
+        dev_data->report_data = layer_debug_report_create_device(instance_data->report_data, *pDevice);
         createDeviceRegisterExtensions(pCreateInfo, *pDevice);
+        // Get physical device limits for this device
+        instance_data->instance_dispatch_table->GetPhysicalDeviceProperties(gpu, &(instance_data->physDevPropertyMap[*pDevice]));
     }
     return result;
 }
@@ -4002,6 +4005,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(VkDevice
                 resetCB(dev_data, pCommandBuffer[i]);
                 pCB->commandBuffer = pCommandBuffer[i];
                 pCB->createInfo    = *pCreateInfo;
+                pCB->device        = device;
             }
         }
     }
@@ -4371,7 +4375,29 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], __LINE__, DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT, "DS",
                                     "descriptorSet #%u (%#" PRIxLEAST64 ") requires %u dynamicOffsets, but only %u dynamicOffsets are left in pDynamicOffsets array. There must be one dynamic offset for each dynamic descriptor being bound.",
                                         i, (uint64_t) pDescriptorSets[i], pSet->pLayout->dynamicDescriptorCount, (dynamicOffsetCount - totalDynamicDescriptors));
-                            } else { // Store dynamic offsets with the set
+                            } else { // Validate and store dynamic offsets with the set
+                                // Validate Dynamic Offset Minimums
+                                uint32_t cur_dyn_offset = totalDynamicDescriptors;
+                                for (uint32_t d = 0; d < pSet->descriptorCount; d++) {
+                                    if (pSet->pLayout->descriptorTypes[i] == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
+                                        if (vk_safe_modulo(pDynamicOffsets[cur_dyn_offset], dev_data->physDevPropertyMap[pCB->device].limits.minUniformBufferOffsetAlignment) != 0) {
+                                            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
+                                            __LINE__, DRAWSTATE_INVALID_UNIFORM_BUFFER_OFFSET, "DS",
+                                            "vkCmdBindDescriptorSets(): pDynamicOffsets[%d] is %d but must be a multiple of device limit minUniformBufferOffsetAlignment %#" PRIxLEAST64,
+                                            cur_dyn_offset, pDynamicOffsets[cur_dyn_offset], dev_data->physDevPropertyMap[pCB->device].limits.minUniformBufferOffsetAlignment);
+                                        }
+                                        cur_dyn_offset++;
+                                    } else if (pSet->pLayout->descriptorTypes[i] == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+                                        if (vk_safe_modulo(pDynamicOffsets[cur_dyn_offset], dev_data->physDevPropertyMap[pCB->device].limits.minStorageBufferOffsetAlignment) != 0) {
+                                            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
+                                            __LINE__, DRAWSTATE_INVALID_STORAGE_BUFFER_OFFSET, "DS",
+                                            "vkCmdBindDescriptorSets(): pDynamicOffsets[%d] is %d but must be a multiple of device limit minStorageBufferOffsetAlignment %#" PRIxLEAST64,
+                                            cur_dyn_offset, pDynamicOffsets[cur_dyn_offset], dev_data->physDevPropertyMap[pCB->device].limits.minStorageBufferOffsetAlignment);
+                                        }
+                                        cur_dyn_offset++;
+                                    }
+                                }
+                                // Store offsets
                                 const uint32_t* pStartDynOffset = pDynamicOffsets + totalDynamicDescriptors;
                                 pSet->dynamicOffsets.assign(pStartDynOffset, pStartDynOffset + pSet->pLayout->dynamicDescriptorCount);
                                 totalDynamicDescriptors += pSet->pLayout->dynamicDescriptorCount;

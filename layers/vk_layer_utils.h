@@ -111,6 +111,7 @@ bool                       vk_format_is_compressed(VkFormat format);
 size_t                     vk_format_get_size(VkFormat format);
 unsigned int               vk_format_get_channel_count(VkFormat format);
 VkFormatCompatibilityClass vk_format_get_compatibility_class(VkFormat format);
+VkDeviceSize               vk_safe_modulo(VkDeviceSize dividend, VkDeviceSize divisor);
 
 static inline int u_ffs(int val)
 {

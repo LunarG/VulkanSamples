@@ -584,3 +584,15 @@ unsigned int vk_format_get_channel_count(VkFormat format)
 {
     return vk_format_table[format].channel_count;
 }
+
+// Perform a zero-tolerant modulo operation
+VkDeviceSize vk_safe_modulo(VkDeviceSize dividend, VkDeviceSize divisor)
+{
+    VkDeviceSize result = 0;
+    if (divisor != 0) {
+        result = dividend % divisor;
+    }
+    return result;
+}
+
+
