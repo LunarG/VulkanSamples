@@ -691,7 +691,7 @@ goto:eof
    mkdir build
    set SPIRV_TOOLS_BUILD_DIR=%SPIRV_TOOLS_DIR%\build
    cd %SPIRV_TOOLS_BUILD_DIR%
-   
+
    echo Generating 64-bit spirv-tools CMake files for Visual Studio %VS_VERSION% ..
    cmake -G "Visual Studio %VS_VERSION% Win64" ..
    
