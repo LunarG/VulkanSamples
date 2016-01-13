@@ -522,9 +522,6 @@ void Hologram::on_frame(float frame_pred, int fb)
     for (auto &worker : workers_)
         worker->draw_objects(fb);
 
-    for (auto &worker : workers_)
-        worker->wait_idle();
-
     VkResult res = vk::BeginCommandBuffer(primary_cmd_, &primary_cmd_begin_info_);
 
     render_pass_begin_info_.framebuffer = framebuffers_[fb];
@@ -533,6 +530,8 @@ void Hologram::on_frame(float frame_pred, int fb)
             VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
     // record render pass commands
+    for (auto &worker : workers_)
+        worker->wait_idle();
     vk::CmdExecuteCommands(primary_cmd_, worker_cmds_.size(), worker_cmds_.data());
 
     vk::CmdEndRenderPass(primary_cmd_);
