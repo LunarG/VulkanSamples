@@ -5,7 +5,7 @@ include_directories( ${SAMPLES_DATA_DIR} ${GLSLANG_PREFIX} ${GLMINC_PREFIX})
 
 # Additional includes for spirv-tools
 include_directories("${CMAKE_SOURCE_DIR}/../spirv-tools/include"
-                    "${CMAKE_SOURCE_DIR}/../spirv-tools/external/include")
+                    "${CMAKE_SOURCE_DIR}/../spirv-tools/external/include"
                     "${CMAKE_SOURCE_DIR}/../source/spirv-tools/include"
                     "${CMAKE_SOURCE_DIR}/../source/spirv-tools/external/include")
 
