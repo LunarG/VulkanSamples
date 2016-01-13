@@ -325,9 +325,6 @@ void Shell::add_game_time(float time)
 
 void Shell::acquire_back_buffer()
 {
-    // TODO workaround GPU hangs
-    vk::DeviceWaitIdle(ctx_.dev);
-
     auto &buf = ctx_.back_buffers.front();
 
     // wait until acquire and render semaphores are waited/unsignaled
