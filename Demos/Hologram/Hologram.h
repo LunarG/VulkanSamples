@@ -30,7 +30,7 @@ public:
     void on_key(Key key);
     void on_tick();
 
-    void on_frame(float frame_pred, int fb);
+    void on_frame(float frame_pred);
 
 private:
     class Worker {
@@ -147,6 +147,7 @@ private:
     VkCommandPool primary_cmd_pool_;
     VkCommandBuffer primary_cmd_;
     VkCommandBufferBeginInfo primary_cmd_begin_info_;
+    VkPipelineStageFlags primary_cmd_submit_wait_stages_;
     VkSubmitInfo primary_cmd_submit_info_;
 
     // called by attach_swapchain

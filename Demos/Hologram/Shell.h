@@ -1,6 +1,7 @@
 #ifndef SHELL_H
 #define SHELL_H
 
+#include <queue>
 #include <vector>
 #include <stdexcept>
 #include <vulkan/vulkan.h>
@@ -15,6 +16,14 @@ public:
     Shell &operator=(const Shell &sh) = delete;
     virtual ~Shell() {}
 
+    struct BackBuffer {
+        uint32_t image_index;
+
+        VkSemaphore acquire_semaphore;
+        VkSemaphore render_semaphore;
+        VkFence present_fence;
+    };
+
     struct Context {
         VkInstance instance;
 
@@ -26,10 +35,14 @@ public:
         VkQueue game_queue;
         VkQueue present_queue;
 
+        std::queue<BackBuffer> back_buffers;
+
         VkSurfaceFormatKHR format;
 
         VkSwapchainKHR swapchain;
         VkExtent2D extent;
+
+        BackBuffer acquired_back_buffer;
     };
     const Context &context() const { return ctx_; }
 
@@ -54,8 +67,8 @@ protected:
 
     void add_game_time(float time);
 
-    uint32_t acquire_back_buffer();
-    void present_back_buffer(uint32_t back_buffer);
+    void acquire_back_buffer();
+    void present_back_buffer();
 
     Game &game_;
     const Game::Settings &settings_;
@@ -73,6 +86,7 @@ private:
     void init_instance();
     void init_physical_dev();
     void init_dev();
+    void init_back_buffers();
     void init_swapchain();
 
     Context ctx_;
