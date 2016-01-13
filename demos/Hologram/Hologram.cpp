@@ -290,9 +290,15 @@ void Hologram::create_primary_cmd()
     primary_cmd_begin_info_.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     primary_cmd_begin_info_.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
+    // we will render to the swapchain images
+    primary_cmd_submit_wait_stages_ = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
     primary_cmd_submit_info_.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    primary_cmd_submit_info_.waitSemaphoreCount = 1;
+    primary_cmd_submit_info_.pWaitDstStageMask = &primary_cmd_submit_wait_stages_;
     primary_cmd_submit_info_.commandBufferCount = 1;
     primary_cmd_submit_info_.pCommandBuffers = &primary_cmd_;
+    primary_cmd_submit_info_.signalSemaphoreCount = 1;
 }
 
 void Hologram::start_workers()
@@ -503,15 +509,17 @@ void Hologram::on_tick()
         worker->step_objects();
 }
 
-void Hologram::on_frame(float frame_pred, int fb)
+void Hologram::on_frame(float frame_pred)
 {
+    const Shell::BackBuffer &back = shell_->context().acquired_back_buffer;
+
     // ignore frame_pred
     for (auto &worker : workers_)
-        worker->draw_objects(framebuffers_[fb]);
+        worker->draw_objects(framebuffers_[back.image_index]);
 
     VkResult res = vk::BeginCommandBuffer(primary_cmd_, &primary_cmd_begin_info_);
 
-    render_pass_begin_info_.framebuffer = framebuffers_[fb];
+    render_pass_begin_info_.framebuffer = framebuffers_[back.image_index];
     render_pass_begin_info_.renderArea.extent = extent_;
     vk::CmdBeginRenderPass(primary_cmd_, &render_pass_begin_info_,
             VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
@@ -523,6 +531,10 @@ void Hologram::on_frame(float frame_pred, int fb)
 
     vk::CmdEndRenderPass(primary_cmd_);
     vk::EndCommandBuffer(primary_cmd_);
+
+    // wait for the image to be owned and signal for render completion
+    primary_cmd_submit_info_.pWaitSemaphores = &back.acquire_semaphore;
+    primary_cmd_submit_info_.pSignalSemaphores = &back.render_semaphore;
 
     res = vk::QueueSubmit(queue_, 1, &primary_cmd_submit_info_, VK_NULL_HANDLE);
 

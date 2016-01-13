@@ -33,6 +33,7 @@ void Shell::init_vk()
     vk::GetDeviceQueue(ctx_.dev, ctx_.game_queue_family, 0, &ctx_.game_queue);
     vk::GetDeviceQueue(ctx_.dev, ctx_.present_queue_family, 0, &ctx_.present_queue);
 
+    init_back_buffers();
     init_swapchain();
 
     game_.attach_shell(*this);
@@ -48,6 +49,17 @@ void Shell::cleanup_vk()
     game_.detach_shell();
 
     vk::DestroySwapchainKHR(ctx_.dev, ctx_.swapchain, nullptr);
+
+    while (!ctx_.back_buffers.empty()) {
+        const auto &buf = ctx_.back_buffers.front();
+
+        vk::DestroySemaphore(ctx_.dev, buf.acquire_semaphore, nullptr);
+        vk::DestroySemaphore(ctx_.dev, buf.render_semaphore, nullptr);
+        vk::DestroyFence(ctx_.dev, buf.present_fence, nullptr);
+
+        ctx_.back_buffers.pop();
+    }
+
     vk::DestroyDevice(ctx_.dev, nullptr);
 
     vk::DestroySurfaceKHR(ctx_.instance, ctx_.surface, nullptr);
@@ -203,6 +215,30 @@ void Shell::init_dev()
     vk::assert_success(vk::CreateDevice(ctx_.physical_dev, &dev_info, nullptr, &ctx_.dev));
 }
 
+void Shell::init_back_buffers()
+{
+    VkSemaphoreCreateInfo sem_info = {};
+    sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fence_info = {};
+    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    // BackBuffer is used to track which swapchain image and its associated
+    // sync primitives are busy.  Having more BackBuffer's than swapchain
+    // images may allows us to replace CPU wait on present_fence by GPU wait
+    // on acquire_semaphore.
+    const int back_buffer_count = 1 + 1;
+    for (int i = 0; i < back_buffer_count; i++) {
+        BackBuffer buf = {};
+        vk::assert_success(vk::CreateSemaphore(ctx_.dev, &sem_info, nullptr, &buf.acquire_semaphore));
+        vk::assert_success(vk::CreateSemaphore(ctx_.dev, &sem_info, nullptr, &buf.render_semaphore));
+        vk::assert_success(vk::CreateFence(ctx_.dev, &fence_info, nullptr, &buf.present_fence));
+
+        ctx_.back_buffers.push(buf);
+    }
+}
+
 void Shell::init_swapchain()
 {
     std::vector<VkSurfaceFormatKHR> formats;
@@ -287,30 +323,43 @@ void Shell::add_game_time(float time)
     }
 }
 
-uint32_t Shell::acquire_back_buffer()
+void Shell::acquire_back_buffer()
 {
     // TODO workaround GPU hangs
     vk::DeviceWaitIdle(ctx_.dev);
 
-    uint32_t index;
-    vk::assert_success(vk::AcquireNextImageKHR(ctx_.dev, ctx_.swapchain, UINT64_MAX,
-            VK_NULL_HANDLE, VK_NULL_HANDLE, &index));
+    auto &buf = ctx_.back_buffers.front();
 
-    return index;
+    // wait until acquire and render semaphores are waited/unsignaled
+    vk::assert_success(vk::WaitForFences(ctx_.dev, 1, &buf.present_fence,
+                true, UINT64_MAX));
+    // reset the fence
+    vk::assert_success(vk::ResetFences(ctx_.dev, 1, &buf.present_fence));
+
+    vk::assert_success(vk::AcquireNextImageKHR(ctx_.dev, ctx_.swapchain,
+                UINT64_MAX, buf.acquire_semaphore, VK_NULL_HANDLE,
+                &buf.image_index));
+
+    ctx_.acquired_back_buffer = buf;
+    ctx_.back_buffers.pop();
 }
 
-void Shell::present_back_buffer(uint32_t image_index)
+void Shell::present_back_buffer()
 {
-    game_.on_frame(game_time_ / game_tick_, image_index);
+    const auto &buf = ctx_.acquired_back_buffer;
+
+    game_.on_frame(game_time_ / game_tick_);
 
     VkPresentInfoKHR present_info = {};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = &buf.render_semaphore;
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &ctx_.swapchain;
-    present_info.pImageIndices = &image_index;
-
-    // TODO semaphores
-    assert(ctx_.game_queue_family == ctx_.present_queue_family);
+    present_info.pImageIndices = &buf.image_index;
 
     vk::assert_success(vk::QueuePresentKHR(ctx_.present_queue, &present_info));
+
+    vk::assert_success(vk::QueueSubmit(ctx_.present_queue, 0, nullptr, buf.present_fence));
+    ctx_.back_buffers.push(buf);
 }

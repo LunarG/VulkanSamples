@@ -237,12 +237,12 @@ void ShellXCB::run()
 
         assert(act == DRAW);
 
-        uint32_t image_index = acquire_back_buffer();
+        acquire_back_buffer();
 
         float t = get_time();
         add_game_time(t - current_time);
 
-        present_back_buffer(image_index);
+        present_back_buffer();
 
         current_time = t;
         profile_present_count++;
