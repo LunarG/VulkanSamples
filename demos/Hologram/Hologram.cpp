@@ -106,7 +106,7 @@ void Hologram::create_render_pass()
     attachment.samples = VK_SAMPLE_COUNT_1_BIT;
     attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     VkAttachmentReference attachment_ref = {};
@@ -118,12 +118,33 @@ void Hologram::create_render_pass()
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &attachment_ref;
 
+    std::array<VkSubpassDependency, 2> subpass_deps;
+    subpass_deps[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    subpass_deps[0].dstSubpass = 0;
+    subpass_deps[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    subpass_deps[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpass_deps[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    subpass_deps[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                                    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    subpass_deps[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    subpass_deps[1].srcSubpass = 0;
+    subpass_deps[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    subpass_deps[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpass_deps[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    subpass_deps[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                                    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    subpass_deps[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    subpass_deps[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
     VkRenderPassCreateInfo render_pass_info = {};
     render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     render_pass_info.attachmentCount = 1;
     render_pass_info.pAttachments = &attachment;
     render_pass_info.subpassCount = 1;
     render_pass_info.pSubpasses = &subpass;
+    render_pass_info.dependencyCount = subpass_deps.size();
+    render_pass_info.pDependencies = subpass_deps.data();
 
     vk::assert_success(vk::CreateRenderPass(dev_, &render_pass_info, nullptr, &render_pass_));
 
@@ -329,8 +350,7 @@ void Hologram::attach_swapchain()
     const Shell::Context &ctx = shell_->context();
 
     prepare_viewport(ctx.extent);
-    prepare_images(ctx.swapchain);
-    prepare_framebuffers();
+    prepare_framebuffers(ctx.swapchain);
 }
 
 void Hologram::detach_swapchain()
@@ -368,45 +388,12 @@ void Hologram::prepare_viewport(const VkExtent2D &extent)
     view_projection_ = projection * view;
 }
 
-void Hologram::prepare_images(VkSwapchainKHR swapchain)
+void Hologram::prepare_framebuffers(VkSwapchainKHR swapchain)
 {
     // get swapchain images
     vk::get(dev_, swapchain, images_);
 
-    // transition to PRESENT_SRC_KHR
-    VkImageMemoryBarrier img_barrier = {};
-    img_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    img_barrier.srcAccessMask = 0;
-    img_barrier.dstAccessMask = 0;
-    img_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    img_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    img_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    img_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    img_barrier.subresourceRange.levelCount = 1;
-    img_barrier.subresourceRange.layerCount = 1;
-
-    std::vector<VkImageMemoryBarrier> img_barriers;
-    img_barriers.reserve(images_.size());
-    for (auto img : images_) {
-        img_barrier.image = img;
-        img_barriers.push_back(img_barrier);
-    }
-
-    vk::BeginCommandBuffer(primary_cmd_, &primary_cmd_begin_info_);
-    vk::CmdPipelineBarrier(primary_cmd_,
-            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-            VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr,
-            img_barriers.size(), img_barriers.data());
-    vk::EndCommandBuffer(primary_cmd_);
-
-    vk::QueueSubmit(queue_, 1, &primary_cmd_submit_info_, VK_NULL_HANDLE);
-}
-
-void Hologram::prepare_framebuffers()
-{
     assert(framebuffers_.empty());
-
     image_views_.reserve(images_.size());
     framebuffers_.reserve(images_.size());
     for (auto img : images_) {
@@ -473,7 +460,7 @@ void Hologram::draw_objects(Worker &worker)
     VkCommandBufferInheritanceInfo inherit_info = {};
     inherit_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
     inherit_info.renderPass = render_pass_;
-    inherit_info.framebuffer = framebuffers_[worker.fb_];
+    inherit_info.framebuffer = worker.fb_;
 
     VkCommandBufferBeginInfo begin_info = {};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -520,7 +507,7 @@ void Hologram::on_frame(float frame_pred, int fb)
 {
     // ignore frame_pred
     for (auto &worker : workers_)
-        worker->draw_objects(fb);
+        worker->draw_objects(framebuffers_[fb]);
 
     VkResult res = vk::BeginCommandBuffer(primary_cmd_, &primary_cmd_begin_info_);
 
@@ -584,7 +571,7 @@ void Hologram::Worker::step_objects()
     state_cv_.notify_one();
 }
 
-void Hologram::Worker::draw_objects(int fb)
+void Hologram::Worker::draw_objects(VkFramebuffer fb)
 {
     {
         std::lock_guard<std::mutex> lock(mutex_);

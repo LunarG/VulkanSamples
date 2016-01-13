@@ -44,7 +44,7 @@ private:
         void start();
         void stop();
         void step_objects();
-        void draw_objects(int fb);
+        void draw_objects(VkFramebuffer fb);
         void wait_idle();
 
         Hologram &hologram_;
@@ -55,7 +55,7 @@ private:
         VkCommandBuffer cmd_;
 
         float object_time_;
-        int fb_;
+        VkFramebuffer fb_;
 
     private:
         enum State {
@@ -130,8 +130,7 @@ private:
 
     // called by attach_swapchain
     void prepare_viewport(const VkExtent2D &extent);
-    void prepare_images(VkSwapchainKHR swapchain);
-    void prepare_framebuffers();
+    void prepare_framebuffers(VkSwapchainKHR swapchain);
 
     VkExtent2D extent_;
     VkViewport viewport_;
