@@ -32,7 +32,7 @@ Show how to enable validation layers and provide callback
 #include <cstdlib>
 #include <util_init.hpp>
 
-VkBool32 dbgFunc(
+VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(
     VkDebugReportFlagsEXT               msgFlags,
     VkDebugReportObjectTypeEXT          objType,
     uint64_t                            srcObject,
