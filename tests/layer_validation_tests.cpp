@@ -5369,51 +5369,6 @@ TEST_F(VkLayerTest, CreateImageLimitsViolationWidth)
     }
 }
 
-TEST_F(VkLayerTest, CreateImageResourceSizeViolation)
-{
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "CreateImage resource size exceeds allowable maximum");
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    // Create an image
-    VkImage image;
-
-    const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
-    const int32_t  tex_width       = 32;
-    const int32_t  tex_height      = 32;
-
-    VkImageCreateInfo image_create_info = {};
-    image_create_info.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.pNext         = NULL;
-    image_create_info.imageType     = VK_IMAGE_TYPE_2D;
-    image_create_info.format        = tex_format;
-    image_create_info.extent.width  = tex_width;
-    image_create_info.extent.height = tex_height;
-    image_create_info.extent.depth  = 1;
-    image_create_info.mipLevels     = 1;
-    image_create_info.arrayLayers     = 1;
-    image_create_info.samples       = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling        = VK_IMAGE_TILING_LINEAR;
-    image_create_info.usage         = VK_IMAGE_USAGE_SAMPLED_BIT;
-    image_create_info.flags         = 0;
-
-    // Introduce error by sending down individually allowable values that result in a surface size
-    // exceeding the device maximum
-    image_create_info.extent.width  = 8192;
-    image_create_info.extent.height = 8192;
-    image_create_info.extent.depth  = 16;
-    image_create_info.arrayLayers     = 4;
-    image_create_info.samples       = VK_SAMPLE_COUNT_2_BIT;
-    image_create_info.format        = VK_FORMAT_R8G8B8A8_UNORM;
-    vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
-
-    if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not receive Error 'CreateImage resource size exceeds allowable maximum'";
-        m_errorMonitor->DumpFailureMsgs();
-    }
-}
-
 TEST_F(VkLayerTest, UpdateBufferAlignment)
 {
     uint32_t updateData[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
@@ -5729,6 +5684,7 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch)
     ASSERT_VK_SUCCESS(err);
 
         image_create_info.imageType = VK_IMAGE_TYPE_1D;
+        image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
