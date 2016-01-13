@@ -1795,7 +1795,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
     layer_data_map.erase(pTable);
 
     pc_instance_table_map.erase(key);
-    assert(pc_instance_table_map.size() == 0 && "Should not have any instance mappings hanging around");
 }
 
 bool PostEnumeratePhysicalDevices(
@@ -2067,7 +2066,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(
 
     get_dispatch_table(pc_device_table_map, device)->DestroyDevice(device, pAllocator);
     pc_device_table_map.erase(key);
-    assert(pc_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");
 }
 
 bool PostGetDeviceQueue(

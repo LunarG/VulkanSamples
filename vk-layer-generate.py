@@ -1657,7 +1657,6 @@ class ObjectTrackerSubcommand(Subcommand):
         gedd_txt.append('    VkLayerDispatchTable *pDisp = get_dispatch_table(object_tracker_device_table_map, device);')
         gedd_txt.append('    pDisp->DestroyDevice(device, pAllocator);')
         gedd_txt.append('    object_tracker_device_table_map.erase(key);')
-        gedd_txt.append('    assert(object_tracker_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");')
         gedd_txt.append('')
         gedd_txt.append('}')
         gedd_txt.append('')
