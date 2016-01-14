@@ -4,7 +4,7 @@
         "name": "VK_LAYER_LUNARG_threading",
         "type": "GLOBAL",
         "library_path": "./libVkLayer_threading.so",
-        "api_version": "0.210.0",
+        "api_version": "1.0.1",
         "implementation_version": "1",
         "description": "LunarG Validation Layer",
         "instance_extensions": [

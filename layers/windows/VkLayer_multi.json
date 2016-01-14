@@ -4,7 +4,7 @@
         "name": "VK_LAYER_LUNARG_multi1",
         "type": "DEVICE",
         "library_path": ".\\VkLayer_multi.dll",
-        "api_version": "0.210.0",
+        "api_version": "1.0.1",
         "implementation_version": "1",
         "description": "LunarG Sample multiple layer per library",
         "functions" : {
@@ -15,7 +15,7 @@
         "name": "VK_LAYER_LUNARG_multi2",
         "type": "INSTANCE",
         "library_path": ".\\VkLayer_multi.dll",
-        "api_version": "0.210.0",
+        "api_version": "1.0.1",
         "implementation_version": "1",
         "description": "LunarG Sample multiple layer per library",
         "functions" : {
