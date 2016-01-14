@@ -19,6 +19,9 @@ public:
         int ticks_per_second;
         bool vsync;
         bool animate;
+
+        bool no_tick;
+        bool no_render;
     };
     const Settings &settings() const { return settings_; }
 
@@ -53,6 +56,9 @@ protected:
         settings_.vsync = true;
         settings_.animate = true;
 
+        settings_.no_tick = false;
+        settings_.no_render = false;
+
         parse_args(args);
     }
 
@@ -71,6 +77,10 @@ private:
             } else if (*it == "-h") {
                 ++it;
                 settings_.initial_height = std::stoi(*it);
+            } else if (*it == "-nt") {
+                settings_.no_tick = true;
+            } else if (*it == "-nr") {
+                settings_.no_render = true;
             }
         }
     }
