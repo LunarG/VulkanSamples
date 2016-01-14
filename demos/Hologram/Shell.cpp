@@ -321,7 +321,8 @@ void Shell::resize_swapchain(int32_t width_hint, int32_t height_hint)
 
 void Shell::add_game_time(float time)
 {
-    game_time_ += time;
+    if (!settings_.no_tick)
+        game_time_ += time;
 
     while (game_time_ >= game_tick_) {
         game_.on_tick();
@@ -351,12 +352,14 @@ void Shell::present_back_buffer()
 {
     const auto &buf = ctx_.acquired_back_buffer;
 
-    game_.on_frame(game_time_ / game_tick_);
+    if (!settings_.no_render)
+        game_.on_frame(game_time_ / game_tick_);
 
     VkPresentInfoKHR present_info = {};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &buf.render_semaphore;
+    present_info.pWaitSemaphores = (settings_.no_render) ?
+        &buf.acquire_semaphore : &buf.render_semaphore;
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &ctx_.swapchain;
     present_info.pImageIndices = &buf.image_index;
