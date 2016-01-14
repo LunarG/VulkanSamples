@@ -54,6 +54,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_VTX_INDEX_ALIGNMENT_ERROR,        // binding offset in vkCmdBindIndexBuffer() out of alignment based on indexType
     //DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order to generate png image
     DRAWSTATE_OUT_OF_MEMORY,                    // malloc failed
+    DRAWSTATE_INVALID_DESCRIPTOR_SET,           // Descriptor Set handle is unknown
     DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH,         // Type in layout vs. update are not the same
     DRAWSTATE_DESCRIPTOR_STAGEFLAGS_MISMATCH,   // StageFlags in layout are not the same throughout a single VkWriteDescriptorSet update
     DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS,  // Descriptors set for update out of bounds for corresponding layout section
@@ -97,7 +98,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_BUFFERINFO_DESCRIPTOR_ERROR,      // A Descriptor of *_[UNIFORM|STORAGE]_BUFFER_[DYNAMIC] type is being updated with an invalid or bad BufferView
     DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW,          // At draw time the dynamic offset combined with buffer offset and range oversteps size of buffer
     DRAWSTATE_DOUBLE_DESTROY,                   // Destroying an object twice
-    DRAWSTATE_OBJECT_INUSE,                     // Destroying an object in use by a command buffer
+    DRAWSTATE_OBJECT_INUSE,                     // Destroying or modifying an object in use by a command buffer
     DRAWSTATE_QUEUE_FORWARD_PROGRESS,           // Queue cannot guarantee forward progress
     DRAWSTATE_INVALID_UNIFORM_BUFFER_OFFSET,    // Dynamic Uniform Buffer Offsets violate device limit
     DRAWSTATE_INVALID_STORAGE_BUFFER_OFFSET,    // Dynamic Storage Buffer Offsets violate device limit
@@ -303,7 +304,9 @@ struct PIPELINE_LAYOUT_NODE {
     vector<VkPushConstantRange>    pushConstantRanges;
 };
 
-typedef struct _SET_NODE {
+class SET_NODE : public BASE_NODE {
+  public:
+    using BASE_NODE::in_use;
     VkDescriptorSet      set;
     VkDescriptorPool     pool;
     // Head of LL of all Update structs for this set
@@ -312,9 +315,10 @@ typedef struct _SET_NODE {
     uint32_t             descriptorCount;
     GENERIC_HEADER**     ppDescriptors; // Array where each index points to update node for its slot
     LAYOUT_NODE*         pLayout; // Layout for this set
-    struct _SET_NODE*    pNext;
+    struct SET_NODE*     pNext;
     vector<uint32_t>     dynamicOffsets; // one dynamic offset per dynamic descriptor
-} SET_NODE;
+    SET_NODE() : pUpdateStructs(NULL), ppDescriptors(NULL), pLayout(NULL), pNext(NULL) {};
+};
 
 typedef struct _DESCRIPTOR_POOL_NODE {
     VkDescriptorPool           pool;
@@ -510,6 +514,9 @@ typedef struct _GLOBAL_CB_NODE {
     VkSubpassContents            activeSubpassContents;
     uint32_t                     activeSubpass;
     VkFramebuffer                framebuffer;
+    // Capture which sets are actually used by the shaders of this CB. This is union of all sets used by each Draw in CB
+    std::set<VkDescriptorSet>    activeSets;
+    // Keep running track of which sets are bound to which set# at any given time
     vector<VkDescriptorSet>      boundDescriptorSets; // Index is set# that given set is bound to
     vector<VkEvent>              waitedEvents;
     unordered_map<QueryObject, vector<VkEvent> > waitedEventsBeforeQueryReset;

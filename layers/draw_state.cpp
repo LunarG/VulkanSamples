@@ -1478,6 +1478,8 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
                         "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u is not compatible with overlapping VkPipelineLayout %#" PRIxLEAST64 " due to: %s",
                             (uint64_t)setHandle, setIndex, (uint64_t)pPipe->graphicsPipelineCI.layout, errorString.c_str());
                 } else { // Valid set is bound and layout compatible, validate that it's updated and verify any dynamic offsets
+                    // Add this set as a valid set for this CB
+                    pCB->activeSets.insert(pCB->boundDescriptorSets[setIndex]);
                     // Pull the set node
                     SET_NODE* pSet = getSetNode(my_data, pCB->boundDescriptorSets[setIndex]);
                     // Make sure set has been updated
@@ -2190,7 +2192,24 @@ static VkBool32 validateUpdateContents(const layer_data* my_data, const VkWriteD
     }
     return skipCall;
 }
-
+// Validate that given set is valid and that it's not being used by an in-flight CmdBuffer
+// func_str is the name of the calling function
+// Return VK_FALSE if no errors occur
+// Return VK_TRUE if validation error occurs and callback returns VK_TRUE (to skip upcoming API call down the chain)
+VkBool32 validateIdleDescriptorSet(const layer_data* my_data, VkDescriptorSet set, std::string func_str) {
+    VkBool32 skip_call = VK_FALSE;
+    auto set_node = my_data->setMap.find(set);
+    if (set_node == my_data->setMap.end()) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, reinterpret_cast<uint64_t>(set), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
+                             "Cannot call %s() on descriptor set %" PRIxLEAST64 " that has not been allocated.", func_str.c_str(), reinterpret_cast<uint64_t>(set));
+    } else {
+        if (set_node->second->in_use.load()) {
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, reinterpret_cast<uint64_t>(set), __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
+                                 "Cannot call %s() on descriptor set %" PRIxLEAST64 " that is in use by a command buffer.", func_str.c_str(), reinterpret_cast<uint64_t>(set));
+        }
+    }
+    return skip_call;
+}
 // update DS mappings based on write and copy update arrays
 static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pWDS, uint32_t descriptorCopyCount, const VkCopyDescriptorSet* pCDS)
 {
@@ -2204,6 +2223,9 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
     for (i=0; i < descriptorWriteCount; i++) {
         VkDescriptorSet ds = pWDS[i].dstSet;
         SET_NODE* pSet = my_data->setMap[ds];
+        // Set being updated cannot be in-flight
+        if ((skipCall = validateIdleDescriptorSet(my_data, ds, "VkUpdateDescriptorSets")) == VK_TRUE)
+            return skipCall;
         GENERIC_HEADER* pUpdate = (GENERIC_HEADER*) &pWDS[i];
         pLayout = pSet->pLayout;
         // First verify valid update struct
@@ -2214,7 +2236,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
         binding = pWDS[i].dstBinding;
         // Make sure that layout being updated has the binding being updated
         if (pLayout->bindings.find(binding) == pLayout->bindings.end()) {
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) ds, __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, reinterpret_cast<uint64_t>(ds), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
                     "Descriptor Set %" PRIu64 " does not have binding to match update binding %u for update type %s!", reinterpret_cast<uint64_t>(ds), binding, string_VkStructureType(pUpdate->sType));
         } else {
             // Next verify that update falls within size of given binding
@@ -2261,6 +2283,9 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
         // For each copy make sure that update falls within given layout and that types match
         pSrcSet = my_data->setMap[pCDS[i].srcSet];
         pDstSet = my_data->setMap[pCDS[i].dstSet];
+        // Set being updated cannot be in-flight
+        if ((skipCall = validateIdleDescriptorSet(my_data, pDstSet->set, "VkUpdateDescriptorSets")) == VK_TRUE)
+            return skipCall;
         pSrcLayout = pSrcSet->pLayout;
         pDstLayout = pDstSet->pLayout;
         // Validate that src binding is valid for src set layout
@@ -2571,6 +2596,7 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->lastBoundPipelineLayout = 0;
         pCB->activeRenderPass = 0;
         pCB->activeSubpass = 0;
+        pCB->activeSets.clear();
         pCB->framebuffer = 0;
         pCB->boundDescriptorSets.clear();
         pCB->drawData.clear();
@@ -3061,6 +3087,24 @@ VkBool32 ValidateCmdBufImageLayouts(VkCommandBuffer cmdBuffer) {
     }
     return skip_call;
 }
+// Descriptor sets are unique vs. other resources in that they may be consumed at bind time:
+//  From spec section on vkCmdBindDescriptorSets - The descriptor set contents bound by a call
+//   to vkCmdBindDescriptorSets may be consumed during host execution of the command, or during
+//   shader execution of the resulting draws, or any time in between.
+VkBool32 validateAndIncrementDescriptorSets(layer_data* my_data, GLOBAL_CB_NODE* pCB) {
+    VkBool32 skip_call = VK_FALSE;
+    // Verify that any active sets for this CB are valid and mark them in use
+    for (auto set : pCB->activeSets) {
+        auto setNode = my_data->setMap.find(set);
+        if (setNode == my_data->setMap.end()) {
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, reinterpret_cast<uint64_t>(set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
+                "Cannot submit cmd buffer using deleted descriptor set %" PRIu64 ".", reinterpret_cast<uint64_t>(set));
+        } else {
+            setNode->second->in_use.fetch_add(1);
+        }
+    }
+    return skip_call;
+}
 
 VkBool32 validateAndIncrementResources(layer_data* my_data, GLOBAL_CB_NODE* pCB) {
     VkBool32 skip_call = VK_FALSE;
@@ -3068,7 +3112,7 @@ VkBool32 validateAndIncrementResources(layer_data* my_data, GLOBAL_CB_NODE* pCB)
         for (auto buffer : drawDataElement.buffers) {
             auto buffer_data = my_data->bufferMap.find(buffer);
             if (buffer_data == my_data->bufferMap.end()) {
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, 0, DRAWSTATE_INVALID_BUFFER, "DS",
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, reinterpret_cast<uint64_t>(buffer), __LINE__, DRAWSTATE_INVALID_BUFFER, "DS",
                                      "Cannot submit cmd buffer using deleted buffer %" PRIu64 ".", reinterpret_cast<uint64_t>(buffer));
             } else {
                 buffer_data->second.in_use.fetch_add(1);
@@ -3086,6 +3130,12 @@ void decrementResources(layer_data* my_data, VkCommandBuffer cmdBuffer) {
             if (buffer_data != my_data->bufferMap.end()) {
                 buffer_data->second.in_use.fetch_sub(1);
             }
+        }
+    }
+    for (auto set : pCB->activeSets) {
+        auto setNode = my_data->setMap.find(set);
+        if (setNode != my_data->setMap.end()) {
+            setNode->second->in_use.fetch_sub(1);
         }
     }
     for (auto queryStatePair : pCB->queryToStateMap) {
@@ -3380,13 +3430,12 @@ VkBool32 validateIdleBuffer(const layer_data* my_data, VkBuffer buffer) {
     VkBool32 skip_call = VK_FALSE;
     auto buffer_data = my_data->bufferMap.find(buffer);
     if (buffer_data == my_data->bufferMap.end()) {
-        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, reinterpret_cast<uint64_t>(buffer), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
                              "Cannot free buffer %" PRIxLEAST64 " that has not been allocated.", reinterpret_cast<uint64_t>(buffer));
     } else {
         if (buffer_data->second.in_use.load()) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, reinterpret_cast<uint64_t>(buffer), __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
                                  "Cannot free buffer %" PRIxLEAST64 " that is in use by a command buffer.", reinterpret_cast<uint64_t>(buffer));
-
         }
     }
     return skip_call;
@@ -3492,7 +3541,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(VkDevice devi
     }
     return result;
 }
-
+// Destroy commandPool along with all of the commandBuffers allocated from that pool
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocationCallbacks* pAllocator)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -3907,12 +3956,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(VkDevice
                             "Out of memory while attempting to allocate SET_NODE in vkAllocateDescriptorSets()"))
                         return VK_ERROR_VALIDATION_FAILED_EXT;
                 } else {
-                    memset(pNewNode, 0, sizeof(SET_NODE));
                     // TODO : Pool should store a total count of each type of Descriptor available
                     //  When descriptors are allocated, decrement the count and validate here
                     //  that the count doesn't go below 0. One reset/free need to bump count back up.
                     // Insert set at head of Set LL for this pool
                     pNewNode->pNext = pPoolNode->pSets;
+                    pNewNode->in_use.store(0);
                     pPoolNode->pSets = pNewNode;
                     LAYOUT_NODE* pLayout = getLayoutNode(dev_data, pAllocateInfo->pSetLayouts[i]);
                     if (NULL == pLayout) {
@@ -3941,6 +3990,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFreeDescriptorSets(VkDevice dev
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    // Make sure that no sets being destroyed are in-flight
+    for (uint32_t i=0; i<count; ++i)
+        skipCall |= validateIdleDescriptorSet(dev_data, pDescriptorSets[i], "vkFreeDesriptorSets");
     DESCRIPTOR_POOL_NODE *pPoolNode = getPoolNode(dev_data, descriptorPool);
     if (pPoolNode && !(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT & pPoolNode->createInfo.flags)) {
         // Can't Free from a NON_FREE pool
@@ -4427,6 +4479,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                     skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t) commandBuffer, __LINE__, DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT, "DS",
                             "Attempting to bind %u descriptorSets with %u dynamic descriptors, but dynamicOffsetCount is %u. It should exactly match the number of dynamic descriptors.", setCount, totalDynamicDescriptors, dynamicOffsetCount);
                 }
+                validateAndIncrementDescriptorSets(dev_data, pCB);
             }
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdBindDescriptorSets()");
