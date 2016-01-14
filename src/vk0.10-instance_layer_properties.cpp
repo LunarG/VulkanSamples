@@ -69,9 +69,11 @@ int main(int argc, char **argv)
     std::cout << "Instance Layers:" << std::endl;
     for (uint32_t i = 0; i < instance_layer_count; i++) {
         VkLayerProperties *props = &vk_props[i];
+        uint32_t major, minor, patch;
         std::cout << props->layerName << ":" << std::endl;
-        std::cout << "\tVersion: " << props->specVersion << std::endl;
-        std::cout << "\tAPI Version: " << props->implementationVersion << std::endl;
+        extract_version(props->specVersion, major, minor, patch);
+        std::cout << "\tVersion: " << props->implementationVersion << std::endl;
+        std::cout << "\tAPI Version: " << "(" << major << "." << minor << "." << patch << ")"<< std::endl;
         std::cout << "\tDescription: " << props->description << std::endl;
         std::cout << std::endl << std::endl;
     }
