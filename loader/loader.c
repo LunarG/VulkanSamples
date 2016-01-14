@@ -98,7 +98,6 @@ loader_platform_thread_mutex loader_json_lock;
 // pointers to "terminator functions".
 const VkLayerInstanceDispatchTable instance_disp = {
     .GetInstanceProcAddr = vkGetInstanceProcAddr,
-    .CreateInstance = loader_CreateInstance,
     .DestroyInstance = loader_DestroyInstance,
     .EnumeratePhysicalDevices = loader_EnumeratePhysicalDevices,
     .GetPhysicalDeviceFeatures = loader_GetPhysicalDeviceFeatures,

@@ -156,9 +156,7 @@ typedef struct VkLayerDispatchTable_
 typedef struct VkLayerInstanceDispatchTable_
 {
     PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
-    PFN_vkCreateInstance CreateInstance;
     PFN_vkDestroyInstance DestroyInstance;
-    PFN_vkCreateDevice CreateDevice;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
     PFN_vkGetPhysicalDeviceFeatures GetPhysicalDeviceFeatures;
     PFN_vkGetPhysicalDeviceImageFormatProperties GetPhysicalDeviceImageFormatProperties;
