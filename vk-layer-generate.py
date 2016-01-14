@@ -1778,7 +1778,7 @@ class ObjectTrackerSubcommand(Subcommand):
                                    'CreateComputePipelines' : ['basePipelineHandle'],
                                    'BeginCommandBuffer' : ['renderPass', 'framebuffer'],
                                    'QueueSubmit' : ['fence'],
-                                   'AcquireNextImageKHR' : ['fence'],
+                                   'AcquireNextImageKHR' : ['fence', 'semaphore' ],
                                    'UpdateDescriptorSets' : ['pTexelBufferView'],
                                    'CreateSwapchainKHR' : ['oldSwapchain'],
                                   }
