@@ -2882,7 +2882,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
 
             lib_handle = loader_add_layer_lib(inst, "instance", layer_prop);
             if (!lib_handle)
-                continue;   // TODO what should we do in this case
+                continue;
             if ((fpGIPA = layer_prop->functions.get_instance_proc_addr) == NULL) {
                 if (layer_prop->functions.str_gipa == NULL || strlen(layer_prop->functions.str_gipa) == 0) {
                     fpGIPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetInstanceProcAddr");
@@ -2891,8 +2891,6 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
                     fpGIPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, layer_prop->functions.str_gipa);
                 if (!fpGIPA) {
                     loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Failed to find vkGetInstanceProcAddr in layer %s", layer_prop->lib_name);
-
-                    /* TODO: Should we return nextObj, nextGPA to previous? or decrement layer_list count*/
                     continue;
                 }
             }
@@ -3096,7 +3094,7 @@ VkResult loader_create_device_chain(
 
             lib_handle = loader_add_layer_lib(inst, "device", layer_prop);
             if (!lib_handle)
-                continue;   // TODO what should we do in this case
+                continue;
             if ((fpGIPA = layer_prop->functions.get_instance_proc_addr) == NULL) {
                 if (layer_prop->functions.str_gipa == NULL || strlen(layer_prop->functions.str_gipa) == 0) {
                     fpGIPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetInstanceProcAddr");
@@ -3105,8 +3103,6 @@ VkResult loader_create_device_chain(
                     fpGIPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, layer_prop->functions.str_gipa);
                 if (!fpGIPA) {
                     loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Failed to find vkGetInstanceProcAddr in layer %s", layer_prop->lib_name);
-
-                    /* TODO: Should we return nextObj, nextGPA to previous? or decrement layer_list count*/
                     continue;
                 }
             }
@@ -3118,8 +3114,6 @@ VkResult loader_create_device_chain(
                     fpGDPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, layer_prop->functions.str_gdpa);
                 if (!fpGDPA) {
                     loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Failed to find vkGetDeviceProcAddr in layer %s", layer_prop->lib_name);
-
-                    /* TODO: Should we return nextObj, nextGPA to previous? or decrement layer_list count*/
                     continue;
                 }
             }

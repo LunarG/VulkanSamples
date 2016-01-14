@@ -187,7 +187,6 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
         *pInstance = created_instance;
 
         /*
-         * TODO: This can go away now?
          * Finally have the layers in place and everyone has seen
          * the CreateInstance command go by. This allows the layer's
          * GetInstanceProcAddr functions to return valid extension functions
