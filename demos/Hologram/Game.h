@@ -53,18 +53,27 @@ protected:
         settings_.vsync = true;
         settings_.animate = true;
 
-        for (auto it = args.begin(); it != args.end(); ++it) {
-            if (*it == "-b")
-                settings_.vsync = false;
-            else if (*it == "-w")
-                settings_.initial_width = std::stoi(*(it + 1));
-            else if (*it == "-h")
-                settings_.initial_height = std::stoi(*(it + 1));
-        }
+        parse_args(args);
     }
 
     Settings settings_;
     Shell *shell_;
+
+private:
+    void parse_args(const std::vector<std::string> &args)
+    {
+        for (auto it = args.begin(); it != args.end(); ++it) {
+            if (*it == "-b") {
+                settings_.vsync = false;
+            } else if (*it == "-w") {
+                ++it;
+                settings_.initial_width = std::stoi(*it);
+            } else if (*it == "-h") {
+                ++it;
+                settings_.initial_height = std::stoi(*it);
+            }
+        }
+    }
 };
 
 #endif // GAME_H
