@@ -3214,7 +3214,6 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateInstance(
             {
                 ptr_instance->icds = ptr_instance->icds->next;
                 loader_icd_destroy(ptr_instance, icd);
-                icd->instance = VK_NULL_HANDLE;
                 loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                         "ICD ignored: failed to CreateInstance and find entrypoints with ICD");
             }

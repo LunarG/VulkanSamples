@@ -181,17 +181,18 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     debug_report_create_instance(ptr_instance, pCreateInfo);
 
 
-    *pInstance = (VkInstance) ptr_instance;
+    res = ptr_instance->disp->CreateInstance(pCreateInfo, pAllocator, &ptr_instance);
 
-    res = ptr_instance->disp->CreateInstance(pCreateInfo, pAllocator, pInstance);
-
-    /*
-     * Finally have the layers in place and everyone has seen
-     * the CreateInstance command go by. This allows the layer's
-     * GetInstanceProcAddr functions to return valid extension functions
-     * if enabled.
-     */
-    loader_activate_instance_layer_extensions(ptr_instance, *pInstance);
+    if (res == VK_SUCCESS) {
+        *pInstance = (VkInstance) ptr_instance;
+        /*
+         * Finally have the layers in place and everyone has seen
+         * the CreateInstance command go by. This allows the layer's
+         * GetInstanceProcAddr functions to return valid extension functions
+         * if enabled.
+         */
+        loader_activate_instance_layer_extensions(ptr_instance, *pInstance);
+    }
     /* Remove temporary debug_report callback */
     util_DestroyDebugReportCallback(ptr_instance, instance_callback, pAllocator);
 
