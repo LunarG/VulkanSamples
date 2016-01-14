@@ -22,6 +22,7 @@ public:
 
         bool no_tick;
         bool no_render;
+        bool no_present;
     };
     const Settings &settings() const { return settings_; }
 
@@ -61,6 +62,7 @@ protected:
 
         settings_.no_tick = false;
         settings_.no_render = false;
+        settings_.no_present = false;
 
         parse_args(args);
     }
@@ -84,6 +86,8 @@ private:
                 settings_.no_tick = true;
             } else if (*it == "-nr") {
                 settings_.no_render = true;
+            } else if (*it == "-np") {
+                settings_.no_present = true;
             }
         }
     }

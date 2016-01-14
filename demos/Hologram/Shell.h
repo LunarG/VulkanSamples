@@ -82,6 +82,8 @@ private:
     void init_back_buffers();
     void init_swapchain();
 
+    void fake_present();
+
     Context ctx_;
 
     const float game_tick_;

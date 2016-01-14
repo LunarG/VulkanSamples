@@ -334,6 +334,11 @@ void Shell::add_game_time(float time)
 
 void Shell::acquire_back_buffer()
 {
+    // acquire just once when not presenting
+    if (settings_.no_present &&
+        ctx_.acquired_back_buffer.acquire_semaphore != VK_NULL_HANDLE)
+        return;
+
     auto &buf = ctx_.back_buffers.front();
 
     // wait until acquire and render semaphores are waited/unsignaled
@@ -357,6 +362,11 @@ void Shell::present_back_buffer()
     if (!settings_.no_render)
         game_.on_frame(game_time_ / game_tick_);
 
+    if (settings_.no_present) {
+        fake_present();
+        return;
+    }
+
     VkPresentInfoKHR present_info = {};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.waitSemaphoreCount = 1;
@@ -370,4 +380,28 @@ void Shell::present_back_buffer()
 
     vk::assert_success(vk::QueueSubmit(ctx_.present_queue, 0, nullptr, buf.present_fence));
     ctx_.back_buffers.push(buf);
+}
+
+void Shell::fake_present()
+{
+    const auto &buf = ctx_.acquired_back_buffer;
+
+    assert(settings_.no_present);
+
+    // wait render semaphore and signal acquire semaphore
+    if (!settings_.no_render) {
+        VkPipelineStageFlags stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        VkSubmitInfo submit_info = {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.waitSemaphoreCount = 1;
+        submit_info.pWaitSemaphores = &buf.render_semaphore;
+        submit_info.pWaitDstStageMask = &stage;
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = &buf.acquire_semaphore;
+        vk::assert_success(vk::QueueSubmit(ctx_.game_queue, 1, &submit_info, VK_NULL_HANDLE));
+    }
+
+    // push the buffer back just once for Shell::cleanup_vk
+    if (buf.acquire_semaphore != ctx_.back_buffers.back().acquire_semaphore)
+        ctx_.back_buffers.push(buf);
 }
