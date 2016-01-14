@@ -731,7 +731,7 @@ object_type_to_string(
            return "image";
            break;
         case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
-           return "image";
+           return "buffer";
            break;
         case VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT:
            return "swapchain";
