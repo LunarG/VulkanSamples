@@ -1513,6 +1513,9 @@ initializeAndTrackMemory(
         if (memProps.memoryTypes[index].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
             mem_element->second.pData = 0;
         } else {
+            if (size == VK_WHOLE_SIZE) {
+                size = mem_element->second.allocInfo.allocationSize;
+            }
             mem_element->second.pData = malloc(2 * size);
             memset(mem_element->second.pData, NoncoherentMemoryFillValue, 2 * size);
             *ppData = static_cast<char*>(mem_element->second.pData) + (size / 2);
