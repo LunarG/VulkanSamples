@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 
         std::cout << "apiVersion: ";
         std::cout << ((properties.apiVersion >> 22) & 0xfff) << '.'; // Major.
-        std::cout << ((properties.apiVersion >> 12) & 0xfff) << '.'; // Minor.
+        std::cout << ((properties.apiVersion >> 12) & 0x3ff) << '.'; // Minor.
         std::cout << (properties.apiVersion & 0xfff); // Patch.
         std::cout << '\n';
 
