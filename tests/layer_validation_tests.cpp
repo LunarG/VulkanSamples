@@ -4815,6 +4815,66 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed)
     }
 }
 
+TEST_F(VkLayerTest, CreatePipelineAttribLocationMismatch)
+{
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERF_WARN_BIT_EXT,
+        "location 0 not consumed by VS");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkVertexInputBindingDescription input_binding;
+    memset(&input_binding, 0, sizeof(input_binding));
+
+    VkVertexInputAttributeDescription input_attrib;
+    memset(&input_attrib, 0, sizeof(input_attrib));
+    input_attrib.format = VK_FORMAT_R32_SFLOAT;
+
+    char const *vsSource =
+        "#version 400\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=1) in float x;\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   gl_Position = vec4(x);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 400\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    pipe.AddVertexInputBindings(&input_binding, 1);
+    pipe.AddVertexInputAttribs(&input_attrib, 1);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        m_errorMonitor->DumpFailureMsgs();
+        FAIL() << "Did not receive Warning 'location 0 not consumed by VS'";
+    }
+}
+
 TEST_F(VkLayerTest, CreatePipelineAttribNotProvided)
 {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,

@@ -881,14 +881,14 @@ validate_vi_against_vs_inputs(layer_data *my_data, VkDevice dev, VkPipelineVerte
         bool b_at_end = inputs.size() == 0  || it_b == inputs.end();
         auto a_first = a_at_end ? 0 : it_a->first;
         auto b_first = b_at_end ? 0 : it_b->first;
-        if (b_at_end || a_first < b_first) {
+        if (!a_at_end && (b_at_end || a_first < b_first)) {
             if (log_msg(my_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                     "Vertex attribute at location %d not consumed by VS", a_first)) {
                 pass = false;
             }
             it_a++;
         }
-        else if (a_at_end || b_first < a_first) {
+        else if (!b_at_end && (a_at_end || b_first < a_first)) {
             if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
                     "VS consumes input at location %d but not provided", b_first)) {
                 pass = false;
