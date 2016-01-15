@@ -150,7 +150,7 @@ int main(int argc, char **argv)
     // Set up our push constant range, which mirrors the declaration of
     const unsigned push_constant_range_count = 1;
     VkPushConstantRange push_constant_ranges[push_constant_range_count] = {};
-    push_constant_ranges[0].stageFlags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    push_constant_ranges[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constant_ranges[0].offset = 0;
     push_constant_ranges[0].size = 8;
 
