@@ -11,6 +11,7 @@
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 
+#include "Animation.h"
 #include "Path.h"
 #include "Game.h"
 
@@ -76,6 +77,7 @@ private:
 
     struct Object {
         int mesh;
+        Animation animation;
         Path path;
 
         glm::mat4 model;
