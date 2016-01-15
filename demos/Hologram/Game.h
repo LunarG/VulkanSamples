@@ -39,6 +39,7 @@ public:
         KEY_ESC,
         KEY_UP,
         KEY_DOWN,
+        KEY_SPACE,
     };
     virtual void on_key(Key key) {}
     virtual void on_tick() {}

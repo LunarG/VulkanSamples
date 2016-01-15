@@ -182,6 +182,9 @@ void ShellXCB::handle_event(const xcb_generic_event_t *ev)
             case 116:
                 key = Game::KEY_DOWN;
                 break;
+            case 65:
+                key = Game::KEY_SPACE;
+                break;
             default:
                 key = Game::KEY_UNKNOWN;
                 break;

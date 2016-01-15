@@ -144,6 +144,7 @@ private:
     // called mostly by on_key
     void update_projection();
 
+    bool paused_;
     glm::vec3 eye_pos_;
     glm::mat4 view_projection_;
 

@@ -10,7 +10,7 @@ Hologram::Hologram(const std::vector<std::string> &args)
     : Game("Hologram", args), random_dev_(), multithread_(true),
       render_pass_clear_value_(), render_pass_begin_info_(),
       primary_cmd_begin_info_(), primary_cmd_submit_info_(),
-      eye_pos_(8.0f)
+      paused_(false), eye_pos_(8.0f)
 {
     for (auto it = args.begin(); it != args.end(); ++it) {
         if (*it == "-s")
@@ -511,6 +511,9 @@ void Hologram::on_key(Key key)
         eye_pos_ += glm::vec3(0.05f);
         update_projection();
         break;
+    case KEY_SPACE:
+        paused_ = !paused_;
+        break;
     default:
         break;
     }
@@ -518,6 +521,9 @@ void Hologram::on_key(Key key)
 
 void Hologram::on_tick()
 {
+    if (paused_)
+        return;
+
     for (auto &worker : workers_)
         worker->step_objects();
 }
