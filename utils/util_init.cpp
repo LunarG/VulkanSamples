@@ -1627,7 +1627,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth, VkBool32 in
     pipeline.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipeline.pNext               = NULL;
     pipeline.layout              = info.pipeline_layout;
-    pipeline.basePipelineHandle  = 0;
+    pipeline.basePipelineHandle  = VK_NULL_HANDLE;
     pipeline.basePipelineIndex   = 0;
     pipeline.flags               = 0;
     pipeline.pVertexInputState   = include_vi?&vi:NULL;
