@@ -238,7 +238,7 @@ int main(int argc, char **argv)
     pipeline.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipeline.pNext               = NULL;
     pipeline.layout              = info.pipeline_layout;
-    pipeline.basePipelineHandle  = 0;
+    pipeline.basePipelineHandle  = VK_NULL_HANDLE;
     pipeline.basePipelineIndex   = 0;
 
     // Specify that we will be creating a derivative of this pipeline.
@@ -298,6 +298,7 @@ int main(int argc, char **argv)
     // Modify pipeline info to reflect derivation
     pipeline.flags = VK_PIPELINE_CREATE_DERIVATIVE_BIT;
     pipeline.basePipelineHandle = basePipeline;
+    pipeline.basePipelineIndex = -1;
 
     // And create the derived pipeline, assigning to info.pipeline for use by later helpers
     res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &info.pipeline);
