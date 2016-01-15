@@ -166,10 +166,11 @@ int main(int argc, char **argv)
 
     /* We need to do the clear here instead of as a load op since all 3 threads share the */
     /* same pipeline / renderpass                                                         */
+    set_image_layout(info, info.buffers[info.current_buffer].image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     vkCmdClearColorImage(info.cmd,
-           info.buffers[info.current_buffer].image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+           info.buffers[info.current_buffer].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
            clear_color, 1, &srRange );
-
+    set_image_layout(info, info.buffers[info.current_buffer].image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = { info.cmd };
