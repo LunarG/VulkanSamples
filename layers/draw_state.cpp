@@ -545,6 +545,91 @@ struct interface_var {
     /* TODO: collect the name, too? Isn't required to be present. */
 };
 
+
+static void
+collect_interface_block_members(layer_data *my_data, VkDevice dev,
+                                shader_module const *src,
+                                std::map<uint32_t, interface_var> &out,
+                                std::map<uint32_t, interface_var> &builtins_out,
+                                std::unordered_map<unsigned, unsigned> const &blocks,
+                                bool is_array_of_verts,
+                                uint32_t id,
+                                uint32_t type_id)
+{
+    /* Walk down the type_id presented, trying to determine whether it's actually an interface block. */
+    std::unordered_map<unsigned, unsigned>::const_iterator type_def_it;
+    while (true) {
+
+        type_def_it = src->type_def_index.find(type_id);
+        if (type_def_it == src->type_def_index.end()) {
+            return; /* this is actually broken SPIR-V */
+        }
+
+        unsigned int const *code = (unsigned int const *)&src->words[type_def_it->second];
+        unsigned opcode = code[0] & 0x0ffffu;
+
+        if (opcode == spv::OpTypePointer) {
+            type_id = code[3];
+        }
+        else if (opcode == spv::OpTypeArray && is_array_of_verts) {
+            type_id = code[2];
+            is_array_of_verts = false;
+        }
+        else if (opcode == spv::OpTypeStruct) {
+            if (blocks.find(type_id) == blocks.end()) {
+                /* This isn't an interface block. */
+                return;
+            }
+            else {
+                /* We have found the correct type. Walk its members. */
+                break;
+            }
+        }
+        else {
+            /* not an interface block */
+            return;
+        }
+    }
+
+    /* Walk OpMemberDecorate for type_id. */
+    unsigned int const *code = (unsigned int const *)&src->words[0];
+    size_t size = src->words.size();
+    unsigned word = 5;
+    while (word < size) {
+
+        unsigned opcode = code[word] & 0x0ffffu;
+        unsigned oplen = (code[word] & 0xffff0000u) >> 16;
+
+        if (opcode == spv::OpMemberDecorate && code[word+1] == type_id) {
+            unsigned member_index = code[word+2];
+            unsigned member_type_id = code[type_def_it->second + 2 + member_index];
+
+            if (code[word+3] == spv::DecorationLocation) {
+                unsigned location = code[word+4];
+                unsigned num_locations = get_locations_consumed_by_type(src, member_type_id, false);
+                for (unsigned int offset = 0; offset < num_locations; offset++) {
+                    interface_var v;
+                    v.id = id;
+                    /* TODO: member index in interface_var too? */
+                    v.type_id = member_type_id;
+                    v.offset = offset;
+                    out[location + offset] = v;
+                }
+            }
+            else if (code[word+3] == spv::DecorationBuiltIn) {
+                unsigned builtin = code[word+4];
+                interface_var v;
+                v.id = id;
+                v.type_id = member_type_id;
+                v.offset = 0;
+                builtins_out[builtin] = v;
+            }
+        }
+
+        word += oplen;
+    }
+}
+
 static void
 collect_interface_by_location(layer_data *my_data, VkDevice dev,
                               shader_module const *src, spv::StorageClass sinterface,
@@ -557,6 +642,7 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
 
     std::unordered_map<unsigned, unsigned> var_locations;
     std::unordered_map<unsigned, unsigned> var_builtins;
+    std::unordered_map<unsigned, unsigned> blocks;
 
     unsigned word = 5;
     while (word < size) {
@@ -574,6 +660,10 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
 
             if (code[word+2] == spv::DecorationBuiltIn) {
                 var_builtins[code[word+1]] = code[word+3];
+            }
+
+            if (code[word+2] == spv::DecorationBlock) {
+                blocks[code[word+1]] = 1;
             }
         }
 
@@ -619,6 +709,11 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
                 v.type_id = type;
                 v.offset = 0;
                 builtins_out[builtin] = v;
+            }
+            else {
+                /* An interface block instance */
+                collect_interface_block_members(my_data, dev, src, out, builtins_out,
+                                                blocks, is_array_of_verts, id, type);
             }
         }
 
