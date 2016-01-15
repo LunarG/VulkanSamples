@@ -86,6 +86,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT,     // DescriptorSets bound with different number of dynamic descriptors that were included in dynamicOffsetCount
     DRAWSTATE_CLEAR_CMD_BEFORE_DRAW,            // Clear cmd issued before any Draw in CommandBuffer, should use RenderPass Ops instead
     DRAWSTATE_BEGIN_CB_INVALID_STATE,           // CB state at Begin call is bad. Can be Primary/Secondary CB created with mismatched FB/RP information or CB in RECORDING state
+    DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE,      // CmdBuffer is being used in violation of VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT rules (i.e. simultaneous use w/o that bit set)
     DRAWSTATE_INVALID_COMMAND_BUFFER_RESET,     // Attempting to call Reset (or Begin on recorded cmdBuffer) that was allocated from Pool w/o VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT bit set
     DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH,        // Count for viewports and scissors mismatch and/or state doesn't match count
     DRAWSTATE_INVALID_IMAGE_ASPECT,             // Image aspect is invalid for the current operation
@@ -524,6 +525,8 @@ typedef struct _GLOBAL_CB_NODE {
     unordered_map<VkImage, IMAGE_CMD_BUF_NODE> imageLayoutMap;
     vector<DRAW_DATA>            drawData;
     DRAW_DATA                    currentDrawData;
+    // If cmd buffer is primary, track secondary command buffers pending execution
+    std::unordered_set<VkCommandBuffer> secondaryCommandBuffers;
 } GLOBAL_CB_NODE;
 
 typedef struct _SWAPCHAIN_NODE {

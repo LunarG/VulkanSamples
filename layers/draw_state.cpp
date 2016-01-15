@@ -2605,6 +2605,7 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->waitedEvents.clear();
         pCB->waitedEventsBeforeQueryReset.clear();
         pCB->queryToStateMap.clear();
+        pCB->secondaryCommandBuffers.clear();
     }
 }
 
@@ -3184,17 +3185,26 @@ void trackCommandBuffers(layer_data* my_data, VkQueue queue, uint32_t cmdBufferC
         my_data->fenceMap[fence].priorFence = priorFence;
         my_data->fenceMap[fence].needsSignaled = true;
         for (uint32_t i = 0; i < cmdBufferCount; ++i) {
+            for (auto secondaryCmdBuffer : my_data->commandBufferMap[pCmdBuffers[i]]->secondaryCommandBuffers) {
+                my_data->fenceMap[fence].cmdBuffers.push_back(secondaryCmdBuffer);
+            }
             my_data->fenceMap[fence].cmdBuffers.push_back(pCmdBuffers[i]);
         }
     } else {
         if (queue_data != my_data->queueMap.end()) {
             for (uint32_t i = 0; i < cmdBufferCount; ++i) {
+                for (auto secondaryCmdBuffer : my_data->commandBufferMap[pCmdBuffers[i]]->secondaryCommandBuffers) {
+                   queue_data->second.untrackedCmdBuffers.push_back(secondaryCmdBuffer);
+                }
                 queue_data->second.untrackedCmdBuffers.push_back(pCmdBuffers[i]);
             }
         }
     }
     if (queue_data != my_data->queueMap.end()) {
         for (uint32_t i = 0; i < cmdBufferCount; ++i) {
+            for (auto secondaryCmdBuffer : my_data->commandBufferMap[pCmdBuffers[i]]->secondaryCommandBuffers) {
+                my_data->inFlightCmdBuffers.insert(secondaryCmdBuffer);
+            }
             my_data->inFlightCmdBuffers.insert(pCmdBuffers[i]);
         }
     }
@@ -3205,8 +3215,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
     VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = NULL;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-    // TODO : Any pCommandBuffers must have USAGE_SIMULTANEOUS_USE_BIT set or cannot already be executing on device
-    //    Same goes for any secondary CBs under the primary CB
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
         const VkSubmitInfo *submit = &pSubmits[submit_idx];
         for (uint32_t i=0; i < submit->waitSemaphoreCount; ++i) {
@@ -3231,7 +3239,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
             pCB = getCBNode(dev_data, submit->pCommandBuffers[i]);
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->submitCount++; // increment submit count
+            // Track in-use for resources off of primary and any secondary CBs
             skipCall |= validateAndIncrementResources(dev_data, pCB);
+            if (!pCB->secondaryCommandBuffers.empty()) {
+                for (auto secondaryCmdBuffer : pCB->secondaryCommandBuffers) {
+                    skipCall |= validateAndIncrementResources(dev_data, dev_data->commandBufferMap[secondaryCmdBuffer]);
+                }
+            }
             if ((pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) && (pCB->submitCount > 1)) {
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
                         "CB %#" PRIxLEAST64 " was begun w/ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set, but has been submitted %#" PRIxLEAST64 " times.",
@@ -3243,6 +3257,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
                         "You must call vkEndCommandBuffer() on CB %#" PRIxLEAST64 " before this call to vkQueueSubmit()!", reinterpret_cast<uint64_t>(pCB->commandBuffer));
                 loader_platform_thread_unlock_mutex(&globalLock);
                 return VK_ERROR_VALIDATION_FAILED_EXT;
+            }
+            // If USAGE_SIMULTANEOUS_USE_BIT not set then CB cannot already be executing on device
+            if (!(pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
+                if (dev_data->inFlightCmdBuffers.find(pCB->commandBuffer) != dev_data->inFlightCmdBuffers.end()) {
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
+                        "Attempt to simultaneously execute CB %#" PRIxLEAST64 " w/o VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!", reinterpret_cast<uint64_t>(pCB->commandBuffer));
+                }
             }
             loader_platform_thread_unlock_mutex(&globalLock);
         }
@@ -3314,6 +3335,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(VkQueue queue)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     decrementResources(dev_data, queue);
+    // TODO : Is this a bug? Can't clear all device CmdBuffers on QueueWaitIdle
     for (auto cmdBuffer : dev_data->inFlightCmdBuffers) {
         cleanInFlightCmdBuffer(dev_data, cmdBuffer);
     }
@@ -5869,6 +5891,22 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer 
                     }
                 }
             }
+            // Secondary cmdBuffers are considered pending execution starting w/ being recorded
+            if (!(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
+                if (dev_data->inFlightCmdBuffers.find(pSubCB->commandBuffer) != dev_data->inFlightCmdBuffers.end()) {
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
+                            "Attempt to simultaneously execute CB %#" PRIxLEAST64 " w/o VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!", reinterpret_cast<uint64_t>(pCB->commandBuffer));
+                }
+                if (pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT) {
+                    // Warn that non-simultaneous secondary cmd buffer renders primary non-simultaneous
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(pCommandBuffers[i]), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
+                            "vkCmdExecuteCommands(): Secondary Command Buffer (%#" PRIxLEAST64 ") does not have VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set and will cause primary command buffer (%#" PRIxLEAST64 ") to be treated as if it does not have VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set, even though it does.",
+                            reinterpret_cast<uint64_t>(pCommandBuffers[i]), reinterpret_cast<uint64_t>(pCB->commandBuffer));
+                    pCB->beginInfo.flags &= ~VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+                }
+            }
+            pCB->secondaryCommandBuffers.insert(pSubCB->commandBuffer);
+            dev_data->inFlightCmdBuffers.insert(pSubCB->commandBuffer);
         }
         skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdExecuteComands");
         skipCall |= addCmd(dev_data, pCB, CMD_EXECUTECOMMANDS, "vkCmdExecuteComands()");
