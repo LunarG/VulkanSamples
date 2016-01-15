@@ -2456,7 +2456,7 @@ class ThreadingSubcommand(Subcommand):
                          '    dispatch_key key = get_dispatch_key(instance);\n'
                          '    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(threading_instance_table_map, %s);\n' % proto.params[0].name +
                          '    %spInstanceTable->%s;\n' % (ret_val, proto.c_call()) +
-                         '    destroy_instance_dispatch_table(key);\n'
+                         '    destroy_dispatch_table(threading_instance_table_map, key);\n'
                          '\n'
                          '    // Clean up logging callback, if any\n'
                          '    layer_data *my_data = get_my_data_ptr(key, layer_data_map);\n'
