@@ -7,20 +7,6 @@ python .\determine_vs_version.py > vsversion.tmp
 set /p VS_VERSION=< vsversion.tmp
 echo Detected Visual Studio Version as %VS_VERSION%
 
-REM from that information set the appropriate MSBUILD machine target as weell.
-echo Determining MSBUILD target
-set MSBUILD_MACHINE_TARGET=x64
-@setlocal
-@echo off
-echo.%VS_VERSION% | findstr /C:"Win32" 1>nul
-if errorlevel 1 (
-  echo.
-) ELSE (
-  set MSBUILD_MACHINE_TARGET=x86
-)
-endlocal
-echo Detected MSBuild target as %MSBUILD_MACHINE_TARGET%
-
 REM Cleanup the file we used to collect the VS version output since it's no longer needed.
 del /Q /F vsversion.tmp
 
