@@ -91,24 +91,12 @@ if(NOT WIN32)
     set (BUILDTGT_DIR build)
 else()
     # For Windows, since 32-bit and 64-bit items can co-exist, we build each in its own build directory.
-    # 32-bit target data goes in build32, and 64-bit target data goes into build64.  So, include/link the
-    # appropriate data at build time.  However, there's a transition time from when the LoaderAndTools, 
-    # GLSLang, and SPIRV-Tools support this.  So, look into the GLSLang folder for the build name and use
-    # the appropriate one.
+    # 32-bit target data goes in build32, and 64-bit target data goes into build.  So, include/link the
+    # appropriate data at build time.
     if (CMAKE_CL_64)
-        if (EXISTS "${CMAKE_SOURCE_DIR}/../glslang/build64")
-            set (BUILDTGT_DIR build64)
-        else()
-            set (BUILDTGT_DIR build)
-message(FATAL_ERROR "did not find build64")
-        endif()
+        set (BUILDTGT_DIR build)
     else ()
-        if (EXISTS "${CMAKE_SOURCE_DIR}/../glslang/build32")
-            set (BUILDTGT_DIR build32)
-        else()
-message(FATAL_ERROR "did not find build32")
-            set (BUILDTGT_DIR build)
-        endif()
+        set (BUILDTGT_DIR build32)
     endif()
 endif()
 
