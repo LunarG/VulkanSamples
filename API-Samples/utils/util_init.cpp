@@ -737,7 +737,13 @@ void init_swapchain_extension(struct sample_info &info)
     GET_DEVICE_PROC_ADDR(info.device, GetSwapchainImagesKHR);
     GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
-    res = info.fpCreateAndroidSurfaceKHR(info.inst, platformWindow, nullptr, &info.surface);
+
+    VkAndroidSurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = nullptr;
+    createInfo.flags = 0;
+    createInfo.window = platformWindow;
+    res = info.fpCreateAndroidSurfaceKHR(info.inst, &createInfo, nullptr, &info.surface);
 #else  // !__ANDROID__ && !_WIN32
     VkXcbSurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
@@ -840,9 +846,7 @@ void execute_queue_cmdbuf(struct sample_info &info, const VkCommandBuffer *cmd_b
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 1;
     submit_info[0].pWaitSemaphores = &info.presentCompleteSemaphore;
-#ifndef TARGET_V210
     submit_info[0].pWaitDstStageMask = NULL;
-#endif
     submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
     submit_info[0].signalSemaphoreCount = 0;
@@ -879,13 +883,8 @@ void execute_pre_present_barrier(struct sample_info &info)
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-#ifdef TARGET_V210
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         0, 1, (const void *const *)&prePresentBarrier);
-#else
-  vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                        0, 0, NULL, 0, NULL, 1, &prePresentBarrier);
-#endif
 }
 
 void execute_present_image(struct sample_info &info)
@@ -982,19 +981,11 @@ void init_swap_chain(struct sample_info &info)
     }
 
     VkSurfaceTransformFlagBitsKHR preTransform;
-#ifdef TARGET_V210
-    if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR) {
-        preTransform = VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR;
-    } else {
-        preTransform = surfCapabilities.currentTransform;
-    }
-#else
     if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
         preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     } else {
         preTransform = surfCapabilities.currentTransform;
     }
-#endif
 
     uint32_t queueFamily = 0;
     VkSwapchainCreateInfoKHR swap_chain = {};
@@ -1168,11 +1159,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_layout.pNext = NULL;
     descriptor_layout.bindingCount = use_texture?2:1;
-#ifdef TARGET_V210
-    descriptor_layout.pBinding = layout_bindings;
-#else
     descriptor_layout.pBindings = layout_bindings;
-#endif
 
     VkResult U_ASSERT_ONLY res;
 
@@ -1313,11 +1300,7 @@ void init_command_buffer(struct sample_info &info)
     cmd.pNext = NULL;
     cmd.commandPool = info.cmd_pool;
     cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-#ifdef TARGET_V210
-    cmd.bufferCount = 1;
-#else
     cmd.commandBufferCount = 1;
-#endif
     res = vkAllocateCommandBuffers(info.device, &cmd, &info.cmd);
     assert(res == VK_SUCCESS);
 }
@@ -1330,10 +1313,7 @@ void execute_begin_command_buffer(struct sample_info &info)
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
     cmd_buf_info.flags = 0;
-#ifdef TARGET_V210
-#else
     cmd_buf_info.pInheritanceInfo = NULL;
-#endif
 
     res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
     assert(res == VK_SUCCESS);
@@ -1360,17 +1340,13 @@ void execute_queue_command_buffer(struct sample_info &info)
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
-#ifndef TARGET_V210
     VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-#endif
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 0;
     submit_info[0].pWaitSemaphores = NULL;
-#ifndef TARGET_V210
     submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
-#endif
     submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
     submit_info[0].signalSemaphoreCount = 0;
@@ -1503,11 +1479,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
     alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info[0].pNext = NULL;
     alloc_info[0].descriptorPool = info.desc_pool;
-#ifdef TARGET_V210
-    alloc_info[0].setLayoutCount = NUM_DESCRIPTOR_SETS;
-#else
     alloc_info[0].descriptorSetCount = NUM_DESCRIPTOR_SETS;
-#endif
     alloc_info[0].pSetLayouts = info.desc_layout.data();
 
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
@@ -1695,25 +1667,18 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth, VkBool32 in
     vp.pViewports = NULL;
 #else
     // Temporary disabling dynamic viewport on Android.
-    VkViewport viewports {
-            .minDepth = 0.0f,
-            .maxDepth = 1.0f,
-            .x = 0,
-            .y = 0,
-            .width = (float)info.width,
-            .height = (float)info.height,
-    };
-    VkRect2D scissor = {
-            .extent = {
-                    .width = info.width,
-                    .height = info.height
-            },
-            .offset = {
-                    .x = 0,
-                    .y = 0,
-            }
-    };
-
+    VkViewport viewports;
+    viewports.minDepth = 0.0f;
+    viewports.maxDepth = 1.0f;
+    viewports.x = 0;
+    viewports.y = 0;
+    viewports.width = info.width;
+    viewports.height = info.height;
+    VkRect2D scissor;
+    scissor.extent.width = info.width;
+    scissor.extent.height = info.height;
+    scissor.offset.x = 0;
+    scissor.offset.y = 0;
     vp.viewportCount = NUM_VIEWPORTS;
     vp.scissorCount = NUM_SCISSORS;
     vp.pScissors = &scissor;
@@ -1789,9 +1754,7 @@ void init_sampler(struct sample_info &info, VkSampler &sampler)
     samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.mipLodBias = 0.0;
-#ifndef TARGET_V210
     samplerCreateInfo.anisotropyEnable = VK_FALSE,
-#endif
     samplerCreateInfo.maxAnisotropy = 0;
     samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
     samplerCreateInfo.minLod = 0.0;
@@ -1978,10 +1941,7 @@ void init_image(struct sample_info &info, texture_object &texObj, const char* te
         cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         cmd_buf_info.pNext = NULL;
         cmd_buf_info.flags = 0;
-#ifdef TARGET_V210
-#else
         cmd_buf_info.pInheritanceInfo = NULL;
-#endif
 
         res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
         assert(res == VK_SUCCESS);
@@ -2002,9 +1962,7 @@ void init_image(struct sample_info &info, texture_object &texObj, const char* te
         submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info[0].waitSemaphoreCount = 0;
         submit_info[0].pWaitSemaphores = NULL;
-#ifndef TARGET_V210
         submit_info[0].pWaitDstStageMask = NULL;
-#endif
         submit_info[0].commandBufferCount = 1;
         submit_info[0].pCommandBuffers = cmd_bufs;
         submit_info[0].signalSemaphoreCount = 0;
@@ -2079,11 +2037,7 @@ void init_viewports(struct sample_info &info)
     info.viewport.maxDepth = (float) 1.0f;
     info.viewport.x = 0;
     info.viewport.y = 0;
-#ifdef TARGET_V210
-    vkCmdSetViewport(info.cmd, NUM_VIEWPORTS, &info.viewport);
-#else
     vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &info.viewport);
-#endif
 #else
     // Temporary disabling dynamic viewport on Android.
 #endif
@@ -2096,11 +2050,7 @@ void init_scissors(struct sample_info &info)
     info.scissor.extent.height = info.height;
     info.scissor.offset.x = 0;
     info.scissor.offset.y = 0;
-#ifdef TARGET_V210
-    vkCmdSetScissor(info.cmd, NUM_SCISSORS, &info.scissor);
-#else
     vkCmdSetScissor(info.cmd, 0, NUM_SCISSORS, &info.scissor);
-#endif
 #else
     // Temporary disabling dynamic scissors on Android.
 #endif
@@ -2121,9 +2071,7 @@ void init_submit_info(struct sample_info &info, VkSubmitInfo &submit_info, VkPip
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.waitSemaphoreCount = 1;
     submit_info.pWaitSemaphores = &info.presentCompleteSemaphore;
-#ifndef TARGET_V210
     submit_info.pWaitDstStageMask = &pipe_stage_flags;
-#endif
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &info.cmd;
     submit_info.signalSemaphoreCount = 0;

@@ -187,14 +187,8 @@ int sample_main()
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
-#ifdef TARGET_V210
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         0, 1, (const void * const*)&pmemory_barrier);
-#else
     vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                         0, 1, (const void * const*)&pmemory_barrier);
-#endif
+                         0, 0, NULL, 0, NULL, 1, &prePresentBarrier);
 
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = { info.cmd };
@@ -205,17 +199,13 @@ int sample_main()
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
-#ifndef TARGET_V210
     VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-#endif
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 0;
     submit_info[0].pWaitSemaphores = &presentCompleteSemaphore;
-#ifndef TARGET_V210
     submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
-#endif
     submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
     submit_info[0].signalSemaphoreCount = 0;
