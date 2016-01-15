@@ -55,7 +55,7 @@ void Hologram::init_objects()
 {
     objects_.reserve(OBJECT_COUNT);
     for (int i = 0; i < OBJECT_COUNT; i++) {
-        Object obj = { i, random_dev_() };
+        Object obj = { i, random_dev_(), random_dev_() };
         objects_.push_back(obj);
     }
 }
@@ -439,11 +439,9 @@ void Hologram::update_projection()
 void Hologram::step_object(Object &obj, float obj_time) const
 {
     glm::vec3 pos = obj.path.position(obj_time);
-    glm::vec3 scale = glm::vec3(0.01f);
+    glm::mat4 trans = obj.animation.transformation(obj_time);
 
-    obj.model = glm::mat4(1.0f);
-    obj.model = glm::translate(obj.model, pos);
-    obj.model = glm::scale(obj.model, scale);
+    obj.model = glm::translate(glm::mat4(1.0f), pos) * trans;
 }
 
 void Hologram::draw_object(const Object &obj, VkCommandBuffer cmd) const
