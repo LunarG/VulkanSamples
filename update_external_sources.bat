@@ -653,7 +653,7 @@ goto:eof
    REM Cleanup any old directories lying around.
    rmdir /s /q build32
    rmdir /s /q build
-   
+
    echo Making 32-bit spirv-tools
    echo *************************
    mkdir build32

@@ -351,10 +351,10 @@ Optional software packages:
 
 Cygwin is used in order to obtain a local copy of the Git repository, and to run the CMake command that creates Visual Studio files.  Visual Studio is used to build the software, and will re-run CMake as appropriate.
 
-Example debug build (e.g. in a "Developer Command Prompt for VS2013" window):
+Example debug x64 build (e.g. in a "Developer Command Prompt for VS2013" window):
 ```
 cd LoaderAndTools  # cd to the root of the Vulkan git repository
-update_external_sources.bat --build-glslang
+update_external_sources.bat --all
 mkdir build
 cd build
 cmake -G "Visual Studio 12 Win64" ..
@@ -371,3 +371,21 @@ https://gitlab.khronos.org/vulkan/vulkan/blob/master/ecosystem/WindowsICDs.txt
 
 This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
+
+### Windows 64-bit Installation Notes
+If you plan on creating a Windows Install file (done in the windowsRuntimeInstaller sub-directory) you will need to build for both 32-bit and 64-bit Windows since both versions of EXEs and DLLs exist simultaneously on Windows 64.
+
+To do this, simply create and build the release versions of each target:
+```
+cd LoaderAndTools  # cd to the root of the Vulkan git repository
+update_external_sources.bat --all
+mkdir build
+cd build
+cmake -G "Visual Studio 12 Win64" ..
+msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release
+mkdir build32
+cd build32
+cmake -G "Visual Studio 12" ..
+msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release
+```
+

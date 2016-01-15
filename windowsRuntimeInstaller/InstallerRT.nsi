@@ -34,7 +34,7 @@
 !define VERSION_API_MAJOR "1"
 !define VERSION_MINOR "0"
 !define VERSION_PATCH "1"
-!define VERSION_BUILDNO "0.pre.1"
+!define VERSION_BUILDNO "0.pre.2"
 #!define VERSION_BUILDNO "0"
 !define PRODUCTVERSION "${VERSION_API_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_BUILDNO}"
 
@@ -200,12 +200,18 @@ Section
     ${StrRep} $0 ${VERSION_BUILDNO} "." "-"
     StrCpy $FileVersion ${VERSION_ABI_MAJOR}-${VERSION_API_MAJOR}-${VERSION_MINOR}-${VERSION_PATCH}-$0
 
-    # Libraries
+    # 32-bit DLLs/EXEs destined for SysWOW64
+    ##########################################
+    SetOutPath $WINDIR\SysWow64
+    File /oname=vulkan-$FileVersion.dll ..\build32\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
+    File /oname=vulkaninfo-$FileVersion.exe ..\build32\demos\Release\vulkaninfo.exe
+    
+    # 64-bit DLLs/EXEs
+    ##########################################
     SetOutPath $WINDIR\System32
     File /oname=vulkan-$FileVersion.dll ..\build\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
 
     # vulkaninfo.exe
-    SetOutPath $WINDIR\System32
     File /oname=vulkaninfo-$FileVersion.exe ..\build\demos\Release\vulkaninfo.exe
     SetOutPath "$INSTDIR"
     File ..\build\demos\Release\vulkaninfo.exe
@@ -289,6 +295,8 @@ Section "uninstall"
         Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
 
         # Delete vullkan dll files: vulkan-<majorabi>.dll and vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll
+        Delete /REBOOTOK $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
+        Delete /REBOOTOK $WINDIR\SysWow64\vulkan-$FileVersion.dll
         Delete /REBOOTOK $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
         Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
 

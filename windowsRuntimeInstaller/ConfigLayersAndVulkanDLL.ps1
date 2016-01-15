@@ -66,9 +66,16 @@ $vulkandll = "vulkan-"+$majorabi+".dll"
 # from the file name. They are used later to find the path to the SDK
 # install directory for the given filename.
 
-$VulkanDllList=@()
-cd c:\WINDOWS\SYSTEM32
-dir -name vulkan-$majorabi-*.dll |
+function UpdateVulkanSysFolder($dir)
+{
+   # Push the current path on the stack and go to $dir
+   Push-Location -Path $dir
+   
+   # Create a list for all the DLLs in the folder
+   $VulkanDllList=@()
+   
+   # Find all DLL objects in this directory
+   dir -name vulkan-$majorabi-*.dll |
    ForEach-Object {
        $major=$_.Split('-')[2]
        $majorOrig=$major
@@ -124,44 +131,50 @@ dir -name vulkan-$majorabi-*.dll |
        $VulkanDllList+="$major=$minor=$patch=$buildno=$prerelease=$prebuildno= $_ @$majorOrig@$minorOrig@$patchOrig@$buildnoOrig@$prereleaseOrig@$prebuildnoOrig@"
    }
 
+    # If $VulkanDllList contains at least one element, there's at least one vulkan*.dll file.
+    # Copy the most recent vulkan*.dll (named in the last element of $VulkanDllList) to vulkan-$majorabi.dll.
+    # TODO: In the future, also copy the corresponding vulkaninfo-*.exe to vulkaninfo.exe.
 
-# If $VulkanDllList contains at least one element, there's at least one vulkan*.dll file.
-# Copy the most recent vulkan*.dll (named in the last element of $VulkanDllList) to vulkan-$majorabi.dll.
-# Also copy the corresponding vulkaninfo-*.exe to vulkaninfo.exe.
+    if ($VulkanDllList.Length -gt 0) {
 
-if ($VulkanDllList.Length -gt 0) {
+        # Sort the list. The most recent vulkan-*.dll will be in the last element of the list.
+        [array]::sort($VulkanDllList)
 
-    # Sort the list. The most recent vulkan-*.dll will be in the last element of the list.
-    [array]::sort($VulkanDllList)
+        # Put the name of the most recent vulkan-*.dll in $mrVulkanDLL.
+        # The most recent vulkanDLL is the second word in the last element of the
+        # sorted $VulkanDllList. Copy it to $vulkandll.
+        $mrVulkanDll=$VulkanDllList[-1].Split(' ')[1]
+        copy $mrVulkanDll $vulkandll
 
-    # Put the name of the most recent vulkan-*.dll in $mrVulkanDLL.
-    # The most recent vulkanDLL is the second word in the last element of the
-    # sorted $VulkanDllList. Copy it to $vulkandll.
-    $mrVulkanDll=$VulkanDLLList[-1].Split(' ')[1]
-    copy $mrVulkanDll $vulkandll
-
-    # Copy the most recent version of vulkaninfo-<abimajor>-*.exe to vulkaninfo.exe.
-    # We create the source file name for the copy from $mrVulkanDll.
-    $mrVulkaninfo=$mrVulkanDll -replace ".dll",".exe"
-    $mrVulkaninfo=$mrVulkaninfo -replace "vulkan","vulkaninfo"
-    copy $mrVulkaninfo vulkaninfo.exe
-
-    # Create the name used in the registry for the SDK associated with $mrVulkanDll.
-    $major=$VulkanDLLList[-1].Split('@')[1]
-    $minor=$VulkanDLLList[-1].Split('@')[2]
-    $patch=$VulkanDLLList[-1].Split('@')[3]
-    $buildno=$VulkanDLLList[-1].Split('@')[4]
-    $prerelease=$VulkanDLLList[-1].Split('@')[5]
-    $prebuildno=$VulkanDLLList[-1].Split('@')[6]
-    $sdkname="VulkanSDK"+$major + "." + $minor + "." + $patch + "." + $buildno
-    if ($prerelease -ne "") {
-        $sdkname=$sdkname + "." + $prerelease
+        # Copy the most recent version of vulkaninfo-<abimajor>-*.exe to vulkaninfo.exe.
+        # We create the source file name for the copy from $mrVulkanDll.
+        $mrVulkaninfo=$mrVulkanDll -replace ".dll",".exe"
+        $mrVulkaninfo=$mrVulkaninfo -replace "vulkan","vulkaninfo"
+        copy $mrVulkaninfo vulkaninfo.exe
+        
+        # Create the name used in the registry for the SDK associated with $mrVulkanDll.
+        $major=$VulkanDLLList[-1].Split('@')[1]
+        $minor=$VulkanDLLList[-1].Split('@')[2]
+        $patch=$VulkanDLLList[-1].Split('@')[3]
+        $buildno=$VulkanDLLList[-1].Split('@')[4]
+        $prerelease=$VulkanDLLList[-1].Split('@')[5]
+        $prebuildno=$VulkanDLLList[-1].Split('@')[6]
+        $sdkname="VulkanSDK"+$major + "." + $minor + "." + $patch + "." + $buildno
+        if ($prerelease -ne "") {
+            $sdkname=$sdkname + "." + $prerelease
+        }
+        if ($prebuildno -ne "") {
+            $sdkname=$sdkname + "." + $prebuildno
+        }
     }
-    if ($prebuildno -ne "") {
-        $sdkname=$sdkname + "." + $prebuildno
-    }
+   
+   # Return to our previous folder
+   Pop-Location
 }
 
+# Update the SYSWOW64 and SYSTEM32 Vulkan items
+UpdateVulkanSysFolder c:\WINDOWS\SYSWOW64
+UpdateVulkanSysFolder c:\WINDOWS\SYSTEM32
 
 # Create an array of vulkan sdk install dirs
 
