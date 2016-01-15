@@ -9,7 +9,8 @@
 Hologram::Hologram(const std::vector<std::string> &args)
     : Game("Hologram", args), random_dev_(), multithread_(true),
       render_pass_clear_value_(), render_pass_begin_info_(),
-      primary_cmd_begin_info_(), primary_cmd_submit_info_()
+      primary_cmd_begin_info_(), primary_cmd_submit_info_(),
+      eye_pos_(8.0f)
 {
     for (auto it = args.begin(); it != args.end(); ++it) {
         if (*it == "-s")
@@ -357,6 +358,8 @@ void Hologram::attach_swapchain()
 
     prepare_viewport(ctx.extent);
     prepare_framebuffers(ctx.swapchain);
+
+    update_projection();
 }
 
 void Hologram::detach_swapchain()
@@ -384,14 +387,6 @@ void Hologram::prepare_viewport(const VkExtent2D &extent)
 
     scissor_.offset = { 0, 0 };
     scissor_.extent = extent_;
-
-    float aspect = static_cast<float>(extent.width) / static_cast<float>(extent.height);
-    const glm::vec3 eye(5.0f, 5.0f, 5.0f);
-    const glm::vec3 center(0.0f);
-    const glm::vec3 up(0.f, 0.0f, 1.0f);
-    const glm::mat4 view = glm::lookAt(eye, center, up);
-    const glm::mat4 projection = glm::perspective(0.4f, aspect, 0.1f, 100.0f);
-    view_projection_ = projection * view;
 }
 
 void Hologram::prepare_framebuffers(VkSwapchainKHR swapchain)
@@ -429,6 +424,16 @@ void Hologram::prepare_framebuffers(VkSwapchainKHR swapchain)
         vk::assert_success(vk::CreateFramebuffer(dev_, &fb_info, nullptr, &fb));
         framebuffers_.push_back(fb);
     }
+}
+
+void Hologram::update_projection()
+{
+    float aspect = static_cast<float>(extent_.width) / static_cast<float>(extent_.height);
+    const glm::vec3 center(0.0f);
+    const glm::vec3 up(0.f, 0.0f, 1.0f);
+    const glm::mat4 view = glm::lookAt(eye_pos_, center, up);
+    const glm::mat4 projection = glm::perspective(0.4f, aspect, 0.1f, 100.0f);
+    view_projection_ = projection * view;
 }
 
 void Hologram::step_object(Object &obj, float obj_time) const
@@ -497,6 +502,14 @@ void Hologram::on_key(Key key)
     case KEY_SHUTDOWN:
     case KEY_ESC:
         shell_->quit();
+        break;
+    case KEY_UP:
+        eye_pos_ -= glm::vec3(0.05f);
+        update_projection();
+        break;
+    case KEY_DOWN:
+        eye_pos_ += glm::vec3(0.05f);
+        update_projection();
         break;
     default:
         break;

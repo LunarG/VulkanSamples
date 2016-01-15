@@ -112,13 +112,19 @@ LRESULT ShellWin32::handle_message(UINT msg, WPARAM wparam, LPARAM lparam)
             resize_swapchain(w, h);
         }
         break;
-    case WM_KEYUP:
+    case WM_KEYDOWN:
         {
             Game::Key key;
 
             switch (wparam) {
             case VK_ESCAPE:
                 key = Game::KEY_ESC;
+                break;
+            case VK_UP:
+                key = Game::KEY_UP;
+                break;
+            case VK_DOWN:
+                key = Game::KEY_DOWN;
                 break;
             default:
                 key = Game::KEY_UNKNOWN;
