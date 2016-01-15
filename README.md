@@ -46,13 +46,15 @@
       The drawtexturedcube sample takes all of the drawcube code and adds texturing.
 
 ## Building the Vulkan Samples Kit
-- Linux:
+### Linux:
   ```
   $ cmake -H. -Bbuild
   $ make -C build 
   ```
 
-- Windows:  
+### Windows:
+#### 64-bit Windows
+
 From a PowerShell window, first build glslang:
   ```
   PS > cd C:\VulkanSDK\<version>\glslang
@@ -63,15 +65,16 @@ From a PowerShell window, first build glslang:
   Open the glslang.sln file in the build folder with Microsoft Visual Studio and build the solution in both Debug and Release mode.  
 
 Next build spirv-tools:
-
+  ```
   PS > cd C:\VulkanSDK\<version>\spirv-tools
   PS > mkdir build
   PS > cd build
   PS > cmake -G "Visual Studio 12 Win64" ..
+  ```
 
   Open the spirv-tools.sln file in the build folder with Microsoft Visual Studio and build the solution in both Debug and Release mode.
 
-  Next build the Vulkan Samples:
+Next build the Vulkan Samples:
   ```
   PS > cd C:\VulkanSDK\<version>\VkSamples
   PS > mkdir build
@@ -79,6 +82,11 @@ Next build spirv-tools:
   PS > cmake -G "Visual Studio 12 Win64" ..
   ```
   Open the VULKAN_SAMPLES.sln file in the build folder with Microsoft Visual Studio and build the solution.
+  
+#### 32-bit Windows
+
+Perform the same operations as 64-bit Windows above, just remove " Win64" from each of the cmake command lines.
+  
 ## Contributing
   Refer to the README.contrib file for specific info regarding contributing to
   the Vulkan samples creation effort.
