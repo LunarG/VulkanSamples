@@ -3026,7 +3026,9 @@ VkResult loader_create_device_terminator(
     localCreateInfo.ppEnabledLayerNames = NULL;
 
     VkDevice localDevice;
-    VkResult res = fpCreateDevice(phys_dev->phys_dev, &localCreateInfo, pAllocator, &localDevice);
+    // TODO: Why does fpCreateDevice behave differently than this_icd->CreateDevice?
+//    VkResult res = fpCreateDevice(phys_dev->phys_dev, &localCreateInfo, pAllocator, &localDevice);
+    VkResult res = phys_dev->this_icd->CreateDevice(phys_dev->phys_dev, &localCreateInfo, pAllocator, &localDevice);
 
     if (res != VK_SUCCESS) {
         return res;
