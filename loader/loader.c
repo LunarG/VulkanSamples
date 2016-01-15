@@ -3524,7 +3524,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
         }
 
         res = loader_add_device_extensions(
-                            inst, icd, physicalDevice,
+                            inst, icd, phys_dev->phys_dev,
                             phys_dev->this_icd->this_icd_lib->lib_name,
                             &phys_dev->device_extension_cache);
         if (res != VK_SUCCESS) {
