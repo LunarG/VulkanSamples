@@ -206,7 +206,6 @@ Get-ChildItem -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Curr
 
 $VulkanSdkDirs+="C:\VulkanSDK\0.9.3"
 
-
 # Remove layer registry entries associated with all installed Vulkan SDKs.
 # Note that we remove only those entries created by Vulkan SDKs. If other
 # layers were installed that are not from an SDK, we don't mess with them.

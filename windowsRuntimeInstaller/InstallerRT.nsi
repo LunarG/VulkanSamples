@@ -290,7 +290,9 @@ Section "uninstall"
         # It will be deleted later when we remove the install directory.
         File ConfigLayersAndVulkanDLL.ps1
 
-        # Delete vulkaninfo.exe in C:\Windows\System32
+        # Delete vulkaninfo.exe in C:\Windows\System32 and C:\Windows\SysWOW64
+        Delete /REBOOTOK $WINDIR\SysWow64\vulkaninfo.exe
+        Delete /REBOOTOK "$WINDIR\SysWow64\vulkaninfo-$FileVersion.exe"
         Delete /REBOOTOK $WINDIR\System32\vulkaninfo.exe
         Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
 
