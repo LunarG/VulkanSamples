@@ -37,6 +37,8 @@ public:
         // physical keys
         KEY_UNKNOWN,
         KEY_ESC,
+        KEY_UP,
+        KEY_DOWN,
     };
     virtual void on_key(Key key) {}
     virtual void on_tick() {}

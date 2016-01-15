@@ -136,11 +136,16 @@ private:
     VkExtent2D extent_;
     VkViewport viewport_;
     VkRect2D scissor_;
-    glm::mat4 view_projection_;
 
     std::vector<VkImage> images_;
     std::vector<VkImageView> image_views_;
     std::vector<VkFramebuffer> framebuffers_;
+
+    // called mostly by on_key
+    void update_projection();
+
+    glm::vec3 eye_pos_;
+    glm::mat4 view_projection_;
 
     // called by workers
     void step_object(Object &obj, float obj_time) const;

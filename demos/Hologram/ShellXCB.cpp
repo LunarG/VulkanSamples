@@ -87,7 +87,7 @@ void ShellXCB::init_window()
     uint32_t value_mask, value_list[32];
     value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
     value_list[0] = scr_->black_pixel;
-    value_list[1] = XCB_EVENT_MASK_KEY_RELEASE |
+    value_list[1] = XCB_EVENT_MASK_KEY_PRESS |
                     XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
     xcb_create_window(c_,
@@ -165,16 +165,22 @@ void ShellXCB::handle_event(const xcb_generic_event_t *ev)
             resize_swapchain(notify->width, notify->height);
         }
         break;
-    case XCB_KEY_RELEASE:
+    case XCB_KEY_PRESS:
         {
-            const xcb_key_release_event_t *release =
-                reinterpret_cast<const xcb_key_release_event_t *>(ev);
+            const xcb_key_press_event_t *press =
+                reinterpret_cast<const xcb_key_press_event_t *>(ev);
             Game::Key key;
 
             // TODO translate xcb_keycode_t
-            switch (release->detail) {
-            case 0x9:
+            switch (press->detail) {
+            case 9:
                 key = Game::KEY_ESC;
+                break;
+            case 111:
+                key = Game::KEY_UP;
+                break;
+            case 116:
+                key = Game::KEY_DOWN;
                 break;
             default:
                 key = Game::KEY_UNKNOWN;
