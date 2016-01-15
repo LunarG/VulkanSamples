@@ -13,18 +13,15 @@ public:
     void quit() { quit_ = true; }
 
 private:
-    enum Action {
-        NONE,
-        DRAW,
-    };
-
     void init_connection();
     void init_window();
 
     PFN_vkGetInstanceProcAddr load_vk();
     VkSurfaceKHR create_surface(VkInstance instance);
 
-    Action handle_event(const xcb_generic_event_t *ev);
+    void handle_event(const xcb_generic_event_t *ev);
+    void loop_wait();
+    void loop_poll();
 
     xcb_connection_t *c_;
     xcb_screen_t *scr_;

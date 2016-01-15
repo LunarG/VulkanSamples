@@ -155,10 +155,8 @@ VkSurfaceKHR ShellXCB::create_surface(VkInstance instance)
     return surface;
 }
 
-ShellXCB::Action ShellXCB::handle_event(const xcb_generic_event_t *ev)
+void ShellXCB::handle_event(const xcb_generic_event_t *ev)
 {
-    Action act = DRAW;
-
     switch (ev->response_type & 0x7f) {
     case XCB_CONFIGURE_NOTIFY:
         {
@@ -197,45 +195,45 @@ ShellXCB::Action ShellXCB::handle_event(const xcb_generic_event_t *ev)
     default:
         break;
     }
-
-    return act;
 }
 
-void ShellXCB::run()
+void ShellXCB::loop_wait()
 {
-    resize_swapchain(settings_.initial_width, settings_.initial_height);
+    while (true) {
+        xcb_generic_event_t *ev = xcb_wait_for_event(c_);
+        if (!ev)
+            continue;
 
-    xcb_map_window(c_, win_);
-    xcb_flush(c_);
+        handle_event(ev);
+        free(ev);
 
+        if (quit_)
+            break;
+
+        acquire_back_buffer();
+        present_back_buffer();
+    }
+}
+
+void ShellXCB::loop_poll()
+{
     int profile_present_count = 0;
     float profile_present_since = get_time();
     float current_time = get_time();
 
-    quit_ = false;
     while (true) {
-        Action act = NONE;
+        // handle pending events
+        while (true) {
+            xcb_generic_event_t *ev = xcb_poll_for_event(c_);
+            if (!ev)
+                break;
 
-        xcb_generic_event_t *ev;
-        if (settings_.animate) {
-            act = DRAW;
-            ev = xcb_poll_for_event(c_);
-        } else {
-            ev = xcb_wait_for_event(c_);
-        }
-
-        if (ev) {
-            act = handle_event(ev);
+            handle_event(ev);
             free(ev);
         }
 
         if (quit_)
             break;
-
-        if (act == NONE)
-            continue;
-
-        assert(act == DRAW);
 
         acquire_back_buffer();
 
@@ -247,13 +245,27 @@ void ShellXCB::run()
         current_time = t;
         profile_present_count++;
 
-        float now = get_time();
-        if (now - profile_present_since >= 5.0) {
-            std::cout << profile_present_count << " presents in " << now - profile_present_since << " seconds\n";
+        t = get_time();
+        if (t - profile_present_since >= 5.0) {
+            std::cout << profile_present_count << " presents in " << t - profile_present_since << " seconds\n";
             profile_present_count = 0;
             profile_present_since = get_time();
         }
     }
+}
+
+void ShellXCB::run()
+{
+    resize_swapchain(settings_.initial_width, settings_.initial_height);
+
+    xcb_map_window(c_, win_);
+    xcb_flush(c_);
+
+    quit_ = false;
+    if (settings_.animate)
+        loop_poll();
+    else
+        loop_wait();
 
     xcb_unmap_window(c_, win_);
     xcb_flush(c_);
