@@ -491,7 +491,7 @@ VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(
         raw_copy = true;
         raw_format = cmd_meta_img_raw_format(cmd, src->layout.format);
     } else {
-        assert((icd_format_is_compressed(src->layout.format) ||
+        assert(!(icd_format_is_compressed(src->layout.format) ||
                icd_format_is_compressed(dst->layout.format)) && "Compressed formats not supported");
     }
 
