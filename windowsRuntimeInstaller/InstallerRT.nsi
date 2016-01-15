@@ -45,7 +45,7 @@
 # doing a "Properties" on the install directory. Add to this the size of the
 # files installed to C:\Windows\System32. And then add a little bit more.
 # The units are 1K bytes.
-!define ESTIMATEDSIZE "340"
+!define ESTIMATEDSIZE "500"
 
 # Set the icon
 !define ICOFILE "Vulkan.ico"
@@ -192,7 +192,7 @@ UninstPage instFiles
 # Start default section
 Section
 
-    # If running on a 64-bit OS machine
+    # If running on a 64-bit OS machine, disable registry re-direct since we're running as a 32-bit executable.
     ${If} ${RunningX64}
             
         ${DisableX64FSRedirection}
@@ -319,7 +319,7 @@ SectionEnd
 # Uninstaller section start
 Section "uninstall"
 
-    # If running on a 64-bit OS machine
+    # If running on a 64-bit OS machine, disable registry re-direct since we're running as a 32-bit executable.
     ${If} ${RunningX64}
 
         ${DisableX64FSRedirection}
