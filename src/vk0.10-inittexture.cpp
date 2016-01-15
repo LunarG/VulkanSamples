@@ -95,6 +95,7 @@ int main(int argc, char **argv)
     image_create_info.arrayLayers = 1;
     image_create_info.samples = NUM_SAMPLES;
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     image_create_info.usage = needStaging?VK_IMAGE_USAGE_TRANSFER_SRC_BIT:
                                           VK_IMAGE_USAGE_SAMPLED_BIT;
     image_create_info.queueFamilyIndexCount = 0;
