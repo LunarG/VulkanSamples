@@ -12,7 +12,7 @@
         }
     },
     "layer" : {
-        "name": "VK_LUNARG_multi2",
+        "name": "VK_LAYER_LUNARG_multi2",
         "type": "INSTANCE",
         "library_path": "./libVkLayer_multi.so",
         "api_version": "1.0.1",
