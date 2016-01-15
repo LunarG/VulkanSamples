@@ -10,7 +10,7 @@ model {
         buildToolsVersion = "23.0.2"
 
         defaultConfig.with {
-            applicationId = "org.khronos.vulkan.tutorials.vkdrawcube"
+            applicationId = "%%PACKAGE_NAME%%"
             minSdkVersion.apiLevel = 22
             targetSdkVersion.apiLevel = 23
             versionCode = 1
@@ -56,7 +56,7 @@ model {
             }
             assets {
                 source{
-                    srcDirs = ['../../../../data/vk0.10/pass-through']
+                    srcDirs = ['../../../../data/vk0.10/%%SHADER_NAME%%']
                 }
             }
         }
