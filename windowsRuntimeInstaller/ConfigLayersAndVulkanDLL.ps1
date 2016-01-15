@@ -27,13 +27,20 @@
 #     to vulkan-<majorabi>.dll
 #   - Copy the most recent version of vulkaninfo-<abimajor>-*.exe in
 #     C:\Windows\System32 to vulkaninfo.exe
+#   - The same thing is done for those files in C:\Windows\SysWOW64 on a 64-bit
+#     target.
 #   - Set the layer registry entries to point to the layer json files
 #     in the Vulkan SDK associated with the most recent vulkan*dll.
 #
-# This script takes one parameter - a single number specifying the major abi version.
+# This script takes two parameters:
+#   $majorabi : a single string number specifying the major abi version.
+#   $ossize   : an integer indicating if the target is a 64 (64) or 32 (32) bit OS.
 #
 
-Param([string]$majorabi)
+Param(
+ [string]$majorabi,
+ [int]$ossize
+)
 
 $vulkandll = "vulkan-"+$majorabi+".dll"
 
@@ -53,7 +60,8 @@ $vulkandll = "vulkan-"+$majorabi+".dll"
 
 
 # We first create an array, with one array element for each vulkan-*dll in
-# C:\Windows\System32, with each element containing:
+# C:\Windows\System32 (and C:\Windows\SysWOW64 on 64-bit systems), with each element
+# containing:
 #    <major>=<minor>=<patch>=<buildno>=<prerelease>=<prebuildno>=
 #     filename
 #    @<major>@<minor>@<patch>@<buildno>@<prerelease>@<prebuildno>@
@@ -172,8 +180,14 @@ function UpdateVulkanSysFolder($dir)
    Pop-Location
 }
 
-# Update the SYSWOW64 and SYSTEM32 Vulkan items
-UpdateVulkanSysFolder c:\WINDOWS\SYSWOW64
+# We only care about SYSWOW64 if we're targeting a 64-bit OS
+if ($ossize -eq 64)
+{
+    # Update the SYSWOW64 Vulkan DLLS/EXEs
+    UpdateVulkanSysFolder c:\WINDOWS\SYSWOW64
+}
+
+# Update the SYSTEM32 Vulkan DLLS/EXEs
 UpdateVulkanSysFolder c:\WINDOWS\SYSTEM32
 
 # Create an array of vulkan sdk install dirs
