@@ -129,6 +129,9 @@ LRESULT ShellWin32::handle_message(UINT msg, WPARAM wparam, LPARAM lparam)
             case VK_DOWN:
                 key = Game::KEY_DOWN;
                 break;
+            case VK_SPACE:
+                key = Game::KEY_SPACE;
+                break;
             default:
                 key = Game::KEY_UNKNOWN;
                 break;
