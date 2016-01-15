@@ -594,6 +594,8 @@ void init_depth_buffer(struct sample_info &info)
     image_info.mipLevels = 1;
     image_info.arrayLayers = 1;
     image_info.samples = NUM_SAMPLES;
+    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     image_info.queueFamilyIndexCount = 0;
     image_info.pQueueFamilyIndices = NULL;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -1707,6 +1709,7 @@ void init_image(struct sample_info &info, texture_object &texObj, const char* te
     image_create_info.arrayLayers = 1;
     image_create_info.samples = NUM_SAMPLES;
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     image_create_info.usage = needStaging?VK_IMAGE_USAGE_TRANSFER_SRC_BIT:
                                           VK_IMAGE_USAGE_SAMPLED_BIT;
     image_create_info.queueFamilyIndexCount = 0;

@@ -111,7 +111,7 @@ int main(int argc, char **argv)
     image_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     image_info.flags = 0;
     image_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_info.initialLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     res = vkCreateImage(info.device, &image_info, NULL, &bltSrcImage);
 
     memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -149,6 +149,7 @@ int main(int argc, char **argv)
     res = vkFlushMappedMemoryRanges(info.device, 1, &memRange);
 
     vkUnmapMemory(info.device, dmem);
+    set_image_layout(info, bltSrcImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
     bltDstImage = info.buffers[info.current_buffer].image;
     // init_swap_chain will create the images as color attachment optimal
