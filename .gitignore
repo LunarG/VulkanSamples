@@ -17,3 +17,4 @@ out64/*
 *.filters
 build
 dbuild
+.DS_Store

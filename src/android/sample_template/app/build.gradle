@@ -1,0 +1,86 @@
+apply plugin: 'com.android.model.application'
+
+Properties properties = new Properties()
+properties.load(project.rootProject.file('local.properties').newDataInputStream())
+def ndkDir = properties.getProperty('ndk.dir')
+
+model {
+    android {
+        compileSdkVersion = 23
+        buildToolsVersion = "23.0.2"
+
+        defaultConfig.with {
+            applicationId = "%%PACKAGE_NAME%%"
+            minSdkVersion.apiLevel = 22
+            targetSdkVersion.apiLevel = 23
+            versionCode = 1
+            versionName = "0.0.1"
+        }
+
+        compileOptions.with {
+            sourceCompatibility=JavaVersion.VERSION_1_7
+            targetCompatibility=JavaVersion.VERSION_1_7
+        }
+    }
+
+    android.ndk {
+        moduleName = "vulkan_samples"
+        cppFlags.add("-Werror")
+        cppFlags.add("-std=c++11")
+        toolchain = "clang"
+        stl = "c++_static"
+        ldLibs.addAll(["log", "android", "vulkan"])
+        cppFlags.add("-I${file("${ndkDir}/sources/android/native_app_glue")}".toString())
+        cppFlags.add("-I${file("../../../../../vulkan/includes")}".toString())
+        cppFlags.add("-I${file("../../../../utils")}".toString())
+        cppFlags.add("-I${file("../../../../ext")}".toString())
+        cppFlags.add("-I${file("../../../../data")}".toString())
+        cppFlags.add("-I${file("../../../../../")}".toString())
+        cppFlags.add("-D VK_PROTOTYPES")
+        cppFlags.add("-D VK_USE_PLATFORM_ANDROID_KHR")
+        cppFlags.add("-D VULKAN_SAMPLES_BASE_DIR=\".\"")
+        cppFlags.add("-D TARGET_V210")
+    }
+
+    android.sources {
+        main {
+            jni {
+                dependencies {
+                    project ":nativeactivity" linkage "static"
+                }
+                source {
+                    srcDir 'src/main/jni'
+                    srcDir '../../../../utils'
+                    srcDir '../../../../ext/'
+                }
+            }
+            assets {
+                source{
+                    srcDirs = ['../../../../data/vk0.10/%%SHADER_NAME%%']
+                }
+            }
+        }
+    }
+
+    android.buildTypes {
+        release {
+            ndk.with {
+                debuggable = true
+            }
+            minifyEnabled = false
+            proguardFiles.add(file('proguard-rules.pro'))
+        }
+    }
+
+    android.productFlavors {
+        create ("x86") {
+            ndk.abiFilters.add("x86")
+            ndk.ldFlags.add("-L../../../../../vulkan/vulkan_libs/x86".toString())
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile project(':nativeactivity')
+}
