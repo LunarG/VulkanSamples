@@ -1056,6 +1056,24 @@ static VkExtensionProperties *get_dev_extension_property(
 }
 
 /*
+ * This function will return the pNext pointer of any
+ * CreateInfo extensions that are not loader extensions.
+ * This is used to skip past the loader extensions prepended
+ * to the list during CreateInstance and CreateDevice.
+ */
+void *loader_strip_create_extensions(const void *pNext)
+{
+    VkLayerInstanceCreateInfo *create_info = (VkLayerInstanceCreateInfo *) pNext;
+
+    while (create_info && (create_info->sType == VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO ||
+           create_info->sType == VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO)) {
+        create_info = (VkLayerInstanceCreateInfo *) create_info->pNext;
+    }
+
+    return create_info;
+}
+
+/*
  * For Instance extensions implemented within the loader (i.e. DEBUG_REPORT
  * the extension must provide two entry points for the loader to use:
  * - "trampoline" entry point - this is the address returned by GetProcAddr
@@ -3002,7 +3020,7 @@ VkResult loader_create_device_terminator(
 
     VkDeviceCreateInfo localCreateInfo;
     memcpy(&localCreateInfo, pCreateInfo, sizeof(localCreateInfo));
-    localCreateInfo.pNext = NULL;
+    localCreateInfo.pNext = loader_strip_create_extensions(pCreateInfo->pNext);
     // ICDs do not support layers
     localCreateInfo.enabledLayerCount = 0;
     localCreateInfo.ppEnabledLayerNames = NULL;
@@ -3262,8 +3280,8 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateInstance(
     icd_create_info.enabledLayerCount = 0;
     icd_create_info.ppEnabledLayerNames = NULL;
 
-    // TODO: Should really strip off the VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO entries
-    icd_create_info.pNext = NULL;
+    // strip off the VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO entries
+    icd_create_info.pNext = loader_strip_create_extensions(pCreateInfo->pNext);
 
     /*
      * NOTE: Need to filter the extensions to only those
