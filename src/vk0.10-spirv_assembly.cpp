@@ -236,7 +236,6 @@ int main(int argc, char **argv)
     }
     assert(fragmentResult == SPV_SUCCESS);
 
-
     info.shaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     info.shaderStages[0].pNext  = NULL;
     info.shaderStages[0].pSpecializationInfo = NULL;
@@ -268,10 +267,14 @@ int main(int argc, char **argv)
     res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[1].module);
     assert(res == VK_SUCCESS);
 
-    // Clean up the assembler context
-   spvContextDestroy(spvContext);
+    // Clean up the diagnostics
+    spvDiagnosticDestroy(vertexDiag);
+    spvDiagnosticDestroy(fragmentDiag);
 
-   /* VULKAN_KEY_END */
+    // Clean up the assembler context
+    spvContextDestroy(spvContext);
+
+    /* VULKAN_KEY_END */
 
     init_framebuffers(info, depthPresent);
     init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
