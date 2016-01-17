@@ -1557,7 +1557,6 @@ static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice de
 {
     VkBool32 skipCall = VK_FALSE;
 
-    //if (!validate_pipeline_shaders(my_data, device, &(pPipeline->graphicsPipelineCI))) {
     if (!validate_pipeline_shaders(my_data, device, pPipeline)) {
         skipCall = VK_TRUE;
     }
