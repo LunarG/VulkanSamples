@@ -135,7 +135,7 @@ struct layer_data {
 
 // Code imported from ShaderChecker
 static void
-build_type_def_index(std::vector<unsigned> const &words, std::unordered_map<unsigned, unsigned> &type_def_index);
+build_type_def_index(shader_module *);
 
 struct shader_module {
     /* the spirv image itself */
@@ -149,7 +149,7 @@ struct shader_module {
         words((uint32_t *)pCreateInfo->pCode, (uint32_t *)pCreateInfo->pCode + pCreateInfo->codeSize / sizeof(uint32_t)),
         type_def_index() {
 
-        build_type_def_index(words, type_def_index);
+        build_type_def_index(this);
     }
 };
 
@@ -289,10 +289,10 @@ static string cmdTypeToString(CMD_TYPE cmd)
 
 // SPIRV utility functions
 static void
-build_type_def_index(std::vector<unsigned> const &words, std::unordered_map<unsigned, unsigned> &type_def_index)
+build_type_def_index(shader_module *module)
 {
-    unsigned int const *code = (unsigned int const *)&words[0];
-    size_t size = words.size();
+    unsigned int const *code = (unsigned int const *)&module->words[0];
+    size_t size = module->words.size();
 
     unsigned word = 5;
     while (word < size) {
@@ -320,7 +320,7 @@ build_type_def_index(std::vector<unsigned> const &words, std::unordered_map<unsi
         case spv::OpTypeReserveId:
         case spv::OpTypeQueue:
         case spv::OpTypePipe:
-            type_def_index[code[word+1]] = word;
+            module->type_def_index[code[word+1]] = word;
             break;
 
         default:
