@@ -137,6 +137,44 @@ struct layer_data {
 static void
 build_type_def_index(shader_module *);
 
+// A forward iterator over spirv instructions. Provides easy access to len, opcode, and content words
+// without the caller needing to care too much about the physical SPIRV module layout.
+struct spirv_inst_iter {
+    std::vector<uint32_t>::const_iterator zero;
+    std::vector<uint32_t>::const_iterator it;
+
+    uint32_t len() { return *it >> 16; }
+    uint32_t opcode() { return *it & 0x0ffffu; }
+    uint32_t const & word(unsigned n) { return it[n]; }
+    uint32_t offset() { return it - zero; }
+
+    spirv_inst_iter(std::vector<uint32_t>::const_iterator zero,
+        std::vector<uint32_t>::const_iterator it) : zero(zero), it(it) {}
+
+    bool operator== (spirv_inst_iter const & other) {
+        return it == other.it;
+    }
+
+    bool operator!= (spirv_inst_iter const & other) {
+        return it != other.it;
+    }
+
+    spirv_inst_iter operator++ (int) {  /* x++ */
+        spirv_inst_iter ii = *this;
+        it += len();
+        return ii;
+    }
+
+    spirv_inst_iter operator++ () { /* ++x; */
+        it += len();
+        return *this;
+    }
+
+    /* The iterator and the value are the same thing. */
+    spirv_inst_iter & operator* () { return *this; }
+    spirv_inst_iter const & operator* () const { return *this; }
+};
+
 struct shader_module {
     /* the spirv image itself */
     vector<uint32_t> words;
@@ -151,6 +189,12 @@ struct shader_module {
 
         build_type_def_index(this);
     }
+
+    /* expose begin() / end() to enable range-based for */
+    spirv_inst_iter begin() const { return spirv_inst_iter(words.begin(), words.begin() + 5); }        /* first insn */
+    spirv_inst_iter end() const { return spirv_inst_iter(words.begin(), words.end()); }          /* just past last insn */
+    /* given an offset into the module, produce an iterator there. */
+    spirv_inst_iter at(unsigned offset) const { return spirv_inst_iter(words.begin(), words.begin() + offset); }
 };
 
 // TODO : Do we need to guard access to layer_data_map w/ lock?
@@ -291,15 +335,8 @@ static string cmdTypeToString(CMD_TYPE cmd)
 static void
 build_type_def_index(shader_module *module)
 {
-    unsigned int const *code = (unsigned int const *)&module->words[0];
-    size_t size = module->words.size();
-
-    unsigned word = 5;
-    while (word < size) {
-        unsigned opcode = code[word] & 0x0ffffu;
-        unsigned oplen = (code[word] & 0xffff0000u) >> 16;
-
-        switch (opcode) {
+    for (auto insn : *module) {
+        switch (insn.opcode()) {
         case spv::OpTypeVoid:
         case spv::OpTypeBool:
         case spv::OpTypeInt:
@@ -320,15 +357,13 @@ build_type_def_index(shader_module *module)
         case spv::OpTypeReserveId:
         case spv::OpTypeQueue:
         case spv::OpTypePipe:
-            module->type_def_index[code[word+1]] = word;
+            module->type_def_index[insn.word(1)] = insn.offset();
             break;
 
         default:
             /* We only care about type definitions */
             break;
         }
-
-        word += oplen;
     }
 }
 
@@ -511,24 +546,23 @@ get_locations_consumed_by_type(shader_module const *src, unsigned type, bool str
         return 1;       /* This is actually broken SPIR-V... */
     }
 
-    unsigned int const *code = (unsigned int const *)&src->words[type_def_it->second];
-    unsigned opcode = code[0] & 0x0ffffu;
+    auto insn = src->at(type_def_it->second);
 
-    switch (opcode) {
+    switch (insn.opcode()) {
         case spv::OpTypePointer:
             /* see through the ptr -- this is only ever at the toplevel for graphics shaders;
              * we're never actually passing pointers around. */
-            return get_locations_consumed_by_type(src, code[3], strip_array_level);
+            return get_locations_consumed_by_type(src, insn.word(3), strip_array_level);
         case spv::OpTypeArray:
             if (strip_array_level) {
-                return get_locations_consumed_by_type(src, code[2], false);
+                return get_locations_consumed_by_type(src, insn.word(2), false);
             }
             else {
-                return code[3] * get_locations_consumed_by_type(src, code[2], false);
+                return insn.word(3) * get_locations_consumed_by_type(src, insn.word(2), false);
             }
         case spv::OpTypeMatrix:
             /* num locations is the dimension * element size */
-            return code[3] * get_locations_consumed_by_type(src, code[2], false);
+            return insn.word(3) * get_locations_consumed_by_type(src, insn.word(2), false);
         default:
             /* everything else is just 1. */
             return 1;
@@ -593,20 +627,13 @@ collect_interface_block_members(layer_data *my_data, VkDevice dev,
     }
 
     /* Walk OpMemberDecorate for type_id. */
-    unsigned int const *code = (unsigned int const *)&src->words[0];
-    size_t size = src->words.size();
-    unsigned word = 5;
-    while (word < size) {
+    for (auto insn : *src) {
+        if (insn.opcode() == spv::OpMemberDecorate && insn.word(1) == type_id) {
+            unsigned member_index = insn.word(2);
+            unsigned member_type_id = src->at(type_def_it->second).word(2 + member_index);
 
-        unsigned opcode = code[word] & 0x0ffffu;
-        unsigned oplen = (code[word] & 0xffff0000u) >> 16;
-
-        if (opcode == spv::OpMemberDecorate && code[word+1] == type_id) {
-            unsigned member_index = code[word+2];
-            unsigned member_type_id = code[type_def_it->second + 2 + member_index];
-
-            if (code[word+3] == spv::DecorationLocation) {
-                unsigned location = code[word+4];
+            if (insn.word(3) == spv::DecorationLocation) {
+                unsigned location = insn.word(4);
                 unsigned num_locations = get_locations_consumed_by_type(src, member_type_id, false);
                 for (unsigned int offset = 0; offset < num_locations; offset++) {
                     interface_var v;
@@ -617,8 +644,8 @@ collect_interface_block_members(layer_data *my_data, VkDevice dev,
                     out[location + offset] = v;
                 }
             }
-            else if (code[word+3] == spv::DecorationBuiltIn) {
-                unsigned builtin = code[word+4];
+            else if (insn.word(3) == spv::DecorationBuiltIn) {
+                unsigned builtin = insn.word(4);
                 interface_var v;
                 v.id = id;
                 v.type_id = member_type_id;
@@ -626,8 +653,6 @@ collect_interface_block_members(layer_data *my_data, VkDevice dev,
                 builtins_out[builtin] = v;
             }
         }
-
-        word += oplen;
     }
 }
 
@@ -638,33 +663,26 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
                               std::map<uint32_t, interface_var> &builtins_out,
                               bool is_array_of_verts)
 {
-    unsigned int const *code = (unsigned int const *)&src->words[0];
-    size_t size = src->words.size();
-
     std::unordered_map<unsigned, unsigned> var_locations;
     std::unordered_map<unsigned, unsigned> var_builtins;
     std::unordered_map<unsigned, unsigned> blocks;
 
-    unsigned word = 5;
-    while (word < size) {
-
-        unsigned opcode = code[word] & 0x0ffffu;
-        unsigned oplen = (code[word] & 0xffff0000u) >> 16;
+    for (auto insn : *src) {
 
         /* We consider two interface models: SSO rendezvous-by-location, and
          * builtins. Complain about anything that fits neither model.
          */
-        if (opcode == spv::OpDecorate) {
-            if (code[word+2] == spv::DecorationLocation) {
-                var_locations[code[word+1]] = code[word+3];
+        if (insn.opcode() == spv::OpDecorate) {
+            if (insn.word(2) == spv::DecorationLocation) {
+                var_locations[insn.word(1)] = insn.word(3);
             }
 
-            if (code[word+2] == spv::DecorationBuiltIn) {
-                var_builtins[code[word+1]] = code[word+3];
+            if (insn.word(2) == spv::DecorationBuiltIn) {
+                var_builtins[insn.word(1)] = insn.word(3);
             }
 
-            if (code[word+2] == spv::DecorationBlock) {
-                blocks[code[word+1]] = 1;
+            if (insn.word(2) == spv::DecorationBlock) {
+                blocks[insn.word(1)] = 1;
             }
         }
 
@@ -672,12 +690,12 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
         /* TODO: handle index=1 dual source outputs from FS -- two vars will
          * have the same location, and we DONT want to clobber. */
 
-        if (opcode == spv::OpVariable && code[word+3] == sinterface) {
-            unsigned id = code[word+2];
-            unsigned type = code[word+1];
+        else if (insn.opcode() == spv::OpVariable && insn.word(3) == sinterface) {
+            unsigned id = insn.word(2);
+            unsigned type = insn.word(1);
 
-            int location = value_or_default(var_locations, code[word+2], -1);
-            int builtin = value_or_default(var_builtins, code[word+2], -1);
+            int location = value_or_default(var_locations, id, -1);
+            int builtin = value_or_default(var_builtins, id, -1);
 
             /* All variables and interface block members in the Input or Output storage classes
              * must be decorated with either a builtin or an explicit location.
@@ -717,8 +735,6 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
                                                 blocks, is_array_of_verts, id, type);
             }
         }
-
-        word += oplen;
     }
 }
 
@@ -727,35 +743,29 @@ collect_interface_by_descriptor_slot(layer_data *my_data, VkDevice dev,
                               shader_module const *src, spv::StorageClass sinterface,
                               std::map<std::pair<unsigned, unsigned>, interface_var> &out)
 {
-    unsigned int const *code = (unsigned int const *)&src->words[0];
-    size_t size = src->words.size();
 
     std::unordered_map<unsigned, unsigned> var_sets;
     std::unordered_map<unsigned, unsigned> var_bindings;
 
-    unsigned word = 5;
-    while (word < size) {
-
-        unsigned opcode = code[word] & 0x0ffffu;
-        unsigned oplen = (code[word] & 0xffff0000u) >> 16;
-
+    for (auto insn : *src) {
         /* All variables in the Uniform or UniformConstant storage classes are required to be decorated with both
          * DecorationDescriptorSet and DecorationBinding.
          */
-        if (opcode == spv::OpDecorate) {
-            if (code[word+2] == spv::DecorationDescriptorSet) {
-                var_sets[code[word+1]] = code[word+3];
+        if (insn.opcode() == spv::OpDecorate) {
+            if (insn.word(2) == spv::DecorationDescriptorSet) {
+                var_sets[insn.word(1)] = insn.word(3);
             }
 
-            if (code[word+2] == spv::DecorationBinding) {
-                var_bindings[code[word+1]] = code[word+3];
+            if (insn.word(2) == spv::DecorationBinding) {
+                var_bindings[insn.word(1)] = insn.word(3);
             }
         }
 
-        if (opcode == spv::OpVariable && (code[word+3] == spv::StorageClassUniform ||
-                                          code[word+3] == spv::StorageClassUniformConstant)) {
-            unsigned set = value_or_default(var_sets, code[word+2], 0);
-            unsigned binding = value_or_default(var_bindings, code[word+2], 0);
+        else if (insn.opcode() == spv::OpVariable &&
+                (insn.word(3) == spv::StorageClassUniform ||
+                 insn.word(3) == spv::StorageClassUniformConstant)) {
+            unsigned set = value_or_default(var_sets, insn.word(2), 0);
+            unsigned binding = value_or_default(var_bindings, insn.word(2), 0);
 
             auto existing_it = out.find(std::make_pair(set, binding));
             if (existing_it != out.end()) {
@@ -763,17 +773,15 @@ collect_interface_by_descriptor_slot(layer_data *my_data, VkDevice dev,
                 log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__,
                         SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
                         "var %d (type %d) in %s interface in descriptor slot (%u,%u) conflicts with existing definition",
-                        code[word+2], code[word+1], storage_class_name(sinterface),
+                        insn.word(2), insn.word(1), storage_class_name(sinterface),
                         existing_it->first.first, existing_it->first.second);
             }
 
             interface_var v;
-            v.id = code[word+2];
-            v.type_id = code[word+1];
+            v.id = insn.word(2);
+            v.type_id = insn.word(1);
             out[std::make_pair(set, binding)] = v;
         }
-
-        word += oplen;
     }
 }
 
