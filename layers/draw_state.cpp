@@ -195,6 +195,14 @@ struct shader_module {
     spirv_inst_iter end() const { return spirv_inst_iter(words.begin(), words.end()); }          /* just past last insn */
     /* given an offset into the module, produce an iterator there. */
     spirv_inst_iter at(unsigned offset) const { return spirv_inst_iter(words.begin(), words.begin() + offset); }
+
+    spirv_inst_iter get_type_def(unsigned type_id) const {
+        auto it = type_def_index.find(type_id);
+        if (it == type_def_index.end()) {
+            return end();
+        }
+        return at(it->second);
+    }
 };
 
 // TODO : Do we need to guard access to layer_data_map w/ lock?
@@ -400,40 +408,34 @@ storage_class_name(unsigned sc)
 static char *
 describe_type(char *dst, shader_module const *src, unsigned type)
 {
-    auto type_def_it = src->type_def_index.find(type);
+    auto insn = src->get_type_def(type);
+    assert(insn != src->end());
 
-    if (type_def_it == src->type_def_index.end()) {
-        return dst + sprintf(dst, "undef");
-    }
-
-    unsigned int const *code = (unsigned int const *)&src->words[type_def_it->second];
-    unsigned opcode = code[0] & 0x0ffffu;
-    switch (opcode) {
+    switch (insn.opcode()) {
         case spv::OpTypeBool:
             return dst + sprintf(dst, "bool");
         case spv::OpTypeInt:
-            return dst + sprintf(dst, "%cint%d", code[3] ? 's' : 'u', code[2]);
+            return dst + sprintf(dst, "%cint%d", insn.word(3) ? 's' : 'u', insn.word(2));
         case spv::OpTypeFloat:
-            return dst + sprintf(dst, "float%d", code[2]);
+            return dst + sprintf(dst, "float%d", insn.word(2));
         case spv::OpTypeVector:
-            dst += sprintf(dst, "vec%d of ", code[3]);
-            return describe_type(dst, src, code[2]);
+            dst += sprintf(dst, "vec%d of ", insn.word(3));
+            return describe_type(dst, src, insn.word(2));
         case spv::OpTypeMatrix:
-            dst += sprintf(dst, "mat%d of ", code[3]);
-            return describe_type(dst, src, code[2]);
+            dst += sprintf(dst, "mat%d of ", insn.word(3));
+            return describe_type(dst, src, insn.word(2));
         case spv::OpTypeArray:
-            dst += sprintf(dst, "arr[%d] of ", code[3]);
-            return describe_type(dst, src, code[2]);
+            dst += sprintf(dst, "arr[%d] of ", insn.word(3));
+            return describe_type(dst, src, insn.word(2));
         case spv::OpTypePointer:
-            dst += sprintf(dst, "ptr to %s ", storage_class_name(code[2]));
-            return describe_type(dst, src, code[3]);
+            dst += sprintf(dst, "ptr to %s ", storage_class_name(insn.word(2)));
+            return describe_type(dst, src, insn.word(3));
         case spv::OpTypeStruct:
             {
-                unsigned oplen = code[0] >> 16;
                 dst += sprintf(dst, "struct of (");
-                for (unsigned i = 2; i < oplen; i++) {
-                    dst = describe_type(dst, src, code[i]);
-                    dst += sprintf(dst, i == oplen-1 ? ")" : ", ");
+                for (unsigned i = 2; i < insn.len(); i++) {
+                    dst = describe_type(dst, src, insn.word(i));
+                    dst += sprintf(dst, i == insn.len()-1 ? ")" : ", ");
                 }
                 return dst;
             }
@@ -447,49 +449,37 @@ describe_type(char *dst, shader_module const *src, unsigned type)
 static bool
 types_match(shader_module const *a, shader_module const *b, unsigned a_type, unsigned b_type, bool b_arrayed)
 {
-    auto a_type_def_it = a->type_def_index.find(a_type);
-    auto b_type_def_it = b->type_def_index.find(b_type);
-
-    if (a_type_def_it == a->type_def_index.end()) {
-        return false;
-    }
-
-    if (b_type_def_it == b->type_def_index.end()) {
-        return false;
-    }
-
     /* walk two type trees together, and complain about differences */
-    unsigned int const *a_code = (unsigned int const *)&a->words[a_type_def_it->second];
-    unsigned int const *b_code = (unsigned int const *)&b->words[b_type_def_it->second];
+    auto a_insn = a->get_type_def(a_type);
+    auto b_insn = b->get_type_def(b_type);
+    assert(a_insn != a->end());
+    assert(b_insn != b->end());
 
-    unsigned a_opcode = a_code[0] & 0x0ffffu;
-    unsigned b_opcode = b_code[0] & 0x0ffffu;
-
-    if (b_arrayed && b_opcode == spv::OpTypeArray) {
+    if (b_arrayed && b_insn.opcode() == spv::OpTypeArray) {
         /* we probably just found the extra level of arrayness in b_type: compare the type inside it to a_type */
-        return types_match(a, b, a_type, b_code[2], false);
+        return types_match(a, b, a_type, b_insn.word(2), false);
     }
 
-    if (a_opcode != b_opcode) {
+    if (a_insn.opcode() != b_insn.opcode()) {
         return false;
     }
 
-    switch (a_opcode) {
+    switch (a_insn.opcode()) {
         /* if b_arrayed and we hit a leaf type, then we can't match -- there's nowhere for the extra OpTypeArray to be! */
         case spv::OpTypeBool:
             return true && !b_arrayed;
         case spv::OpTypeInt:
             /* match on width, signedness */
-            return a_code[2] == b_code[2] && a_code[3] == b_code[3] && !b_arrayed;
+            return a_insn.word(2) == b_insn.word(2) && a_insn.word(3) == b_insn.word(3) && !b_arrayed;
         case spv::OpTypeFloat:
             /* match on width */
-            return a_code[2] == b_code[2] && !b_arrayed;
+            return a_insn.word(2) == b_insn.word(2) && !b_arrayed;
         case spv::OpTypeVector:
         case spv::OpTypeMatrix:
         case spv::OpTypeArray:
             /* match on element type, count. these all have the same layout. we don't get here if
              * b_arrayed -- that is handled above. */
-            return !b_arrayed && types_match(a, b, a_code[2], b_code[2], b_arrayed) && a_code[3] == b_code[3];
+            return !b_arrayed && types_match(a, b, a_insn.word(2), b_insn.word(2), b_arrayed) && a_insn.word(3) == b_insn.word(3);
         case spv::OpTypeStruct:
             /* match on all element types */
             {
@@ -498,15 +488,12 @@ types_match(shader_module const *a, shader_module const *b, unsigned a_type, uns
                     return false;
                 }
 
-                unsigned a_len = a_code[0] >> 16;
-                unsigned b_len = b_code[0] >> 16;
-
-                if (a_len != b_len) {
+                if (a_insn.len() != b_insn.len()) {
                     return false;   /* structs cannot match if member counts differ */
                 }
 
-                for (unsigned i = 2; i < a_len; i++) {
-                    if (!types_match(a, b, a_code[i], b_code[i], b_arrayed)) {
+                for (unsigned i = 2; i < a_insn.len(); i++) {
+                    if (!types_match(a, b, a_insn.word(i), b_insn.word(i), b_arrayed)) {
                         return false;
                     }
                 }
@@ -515,7 +502,7 @@ types_match(shader_module const *a, shader_module const *b, unsigned a_type, uns
             }
         case spv::OpTypePointer:
             /* match on pointee type. storage class is expected to differ */
-            return types_match(a, b, a_code[3], b_code[3], b_arrayed);
+            return types_match(a, b, a_insn.word(3), b_insn.word(3), b_arrayed);
 
         default:
             /* remaining types are CLisms, or may not appear in the interfaces we
@@ -540,13 +527,8 @@ value_or_default(std::unordered_map<unsigned, unsigned> const &map, unsigned id,
 static unsigned
 get_locations_consumed_by_type(shader_module const *src, unsigned type, bool strip_array_level)
 {
-    auto type_def_it = src->type_def_index.find(type);
-
-    if (type_def_it == src->type_def_index.end()) {
-        return 1;       /* This is actually broken SPIR-V... */
-    }
-
-    auto insn = src->at(type_def_it->second);
+    auto insn = src->get_type_def(type);
+    assert(insn != src->end());
 
     switch (insn.opcode()) {
         case spv::OpTypePointer:
@@ -592,26 +574,19 @@ collect_interface_block_members(layer_data *my_data, VkDevice dev,
                                 uint32_t type_id)
 {
     /* Walk down the type_id presented, trying to determine whether it's actually an interface block. */
-    std::unordered_map<unsigned, unsigned>::const_iterator type_def_it;
+    auto type = src->get_type_def(type_id);
+
     while (true) {
 
-        type_def_it = src->type_def_index.find(type_id);
-        if (type_def_it == src->type_def_index.end()) {
-            return; /* this is actually broken SPIR-V */
+        if (type.opcode() == spv::OpTypePointer) {
+            type = src->get_type_def(type.word(3));
         }
-
-        unsigned int const *code = (unsigned int const *)&src->words[type_def_it->second];
-        unsigned opcode = code[0] & 0x0ffffu;
-
-        if (opcode == spv::OpTypePointer) {
-            type_id = code[3];
-        }
-        else if (opcode == spv::OpTypeArray && is_array_of_verts) {
-            type_id = code[2];
+        else if (type.opcode() == spv::OpTypeArray && is_array_of_verts) {
+            type = src->get_type_def(type.word(2));
             is_array_of_verts = false;
         }
-        else if (opcode == spv::OpTypeStruct) {
-            if (blocks.find(type_id) == blocks.end()) {
+        else if (type.opcode() == spv::OpTypeStruct) {
+            if (blocks.find(type.word(1)) == blocks.end()) {
                 /* This isn't an interface block. */
                 return;
             }
@@ -626,11 +601,11 @@ collect_interface_block_members(layer_data *my_data, VkDevice dev,
         }
     }
 
-    /* Walk OpMemberDecorate for type_id. */
+    /* Walk all the OpMemberDecorate for type's result id. */
     for (auto insn : *src) {
-        if (insn.opcode() == spv::OpMemberDecorate && insn.word(1) == type_id) {
+        if (insn.opcode() == spv::OpMemberDecorate && insn.word(1) == type.word(1)) {
             unsigned member_index = insn.word(2);
-            unsigned member_type_id = src->at(type_def_it->second).word(2 + member_index);
+            unsigned member_type_id = type.word(2 + member_index);
 
             if (insn.word(3) == spv::DecorationLocation) {
                 unsigned location = insn.word(4);
@@ -906,27 +881,22 @@ get_format_type(VkFormat fmt) {
 static unsigned
 get_fundamental_type(shader_module const *src, unsigned type)
 {
-    auto type_def_it = src->type_def_index.find(type);
+    auto insn = src->get_type_def(type);
+    assert(insn != src->end());
 
-    if (type_def_it == src->type_def_index.end()) {
-        return FORMAT_TYPE_UNDEFINED;
-    }
-
-    unsigned int const *code = (unsigned int const *)&src->words[type_def_it->second];
-    unsigned opcode = code[0] & 0x0ffffu;
-    switch (opcode) {
+    switch (insn.opcode()) {
         case spv::OpTypeInt:
-            return code[3] ? FORMAT_TYPE_SINT : FORMAT_TYPE_UINT;
+            return insn.word(3) ? FORMAT_TYPE_SINT : FORMAT_TYPE_UINT;
         case spv::OpTypeFloat:
             return FORMAT_TYPE_FLOAT;
         case spv::OpTypeVector:
-            return get_fundamental_type(src, code[2]);
+            return get_fundamental_type(src, insn.word(2));
         case spv::OpTypeMatrix:
-            return get_fundamental_type(src, code[2]);
+            return get_fundamental_type(src, insn.word(2));
         case spv::OpTypeArray:
-            return get_fundamental_type(src, code[2]);
+            return get_fundamental_type(src, insn.word(2));
         case spv::OpTypePointer:
-            return get_fundamental_type(src, code[3]);
+            return get_fundamental_type(src, insn.word(3));
         default:
             return FORMAT_TYPE_UNDEFINED;
     }
@@ -1042,7 +1012,6 @@ validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevice dev, shade
      * are currently dense, but the parallel with matching between shader stages is nice.
      */
 
-    /* TODO: Figure out compile error with cb->attachmentCount */
     while ((outputs.size() > 0 && it != outputs.end()) || attachment < color_formats.size()) {
         if (attachment == color_formats.size() || ( it != outputs.end() && it->first < attachment)) {
             if (log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
