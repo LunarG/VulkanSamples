@@ -435,7 +435,7 @@ goto:eof
 
    REM Cleanup any old directories lying around.
    rmdir /s /q build32
-   rmdir /s /q build64
+   rmdir /s /q build
    
    echo Making 32-bit glslang
    echo *************************
@@ -469,8 +469,8 @@ goto:eof
  
    echo Making 64-bit glslang
    echo *************************
-   mkdir build64
-   set GLSLANG_BUILD_DIR=%GLSLANG_DIR%\build64
+   mkdir build
+   set GLSLANG_BUILD_DIR=%GLSLANG_DIR%\build
    cd %GLSLANG_BUILD_DIR%
 
    echo Generating 64-bit Glslang CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
@@ -504,7 +504,7 @@ goto:eof
 
    REM Cleanup any old directories lying around.
    rmdir /s /q build32
-   rmdir /s /q build64
+   rmdir /s /q build
    
    echo Making 32-bit LLVM
    echo *************************
@@ -541,8 +541,8 @@ goto:eof
  
    echo Making 64-bit LLVM
    echo *************************
-   mkdir build64
-   set LLVM_BUILD_DIR=%LLVM_DIR%\build64
+   mkdir build
+   set LLVM_BUILD_DIR=%LLVM_DIR%\build
    cd %LLVM_BUILD_DIR%
 
    echo Generating 64-bit LLVM CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
@@ -574,7 +574,7 @@ goto:eof
 
    REM Cleanup any old directories lying around.
    rmdir /s /q build32
-   rmdir /s /q build64
+   rmdir /s /q build
    
    echo Making 32-bit LunarGLASS
    echo *************************
@@ -613,8 +613,8 @@ goto:eof
    
    echo Making 64-bit LunarGLASS
    echo *************************
-   mkdir build64
-   set LUNARGLASS_BUILD_DIR=%LUNARGLASS_DIR%\build64
+   mkdir build
+   set LUNARGLASS_BUILD_DIR=%LUNARGLASS_DIR%\build
    cd %LUNARGLASS_BUILD_DIR%
    
    echo Generating 64-bit LunarGlass CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
@@ -652,7 +652,7 @@ goto:eof
 
    REM Cleanup any old directories lying around.
    rmdir /s /q build32
-   rmdir /s /q build64
+   rmdir /s /q build
    
    echo Making 32-bit spirv-tools
    echo *************************
@@ -687,8 +687,8 @@ goto:eof
  
    echo Making 64-bit spirv-tools  
    echo *************************
-   mkdir build64
-   set SPIRV_TOOLS_BUILD_DIR=%SPIRV_TOOLS_DIR%\build64
+   mkdir build
+   set SPIRV_TOOLS_BUILD_DIR=%SPIRV_TOOLS_DIR%\build
    cd %SPIRV_TOOLS_BUILD_DIR%
    
    echo Generating 64-bit spirv-tools CMake files for Visual Studio %VS_VERSION% ..
