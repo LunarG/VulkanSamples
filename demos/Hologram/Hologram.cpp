@@ -602,6 +602,9 @@ void Hologram::Worker::step_objects()
 
 void Hologram::Worker::draw_objects(VkFramebuffer fb)
 {
+    // wait for step_objects first
+    wait_idle();
+
     {
         std::lock_guard<std::mutex> lock(mutex_);
         bool started = (state_ != INIT);
