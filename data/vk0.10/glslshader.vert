@@ -18,8 +18,8 @@ out gl_PerVertex {
 
 void main() 
 {
-   texcoord = ubuf.attr[gl_VertexID];
-   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];
+   texcoord = ubuf.attr[gl_VertexIndex];
+   gl_Position = ubuf.MVP * ubuf.position[gl_VertexIndex];
 
    // GL->VK conventions
    gl_Position.y = -gl_Position.y;
