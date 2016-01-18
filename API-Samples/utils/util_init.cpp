@@ -716,6 +716,16 @@ void init_swapchain_extension(struct sample_info &info)
 
     VkResult U_ASSERT_ONLY res;
 
+    // Construct the surface description:
+#ifdef _WIN32
+    VkWin32SurfaceCreateInfoKHR createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.hinstance = info.connection;
+    createInfo.hwnd = info.window;
+    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo,
+                                  NULL, &info.surface);
+#elif defined(__ANDROID__)
     GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceSupportKHR);
     GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceCapabilitiesKHR);
     GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceFormatsKHR);
@@ -727,17 +737,6 @@ void init_swapchain_extension(struct sample_info &info)
     GET_DEVICE_PROC_ADDR(info.device, GetSwapchainImagesKHR);
     GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
-
-    // Construct the surface description:
-#ifdef _WIN32
-    VkWin32SurfaceCreateInfoKHR createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    createInfo.pNext = NULL;
-    createInfo.hinstance = info.connection;
-    createInfo.hwnd = info.window;
-    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo,
-                                  NULL, &info.surface);
-#elif defined(__ANDROID__)
     res = info.fpCreateAndroidSurfaceKHR(info.inst, platformWindow, nullptr, &info.surface);
 #else  // !__ANDROID__ && !_WIN32
     VkXcbSurfaceCreateInfoKHR createInfo = {};
