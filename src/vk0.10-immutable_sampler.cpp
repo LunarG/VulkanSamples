@@ -273,7 +273,7 @@ int main(int argc, char **argv)
     } while (res == VK_TIMEOUT);
 
     assert(res == VK_SUCCESS);
-    res = info.fpQueuePresentKHR(info.queue, &present);
+    res = vkQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);

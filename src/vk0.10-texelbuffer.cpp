@@ -275,7 +275,7 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
-    res = info.fpAcquireNextImageKHR(info.device, info.swap_chain,
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain,
                                       UINT64_MAX,
                                       info.presentCompleteSemaphore,
                                       NULL,

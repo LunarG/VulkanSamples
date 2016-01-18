@@ -676,17 +676,6 @@ void init_swapchain_extension(struct sample_info &info)
 
     VkResult U_ASSERT_ONLY res;
 
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceSupportKHR);
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceCapabilitiesKHR);
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceFormatsKHR);
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfacePresentModesKHR);
-    GET_INSTANCE_PROC_ADDR(info.inst, DestroySurfaceKHR);
-    GET_DEVICE_PROC_ADDR(info.device, CreateSwapchainKHR);
-    GET_DEVICE_PROC_ADDR(info.device, DestroySwapchainKHR);
-    GET_DEVICE_PROC_ADDR(info.device, GetSwapchainImagesKHR);
-    GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
-    GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
-
     // Construct the surface description:
 #ifdef _WIN32
     VkWin32SurfaceCreateInfoKHR createInfo = {};
@@ -710,7 +699,7 @@ void init_swapchain_extension(struct sample_info &info)
     // Iterate over each queue to learn whether it supports presenting:
     VkBool32* supportsPresent = (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
     for (uint32_t i = 0; i < info.queue_count; i++) {
-        info.fpGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i,
+        vkGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i,
                                                    info.surface,
                                                    &supportsPresent[i]);
     }
@@ -754,12 +743,12 @@ void init_swapchain_extension(struct sample_info &info)
 
     // Get the list of VkFormats that are supported:
     uint32_t formatCount;
-    res = info.fpGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0],
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0],
                                      info.surface,
                                      &formatCount, NULL);
     assert(res == VK_SUCCESS);
     VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
-    res = info.fpGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0],
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0],
                                      info.surface,
                                      &formatCount, surfFormats);
     assert(res == VK_SUCCESS);
@@ -794,7 +783,7 @@ void init_presentable_image(struct sample_info &info)
     assert(!res);
 
     // Get the index of the next available swapchain image:
-    res = info.fpAcquireNextImageKHR(info.device, info.swap_chain,
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain,
                                       UINT64_MAX,
                                       info.presentCompleteSemaphore,
                                       NULL,
@@ -871,7 +860,7 @@ void execute_present_image(struct sample_info &info)
     present.waitSemaphoreCount = 0;
     present.pResults = NULL;
 
-    res = info.fpQueuePresentKHR(info.queue, &present);
+    res = vkQueuePresentKHR(info.queue, &present);
     // TODO: Deal with the VK_SUBOPTIMAL_WSI and VK_ERROR_OUT_OF_DATE_WSI
     // return codes
     assert(!res);
@@ -884,20 +873,20 @@ void init_swap_chain(struct sample_info &info)
     VkResult U_ASSERT_ONLY res;
     VkSurfaceCapabilitiesKHR surfCapabilities;
 
-    res = info.fpGetPhysicalDeviceSurfaceCapabilitiesKHR(info.gpus[0],
+    res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(info.gpus[0],
         info.surface,
         &surfCapabilities);
     assert(res == VK_SUCCESS);
 
     uint32_t presentModeCount;
-    res = info.fpGetPhysicalDeviceSurfacePresentModesKHR(info.gpus[0],
+    res = vkGetPhysicalDeviceSurfacePresentModesKHR(info.gpus[0],
         info.surface,
         &presentModeCount, NULL);
     assert(res == VK_SUCCESS);
     VkPresentModeKHR *presentModes =
         (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
     assert(presentModes);
-    res = info.fpGetPhysicalDeviceSurfacePresentModesKHR(info.gpus[0],
+    res = vkGetPhysicalDeviceSurfacePresentModesKHR(info.gpus[0],
         info.surface,
         &presentModeCount, presentModes);
     assert(res == VK_SUCCESS);
@@ -971,16 +960,16 @@ void init_swap_chain(struct sample_info &info)
     swap_chain.queueFamilyIndexCount = 0;
     swap_chain.pQueueFamilyIndices = NULL;
 
-    res = info.fpCreateSwapchainKHR(info.device, &swap_chain, NULL, &info.swap_chain);
+    res = vkCreateSwapchainKHR(info.device, &swap_chain, NULL, &info.swap_chain);
     assert(res == VK_SUCCESS);
 
-    res = info.fpGetSwapchainImagesKHR(info.device, info.swap_chain,
+    res = vkGetSwapchainImagesKHR(info.device, info.swap_chain,
                                       &info.swapchainImageCount, NULL);
     assert(res == VK_SUCCESS);
 
     VkImage* swapchainImages = (VkImage*)malloc(info.swapchainImageCount * sizeof(VkImage));
     assert(swapchainImages);
-    res = info.fpGetSwapchainImagesKHR(info.device, info.swap_chain,
+    res = vkGetSwapchainImagesKHR(info.device, info.swap_chain,
                                       &info.swapchainImageCount, swapchainImages);
     assert(res == VK_SUCCESS);
 
@@ -2085,7 +2074,7 @@ void destroy_swap_chain(struct sample_info &info)
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         vkDestroyImageView(info.device, info.buffers[i].view, NULL);
     }
-    info.fpDestroySwapchainKHR(info.device, info.swap_chain, NULL);
+    vkDestroySwapchainKHR(info.device, info.swap_chain, NULL);
 }
 
 void destroy_framebuffers(struct sample_info &info)
