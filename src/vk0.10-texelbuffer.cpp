@@ -58,7 +58,7 @@ static const char *vertShaderText =
     "    vertices[0] = vec2(-1.0, -1.0);\n"
     "    vertices[1] = vec2( 1.0, -1.0);\n"
     "    vertices[2] = vec2( 0.0,  1.0);\n"
-    "    gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+    "    gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
     "}\n";
 
 static const char *fragShaderText=
