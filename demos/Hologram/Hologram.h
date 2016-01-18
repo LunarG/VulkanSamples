@@ -124,6 +124,7 @@ private:
 
     VkCommandPool primary_cmd_pool_;
     VkCommandBuffer primary_cmd_;
+    VkFence primary_cmd_fence_;
     VkCommandBufferBeginInfo primary_cmd_begin_info_;
     VkPipelineStageFlags primary_cmd_submit_wait_stages_;
     VkSubmitInfo primary_cmd_submit_info_;

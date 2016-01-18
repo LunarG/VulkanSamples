@@ -86,6 +86,7 @@ void Hologram::detach_shell()
 {
     stop_workers();
 
+    vk::DestroyFence(dev_, primary_cmd_fence_, nullptr);
     vk::DestroyCommandPool(dev_, primary_cmd_pool_, nullptr);
 
     vk::DestroyPipeline(dev_, pipeline_, nullptr);
@@ -287,6 +288,11 @@ void Hologram::create_primary_cmd()
     cmd_buf_info.commandBufferCount = 1;
 
     vk::assert_success(vk::AllocateCommandBuffers(dev_, &cmd_buf_info, &primary_cmd_));
+
+    VkFenceCreateInfo fence_info = {};
+    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    vk::assert_success(vk::CreateFence(dev_, &fence_info, nullptr, &primary_cmd_fence_));
 
     primary_cmd_begin_info_.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     primary_cmd_begin_info_.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -528,6 +534,10 @@ void Hologram::on_tick()
 
 void Hologram::on_frame(float frame_pred)
 {
+    // wait for the last submission since we reuse command buffers
+    vk::assert_success(vk::WaitForFences(dev_, 1, &primary_cmd_fence_, true, UINT64_MAX));
+    vk::assert_success(vk::ResetFences(dev_, 1, &primary_cmd_fence_));
+
     const Shell::BackBuffer &back = shell_->context().acquired_back_buffer;
 
     // ignore frame_pred
@@ -553,7 +563,7 @@ void Hologram::on_frame(float frame_pred)
     primary_cmd_submit_info_.pWaitSemaphores = &back.acquire_semaphore;
     primary_cmd_submit_info_.pSignalSemaphores = &back.render_semaphore;
 
-    res = vk::QueueSubmit(queue_, 1, &primary_cmd_submit_info_, VK_NULL_HANDLE);
+    res = vk::QueueSubmit(queue_, 1, &primary_cmd_submit_info_, primary_cmd_fence_);
 
     (void) res;
 }
