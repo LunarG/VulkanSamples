@@ -83,7 +83,7 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
-    res = info.fpAcquireNextImageKHR(info.device, info.swap_chain,
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain,
                                       UINT64_MAX,
                                       presentCompleteSemaphore,
                                       NULL,
@@ -270,7 +270,7 @@ int main(int argc, char **argv)
         res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while(res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
-    res = info.fpQueuePresentKHR(info.queue, &present);
+    res = vkQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);

@@ -62,16 +62,6 @@ int main(int argc, char **argv)
 
 
     /* VULKAN_KEY_START */
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceSupportKHR);
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceCapabilitiesKHR);
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceFormatsKHR);
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfacePresentModesKHR);
-    GET_DEVICE_PROC_ADDR(info.device, CreateSwapchainKHR);
-    GET_DEVICE_PROC_ADDR(info.device, DestroySwapchainKHR);
-    GET_DEVICE_PROC_ADDR(info.device, GetSwapchainImagesKHR);
-    GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
-    GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
-
     // Construct the surface description:
 #ifdef _WIN32
     VkWin32SurfaceCreateInfoKHR createInfo = {};
@@ -95,7 +85,7 @@ int main(int argc, char **argv)
     // Iterate over each queue to learn whether it supports presenting:
     VkBool32* supportsPresent = (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
     for (uint32_t i = 0; i < info.queue_count; i++) {
-        info.fpGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i,
+        vkGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i,
                                                    info.surface,
                                                    &supportsPresent[i]);
     }
@@ -139,12 +129,12 @@ int main(int argc, char **argv)
 
     // Get the list of VkFormats that are supported:
     uint32_t formatCount;
-    res = info.fpGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0],
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0],
                                      info.surface,
                                      &formatCount, NULL);
     assert(res == VK_SUCCESS);
     VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
-    res = info.fpGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0],
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0],
                                      info.surface,
                                      &formatCount, surfFormats);
     assert(res == VK_SUCCESS);
@@ -163,20 +153,20 @@ int main(int argc, char **argv)
 
     VkSurfaceCapabilitiesKHR surfCapabilities;
 
-    res = info.fpGetPhysicalDeviceSurfaceCapabilitiesKHR(info.gpus[0],
+    res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(info.gpus[0],
         info.surface,
         &surfCapabilities);
     assert(res == VK_SUCCESS);
 
     uint32_t presentModeCount;
-    res = info.fpGetPhysicalDeviceSurfacePresentModesKHR(info.gpus[0],
+    res = vkGetPhysicalDeviceSurfacePresentModesKHR(info.gpus[0],
         info.surface,
         &presentModeCount, NULL);
     assert(res == VK_SUCCESS);
     VkPresentModeKHR *presentModes =
         (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
 
-    res = info.fpGetPhysicalDeviceSurfacePresentModesKHR(info.gpus[0],
+    res = vkGetPhysicalDeviceSurfacePresentModesKHR(info.gpus[0],
         info.surface,
         &presentModeCount, presentModes);
     assert(res == VK_SUCCESS);
@@ -250,16 +240,16 @@ int main(int argc, char **argv)
     swap_chain.queueFamilyIndexCount = 0;
     swap_chain.pQueueFamilyIndices = NULL;
 
-    res = info.fpCreateSwapchainKHR(info.device, &swap_chain, NULL, &info.swap_chain);
+    res = vkCreateSwapchainKHR(info.device, &swap_chain, NULL, &info.swap_chain);
     assert(res == VK_SUCCESS);
 
-    res = info.fpGetSwapchainImagesKHR(info.device, info.swap_chain,
+    res = vkGetSwapchainImagesKHR(info.device, info.swap_chain,
                                       &info.swapchainImageCount, NULL);
     assert(res == VK_SUCCESS);
 
     VkImage* swapchainImages = (VkImage*)malloc(info.swapchainImageCount * sizeof(VkImage));
     assert(swapchainImages);
-    res = info.fpGetSwapchainImagesKHR(info.device, info.swap_chain,
+    res = vkGetSwapchainImagesKHR(info.device, info.swap_chain,
                                       &info.swapchainImageCount, swapchainImages);
     assert(res == VK_SUCCESS);
 
@@ -316,7 +306,7 @@ int main(int argc, char **argv)
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         vkDestroyImageView(info.device, info.buffers[i].view, NULL);
     }
-    info.fpDestroySwapchainKHR(info.device, info.swap_chain, NULL);
+    vkDestroySwapchainKHR(info.device, info.swap_chain, NULL);
     destroy_device(info);
     destroy_instance(info);
     destroy_window(info);
