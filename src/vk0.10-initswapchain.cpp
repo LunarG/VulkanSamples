@@ -307,9 +307,9 @@ int main(int argc, char **argv)
         vkDestroyImageView(info.device, info.buffers[i].view, NULL);
     }
     vkDestroySwapchainKHR(info.device, info.swap_chain, NULL);
+    destroy_window(info);
     destroy_device(info);
     destroy_instance(info);
-    destroy_window(info);
 
     return 0;
 }

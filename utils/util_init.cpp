@@ -498,6 +498,7 @@ void init_window(struct sample_info &info)
 
 void destroy_window(struct sample_info &info)
 {
+    vkDestroySurfaceKHR(info.inst, info.surface, NULL);
     DestroyWindow(info.window);
 }
 #else
@@ -554,6 +555,7 @@ void init_window(struct sample_info &info)
 
 void destroy_window(struct sample_info &info)
 {
+    vkDestroySurfaceKHR(info.inst, info.surface, NULL);
     xcb_destroy_window(info.connection, info.window);
     xcb_disconnect(info.connection);
 }
