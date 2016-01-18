@@ -321,10 +321,12 @@ void Shell::resize_swapchain(int32_t width_hint, int32_t height_hint)
 
 void Shell::add_game_time(float time)
 {
+    int max_ticks = 3;
+
     if (!settings_.no_tick)
         game_time_ += time;
 
-    while (game_time_ >= game_tick_) {
+    while (game_time_ >= game_tick_ && max_ticks--) {
         game_.on_tick();
         game_time_ -= game_tick_;
     }
