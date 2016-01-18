@@ -292,6 +292,7 @@ int sample_main()
         vkDestroyImageView(info.device, info.buffers[i].view, NULL);
     }
     vkDestroySwapchainKHR(info.device, info.swap_chain, NULL);
+    destroy_window(info);
     destroy_device(info);
     destroy_instance(info);
 
