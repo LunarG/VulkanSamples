@@ -43,6 +43,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
         VkInstance* pInstance)
 {
     struct loader_instance *ptr_instance = NULL;
+    VkInstance created_instance = VK_NULL_HANDLE;
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
     VkDebugReportCallbackEXT instance_callback = VK_NULL_HANDLE;
     void *pNext = (void *) pCreateInfo->pNext;
@@ -180,11 +181,11 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     wsi_create_instance(ptr_instance, pCreateInfo);
     debug_report_create_instance(ptr_instance, pCreateInfo);
 
-
-    res = ptr_instance->disp->CreateInstance(pCreateInfo, pAllocator, &ptr_instance);
+    created_instance = (VkInstance) ptr_instance;
+    res = ptr_instance->disp->CreateInstance(pCreateInfo, pAllocator, &created_instance);
 
     if (res == VK_SUCCESS) {
-        *pInstance = (VkInstance) ptr_instance;
+        *pInstance = created_instance;
         /*
          * Finally have the layers in place and everyone has seen
          * the CreateInstance command go by. This allows the layer's
