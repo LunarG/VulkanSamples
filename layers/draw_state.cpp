@@ -2043,7 +2043,8 @@ static VkBool32 validateImageView(const layer_data* my_data, const VkImageView* 
         VkImage image = ivIt->second->image;
         // TODO : Check here in case we have a bad image
         auto imgIt = my_data->imageMap.find(image);
-        if (imgIt == my_data->imageMap.end()) {
+        auto swapChainImageIt = my_data->imageLayoutMap.find(image);
+        if ((imgIt == my_data->imageMap.end()) && (swapChainImageIt == my_data->imageLayoutMap.end())) {
             skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, (uint64_t) image, __LINE__, DRAWSTATE_IMAGEVIEW_DESCRIPTOR_ERROR, "DS",
                 "vkUpdateDescriptorSets: Attempt to update descriptor with invalid image %#" PRIxLEAST64 " in imageView %#" PRIxLEAST64, (uint64_t) image, (uint64_t) *pImageView);
         } else {
