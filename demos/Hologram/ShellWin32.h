@@ -30,10 +30,6 @@ private:
     }
     LRESULT handle_message(UINT msg, WPARAM wparam, LPARAM lparam);
 
-    float get_time();
-
-    UINT64 perf_counter_freq_;
-
     HINSTANCE hinstance_;
     HWND hwnd_;
 

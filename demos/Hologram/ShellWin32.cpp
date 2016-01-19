@@ -6,10 +6,41 @@
 #include "Game.h"
 #include "ShellWin32.h"
 
+namespace {
+
+class Win32Timer {
+public:
+    Win32Timer()
+    {
+        LARGE_INTEGER freq;
+        QueryPerformanceFrequency(&freq);
+        freq_ = static_cast<double>(freq.QuadPart);
+
+        reset();
+    }
+
+    void reset()
+    {
+        QueryPerformanceCounter(&start_);
+    }
+
+    double get() const
+    {
+        LARGE_INTEGER now;
+        QueryPerformanceCounter(&now);
+
+        return static_cast<double>(now.QuadPart - start_.QuadPart) / freq_;
+    }
+
+private:
+    double freq_;
+    LARGE_INTEGER start_;
+};
+
+} // namespace
+
 ShellWin32::ShellWin32(Game &game) : Shell(game), hwnd_(nullptr)
 {
-    QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER *>(&perf_counter_freq_));
-
     init_window();
 
     global_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
@@ -151,14 +182,6 @@ LRESULT ShellWin32::handle_message(UINT msg, WPARAM wparam, LPARAM lparam)
     return 0;
 }
 
-float ShellWin32::get_time()
-{
-    UINT64 count;
-    QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER *>(&count));
-
-    return (float) count / perf_counter_freq_;
-}
-
 void ShellWin32::quit()
 {
     PostQuitMessage(0);
@@ -168,7 +191,8 @@ void ShellWin32::run()
 {
     resize_swapchain(settings_.initial_width, settings_.initial_height);
 
-    float current_time = get_time();
+    Win32Timer timer;
+    double current_time = timer.get();
 
     while (true) {
         bool quit = false;
@@ -192,8 +216,8 @@ void ShellWin32::run()
 
         acquire_back_buffer();
 
-        float t = get_time();
-        add_game_time(t - current_time);
+        double t = timer.get();
+        add_game_time(static_cast<float>(t - current_time));
 
         present_back_buffer();
 
