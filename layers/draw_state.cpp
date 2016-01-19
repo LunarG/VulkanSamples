@@ -2551,7 +2551,8 @@ static VkBool32 addCmd(const layer_data* my_data, GLOBAL_CB_NODE* pCB, const CMD
     }
     return skipCall;
 }
-
+// Reset the command buffer state
+//  Maintain the createInfo and set state to CB_NEW, but clear all other state
 static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(my_data, cb);
@@ -2562,10 +2563,8 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
             cmd_list.pop_back();
         }
         pCB->pCmds.clear();
-        // Reset CB state (need to save createInfo)
-        VkCommandBufferAllocateInfo saveCBCI = pCB->createInfo;
+        // Reset CB state (note that createInfo is not cleared)
         pCB->commandBuffer = cb;
-        pCB->createInfo = saveCBCI;
         memset(&pCB->beginInfo, 0, sizeof(VkCommandBufferBeginInfo));
         pCB->fence = 0;
         pCB->numCmds = 0;
@@ -4022,7 +4021,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
                 }
             }
         }
-        pCB->beginInfo = *pBeginInfo;
         if (CB_RECORDING == pCB->state) {
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
                 "vkBeginCommandBuffer(): Cannot call Begin on CB (%#" PRIxLEAST64 ") in the RECORDING state. Must first call vkEndCommandBuffer().", (uint64_t)commandBuffer);
@@ -4034,7 +4032,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
                     "Call to vkBeginCommandBuffer() on command buffer (%#" PRIxLEAST64 ") attempts to implicitly reset cmdBuffer created from command pool (%#" PRIxLEAST64 ") that does NOT have the VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT bit set.",
                     (uint64_t) commandBuffer, (uint64_t) cmdPool);
             }
+            resetCB(dev_data, commandBuffer);
         }
+        // Set updated state here in case implicit reset occurs above
+        pCB->state = CB_RECORDING;
+        pCB->beginInfo = *pBeginInfo;
     } else {
         skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
                 "In vkBeginCommandBuffer() and unable to find CommandBuffer Node for CB %p!", (void*)commandBuffer);
@@ -4043,8 +4045,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     VkResult result = dev_data->device_dispatch_table->BeginCommandBuffer(commandBuffer, pBeginInfo);
-    if ((VK_SUCCESS == result) && (pCB != NULL)) {
-        if (CB_RECORDED == pCB->state) { resetCB(dev_data, commandBuffer); } pCB->state = CB_RECORDING; }
     return result;
 }
 
