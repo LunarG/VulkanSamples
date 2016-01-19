@@ -180,7 +180,7 @@ delete_cmd_buf_info(
     VkBool32 result = VK_TRUE;
     result = clear_cmd_buf_and_mem_references(my_data, cb);
     // Delete the CBInfo info
-    if (result == VK_TRUE) {
+    if (result != VK_TRUE) {
         my_data->commandPoolMap[commandPool].pCommandBuffers.remove(cb);
         my_data->cbMap.erase(cb);
     }
