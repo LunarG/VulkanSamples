@@ -181,8 +181,7 @@ function UpdateVulkanSysFolder($dir)
 }
 
 # We only care about SYSWOW64 if we're targeting a 64-bit OS
-if ($ossize -eq 64)
-{
+if ($ossize -eq 64) {
     # Update the SYSWOW64 Vulkan DLLS/EXEs
     UpdateVulkanSysFolder c:\WINDOWS\SYSWOW64
 }
@@ -233,6 +232,18 @@ Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\ExplicitLaye
           }
        }
    }
+# Remove 32-bit layer registry entries if we're targeting a 64-bit OS
+if ($ossize -eq 64) {
+   Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | Select-Object -ExpandProperty Property |
+      ForEach-Object {
+          $regval=$_
+          ForEach ($sdkdir in $VulkanSdkDirs) {
+             if ($regval -like "$sdkdir\*.json") {
+                 Remove-ItemProperty -ErrorAction Ignore -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -name $regval
+             }
+          }
+      }
+}
 
 
 # Create layer registry entries associated with Vulkan SDK from which $mrVulkanDll is from
@@ -243,4 +254,13 @@ if ($mrVulkanDllInstallDir -ne "") {
        ForEach-Object {
            New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin\$_ -PropertyType DWord -Value 0 | out-null
        }
+
+    # Create registry entires for the WOW6432Node registry only if we're targeting a 64-bit OS
+    if ($ossize -eq 64) {
+        New-Item -Force -ErrorAction Ignore -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | out-null
+        Get-ChildItem $mrVulkanDllInstallDir\Bin32 -Filter *json |
+           ForEach-Object {
+               New-ItemProperty -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin\$_ -PropertyType DWord -Value 0 | out-null
+           }
+    }
 }
