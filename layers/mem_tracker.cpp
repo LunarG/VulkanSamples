@@ -2970,6 +2970,16 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
     if (!skip_call) {
         result = my_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
     }
+
+    loader_platform_thread_lock_mutex(&globalLock);
+    for (uint32_t i = 0; i < pPresentInfo->waitSemaphoreCount; i++) {
+        VkSemaphore sem = pPresentInfo->pWaitSemaphores[i];
+        if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {
+            my_data->semaphoreMap[sem] = MEMTRACK_SEMAPHORE_STATE_UNSET;
+        }
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+
     return result;
 }
 
