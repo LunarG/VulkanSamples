@@ -477,6 +477,7 @@ typedef struct _GLOBAL_CB_NODE {
     VkCommandBuffer              commandBuffer;
     VkCommandBufferAllocateInfo  createInfo;
     VkCommandBufferBeginInfo     beginInfo;
+    VkCommandBufferInheritanceInfo inheritanceInfo;
     VkFence                      fence;    // fence tracking this cmd buffer
     VkDevice                     device;   // device this DB belongs to
     uint64_t                     numCmds;  // number of cmds in this CB

@@ -2566,6 +2566,7 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         // Reset CB state (note that createInfo is not cleared)
         pCB->commandBuffer = cb;
         memset(&pCB->beginInfo, 0, sizeof(VkCommandBufferBeginInfo));
+        memset(&pCB->inheritanceInfo, 0, sizeof(VkCommandBufferInheritanceInfo));
         pCB->fence = 0;
         pCB->numCmds = 0;
         memset(pCB->drawCount, 0, NUM_DRAW_TYPES * sizeof(uint64_t));
@@ -4037,6 +4038,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
         // Set updated state here in case implicit reset occurs above
         pCB->state = CB_RECORDING;
         pCB->beginInfo = *pBeginInfo;
+
+        if (pCB->beginInfo.pInheritanceInfo) {
+            pCB->inheritanceInfo = *(pCB->beginInfo.pInheritanceInfo);
+            pCB->beginInfo.pInheritanceInfo = &pCB->inheritanceInfo;
+        }
     } else {
         skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
                 "In vkBeginCommandBuffer() and unable to find CommandBuffer Node for CB %p!", (void*)commandBuffer);
