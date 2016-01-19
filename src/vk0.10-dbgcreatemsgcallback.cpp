@@ -44,7 +44,7 @@ VkBool32 dbgFunc(
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
     const char*                         pMsg,
-    const void*                         pUserData)
+    void*                               pUserData)
 {
     std::ostringstream message;
 
