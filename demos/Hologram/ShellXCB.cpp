@@ -10,19 +10,42 @@
 
 namespace {
 
-float get_time()
-{
-    struct timespec tv;
+class PosixTimer {
+public:
+    PosixTimer()
+    {
+        reset();
+    }
 
-    if (clock_gettime(CLOCK_MONOTONIC, &tv) < 0)
-        return 0.0f;
+    void reset()
+    {
+        clock_gettime(CLOCK_MONOTONIC, &start_);
+    }
 
-    constexpr float ms = 1.0f / 1000.0f;
-    constexpr float us = ms / 1000.0f;
-    constexpr float ns = us / 1000.0f;
+    double get() const
+    {
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
 
-    return (float) tv.tv_sec + ns * tv.tv_nsec;
-}
+        constexpr long one_s_in_ns = 1000 * 1000 * 1000;
+        constexpr double one_s_in_ns_d = static_cast<double>(one_s_in_ns);
+
+        time_t s = now.tv_sec - start_.tv_sec;
+        long ns;
+        if (now.tv_nsec > start_.tv_nsec) {
+            ns = now.tv_nsec - start_.tv_nsec;
+        } else {
+            assert(s > 0);
+            s--;
+            ns = one_s_in_ns - (start_.tv_nsec - now.tv_nsec);
+        }
+
+        return static_cast<double>(s) + static_cast<double>(ns) / one_s_in_ns_d;
+    }
+
+private:
+    struct timespec start_;
+};
 
 xcb_intern_atom_cookie_t intern_atom_cookie(xcb_connection_t *c, const std::string &s)
 {
@@ -226,9 +249,11 @@ void ShellXCB::loop_wait()
 
 void ShellXCB::loop_poll()
 {
+    PosixTimer timer;
+
+    double current_time = timer.get();
+    double profile_start_time = current_time;
     int profile_present_count = 0;
-    float profile_present_since = get_time();
-    float current_time = get_time();
 
     while (true) {
         // handle pending events
@@ -246,19 +271,22 @@ void ShellXCB::loop_poll()
 
         acquire_back_buffer();
 
-        float t = get_time();
-        add_game_time(t - current_time);
+        double t = timer.get();
+        add_game_time(static_cast<float>(t - current_time));
 
         present_back_buffer();
 
         current_time = t;
-        profile_present_count++;
 
-        t = get_time();
-        if (t - profile_present_since >= 5.0) {
-            std::cout << profile_present_count << " presents in " << t - profile_present_since << " seconds\n";
+        profile_present_count++;
+        if (current_time - profile_start_time >= 5.0) {
+            const double fps = profile_present_count / (current_time - profile_start_time);
+            std::cout << profile_present_count << " presents in " <<
+                         current_time - profile_start_time << " seconds " <<
+                         "(FPS: " << fps << ")\n";
+
+            profile_start_time = current_time;
             profile_present_count = 0;
-            profile_present_since = get_time();
         }
     }
 }
