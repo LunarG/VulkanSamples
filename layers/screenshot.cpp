@@ -142,6 +142,10 @@ static void writePPM( const char *filename, VkImage image1)
     const char *ptr;
     VkDeviceMemory mem2;
     VkCommandBuffer commandBuffer;
+
+    if (imageMap.empty() || imageMap.find(image1) == imageMap.end())
+        return;
+
     VkDevice device = imageMap[image1]->device;
     VkPhysicalDevice physicalDevice = deviceMap[device]->physicalDevice;
     VkInstance instance = physDeviceMap[physicalDevice]->instance;
@@ -162,7 +166,11 @@ static void writePPM( const char *filename, VkImage image1)
         1,
         VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_TILING_LINEAR,
-        (VK_IMAGE_USAGE_TRANSFER_DST_BIT|VK_IMAGE_USAGE_STORAGE_BIT),
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        VK_SHARING_MODE_EXCLUSIVE,
+        0,
+        NULL,
+        VK_IMAGE_LAYOUT_UNDEFINED,
     };
     VkMemoryAllocateInfo memAllocInfo = {
         VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -183,23 +191,18 @@ static void writePPM( const char *filename, VkImage image1)
         VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     };
     const VkImageCopy imageCopyRegion = {
-        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0},
+        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
         {0, 0, 0},
-        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0},
+        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
         {0, 0, 0},
         {width, height, 1}
     };
     VkMemoryRequirements memRequirements;
-    uint32_t num_allocations = 0;
-    size_t num_alloc_size = sizeof(num_allocations);
     VkLayerDispatchTable* pTableDevice = get_dispatch_table(screenshot_device_table_map, device);
     VkLayerDispatchTable* pTableQueue = get_dispatch_table(screenshot_device_table_map, queue);
     VkLayerInstanceDispatchTable* pInstanceTable;
     VkLayerDispatchTable* pTableCommandBuffer;
     VkPhysicalDeviceMemoryProperties memory_properties;
-
-    if (imageMap.empty() || imageMap.find(image1) == imageMap.end())
-        return;
 
     // The VkImage image1 we are going to dump may not be mappable,
     // and/or it may have a tiling mode of optimal rather than linear.
@@ -207,7 +210,7 @@ static void writePPM( const char *filename, VkImage image1)
     //     create image2 that is mappable and linear
     //     copy image1 to image2
     //     map image2
-    //     read from image2's mapped memeory.
+    //     read from image2's mapped memory.
 
     err = pTableDevice->CreateImage(device, &imgCreateInfo, NULL, &image2);
     assert(!err);
@@ -219,9 +222,9 @@ static void writePPM( const char *filename, VkImage image1)
     pInstanceTable->GetPhysicalDeviceMemoryProperties(physicalDevice, &memory_properties);
 
     pass = memory_type_from_properties(&memory_properties,
-                                memRequirements.memoryTypeBits,
-                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-                                &memAllocInfo.memoryTypeIndex);
+                                       memRequirements.memoryTypeBits,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                       &memAllocInfo.memoryTypeIndex);
     assert(pass);
 
     err = pTableDevice->AllocateMemory(device, &memAllocInfo, NULL, &mem2);
@@ -236,12 +239,56 @@ static void writePPM( const char *filename, VkImage image1)
     screenshot_device_table_map.emplace(commandBuffer, pTableDevice);
     pTableCommandBuffer = screenshot_device_table_map[commandBuffer];
 
+    // We have just created a dispatchable object, but the dispatch table has not been placed
+    // in the object yet.  When a "normal" application creates a command buffer, the dispatch
+    // table is installed by the top-level api binding (trampoline.c).
+    // But here, we have to do it ourselves.
+    *((const void**)commandBuffer) = *(void**)device;
+
     err = pTableCommandBuffer->BeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
     assert(!err);
 
-    // TODO: We need to transition images to match these layouts, then restore the original layouts
-    pTableCommandBuffer->CmdCopyImage(commandBuffer, image1, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                   image2, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopyRegion);
+    // Transition the source image layout to prepare it for the copy.
+
+    VkImageMemoryBarrier image1_memory_barrier = {
+        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        NULL,
+        0,
+        VK_ACCESS_TRANSFER_READ_BIT,
+        VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        0,
+        0,
+        image1,
+        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+    };
+
+    VkImageMemoryBarrier image2_memory_barrier = {
+        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        NULL,
+        0,
+        VK_ACCESS_TRANSFER_READ_BIT,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_IMAGE_LAYOUT_GENERAL,
+        0,
+        0,
+        image2,
+        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+    };
+
+    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    VkPipelineStageFlags dst_stages = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+    pTableCommandBuffer->CmdPipelineBarrier(commandBuffer, src_stages, dst_stages,
+                                            0, 0, NULL, 0, NULL, 1, &image1_memory_barrier);
+
+    pTableCommandBuffer->CmdCopyImage(commandBuffer,
+                                      image1, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                      image2, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                      1, &imageCopyRegion);
+
+    pTableCommandBuffer->CmdPipelineBarrier(commandBuffer, src_stages, dst_stages,
+                                            0, 0, NULL, 0, NULL, 1, &image2_memory_barrier);
 
     err = pTableCommandBuffer->EndCommandBuffer(commandBuffer);
     assert(!err);
@@ -308,9 +355,30 @@ static void writePPM( const char *filename, VkImage image1)
        ptr += sr_layout.rowPitch;
     }
     file.close();
+    pTableDevice->UnmapMemory(device, mem2);
+
+    // Restore the swap chain image layout to what it was before.
+    // This may not be strictly needed, but it is generally good to restore things to original state.
+    err = pTableCommandBuffer->BeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
+    assert(!err);
+    image1_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    image1_memory_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    pTableCommandBuffer->CmdPipelineBarrier(commandBuffer, src_stages, dst_stages,
+                                            0, 0, NULL, 0, NULL, 1, &image1_memory_barrier);
+    err = pTableCommandBuffer->EndCommandBuffer(commandBuffer);
+    assert(!err);
+
+    err = pTableQueue->QueueSubmit(queue, 1, &submit_info, nullFence);
+    assert(!err);
+
+    err = pTableQueue->QueueWaitIdle(queue);
+    assert(!err);
+
+    err =  pTableDevice->DeviceWaitIdle(device);
+    assert(!err);
 
     // Clean up
-    pTableDevice->UnmapMemory(device, mem2);
     pTableDevice->FreeMemory(device, mem2, NULL);
     pTableDevice->FreeCommandBuffers(device, deviceMap[device]->commandPool, 1, &commandBuffer);
 }
