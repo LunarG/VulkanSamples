@@ -298,7 +298,18 @@ void Shell::resize_swapchain(int32_t width_hint, int32_t height_hint)
     swapchain_info.imageExtent = extent;
     swapchain_info.imageArrayLayers = 1;
     swapchain_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    swapchain_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    std::vector<uint32_t> queue_families(1, ctx_.game_queue_family);
+    if (ctx_.game_queue_family != ctx_.present_queue_family) {
+        queue_families.push_back(ctx_.present_queue_family);
+
+        swapchain_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        swapchain_info.queueFamilyIndexCount = queue_families.size();
+        swapchain_info.pQueueFamilyIndices = queue_families.data();
+    } else {
+        swapchain_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    }
+
     swapchain_info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     swapchain_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     swapchain_info.presentMode = mode;
