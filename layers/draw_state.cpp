@@ -5077,7 +5077,9 @@ VkBool32 ValidateMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, 
         } else {
             std::string opt_bits;
             if (optional_bits != 0) {
-                opt_bits = "and may have optional bits " + std::to_string(optional_bits) + ' ' + string_VkAccessFlags(optional_bits);
+                std::stringstream ss;
+                ss << optional_bits;
+                opt_bits = "and may have optional bits " + ss.str() + ' ' + string_VkAccessFlags(optional_bits);
             }
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
                                  "%s AccessMask %d %s must have required access bit %d %s %s when layout is %s, unless the app has previously added a barrier for this transition.",
@@ -5528,14 +5530,21 @@ VkBool32 CreatePassDAG(const layer_data* my_data, VkDevice device, const VkRende
     }
     for (uint32_t i = 0; i < pCreateInfo->dependencyCount; ++i) {
         const VkSubpassDependency& dependency = pCreateInfo->pDependencies[i];
-        if (dependency.srcSubpass > dependency.dstSubpass) {
+        if (dependency.srcSubpass > dependency.dstSubpass && dependency.srcSubpass != VK_SUBPASS_EXTERNAL && dependency.dstSubpass != VK_SUBPASS_EXTERNAL) {
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
                                  "Depedency graph must be specified such that an earlier pass cannot depend on a later pass.");
+        } else if (dependency.srcSubpass == VK_SUBPASS_EXTERNAL && dependency.dstSubpass == VK_SUBPASS_EXTERNAL) {
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                 "The src and dest subpasses cannot both be external.");
         } else if (dependency.srcSubpass == dependency.dstSubpass) {
             has_self_dependency[dependency.srcSubpass] = true;
         }
-        subpass_to_node[dependency.dstSubpass].prev.push_back(dependency.srcSubpass);
-        subpass_to_node[dependency.srcSubpass].next.push_back(dependency.dstSubpass);
+        if (dependency.dstSubpass != VK_SUBPASS_EXTERNAL) {
+            subpass_to_node[dependency.dstSubpass].prev.push_back(dependency.srcSubpass);
+        }
+        if (dependency.srcSubpass != VK_SUBPASS_EXTERNAL) {
+            subpass_to_node[dependency.srcSubpass].next.push_back(dependency.dstSubpass);
+        }
     }
     return skip_call;
 }
