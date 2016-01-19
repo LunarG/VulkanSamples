@@ -181,7 +181,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionPrope
 
 static const VkLayerProperties pc_global_layers[] = {
     {
-        "param_checker",
+        "VK_LAYER_LUNARG_param_checker",
         VK_API_VERSION,
         VK_MAKE_VERSION(0, 1, 0),
         "Validation layer: param_checker",

@@ -400,7 +400,7 @@ class Subcommand(object):
             gpdlp_body.append('%s' % self.lineinfo.get())
             gpdlp_body.append('static const VkLayerProperties deviceLayerProps[] = {')
             gpdlp_body.append('    {')
-            gpdlp_body.append('        "%s",' % layer)
+            gpdlp_body.append('        "VK_LAYER_LUNARG_%s",' % layer)
             gpdlp_body.append('        VK_API_VERSION,')
             gpdlp_body.append('        VK_MAKE_VERSION(0, 1, 0),')
             gpdlp_body.append('        "layer: %s",' % layer)

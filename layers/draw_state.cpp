@@ -2989,7 +2989,7 @@ static const VkExtensionProperties ds_device_extensions[] = {
 
 static const VkLayerProperties ds_device_layers[] = {
     {
-        "draw_state",
+        "VK_LAYER_LUNARG_draw_state",
         VK_API_VERSION,
         VK_MAKE_VERSION(0, 1, 0),
         "Validation layer: draw_state",
