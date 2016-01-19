@@ -263,7 +263,7 @@ VkBool32 dbgFunc(
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
     const char*                         pMsg,
-    const void*                         pUserData)
+    void*                               pUserData)
 {
     char *message = (char *) malloc(strlen(pMsg)+100);
 
@@ -307,7 +307,7 @@ VkBool32 BreakCallback(
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
     const char*                         pMsg,
-    const void*                         pUserData)
+    void*                               pUserData)
 {
 #ifndef WIN32
     raise(SIGTRAP);

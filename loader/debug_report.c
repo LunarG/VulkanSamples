@@ -128,7 +128,7 @@ VkBool32 util_DebugReportMessage(
                                   msgCode,
                                   pLayerPrefix,
                                   pMsg,
-                                  (void *) pTrav->pUserData)) {
+                                  pTrav->pUserData)) {
                 bail = true;
             }
         }

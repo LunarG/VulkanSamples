@@ -137,7 +137,7 @@ VkBool32 dbg_callback(
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
     const char*                         pMsg,
-    const void*                         pUserData)
+    void*                               pUserData)
 {
     char *message = (char *) malloc(strlen(pMsg)+100);
 

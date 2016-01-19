@@ -307,7 +307,7 @@ static inline VKAPI_ATTR VkBool32 VKAPI_CALL log_callback(
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
     const char*                         pMsg,
-    const void*                         pUserData)
+    void*                               pUserData)
 {
     char msg_flags[30];
 
@@ -328,7 +328,7 @@ static inline VKAPI_ATTR VkBool32 VKAPI_CALL win32_debug_output_msg(
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
     const char*                         pMsg,
-    const void*                         pUserData)
+    void*                               pUserData)
 {
 #ifdef WIN32
     char msg_flags[30];

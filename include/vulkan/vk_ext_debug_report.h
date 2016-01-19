@@ -106,7 +106,7 @@ typedef VkBool32 (VKAPI_PTR *PFN_vkDebugReportCallbackEXT)(
     int32_t                                     messageCode,
     const char*                                 pLayerPrefix,
     const char*                                 pMessage,
-    const void*                                 pUserData);
+    void*                                       pUserData);
 
 
 typedef struct VkDebugReportCallbackCreateInfoEXT {
@@ -114,7 +114,7 @@ typedef struct VkDebugReportCallbackCreateInfoEXT {
     const void*                                 pNext;
     VkDebugReportFlagsEXT                       flags;
     PFN_vkDebugReportCallbackEXT                pfnCallback;
-    const void*                                 pUserData;
+    void*                                       pUserData;
 } VkDebugReportCallbackCreateInfoEXT;
 
 typedef VkResult (VKAPI_PTR *PFN_vkCreateDebugReportCallbackEXT)(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);

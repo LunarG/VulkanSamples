@@ -36,7 +36,7 @@ extern "C" {
 
 struct icd_instance_logger {
     PFN_vkDebugReportCallbackEXT func;
-    const void *user_data;
+    void *user_data;
     VkFlags flags;
 
     struct icd_instance_logger *next;

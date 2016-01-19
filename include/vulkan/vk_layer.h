@@ -208,7 +208,7 @@ typedef struct VkLayerDbgFunctionNode_
     VkDebugReportCallbackEXT msgCallback;
     PFN_vkDebugReportCallbackEXT pfnMsgCallback;
     VkFlags msgFlags;
-    const void *pUserData;
+    void *pUserData;
     struct VkLayerDbgFunctionNode_ *pNext;
 } VkLayerDbgFunctionNode;
 

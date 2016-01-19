@@ -112,7 +112,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
     const char*                         pMsg,
-    const void*                         pUserData);
+    void*                               pUserData);
 
 // ********************************************************
 // ErrorMonitor Usage:
@@ -215,7 +215,7 @@ static VkBool32 myDbgFunc(
     int32_t                    msgCode,
     const char*                pLayerPrefix,
     const char*                pMsg,
-    const void*                pUserData)
+    void*                      pUserData)
 {
     if (msgFlags & (VK_DEBUG_REPORT_WARN_BIT_EXT | VK_DEBUG_REPORT_PERF_WARN_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT)) {
         ErrorMonitor *errMonitor = (ErrorMonitor *)pUserData;
