@@ -1662,13 +1662,37 @@ class ObjectTrackerSubcommand(Subcommand):
         gedd_txt.append('')
         return "\n".join(gedd_txt)
 
+    # Special-case validating the array pointers in UpdateDescriptorSets.  They may not be NULL but should
+    # be ignored if the descriptorType does not specify those arrays.
+    def _handle_descriptorType(self, indent, prefix, type_name, name):
+        s_code = ''
+        if type_name == 'pBufferInfo':
+            s_code += '%sif ((%sdescriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)         ||\n'    % (indent, prefix)
+            s_code += '%s    (%sdescriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)         ||\n'    % (indent, prefix)
+            s_code += '%s    (%sdescriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||\n'    % (indent, prefix)
+            s_code += '%s    (%sdescriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)   ) {\n' % (indent, prefix)
+        elif type_name == 'pImageInfo':
+            s_code += '%sif ((%sdescriptorType == VK_DESCRIPTOR_TYPE_SAMPLER)                ||\n'    % (indent, prefix)
+            s_code += '%s    (%sdescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) ||\n'    % (indent, prefix)
+            s_code += '%s    (%sdescriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)       ||\n'    % (indent, prefix)
+            s_code += '%s    (%sdescriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)          ||\n'    % (indent, prefix)
+            s_code += '%s    (%sdescriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)            ) {\n' % (indent, prefix)
+        elif type_name == 'pTexelBufferView':
+            s_code += '%sif ((%sdescriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) ||\n'    % (indent, prefix)
+            s_code += '%s    (%sdescriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER)   ) {\n' % (indent, prefix)
+        else:
+            s_code += '%sif (%s) {\n' % (indent, name)
+        return s_code
+
     def _gen_obj_validate_code(self, struct_uses, obj_type_mapping, func_name, valid_null_dict, param0_name, indent, prefix, array_index):
         pre_code = ''
         for obj in sorted(struct_uses):
             name = obj
             array = ''
+            type_name = ''
             if '[' in obj:
                 (name, array) = obj.split('[')
+                type_name = name
                 array = array.strip(']')
             if isinstance(struct_uses[obj], dict):
                 local_prefix = ''
@@ -1676,7 +1700,8 @@ class ObjectTrackerSubcommand(Subcommand):
                 ptr_type = False
                 if 'p' == obj[0]:
                     ptr_type = True
-                    pre_code += '%sif (%s) {\n' % (indent, name)
+                    tmp_pre = self._handle_descriptorType(indent, prefix, type_name, name)
+                    pre_code += tmp_pre
                     indent += '    '
                 if array != '':
                     idx = 'idx%s' % str(array_index)
@@ -1708,7 +1733,8 @@ class ObjectTrackerSubcommand(Subcommand):
                 if func_name in valid_null_dict and True in [name in pn for pn in valid_null_dict[func_name]]:
                     null_obj_ok = 'true'
                 if (array_index > 0) or '' != array:
-                    pre_code += '%sif (%s) {\n' %(indent, full_name)
+                    tmp_pre = self._handle_descriptorType(indent, prefix, type_name, full_name)
+                    pre_code += tmp_pre
                     indent += '    '
                     if array != '':
                         idx = 'idx%s' % str(array_index)
