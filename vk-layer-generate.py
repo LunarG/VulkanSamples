@@ -353,7 +353,7 @@ class Subcommand(object):
             ggep_body.append('static const VkExtensionProperties instance_extensions[] = {')
             ggep_body.append('    {')
             ggep_body.append('        VK_EXT_DEBUG_REPORT_EXTENSION_NAME,')
-            ggep_body.append('        VK_EXT_DEBUG_REPORT_REVISION')
+            ggep_body.append('        VK_EXT_DEBUG_REPORT_SPEC_VERSION')
             ggep_body.append('    }')
             ggep_body.append('};')
         ggep_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)')

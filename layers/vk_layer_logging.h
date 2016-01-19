@@ -122,7 +122,7 @@ static inline void layer_debug_report_destroy_instance(debug_report_data *debug_
         debug_report_log_msg(
                     debug_data, VK_DEBUG_REPORT_WARN_BIT_EXT,
                     VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT, (uint64_t) pTrav->msgCallback,
-                    0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF,
+                    0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT,
                     "DebugReport",
                     "Debug Report callbacks not removed before DestroyInstance");
 
@@ -174,7 +174,7 @@ static inline VkResult layer_create_msg_callback(
     debug_report_log_msg(
                 debug_data, VK_DEBUG_REPORT_DEBUG_BIT_EXT,
                 VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT, (uint64_t) *pCallback,
-                0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF,
+                0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT,
                 "DebugReport",
                 "Added callback");
     return VK_SUCCESS;
@@ -200,7 +200,7 @@ static inline void layer_destroy_msg_callback(
             debug_report_log_msg(
                         debug_data, VK_DEBUG_REPORT_DEBUG_BIT_EXT,
                         VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT, (uint64_t) pTrav->msgCallback,
-                        0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF,
+                        0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT,
                         "DebugReport",
                         "Destroyed callback");
         } else {

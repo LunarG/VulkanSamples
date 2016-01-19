@@ -45,7 +45,7 @@ template layer_data *get_my_data_ptr<layer_data>(
 static const VkExtensionProperties instance_extensions[] = {
     {
         VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-        VK_EXT_DEBUG_REPORT_REVISION
+        VK_EXT_DEBUG_REPORT_SPEC_VERSION
     }
 };
 

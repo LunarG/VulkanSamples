@@ -1266,7 +1266,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceMemoryProperties(
 static const VkExtensionProperties instance_extensions[] = {
     {
         VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-        VK_EXT_DEBUG_REPORT_REVISION
+        VK_EXT_DEBUG_REPORT_SPEC_VERSION
     }
 };
 

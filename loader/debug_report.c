@@ -42,7 +42,7 @@ typedef void (VKAPI_PTR *PFN_stringCallback)(char *message);
 
 static const VkExtensionProperties debug_report_extension_info = {
         .extensionName = VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-        .specVersion = VK_EXT_DEBUG_REPORT_REVISION,
+        .specVersion = VK_EXT_DEBUG_REPORT_SPEC_VERSION,
 };
 
 void debug_report_add_instance_extensions(

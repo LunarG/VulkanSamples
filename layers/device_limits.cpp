@@ -152,7 +152,7 @@ static void init_device_limits(layer_data *my_data, const VkAllocationCallbacks 
 static const VkExtensionProperties instance_extensions[] = {
     {
         VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-        VK_EXT_DEBUG_REPORT_REVISION
+        VK_EXT_DEBUG_REPORT_SPEC_VERSION
     }
 };
 
