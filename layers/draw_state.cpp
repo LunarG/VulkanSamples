@@ -3684,7 +3684,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateComputePipelines(
 
         // Create and initialize internal tracking data structure
         pPipeNode[i] = new PIPELINE_NODE;
-        memset((void*)pPipeNode[i], 0, sizeof(PIPELINE_NODE));
         memcpy(&pPipeNode[i]->computePipelineCI, (const void*)&pCreateInfos[i], sizeof(VkComputePipelineCreateInfo));
 
         // TODO: Add Compute Pipeline Verification
