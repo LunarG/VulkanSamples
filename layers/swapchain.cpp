@@ -121,6 +121,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     VkLayerInstanceDispatchTable *pDisp  = my_data->instance_dispatch_table;
     PFN_vkGetInstanceProcAddr gpa = pDisp->GetInstanceProcAddr;
+    pDisp->GetPhysicalDeviceQueueFamilyProperties = (PFN_vkGetPhysicalDeviceQueueFamilyProperties) gpa(instance, "vkGetPhysicalDeviceQueueFamilyProperties");
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
     pDisp->CreateAndroidSurfaceKHR = (PFN_vkCreateAndroidSurfaceKHR) gpa(instance, "vkCreateAndroidSurfaceKHR");
 #endif // VK_USE_PLATFORM_ANDROID_KHR
@@ -364,6 +365,32 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
     layer_data_map.erase(key);
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceQueueFamilyProperties(
+    VkPhysicalDevice physicalDevice,
+    uint32_t* pQueueFamilyPropertyCount,
+    VkQueueFamilyProperties* pQueueFamilyProperties)
+{
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
+
+    if (VK_FALSE == skipCall) {
+        // Call down the call chain:
+        my_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(
+                physicalDevice,
+                pQueueFamilyPropertyCount,
+                pQueueFamilyProperties);
+
+        // Record the result of this query:
+        if (pPhysicalDevice &&
+            pQueueFamilyPropertyCount && !pQueueFamilyProperties) {
+            pPhysicalDevice->gotQueueFamilyPropertyCount = true;
+            pPhysicalDevice->pQueueFamilyPropertyCount =
+                *pQueueFamilyPropertyCount;
+        }
+    }
+}
+
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
     VkInstance                                  instance,
@@ -483,6 +510,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceMirPresentatio
                               "%s() called even though the %s extension was not enabled for this VkInstance.",
                               __FUNCTION__, VK_KHR_MIR_SURFACE_EXTENSION_NAME);
     }
+    if (pPhysicalDevice->gotQueueFamilyPropertyCount &&
+        (queueFamilyIndex >= pPhysicalDevice->pQueueFamilyPropertyCount)) {
+        skipCall |= LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                                                           pPhysicalDevice,
+                                                           "VkPhysicalDevice",
+                                                           queueFamilyIndex,
+                                                           pPhysicalDevice->pQueueFamilyPropertyCount);
+    }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -562,6 +597,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWaylandPresent
                               "%s() called even though the %s extension was not enabled for this VkInstance.",
                               __FUNCTION__, VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
     }
+    if (pPhysicalDevice->gotQueueFamilyPropertyCount &&
+        (queueFamilyIndex >= pPhysicalDevice->pQueueFamilyPropertyCount)) {
+        skipCall |= LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                                                           pPhysicalDevice,
+                                                           "VkPhysicalDevice",
+                                                           queueFamilyIndex,
+                                                           pPhysicalDevice->pQueueFamilyPropertyCount);
+    }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -639,6 +682,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWin32Presentat
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkInstance.",
                               __FUNCTION__, VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    }
+    if (pPhysicalDevice->gotQueueFamilyPropertyCount &&
+        (queueFamilyIndex >= pPhysicalDevice->pQueueFamilyPropertyCount)) {
+        skipCall |= LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                                                           pPhysicalDevice,
+                                                           "VkPhysicalDevice",
+                                                           queueFamilyIndex,
+                                                           pPhysicalDevice->pQueueFamilyPropertyCount);
     }
 
     if (VK_FALSE == skipCall) {
@@ -720,6 +771,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentatio
                               "%s() called even though the %s extension was not enabled for this VkInstance.",
                               __FUNCTION__, VK_KHR_XCB_SURFACE_EXTENSION_NAME);
     }
+    if (pPhysicalDevice->gotQueueFamilyPropertyCount &&
+        (queueFamilyIndex >= pPhysicalDevice->pQueueFamilyPropertyCount)) {
+        skipCall |= LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                                                           pPhysicalDevice,
+                                                           "VkPhysicalDevice",
+                                                           queueFamilyIndex,
+                                                           pPhysicalDevice->pQueueFamilyPropertyCount);
+    }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -800,6 +859,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentati
                               "%s() called even though the %s extension was not enabled for this VkInstance.",
                               __FUNCTION__, VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
     }
+    if (pPhysicalDevice->gotQueueFamilyPropertyCount &&
+        (queueFamilyIndex >= pPhysicalDevice->pQueueFamilyPropertyCount)) {
+        skipCall |= LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                                                           pPhysicalDevice,
+                                                           "VkPhysicalDevice",
+                                                           queueFamilyIndex,
+                                                           pPhysicalDevice->pQueueFamilyPropertyCount);
+    }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -844,6 +911,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInst
                     pPhysicalDevices[i];
                 my_data->physicalDeviceMap[pPhysicalDevices[i]].pInstance = pInstance;
                 my_data->physicalDeviceMap[pPhysicalDevices[i]].pDevice = NULL;
+                my_data->physicalDeviceMap[pPhysicalDevices[i]].gotQueueFamilyPropertyCount = false;
                 my_data->physicalDeviceMap[pPhysicalDevices[i]].gotSurfaceCapabilities = false;
                 my_data->physicalDeviceMap[pPhysicalDevices[i]].surfaceFormatCount = 0;
                 my_data->physicalDeviceMap[pPhysicalDevices[i]].pSurfaceFormats = NULL;
@@ -939,11 +1007,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
     VkSurfaceKHR surface,
     VkBool32* pSupported)
 {
-// TODOs:
-//
-// - Ensure that queueFamilyIndex is a valid queue family index for
-//   physicalDevice.  How?  Probably need to record data from another function
-//   call(s).
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
@@ -958,6 +1021,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkInstance.",
                               __FUNCTION__, VK_KHR_SURFACE_EXTENSION_NAME);
+    }
+    if (pPhysicalDevice->gotQueueFamilyPropertyCount &&
+        (queueFamilyIndex >= pPhysicalDevice->pQueueFamilyPropertyCount)) {
+        skipCall |= LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                                                           pPhysicalDevice,
+                                                           "VkPhysicalDevice",
+                                                           queueFamilyIndex,
+                                                           pPhysicalDevice->pQueueFamilyPropertyCount);
     }
     if (!pSupported) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
@@ -1998,6 +2069,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
         return addr;
     }
 
+    if (!strcmp("vkGetPhysicalDeviceQueueFamilyProperties", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceQueueFamilyProperties);
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
     if (my_data->instanceMap.size() != 0 &&
         my_data->instanceMap[instance].androidSurfaceExtensionEnabled)
