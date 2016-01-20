@@ -1386,9 +1386,8 @@ static VkBool32 validateCreateSwapchainKHR(
         }
         // Validate pCreateInfo->imageUsage against
         // VkSurfaceCapabilitiesKHR::supportedUsageFlags:
-        if (pCreateInfo->imageUsage &&
-            (pCreateInfo->imageUsage !=
-             (pCreateInfo->imageUsage & pCapabilities->supportedUsageFlags))) {
+        if (pCreateInfo->imageUsage !=
+            (pCreateInfo->imageUsage & pCapabilities->supportedUsageFlags)) {
             skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                                   SWAPCHAIN_CREATE_SWAP_BAD_IMG_USAGE_FLAGS,
                                   "%s() called with a non-supported "
