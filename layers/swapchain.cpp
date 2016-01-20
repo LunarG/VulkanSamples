@@ -1332,9 +1332,12 @@ static VkBool32 validateCreateSwapchainKHR(
                                              LAYER_NAME,
                                              errorString.c_str());
         }
-        // Validate pCreateInfo->compositeAlpha against
-        // VkSurfaceCapabilitiesKHR::supportedCompositeAlpha:
-        if (!((pCreateInfo->compositeAlpha) & pCapabilities->supportedCompositeAlpha)) {
+        // Validate pCreateInfo->compositeAlpha has one bit set (1st two
+        // lines of if-statement), which bit is also set in
+        // VkSurfaceCapabilitiesKHR::supportedCompositeAlpha (3rd line of if-statement):
+        if (!pCreateInfo->compositeAlpha ||
+            (pCreateInfo->compositeAlpha & (pCreateInfo->compositeAlpha - 1)) ||
+            !((pCreateInfo->compositeAlpha) & pCapabilities->supportedCompositeAlpha)) {
             // This is an error situation; one for which we'd like to give
             // the developer a helpful, multi-line error message.  Build it
             // up a little at a time, and then log it:
