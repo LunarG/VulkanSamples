@@ -15,13 +15,7 @@
 #  define VK_LAYER_EXPORT
 #endif
 
-typedef void * (VKAPI_PTR *PFN_vkGPA)(void* obj, const char * pName);
-typedef struct VkBaseLayerObject_
-{
-    PFN_vkGPA pGPA;
-    void* nextObject;
-    void* baseObject;
-} VkBaseLayerObject;
+
 
 typedef struct VkLayerDispatchTable_
 {
@@ -233,7 +227,7 @@ typedef enum VkLayerFunction_
  * When creating the device chain the loader needs to pass
  * down information about it's device structure needed at
  * the end of the chain. Passing the data via the
- * VkLayerDeviceInfo avoids issues with finding the
+ * VkLayerInstanceInfo avoids issues with finding the
  * exact instance being used.
  */
 typedef struct VkLayerInstanceInfo_ {

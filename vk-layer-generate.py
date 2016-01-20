@@ -1011,7 +1011,6 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('%s' % self.lineinfo.get())
-        header_txt.append('static VkBaseLayerObject *pCurObj;')
         header_txt.append('static bool g_APIDumpDetailed = true;')
         header_txt.append('')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
