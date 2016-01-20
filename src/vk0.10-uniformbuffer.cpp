@@ -109,4 +109,5 @@ int main(int argc, char **argv)
     vkFreeMemory(info.device, info.uniform_data.mem, NULL);
     destroy_device(info);
     destroy_instance(info);
+    return 0;
 }
