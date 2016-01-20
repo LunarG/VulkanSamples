@@ -22,6 +22,7 @@
  *
  * Author: Cody Northrop <cody@lunarg.com>
  * Author: David Pinedo <david@lunarg.com>
+ * Author: Jon Ashburn <jon@lunarg.com>
  */
 
 #include <inttypes.h>
@@ -52,6 +53,8 @@ struct devExts {
 };
 static std::unordered_map<void *, struct devExts>     deviceExtMap;
 static device_table_map screenshot_device_table_map;
+//TODO convert over to the new interface using locally defiend maps
+//static instance_table_map screenshot_instance_table_map;
 
 static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
@@ -383,6 +386,36 @@ static void writePPM( const char *filename, VkImage image1)
     pTableDevice->FreeCommandBuffers(device, deviceMap[device]->commandPool, 1, &commandBuffer);
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
+    const VkInstanceCreateInfo* pCreateInfo,
+    const VkAllocationCallbacks* pAllocator,
+    VkInstance* pInstance)
+{
+    VkLayerInstanceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    assert(fpGetInstanceProcAddr);
+    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) fpGetInstanceProcAddr(*pInstance, "vkCreateInstance");
+    if (fpCreateInstance == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
+    if (result != VK_SUCCESS)
+        return result;
+
+    initInstanceTable(*pInstance, fpGetInstanceProcAddr);
+
+    init_screenshot();
+
+    return result;
+}
+
+//TODO hook DestroyInstance to cleanup
 
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
@@ -426,7 +459,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
 
     initDeviceTable(*pDevice, fpGetDeviceProcAddr, screenshot_device_table_map);
 
-    init_screenshot();
     createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     // Create a mapping from a device to a physicalDevice
     if (deviceMap[*pDevice] == NULL)
@@ -758,13 +790,10 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
     VkDevice         dev,
     const char       *funcName)
 {
-    if (!strcmp(funcName, "vkGetDeviceProcAddr")) {
+    if (!strcmp(funcName, "vkGetDeviceProcAddr"))
         return (PFN_vkVoidFunction)vkGetDeviceProcAddr;
-    }
-
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (PFN_vkVoidFunction) vkGetDeviceQueue;
-
     if (!strcmp(funcName, "vkCreateCommandPool"))
         return (PFN_vkVoidFunction) vkCreateCommandPool;
 
@@ -791,8 +820,11 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
+
     if (!strcmp("vkGetInstanceProcAddr", funcName))
         return (PFN_vkVoidFunction) vkGetInstanceProcAddr;
+    if (!strcmp(funcName, "vkCreateInstance"))
+        return (PFN_vkVoidFunction) vkCreateInstance;
     if (!strcmp(funcName, "vkCreateDevice"))
         return (PFN_vkVoidFunction) vkCreateDevice;
     if (!strcmp(funcName, "vkEnumeratePhysicalDevices"))
@@ -803,7 +835,6 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
     if (instance == VK_NULL_HANDLE) {
         return NULL;
     }
-
     VkLayerInstanceDispatchTable* pTable = instance_dispatch_table(instance);
     if (pTable->GetInstanceProcAddr == NULL)
         return NULL;
