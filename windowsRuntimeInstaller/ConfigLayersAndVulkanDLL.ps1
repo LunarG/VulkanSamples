@@ -74,7 +74,7 @@ $vulkandll = "vulkan-"+$majorabi+".dll"
 # from the file name. They are used later to find the path to the SDK
 # install directory for the given filename.
 
-function UpdateVulkanSysFolder($dir)
+function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
 {
    # Push the current path on the stack and go to $dir
    Push-Location -Path $dir
@@ -167,27 +167,35 @@ function UpdateVulkanSysFolder($dir)
         $buildno=$VulkanDLLList[-1].Split('@')[4]
         $prerelease=$VulkanDLLList[-1].Split('@')[5]
         $prebuildno=$VulkanDLLList[-1].Split('@')[6]
-        $sdkname="VulkanSDK"+$major + "." + $minor + "." + $patch + "." + $buildno
+        
+        $sdktempname="VulkanSDK"+$major + "." + $minor + "." + $patch + "." + $buildno
         if ($prerelease -ne "") {
-            $sdkname=$sdkname + "." + $prerelease
+            $sdktempname=$sdktempname + "." + $prerelease
         }
         if ($prebuildno -ne "") {
-            $sdkname=$sdkname + "." + $prebuildno
+            $sdktempname=$sdktempname + "." + $prebuildno
         }
     }
    
-   # Return to our previous folder
-   Pop-Location
+    # Return to our previous folder
+    Pop-Location
+
+    # Only update the overall script-scope SDK name if we're told to
+    if ($writeSdkName -ne 0) {
+        $script:sdkname = $sdktempname
+    }
+
+    return
 }
 
 # We only care about SYSWOW64 if we're targeting a 64-bit OS
 if ($ossize -eq 64) {
     # Update the SYSWOW64 Vulkan DLLS/EXEs
-    UpdateVulkanSysFolder c:\WINDOWS\SYSWOW64
+    UpdateVulkanSysFolder c:\WINDOWS\SYSWOW64 0
 }
 
 # Update the SYSTEM32 Vulkan DLLS/EXEs
-UpdateVulkanSysFolder c:\WINDOWS\SYSTEM32
+UpdateVulkanSysFolder c:\WINDOWS\SYSTEM32 1
 
 # Create an array of vulkan sdk install dirs
 
@@ -202,7 +210,7 @@ Get-ChildItem -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Curr
            $tmp=$tmp -replace "\\Uninstall.exe.*",""
            $tmp=$tmp -replace ".*=.",""
            $VulkanSdkDirs+=$tmp
-           if ($regkey -eq $sdkname) {
+           if ($regkey -eq $script:sdkname) {
                # Save away the sdk install dir for the the most recent vulkandll
                $mrVulkanDllInstallDir=$tmp
            }
@@ -239,7 +247,7 @@ if ($ossize -eq 64) {
           $regval=$_
           ForEach ($sdkdir in $VulkanSdkDirs) {
              if ($regval -like "$sdkdir\*.json") {
-                 Remove-ItemProperty -ErrorAction Ignore -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -name $regval
+                 Remove-ItemProperty -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -name $regval
              }
           }
       }
@@ -260,7 +268,7 @@ if ($mrVulkanDllInstallDir -ne "") {
         New-Item -Force -ErrorAction Ignore -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | out-null
         Get-ChildItem $mrVulkanDllInstallDir\Bin32 -Filter *json |
            ForEach-Object {
-               New-ItemProperty -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin\$_ -PropertyType DWord -Value 0 | out-null
+               New-ItemProperty -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin32\$_ -PropertyType DWord -Value 0 | out-null
            }
     }
 }
