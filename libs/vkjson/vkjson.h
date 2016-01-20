@@ -30,6 +30,8 @@
 #define VKJSON_H_
 
 #include <vulkan/vulkan.h>
+#include <string.h>
+
 #include <map>
 #include <string>
 #include <vector>
