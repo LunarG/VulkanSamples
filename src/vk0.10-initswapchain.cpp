@@ -55,7 +55,6 @@ int main(int argc, char **argv)
     init_device_extension_names(info);
     init_instance(info, sample_title);
     init_enumerate_device(info);
-    init_device(info);
     init_connection(info);
     info.width = info.height = 50;
     init_window(info);    
@@ -126,6 +125,8 @@ int main(int argc, char **argv)
     }
 
     info.graphics_queue_family_index = graphicsQueueNodeIndex;
+
+    init_device(info);
 
     // Get the list of VkFormats that are supported:
     uint32_t formatCount;

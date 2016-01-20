@@ -50,6 +50,7 @@ VkBool32 demo_check_layers(
         const std::vector<const char *> &layer_names);
 void init_connection(struct sample_info &info);
 void init_window(struct sample_info &info);
+void init_queue_family_index(struct sample_info &info);
 void init_presentable_image(struct sample_info &info);
 void execute_queue_cmdbuf(struct sample_info &info, const VkCommandBuffer *cmd_bufs);
 void execute_pre_present_barrier(struct sample_info &info);

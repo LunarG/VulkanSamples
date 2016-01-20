@@ -44,11 +44,11 @@ int main(int argc, char **argv)
     init_device_extension_names(info);
     init_instance(info, sample_title);
     init_enumerate_device(info);
-    init_device(info);
     init_connection(info);
     info.width = info.height = 50;
     init_window(info);
     init_swapchain_extension(info);
+    init_device(info);
     init_command_pool(info);
     init_command_buffer(info);
     execute_begin_command_buffer(info);

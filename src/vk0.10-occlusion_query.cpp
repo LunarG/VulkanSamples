@@ -100,11 +100,11 @@ int main(int argc, char **argv)
     info.device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     init_instance(info, sample_title);
     init_enumerate_device(info);
-    init_device(info);
     info.width = info.height = 500;
     init_connection(info);
     init_window(info);
     init_swapchain_extension(info);
+    init_device(info);
     init_command_pool(info);
     init_command_buffer(info);
     execute_begin_command_buffer(info);

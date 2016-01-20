@@ -276,35 +276,12 @@ VkResult init_device(struct sample_info &info)
     VkResult res;
     VkDeviceQueueCreateInfo queue_info = {};
 
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
-    assert(info.queue_count >= 1);
-
-    info.queue_props.resize(info.queue_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
-    assert(info.queue_count >= 1);
-
-    bool found = false;
-    for (unsigned int i = 0; i < info.queue_count; i++)
-    {
-        if (info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-        {
-            queue_info.queueFamilyIndex = i;
-            found = true;
-            break;
-        }
-    }
-    assert(found);
-    assert(info.queue_count >= 1);
-
-    /* This is as good a place as any to do this */
-    vkGetPhysicalDeviceMemoryProperties(info.gpus[0], &info.memory_properties);
-    vkGetPhysicalDeviceProperties(info.gpus[0], &info.gpu_props);
-
     float queue_priorities[1] = { 0.0 };
     queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queue_info.pNext = NULL;
     queue_info.queueCount = 1;
     queue_info.pQueuePriorities = queue_priorities;
+    queue_info.queueFamilyIndex = info.graphics_queue_family_index;
 
     VkDeviceCreateInfo device_info = {};
     device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -331,10 +308,49 @@ VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count)
     VkResult res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, NULL);
     assert(gpu_count);
     info.gpus.resize(gpu_count);
+
     res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, info.gpus.data());
     assert(!res && gpu_count >= req_count);
 
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
+    assert(info.queue_count >= 1);
+
+    info.queue_props.resize(info.queue_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
+    assert(info.queue_count >= 1);
+
+    /* This is as good a place as any to do this */
+    vkGetPhysicalDeviceMemoryProperties(info.gpus[0], &info.memory_properties);
+    vkGetPhysicalDeviceProperties(info.gpus[0], &info.gpu_props);
+
     return res;
+}
+
+void init_queue_family_index(struct sample_info &info)
+{
+    /* This routine simply finds a graphics queue for a later vkCreateDevice, without consideration  */
+    /* for which queue family can present an image.  Do not use this if your intent is to present    */
+    /* later in your sample, instead use the init_connection, init_window, init_swapchain_extension, */
+    /* init_device call sequence to get a graphics and present compatible queue family               */
+
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
+    assert(info.queue_count >= 1);
+
+    info.queue_props.resize(info.queue_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
+    assert(info.queue_count >= 1);
+
+    bool found = false;
+    for (unsigned int i = 0; i < info.queue_count; i++)
+    {
+        if (info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
+            info.graphics_queue_family_index = i;
+            found = true;
+            break;
+        }
+    }
+    assert(found);
 }
 
 VkResult init_debug_report_callback(struct sample_info &info, PFN_vkDebugReportCallbackEXT dbgFunc)

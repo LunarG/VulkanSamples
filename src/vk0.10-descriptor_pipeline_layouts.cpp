@@ -42,6 +42,7 @@ int main(int argc, char **argv)
     init_global_layer_properties(info);
     init_instance(info, sample_title);
     init_enumerate_device(info);
+    init_queue_family_index(info);
     init_device(info);
 
     /* VULKAN_KEY_START */

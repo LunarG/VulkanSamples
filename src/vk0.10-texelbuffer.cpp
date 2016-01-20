@@ -86,7 +86,6 @@ int main(int argc, char **argv)
     init_device_extension_names(info);
     init_instance(info, sample_title);
     init_enumerate_device(info);
-    init_device(info);
 
     if (info.gpu_props.limits.maxTexelBufferElements < 4) {
         std::cout << "maxTexelBufferElements too small\n";
@@ -104,6 +103,7 @@ int main(int argc, char **argv)
     init_connection(info);
     init_window(info);
     init_swapchain_extension(info);
+    init_device(info);
     init_command_pool(info);
     init_command_buffer(info);
     execute_begin_command_buffer(info);
