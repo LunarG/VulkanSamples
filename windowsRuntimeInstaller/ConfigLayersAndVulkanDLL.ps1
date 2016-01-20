@@ -203,7 +203,7 @@ Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\ExplicitLaye
        $regval=$_
        ForEach ($sdkdir in $VulkanSdkDirs) {
           if ($regval -like "$sdkdir\*.json") {
-              Remove-ItemProperty -ErrorAction Ignore -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -name $regval
+              Remove-ItemProperty -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -name $regval
           }
        }
    }
@@ -212,7 +212,7 @@ Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\ExplicitLaye
 # Create layer registry entries associated with Vulkan SDK from which $mrVulkanDll is from
 
 if ($mrVulkanDllInstallDir -ne "") {
-    New-Item -Force -ErrorAction Ignore -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers | out-null
+    New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers | out-null
     Get-ChildItem $mrVulkanDllInstallDir\Bin -Filter *json |
        ForEach-Object {
            New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin\$_ -PropertyType DWord -Value 0 | out-null
