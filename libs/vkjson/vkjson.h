@@ -34,10 +34,20 @@
 #include <string>
 #include <vector>
 
+#ifdef WIN32
+#undef min
+#undef max
+#endif
+
 struct VkJsonAllProperties {
-  VkPhysicalDeviceProperties properties = {0};
-  VkPhysicalDeviceFeatures features = {0};
-  VkPhysicalDeviceMemoryProperties memory = {0};
+  VkJsonAllProperties() {
+          memset(&properties, 0, sizeof(VkPhysicalDeviceProperties));
+          memset(&features, 0, sizeof(VkPhysicalDeviceFeatures));
+          memset(&memory, 0, sizeof(VkPhysicalDeviceMemoryProperties));
+  }
+  VkPhysicalDeviceProperties properties;
+  VkPhysicalDeviceFeatures features;
+  VkPhysicalDeviceMemoryProperties memory;
   std::vector<VkQueueFamilyProperties> queues;
   std::vector<VkExtensionProperties> extensions;
   std::vector<VkLayerProperties> layers;
