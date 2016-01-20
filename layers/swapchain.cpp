@@ -488,11 +488,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceMirPresentatio
         // Call down the call chain:
         result = my_data->instance_dispatch_table->GetPhysicalDeviceMirPresentationSupportKHR(
                 physicalDevice, queueFamilyIndex, connection);
-
-        if (pPhysicalDevice) {
-            // Record the result of this query:
-            pPhysicalDevice->queueFamilyIndexSupport[queueFamilyIndex] = result;
-        }
     }
     return result;
 }
@@ -572,11 +567,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWaylandPresent
         // Call down the call chain:
         result = my_data->instance_dispatch_table->GetPhysicalDeviceWaylandPresentationSupportKHR(
                 physicalDevice, queueFamilyIndex, display);
-
-        if (pPhysicalDevice) {
-            // Record the result of this query:
-            pPhysicalDevice->queueFamilyIndexSupport[queueFamilyIndex] = result;
-        }
     }
     return result;
 }
@@ -655,11 +645,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWin32Presentat
         // Call down the call chain:
         result = my_data->instance_dispatch_table->GetPhysicalDeviceWin32PresentationSupportKHR(
                 physicalDevice, queueFamilyIndex);
-
-        if (pPhysicalDevice) {
-            // Record the result of this query:
-            pPhysicalDevice->queueFamilyIndexSupport[queueFamilyIndex] = result;
-        }
     }
     return result;
 }
@@ -740,11 +725,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentatio
         // Call down the call chain:
         result = my_data->instance_dispatch_table->GetPhysicalDeviceXcbPresentationSupportKHR(
                 physicalDevice, queueFamilyIndex, connection, visual_id);
-
-        if (pPhysicalDevice) {
-            // Record the result of this query:
-            pPhysicalDevice->queueFamilyIndexSupport[queueFamilyIndex] = result;
-        }
     }
     return result;
 }
@@ -825,11 +805,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentati
         // Call down the call chain:
         result = my_data->instance_dispatch_table->GetPhysicalDeviceXlibPresentationSupportKHR(
                 physicalDevice, queueFamilyIndex, dpy, visualID);
-
-        if (pPhysicalDevice) {
-            // Record the result of this query:
-            pPhysicalDevice->queueFamilyIndexSupport[queueFamilyIndex] = result;
-        }
     }
     return result;
 }
@@ -999,7 +974,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
         if ((result == VK_SUCCESS) && pSupported && pPhysicalDevice) {
             // Record the result of this query:
             pPhysicalDevice->queueFamilyIndexSupport[queueFamilyIndex] =
-                *pSupported;
+                surface;
+            pPhysicalDevice->surfaceSupport[surface] =
+                queueFamilyIndex;
             // TODO: We need to compare this with the actual queue used for
             // presentation, to ensure it was advertised to the application as
             // supported for presentation.
@@ -1249,6 +1226,20 @@ static VkBool32 validateCreateSwapchainKHR(
                               "vkGetPhysicalDeviceSurfaceCapabilitiesKHR().",
                               fn);
     } else if (pCreateInfo) {
+        // Validate pCreateInfo->surface to make sure that
+        // vkGetPhysicalDeviceSurfaceSupportKHR() reported this as a supported
+        // surface:
+        uint32_t queueFamilyIndex = pPhysicalDevice->surfaceSupport[pCreateInfo->surface];
+        if (!queueFamilyIndex) {
+            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
+                                  SWAPCHAIN_CREATE_UNSUPPORTED_SURFACE,
+                                  "%s() called with pCreateInfo->surface that "
+                                  "was not returned by "
+                                  "vkGetPhysicalDeviceSurfaceSupportKHR() "
+                                  "for the device.",
+                                  fn);
+        }
+
         // Validate pCreateInfo->minImageCount against
         // VkSurfaceCapabilitiesKHR::{min|max}ImageCount:
         VkSurfaceCapabilitiesKHR *pCapabilities = &pPhysicalDevice->surfaceCapabilities;

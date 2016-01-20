@@ -64,6 +64,7 @@ typedef enum _SWAPCHAIN_ERROR
     SWAPCHAIN_NULL_POINTER,                     // Pointer set to NULL, instead of being a valid pointer
     SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,         // Did not enable WSI extension, but called WSI function 
     SWAPCHAIN_DEL_DEVICE_BEFORE_SWAPCHAINS,     // Called vkDestroyDevice() before vkDestroySwapchainKHR()
+    SWAPCHAIN_CREATE_UNSUPPORTED_SURFACE,       // Called vkCreateSwapchainKHR() with a pCreateInfo->surface that wasn't seen as supported by vkGetPhysicalDeviceSurfaceSupportKHR for the device
     SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,        // Called vkCreateSwapchainKHR() without calling a query (e.g. vkGetPhysicalDeviceSurfaceCapabilitiesKHR())
     SWAPCHAIN_CREATE_SWAP_BAD_MIN_IMG_COUNT,    // Called vkCreateSwapchainKHR() with out-of-bounds minImageCount
     SWAPCHAIN_CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS,// Called vkCreateSwapchainKHR() with out-of-bounds imageExtent
@@ -214,8 +215,13 @@ struct _SwpPhysicalDevice {
     // VkInstance that this VkPhysicalDevice is associated with:
     SwpInstance *pInstance;
 
-    // Which queueFamilyIndices support presenting with WSI swapchains:
-    unordered_map<uint32_t, VkBool32> queueFamilyIndexSupport;
+    // Record all supported queueFamilyIndex-surface pairs that support
+    // presenting with WSI swapchains:
+    unordered_map<uint32_t, VkSurfaceKHR> queueFamilyIndexSupport;
+
+    // Record all supported surface-queueFamilyIndex pairs that support
+    // presenting with WSI swapchains:
+    unordered_map<VkSurfaceKHR, uint32_t> surfaceSupport;
 
 // TODO: Record/use this info per-surface, not per-device, once a
 // non-dispatchable surface object is added to WSI:
