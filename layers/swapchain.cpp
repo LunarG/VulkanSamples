@@ -435,6 +435,15 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
         // Call down the call chain:
         result = my_data->instance_dispatch_table->CreateAndroidSurfaceKHR(
                 instance, pCreateInfo, pAllocator, pSurface);
+
+        if ((result == VK_SUCCESS) && pInstance && pSurface) {
+            // Record the VkSurfaceKHR returned by the ICD:
+            my_data->surfaceMap[*pSurface].surface = *pSurface;
+            my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            // Point to the associated SwpInstance:
+            pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
+        }
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -485,6 +494,15 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
         // Call down the call chain:
         result = my_data->instance_dispatch_table->CreateMirSurfaceKHR(
                 instance, pCreateInfo, pAllocator, pSurface);
+
+        if ((result == VK_SUCCESS) && pInstance && pSurface) {
+            // Record the VkSurfaceKHR returned by the ICD:
+            my_data->surfaceMap[*pSurface].surface = *pSurface;
+            my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            // Point to the associated SwpInstance:
+            pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
+        }
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -572,6 +590,15 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
         // Call down the call chain:
         result = my_data->instance_dispatch_table->CreateWaylandSurfaceKHR(
                 instance, pCreateInfo, pAllocator, pSurface);
+
+        if ((result == VK_SUCCESS) && pInstance && pSurface) {
+            // Record the VkSurfaceKHR returned by the ICD:
+            my_data->surfaceMap[*pSurface].surface = *pSurface;
+            my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            // Point to the associated SwpInstance:
+            pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
+        }
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -659,6 +686,15 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
         // Call down the call chain:
         result = my_data->instance_dispatch_table->CreateWin32SurfaceKHR(
                 instance, pCreateInfo, pAllocator, pSurface);
+
+        if ((result == VK_SUCCESS) && pInstance && pSurface) {
+            // Record the VkSurfaceKHR returned by the ICD:
+            my_data->surfaceMap[*pSurface].surface = *pSurface;
+            my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            // Point to the associated SwpInstance:
+            pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
+        }
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -745,6 +781,15 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
         // Call down the call chain:
         result = my_data->instance_dispatch_table->CreateXcbSurfaceKHR(
                 instance, pCreateInfo, pAllocator, pSurface);
+
+        if ((result == VK_SUCCESS) && pInstance && pSurface) {
+            // Record the VkSurfaceKHR returned by the ICD:
+            my_data->surfaceMap[*pSurface].surface = *pSurface;
+            my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            // Point to the associated SwpInstance:
+            pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
+        }
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -833,6 +878,15 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
         // Call down the call chain:
         result = my_data->instance_dispatch_table->CreateXlibSurfaceKHR(
                 instance, pCreateInfo, pAllocator, pSurface);
+
+        if ((result == VK_SUCCESS) && pInstance && pSurface) {
+            // Record the VkSurfaceKHR returned by the ICD:
+            my_data->surfaceMap[*pSurface].surface = *pSurface;
+            my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            // Point to the associated SwpInstance:
+            pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
+        }
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -881,14 +935,37 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(VkInstance  insta
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
+    SwpSurface *pSurface = &my_data->surfaceMap[surface];
+
+    // Regardless of skipCall value, do some internal cleanup:
+    if (pSurface) {
+        // Delete the SwpSurface associated with this surface:
+        if (pSurface->pInstance) {
+            pSurface->pInstance->surfaces.erase(surface);
+        }
+        if (!pSurface->swapchains.empty()) {
+            LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, instance, "VkInstance",
+                      SWAPCHAIN_DEL_OBJECT_BEFORE_SWAPCHAINS,
+                      "%s() called before all of its associated "
+                      "VkSwapchainKHRs were destroyed.",
+                      __FUNCTION__);
+            // Empty and then delete all SwpSwapchain's
+            for (auto it = pSurface->swapchains.begin() ;
+                 it != pSurface->swapchains.end() ; it++) {
+                // Delete all SwpImage's
+                it->second->images.clear();
+            }
+            pSurface->swapchains.clear();
+        }
+        my_data->surfaceMap.erase(surface);
+    }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
         my_data->instance_dispatch_table->DestroySurfaceKHR(
                 instance, surface, pAllocator);
     }
-
-    // No need to do any cleanup--rely on object_tracker to track VkSurfaceKHR
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices)
@@ -983,7 +1060,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
         }
         if (!pDevice->swapchains.empty()) {
             LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                      SWAPCHAIN_DEL_DEVICE_BEFORE_SWAPCHAINS,
+                      SWAPCHAIN_DEL_OBJECT_BEFORE_SWAPCHAINS,
                       "%s() called before all of its associated "
                       "VkSwapchainKHRs were destroyed.",
                       __FUNCTION__);
@@ -1605,7 +1682,7 @@ static VkBool32 validateCreateSwapchainKHR(
                                       "than the VkSwapchainKHR was created with.",
                                       __FUNCTION__);
             }
-            if (pCreateInfo->surface != pOldSwapchain->surface) {
+            if (pCreateInfo->surface != pOldSwapchain->pSurface->surface) {
                 skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                       device, "VkDevice",
                                       SWAPCHAIN_CREATE_SWAP_DIFF_SURFACE,
@@ -1649,9 +1726,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
             pDevice->swapchains[*pSwapchain] =
                 &my_data->swapchainMap[*pSwapchain];
             my_data->swapchainMap[*pSwapchain].pDevice = pDevice;
-            my_data->swapchainMap[*pSwapchain].surface =
-                (pCreateInfo) ? pCreateInfo->surface : 0;
             my_data->swapchainMap[*pSwapchain].imageCount = 0;
+            // Store a pointer to the surface
+            SwpPhysicalDevice *pPhysicalDevice = pDevice->pPhysicalDevice;
+            SwpInstance *pInstance =
+                (pPhysicalDevice) ? pPhysicalDevice->pInstance : NULL;
+            layer_data *my_instance_data =
+                ((pInstance) ?
+                 get_my_data_ptr(get_dispatch_key(pInstance->instance), layer_data_map) :
+                 NULL);
+            SwpSurface *pSurface =
+                ((my_data && pCreateInfo) ?
+                 &my_instance_data->surfaceMap[pCreateInfo->surface] : NULL);
+            my_data->swapchainMap[*pSwapchain].pSurface = pSurface;
+            if (pSurface) {
+                pSurface->swapchains[*pSwapchain] =
+                    &my_data->swapchainMap[*pSwapchain];
+            }
         }
 
         return result;

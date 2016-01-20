@@ -63,7 +63,7 @@ typedef enum _SWAPCHAIN_ERROR
     SWAPCHAIN_INVALID_HANDLE,                   // Handle used that isn't currently valid
     SWAPCHAIN_NULL_POINTER,                     // Pointer set to NULL, instead of being a valid pointer
     SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,         // Did not enable WSI extension, but called WSI function 
-    SWAPCHAIN_DEL_DEVICE_BEFORE_SWAPCHAINS,     // Called vkDestroyDevice() before vkDestroySwapchainKHR()
+    SWAPCHAIN_DEL_OBJECT_BEFORE_SWAPCHAINS,     // Called vkDestroyDevice() before vkDestroySwapchainKHR()
     SWAPCHAIN_CREATE_UNSUPPORTED_SURFACE,       // Called vkCreateSwapchainKHR() with a pCreateInfo->surface that wasn't seen as supported by vkGetPhysicalDeviceSurfaceSupportKHR for the device
     SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,        // Called vkCreateSwapchainKHR() without calling a query (e.g. vkGetPhysicalDeviceSurfaceCapabilitiesKHR())
     SWAPCHAIN_CREATE_SWAP_BAD_MIN_IMG_COUNT,    // Called vkCreateSwapchainKHR() with out-of-bounds minImageCount
@@ -165,12 +165,14 @@ typedef enum _SWAPCHAIN_ERROR
 
 // Forward declarations:
 struct _SwpInstance;
+struct _SwpSurface;
 struct _SwpPhysicalDevice;
 struct _SwpDevice;
 struct _SwpSwapchain;
 struct _SwpImage;
 
 typedef _SwpInstance SwpInstance;
+typedef _SwpSurface SwpSurface;;
 typedef _SwpPhysicalDevice SwpPhysicalDevice;
 typedef _SwpDevice SwpDevice;
 typedef _SwpSwapchain SwpSwapchain;
@@ -180,6 +182,9 @@ typedef _SwpImage SwpImage;
 struct _SwpInstance {
     // The actual handle for this VkInstance:
     VkInstance instance;
+
+    // Remember the VkSurfaceKHR's that are created for this VkInstance:
+    unordered_map<const void*, SwpSurface*> surfaces;
 
     // When vkEnumeratePhysicalDevices is called, the VkPhysicalDevice's are
     // remembered:
@@ -213,6 +218,19 @@ struct _SwpInstance {
     // Set to true if VK_KHR_XLIB_SURFACE_EXTENSION_NAME was enabled for this VkInstance:
     bool xlibSurfaceExtensionEnabled;
 #endif // VK_USE_PLATFORM_XLIB_KHR
+};
+ 
+// Create one of these for each VkSurfaceKHR:
+struct _SwpSurface {
+    // The actual handle for this VkSurfaceKHR:
+    VkSurfaceKHR surface;
+
+    // VkInstance that this VkSurfaceKHR is associated with:
+    SwpInstance *pInstance;
+
+    // When vkCreateSwapchainKHR is called, the VkSwapchainKHR's are
+    // remembered:
+    unordered_map<VkSwapchainKHR, SwpSwapchain*> swapchains;
 };
 
 // Create one of these for each VkPhysicalDevice within a VkInstance:
@@ -296,7 +314,7 @@ struct _SwpSwapchain {
     SwpDevice *pDevice;
 
     // Corresponding VkSurfaceKHR to this VkSwapchainKHR:
-    VkSurfaceKHR surface;
+    SwpSurface *pSurface;
 
     // When vkGetSwapchainImagesKHR is called, the VkImage's are
     // remembered:
@@ -312,6 +330,7 @@ struct layer_data {
     // NOTE: The following are for keeping track of info that is used for
     // validating the WSI extensions.
     std::unordered_map<void *, SwpInstance>       instanceMap;
+    std::unordered_map<void *, SwpSurface>        surfaceMap;
     std::unordered_map<void *, SwpPhysicalDevice> physicalDeviceMap;
     std::unordered_map<void *, SwpDevice>         deviceMap;
     std::unordered_map<VkSwapchainKHR, SwpSwapchain>    swapchainMap;
