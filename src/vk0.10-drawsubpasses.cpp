@@ -692,4 +692,5 @@ int main(int argc, char **argv)
     destroy_window(info);
     destroy_device(info);
     destroy_instance(info);
+    return 0;
 }

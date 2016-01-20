@@ -87,5 +87,6 @@ int main(int argc, char **argv)
     vkDestroyPipelineLayout(info.device, info.pipeline_layout, NULL);
     destroy_device(info);
     destroy_instance(info);
+    return 0;
 }
 
