@@ -2847,7 +2847,8 @@ VkResult loader_enable_instance_layers(
  */
 VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
                                       const VkAllocationCallbacks* pAllocator,
-                                      struct loader_instance *inst)
+                                      struct loader_instance *inst,
+                                      VkInstance created_instance)
 {
     uint32_t activated_layers = 0;
     VkLayerInstanceCreateInfo chain_info;
@@ -2909,7 +2910,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
         }
     }
 
-    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) nextGIPA(VK_NULL_HANDLE, "vkCreateInstance");
+    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) nextGIPA(created_instance, "vkCreateInstance");
     if (fpCreateInstance) {
         VkLayerInstanceCreateInfo instance_create_info;
 
@@ -2922,7 +2923,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
         instance_create_info.pNext = loader_create_info.pNext;
         loader_create_info.pNext = &instance_create_info;
 
-        res = fpCreateInstance(&loader_create_info, pAllocator, &inst->instance);
+        res = fpCreateInstance(&loader_create_info, pAllocator, &created_instance);
     } else {
         // Couldn't find CreateInstance function!
         res = VK_ERROR_INITIALIZATION_FAILED;
@@ -2931,7 +2932,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
     if (res != VK_SUCCESS) {
         // TODO: Need to clean up here
     } else {
-        loader_init_instance_core_dispatch_table(inst->disp, nextGIPA, inst->instance);
+        loader_init_instance_core_dispatch_table(inst->disp, nextGIPA, created_instance);
     }
 
     return res;
@@ -3134,7 +3135,7 @@ VkResult loader_create_device_chain(
         }
     }
 
-    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) nextGIPA(VK_NULL_HANDLE, "vkCreateDevice");
+    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) nextGIPA((VkInstance) inst, "vkCreateDevice");
     if (fpCreateDevice) {
         res = fpCreateDevice(physicalDevice, &loader_create_info, pAllocator, &dev->device);
     } else {

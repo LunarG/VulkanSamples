@@ -178,7 +178,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     }
 
     created_instance = (VkInstance) ptr_instance;
-    res = loader_create_instance_chain(pCreateInfo, pAllocator, ptr_instance);
+    res = loader_create_instance_chain(pCreateInfo, pAllocator, ptr_instance, created_instance);
 
     if (res == VK_SUCCESS) {
         wsi_create_instance(ptr_instance, pCreateInfo);

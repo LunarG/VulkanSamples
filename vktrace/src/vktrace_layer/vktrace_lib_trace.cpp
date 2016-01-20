@@ -71,11 +71,14 @@ layer_device_data *mdd(void* object)
     return got->second;
 }
 
-static layer_instance_data *initInstanceData(std::unordered_map<void *, layer_instance_data *> &map, const VkBaseLayerObject *instancew)
+static layer_instance_data *initInstanceData(
+                                    VkInstance instance,
+                                    const PFN_vkGetInstanceProcAddr gpa,
+                                    std::unordered_map<void *, layer_instance_data *> &map)
 {
     layer_instance_data *pTable;
-    assert(instancew);
-    dispatch_key key = get_dispatch_key(instancew->baseObject);
+    assert(instance);
+    dispatch_key key = get_dispatch_key(instance);
 
     std::unordered_map<void *, layer_instance_data *>::const_iterator it = map.find(key);
     if (it == map.end())
@@ -88,7 +91,7 @@ static layer_instance_data *initInstanceData(std::unordered_map<void *, layer_in
     }
 
     // TODO: Convert to new init method
-//    layer_init_instance_dispatch_table(&pTable->instTable, instancew);
+    layer_init_instance_dispatch_table(instance, &pTable->instTable, gpa);
 
     return pTable;
 }
@@ -114,6 +117,24 @@ static layer_device_data *initDeviceData(
     layer_init_device_dispatch_table(device, &pTable->devTable, gpa);
 
     return pTable;
+}
+
+/*
+ * This function will return the pNext pointer of any
+ * CreateInfo extensions that are not loader extensions.
+ * This is used to skip past the loader extensions prepended
+ * to the list during CreateInstance and CreateDevice.
+ */
+void *strip_create_extensions(const void *pNext)
+{
+    VkLayerInstanceCreateInfo *create_info = (VkLayerInstanceCreateInfo *) pNext;
+
+    while (create_info && (create_info->sType == VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO ||
+           create_info->sType == VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO)) {
+        create_info = (VkLayerInstanceCreateInfo *) create_info->pNext;
+    }
+
+    return create_info;
 }
 
 VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkAllocateMemory(
@@ -373,14 +394,15 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateDevice(
     vktrace_trace_packet_header* pHeader;
     VkResult result;
     packet_vkCreateDevice* pPacket = NULL;
-
-    CREATE_TRACE_PACKET(vkCreateDevice, get_struct_chain_size((void*)pCreateInfo) + sizeof(VkDevice));
+    uint32_t i;
 
     VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
     assert(chain_info->u.pLayerInfo);
     PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    assert(fpGetInstanceProcAddr);
     PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
+    assert(fpGetDeviceProcAddr);
     PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) fpGetInstanceProcAddr(NULL, "vkCreateDevice");
     if (fpCreateDevice == NULL) {
         return VK_ERROR_INITIALIZATION_FAILED;
@@ -390,15 +412,32 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateDevice(
     chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
 
     result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
-    if (result == VK_SUCCESS) {
-        // Setup device dispatch table
-        ext_init_create_device(mdd(*pDevice), *pDevice, fpGetDeviceProcAddr, pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
+    if (result != VK_SUCCESS) {
+        return result;
     }
+ 
+    initDeviceData(*pDevice, fpGetDeviceProcAddr, g_deviceDataMap);
+    // Setup device dispatch table for extensions
+    ext_init_create_device(mdd(*pDevice), *pDevice, fpGetDeviceProcAddr, pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
 
+    // remove the loader extended createInfo structure
+    VkDeviceCreateInfo localCreateInfo;
+    memcpy(&localCreateInfo, pCreateInfo, sizeof(localCreateInfo));
+    for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+        char **ppName = (char **) &localCreateInfo.ppEnabledExtensionNames[i];
+        *ppName = (char *) pCreateInfo->ppEnabledExtensionNames[i];
+    }
+    for (i = 0; i < pCreateInfo->enabledLayerCount; i++) {
+        char **ppName = (char **) &localCreateInfo.ppEnabledLayerNames[i];
+        *ppName = (char *) pCreateInfo->ppEnabledLayerNames[i];
+    }
+    localCreateInfo.pNext = strip_create_extensions(pCreateInfo->pNext);
+
+    CREATE_TRACE_PACKET(vkCreateDevice, get_struct_chain_size((void*)&localCreateInfo) + sizeof(VkDevice));
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCreateDevice(pHeader);
     pPacket->physicalDevice = physicalDevice;
-    add_VkDeviceCreateInfo_to_packet(pHeader, (VkDeviceCreateInfo**) &(pPacket->pCreateInfo), pCreateInfo);
+    add_VkDeviceCreateInfo_to_packet(pHeader, (VkDeviceCreateInfo**) &(pPacket->pCreateInfo), &localCreateInfo);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocator), sizeof(VkAllocationCallbacks), pAllocator);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDevice), sizeof(VkDevice), pDevice);
     pPacket->result = result;
@@ -441,8 +480,8 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateFramebuffer(
 VkLayerInstanceCreateInfo *get_chain_info(const VkInstanceCreateInfo *pCreateInfo, VkLayerFunction func)
 {
     VkLayerInstanceCreateInfo *chain_info = (VkLayerInstanceCreateInfo *) pCreateInfo->pNext;
-    while (chain_info && chain_info->sType != VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO
-           && chain_info->function != func) {
+    while (chain_info && ((chain_info->sType != VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO)
+           || (chain_info->function != func))) {
         chain_info = (VkLayerInstanceCreateInfo *) chain_info->pNext;
     }
     assert(chain_info != NULL);
@@ -459,16 +498,17 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateInstance(
     packet_vkCreateInstance* pPacket = NULL;
     uint64_t startTime;
     uint64_t endTime;
+    uint32_t i;
     uint64_t vktraceStartTime = vktrace_get_time();
     SEND_ENTRYPOINT_ID(vkCreateInstance);
     startTime = vktrace_get_time();
 
-//    result = mid(*pInstance)->instTable.CreateInstance(pCreateInfo, pAllocator, pInstance);
     VkLayerInstanceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
     assert(chain_info->u.pLayerInfo);
     PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
-    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) fpGetInstanceProcAddr(NULL, "vkCreateInstance");
+    assert(fpGetInstanceProcAddr);
+    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) fpGetInstanceProcAddr(*pInstance, "vkCreateInstance");
     if (fpCreateInstance == NULL) {
         return VK_ERROR_INITIALIZATION_FAILED;
     }
@@ -480,19 +520,30 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateInstance(
     if (result != VK_SUCCESS) {
         return result;
     }
-
     endTime = vktrace_get_time();
 
-    if (result == VK_SUCCESS)
-        ext_init_create_instance(mid(*pInstance), *pInstance, pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
+    initInstanceData(*pInstance, fpGetInstanceProcAddr, g_instanceDataMap);
+    ext_init_create_instance(mid(*pInstance), *pInstance, pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
 
-    CREATE_TRACE_PACKET(vkCreateInstance, sizeof(VkInstance) + get_struct_chain_size((void*)pCreateInfo) + sizeof(VkAllocationCallbacks));
+    // remove the loader extended createInfo structure
+    VkInstanceCreateInfo localCreateInfo;
+    memcpy(&localCreateInfo, pCreateInfo, sizeof(localCreateInfo));
+    for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+        char **ppName = (char **) &localCreateInfo.ppEnabledExtensionNames[i];
+        *ppName = (char *) pCreateInfo->ppEnabledExtensionNames[i];
+    }
+    for (i = 0; i < pCreateInfo->enabledLayerCount; i++) {
+        char **ppName = (char **) &localCreateInfo.ppEnabledLayerNames[i];
+        *ppName = (char *) pCreateInfo->ppEnabledLayerNames[i];
+    }
+    localCreateInfo.pNext = strip_create_extensions(pCreateInfo->pNext);
+    CREATE_TRACE_PACKET(vkCreateInstance, sizeof(VkInstance) + get_struct_chain_size((void*)&localCreateInfo) + sizeof(VkAllocationCallbacks));
     pHeader->vktrace_begin_time = vktraceStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
     pPacket = interpret_body_as_vkCreateInstance(pHeader);
 
-    add_VkInstanceCreateInfo_to_packet(pHeader, (VkInstanceCreateInfo**)&(pPacket->pCreateInfo), (VkInstanceCreateInfo*) pCreateInfo);
+    add_VkInstanceCreateInfo_to_packet(pHeader, (VkInstanceCreateInfo**)&(pPacket->pCreateInfo), (VkInstanceCreateInfo*) &localCreateInfo);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocator), sizeof(VkAllocationCallbacks), pAllocator);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pInstance), sizeof(VkInstance), pInstance);
     pPacket->result = result;
@@ -1653,6 +1704,8 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name)
         return NULL;
 
     name += 2;
+    if (!strcmp(name, "CreateDevice"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateDevice;
     if (!strcmp(name, "CreateInstance"))
         return (PFN_vkVoidFunction) __HOOKED_vkCreateInstance;
     if (!strcmp(name, "DestroyInstance"))
@@ -1782,15 +1835,14 @@ VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vktraceGetInstanceProcA
 VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
     PFN_vkVoidFunction addr;
+    layer_instance_data  *instData;
+
     if (instance == VK_NULL_HANDLE) {
         return NULL;
     }
 
     vktrace_platform_thread_once(&gInitOnce, InitTracer);
-
-    /* loader uses this to force layer initialization; instance object is wrapped */
     if (!strcmp("vkGetInstanceProcAddr", funcName)) {
-        initInstanceData(g_instanceDataMap, (VkBaseLayerObject *) instance);
         if (gMessageStream != NULL) {
             return (PFN_vkVoidFunction) vktraceGetInstanceProcAddr;
         } else {
@@ -1798,13 +1850,12 @@ VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetInstanceP
         }
     }
 
-    layer_instance_data  *instData = mid(instance);
     if (gMessageStream != NULL) {
-
         addr = layer_intercept_instance_proc(funcName);
         if (addr)
             return addr;
 
+        instData = mid(instance);
         if (instData->LunargDebugReportEnabled)
         {
             if (!strcmp("vkCreateDebugReportCallbackEXT", funcName))
@@ -1871,6 +1922,8 @@ VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetInstanceP
                 return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceWin32PresentationSupportKHR;
         }
 #endif
+    } else {
+        instData = mid(instance);
     }
     VkLayerInstanceDispatchTable* pTable = &instData->instTable;
     if (pTable->GetInstanceProcAddr == NULL)

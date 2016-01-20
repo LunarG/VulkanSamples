@@ -499,9 +499,11 @@ VkResult loader_enable_instance_layers(
         const struct loader_layer_list *instance_layers);
 void loader_deactivate_instance_layers(struct loader_instance *instance);
 
-VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
-                                      const VkAllocationCallbacks* pAllocator,
-                                      struct loader_instance *inst);
+VkResult loader_create_instance_chain(
+        const VkInstanceCreateInfo *pCreateInfo,
+        const VkAllocationCallbacks* pAllocator,
+        struct loader_instance *inst,
+        VkInstance created_instance);
 
 void loader_activate_instance_layer_extensions(struct loader_instance *inst, VkInstance created_inst);
 
