@@ -1593,6 +1593,11 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
     VkSwapchainKHR swapchain,
     const VkAllocationCallbacks* pAllocator)
 {
+// TODOs:
+//
+// - Implement a check for validity language that reads: All uses of
+//   presentable images acquired from pname:swapchain and owned by the
+//   application must: have completed execution
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     SwpDevice *pDevice = &my_data->deviceMap[device];
@@ -1706,8 +1711,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
 //
 // - Address the timeout.  Possibilities include looking at the state of the
 //   swapchain's images, depending on the timeout value.
-// - Validate that semaphore and fence are either VK_NULL_HANDLE or valid
-//   handles.
+// - Implement a check for validity language that reads: If pname:semaphore is
+//   not sname:VK_NULL_HANDLE it must: be unsignalled
+// - Implement a check for validity language that reads: If pname:fence is not
+//   sname:VK_NULL_HANDLE it must: be unsignalled and mustnot: be associated
+//   with any other queue command that has not yet completed execution on that
+//   queue
 // - Record/update the state of the swapchain, in case an error occurs
 //   (e.g. VK_ERROR_OUT_OF_DATE_KHR).
     VkResult result = VK_SUCCESS;
@@ -1778,6 +1787,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
 {
 // TODOs:
 //
+// - Implement a check for validity language that reads: Any given element of
+//   sname:VkSemaphore in pname:pWaitSemaphores must: refer to a prior signal
+//   of that sname:VkSemaphore that won't be consumed by any other wait on that
+//   semaphore
 // - Ensure that the queue is active, and is one of the queueFamilyIndex's
 //   that was returned by a previuos query.
 // - Record/update the state of the swapchain, in case an error occurs
