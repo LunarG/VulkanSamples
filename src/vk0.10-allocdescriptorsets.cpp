@@ -95,4 +95,5 @@ int main(int argc, char **argv)
     destroy_descriptor_and_pipeline_layouts(info);
     destroy_device(info);
     destroy_instance(info);
+    return 0;
 }
