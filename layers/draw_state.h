@@ -255,6 +255,7 @@ struct RENDER_PASS_NODE {
 class FENCE_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
+    VkQueue queue;
     vector<VkCommandBuffer> cmdBuffers;
     bool needsSignaled;
     VkFence priorFence;
@@ -272,11 +273,6 @@ class QUEUE_NODE {
     VkFence priorFence;
     vector<VkCommandBuffer> untrackedCmdBuffers;
     unordered_set<VkCommandBuffer> inFlightCmdBuffers;
-};
-
-class DEVICE_NODE {
-  public:
-    vector<VkQueue> queues;
 };
 
 // Descriptor Data structures

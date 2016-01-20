@@ -95,6 +95,7 @@ struct layer_data {
     VkLayerDispatchTable* device_dispatch_table;
     VkLayerInstanceDispatchTable* instance_dispatch_table;
     devExts device_extensions;
+    vector<VkQueue> queues; // all queues under given device
     unordered_set<VkCommandBuffer> inFlightCmdBuffers;
     // Layer specific data
     unordered_map<VkSampler,             unique_ptr<SAMPLER_NODE>>           sampleMap;
@@ -111,7 +112,6 @@ struct layer_data {
     unordered_map<VkDeviceMemory,        VkImage>                            memImageMap;
     unordered_map<VkFence,               FENCE_NODE>                         fenceMap;
     unordered_map<VkQueue,               QUEUE_NODE>                         queueMap;
-    unordered_map<VkDevice,              DEVICE_NODE>                        deviceMap;
     unordered_map<VkEvent,               EVENT_NODE>                         eventMap;
     unordered_map<QueryObject,           bool>                               queryToStateMap;
     unordered_map<VkSemaphore,           uint32_t>                           semaphoreSignaledMap;
@@ -3202,10 +3202,13 @@ void trackCommandBuffers(layer_data* my_data, VkQueue queue, uint32_t cmdBufferC
     }
     if (queue_data != my_data->queueMap.end()) {
         for (uint32_t i = 0; i < cmdBufferCount; ++i) {
+            // Add cmdBuffers to both the global set and queue set
             for (auto secondaryCmdBuffer : my_data->commandBufferMap[pCmdBuffers[i]]->secondaryCommandBuffers) {
                 my_data->inFlightCmdBuffers.insert(secondaryCmdBuffer);
+                my_data->queueMap[queue].inFlightCmdBuffers.insert(secondaryCmdBuffer);
             }
             my_data->inFlightCmdBuffers.insert(pCmdBuffers[i]);
+            my_data->queueMap[queue].inFlightCmdBuffers.insert(pCmdBuffers[i]);
         }
     }
 }
@@ -3288,6 +3291,20 @@ VkBool32 cleanInFlightCmdBuffer(layer_data* my_data, VkCommandBuffer cmdBuffer) 
     }
     return skip_call;
 }
+// Remove given cmd_buffer from inFlight set for given queue
+// If cmd_buffer is not inFlight on any other queues, also remove it from global inFlight set
+static inline void removeInFlightCmdBuffer(layer_data* dev_data, VkQueue queue, VkCommandBuffer cmd_buffer)
+{
+    dev_data->queueMap[queue].inFlightCmdBuffers.erase(cmd_buffer);
+    // Pull it off of global list initially, but if we find it in any other queue list, add it back in
+    dev_data->inFlightCmdBuffers.erase(cmd_buffer);
+    for (auto q : dev_data->queues) {
+        if ((q != queue) && (dev_data->queueMap[q].inFlightCmdBuffers.find(cmd_buffer) != dev_data->queueMap[q].inFlightCmdBuffers.end())) {
+            dev_data->inFlightCmdBuffers.insert(cmd_buffer);
+            break;
+        }
+    }
+}
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(VkDevice device, uint32_t fenceCount, const VkFence* pFences, VkBool32 waitAll, uint64_t timeout)
 {
@@ -3296,9 +3313,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(VkDevice device, 
     VkBool32 skip_call = VK_FALSE;
     if ((waitAll || fenceCount == 1) && result == VK_SUCCESS) {
         for (uint32_t i = 0; i < fenceCount; ++i) {
+            VkQueue fence_queue = dev_data->fenceMap[pFences[i]].queue;
             for (auto cmdBuffer : dev_data->fenceMap[pFences[i]].cmdBuffers) {
-                dev_data->inFlightCmdBuffers.erase(cmdBuffer);
                 skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
+                removeInFlightCmdBuffer(dev_data, fence_queue, cmdBuffer);
             }
         }
         decrementResources(dev_data, fenceCount, pFences);
@@ -3313,13 +3331,17 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(VkDevice device,
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->GetFenceStatus(device, fence);
+    VkBool32 skip_call = VK_FALSE;
     if (result == VK_SUCCESS) {
+        auto fence_queue = dev_data->fenceMap[fence].queue;
         for (auto cmdBuffer : dev_data->fenceMap[fence].cmdBuffers) {
-            dev_data->inFlightCmdBuffers.erase(cmdBuffer);
-            cleanInFlightCmdBuffer(dev_data, cmdBuffer);
+            skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
+            removeInFlightCmdBuffer(dev_data, fence_queue, cmdBuffer);
         }
         decrementResources(dev_data, 1, &fence);
     }
+    if (VK_FALSE != skip_call)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     return result;
 }
 
@@ -3327,7 +3349,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(VkDevice device, uin
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     dev_data->device_dispatch_table->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
-    dev_data->deviceMap[device].queues.push_back(*pQueue);
+    dev_data->queues.push_back(*pQueue);
     dev_data->queueMap[*pQueue].device = device;
 }
 
@@ -3335,22 +3357,26 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(VkQueue queue)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     decrementResources(dev_data, queue);
-    // TODO : Is this a bug? Can't clear all device CmdBuffers on QueueWaitIdle
-    for (auto cmdBuffer : dev_data->inFlightCmdBuffers) {
-        cleanInFlightCmdBuffer(dev_data, cmdBuffer);
+    VkBool32 skip_call = VK_FALSE;
+    // Iterate over local set since we erase set members as we go in for loop
+    auto local_cb_set = dev_data->queueMap[queue].inFlightCmdBuffers;
+    for (auto cmdBuffer : local_cb_set) {
+        skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
+        removeInFlightCmdBuffer(dev_data, queue, cmdBuffer);
     }
-    dev_data->inFlightCmdBuffers.clear();
+    dev_data->queueMap[queue].inFlightCmdBuffers.clear();
+    if (VK_FALSE != skip_call)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     return dev_data->device_dispatch_table->QueueWaitIdle(queue);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDeviceWaitIdle(VkDevice device)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    auto device_data = dev_data->deviceMap.find(device);
-    if (device_data != dev_data->deviceMap.end()) {
-        for (auto queue : device_data->second.queues) {
-            decrementResources(dev_data, queue);
-        }
+    for (auto queue : dev_data->queues) {
+        decrementResources(dev_data, queue);
+        // Clear all of the queue inFlightCmdBuffers (global set cleared below)
+        dev_data->queueMap[queue].inFlightCmdBuffers.clear();
     }
     for (auto cmdBuffer : dev_data->inFlightCmdBuffers) {
         cleanInFlightCmdBuffer(dev_data, cmdBuffer);
