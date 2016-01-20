@@ -1296,9 +1296,12 @@ static VkBool32 validateCreateSwapchainKHR(
                                   pCapabilities->currentExtent.width,
                                   pCapabilities->currentExtent.height);
         }
-        // Validate pCreateInfo->preTransform against
-        // VkSurfaceCapabilitiesKHR::supportedTransforms:
-        if (!((pCreateInfo->preTransform) & pCapabilities->supportedTransforms)) {
+        // Validate pCreateInfo->preTransform has one bit set (1st two
+        // lines of if-statement), which bit is also set in
+        // VkSurfaceCapabilitiesKHR::supportedTransforms (3rd line of if-statement):
+        if (!pCreateInfo->preTransform ||
+            (pCreateInfo->preTransform & (pCreateInfo->preTransform - 1)) ||
+            !(pCreateInfo->preTransform & pCapabilities->supportedTransforms)) {
             // This is an error situation; one for which we'd like to give
             // the developer a helpful, multi-line error message.  Build it
             // up a little at a time, and then log it:
