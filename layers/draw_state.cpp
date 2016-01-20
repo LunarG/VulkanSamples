@@ -2497,12 +2497,6 @@ static void deleteCommandBuffers(layer_data* my_data)
         return;
     }
     for (auto ii=my_data->commandBufferMap.begin(); ii!=my_data->commandBufferMap.end(); ++ii) {
-        vector<CMD_NODE*> cmd_node_list = (*ii).second->pCmds;
-        while (!cmd_node_list.empty()) {
-            CMD_NODE* cmd_node = cmd_node_list.back();
-            delete cmd_node;
-            cmd_node_list.pop_back();
-        }
         delete (*ii).second;
     }
     my_data->commandBufferMap.clear();
@@ -2536,18 +2530,11 @@ static VkBool32 addCmd(const layer_data* my_data, GLOBAL_CB_NODE* pCB, const CMD
     if (pCB->state != CB_RECORDING) {
         skipCall |= report_error_no_cb_begin(my_data, pCB->commandBuffer, caller_name);
         skipCall |= validateCmdsInCmdBuffer(my_data, pCB, cmd);
-        CMD_NODE* pCmd = new CMD_NODE;
-        if (pCmd) {
-            // init cmd node and append to end of cmd LL
-            memset(pCmd, 0, sizeof(CMD_NODE));
-            pCmd->cmdNumber = ++pCB->numCmds;
-            pCmd->type = cmd;
-            pCB->pCmds.push_back(pCmd);
-        } else {
-            // TODO : How to pass cb as srcObj here?
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_OUT_OF_MEMORY, "DS",
-                    "Out of memory while attempting to allocate new CMD_NODE for commandBuffer %#" PRIxLEAST64, reinterpret_cast<uint64_t>(pCB->commandBuffer));
-        }
+        CMD_NODE cmdNode = {};
+        // init cmd node and append to end of cmd LL
+        cmdNode.cmdNumber = ++pCB->numCmds;
+        cmdNode.type = cmd;
+        pCB->cmds.push_back(cmdNode);
     }
     return skipCall;
 }
@@ -2557,12 +2544,7 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(my_data, cb);
     if (pCB) {
-        vector<CMD_NODE*> cmd_list = pCB->pCmds;
-        while (!cmd_list.empty()) {
-            delete cmd_list.back();
-            cmd_list.pop_back();
-        }
-        pCB->pCmds.clear();
+        pCB->cmds.clear();
         // Reset CB state (note that createInfo is not cleared)
         pCB->commandBuffer = cb;
         memset(&pCB->beginInfo, 0, sizeof(VkCommandBufferBeginInfo));
@@ -2573,7 +2555,6 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->state = CB_NEW;
         pCB->submitCount = 0;
         pCB->status = 0;
-        pCB->pCmds.clear();
         pCB->lastBoundPipeline = 0;
         pCB->viewports.clear();
         pCB->scissors.clear();
@@ -2731,14 +2712,14 @@ static VkBool32 printDSConfig(layer_data* my_data, const VkCommandBuffer cb)
 static void printCB(layer_data* my_data, const VkCommandBuffer cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(my_data, cb);
-    if (pCB && pCB->pCmds.size() > 0) {
+    if (pCB && pCB->cmds.size() > 0) {
         log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
                 "Cmds in CB %p", (void*)cb);
-        vector<CMD_NODE*> pCmds = pCB->pCmds;
-        for (auto ii=pCmds.begin(); ii!=pCmds.end(); ++ii) {
+        vector<CMD_NODE> cmds = pCB->cmds;
+        for (auto ii=cmds.begin(); ii!=cmds.end(); ++ii) {
             // TODO : Need to pass cb as srcObj here
             log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
-                "  CMD#%" PRIu64 ": %s", (*ii)->cmdNumber, cmdTypeToString((*ii)->type).c_str());
+                "  CMD#%" PRIu64 ": %s", (*ii).cmdNumber, cmdTypeToString((*ii).type).c_str());
         }
     } else {
         // Nothing to print

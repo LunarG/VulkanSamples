@@ -485,7 +485,7 @@ typedef struct _GLOBAL_CB_NODE {
     CB_STATE                     state;  // Track cmd buffer update state
     uint64_t                     submitCount; // Number of times CB has been submitted
     CBStatusFlags                status; // Track status of various bindings on cmd buffer
-    vector<CMD_NODE*>            pCmds;
+    vector<CMD_NODE>             cmds; // vector of commands bound to this command buffer
     // Currently storing "lastBound" objects on per-CB basis
     //  long-term may want to create caches of "lastBound" states and could have
     //  each individual CMD_NODE referencing its own "lastBound" state
