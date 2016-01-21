@@ -32,6 +32,8 @@
 #include <string.h>
 
 #include <cmath>
+#include <cinttypes>
+#include <cstdio>
 #include <limits>
 #include <memory>
 #include <sstream>
@@ -364,6 +366,12 @@ inline cJSON* ToJsonValue(const T& value) {
   return cJSON_CreateNumber(static_cast<double>(value));
 }
 
+inline cJSON* ToJsonValue(const uint64_t& value) {
+  char string[19] = {0};  // "0x" + 16 digits + terminal \0
+  std::snprintf(string, sizeof(string), "0x%016" PRIx64, value);
+  return cJSON_CreateString(string);
+}
+
 template <typename T, typename = EnableForEnum<T>, typename = void,
           typename = void>
 inline cJSON* ToJsonValue(const T& value) {
@@ -469,29 +477,27 @@ inline bool AsValue(cJSON* json_value, int32_t* value) {
 }
 
 inline bool AsValue(cJSON* json_value, uint64_t* value) {
-  double d = json_value->valuedouble;
-  if (json_value->type != cJSON_Number || !IsIntegral(d) ||
-      d < 0.0 || d > static_cast<double>(std::numeric_limits<uint64_t>::max()))
+  if (json_value->type != cJSON_String)
     return false;
-  *value = static_cast<uint64_t>(d);
-  return true;
+  int result = std::sscanf(json_value->valuestring, "0x%016" PRIx64, value);
+  return result == 1;
 }
 
 inline bool AsValue(cJSON* json_value, uint32_t* value) {
-  uint64_t value64 = 0;
-  AsValue(json_value, &value64);
-  if (value64 > std::numeric_limits<uint32_t>::max())
+  double d = json_value->valuedouble;
+  if (json_value->type != cJSON_Number || !IsIntegral(d) ||
+      d < 0.0 || d > static_cast<double>(std::numeric_limits<uint32_t>::max()))
     return false;
-  *value = static_cast<uint32_t>(value64);
+  *value = static_cast<uint32_t>(d);
   return true;
 }
 
 inline bool AsValue(cJSON* json_value, uint8_t* value) {
-  uint64_t value64 = 0;
-  AsValue(json_value, &value64);
-  if (value64 > std::numeric_limits<uint8_t>::max())
+  uint32_t value32 = 0;
+  AsValue(json_value, &value32);
+  if (value32 > std::numeric_limits<uint8_t>::max())
     return false;
-  *value = static_cast<uint8_t>(value64);
+  *value = static_cast<uint8_t>(value32);
   return true;
 }
 
@@ -504,7 +510,8 @@ inline bool AsValue(cJSON* json_value, float* value) {
 
 template <typename T>
 inline bool AsArray(cJSON* json_value, uint32_t count, T* values) {
-  if (json_value->type != cJSON_Array || cJSON_GetArraySize(json_value) != count)
+  if (json_value->type != cJSON_Array ||
+      cJSON_GetArraySize(json_value) != count)
     return false;
   for (uint32_t i = 0; i < count; ++i) {
     if (!AsValue(cJSON_GetArrayItem(json_value, i), values + i))

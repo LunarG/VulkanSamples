@@ -89,7 +89,6 @@ int main(int argc, char* argv[]) {
 
   VkImageFormatProperties props = {0};
   json = VkJsonImageFormatPropertiesToJson(props);
-  // std::cout << json << std::endl;
   VkImageFormatProperties props2 = {0};
   result = VkJsonImageFormatPropertiesFromJson(json, &props2, &errors);
   EXPECT(result);
