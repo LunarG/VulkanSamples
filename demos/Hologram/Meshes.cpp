@@ -185,9 +185,9 @@ void Meshes::generate(unsigned int rng_seed, int count)
     vertex_input_bindings_ = gen.vertex_input_bindings();
     vertex_input_attrs_ = gen.vertex_input_attributes();
     vertex_input_state_.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertex_input_state_.vertexBindingDescriptionCount = vertex_input_bindings_.size();
+    vertex_input_state_.vertexBindingDescriptionCount = (uint32_t)vertex_input_bindings_.size();
     vertex_input_state_.pVertexBindingDescriptions = vertex_input_bindings_.data();
-    vertex_input_state_.vertexAttributeDescriptionCount = vertex_input_attrs_.size();
+    vertex_input_state_.vertexAttributeDescriptionCount = (uint32_t)vertex_input_attrs_.size();
     vertex_input_state_.pVertexAttributeDescriptions = vertex_input_attrs_.data();
 
     input_assembly_state_ = gen.input_assembly_state();

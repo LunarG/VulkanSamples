@@ -118,7 +118,7 @@ VkInstance Shell::create_instance()
     VkInstanceCreateInfo instance_info = {};
     instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instance_info.pApplicationInfo = &app_info;
-    instance_info.enabledExtensionCount = global_extensions_.size();
+    instance_info.enabledExtensionCount = (uint32_t)global_extensions_.size();
     instance_info.ppEnabledExtensionNames = global_extensions_.data();
 
     VkInstance instance;
@@ -204,7 +204,7 @@ void Shell::init_dev()
 
     dev_info.pQueueCreateInfos = queue_info.data();
 
-    dev_info.enabledExtensionCount = device_extensions_.size();
+    dev_info.enabledExtensionCount = (uint32_t)device_extensions_.size();
     dev_info.ppEnabledExtensionNames = device_extensions_.data();
 
     // enable all features
@@ -304,7 +304,7 @@ void Shell::resize_swapchain(int32_t width_hint, int32_t height_hint)
         queue_families.push_back(ctx_.present_queue_family);
 
         swapchain_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        swapchain_info.queueFamilyIndexCount = queue_families.size();
+        swapchain_info.queueFamilyIndexCount = (uint32_t)queue_families.size();
         swapchain_info.pQueueFamilyIndices = queue_families.data();
     } else {
         swapchain_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;

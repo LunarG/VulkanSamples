@@ -226,7 +226,7 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     sample_platform_thread vk_threads[3];
-    for (long i = 0; i < 3; i++) {
+    for (size_t i = 0; i < 3; i++) {
         sample_platform_thread_create(&vk_threads[i], &per_thread_code, (void *) i);
     }
 
@@ -329,7 +329,7 @@ static void * per_thread_code(void *arg)
     /* triangle                                                             */
     VkResult U_ASSERT_ONLY res;
     // int threadNum = *((int*)(&arg));
-    long threadNum = (long) arg;
+    size_t threadNum = (size_t) arg;
 
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
