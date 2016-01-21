@@ -82,3 +82,5 @@ echo "Secondary Command Buffers"
 & $dPath\vk0.10-secondarycmd
 echo "SPIR-V Assembly"
 & $dPath\vk0.10-spirv_assembly
+echo "SPIR-V Specialization"
+& $dPath\vk0.10-spirv_specialization
