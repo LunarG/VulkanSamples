@@ -48,7 +48,8 @@ int sample_main()
     init_device_extension_names(info);
     init_instance(info, sample_title);
     init_enumerate_device(info);
-    init_window_size(info, 500, 500);
+    init_device(info);
+    get_window_size(&info.width, &info.height);
     init_connection(info);
     init_window(info);
     init_swapchain_extension(info);
