@@ -661,7 +661,7 @@ int sample_main()
     res = vkQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
 
-    wait_seconds(1);
+    while(!wait(1)) {};
     /* VULKAN_KEY_END */
 
     for(uint32_t i=0; i < info.swapchainImageCount; i++)
