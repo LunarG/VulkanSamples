@@ -1859,6 +1859,7 @@ bool VkTestFramework::GLSLtoSPV(const VkShaderStageFlagBits shader_type,
 
     EShMessages messages = EShMsgDefault;
     SetMessageOptions(messages);
+    messages = static_cast<EShMessages>(messages | EShMsgSpvRules | EShMsgVulkanRules);
 
     EShLanguage stage = FindLanguage(shader_type);
     glslang::TShader* shader = new glslang::TShader(stage);

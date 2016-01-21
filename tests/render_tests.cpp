@@ -570,8 +570,8 @@ TEST_F(VkRenderTest, VKTriangle_FragColor)
         "\n"
         "void main() \n"
         "{\n"
-        "   outColor = ubuf.color[gl_VertexID];\n"
-        "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];\n"
+        "   outColor = ubuf.color[gl_VertexIndex];\n"
+        "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexIndex];\n"
         "}\n";
 
     static const char *fragShaderText =
@@ -611,8 +611,8 @@ TEST_F(VkRenderTest, VKTriangle_OutputLocation)
         "\n"
         "void main() \n"
         "{\n"
-        "   outColor = ubuf.color[gl_VertexID];\n"
-        "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];\n"
+        "   outColor = ubuf.color[gl_VertexIndex];\n"
+        "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexIndex];\n"
         "}\n";
 
     static const char *fragShaderText =
@@ -653,8 +653,8 @@ TEST_F(VkRenderTest, SPV_VKTriangle)
         "\n"
         "void main() \n"
         "{\n"
-        "   outColor = ubuf.color[gl_VertexID];\n"
-        "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];\n"
+        "   outColor = ubuf.color[gl_VertexIndex];\n"
+        "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexIndex];\n"
         "}\n";
 
     static const char *fragShaderText =
@@ -689,7 +689,7 @@ TEST_F(VkRenderTest, SPV_GreenTriangle)
             "      vertices[0] = vec2(-1.0, -1.0);\n"
             "      vertices[1] = vec2( 1.0, -1.0);\n"
             "      vertices[2] = vec2( 0.0,  1.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -724,7 +724,7 @@ TEST_F(VkRenderTest, YellowTriangle)
             "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
             "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
             "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -1227,7 +1227,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
             "      dists[0] = 0.0;\n"
             "      dists[1] = 1.0;\n"
             "      dists[2] = 1.0;\n"
-            "   gl_ClipDistance[0] = dists[gl_VertexID % 3];\n"
+            "   gl_ClipDistance[0] = dists[gl_VertexIndex % 3];\n"
             "}\n";
 
 
@@ -1413,7 +1413,7 @@ TEST_F(VkRenderTest, TriangleVSUniform)
             "      vertices[0] = vec2(-0.5, -0.5);\n"
             "      vertices[1] = vec2( 0.5, -0.5);\n"
             "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   gl_Position = ubuf.MVP * vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_Position = ubuf.MVP * vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -1499,10 +1499,10 @@ TEST_F(VkRenderTest, MixTriangle)
             "      colors[0] = vec4(1.0, 0.0, 0.0, 1.0);\n"
             "      colors[1] = vec4(0.0, 1.0, 0.0, 1.0);\n"
             "      colors[2] = vec4(0.0, 0.0, 1.0, 1.0);\n"
-            "   foo = colors[gl_VertexID % 3];\n"
+            "   foo = colors[gl_VertexIndex % 3];\n"
             "   bar = vec4(1.0, 1.0, 1.0, 1.0);\n"
             "   scale = 1.0;\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -1554,7 +1554,7 @@ TEST_F(VkRenderTest, MixTriangle)
 
 TEST_F(VkRenderTest, QuadVertFetchAndVertID)
 {
-    // This tests that attributes work in the presence of gl_VertexID
+    // This tests that attributes work in the presence of gl_VertexIndex
 
     static const char *vertShaderText =
             "#version 400\n"
@@ -1571,8 +1571,8 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
             "void main() {\n"
             "   outColor = inColor;\n"
             "   vec4 vertices[3];"
-            "      vertices[gl_VertexID % 3] = pos;\n"
-            "   gl_Position = vertices[(gl_VertexID + 3) % 3];\n"
+            "      vertices[gl_VertexIndex % 3] = pos;\n"
+            "   gl_Position = vertices[(gl_VertexIndex + 3) % 3];\n"
             "}\n";
 
 
@@ -1646,7 +1646,7 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
 
 TEST_F(VkRenderTest, QuadSparseVertFetch)
 {
-    // This tests that attributes work in the presence of gl_VertexID
+    // This tests that attributes work in the presence of gl_VertexIndex
 
     static const char *vertShaderText =
             "#version 400\n"
@@ -1752,7 +1752,7 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
 
 TEST_F(VkRenderTest, TriVertFetchDeadAttr)
 {
-    // This tests that attributes work in the presence of gl_VertexID
+    // This tests that attributes work in the presence of gl_VertexIndex
     // and a dead attribute in position 0. Draws a triangle with yellow,
     // red and green corners, starting at top and going clockwise.
 
@@ -1774,7 +1774,7 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
             "      vertices[0] = vec2(-1.0, -1.0);\n"
             "      vertices[1] = vec2( 1.0, -1.0);\n"
             "      vertices[2] = vec2( 0.0,  1.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
 
@@ -1988,9 +1988,9 @@ TEST_F(VkRenderTest, VSTexture)
             "      positions[0] = vec2( 0.0, 0.0);\n"
             "      positions[1] = vec2( 0.25, 0.1);\n"
             "      positions[2] = vec2( 0.1, 0.25);\n"
-            "   vec2 samplePos = positions[gl_VertexID % 3];\n"
+            "   vec2 samplePos = positions[gl_VertexIndex % 3];\n"
             "   texColor = textureLod(surface, samplePos, 0.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -2061,8 +2061,8 @@ TEST_F(VkRenderTest, TexturedTriangle)
             "      positions[0] = vec2( 0.0, 0.0);\n"
             "      positions[1] = vec2( 1.0, 0.0);\n"
             "      positions[2] = vec2( 1.0, 1.0);\n"
-            "   samplePos = positions[gl_VertexID % 3];\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   samplePos = positions[gl_VertexIndex % 3];\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -2136,9 +2136,9 @@ TEST_F(VkRenderTest, TexturedTriangleClip)
             "      dists[0] = 1.0;\n"
             "      dists[1] = 1.0;\n"
             "      dists[2] = -1.0;\n"
-            "   gl_ClipDistance[0] = dists[gl_VertexID % 3];\n"
-            "   samplePos = positions[gl_VertexID % 3];\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_ClipDistance[0] = dists[gl_VertexIndex % 3];\n"
+            "   samplePos = positions[gl_VertexIndex % 3];\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -2210,8 +2210,8 @@ TEST_F(VkRenderTest, FSTriangle)
             "      positions[0] = vec2( 0.0, 0.0);\n"
             "      positions[1] = vec2( 1.0, 0.0);\n"
             "      positions[2] = vec2( 1.0, 1.0);\n"
-            "   samplePos = positions[gl_VertexID % 3];\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   samplePos = positions[gl_VertexIndex % 3];\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -2286,8 +2286,8 @@ TEST_F(VkRenderTest, SamplerBindingsTriangle)
             "      positions[0] = vec2( 0.0, 0.0);\n"
             "      positions[1] = vec2( 1.0, 0.0);\n"
             "      positions[2] = vec2( 1.0, 1.0);\n"
-            "   samplePos = vec4(positions[gl_VertexID % 3], 0.0, 0.0);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   samplePos = vec4(positions[gl_VertexIndex % 3], 0.0, 0.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -2375,7 +2375,7 @@ TEST_F(VkRenderTest, TriangleVSUniformBlock)
             "      vertices[1] = vec2( 0.5, -0.5);\n"
             "      vertices[2] = vec2( 0.5,  0.5);\n"
             "   outColor = myBufferVals.blue;\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -2456,7 +2456,7 @@ TEST_F(VkRenderTest, TriangleFSUniformBlockBinding)
             "      vertices[0] = vec2(-0.5, -0.5);\n"
             "      vertices[1] = vec2( 0.5, -0.5);\n"
             "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -2554,7 +2554,7 @@ TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBinding)
             "      vertices[0] = vec2(-0.5, -0.5);\n"
             "      vertices[1] = vec2( 0.5, -0.5);\n"
             "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -2651,7 +2651,7 @@ TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBindingWithStruct)
             "      vertices[0] = vec2(-0.5, -0.5);\n"
             "      vertices[1] = vec2( 0.5, -0.5);\n"
             "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -2904,7 +2904,7 @@ TEST_F(VkRenderTest, TriangleMixedSamplerUniformBlockBinding)
             "      vertices[0] = vec2(-0.5, -0.5);\n"
             "      vertices[1] = vec2( 0.5, -0.5);\n"
             "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -3019,7 +3019,7 @@ TEST_F(VkRenderTest, TriangleMatchingSamplerUniformBlockBinding)
             "      vertices[0] = vec2(-0.5, -0.5);\n"
             "      vertices[1] = vec2( 0.5, -0.5);\n"
             "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -3176,7 +3176,7 @@ TEST_F(VkRenderTest, TriangleUniformBufferLayout)
 
             // generic position stuff
             "   vec2 vertices;\n"
-            "   int vertexSelector = gl_VertexID;\n"
+            "   int vertexSelector = gl_VertexIndex;\n"
             "   if (vertexSelector == 0)\n"
             "      vertices = vec2(-0.5, -0.5);\n"
             "   else if (vertexSelector == 1)\n"
@@ -3386,7 +3386,7 @@ TEST_F(VkRenderTest, TextureGather)
             "      vertices[0] = vec2(-0.5, -0.5);\n"
             "      vertices[1] = vec2( 0.5, -0.5);\n"
             "      vertices[2] = vec2( 0.5,  0.5);\n"
-            "   gl_Position = vec4(vertices[gl_VertexID % 3], 0.0, 1.0);\n"
+            "   gl_Position = vec4(vertices[gl_VertexIndex % 3], 0.0, 1.0);\n"
             "}\n";
 
     static const char *fragShaderText =
@@ -3491,7 +3491,7 @@ TEST_F(VkRenderTest, GeometryShaderHelloWorld)
 
             // generic position stuff
             "   vec2 vertices;\n"
-            "   int vertexSelector = gl_VertexID;\n"
+            "   int vertexSelector = gl_VertexIndex;\n"
             "   if (vertexSelector == 0)\n"
             "      vertices = vec2(-0.5, -0.5);\n"
             "   else if (vertexSelector == 1)\n"
@@ -3648,7 +3648,7 @@ TEST_F(VkRenderTest, GSUniformBufferLayout)
 
             // generic position stuff
             "   vec2 vertices;\n"
-            "   int vertexSelector = gl_VertexID;\n"
+            "   int vertexSelector = gl_VertexIndex;\n"
             "   if (vertexSelector == 0)\n"
             "      vertices = vec2(-0.5, -0.5);\n"
             "   else if (vertexSelector == 1)\n"
@@ -3963,7 +3963,7 @@ TEST_F(VkRenderTest, GSPositions)
 
             // generic position stuff
             "   vec2 vertices;\n"
-            "   int vertexSelector = gl_VertexID;\n"
+            "   int vertexSelector = gl_VertexIndex;\n"
             "   if (vertexSelector == 0)\n"
             "      vertices = vec2(-0.5, -0.5);\n"
             "   else if (vertexSelector == 1)\n"
@@ -4087,7 +4087,7 @@ TEST_F(VkRenderTest, GSTriStrip)
 
             // generic position stuff
             "   vec2 vertices;\n"
-            "   int vertexSelector = gl_VertexID;\n"
+            "   int vertexSelector = gl_VertexIndex;\n"
             "   if (vertexSelector == 0)\n"
             "      vertices = vec2(-0.5, -0.5);\n"
             "   else if (vertexSelector == 1)\n"
