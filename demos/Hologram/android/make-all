@@ -1,0 +1,25 @@
+#!/bin/sh
+
+set -e
+
+SDK="$HOME/android/android-sdk-linux"
+NDK="$HOME/android/android-ndk-r10e"
+
+build() {
+	$NDK/ndk-build
+	$SDK/tools/android update project -p . -t android-23 -n Hologram
+	ant debug
+}
+
+install() {
+	adb uninstall com.example.Hologram
+	adb install bin/Hologram-debug.apk
+}
+
+run() {
+	adb shell am start com.example.Hologram/android.app.NativeActivity
+}
+
+build
+install
+#run
