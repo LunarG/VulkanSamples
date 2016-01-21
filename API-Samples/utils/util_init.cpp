@@ -34,9 +34,6 @@ samples "init" utility functions
 #include "util_init.hpp"
 #include "cube_data.h"
 
-// Main entry point of samples
-int sample_main();
-
 #ifdef __ANDROID__
 // Android specific stuff.
 
@@ -46,8 +43,7 @@ int sample_main();
 bool Android_LoadFile(const char* filePath, std::vector<unsigned int>& data);
 
 // Static variable that keeps ANativeWindow and asset manager instances.
-static ANativeWindow *platformWindow = nullptr;
-static AAssetManager* assetManager = nullptr;
+static android_app* Android_application = nullptr;
 #endif
 
 using namespace std;
@@ -742,7 +738,7 @@ void init_swapchain_extension(struct sample_info &info)
     createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = nullptr;
     createInfo.flags = 0;
-    createInfo.window = platformWindow;
+    createInfo.window = Android_application->window;
     res = info.fpCreateAndroidSurfaceKHR(info.inst, &createInfo, nullptr, &info.surface);
 #else  // !__ANDROID__ && !_WIN32
     VkXcbSurfaceCreateInfoKHR createInfo = {};
@@ -2215,14 +2211,32 @@ void destroy_textures(struct sample_info &info)
     }
 }
 
-#ifdef __ANDROID__
-// Process the next main command.
-void handle_cmd( android_app* app, int32_t cmd )
-{
+bool get_window_size(int32_t* width, int32_t* height) {
+#ifndef __ANDROID__
+    // On Other platforms, set the window size.
+    *width = *height = 500;
+#else
+    // On Android, retrieve the window size from the native window.
+    assert(Android_application != nullptr);
+    *width = ANativeWindow_getWidth(Android_application->window);
+    *height = ANativeWindow_getHeight(Android_application->window);
+#endif
+    return true;
+};
+
+
+#ifndef __ANDROID__
+int main(int argc, char **argv) {
+    return sample_main();
+}
+#else
+//
+// Android specific helper functions.
+//
+void Android_handle_cmd(android_app* app, int32_t cmd)  {
     switch( cmd ){
         case APP_CMD_INIT_WINDOW:
             // The window is being shown, get it ready.
-            platformWindow = app->window;
             sample_main();
             break;
         case APP_CMD_TERM_WINDOW:
@@ -2233,81 +2247,40 @@ void handle_cmd( android_app* app, int32_t cmd )
     }
 }
 
+bool Android_process_command() {
+    assert(Android_application != nullptr);
+    int events;
+    android_poll_source* source;
+    // Poll all pending events.
+    if( ALooper_pollAll(0, NULL, &events, (void**)&source) >= 0 ){
+        // Process each polled events
+        if (source != NULL)
+            source->process(Android_application, source);
+    }
+    return Android_application->destroyRequested;
+}
+
 void android_main(struct android_app* app) {
     // Magic call, please ignore it (Android specific).
     app_dummy();
     // Set static variables.
-    assetManager = app->activity->assetManager;
+    Android_application = app;
     // Set the callback to process system events
-    app->onAppCmd = handle_cmd;
-
-    // Used to poll the events in the main loop
-    int events;
-    android_poll_source* source;
-
-    // This will contain the index of the framebuffer we should draw in
-    uint32_t nextIndex;
+    app->onAppCmd = Android_handle_cmd;
 
     // Main loop
     do {
-        // Poll all pending events.
-        if( ALooper_pollAll(0, NULL, &events, (void**)&source) >= 0 ){
-            // Process each polled events
-            if (source != NULL)
-                source->process(app, source);
-        }
-#if 0
-        // If vulkan is initialised we draw
-        if(initialised) {
-            // Get the framebuffer index we should draw in
-            // Acquire with fence not yet supported
-            CHECK(fn_vkAcquireNextImageKHR(tutorialDevice, tutorialSwapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &nextIndex) == VK_ERROR_OUT_OF_DATE_KHR);
-
-            // This fence will be used to make sure our draw command(s) complete before swapping the frame buffers
-            // We reset it to its default value: unsignaled
-            CHECK(vkResetFences(tutorialDevice, 1, &fence) < VK_SUCCESS);
-
-            // Wait to get the right to sue the framebuffer
-            VkSubmitInfo submit_info = {
-                    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                    .pNext = NULL,
-                    .waitSemaphoreCount = 1,
-                    .pWaitSemaphores = &semaphore,
-                    .commandBufferCount = 1,
-                    .pCommandBuffers = &cmdBuffer[nextIndex],
-                    .signalSemaphoreCount = 0,
-                    .pSignalSemaphores = NULL
-            };
-            CHECK(vkQueueSubmit(tutorialGraphicsQueue, 1, &submit_info, fence) < VK_SUCCESS);
-
-            // Before swapping the framebuffer we need to wait for our draw command to complete
-            CHECK(vkWaitForFences(tutorialDevice, 1, &fence, 1 /*true*/, 100000000) < VK_SUCCESS);
-
-            VkResult result;
-            // Require to swap the frames
-            VkPresentInfoKHR presentInfo{
-                    .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-                    .pNext = nullptr,
-                    .swapchainCount = 1,
-                    .pSwapchains = &tutorialSwapchain,
-                    .pImageIndices = &nextIndex,
-                    .waitSemaphoreCount = 0,
-                    .pWaitSemaphores = nullptr,
-                    .pResults = &result,
-            };
-            fn_vkQueuePresentKHR(tutorialGraphicsQueue, &presentInfo);
-
-        }
-#endif
+        Android_process_command();
     } // Check if system requested to quit the application
-    while( app->destroyRequested == 0 );
+    while(app->destroyRequested == 0);
 
     return;
 }
 
 bool Android_LoadFile(const char* filePath, std::vector<unsigned int> &data){
-    assert(assetManager != nullptr);
-    AAsset* file = AAssetManager_open(assetManager, filePath, AASSET_MODE_BUFFER);
+    assert(Android_application != nullptr);
+    AAsset* file = AAssetManager_open(Android_application->activity->assetManager,
+                                      filePath, AASSET_MODE_BUFFER);
     size_t fileLength = AAsset_getLength(file);
     LOGI("Loaded file:%s size:%d", filePath, fileLength);
     if (fileLength == 0) {
@@ -2317,21 +2290,14 @@ bool Android_LoadFile(const char* filePath, std::vector<unsigned int> &data){
     AAsset_read(file, &data[0], fileLength);
     return true;
 }
+#endif
 
-bool get_window_size(int32_t* width, int32_t* height) {
-#ifdef __ANDROID_API__
-    assert(platformWindow != nullptr);
-    *width = ANativeWindow_getWidth(platformWindow);
-    *height = ANativeWindow_getHeight(platformWindow);
+bool wait(int32_t timeout) {
+#ifndef __ANDROID__
+    wait_second(timeout);
     return true;
 #else
-    *width = *height = 500;
+    (void)timeout;
+    return Android_process_command();
 #endif
-};
-
-
-#else // __ANDROID__
-int main(int argc, char **argv) {
-    return sample_main();
 }
-#endif

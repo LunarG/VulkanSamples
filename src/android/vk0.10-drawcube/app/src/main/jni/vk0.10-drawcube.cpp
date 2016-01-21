@@ -236,7 +236,9 @@ int sample_main()
     res = info.fpQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
 
-    wait_seconds(1);
+    // Wait for a second (or until App terminated on Android).
+    while(wait(1) == false) {};
+
     /* VULKAN_KEY_END */
 
     vkDestroySemaphore(info.device, presentCompleteSemaphore, NULL);
