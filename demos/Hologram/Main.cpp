@@ -3,24 +3,46 @@
 
 #include "Hologram.h"
 
-#ifdef _WIN32
-#include "ShellWin32.h"
-#else
+namespace {
+
+Game *create_game(int argc, char **argv)
+{
+    std::vector<std::string> args(argv, argv + argc);
+    return new Hologram(args);
+}
+
+} // namespace
+
+#if defined(VK_USE_PLATFORM_XCB_KHR)
+
 #include "ShellXcb.h"
-#endif
 
 int main(int argc, char **argv)
 {
-    std::vector<std::string> args(argv, argv + argc);
-    Hologram hologram(args);
-
-#ifdef _WIN32
-    ShellWin32 shell(hologram);
-#else
-    ShellXcb shell(hologram);
-#endif
-
-    shell.run();
+    Game *game = create_game(argc, argv);
+    {
+        ShellXcb shell(*game);
+        shell.run();
+    }
+    delete game;
 
     return 0;
 }
+
+#elif defined(VK_USE_PLATFORM_WIN32_KHR)
+
+#include "ShellWin32.h"
+
+int main(int argc, char **argv)
+{
+    Game *game = create_game(argc, argv);
+    {
+        ShellWin32 shell(*game);
+        shell.run();
+    }
+    delete game;
+
+    return 0;
+}
+
+#endif // VK_USE_PLATFORM_XCB_KHR
