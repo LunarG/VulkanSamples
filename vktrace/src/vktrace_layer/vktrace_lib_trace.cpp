@@ -1271,10 +1271,15 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkQueuePresentKHR(
     vktrace_trace_packet_header* pHeader;
     VkResult result;
     packet_vkQueuePresentKHR* pPacket = NULL;
-    size_t swapchainSize = pPresentInfo->swapchainCount*sizeof(VkSwapchainKHR);
-    size_t indexSize = pPresentInfo->swapchainCount*sizeof(uint32_t);
+    size_t swapchainSize = pPresentInfo->swapchainCount * sizeof(VkSwapchainKHR);
+    size_t indexSize = pPresentInfo->swapchainCount * sizeof(uint32_t);
     size_t semaSize = pPresentInfo->waitSemaphoreCount * sizeof(VkSemaphore);
-    CREATE_TRACE_PACKET(vkQueuePresentKHR, sizeof(VkPresentInfoKHR) + swapchainSize + indexSize + semaSize);
+    size_t resultsSize = pPresentInfo->swapchainCount * sizeof(VkResult);
+    size_t totalSize = sizeof(VkPresentInfoKHR) + swapchainSize + indexSize + semaSize;
+    if (pPresentInfo->pResults != NULL) {
+        totalSize += resultsSize;
+    }
+    CREATE_TRACE_PACKET(vkQueuePresentKHR, totalSize);
     result = mdd(queue)->devTable.QueuePresentKHR(queue, pPresentInfo);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkQueuePresentKHR(pHeader);
@@ -1283,10 +1288,16 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkQueuePresentKHR(
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentInfo->pSwapchains), swapchainSize, pPresentInfo->pSwapchains);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentInfo->pImageIndices), indexSize, pPresentInfo->pImageIndices);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentInfo->pWaitSemaphores), semaSize, pPresentInfo->pWaitSemaphores);
+    if (pPresentInfo->pResults != NULL) {
+        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentInfo->pResults), resultsSize, pPresentInfo->pResults);
+    }
     pPacket->result = result;
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentInfo->pImageIndices));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentInfo->pSwapchains));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentInfo->pWaitSemaphores));
+    if (pPresentInfo->pResults != NULL) {
+        vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentInfo->pResults));
+    }
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentInfo));
     FINISH_TRACE_PACKET();
     return result;

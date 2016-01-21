@@ -100,8 +100,8 @@ vktrace_replay::VKTRACE_REPLAY_RESULT vkReplay::handle_replay_errors(const char*
 {
     vktrace_replay::VKTRACE_REPLAY_RESULT res = resIn;
     if (resCall != resTrace) {
-        vktrace_LogError("Return value %s from API call (%s) does not match return value from trace file %s.", entrypointName,
-                string_VkResult((VkResult)resCall), string_VkResult((VkResult)resTrace));
+        vktrace_LogError("Return value %s from API call (%s) does not match return value from trace file %s.",
+                string_VkResult((VkResult)resCall), entrypointName, string_VkResult((VkResult)resTrace));
         res = vktrace_replay::VKTRACE_REPLAY_BAD_RETURN;
     }
 #if 0
@@ -1869,7 +1869,7 @@ VkResult vkReplay::manually_replay_vkQueuePresentKHR(packet_vkQueuePresentKHR* p
     }
     // TODO : Probably need some kind of remapping from image indices grabbed w/
     //   AcquireNextImageKHR call, and then the indicies that are passed in here
-    VkPresentInfoKHR present;
+    VkPresentInfoKHR present = {};
     present.sType = pPacket->pPresentInfo->sType;
     present.pNext = pPacket->pPresentInfo->pNext;
     present.swapchainCount = pPacket->pPresentInfo->swapchainCount;
@@ -1889,9 +1889,27 @@ VkResult vkReplay::manually_replay_vkQueuePresentKHR(packet_vkQueuePresentKHR* p
         }
         VKTRACE_DELETE(pRemappedWaitSems);
     }
+    present.pResults = NULL;
+
+    // If the application requested per-swapchain results, set up to get the results from the replay.
+    if (pPacket->pPresentInfo->pResults != NULL) {
+        present.pResults = VKTRACE_NEW_ARRAY(VkResult, pPacket->pPresentInfo->swapchainCount);
+    }
+
     replayResult = m_vkFuncs.real_vkQueuePresentKHR(remappedqueue, &present);
 
     m_frameNumber++;
+
+    // Compare the results from the trace file with those just received from the replay.  Report any differences.
+    if (present.pResults != NULL) {
+        for (i=0; i <pPacket->pPresentInfo->swapchainCount; i++) {
+            if (present.pResults[i] != pPacket->pPresentInfo->pResults[i]) {
+                vktrace_LogError("Return value %s from API call (VkQueuePresentKHR) does not match return value from trace file %s for swapchain %d.",
+                                 string_VkResult(present.pResults[i]), string_VkResult(pPacket->pPresentInfo->pResults[i]), i);
+            }
+        }
+        VKTRACE_DELETE(present.pResults);
+    }
 
     return replayResult;
 }
