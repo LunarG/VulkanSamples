@@ -99,7 +99,7 @@ int sample_main()
         exit(-1);
     }
 
-    info.width = info.height = 500;
+    get_window_size(&info.width, &info.height);
     init_connection(info);
     init_window(info);
     init_swapchain_extension(info);
