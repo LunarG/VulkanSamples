@@ -343,14 +343,19 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
 
     // Regardless of skipCall value, do some internal cleanup:
     if (pInstance) {
-        // Delete all of the SwpPhysicalDevice's and the SwpInstance associated
-        // with this instance:
+        // Delete all of the SwpPhysicalDevice's, SwpSurface's, and the
+        // SwpInstance associated with this instance:
         for (auto it = pInstance->physicalDevices.begin() ;
              it != pInstance->physicalDevices.end() ; it++) {
 
             // Free memory that was allocated for/by this SwpPhysicalDevice:
             SwpPhysicalDevice *pPhysicalDevice = it->second;
             if (pPhysicalDevice) {
+                LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, instance, "VkInstance",
+                          SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN,
+                          "%s() called before all of its associated "
+                          "VkPhysicalDevices were destroyed.",
+                          __FUNCTION__);
                 free(pPhysicalDevice->pSurfaceFormats);
                 free(pPhysicalDevice->pPresentModes);
             }
@@ -358,6 +363,19 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
             // Erase the SwpPhysicalDevice's from the my_data->physicalDeviceMap (which
             // are simply pointed to by the SwpInstance):
             my_data->physicalDeviceMap.erase(it->second->physicalDevice);
+        }
+        for (auto it = pInstance->surfaces.begin() ;
+             it != pInstance->surfaces.end() ; it++) {
+
+            // Free memory that was allocated for/by this SwpPhysicalDevice:
+            SwpSurface *pSurface = it->second;
+            if (pSurface) {
+                LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, instance, "VkInstance",
+                          SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN,
+                          "%s() called before all of its associated "
+                          "VkSurfaceKHRs were destroyed.",
+                          __FUNCTION__);
+            }
         }
         my_data->instanceMap.erase(instance);
     }
@@ -958,7 +976,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(VkInstance  insta
         }
         if (!pSurface->swapchains.empty()) {
             LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, instance, "VkInstance",
-                      SWAPCHAIN_DEL_OBJECT_BEFORE_SWAPCHAINS,
+                      SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN,
                       "%s() called before all of its associated "
                       "VkSwapchainKHRs were destroyed.",
                       __FUNCTION__);
@@ -1079,7 +1097,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
         }
         if (!pDevice->swapchains.empty()) {
             LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                      SWAPCHAIN_DEL_OBJECT_BEFORE_SWAPCHAINS,
+                      SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN,
                       "%s() called before all of its associated "
                       "VkSwapchainKHRs were destroyed.",
                       __FUNCTION__);

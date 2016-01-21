@@ -63,7 +63,7 @@ typedef enum _SWAPCHAIN_ERROR
     SWAPCHAIN_INVALID_HANDLE,                   // Handle used that isn't currently valid
     SWAPCHAIN_NULL_POINTER,                     // Pointer set to NULL, instead of being a valid pointer
     SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,         // Did not enable WSI extension, but called WSI function 
-    SWAPCHAIN_DEL_OBJECT_BEFORE_SWAPCHAINS,     // Called vkDestroyDevice() before vkDestroySwapchainKHR()
+    SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN,     // Called vkDestroyDevice() before vkDestroySwapchainKHR()
     SWAPCHAIN_CREATE_UNSUPPORTED_SURFACE,       // Called vkCreateSwapchainKHR() with a pCreateInfo->surface that wasn't seen as supported by vkGetPhysicalDeviceSurfaceSupportKHR for the device
     SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,        // Called vkCreateSwapchainKHR() without calling a query (e.g. vkGetPhysicalDeviceSurfaceCapabilitiesKHR())
     SWAPCHAIN_CREATE_SWAP_BAD_MIN_IMG_COUNT,    // Called vkCreateSwapchainKHR() with out-of-bounds minImageCount
