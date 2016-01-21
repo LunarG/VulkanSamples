@@ -29,6 +29,11 @@
 if (NOT WIN32)
     set (CMAKE_CXX_FLAGS "-std=c++11")
 endif()
+include_directories(
+	${CMAKE_CURRENT_SOURCE_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}/../../loader
+	${CMAKE_CURRENT_SOURCE_DIR}/../../include/vulkan
+	)
 
 add_library(vkjson STATIC vkjson.cc vkjson_device.cc ../../loader/cJSON.c)
 

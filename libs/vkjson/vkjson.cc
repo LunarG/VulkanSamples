@@ -40,7 +40,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "../../loader/cJSON.h"
+#include "cJSON.h"
+#include "vk_sdk_platform.h"
 
 namespace {
 
@@ -368,7 +369,7 @@ inline cJSON* ToJsonValue(const T& value) {
 
 inline cJSON* ToJsonValue(const uint64_t& value) {
   char string[19] = {0};  // "0x" + 16 digits + terminal \0
-  std::snprintf(string, sizeof(string), "0x%016" PRIx64, value);
+  snprintf(string, sizeof(string), "0x%016" PRIx64, value);
   return cJSON_CreateString(string);
 }
 
