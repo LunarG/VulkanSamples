@@ -358,7 +358,7 @@ int sample_main()
     res = vkQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
 
-    wait_seconds(1);
+    while(!wait(1)) {};
     
     vkFreeCommandBuffers(info.device, info.cmd_pool, 4, secondary_cmds);
 
