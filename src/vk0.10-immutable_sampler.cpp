@@ -276,7 +276,7 @@ int sample_main()
     res = vkQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
 
-    wait_seconds(1);
+    while(!wait(1)) {};
 
     vkDestroyFence(info.device, drawFence, NULL);
     vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);
