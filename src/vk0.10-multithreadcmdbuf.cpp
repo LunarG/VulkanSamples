@@ -95,7 +95,7 @@ static const char *fragShaderText=
     "}\n";
 
 static struct sample_info info = {};
-int main(int argc, char **argv)
+int sample_main()
 {
     VkResult U_ASSERT_ONLY res;
 
