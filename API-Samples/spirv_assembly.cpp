@@ -183,7 +183,7 @@ const std::string fragmentSPIRV =
         "               OpReturn\n"
         "               OpFunctionEnd\n";
 
-int main(int argc, char **argv)
+int sample_main()
 {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};

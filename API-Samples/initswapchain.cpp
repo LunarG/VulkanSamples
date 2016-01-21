@@ -33,7 +33,7 @@ Inititalize Swapchain
 #include <assert.h>
 #include <cstdlib>
 
-int main(int argc, char **argv)
+int sample_main()
 {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};

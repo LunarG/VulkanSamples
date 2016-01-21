@@ -77,7 +77,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(
     return false;
 }
 
-int main(int argc, char **argv)
+int sample_main()
 {
     VkExtensionProperties *vk_props = NULL;
     uint32_t instance_extension_count;

@@ -45,6 +45,10 @@ samples utility functions
 
 using namespace std;
 
+int main(int argc, char **argv) {
+    return sample_main();
+}
+
 void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch)
 {
     major = version >> 22;

@@ -31,7 +31,7 @@ extension are available to enable at CreateInstance time.
 #include <util_init.hpp>
 #include <cstdlib>
 
-int main(int argc, char **argv)
+int sample_main()
 {
     VkResult res;
     VkExtensionProperties *vk_props = NULL;

@@ -73,7 +73,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(
     return false;
 }
 
-int main(int argc, char **argv)
+int sample_main()
 {
     struct sample_info info = {};
     init_global_layer_properties(info);

@@ -34,7 +34,7 @@ Create Uniform Buffer
 #include <string.h>
 #include <cstdlib>
 
-int main(int argc, char **argv)
+int sample_main()
 {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
