@@ -1730,14 +1730,23 @@ VKAPI_ATTR void* VKAPI_CALL myalloc(
     size_t                          alignment,
     VkSystemAllocationScope              allocationScope)
 {
-    return malloc(size);
+#ifdef _MSC_VER
+    return _aligned_malloc(size, alignment);
+#else
+    return aligned_malloc(alignment, size);
+#endif
 }
 VKAPI_ATTR void VKAPI_CALL myfree(
     void*                           pUserData,
     void*                           pMemory)
 {
+#ifdef _MSC_VER
+    _aligned_free(pMemory);
+#else
     free(pMemory);
+#endif
 }
+
 static void demo_init_vk(struct demo *demo)
 {
     VkResult err;

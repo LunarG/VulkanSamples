@@ -130,7 +130,7 @@ struct app_gpu {
 };
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL dbg_callback(
-    VkDebugReportFlagsEXT               msgFlags,
+    VkFlags                             msgFlags,
     VkDebugReportObjectTypeEXT          objType,
     uint64_t                            srcObject,
     size_t                              location,
