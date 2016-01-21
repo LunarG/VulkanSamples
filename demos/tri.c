@@ -1734,7 +1734,7 @@ VKAPI_ATTR void* VKAPI_CALL myalloc(
 #ifdef _MSC_VER
     return _aligned_malloc(size, alignment);
 #else
-    return aligned_malloc(alignment, size);
+    return aligned_alloc(alignment, size);
 #endif
 }
 VKAPI_ATTR void VKAPI_CALL myfree(
