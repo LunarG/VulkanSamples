@@ -211,6 +211,7 @@ typedef struct _SAMPLER_NODE {
 
 typedef struct _IMAGE_NODE {
     VkImageLayout layout;
+    VkFormat      format;
 } IMAGE_NODE;
 
 typedef struct _IMAGE_CMD_BUF_NODE {
@@ -526,5 +527,22 @@ typedef struct _GLOBAL_CB_NODE {
 } GLOBAL_CB_NODE;
 
 typedef struct _SWAPCHAIN_NODE {
+    VkSwapchainCreateInfoKHR    createInfo;
+    uint32_t*                   pQueueFamilyIndices;
     std::vector<VkImage>        images;
+    _SWAPCHAIN_NODE(const VkSwapchainCreateInfoKHR *pCreateInfo) :
+        createInfo(*pCreateInfo),
+        pQueueFamilyIndices(NULL)
+    {
+        if (pCreateInfo->queueFamilyIndexCount) {
+            pQueueFamilyIndices = new uint32_t[pCreateInfo->queueFamilyIndexCount];
+            memcpy(pQueueFamilyIndices, pCreateInfo->pQueueFamilyIndices, pCreateInfo->queueFamilyIndexCount*sizeof(uint32_t));
+            createInfo.pQueueFamilyIndices = pQueueFamilyIndices;
+        }
+    }
+    ~_SWAPCHAIN_NODE()
+    {
+        if (pQueueFamilyIndices)
+            delete pQueueFamilyIndices;
+    }
 } SWAPCHAIN_NODE;

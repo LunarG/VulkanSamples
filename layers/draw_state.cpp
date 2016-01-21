@@ -2044,9 +2044,8 @@ static VkBool32 validateImageView(const layer_data* my_data, const VkImageView* 
         VkImageAspectFlags aspectMask = ivIt->second->subresourceRange.aspectMask;
         VkImage image = ivIt->second->image;
         // TODO : Check here in case we have a bad image
-        auto imgIt = my_data->imageMap.find(image);
-        auto swapChainImageIt = my_data->imageLayoutMap.find(image);
-        if ((imgIt == my_data->imageMap.end()) && (swapChainImageIt == my_data->imageLayoutMap.end())) {
+        auto imgIt = my_data->imageLayoutMap.find(image);
+        if (imgIt == my_data->imageLayoutMap.end()) {
             skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, (uint64_t) image, __LINE__, DRAWSTATE_IMAGEVIEW_DESCRIPTOR_ERROR, "DS",
                 "vkUpdateDescriptorSets: Attempt to update descriptor with invalid image %#" PRIxLEAST64 " in imageView %#" PRIxLEAST64, (uint64_t) image, (uint64_t) *pImageView);
         } else {
@@ -3675,6 +3674,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, co
     if (VK_SUCCESS == result) {
         IMAGE_NODE* image_node = new IMAGE_NODE;
         image_node->layout = pCreateInfo->initialLayout;
+        image_node->format = pCreateInfo->format;
         loader_platform_thread_lock_mutex(&globalLock);
         dev_data->imageMap[*pImage] = unique_ptr<VkImageCreateInfo>(new VkImageCreateInfo(*pCreateInfo));
         dev_data->imageLayoutMap[*pImage] = image_node;
@@ -6064,7 +6064,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkResult result = dev_data->device_dispatch_table->CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
 
     if (VK_SUCCESS == result) {
-        SWAPCHAIN_NODE *swapchain_data = new SWAPCHAIN_NODE;
+        SWAPCHAIN_NODE *swapchain_data = new SWAPCHAIN_NODE(pCreateInfo);
         loader_platform_thread_lock_mutex(&globalLock);
         dev_data->device_extensions.swapchainMap[*pSwapchain] = swapchain_data;
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -6113,7 +6113,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
             IMAGE_NODE* image_node = new IMAGE_NODE;
             image_node->layout = VK_IMAGE_LAYOUT_UNDEFINED;
             loader_platform_thread_lock_mutex(&globalLock);
-            dev_data->device_extensions.swapchainMap[swapchain]->images.push_back(pSwapchainImages[i]);
+            auto swapchain_node = dev_data->device_extensions.swapchainMap[swapchain];
+            image_node->format = swapchain_node->createInfo.imageFormat;
+            swapchain_node->images.push_back(pSwapchainImages[i]);
             dev_data->imageLayoutMap[pSwapchainImages[i]] = image_node;
             loader_platform_thread_unlock_mutex(&globalLock);
         }
