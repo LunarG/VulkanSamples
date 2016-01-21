@@ -9,6 +9,7 @@ class Game {
 public:
     Game(const Game &game) = delete;
     Game &operator=(const Game &game) = delete;
+    virtual ~Game() {}
 
     struct Settings {
         std::string name;
