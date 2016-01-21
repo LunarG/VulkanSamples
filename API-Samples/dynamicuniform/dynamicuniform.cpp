@@ -93,7 +93,7 @@ int sample_main()
         std::cout << "No dynamic uniform buffers supported\n";
         exit(-1);
     }
-    init_window_size(info, 500, 500);
+    get_window_size(&info.width, &info.height);
     init_connection(info);
     init_window(info);
     init_swapchain_extension(info);
