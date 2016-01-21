@@ -145,7 +145,7 @@ void Hologram::create_render_pass()
     render_pass_info.pAttachments = &attachment;
     render_pass_info.subpassCount = 1;
     render_pass_info.pSubpasses = &subpass;
-    render_pass_info.dependencyCount = subpass_deps.size();
+    render_pass_info.dependencyCount = (uint32_t)subpass_deps.size();
     render_pass_info.pDependencies = subpass_deps.data();
 
     vk::assert_success(vk::CreateRenderPass(dev_, &render_pass_info, nullptr, &render_pass_));
@@ -249,7 +249,7 @@ void Hologram::create_pipeline()
     };
     struct VkPipelineDynamicStateCreateInfo dynamic_info = {};
     dynamic_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamic_info.dynamicStateCount = dynamic_states.size();
+    dynamic_info.dynamicStateCount = (uint32_t)dynamic_states.size();
     dynamic_info.pDynamicStates = dynamic_states.data();
 
     VkGraphicsPipelineCreateInfo pipeline_info = {};
@@ -554,7 +554,7 @@ void Hologram::on_frame(float frame_pred)
     // record render pass commands
     for (auto &worker : workers_)
         worker->wait_idle();
-    vk::CmdExecuteCommands(primary_cmd_, worker_cmds_.size(), worker_cmds_.data());
+    vk::CmdExecuteCommands(primary_cmd_, (uint32_t)worker_cmds_.size(), worker_cmds_.data());
 
     vk::CmdEndRenderPass(primary_cmd_);
     vk::EndCommandBuffer(primary_cmd_);
