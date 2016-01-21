@@ -84,7 +84,12 @@ int sample_main()
     init_device_extension_names(info);
     init_instance(info, sample_title);
     init_enumerate_device(info);
+<<<<<<< f5c048a823efd4119166c2486609e4e3e82cc2a9
     info.width = info.height = 500;
+=======
+    init_device(info);
+    get_window_size(&info.width, &info.height);
+>>>>>>> Retrieve the window size via helper function.
     init_connection(info);
     init_window(info);
     init_swapchain_extension(info);
