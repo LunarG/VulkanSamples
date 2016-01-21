@@ -94,7 +94,7 @@ static const char *fragShaderText=
 /**
  *  Sample using multiple render passes per framebuffer (different x,y extents) and multiple subpasses per renderpass.
  */
-int main(int argc, char **argv)
+int sample_main()
 {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
