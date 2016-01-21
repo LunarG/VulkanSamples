@@ -251,7 +251,7 @@ void Shell::init_swapchain()
     ctx_.extent.height = (uint32_t) -1;
 }
 
-void Shell::resize_swapchain(int32_t width_hint, int32_t height_hint)
+void Shell::resize_swapchain(uint32_t width_hint, uint32_t height_hint)
 {
     VkSurfaceCapabilitiesKHR caps;
     vk::assert_success(vk::GetPhysicalDeviceSurfaceCapabilitiesKHR(ctx_.physical_dev,
@@ -263,6 +263,16 @@ void Shell::resize_swapchain(int32_t width_hint, int32_t height_hint)
         extent.width = width_hint;
         extent.height = height_hint;
     }
+    // clamp width; to protect us from broken hints?
+    if (extent.width < caps.minImageExtent.width)
+        extent.width = caps.minImageExtent.width;
+    else if (extent.width > caps.maxImageExtent.width)
+        extent.width = caps.maxImageExtent.width;
+    // clamp height
+    if (extent.height < caps.minImageExtent.height)
+        extent.height = caps.minImageExtent.height;
+    else if (extent.height > caps.maxImageExtent.height)
+        extent.height = caps.maxImageExtent.height;
 
     if (ctx_.extent.width == extent.width && ctx_.extent.height == extent.height)
         return;

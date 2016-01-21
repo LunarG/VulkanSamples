@@ -56,7 +56,7 @@ protected:
     void init_vk();
     void cleanup_vk();
 
-    void resize_swapchain(int32_t width_hint, int32_t height_hint);
+    void resize_swapchain(uint32_t width_hint, uint32_t height_hint);
 
     void add_game_time(float time);
 
