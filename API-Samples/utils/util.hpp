@@ -250,3 +250,4 @@ timestamp_t get_milliseconds();
 
 // Main entry point of samples
 int sample_main();
+
