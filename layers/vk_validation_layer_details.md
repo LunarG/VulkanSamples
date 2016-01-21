@@ -374,6 +374,7 @@ This layer is a work in progress. VK_LAYER_LUNARG_swapchain layer is intended to
 | Valid pNext | Validates that a struct has NULL for the value of pNext | WRONG_NEXT | vkCreateSwapchainKHR vkQueuePresentKHR | NA | None |
 | Non-zero value | Validates that a required value should be non-zero | ZERO_VALUE | vkQueuePresentKHR | NA | None |
 | Valid queueFamilyIndex value | Validates that a queueFamilyIndex value is less-than  pQueueFamilyPropertyCount returned by vkGetPhysicalDeviceQueueFamilyProperties | ZERO_VALUE | vkGetPhysicalDeviceSurfaceSupportKHR | NA | None |
+| Compaitible Allocator | Validates that pAllocator is compatible (i.e. NULL or not) when an object is created and destroyed | INCOMPATIBLE_ALLOCATOR | vkDestroySurfaceKHR | NA | None |
 
 Note: The following platform-specific functions are not mentioned above, because they are protected by ifdefs, which cause test failures:
 

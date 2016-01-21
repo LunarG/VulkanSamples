@@ -90,6 +90,7 @@ typedef enum _SWAPCHAIN_ERROR
     SWAPCHAIN_WRONG_NEXT,                       // The pNext for a struct is not NULL
     SWAPCHAIN_ZERO_VALUE,                       // A value should be non-zero
     SWAPCHAIN_QUEUE_FAMILY_INDEX_TOO_LARGE,     // A queueFamilyIndex value is not less than pQueueFamilyPropertyCount returned by vkGetPhysicalDeviceQueueFamilyProperties()
+    SWAPCHAIN_INCOMPATIBLE_ALLOCATOR,           // pAllocator must be compatible (i.e. NULL or not) when object is created and destroyed
 } SWAPCHAIN_ERROR;
 
 
@@ -231,6 +232,9 @@ struct _SwpSurface {
     // When vkCreateSwapchainKHR is called, the VkSwapchainKHR's are
     // remembered:
     unordered_map<VkSwapchainKHR, SwpSwapchain*> swapchains;
+
+    // 'true' if pAllocator was non-NULL when vkCreate*SurfaceKHR was called:
+    bool usedAllocatorToCreate;
 };
 
 // Create one of these for each VkPhysicalDevice within a VkInstance:
@@ -320,6 +324,9 @@ struct _SwpSwapchain {
     // remembered:
     uint32_t imageCount;
     unordered_map<int, SwpImage> images;
+
+    // 'true' if pAllocator was non-NULL when vkCreateSwapchainKHR was called:
+    bool usedAllocatorToCreate;
 };
 
 struct layer_data {

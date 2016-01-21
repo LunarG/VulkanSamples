@@ -440,6 +440,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            my_data->surfaceMap[*pSurface].usedAllocatorToCreate =
+                (pAllocator != NULL);
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -499,6 +501,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            my_data->surfaceMap[*pSurface].usedAllocatorToCreate =
+                (pAllocator != NULL);
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -595,6 +599,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            my_data->surfaceMap[*pSurface].usedAllocatorToCreate =
+                (pAllocator != NULL);
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -691,6 +697,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            my_data->surfaceMap[*pSurface].usedAllocatorToCreate =
+                (pAllocator != NULL);
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -786,6 +794,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            my_data->surfaceMap[*pSurface].usedAllocatorToCreate =
+                (pAllocator != NULL);
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -883,6 +893,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            my_data->surfaceMap[*pSurface].usedAllocatorToCreate =
+                (pAllocator != NULL);
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -957,6 +969,13 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(VkInstance  insta
                 it->second->images.clear();
             }
             pSurface->swapchains.clear();
+        }
+        if ((pAllocator != NULL) != pSurface->usedAllocatorToCreate) {
+            LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, instance, "VkInstance",
+                      SWAPCHAIN_INCOMPATIBLE_ALLOCATOR,
+                      "%s() called with incompatible pAllocator from when "
+                      "the object was created.",
+                      __FUNCTION__);
         }
         my_data->surfaceMap.erase(surface);
     }
@@ -1727,6 +1746,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
                 &my_data->swapchainMap[*pSwapchain];
             my_data->swapchainMap[*pSwapchain].pDevice = pDevice;
             my_data->swapchainMap[*pSwapchain].imageCount = 0;
+            my_data->swapchainMap[*pSwapchain].usedAllocatorToCreate =
+                (pAllocator != NULL);
             // Store a pointer to the surface
             SwpPhysicalDevice *pPhysicalDevice = pDevice->pPhysicalDevice;
             SwpInstance *pInstance =
@@ -1788,6 +1809,13 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
         }
         if (pSwapchain->imageCount) {
             pSwapchain->images.clear();
+        }
+        if ((pAllocator != NULL) != pSwapchain->usedAllocatorToCreate) {
+            LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, instance, "VkInstance",
+                      SWAPCHAIN_INCOMPATIBLE_ALLOCATOR,
+                      "%s() called with incompatible pAllocator from when "
+                      "the object was created.",
+                      __FUNCTION__);
         }
         my_data->swapchainMap.erase(swapchain);
     }
