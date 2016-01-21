@@ -348,7 +348,7 @@ This layer is a work in progress. VK_LAYER_LUNARG_swapchain layer is intended to
 | Valid pointer | If a NULL pointer is used, this error will be flagged | NULL_POINTER | vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfacePresentModesKHR vkCreateSwapchainKHR vkGetSwapchainImagesKHR vkAcquireNextImageKHR vkQueuePresentKHR | NA | None |
 | Extension enabled before use | Validates that a WSI extension is enabled before its functions are used | EXT_NOT_ENABLED_BUT_USED | vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfacePresentModesKHR vkCreateSwapchainKHR vkDestroySwapchainKHR vkGetSwapchainImagesKHR vkAcquireNextImageKHR vkQueuePresentKHR | NA | None |
 | Swapchains destroyed before devices | Validates that  vkDestroySwapchainKHR() is called for all swapchains associated with a device before vkDestroyDevice() is called | DEL_OBJECT_BEFORE_CHILDREN | vkDestroyDevice vkDestroySurfaceKHR | NA | None |
-| Supported surface used with a swapchain | Validates that vkGetPhysicalDeviceSurfaceSupportKHR() was seen to support the surface used with a swapchain | CREATE_SWAP_UNSUPPORTED_SURFACE | vkCreateSwapchainKHR | NA | None |
+| Surface seen to support presentation | Validates that pCreateInfo->surface was seen by vkGetPhysicalDeviceSurfaceSupportKHR() to support presentation | CREATE_UNSUPPORTED_SURFACE | vkCreateSwapchainKHR | NA | None |
 | Queries occur before swapchain creation | Validates that vkGetPhysicalDeviceSurfaceCapabilitiesKHR(), vkGetPhysicalDeviceSurfaceFormatsKHR() and vkGetPhysicalDeviceSurfacePresentModesKHR() are called before vkCreateSwapchainKHR() | CREATE_SWAP_WITHOUT_QUERY | vkCreateSwapchainKHR | NA | None |
 | vkCreateSwapchainKHR(pCreateInfo->minImageCount) | Validates vkCreateSwapchainKHR(pCreateInfo->minImageCount) | CREATE_SWAP_BAD_MIN_IMG_COUNT | vkCreateSwapchainKHR | NA | None |
 | vkCreateSwapchainKHR(pCreateInfo->imageExtent) | Validates vkCreateSwapchainKHR(pCreateInfo->imageExtent) when window has no fixed size | CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS | vkCreateSwapchainKHR | NA | None |
@@ -373,8 +373,10 @@ This layer is a work in progress. VK_LAYER_LUNARG_swapchain layer is intended to
 | Valid sType | Validates that a struct has correct value for sType | WRONG_STYPE | vkCreateSwapchainKHR vkQueuePresentKHR | NA | None |
 | Valid pNext | Validates that a struct has NULL for the value of pNext | WRONG_NEXT | vkCreateSwapchainKHR vkQueuePresentKHR | NA | None |
 | Non-zero value | Validates that a required value should be non-zero | ZERO_VALUE | vkQueuePresentKHR | NA | None |
-| Valid queueFamilyIndex value | Validates that a queueFamilyIndex value is less-than  pQueueFamilyPropertyCount returned by vkGetPhysicalDeviceQueueFamilyProperties | ZERO_VALUE | vkGetPhysicalDeviceSurfaceSupportKHR | NA | None |
 | Compaitible Allocator | Validates that pAllocator is compatible (i.e. NULL or not) when an object is created and destroyed | INCOMPATIBLE_ALLOCATOR | vkDestroySurfaceKHR | NA | None |
+| Valid use of queueFamilyIndex | Validates that a queueFamilyIndex not used before vkGetPhysicalDeviceQueueFamilyProperties() was called | DID_NOT_QUERY_QUEUE_FAMILIES | vkGetPhysicalDeviceSurfaceSupportKHR | NA | None |
+| Valid queueFamilyIndex value | Validates that a queueFamilyIndex value is less-than pQueueFamilyPropertyCount returned by vkGetPhysicalDeviceQueueFamilyProperties | QUEUE_FAMILY_INDEX_TOO_LARGE | vkGetPhysicalDeviceSurfaceSupportKHR | NA | None |
+| Supported combination of queue and surface | Validates that the surface associated with a swapchain was seen to support the queueFamilyIndex of a given queue | SURFACE_NOT_SUPPORTED_WITH_QUEUE | vkQueuePresentKHR | NA | None |
 
 Note: The following platform-specific functions are not mentioned above, because they are protected by ifdefs, which cause test failures:
 

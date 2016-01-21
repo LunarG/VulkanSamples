@@ -89,6 +89,7 @@ static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, cons
     pDisp->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");
     pDisp->AcquireNextImageKHR   = (PFN_vkAcquireNextImageKHR) gpa(device, "vkAcquireNextImageKHR");
     pDisp->QueuePresentKHR       = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");
+    pDisp->GetDeviceQueue        = (PFN_vkGetDeviceQueue) gpa(device, "vkGetDeviceQueue");
 
     SwpPhysicalDevice *pPhysicalDevice = &my_instance_data->physicalDeviceMap[physicalDevice];
     if (pPhysicalDevice) {
@@ -121,7 +122,6 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     VkLayerInstanceDispatchTable *pDisp  = my_data->instance_dispatch_table;
     PFN_vkGetInstanceProcAddr gpa = pDisp->GetInstanceProcAddr;
-    pDisp->GetPhysicalDeviceQueueFamilyProperties = (PFN_vkGetPhysicalDeviceQueueFamilyProperties) gpa(instance, "vkGetPhysicalDeviceQueueFamilyProperties");
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
     pDisp->CreateAndroidSurfaceKHR = (PFN_vkCreateAndroidSurfaceKHR) gpa(instance, "vkCreateAndroidSurfaceKHR");
 #endif // VK_USE_PLATFORM_ANDROID_KHR
@@ -403,7 +403,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceQueueFamilyPropert
         if (pPhysicalDevice &&
             pQueueFamilyPropertyCount && !pQueueFamilyProperties) {
             pPhysicalDevice->gotQueueFamilyPropertyCount = true;
-            pPhysicalDevice->pQueueFamilyPropertyCount =
+            pPhysicalDevice->numOfQueueFamilies =
                 *pQueueFamilyPropertyCount;
         }
     }
@@ -460,6 +460,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
             my_data->surfaceMap[*pSurface].usedAllocatorToCreate =
                 (pAllocator != NULL);
+            my_data->surfaceMap[*pSurface].numQueueFamilyIndexSupport = 0;
+            my_data->surfaceMap[*pSurface].pQueueFamilyIndexSupport = NULL;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -521,6 +523,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
             my_data->surfaceMap[*pSurface].usedAllocatorToCreate =
                 (pAllocator != NULL);
+            my_data->surfaceMap[*pSurface].numQueueFamilyIndexSupport = 0;
+            my_data->surfaceMap[*pSurface].pQueueFamilyIndexSupport = NULL;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -551,12 +555,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceMirPresentatio
                               __FUNCTION__, VK_KHR_MIR_SURFACE_EXTENSION_NAME);
     }
     if (pPhysicalDevice->gotQueueFamilyPropertyCount &&
-        (queueFamilyIndex >= pPhysicalDevice->pQueueFamilyPropertyCount)) {
+        (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
         skipCall |= LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                                            pPhysicalDevice,
                                                            "VkPhysicalDevice",
                                                            queueFamilyIndex,
-                                                           pPhysicalDevice->pQueueFamilyPropertyCount);
+                                                           pPhysicalDevice->numOfQueueFamilies);
     }
 
     if (VK_FALSE == skipCall) {
@@ -619,6 +623,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
             my_data->surfaceMap[*pSurface].usedAllocatorToCreate =
                 (pAllocator != NULL);
+            my_data->surfaceMap[*pSurface].numQueueFamilyIndexSupport = 0;
+            my_data->surfaceMap[*pSurface].pQueueFamilyIndexSupport = NULL;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -649,12 +655,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWaylandPresent
                               __FUNCTION__, VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
     }
     if (pPhysicalDevice->gotQueueFamilyPropertyCount &&
-        (queueFamilyIndex >= pPhysicalDevice->pQueueFamilyPropertyCount)) {
+        (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
         skipCall |= LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                                            pPhysicalDevice,
                                                            "VkPhysicalDevice",
                                                            queueFamilyIndex,
-                                                           pPhysicalDevice->pQueueFamilyPropertyCount);
+                                                           pPhysicalDevice->numOfQueueFamilies);
     }
 
     if (VK_FALSE == skipCall) {
@@ -717,6 +723,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
             my_data->surfaceMap[*pSurface].usedAllocatorToCreate =
                 (pAllocator != NULL);
+            my_data->surfaceMap[*pSurface].numQueueFamilyIndexSupport = 0;
+            my_data->surfaceMap[*pSurface].pQueueFamilyIndexSupport = NULL;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -746,12 +754,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWin32Presentat
                               __FUNCTION__, VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     }
     if (pPhysicalDevice->gotQueueFamilyPropertyCount &&
-        (queueFamilyIndex >= pPhysicalDevice->pQueueFamilyPropertyCount)) {
+        (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
         skipCall |= LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                                            pPhysicalDevice,
                                                            "VkPhysicalDevice",
                                                            queueFamilyIndex,
-                                                           pPhysicalDevice->pQueueFamilyPropertyCount);
+                                                           pPhysicalDevice->numOfQueueFamilies);
     }
 
     if (VK_FALSE == skipCall) {
@@ -814,6 +822,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
             my_data->surfaceMap[*pSurface].usedAllocatorToCreate =
                 (pAllocator != NULL);
+            my_data->surfaceMap[*pSurface].numQueueFamilyIndexSupport = 0;
+            my_data->surfaceMap[*pSurface].pQueueFamilyIndexSupport = NULL;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -845,12 +855,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentatio
                               __FUNCTION__, VK_KHR_XCB_SURFACE_EXTENSION_NAME);
     }
     if (pPhysicalDevice->gotQueueFamilyPropertyCount &&
-        (queueFamilyIndex >= pPhysicalDevice->pQueueFamilyPropertyCount)) {
+        (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
         skipCall |= LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                                            pPhysicalDevice,
                                                            "VkPhysicalDevice",
                                                            queueFamilyIndex,
-                                                           pPhysicalDevice->pQueueFamilyPropertyCount);
+                                                           pPhysicalDevice->numOfQueueFamilies);
     }
 
     if (VK_FALSE == skipCall) {
@@ -913,6 +923,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
             my_data->surfaceMap[*pSurface].usedAllocatorToCreate =
                 (pAllocator != NULL);
+            my_data->surfaceMap[*pSurface].numQueueFamilyIndexSupport = 0;
+            my_data->surfaceMap[*pSurface].pQueueFamilyIndexSupport = NULL;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
@@ -944,12 +956,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentati
                               __FUNCTION__, VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
     }
     if (pPhysicalDevice->gotQueueFamilyPropertyCount &&
-        (queueFamilyIndex >= pPhysicalDevice->pQueueFamilyPropertyCount)) {
+        (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
         skipCall |= LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                                            pPhysicalDevice,
                                                            "VkPhysicalDevice",
                                                            queueFamilyIndex,
-                                                           pPhysicalDevice->pQueueFamilyPropertyCount);
+                                                           pPhysicalDevice->numOfQueueFamilies);
     }
 
     if (VK_FALSE == skipCall) {
@@ -1136,13 +1148,22 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
                               "%s() called even though the %s extension was not enabled for this VkInstance.",
                               __FUNCTION__, VK_KHR_SURFACE_EXTENSION_NAME);
     }
-    if (pPhysicalDevice->gotQueueFamilyPropertyCount &&
-        (queueFamilyIndex >= pPhysicalDevice->pQueueFamilyPropertyCount)) {
+    if (!pPhysicalDevice->gotQueueFamilyPropertyCount) {
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                              pPhysicalDevice,
+                              "VkPhysicalDevice",
+                              SWAPCHAIN_DID_NOT_QUERY_QUEUE_FAMILIES,
+                              "%s() called before calling the "
+                              "vkGetPhysicalDeviceQueueFamilyProperties "
+                              "function.",
+                              __FUNCTION__);
+    } else if (pPhysicalDevice->gotQueueFamilyPropertyCount &&
+               (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
         skipCall |= LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                                            pPhysicalDevice,
                                                            "VkPhysicalDevice",
                                                            queueFamilyIndex,
-                                                           pPhysicalDevice->pQueueFamilyPropertyCount);
+                                                           pPhysicalDevice->numOfQueueFamilies);
     }
     if (!pSupported) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
@@ -1158,13 +1179,27 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
 
         if ((result == VK_SUCCESS) && pSupported && pPhysicalDevice) {
             // Record the result of this query:
-            pPhysicalDevice->queueFamilyIndexSupport[queueFamilyIndex] =
-                surface;
-            pPhysicalDevice->surfaceSupport[surface] =
-                queueFamilyIndex;
-            // TODO: We need to compare this with the actual queue used for
-            // presentation, to ensure it was advertised to the application as
-            // supported for presentation.
+            SwpInstance *pInstance = pPhysicalDevice->pInstance;
+            SwpSurface *pSurface =
+                (pInstance) ? pInstance->surfaces[surface] : NULL;
+            if (pSurface) {
+                pPhysicalDevice->supportedSurfaces[surface] = pSurface;
+                if (!pSurface->numQueueFamilyIndexSupport) {
+                    if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
+                        pSurface->pQueueFamilyIndexSupport = (VkBool32 *)
+                            malloc(pPhysicalDevice->numOfQueueFamilies *
+                                   sizeof(VkBool32));
+                        if (pSurface->pQueueFamilyIndexSupport != NULL) {
+                            pSurface->numQueueFamilyIndexSupport =
+                                pPhysicalDevice->numOfQueueFamilies;
+                        }
+                    }
+                }
+                if (pSurface->numQueueFamilyIndexSupport) {
+                    pSurface->pQueueFamilyIndexSupport[queueFamilyIndex] =
+                        *pSupported;
+                }
+            }
         }
 
         return result;
@@ -1414,8 +1449,10 @@ static VkBool32 validateCreateSwapchainKHR(
         // Validate pCreateInfo->surface to make sure that
         // vkGetPhysicalDeviceSurfaceSupportKHR() reported this as a supported
         // surface:
-        uint32_t queueFamilyIndex = pPhysicalDevice->surfaceSupport[pCreateInfo->surface];
-        if (!queueFamilyIndex) {
+        SwpSurface *pSurface =
+            ((pPhysicalDevice) ?
+             pPhysicalDevice->supportedSurfaces[pCreateInfo->surface] : NULL);
+        if (!pSurface) {
             skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                                   SWAPCHAIN_CREATE_UNSUPPORTED_SURFACE,
                                   "%s() called with pCreateInfo->surface that "
@@ -1760,8 +1797,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
             SwpDevice *pDevice = &my_data->deviceMap[device];
 
             my_data->swapchainMap[*pSwapchain].swapchain = *pSwapchain;
-            pDevice->swapchains[*pSwapchain] =
-                &my_data->swapchainMap[*pSwapchain];
+            if (pDevice) {
+                pDevice->swapchains[*pSwapchain] =
+                    &my_data->swapchainMap[*pSwapchain];
+            }
             my_data->swapchainMap[*pSwapchain].pDevice = pDevice;
             my_data->swapchainMap[*pSwapchain].imageCount = 0;
             my_data->swapchainMap[*pSwapchain].usedAllocatorToCreate =
@@ -1999,8 +2038,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
 //   sname:VkSemaphore in pname:pWaitSemaphores must: refer to a prior signal
 //   of that sname:VkSemaphore that won't be consumed by any other wait on that
 //   semaphore
-// - Ensure that the queue is active, and is one of the queueFamilyIndex's
-//   that was returned by a previuos query.
 // - Record/update the state of the swapchain, in case an error occurs
 //   (e.g. VK_ERROR_OUT_OF_DATE_KHR).
     VkResult result = VK_SUCCESS;
@@ -2078,6 +2115,26 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
                                           __FUNCTION__, index);
                 }
             }
+            SwpQueue *pQueue = &my_data->queueMap[queue];
+            SwpSurface *pSurface = pSwapchain->pSurface;
+            if (pQueue && pSurface && pSurface->numQueueFamilyIndexSupport) {
+                uint32_t queueFamilyIndex = pQueue->queueFamilyIndex;
+                // Note: the 1st test is to ensure queueFamilyIndex is in range,
+                // and the 2nd test is the validation check:
+                if ((pSurface->numQueueFamilyIndexSupport > queueFamilyIndex) &&
+                    (!pSurface->pQueueFamilyIndexSupport[queueFamilyIndex])) {
+                    skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                                          pPresentInfo->pSwapchains[i],
+                                          "VkSwapchainKHR",
+                                          SWAPCHAIN_SURFACE_NOT_SUPPORTED_WITH_QUEUE,
+                                          "%s() called with a swapchain whose "
+                                          "surface is not supported for "
+                                          "presention on this device with the "
+                                          "queueFamilyIndex (i.e. %d) of the "
+                                          "given queue.",
+                                          __FUNCTION__, queueFamilyIndex);
+                }
+            }
         }
     }
 
@@ -2104,6 +2161,32 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(
+    VkDevice                                    device,
+    uint32_t                                    queueFamilyIndex,
+    uint32_t                                    queueIndex,
+    VkQueue*                                    pQueue)
+{
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    if (VK_FALSE == skipCall) {
+        // Call down the call chain:
+        my_data->device_dispatch_table->GetDeviceQueue(
+                device, queueFamilyIndex, queueIndex, pQueue);
+
+        // Remember the queue's handle, and link it to the device:
+        SwpDevice *pDevice = &my_data->deviceMap[device];
+        my_data->queueMap[&pQueue].queue = *pQueue;
+        if (pDevice) {
+            pDevice->queues[*pQueue] = &my_data->queueMap[*pQueue];
+        }
+        my_data->queueMap[&pQueue].pDevice = pDevice;
+        my_data->queueMap[&pQueue].queueFamilyIndex = queueFamilyIndex;
+    }
+}
+
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
         VkInstance                                      instance,
@@ -2169,6 +2252,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         if (!strcmp("vkQueuePresentKHR", funcName))
             return reinterpret_cast<PFN_vkVoidFunction>(vkQueuePresentKHR);
     }
+    if (!strcmp("vkGetDeviceQueue", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetDeviceQueue);
 
     if (pDisp->GetDeviceProcAddr == NULL)
         return NULL;
@@ -2191,6 +2276,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
         return (PFN_vkVoidFunction) vkEnumerateInstanceLayerProperties;
     if (!strcmp(funcName, "vkEnumerateInstanceExtensionProperties"))
         return (PFN_vkVoidFunction) vkEnumerateInstanceExtensionProperties;
+    if (!strcmp(funcName, "vkGetPhysicalDeviceQueueFamilyProperties"))
+        return (PFN_vkVoidFunction) vkGetPhysicalDeviceQueueFamilyProperties;
 
     if (instance == VK_NULL_HANDLE) {
         return NULL;
@@ -2206,8 +2293,6 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
         return addr;
     }
 
-    if (!strcmp("vkGetPhysicalDeviceQueueFamilyProperties", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceQueueFamilyProperties);
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
     if (my_data->instanceMap.size() != 0 &&
         my_data->instanceMap[instance].androidSurfaceExtensionEnabled)

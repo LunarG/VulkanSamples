@@ -89,8 +89,10 @@ typedef enum _SWAPCHAIN_ERROR
     SWAPCHAIN_WRONG_STYPE,                      // The sType for a struct has the wrong value
     SWAPCHAIN_WRONG_NEXT,                       // The pNext for a struct is not NULL
     SWAPCHAIN_ZERO_VALUE,                       // A value should be non-zero
-    SWAPCHAIN_QUEUE_FAMILY_INDEX_TOO_LARGE,     // A queueFamilyIndex value is not less than pQueueFamilyPropertyCount returned by vkGetPhysicalDeviceQueueFamilyProperties()
     SWAPCHAIN_INCOMPATIBLE_ALLOCATOR,           // pAllocator must be compatible (i.e. NULL or not) when object is created and destroyed
+    SWAPCHAIN_DID_NOT_QUERY_QUEUE_FAMILIES,     // A function using a queueFamilyIndex was called before vkGetPhysicalDeviceQueueFamilyProperties() was called
+    SWAPCHAIN_QUEUE_FAMILY_INDEX_TOO_LARGE,     // A queueFamilyIndex value is not less than pQueueFamilyPropertyCount returned by vkGetPhysicalDeviceQueueFamilyProperties()
+    SWAPCHAIN_SURFACE_NOT_SUPPORTED_WITH_QUEUE, // A surface is not supported by a given queueFamilyIndex, as seen by vkGetPhysicalDeviceSurfaceSupportKHR()
 } SWAPCHAIN_ERROR;
 
 
@@ -171,6 +173,7 @@ struct _SwpPhysicalDevice;
 struct _SwpDevice;
 struct _SwpSwapchain;
 struct _SwpImage;
+struct _SwpQueue;
 
 typedef _SwpInstance SwpInstance;
 typedef _SwpSurface SwpSurface;;
@@ -178,6 +181,7 @@ typedef _SwpPhysicalDevice SwpPhysicalDevice;
 typedef _SwpDevice SwpDevice;
 typedef _SwpSwapchain SwpSwapchain;
 typedef _SwpImage SwpImage;
+typedef _SwpQueue SwpQueue;
 
 // Create one of these for each VkInstance:
 struct _SwpInstance {
@@ -235,6 +239,16 @@ struct _SwpSurface {
 
     // 'true' if pAllocator was non-NULL when vkCreate*SurfaceKHR was called:
     bool usedAllocatorToCreate;
+
+    // Value of pQueueFamilyPropertyCount that was returned by the
+    // vkGetPhysicalDeviceQueueFamilyProperties() function:
+    uint32_t numQueueFamilyIndexSupport;
+    // Array of VkBool32's that is intialized by the
+    // vkGetPhysicalDeviceSurfaceSupportKHR() function.  First call for a given
+    // surface allocates and initializes this array to false for all
+    // queueFamilyIndex's (and sets numQueueFamilyIndexSupport to non-zero).
+    // All calls set the entry for a given queueFamilyIndex:
+    VkBool32 *pQueueFamilyIndexSupport;
 };
 
 // Create one of these for each VkPhysicalDevice within a VkInstance:
@@ -249,17 +263,13 @@ struct _SwpPhysicalDevice {
     SwpInstance *pInstance;
 
     // Records results of vkGetPhysicalDeviceQueueFamilyProperties()'s
-    // pQueueFamilyPropertyCount parameter when pQueueFamilyProperties is NULL:
+    // numOfQueueFamilies parameter when pQueueFamilyProperties is NULL:
     bool gotQueueFamilyPropertyCount;
-    uint32_t pQueueFamilyPropertyCount;
+    uint32_t numOfQueueFamilies;
 
-    // Record all supported queueFamilyIndex-surface pairs that support
-    // presenting with WSI swapchains:
-    unordered_map<uint32_t, VkSurfaceKHR> queueFamilyIndexSupport;
-
-    // Record all supported surface-queueFamilyIndex pairs that support
-    // presenting with WSI swapchains:
-    unordered_map<VkSurfaceKHR, uint32_t> surfaceSupport;
+    // Record all surfaces that vkGetPhysicalDeviceSurfaceSupportKHR() was
+    // called for:
+    unordered_map<const void*, SwpSurface*> supportedSurfaces;
 
 // TODO: Record/use this info per-surface, not per-device, once a
 // non-dispatchable surface object is added to WSI:
@@ -294,6 +304,9 @@ struct _SwpDevice {
     // When vkCreateSwapchainKHR is called, the VkSwapchainKHR's are
     // remembered:
     unordered_map<VkSwapchainKHR, SwpSwapchain*> swapchains;
+
+    // When vkGetDeviceQueue is called, the VkQueue's are remembered:
+    unordered_map<VkQueue, SwpQueue*> queues;
 };
 
 // Create one of these for each VkImage within a VkSwapchainKHR:
@@ -329,6 +342,18 @@ struct _SwpSwapchain {
     bool usedAllocatorToCreate;
 };
 
+// Create one of these for each VkQueue within a VkDevice:
+struct _SwpQueue {
+    // The actual handle for this VkQueue:
+    VkQueue queue;
+
+    // Corresponding VkDevice (and info) to this VkSwapchainKHR:
+    SwpDevice *pDevice;
+
+    // Which queueFamilyIndex this VkQueue is associated with:
+    uint32_t queueFamilyIndex;
+};
+
 struct layer_data {
     debug_report_data *report_data;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
@@ -341,6 +366,7 @@ struct layer_data {
     std::unordered_map<void *, SwpPhysicalDevice> physicalDeviceMap;
     std::unordered_map<void *, SwpDevice>         deviceMap;
     std::unordered_map<VkSwapchainKHR, SwpSwapchain>    swapchainMap;
+    std::unordered_map<void *, SwpQueue>          queueMap;
 
     layer_data() :
         report_data(nullptr),
