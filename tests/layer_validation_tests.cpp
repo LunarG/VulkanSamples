@@ -4900,6 +4900,8 @@ TEST_F(VkLayerTest, ThreadCommandBufferCollision) {
     test_platform_thread_join(thread, NULL);
     commandBuffer.EndCommandBuffer();
 
+    m_errorMonitor->SetBailout(NULL);
+
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive Error 'THREADING ERROR' from using one "
                   "VkCommandBufferObj in two threads";
