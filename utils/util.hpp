@@ -62,7 +62,7 @@
 #define NUM_SCISSORS NUM_VIEWPORTS
 
 /* Amount of time, in nanoseconds, to wait for a command buffer to complete */
-#define FENCE_TIMEOUT 1000000
+#define FENCE_TIMEOUT 100000000
 
 #define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                         \
 {                                                                        \
