@@ -294,7 +294,7 @@ int sample_main()
 
     execute_present_image(info);
 
-    while(!wait(1)) {};
+    wait_seconds(1);
     /* VULKAN_KEY_END */
 
     vkFreeCommandBuffers(info.device, info.cmd_pool, 3, threadCmdBufs);

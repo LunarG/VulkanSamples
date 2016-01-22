@@ -273,7 +273,7 @@ int sample_main()
     res = vkQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
 
-    while(!wait(1)) {};
+    wait_seconds(1);
     /* VULKAN_KEY_END */
 
     vkDestroySemaphore(info.device, presentCompleteSemaphore, NULL);
