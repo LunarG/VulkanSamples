@@ -1412,7 +1412,17 @@ VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceMemoryProperties(
     VkPhysicalDevice gpu_,
     VkPhysicalDeviceMemoryProperties* pProperties)
 {
-    // TODO: Fill in with real data
+    // the null driver pretends to have a single memory type (and single heap);
+    pProperties->memoryTypeCount = 1;
+    pProperties->memoryHeapCount = 1;
+    pProperties->memoryTypes[0].heapIndex = 0;
+    pProperties->memoryTypes[0].propertyFlags =
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+        VK_MEMORY_PROPERTY_HOST_CACHED_BIT |
+        VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
+    pProperties->memoryHeaps[0].flags = 0;      /* not device local */
+    pProperties->memoryHeaps[0].size = 0;       /* it's just malloc-backed memory */
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
