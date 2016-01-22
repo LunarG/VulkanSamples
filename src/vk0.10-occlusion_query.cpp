@@ -100,7 +100,7 @@ int sample_main()
     info.device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     init_instance(info, sample_title);
     init_enumerate_device(info);
-    get_window_size(&info.width, &info.height);
+    init_window_size(info, 500, 500);
     init_connection(info);
     init_window(info);
     init_swapchain_extension(info);
