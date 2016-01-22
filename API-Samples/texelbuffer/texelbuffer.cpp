@@ -319,7 +319,7 @@ int sample_main()
     execute_queue_cmdbuf(info, cmd_bufs);
     execute_present_image(info);
 
-    while(!wait(1)) {};
+    wait_seconds(1);
     /* VULKAN_KEY_END */
 
     vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);

@@ -254,8 +254,4 @@ int sample_main();
 // Helper to retrieve Window size.
 bool get_window_size(int32_t* width, int32_t* height);
 
-// Wait a specified time in second.
-bool wait(int32_t timeout);
-
-
 
