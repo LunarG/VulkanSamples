@@ -932,11 +932,13 @@ explicit_AllocateDescriptorSets(
     VkResult result = get_dispatch_table(object_tracker_device_table_map, device)->AllocateDescriptorSets(
         device, pAllocateInfo, pDescriptorSets);
 
-    loader_platform_thread_lock_mutex(&objLock);
-    for (uint32_t i = 0; i < pAllocateInfo->descriptorSetCount; i++) {
-        alloc_descriptor_set(device, pAllocateInfo->descriptorPool, pDescriptorSets[i], VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT);
+    if (VK_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&objLock);
+        for (uint32_t i = 0; i < pAllocateInfo->descriptorSetCount; i++) {
+            alloc_descriptor_set(device, pAllocateInfo->descriptorPool, pDescriptorSets[i], VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT);
+        }
+        loader_platform_thread_unlock_mutex(&objLock);
     }
-    loader_platform_thread_unlock_mutex(&objLock);
 
     return result;
 }
