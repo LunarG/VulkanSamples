@@ -46,7 +46,7 @@ int sample_main()
     init_enumerate_device(info);
     init_queue_family_index(info);
     init_device(info);
-    info.width = info.height = 50;
+    init_window_size(info, 50, 50);
 
     info.Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
     info.View       = glm::lookAt(

@@ -458,9 +458,3 @@ void print_UUID(uint8_t* pipelineCacheUUID)
         }
     }
 }
-
-bool get_window_size(int32_t* width, int32_t* height) {
-    *width = *height = 500;
-    return true;
-};
-

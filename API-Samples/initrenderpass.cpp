@@ -45,7 +45,7 @@ int sample_main()
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_connection(info);
-    info.width = info.height = 50;
+    init_window_size(info, 50, 50);
     init_window(info);
     init_swapchain_extension(info);
     init_device(info);
