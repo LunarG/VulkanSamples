@@ -784,15 +784,16 @@ static void app_dev_dump_format_props(const struct app_dev *dev, VkFormat fmt)
         if (features[i].flags == 0) {
             printf("\n\t\tNone");
         } else {
-            printf("%s%s%s%s%s%s%s%s%s%s%s%s",
+            printf("%s%s%s%s%s%s%s%s%s%s%s%s%s",
                ((features[i].flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)               ? "\n\t\tVK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT"               : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)               ? "\n\t\tVK_FORMAT_FEATURE_STORAGE_IMAGE_BIT"               : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)        ? "\n\t\tVK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT"        : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)            ? "\n\t\tVK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT"            : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT)      ? "\n\t\tVK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT"      : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)    ? "\n\t\tVK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT"    : ""),
-               ((features[i].flags & VK_FORMAT_FEATURE_BLIT_SRC_BIT)                 ? "\n\t\tVK_FORMAT_FEATURE_BLIT_SRC_BIT"                 : ""),
-               ((features[i].flags & VK_FORMAT_FEATURE_BLIT_DST_BIT)            ? "\n\t\tVK_FORMAT_FEATURE_BLIT_DST_BIT"            : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_BLIT_SRC_BIT)                    ? "\n\t\tVK_FORMAT_FEATURE_BLIT_SRC_BIT"                    : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_BLIT_DST_BIT)                    ? "\n\t\tVK_FORMAT_FEATURE_BLIT_DST_BIT"                    : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) ? "\n\t\tVK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT" : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)        ? "\n\t\tVK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT"        : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)        ? "\n\t\tVK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT"        : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT) ? "\n\t\tVK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT" : ""),

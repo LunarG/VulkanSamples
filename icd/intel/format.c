@@ -604,11 +604,11 @@ static VkFlags intel_format_get_color_features(const struct intel_gpu *gpu,
     if (TEST(gpu, sampler, sampling)) {
         if (icd_format_is_int(format) ||
             TEST(gpu, sampler, filtering))
-            features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+            features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
     }
 
     if (TEST(gpu, dp, typed_write))
-        features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+        features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
 
     if (TEST(gpu, dp, rt_write)) {
         features |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
@@ -617,7 +617,7 @@ static VkFlags intel_format_get_color_features(const struct intel_gpu *gpu,
             features |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
 
         if (features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) {
-            features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+            features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
         }
     }
 #undef TEST

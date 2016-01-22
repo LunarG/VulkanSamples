@@ -330,7 +330,8 @@ bool ValidateEnumerator(VkFormatFeatureFlagBits const& enumerator)
         VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
         VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
         VK_FORMAT_FEATURE_BLIT_SRC_BIT |
-        VK_FORMAT_FEATURE_BLIT_DST_BIT);
+        VK_FORMAT_FEATURE_BLIT_DST_BIT |
+        VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -395,6 +396,10 @@ std::string EnumeratorString(VkFormatFeatureFlagBits const& enumerator)
     if(enumerator & VK_FORMAT_FEATURE_BLIT_DST_BIT)
     {
         strings.push_back("VK_FORMAT_FEATURE_BLIT_DST_BIT");
+    }
+    if(enumerator & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)
+    {
+        strings.push_back("VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT");
     }
 
     std::string enumeratorString;
