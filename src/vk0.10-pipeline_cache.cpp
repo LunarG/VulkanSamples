@@ -306,7 +306,7 @@ int sample_main()
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
-    while(!wait(1)) {};
+    wait_seconds(1);
 
     // End standard draw stuff
 

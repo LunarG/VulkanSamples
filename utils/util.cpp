@@ -464,8 +464,3 @@ bool get_window_size(int32_t* width, int32_t* height) {
     return true;
 };
 
-bool wait(int32_t timeout) {
-    wait_seconds(timeout);
-    return true;
-}
-
