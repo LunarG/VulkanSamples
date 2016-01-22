@@ -391,6 +391,7 @@ static VkResult buf_get_memory_requirements(struct nulldrv_base *base,
 
     pMemoryRequirements->size = buf->size;
     pMemoryRequirements->alignment = 4096;
+    pMemoryRequirements->memoryTypeBits = 1;    /* nulldrv only has one memory type */
 
     return VK_SUCCESS;
 }
