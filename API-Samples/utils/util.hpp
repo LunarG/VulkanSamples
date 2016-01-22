@@ -283,6 +283,3 @@ bool wait(int32_t timeout);
 ANativeWindow* AndroidGetApplicationWindow();
 bool AndroidLoadFile(const char* filePath, std::vector<unsigned int>& data);
 #endif
-
-
-

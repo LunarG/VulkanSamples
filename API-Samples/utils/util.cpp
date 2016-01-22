@@ -525,6 +525,7 @@ void android_main(struct android_app* app) {
 }
 #endif
 
+<<<<<<< HEAD
 bool wait(int32_t timeout) {
 #ifndef __ANDROID__
     wait_seconds(timeout);
