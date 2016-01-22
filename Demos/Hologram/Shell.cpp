@@ -36,7 +36,7 @@ Shell::Shell(Game &game)
 {
     // require generic WSI extensions
     global_extensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-    device_extensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    //device_extensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 }
 
 void Shell::log(LogPriority priority, const char *msg)
@@ -333,8 +333,8 @@ void Shell::resize_swapchain(uint32_t width_hint, uint32_t height_hint)
 
     assert(caps.supportedUsageFlags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
     assert(caps.supportedTransforms & caps.currentTransform);
-    assert(caps.supportedCompositeAlpha & (VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR |
-                                           VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR));
+    //assert(caps.supportedCompositeAlpha & (VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR |
+    //                                       VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR));
     VkCompositeAlphaFlagBitsKHR composite_alpha =
         (caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) ?
         VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR : VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
