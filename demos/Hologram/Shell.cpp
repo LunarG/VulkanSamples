@@ -277,14 +277,19 @@ void Shell::resize_swapchain(uint32_t width_hint, uint32_t height_hint)
     if (ctx_.extent.width == extent.width && ctx_.extent.height == extent.height)
         return;
 
-    assert(caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR);
-    assert(caps.supportedUsageFlags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-
     uint32_t image_count = settings_.back_buffer_count;
     if (image_count < caps.minImageCount)
         image_count = caps.minImageCount;
     else if (image_count > caps.maxImageCount)
         image_count = caps.maxImageCount;
+
+    assert(caps.supportedUsageFlags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+    assert(caps.supportedTransforms & caps.currentTransform);
+    assert(caps.supportedCompositeAlpha & (VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR |
+                                           VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR));
+    VkCompositeAlphaFlagBitsKHR composite_alpha =
+        (caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) ?
+        VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR : VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 
     std::vector<VkPresentModeKHR> modes;
     vk::get(ctx_.physical_dev, ctx_.surface, modes);
@@ -320,8 +325,8 @@ void Shell::resize_swapchain(uint32_t width_hint, uint32_t height_hint)
         swapchain_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     }
 
-    swapchain_info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-    swapchain_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchain_info.preTransform = caps.currentTransform;;
+    swapchain_info.compositeAlpha = composite_alpha;
     swapchain_info.presentMode = mode;
     swapchain_info.clipped = true;
     swapchain_info.oldSwapchain = ctx_.swapchain;
