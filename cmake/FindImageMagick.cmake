@@ -101,10 +101,10 @@ function(FIND_REGISTRY)
   if (WIN32)
     # If a 64-bit compile, it can only appear in "[HKLM]\\software\\ImageMagick"
     if (CMAKE_CL_64)
-    
-      set (IMAGEMAGIC_REG_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\ImageMagick\\Current;BinPath]" PARENT_SCOPE)
-      set (IMAGEMAGIC_REGINCLUDE_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\ImageMagick\\Current;BinPath]/include" PARENT_SCOPE)
-      set (IMAGEMAGIC_REGLIB_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\ImageMagick\\Current;BinPath]/lib" PARENT_SCOPE)
+
+        GET_FILENAME_COMPONENT(IM_BIN_PATH  
+          [HKEY_LOCAL_MACHINE\\SOFTWARE\\ImageMagick\\Current;BinPath]
+          ABSOLUTE CACHE)
       
     else()
     
@@ -115,23 +115,28 @@ function(FIND_REGISTRY)
         [HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\ImageMagick\\Current;BinPath]
         PATH)
 
-      # If a 32-bit compile on a 64-bit Windows, it appears in "[HKLM]\\software\\WOW6432Node\\ImageMagick"
-      if (TESTING STREQUAL "C:/Program Files (x86)")
+      # If the WOW6432Node reg string returns empty, assume 32-bit OS, and look in the standard reg path.
+      if (TESTING STREQUAL "")
       
-        set (IMAGEMAGIC_REG_PATH [HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\ImageMagick\\Current;BinPath] PARENT_SCOPE)
-        set (IMAGEMAGIC_REGINCLUDE_PATH [HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\ImageMagick\\Current;BinPath]/include PARENT_SCOPE)
-        set (IMAGEMAGIC_REGLIB_PATH [HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\ImageMagick\\Current;BinPath]/lib PARENT_SCOPE)
-        
-      # If a 32-bit compile on a 32-bit Windows, it appears in "[HKLM]\\software\\ImageMagick"
+        GET_FILENAME_COMPONENT(IM_BIN_PATH  
+          [HKEY_LOCAL_MACHINE\\SOFTWARE\\ImageMagick\\Current;BinPath]
+          ABSOLUTE CACHE)
+          
+      # Otherwise, the WOW6432Node returned a string, assume 32-bit build on 64-bit OS and use that string.
       else()
-      
-        set (IMAGEMAGIC_REG_PATH [HKEY_LOCAL_MACHINE\\SOFTWARE\\ImageMagick\\Current;BinPath] PARENT_SCOPE)
-        set (IMAGEMAGIC_REGINCLUDE_PATH [HKEY_LOCAL_MACHINE\\SOFTWARE\\ImageMagick\\Current;BinPath]/include PARENT_SCOPE)
-        set (IMAGEMAGIC_REGLIB_PATH [HKEY_LOCAL_MACHINE\\SOFTWARE\\ImageMagick\\Current;BinPath]/lib PARENT_SCOPE)
+
+        GET_FILENAME_COMPONENT(IM_BIN_PATH  
+          [HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\ImageMagick\\Current;BinPath]
+          ABSOLUTE CACHE)
         
       endif()
       
     endif()
+
+    set (IMAGEMAGIC_REG_PATH ${IM_BIN_PATH} PARENT_SCOPE)
+    set (IMAGEMAGIC_REGINCLUDE_PATH ${IM_BIN_PATH}/include PARENT_SCOPE)
+    set (IMAGEMAGIC_REGLIB_PATH ${IM_BIN_PATH}/lib PARENT_SCOPE)
+
   else()
   
   message(WARNING "In FIND_REGISTRY:  LINUX_BUILD")
