@@ -331,9 +331,34 @@ VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count)
     return res;
 }
 
-//TODO: DebugReporter implementation on Android?
-#if 0
-VkResult init_debug_report_callback(struct sample_info &info, PFN_vkDebugReportCallbackEXT dbgFunc)
+void init_queue_family_index(struct sample_info &info)
+{
+    /* This routine simply finds a graphics queue for a later vkCreateDevice, without consideration  */
+    /* for which queue family can present an image.  Do not use this if your intent is to present    */
+    /* later in your sample, instead use the init_connection, init_window, init_swapchain_extension, */
+    /* init_device call sequence to get a graphics and present compatible queue family               */
+
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
+    assert(info.queue_count >= 1);
+
+    info.queue_props.resize(info.queue_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
+    assert(info.queue_count >= 1);
+    bool found = false;
+    for (unsigned int i = 0; i < info.queue_count; i++)
+    {
+        if (info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
+            info.graphics_queue_family_index = i;
+            found = true;
+            break;
+        }
+    }
+    assert(found);
+ }
+
+#ifndef __ANDROID__
+vkResult init_debug_report_callback(struct sample_info &info, PFN_vkDebugReportCallbackEXT dbgFunc)
 {
     VkResult res;
     VkDebugReportCallbackEXT debug_report_callback;
@@ -495,11 +520,6 @@ void init_window(struct sample_info &info)
     SetWindowLongPtr(info.window, GWLP_USERDATA, (LONG_PTR) &info);
 }
 
-void init_window_size(struct sample_info &info, int32_t default_width, int32_t default_height) {
-    info.width = default_width;
-    info.height = default_height;
-}
-
 void destroy_window(struct sample_info &info)
 {
     vkDestroySurfaceKHR(info.inst, info.surface, NULL);
@@ -576,8 +596,12 @@ void destroy_window(struct sample_info &info)
 #endif // _WIN32
 
 void init_window_size(struct sample_info &info, int32_t default_width, int32_t default_height) {
+#ifndef __ANDROID__
     info.width = default_width;
     info.height = default_height;
+#else
+    AndroidGetWindowSize(&info.width, &info.height);
+#endif
 }
 
 void init_depth_buffer(struct sample_info &info)

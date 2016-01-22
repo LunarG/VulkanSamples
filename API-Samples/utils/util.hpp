@@ -235,8 +235,7 @@ struct sample_info {
     VkDescriptorPool desc_pool;
     std::vector<VkDescriptorSet> desc_set;
 
-    // TODO: Debug reporter
-#if 0
+#ifndef __ANDROID__
     PFN_vkCreateDebugReportCallbackEXT dbgCreateDebugReportCallback;
     PFN_vkDestroyDebugReportCallbackEXT dbgDestroyDebugReportCallback;
     PFN_vkDebugReportMessageEXT dbgBreakCallback;
@@ -272,14 +271,10 @@ timestamp_t get_milliseconds();
 // Main entry point of samples
 int sample_main();
 
-// Helper to retrieve Window size.
-bool get_window_size(int32_t* width, int32_t* height);
-
-// Wait a specified time in second.
-bool wait(int32_t timeout);
-
 #ifdef __ANDROID__
 // Android specific helpers.
+bool Android_process_command();
 ANativeWindow* AndroidGetApplicationWindow();
 bool AndroidLoadFile(const char* filePath, std::vector<unsigned int>& data);
+void AndroidGetWindowSize(int32_t *width, int32_t *height);
 #endif

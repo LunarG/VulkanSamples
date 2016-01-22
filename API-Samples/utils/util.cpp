@@ -436,6 +436,12 @@ void wait_seconds(int seconds)
 {
 #ifdef WIN32
     Sleep(seconds * 1000);
+#elif defined(__ANDROID__)
+    // Loop until the app is requested to finish.
+    (void)seconds;
+    while (!Android_process_command()) {
+        usleep(100);
+    };
 #else
     sleep(seconds);
 #endif
@@ -523,35 +529,7 @@ void android_main(struct android_app* app) {
 
     return;
 }
-#endif
 
-<<<<<<< HEAD
-bool wait(int32_t timeout) {
-#ifndef __ANDROID__
-    wait_seconds(timeout);
-    return true;
-#else
-    (void)timeout;
-    return Android_process_command();
-#endif
-}
-
-bool get_window_size(int32_t* width, int32_t* height) {
-#ifndef __ANDROID__
-    // On Other platforms, set the window size.
-    *width = *height = 500;
-#else
-    // On Android, retrieve the window size from the native window.
-    assert(Android_application != nullptr);
-    *width = ANativeWindow_getWidth(Android_application->window);
-    *height = ANativeWindow_getHeight(Android_application->window);
-#endif
-    return true;
-}
-
-
-#ifdef __ANDROID__
-// Android specific helpers.
 ANativeWindow* AndroidGetApplicationWindow() {
     assert(Android_application != nullptr);
     return Android_application->window;
@@ -570,4 +548,12 @@ bool AndroidLoadFile(const char* filePath, std::vector<unsigned int> &data){
     AAsset_read(file, &data[0], fileLength);
     return true;
 }
+
+void AndroidGetWindowSize(int32_t *width, int32_t *height) {
+    // On Android, retrieve the window size from the native window.
+    assert(Android_application != nullptr);
+    *width = ANativeWindow_getWidth(Android_application->window);
+    *height = ANativeWindow_getHeight(Android_application->window);
+}
+
 #endif
