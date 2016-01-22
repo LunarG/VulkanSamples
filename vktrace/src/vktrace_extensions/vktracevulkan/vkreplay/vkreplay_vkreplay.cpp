@@ -1240,6 +1240,14 @@ VkResult vkReplay::manually_replay_vkCreateGraphicsPipelines(packet_vkCreateGrap
         pLocalCIs[i].renderPass = m_objMapper.remap_renderpasss(pPacket->pCreateInfos[i].renderPass);
 
         pLocalCIs[i].basePipelineHandle = m_objMapper.remap_pipelines(pPacket->pCreateInfos[i].basePipelineHandle);
+
+        ((VkPipelineViewportStateCreateInfo*)pLocalCIs[i].pViewportState)->pViewports =
+                (VkViewport*)vktrace_trace_packet_interpret_buffer_pointer(pPacket->header, (intptr_t)pPacket->pCreateInfos[i].pViewportState->pViewports);
+        ((VkPipelineViewportStateCreateInfo*)pLocalCIs[i].pViewportState)->pScissors =
+                (VkRect2D*)vktrace_trace_packet_interpret_buffer_pointer(pPacket->header, (intptr_t)pPacket->pCreateInfos[i].pViewportState->pScissors);
+
+        ((VkPipelineMultisampleStateCreateInfo*)pLocalCIs[i].pMultisampleState)->pSampleMask =
+                (VkSampleMask*)vktrace_trace_packet_interpret_buffer_pointer(pPacket->header, (intptr_t)pPacket->pCreateInfos[i].pMultisampleState->pSampleMask);
     }
 
     VkPipelineCache pipelineCache;
@@ -1869,7 +1877,7 @@ VkResult vkReplay::manually_replay_vkQueuePresentKHR(packet_vkQueuePresentKHR* p
     }
     // TODO : Probably need some kind of remapping from image indices grabbed w/
     //   AcquireNextImageKHR call, and then the indicies that are passed in here
-    VkPresentInfoKHR present = {};
+    VkPresentInfoKHR present;
     present.sType = pPacket->pPresentInfo->sType;
     present.pNext = pPacket->pPresentInfo->pNext;
     present.swapchainCount = pPacket->pPresentInfo->swapchainCount;

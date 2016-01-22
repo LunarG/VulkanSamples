@@ -343,6 +343,12 @@ static void add_VkGraphicsPipelineCreateInfos_to_trace_packet(vktrace_trace_pack
             // Viewport State
             if (pParam[i].pViewportState) {
                 vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pViewportState), sizeof(VkPipelineViewportStateCreateInfo), pParam[i].pViewportState);
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pViewportState->pViewports), sizeof(VkViewport) * pParam[i].pViewportState->viewportCount,
+                                                   pParam[i].pViewportState->pViewports);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pViewportState->pViewports));
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pViewportState->pScissors), sizeof(VkRect2D) * pParam[i].pViewportState->scissorCount,
+                                                   pParam[i].pViewportState->pScissors);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pViewportState->pScissors));
                 vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pViewportState));
             }
 
@@ -354,6 +360,8 @@ static void add_VkGraphicsPipelineCreateInfos_to_trace_packet(vktrace_trace_pack
             // MultiSample State
             if (pParam[i].pMultisampleState) {
                 vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pMultisampleState), sizeof(VkPipelineMultisampleStateCreateInfo), pParam[i].pMultisampleState);
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pMultisampleState->pSampleMask), sizeof(VkSampleMask), pParam[i].pMultisampleState->pSampleMask);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pMultisampleState->pSampleMask));
                 vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pMultisampleState));
             }
 
