@@ -113,7 +113,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
     const char*                         pMsg,
-    const void*                               pUserData)
+    void*                               pUserData)
 {
     char *message = (char *) malloc(strlen(pMsg)+100);
 
@@ -176,6 +176,12 @@ struct demo {
     VkPhysicalDeviceProperties gpu_props;
     VkQueueFamilyProperties *queue_props;
     uint32_t graphics_queue_node_index;
+
+    uint32_t enabled_extension_count;
+    uint32_t enabled_layer_count;
+    char *extension_names[64];
+    char *device_validation_layers[64];
+
 
     int width, height;
     VkFormat format;
@@ -1731,24 +1737,22 @@ VKAPI_ATTR void VKAPI_CALL myfree(
 static void demo_init_vk(struct demo *demo)
 {
     VkResult err;
-    char *extension_names[64];
-    char *layer_names[64];
     VkExtensionProperties *instance_extensions;
     VkPhysicalDevice *physical_devices;
     VkLayerProperties *instance_layers;
     VkLayerProperties *device_layers;
     uint32_t instance_extension_count = 0;
     uint32_t instance_layer_count = 0;
-    uint32_t enabled_extension_count = 0;
-    uint32_t enabled_layer_count = 0;
+    uint32_t device_validation_layer_count = 0;
+    demo->enabled_extension_count = 0;
+    demo->enabled_layer_count = 0;
 
     char *instance_validation_layers[] = {
-        "VK_LUNARG_LAYER_mem_tracker",
+        "VK_LAYER_LUNARG_mem_tracker",
     };
 
-    char *device_validation_layers[] = {
-        "VK_LUNARG_LAYER_mem_tracker",
-    };
+    demo->device_validation_layers[0] = "VK_LAYER_LUNARG_mem_tracker";
+    device_validation_layer_count = 1;
 
     /* Look for validation layers */
     VkBool32 validation_found = 0;
@@ -1769,7 +1773,7 @@ static void demo_init_vk(struct demo *demo)
                      "information.\n",
                      "vkCreateInstance Failure");
         }
-        enabled_layer_count = ARRAY_SIZE(instance_validation_layers);
+        demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers);
     }
 
     err = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, NULL);
@@ -1777,32 +1781,32 @@ static void demo_init_vk(struct demo *demo)
 
     VkBool32 surfaceExtFound = 0;
     VkBool32 platformSurfaceExtFound = 0;
-    memset(extension_names, 0, sizeof(extension_names));
+    memset(demo->extension_names, 0, sizeof(demo->extension_names));
     instance_extensions = malloc(sizeof(VkExtensionProperties) * instance_extension_count);
     err = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, instance_extensions);
     assert(!err);
     for (uint32_t i = 0; i < instance_extension_count; i++) {
         if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
             surfaceExtFound = 1;
-            extension_names[enabled_extension_count++] = VK_KHR_SURFACE_EXTENSION_NAME;
+            demo->extension_names[demo->enabled_extension_count++] = VK_KHR_SURFACE_EXTENSION_NAME;
         }
 #ifdef _WIN32
         if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
             platformSurfaceExtFound = 1;
-            extension_names[enabled_extension_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+            demo->extension_names[demo->enabled_extension_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
         }
 #else  // _WIN32
         if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
             platformSurfaceExtFound = 1;
-            extension_names[enabled_extension_count++] = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
+            demo->extension_names[demo->enabled_extension_count++] = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
         }
 #endif // _WIN32
         if (!strcmp(VK_EXT_DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extensionName)) {
             if (demo->validate) {
-                extension_names[enabled_extension_count++] = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
+                demo->extension_names[demo->enabled_extension_count++] = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
             }
         }
-        assert(enabled_extension_count < 64);
+        assert(demo->enabled_extension_count < 64);
     }
     if (!surfaceExtFound) {
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
@@ -1842,19 +1846,12 @@ static void demo_init_vk(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
         .pApplicationInfo = &app,
-        .enabledLayerCount = enabled_layer_count,
-        .ppEnabledLayerNames = (const char *const*) layer_names,
-        .enabledExtensionCount = enabled_extension_count,
-        .ppEnabledExtensionNames = (const char *const*) extension_names,
+        .enabledLayerCount = demo->enabled_layer_count,
+        .ppEnabledLayerNames = (const char *const*) instance_validation_layers,
+        .enabledExtensionCount = demo->enabled_extension_count,
+        .ppEnabledExtensionNames = (const char *const*) demo->extension_names,
     };
-    float queue_priorities[1] = { 0.0 };
-    const VkDeviceQueueCreateInfo queue = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        .pNext = NULL,
-        .queueFamilyIndex = 0,
-        .queueCount = 1,
-        .pQueuePriorities = queue_priorities
-    };
+
     uint32_t gpu_count;
 
     demo->allocator.pfnAllocation = myalloc;
@@ -1893,7 +1890,7 @@ static void demo_init_vk(struct demo *demo)
 
     /* Look for validation layers */
     validation_found = 0;
-    enabled_layer_count = 0;
+    demo->enabled_layer_count = 0;
     uint32_t device_layer_count = 0;
     err = vkEnumerateDeviceLayerProperties(demo->gpu, &device_layer_count, NULL);
     assert(!err);
@@ -1903,16 +1900,16 @@ static void demo_init_vk(struct demo *demo)
     assert(!err);
 
     if (demo->validate) {
-        validation_found = demo_check_layers(ARRAY_SIZE(device_validation_layers), device_validation_layers,
+        validation_found = demo_check_layers(device_validation_layer_count, demo->device_validation_layers,
                                              device_layer_count, device_layers);
         if (!validation_found) {
-            ERR_EXIT("vkEnumerateDeviceLayerProperties failed to find"
+            ERR_EXIT("vkEnumerateDeviceLayerProperties failed to find "
                      "a required validation layer.\n\n"
                      "Please look at the Getting Started guide for additional "
                      "information.\n",
                      "vkCreateDevice Failure");
         }
-        enabled_layer_count = ARRAY_SIZE(device_validation_layers);
+        demo->enabled_layer_count = device_validation_layer_count;
     }
 
     uint32_t device_extension_count = 0;
@@ -1922,8 +1919,8 @@ static void demo_init_vk(struct demo *demo)
     assert(!err);
 
     VkBool32 swapchainExtFound = 0;
-    enabled_extension_count = 0;
-    memset(extension_names, 0, sizeof(extension_names));
+    demo->enabled_extension_count = 0;
+    memset(demo->extension_names, 0, sizeof(demo->extension_names));
     device_extensions = malloc(sizeof(VkExtensionProperties) * device_extension_count);
     err = vkEnumerateDeviceExtensionProperties(
               demo->gpu, NULL, &device_extension_count, device_extensions);
@@ -1932,9 +1929,9 @@ static void demo_init_vk(struct demo *demo)
     for (uint32_t i = 0; i < device_extension_count; i++) {
         if (!strcmp(VK_KHR_SWAPCHAIN_EXTENSION_NAME, device_extensions[i].extensionName)) {
             swapchainExtFound = 1;
-            extension_names[enabled_extension_count++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+            demo->extension_names[demo->enabled_extension_count++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
         }
-        assert(enabled_extension_count < 64);
+        assert(demo->enabled_extension_count < 64);
     }
     if (!swapchainExtFound) {
         ERR_EXIT("vkEnumerateDeviceExtensionProperties failed to find the "
@@ -1944,17 +1941,6 @@ static void demo_init_vk(struct demo *demo)
                  "information.\n",
                  "vkCreateInstance Failure");
     }
-
-    VkDeviceCreateInfo device = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = NULL,
-        .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &queue,
-        .enabledLayerCount = enabled_layer_count,
-        .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? device_validation_layers : NULL),
-        .enabledExtensionCount = enabled_extension_count,
-        .ppEnabledExtensionNames = (const char *const*) extension_names,
-    };
 
     if (demo->validate) {
         demo->CreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT) vkGetInstanceProcAddr(demo->inst, "vkCreateDebugReportCallbackEXT");
@@ -1992,10 +1978,6 @@ static void demo_init_vk(struct demo *demo)
     GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceCapabilitiesKHR);
     GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceFormatsKHR);
     GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfacePresentModesKHR);
-
-    err = vkCreateDevice(demo->gpu, &device, NULL, &demo->device);
-    assert(!err);
-
     GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceSupportKHR);
     GET_INSTANCE_PROC_ADDR(demo->inst, CreateSwapchainKHR);
     GET_INSTANCE_PROC_ADDR(demo->inst, DestroySwapchainKHR);
@@ -2015,6 +1997,34 @@ static void demo_init_vk(struct demo *demo)
     // Graphics queue and MemMgr queue can be separate.
     // TODO: Add support for separate queues, including synchronization,
     //       and appropriate tracking for QueueSubmit
+}
+
+static void demo_init_device(struct demo *demo)
+{
+    VkResult U_ASSERT_ONLY err;
+
+    float queue_priorities[1] = { 0.0 };
+    const VkDeviceQueueCreateInfo queue = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        .pNext = NULL,
+        .queueFamilyIndex = demo->graphics_queue_node_index,
+        .queueCount = 1,
+        .pQueuePriorities = queue_priorities
+    };
+
+    VkDeviceCreateInfo device = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = NULL,
+        .queueCreateInfoCount = 1,
+        .pQueueCreateInfos = &queue,
+        .enabledLayerCount = demo->enabled_layer_count,
+        .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? demo->device_validation_layers : NULL),
+        .enabledExtensionCount = demo->enabled_extension_count,
+        .ppEnabledExtensionNames = (const char *const*) demo->extension_names,
+    };
+
+    err = vkCreateDevice(demo->gpu, &device, NULL, &demo->device);
+    assert(!err);
 }
 
 static void demo_init_vk_swapchain(struct demo *demo)
@@ -2100,6 +2110,8 @@ static void demo_init_vk_swapchain(struct demo *demo)
     }
 
     demo->graphics_queue_node_index = graphicsQueueNodeIndex;
+
+    demo_init_device(demo);
 
     vkGetDeviceQueue(demo->device, demo->graphics_queue_node_index,
             0, &demo->queue);

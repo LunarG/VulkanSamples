@@ -349,6 +349,11 @@ struct demo {
     VkQueueFamilyProperties *queue_props;
     VkPhysicalDeviceMemoryProperties memory_properties;
 
+    uint32_t enabled_extension_count;
+    uint32_t enabled_layer_count;
+    char *extension_names[64];
+    char *device_validation_layers[64];
+
     int width, height;
     VkFormat format;
     VkColorSpaceKHR color_space;
@@ -2140,6 +2145,7 @@ static void demo_init_vk(struct demo *demo)
     VkLayerProperties *device_layers;
     uint32_t instance_extension_count = 0;
     uint32_t instance_layer_count = 0;
+    uint32_t device_validation_layer_count = 0;
     uint32_t enabled_extension_count = 0;
     uint32_t enabled_layer_count = 0;
 
@@ -2154,16 +2160,15 @@ static void demo_init_vk(struct demo *demo)
         "VK_LAYER_LUNARG_image",
     };
 
-    char *device_validation_layers[] = {
-        "VK_LAYER_LUNARG_threading",
-        "VK_LAYER_LUNARG_mem_tracker",
-        "VK_LAYER_LUNARG_object_tracker",
-        "VK_LAYER_LUNARG_draw_state",
-        "VK_LAYER_LUNARG_param_checker",
-        "VK_LAYER_LUNARG_swapchain",
-        "VK_LAYER_LUNARG_device_limits",
-        "VK_LAYER_LUNARG_image",
-    };
+    demo->device_validation_layers[0] = "VK_LAYER_LUNARG_threading";
+    demo->device_validation_layers[1] = "VK_LAYER_LUNARG_mem_tracker";
+    demo->device_validation_layers[2] = "VK_LAYER_LUNARG_object_tracker",
+    demo->device_validation_layers[3] = "VK_LAYER_LUNARG_draw_state",
+    demo->device_validation_layers[4] = "VK_LAYER_LUNARG_param_checker",
+    demo->device_validation_layers[5] = "VK_LAYER_LUNARG_swapchain",
+    demo->device_validation_layers[6] = "VK_LAYER_LUNARG_device_limits",
+    demo->device_validation_layers[7] = "VK_LAYER_LUNARG_image",
+    device_validation_layer_count = 8;
 
     /* Look for validation layers */
     VkBool32 validation_found = 0;
@@ -2297,7 +2302,7 @@ static void demo_init_vk(struct demo *demo)
 
     /* Look for validation layers */
     validation_found = 0;
-    enabled_layer_count = 0;
+    demo->enabled_layer_count = 0;
     uint32_t device_layer_count = 0;
     err = vkEnumerateDeviceLayerProperties(demo->gpu, &device_layer_count, NULL);
     assert(!err);
@@ -2307,7 +2312,7 @@ static void demo_init_vk(struct demo *demo)
     assert(!err);
 
     if (demo->validate) {
-        validation_found = demo_check_layers(ARRAY_SIZE(device_validation_layers), device_validation_layers,
+        validation_found = demo_check_layers(device_validation_layer_count, demo->device_validation_layers,
                                              device_layer_count, device_layers);
         if (!validation_found) {
             ERR_EXIT("vkEnumerateDeviceLayerProperties failed to find"
@@ -2316,7 +2321,7 @@ static void demo_init_vk(struct demo *demo)
                      "information.\n",
                      "vkCreateDevice Failure");
         }
-        enabled_layer_count = ARRAY_SIZE(device_validation_layers);
+        demo->enabled_layer_count = device_validation_layer_count;
     }
 
     uint32_t device_extension_count = 0;
@@ -2326,7 +2331,7 @@ static void demo_init_vk(struct demo *demo)
     assert(!err);
 
     VkBool32 swapchainExtFound = 0;
-    enabled_extension_count = 0;
+    demo->enabled_extension_count = 0;
     memset(extension_names, 0, sizeof(extension_names));
     device_extensions = malloc(sizeof(VkExtensionProperties) * device_extension_count);
     err = vkEnumerateDeviceExtensionProperties(
@@ -2336,9 +2341,9 @@ static void demo_init_vk(struct demo *demo)
     for (uint32_t i = 0; i < device_extension_count; i++) {
         if (!strcmp(VK_KHR_SWAPCHAIN_EXTENSION_NAME, device_extensions[i].extensionName)) {
             swapchainExtFound = 1;
-            extension_names[enabled_extension_count++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+            demo->extension_names[demo->enabled_extension_count++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
         }
-        assert(enabled_extension_count < 64);
+        assert(demo->enabled_extension_count < 64);
     }
     if (!swapchainExtFound) {
         ERR_EXIT("vkEnumerateDeviceExtensionProperties failed to find the "
@@ -2419,11 +2424,23 @@ static void demo_init_vk(struct demo *demo)
     VkPhysicalDeviceFeatures physDevFeatures;
     vkGetPhysicalDeviceFeatures(demo->gpu, &physDevFeatures);
 
+    free(device_layers);
+
+    GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceSupportKHR);
+    GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceCapabilitiesKHR);
+    GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceFormatsKHR);
+    GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfacePresentModesKHR);
+    GET_INSTANCE_PROC_ADDR(demo->inst, GetSwapchainImagesKHR);
+}
+
+static void demo_create_device(struct demo *demo)
+{
+    VkResult U_ASSERT_ONLY err;
     float queue_priorities[1] = { 0.0 };
     const VkDeviceQueueCreateInfo queue = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .pNext = NULL,
-        .queueFamilyIndex = gfx_queue_idx,
+        .queueFamilyIndex = demo->graphics_queue_node_index,
         .queueCount = 1,
         .pQueuePriorities = queue_priorities
     };
@@ -2433,27 +2450,16 @@ static void demo_init_vk(struct demo *demo)
         .pNext = NULL,
         .queueCreateInfoCount = 1,
         .pQueueCreateInfos = &queue,
-        .enabledLayerCount = enabled_layer_count,
-        .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? device_validation_layers : NULL),
-        .enabledExtensionCount = enabled_extension_count,
-        .ppEnabledExtensionNames = (const char *const*) extension_names,
+        .enabledLayerCount = demo->enabled_layer_count,
+        .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? demo->device_validation_layers : NULL),
+        .enabledExtensionCount = demo->enabled_extension_count,
+        .ppEnabledExtensionNames = (const char *const*) demo->extension_names,
         .pEnabledFeatures = NULL, // If specific features are required, pass them in here
     };
 
     err = vkCreateDevice(demo->gpu, &device, NULL, &demo->device);
     assert(!err);
 
-    free(device_layers);
-
-    GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceSupportKHR);
-    GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceCapabilitiesKHR);
-    GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceFormatsKHR);
-    GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfacePresentModesKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, CreateSwapchainKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, DestroySwapchainKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, GetSwapchainImagesKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, AcquireNextImageKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, QueuePresentKHR);
 }
 
 static void demo_init_vk_swapchain(struct demo *demo)
@@ -2539,6 +2545,14 @@ static void demo_init_vk_swapchain(struct demo *demo)
     }
 
     demo->graphics_queue_node_index = graphicsQueueNodeIndex;
+
+    demo_create_device(demo);
+
+    GET_DEVICE_PROC_ADDR(demo->device, CreateSwapchainKHR);
+    GET_DEVICE_PROC_ADDR(demo->device, DestroySwapchainKHR);
+    GET_DEVICE_PROC_ADDR(demo->device, GetSwapchainImagesKHR);
+    GET_DEVICE_PROC_ADDR(demo->device, AcquireNextImageKHR);
+    GET_DEVICE_PROC_ADDR(demo->device, QueuePresentKHR);
 
     vkGetDeviceQueue(demo->device, demo->graphics_queue_node_index,
             0, &demo->queue);
