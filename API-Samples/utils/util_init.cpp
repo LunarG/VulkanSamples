@@ -512,6 +512,11 @@ void init_window(struct sample_info &info)
     SetWindowLongPtr(info.window, GWLP_USERDATA, (LONG_PTR) &info);
 }
 
+void init_window_size(struct sample_info &info, int32_t default_width, int32_t default_height) {
+    info.width = default_width;
+    info.height = default_height;
+}
+
 void destroy_window(struct sample_info &info)
 {
     vkDestroySurfaceKHR(info.inst, info.surface, NULL);
