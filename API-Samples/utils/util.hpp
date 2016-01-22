@@ -278,5 +278,11 @@ bool get_window_size(int32_t* width, int32_t* height);
 // Wait a specified time in second.
 bool wait(int32_t timeout);
 
+#ifdef __ANDROID__
+// Android specific helpers.
+ANativeWindow* AndroidGetApplicationWindow();
+bool AndroidLoadFile(const char* filePath, std::vector<unsigned int>& data);
+#endif
+
 
 

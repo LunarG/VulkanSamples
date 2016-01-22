@@ -34,7 +34,15 @@ samples utility functions
 #include <iomanip>
 #include <iostream>
 #include "util.hpp"
-#ifndef __ANDROID__
+#ifdef __ANDROID__
+// Android specific stuff.
+
+// Header files..
+#include <android_native_app_glue.h>
+
+// Static variable that keeps ANativeWindow and asset manager instances.
+static android_app* Android_application = nullptr;
+#else
 #include "SPIRV/GlslangToSpv.h"
 #endif
 
@@ -46,10 +54,6 @@ samples utility functions
 #endif
 
 using namespace std;
-
-int main(int argc, char **argv) {
-    return sample_main();
-}
 
 void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch)
 {
@@ -468,13 +472,101 @@ void print_UUID(uint8_t* pipelineCacheUUID)
     }
 }
 
-bool get_window_size(int32_t* width, int32_t* height) {
-    *width = *height = 500;
-    return true;
-};
+#ifndef __ANDROID__
+int main(int argc, char **argv) {
+    return sample_main();
+}
+#else
+//
+// Android specific helper functions.
+//
+void Android_handle_cmd(android_app* app, int32_t cmd)  {
+    switch( cmd ){
+        case APP_CMD_INIT_WINDOW:
+            // The window is being shown, get it ready.
+            sample_main();
+            break;
+        case APP_CMD_TERM_WINDOW:
+            // The window is being hidden or closed, clean it up.
+            break;
+        default :
+            LOGI("event not handled: %d", cmd);
+    }
+}
+
+bool Android_process_command() {
+    assert(Android_application != nullptr);
+    int events;
+    android_poll_source* source;
+    // Poll all pending events.
+    if( ALooper_pollAll(0, NULL, &events, (void**)&source) >= 0 ){
+        // Process each polled events
+        if (source != NULL)
+            source->process(Android_application, source);
+    }
+    return Android_application->destroyRequested;
+}
+
+void android_main(struct android_app* app) {
+    // Magic call, please ignore it (Android specific).
+    app_dummy();
+    // Set static variables.
+    Android_application = app;
+    // Set the callback to process system events
+    app->onAppCmd = Android_handle_cmd;
+
+    // Main loop
+    do {
+        Android_process_command();
+    } // Check if system requested to quit the application
+    while(app->destroyRequested == 0);
+
+    return;
+}
+#endif
 
 bool wait(int32_t timeout) {
+#ifndef __ANDROID__
     wait_seconds(timeout);
+    return true;
+#else
+    (void)timeout;
+    return Android_process_command();
+#endif
+}
+
+bool get_window_size(int32_t* width, int32_t* height) {
+#ifndef __ANDROID__
+    // On Other platforms, set the window size.
+    *width = *height = 500;
+#else
+    // On Android, retrieve the window size from the native window.
+    assert(Android_application != nullptr);
+    *width = ANativeWindow_getWidth(Android_application->window);
+    *height = ANativeWindow_getHeight(Android_application->window);
+#endif
     return true;
 }
 
+
+#ifdef __ANDROID__
+// Android specific helpers.
+ANativeWindow* AndroidGetApplicationWindow() {
+    assert(Android_application != nullptr);
+    return Android_application->window;
+}
+
+bool AndroidLoadFile(const char* filePath, std::vector<unsigned int> &data){
+    assert(Android_application != nullptr);
+    AAsset* file = AAssetManager_open(Android_application->activity->assetManager,
+                                      filePath, AASSET_MODE_BUFFER);
+    size_t fileLength = AAsset_getLength(file);
+    LOGI("Loaded file:%s size:%d", filePath, fileLength);
+    if (fileLength == 0) {
+        return false;
+    }
+    data.resize((fileLength + sizeof(uint32_t) - 1)/ sizeof(uint32_t));
+    AAsset_read(file, &data[0], fileLength);
+    return true;
+}
+#endif

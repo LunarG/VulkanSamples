@@ -28,9 +28,6 @@
 
 #include "util.hpp"
 
-// Main entry point of samples
-int sample_main();
-
 // Make sure functions start with init, execute, or destroy to assist codegen
 
 VkResult init_global_extension_properties(
@@ -111,11 +108,6 @@ void destroy_command_pool(struct sample_info &info);
 void destroy_device(struct sample_info &info);
 void destroy_instance(struct sample_info &info);
 void destroy_window(struct sample_info &info);
-
-// Helper to retrieve Window size.
-bool get_window_size(int32_t* width, int32_t* height);
-
-bool wait(int32_t timeout);
 
 #endif // UTIL_INIT
 

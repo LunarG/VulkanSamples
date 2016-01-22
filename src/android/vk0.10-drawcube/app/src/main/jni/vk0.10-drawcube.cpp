@@ -237,7 +237,7 @@ int sample_main()
     assert(res == VK_SUCCESS);
 
     // Wait for a second (or until App terminated on Android).
-    while(wait(1) == false) {};
+    while(!wait(1)) {};
 
     /* VULKAN_KEY_END */
 
