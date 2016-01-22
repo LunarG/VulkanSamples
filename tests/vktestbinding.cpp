@@ -213,7 +213,7 @@ bool PhysicalDevice::set_memory_type(const uint32_t type_bits, VkMemoryAllocateI
 {
      uint32_t type_mask = type_bits;
      // Search memtypes to find first index with those properties
-     for (uint32_t i = 0; i < 32; i++) {
+     for (uint32_t i = 0; i < memory_properties_.memoryTypeCount; i++) {
          if ((type_mask & 1) == 1) {
              // Type is available, does it match user properties?
              if ((memory_properties_.memoryTypes[i].propertyFlags & properties) == properties &&
