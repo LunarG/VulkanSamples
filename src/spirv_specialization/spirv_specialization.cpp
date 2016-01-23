@@ -230,7 +230,7 @@ const std::string fragmentSPIRV_specialized =
 
 
 
-int sample_main()
+int main(int argc, char **argv)
 {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
@@ -242,7 +242,7 @@ int sample_main()
     init_device_extension_names(info);
     init_instance(info, sample_title);
     init_enumerate_device(info);
-    init_window_size(info, 500, 500);
+    info.width = info.height = 500;
     init_connection(info);
     init_window(info);
     init_swapchain_extension(info);
