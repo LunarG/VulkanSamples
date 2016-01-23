@@ -93,7 +93,7 @@ ir_validate::visit(ir_dereference_variable *ir)
       abort();
    }
 
-   if (false && hash_table_find(ht, ir->var) == NULL) {
+   if (hash_table_find(ht, ir->var) == NULL) {
       printf("ir_dereference_variable @ %p specifies undeclared variable "
 	     "`%s' @ %p\n",
 	     (void *) ir, ir->var->name, (void *) ir->var);

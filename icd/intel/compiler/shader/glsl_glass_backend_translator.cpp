@@ -1135,6 +1135,7 @@ void MesaGlassTranslator::addIoDeclaration(gla::EVariableQualifier qualifier,
    case EmbCullDistance:   bname = "gl_CullDistance"; break;
    case EmbFragDepth:      bname = "gl_FragDepth";    break;
    case EmbVertexId:       bname = "gl_VertexID";     break;
+   case EmbVertexIndex:    bname = "gl_VertexID";     break;
    case EmbPrimitiveId:    bname = "gl_PrimitiveID";  break;
    case EmbInstanceId:     bname = "gl_InstanceID";   break;
    case EmbFace:           bname = "gl_FrontFacing";  break;
@@ -1158,13 +1159,14 @@ void MesaGlassTranslator::addIoDeclaration(gla::EVariableQualifier qualifier,
        break;
    } // switch
 
-   if (!bname.empty()) {
-       nameBuiltinMap[name] = bname;
-       name = bname;
-   }
-
    const glsl_type*       irInterfaceType = llvmTypeToHirType(mdType, mdNode);
    const ir_variable_mode irVarMode       = VariableQualifierToIR(qualifier);
+
+   if (!bname.empty()) {
+       nameBuiltinMap[name] = bname;
+       globalVarModeMap[name] = irVarMode;
+       name = bname;
+   }
 
    // Register name -> metadata mapping for this declaration
    typenameMdMap[name]    = mdNode;
