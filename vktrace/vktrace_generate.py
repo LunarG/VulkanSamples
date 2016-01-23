@@ -1434,6 +1434,34 @@ class Subcommand(object):
         cb_body.append('            }')
         return "\n".join(cb_body)
 
+    def _gen_replay_create_instance(self):
+        cb_body = []
+        cb_body.append('            replayResult = manually_replay_vkCreateInstance(pPacket);')
+        cb_body.append('            CHECK_RETURN_VALUE(vkCreateInstance);')
+        cb_body.append('            if (replayResult == VK_SUCCESS) {')
+        cb_body.append('                VkInstance remappedInstance = m_objMapper.remap_instances(*pPacket->pInstance);')
+        cb_body.append('                if (remappedInstance == VK_NULL_HANDLE) {')
+        cb_body.append('                    returnValue = vktrace_replay::VKTRACE_REPLAY_ERROR;')
+        cb_body.append('                    break;')
+        cb_body.append('                }')
+        cb_body.append('                VkFlags reportFlags = VK_DEBUG_REPORT_INFO_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT | VK_DEBUG_REPORT_PERF_WARN_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT;')
+        cb_body.append('                PFN_vkCreateDebugReportCallbackEXT callback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(remappedInstance, "vkCreateDebugReportCallbackEXT");')
+        cb_body.append('                if (callback != NULL) {')
+        cb_body.append('                    VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;')
+        cb_body.append('                    memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));')
+        cb_body.append('                    dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;')
+        cb_body.append('                    dbgCreateInfo.flags = reportFlags;')
+        cb_body.append('                    dbgCreateInfo.pfnCallback = g_fpDbgMsgCallback;')
+        cb_body.append('                    dbgCreateInfo.pUserData = NULL;')
+        cb_body.append('                    if (callback(remappedInstance, &dbgCreateInfo, NULL, &m_dbgMsgCallbackObj) != VK_SUCCESS) {')
+        cb_body.append('                        vktrace_LogWarning("Failed to register vulkan callback for replayer error handling.");')
+        cb_body.append('                        returnValue = vktrace_replay::VKTRACE_REPLAY_ERROR;')
+        cb_body.append('                        break;')
+        cb_body.append('                    }')
+        cb_body.append('                }')
+        cb_body.append('            }')
+        return "\n".join(cb_body)
+
     # Generate main replay case statements where actual replay API call is dispatched based on input packet data
     def _generate_replay(self):
         manually_replay_funcs = ['AllocateMemory',
@@ -1442,7 +1470,7 @@ class Subcommand(object):
                                  'CreateDevice',
                                  'CreateFramebuffer',
                                  'CreateGraphicsPipelines',
-                                 'CreateInstance',
+                                 #'CreateInstance',
                                  'CreatePipelineLayout',
                                  'CreateRenderPass',
                                  'CmdBeginRenderPass',
@@ -1491,7 +1519,8 @@ class Subcommand(object):
 
         # map protos to custom functions if body is fully custom
         custom_body_dict = {'CreateImage': self._gen_replay_create_image,
-                            'CreateBuffer': self._gen_replay_create_buffer }
+                            'CreateBuffer': self._gen_replay_create_buffer,
+                            'CreateInstance': self._gen_replay_create_instance }
         # multi-gpu Open funcs w/ list of local params to create
         custom_open_params = {'OpenSharedMemory': (-1,),
                               'OpenSharedSemaphore': (-1,),

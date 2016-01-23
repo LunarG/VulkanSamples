@@ -426,27 +426,6 @@ VkResult vkReplay::manually_replay_vkEnumeratePhysicalDevices(packet_vkEnumerate
         }
         VKTRACE_DELETE(pDevices);
     }
-    if (pPacket->pPhysicalDevices != NULL)
-    {
-        VkInstance remappedInstance = m_objMapper.remap_instances(pPacket->instance);
-        if (remappedInstance == VK_NULL_HANDLE)
-            return VK_ERROR_VALIDATION_FAILED_EXT;
-
-        VkFlags reportFlags = VK_DEBUG_REPORT_INFO_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT | VK_DEBUG_REPORT_PERF_WARN_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT;
-        if (m_vkFuncs.real_vkCreateDebugReportCallbackEXT != NULL)
-        {
-            VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
-            memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
-            dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-            dbgCreateInfo.flags = reportFlags;
-            dbgCreateInfo.pfnCallback = g_fpDbgMsgCallback;
-            dbgCreateInfo.pUserData = NULL;
-            if (m_vkFuncs.real_vkCreateDebugReportCallbackEXT(remappedInstance, &dbgCreateInfo, NULL, &m_dbgMsgCallbackObj) != VK_SUCCESS)
-            {
-                vktrace_LogWarning("Failed to register vulkan callback for replayer error handling.");
-            }
-        }
-    }
     return replayResult;
 }
 
