@@ -1,5 +1,5 @@
-#ifndef SHELLWIN32_H
-#define SHELLWIN32_H
+#ifndef SHELL_WIN32_H
+#define SHELL_WIN32_H
 
 #include <windows.h>
 #include "Shell.h"
@@ -36,4 +36,4 @@ private:
     HMODULE hmodule_;
 };
 
-#endif // SHELLWIN32_H
+#endif // SHELL_WIN32_H

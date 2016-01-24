@@ -60,7 +60,7 @@ else()
 
     find_package(XCB REQUIRED)
 
-    list(APPEND sources ShellXCB.cpp ShellXCB.h)
+    list(APPEND sources ShellXcb.cpp ShellXcb.h)
     list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_XCB_KHR)
     list(APPEND includes PRIVATE ${XCB_INCLUDES})
     list(APPEND libraries PRIVATE ${XCB_LIBRARIES})
