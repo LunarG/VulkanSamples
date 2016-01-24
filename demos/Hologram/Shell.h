@@ -26,7 +26,6 @@ public:
 
     struct Context {
         VkInstance instance;
-        VkSurfaceKHR surface;
 
         VkPhysicalDevice physical_dev;
         uint32_t game_queue_family;
@@ -38,6 +37,7 @@ public:
 
         std::queue<BackBuffer> back_buffers;
 
+        VkSurfaceKHR surface;
         VkSurfaceFormatKHR format;
 
         VkSwapchainKHR swapchain;
@@ -64,6 +64,9 @@ protected:
     void init_vk();
     void cleanup_vk();
 
+    void create_context();
+    void destroy_context();
+
     void resize_swapchain(uint32_t width_hint, uint32_t height_hint);
 
     void add_game_time(float time);
@@ -81,15 +84,19 @@ private:
     void assert_all_global_extensions() const;
     bool has_all_device_extensions(VkPhysicalDevice phy) const;
 
+    // called by init_vk
     virtual PFN_vkGetInstanceProcAddr load_vk() = 0;
     virtual bool can_present(VkPhysicalDevice phy, uint32_t queue_family) = 0;
-    virtual VkSurfaceKHR create_surface(VkInstance instance) = 0;
-    VkInstance create_instance();
-
+    void init_instance();
     void init_physical_dev();
-    void init_dev();
-    void init_back_buffers();
-    void init_swapchain();
+
+    // called by create_context
+    void create_dev();
+    void create_back_buffers();
+    void destroy_back_buffers();
+    virtual VkSurfaceKHR create_surface(VkInstance instance) = 0;
+    void create_swapchain();
+    void destroy_swapchain();
 
     void fake_present();
 
