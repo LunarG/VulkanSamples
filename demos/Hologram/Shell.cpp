@@ -1,5 +1,6 @@
 #include <cassert>
 #include <array>
+#include <iostream>
 #include <string>
 #include <sstream>
 #include <set>
@@ -11,6 +12,12 @@ Shell::Shell(Game &game)
     : game_(game), settings_(game.settings()), ctx_(),
       game_tick_(1.0f / settings_.ticks_per_second), game_time_(game_tick_)
 {
+}
+
+void Shell::log(LogPriority priority, const char *msg)
+{
+    std::ostream &st = (priority >= LOG_ERR) ? std::cerr : std::cout;
+    st << msg << "\n";
 }
 
 void Shell::init_vk()

@@ -47,6 +47,14 @@ public:
     };
     const Context &context() const { return ctx_; }
 
+    enum LogPriority {
+        LOG_DEBUG,
+        LOG_INFO,
+        LOG_WARN,
+        LOG_ERR,
+    };
+    virtual void log(LogPriority priority, const char *msg);
+
     virtual void run() = 0;
     virtual void quit() = 0;
 
