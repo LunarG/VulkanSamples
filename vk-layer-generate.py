@@ -1687,9 +1687,9 @@ class ObjectTrackerSubcommand(Subcommand):
         gedd_txt.append('')
         return "\n".join(gedd_txt)
 
-    # Special-case validating the array pointers in UpdateDescriptorSets.  They may not be NULL but should
-    # be ignored if the descriptorType does not specify those arrays.
-    def _handle_descriptorType(self, indent, prefix, type_name, name):
+    # Special-case validating some objects -- they may be non-NULL but should
+    # only be validated upon meeting some condition specified below.
+    def _dereference_conditionally(self, indent, prefix, type_name, name):
         s_code = ''
         if type_name == 'pBufferInfo':
             s_code += '%sif ((%sdescriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)         ||\n'    % (indent, prefix)
@@ -1703,8 +1703,11 @@ class ObjectTrackerSubcommand(Subcommand):
             s_code += '%s    (%sdescriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)          ||\n'    % (indent, prefix)
             s_code += '%s    (%sdescriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)            ) {\n' % (indent, prefix)
         elif type_name == 'pTexelBufferView':
-            s_code += '%sif ((%sdescriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) ||\n'    % (indent, prefix)
-            s_code += '%s    (%sdescriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER)   ) {\n' % (indent, prefix)
+            s_code += '%sif ((%sdescriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) ||\n'      % (indent, prefix)
+            s_code += '%s    (%sdescriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER)   ) {\n'   % (indent, prefix)
+        elif name == 'pBeginInfo->pInheritanceInfo':
+            s_code += '%sOBJTRACK_NODE* pNode = VkCommandBufferMap[(uint64_t)commandBuffer];\n'       % (indent)
+            s_code += '%sif ((%s) && (pNode->status & OBJSTATUS_COMMAND_BUFFER_SECONDARY)) {\n'       % (indent, name)
         else:
             s_code += '%sif (%s) {\n' % (indent, name)
         return s_code
@@ -1725,7 +1728,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 ptr_type = False
                 if 'p' == obj[0]:
                     ptr_type = True
-                    tmp_pre = self._handle_descriptorType(indent, prefix, type_name, name)
+                    tmp_pre = self._dereference_conditionally(indent, prefix, type_name, name)
                     pre_code += tmp_pre
                     indent += '    '
                 if array != '':
@@ -1758,7 +1761,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 if func_name in valid_null_dict and True in [name in pn for pn in valid_null_dict[func_name]]:
                     null_obj_ok = 'true'
                 if (array_index > 0) or '' != array:
-                    tmp_pre = self._handle_descriptorType(indent, prefix, type_name, full_name)
+                    tmp_pre = self._dereference_conditionally(indent, prefix, type_name, full_name)
                     pre_code += tmp_pre
                     indent += '    '
                     if array != '':

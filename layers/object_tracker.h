@@ -56,13 +56,14 @@ typedef enum _ObjectStatusFlagBits
     OBJSTATUS_COLOR_BLEND_BOUND                 = 0x00000008, // Viewport state object has been bound
     OBJSTATUS_DEPTH_STENCIL_BOUND               = 0x00000010, // Viewport state object has been bound
     OBJSTATUS_GPU_MEM_MAPPED                    = 0x00000020, // Memory object is currently mapped
+    OBJSTATUS_COMMAND_BUFFER_SECONDARY          = 0x00000040, // Command Buffer is of type SECONDARY
 } ObjectStatusFlagBits;
 
 typedef struct _OBJTRACK_NODE {
-    uint64_t             vkObj;                 // Object handle
-    VkDebugReportObjectTypeEXT      objType;               // Object type identifier
-    ObjectStatusFlags    status;                // Object state
-    uint64_t             parentObj;             // Parent object
+    uint64_t                   vkObj;           // Object handle
+    VkDebugReportObjectTypeEXT objType;         // Object type identifier
+    ObjectStatusFlags          status;          // Object state
+    uint64_t                   parentObj;       // Parent object
 } OBJTRACK_NODE;
 
 // prototype for extension functions
@@ -557,7 +558,7 @@ static void destroy_surface_khr(VkInstance dispatchable_object, VkSurfaceKHR obj
     }
 }
 
-static void alloc_command_buffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer vkObj, VkDebugReportObjectTypeEXT objType)
+static void alloc_command_buffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer vkObj, VkDebugReportObjectTypeEXT objType, VkCommandBufferLevel level)
 {
     log_msg(mdd(device), VK_DEBUG_REPORT_INFO_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), __LINE__, OBJTRACK_NONE, "OBJTRACK",
         "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDebugReportObjectTypeEXT(objType),
@@ -565,9 +566,13 @@ static void alloc_command_buffer(VkDevice device, VkCommandPool commandPool, VkC
 
     OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
     pNewObjNode->objType   = objType;
-    pNewObjNode->status    = OBJSTATUS_NONE;
     pNewObjNode->vkObj     = reinterpret_cast<uint64_t>(vkObj);
     pNewObjNode->parentObj = (uint64_t) commandPool;
+    if (level == VK_COMMAND_BUFFER_LEVEL_SECONDARY) {
+        pNewObjNode->status = OBJSTATUS_COMMAND_BUFFER_SECONDARY;
+    } else {
+        pNewObjNode->status = OBJSTATUS_NONE;
+    }
     VkCommandBufferMap[reinterpret_cast<uint64_t>(vkObj)] = pNewObjNode;
     uint32_t objIndex = objTypeToIndex(objType);
     numObjs[objIndex]++;
@@ -905,7 +910,7 @@ explicit_AllocateCommandBuffers(
 
     loader_platform_thread_lock_mutex(&objLock);
     for (uint32_t i = 0; i < pAllocateInfo->commandBufferCount; i++) {
-        alloc_command_buffer(device, pAllocateInfo->commandPool, pCommandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT);
+        alloc_command_buffer(device, pAllocateInfo->commandPool, pCommandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, pAllocateInfo->level);
     }
     loader_platform_thread_unlock_mutex(&objLock);
 
