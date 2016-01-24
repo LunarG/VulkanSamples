@@ -1,5 +1,4 @@
 #include <cassert>
-#include <iostream>
 #include <sstream>
 #include <dlfcn.h>
 #include <time.h>
@@ -281,9 +280,11 @@ void ShellXcb::loop_poll()
         profile_present_count++;
         if (current_time - profile_start_time >= 5.0) {
             const double fps = profile_present_count / (current_time - profile_start_time);
-            std::cout << profile_present_count << " presents in " <<
-                         current_time - profile_start_time << " seconds " <<
-                         "(FPS: " << fps << ")\n";
+            std::stringstream ss;
+            ss << profile_present_count << " presents in " <<
+                  current_time - profile_start_time << " seconds " <<
+                  "(FPS: " << fps << ")";
+            log(LOG_INFO, ss.str().c_str());
 
             profile_start_time = current_time;
             profile_present_count = 0;
