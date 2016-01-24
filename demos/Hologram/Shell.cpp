@@ -12,6 +12,9 @@ Shell::Shell(Game &game)
     : game_(game), settings_(game.settings()), ctx_(),
       game_tick_(1.0f / settings_.ticks_per_second), game_time_(game_tick_)
 {
+    // require generic WSI extensions
+    global_extensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+    device_extensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 }
 
 void Shell::log(LogPriority priority, const char *msg)
@@ -22,54 +25,20 @@ void Shell::log(LogPriority priority, const char *msg)
 
 void Shell::init_vk()
 {
-    // require generic WSI extensions
-    global_extensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-    device_extensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-
     vk::init_dispatch_table_top(load_vk());
-    ctx_.instance = create_instance();
 
+    init_instance();
     vk::init_dispatch_table_middle(ctx_.instance, false);
-    ctx_.surface = create_surface(ctx_.instance);
 
     init_physical_dev();
-    init_dev();
 
-    vk::init_dispatch_table_bottom(ctx_.instance, ctx_.dev);
-
-    vk::GetDeviceQueue(ctx_.dev, ctx_.game_queue_family, 0, &ctx_.game_queue);
-    vk::GetDeviceQueue(ctx_.dev, ctx_.present_queue_family, 0, &ctx_.present_queue);
-
-    init_back_buffers();
-    init_swapchain();
-
-    game_.attach_shell(*this);
+    create_context();
 }
 
 void Shell::cleanup_vk()
 {
-    vk::DeviceWaitIdle(ctx_.dev);
+    destroy_context();
 
-    if (ctx_.swapchain != VK_NULL_HANDLE)
-        game_.detach_swapchain();
-
-    game_.detach_shell();
-
-    vk::DestroySwapchainKHR(ctx_.dev, ctx_.swapchain, nullptr);
-
-    while (!ctx_.back_buffers.empty()) {
-        const auto &buf = ctx_.back_buffers.front();
-
-        vk::DestroySemaphore(ctx_.dev, buf.acquire_semaphore, nullptr);
-        vk::DestroySemaphore(ctx_.dev, buf.render_semaphore, nullptr);
-        vk::DestroyFence(ctx_.dev, buf.present_fence, nullptr);
-
-        ctx_.back_buffers.pop();
-    }
-
-    vk::DestroyDevice(ctx_.dev, nullptr);
-
-    vk::DestroySurfaceKHR(ctx_.instance, ctx_.surface, nullptr);
     vk::DestroyInstance(ctx_.instance, nullptr);
 }
 
@@ -112,7 +81,7 @@ bool Shell::has_all_device_extensions(VkPhysicalDevice phy) const
     return true;
 }
 
-VkInstance Shell::create_instance()
+void Shell::init_instance()
 {
     assert_all_global_extensions();
 
@@ -128,12 +97,7 @@ VkInstance Shell::create_instance()
     instance_info.enabledExtensionCount = (uint32_t)global_extensions_.size();
     instance_info.ppEnabledExtensionNames = global_extensions_.data();
 
-    VkInstance instance;
-    vk::assert_success(vk::CreateInstance(&instance_info, nullptr, &instance));
-
-    // TODO vk::GetInstanceProcAddr
-
-    return instance;
+    vk::assert_success(vk::CreateInstance(&instance_info, nullptr, &ctx_.instance));
 }
 
 void Shell::init_physical_dev()
@@ -183,7 +147,43 @@ void Shell::init_physical_dev()
         throw std::runtime_error("failed to find any capable Vulkan physical device");
 }
 
-void Shell::init_dev()
+void Shell::create_context()
+{
+    create_dev();
+    vk::init_dispatch_table_bottom(ctx_.instance, ctx_.dev);
+
+    vk::GetDeviceQueue(ctx_.dev, ctx_.game_queue_family, 0, &ctx_.game_queue);
+    vk::GetDeviceQueue(ctx_.dev, ctx_.present_queue_family, 0, &ctx_.present_queue);
+
+    create_back_buffers();
+
+    // initialize ctx_.{surface,format} before attach_shell
+    create_swapchain();
+
+    game_.attach_shell(*this);
+}
+
+void Shell::destroy_context()
+{
+    if (ctx_.dev == VK_NULL_HANDLE)
+        return;
+
+    vk::DeviceWaitIdle(ctx_.dev);
+
+    destroy_swapchain();
+
+    game_.detach_shell();
+
+    destroy_back_buffers();
+
+    ctx_.game_queue = VK_NULL_HANDLE;
+    ctx_.present_queue = VK_NULL_HANDLE;
+
+    vk::DestroyDevice(ctx_.dev, nullptr);
+    ctx_.dev = VK_NULL_HANDLE;
+}
+
+void Shell::create_dev()
 {
     VkDeviceCreateInfo dev_info = {};
     dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -219,7 +219,7 @@ void Shell::init_dev()
     vk::assert_success(vk::CreateDevice(ctx_.physical_dev, &dev_info, nullptr, &ctx_.dev));
 }
 
-void Shell::init_back_buffers()
+void Shell::create_back_buffers()
 {
     VkSemaphoreCreateInfo sem_info = {};
     sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -243,8 +243,23 @@ void Shell::init_back_buffers()
     }
 }
 
-void Shell::init_swapchain()
+void Shell::destroy_back_buffers()
 {
+    while (!ctx_.back_buffers.empty()) {
+        const auto &buf = ctx_.back_buffers.front();
+
+        vk::DestroySemaphore(ctx_.dev, buf.acquire_semaphore, nullptr);
+        vk::DestroySemaphore(ctx_.dev, buf.render_semaphore, nullptr);
+        vk::DestroyFence(ctx_.dev, buf.present_fence, nullptr);
+
+        ctx_.back_buffers.pop();
+    }
+}
+
+void Shell::create_swapchain()
+{
+    ctx_.surface = create_surface(ctx_.instance);
+
     std::vector<VkSurfaceFormatKHR> formats;
     vk::get(ctx_.physical_dev, ctx_.surface, formats);
     ctx_.format = formats[0];
@@ -253,6 +268,19 @@ void Shell::init_swapchain()
     ctx_.swapchain = VK_NULL_HANDLE;
     ctx_.extent.width = (uint32_t) -1;
     ctx_.extent.height = (uint32_t) -1;
+}
+
+void Shell::destroy_swapchain()
+{
+    if (ctx_.swapchain != VK_NULL_HANDLE) {
+        game_.detach_swapchain();
+
+        vk::DestroySwapchainKHR(ctx_.dev, ctx_.swapchain, nullptr);
+        ctx_.swapchain = VK_NULL_HANDLE;
+    }
+
+    vk::DestroySurfaceKHR(ctx_.instance, ctx_.surface, nullptr);
+    ctx_.surface = VK_NULL_HANDLE;
 }
 
 void Shell::resize_swapchain(uint32_t width_hint, uint32_t height_hint)
