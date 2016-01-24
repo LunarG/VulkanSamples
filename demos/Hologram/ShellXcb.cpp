@@ -6,7 +6,7 @@
 
 #include "Helpers.h"
 #include "Game.h"
-#include "ShellXCB.h"
+#include "ShellXcb.h"
 
 namespace {
 
@@ -66,7 +66,7 @@ xcb_atom_t intern_atom(xcb_connection_t *c, xcb_intern_atom_cookie_t cookie)
 
 } // namespace
 
-ShellXCB::ShellXCB(Game &game) : Shell(game)
+ShellXcb::ShellXcb(Game &game) : Shell(game)
 {
     init_connection();
     init_window();
@@ -75,7 +75,7 @@ ShellXCB::ShellXCB(Game &game) : Shell(game)
     init_vk();
 }
 
-ShellXCB::~ShellXCB()
+ShellXcb::~ShellXcb()
 {
     cleanup_vk();
 
@@ -85,7 +85,7 @@ ShellXCB::~ShellXCB()
     xcb_disconnect(c_);
 }
 
-void ShellXCB::init_connection()
+void ShellXcb::init_connection()
 {
     int scr;
 
@@ -103,7 +103,7 @@ void ShellXCB::init_connection()
     scr_ = iter.data;
 }
 
-void ShellXCB::init_window()
+void ShellXcb::init_window()
 {
     win_ = xcb_generate_id(c_);
 
@@ -139,7 +139,7 @@ void ShellXCB::init_window()
             XCB_ATOM_ATOM, 32, 1, &wm_delete_window_);
 }
 
-PFN_vkGetInstanceProcAddr ShellXCB::load_vk()
+PFN_vkGetInstanceProcAddr ShellXcb::load_vk()
 {
     void *handle, *symbol;
 
@@ -165,7 +165,7 @@ PFN_vkGetInstanceProcAddr ShellXCB::load_vk()
     return reinterpret_cast<PFN_vkGetInstanceProcAddr>(symbol);
 }
 
-VkSurfaceKHR ShellXCB::create_surface(VkInstance instance)
+VkSurfaceKHR ShellXcb::create_surface(VkInstance instance)
 {
     VkXcbSurfaceCreateInfoKHR surface_info = {};
     surface_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
@@ -178,7 +178,7 @@ VkSurfaceKHR ShellXCB::create_surface(VkInstance instance)
     return surface;
 }
 
-void ShellXCB::handle_event(const xcb_generic_event_t *ev)
+void ShellXcb::handle_event(const xcb_generic_event_t *ev)
 {
     switch (ev->response_type & 0x7f) {
     case XCB_CONFIGURE_NOTIFY:
@@ -229,7 +229,7 @@ void ShellXCB::handle_event(const xcb_generic_event_t *ev)
     }
 }
 
-void ShellXCB::loop_wait()
+void ShellXcb::loop_wait()
 {
     while (true) {
         xcb_generic_event_t *ev = xcb_wait_for_event(c_);
@@ -247,7 +247,7 @@ void ShellXCB::loop_wait()
     }
 }
 
-void ShellXCB::loop_poll()
+void ShellXcb::loop_poll()
 {
     PosixTimer timer;
 
@@ -291,7 +291,7 @@ void ShellXCB::loop_poll()
     }
 }
 
-void ShellXCB::run()
+void ShellXcb::run()
 {
     resize_swapchain(settings_.initial_width, settings_.initial_height);
 

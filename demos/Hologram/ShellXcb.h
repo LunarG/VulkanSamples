@@ -1,13 +1,13 @@
-#ifndef SHELLXCB_H
-#define SHELLXCB_H
+#ifndef SHELL_XCB_H
+#define SHELL_XCB_H
 
 #include <xcb/xcb.h>
 #include "Shell.h"
 
-class ShellXCB : public Shell {
+class ShellXcb : public Shell {
 public:
-    ShellXCB(Game &game);
-    ~ShellXCB();
+    ShellXcb(Game &game);
+    ~ShellXcb();
 
     void run();
     void quit() { quit_ = true; }
@@ -35,4 +35,4 @@ private:
     bool quit_;
 };
 
-#endif // SHELLXCB_H
+#endif // SHELL_XCB_H

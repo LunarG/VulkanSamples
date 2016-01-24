@@ -6,7 +6,7 @@
 #ifdef _WIN32
 #include "ShellWin32.h"
 #else
-#include "ShellXCB.h"
+#include "ShellXcb.h"
 #endif
 
 int main(int argc, char **argv)
@@ -17,7 +17,7 @@ int main(int argc, char **argv)
 #ifdef _WIN32
     ShellWin32 shell(hologram);
 #else
-    ShellXCB shell(hologram);
+    ShellXcb shell(hologram);
 #endif
 
     shell.run();
