@@ -1026,6 +1026,10 @@ void init_swap_chain(struct sample_info &info)
         assert(res == VK_SUCCESS);
     }
     info.current_buffer = 0;
+    
+    if (NULL != presentModes) {
+        free(presentModes);
+    }
 }
 
 void init_uniform_buffer(struct sample_info &info)
