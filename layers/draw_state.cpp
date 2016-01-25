@@ -3279,12 +3279,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
 VkBool32 cleanInFlightCmdBuffer(layer_data* my_data, VkCommandBuffer cmdBuffer) {
     VkBool32 skip_call = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(my_data, cmdBuffer);
-    for (auto queryEventsPair : pCB->waitedEventsBeforeQueryReset) {
-        for (auto event : queryEventsPair.second) {
-            if (my_data->eventMap[event].needsSignaled) {
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, 0, DRAWSTATE_INVALID_QUERY, "DS",
-                                 "Cannot get query results on queryPool %" PRIu64 " with index %d which was guarded by unsignaled event %" PRIu64 ".",
-                                 (uint64_t)(queryEventsPair.first.pool), queryEventsPair.first.index, (uint64_t)(event));
+    if (pCB) {
+        for (auto queryEventsPair : pCB->waitedEventsBeforeQueryReset) {
+            for (auto event : queryEventsPair.second) {
+                if (my_data->eventMap[event].needsSignaled) {
+                    skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, 0, DRAWSTATE_INVALID_QUERY, "DS",
+                                     "Cannot get query results on queryPool %" PRIu64 " with index %d which was guarded by unsignaled event %" PRIu64 ".",
+                                     (uint64_t)(queryEventsPair.first.pool), queryEventsPair.first.index, (uint64_t)(event));
+                }
             }
         }
     }
