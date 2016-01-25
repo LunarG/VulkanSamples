@@ -11,6 +11,19 @@ set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -std=c++11")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG -std=c++11")
 
+if (WIN32)
+    # For Windows, since 32-bit and 64-bit items can co-exist, we build each in its own build directory.
+    # 32-bit target data goes in build32, and 64-bit target data goes into build.  So, include/link the
+    # appropriate data at build time.
+    if (CMAKE_CL_64)
+        set (BUILDTGT_DIR build)
+    else ()
+        set (BUILDTGT_DIR build32)
+    endif()
+else()
+    set (BUILDTGT_DIR build)
+endif()
+
 # LunarG TODO:  Get the llvm-config flags hooked up correctly and remove extra definitions from above
 
 execute_process(COMMAND ${LUNARGLASS_PREFIX}/Core/LLVM/llvm-3.4/${BUILDTGT_DIR}/install/usr/local/bin/llvm-config --libs engine bitwriter
@@ -23,19 +36,6 @@ message(STATUS ${LLVM_LIBS_ALL})
 
 if(NOT "${LLVM_LIBS_RESULT}" EQUAL "0")
   message(FATAL_ERROR "llvm-config failed: " ${LLVM_LIBS_RESULT})
-endif()
-
-if (WIN32)
-    # For Windows, since 32-bit and 64-bit items can co-exist, we build each in its own build directory.
-    # 32-bit target data goes in build32, and 64-bit target data goes into build.  So, include/link the
-    # appropriate data at build time.
-    if (CMAKE_CL_64)
-        set (BUILDTGT_DIR build)
-    else ()
-        set (BUILDTGT_DIR build32)
-    endif()
-else()
-    set (BUILDTGT_DIR build)
 endif()
 
 # Expect libraries to be in either the build (release build) or dbuild (debug) directories
