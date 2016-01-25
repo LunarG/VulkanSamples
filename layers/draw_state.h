@@ -315,6 +315,7 @@ class SET_NODE : public BASE_NODE {
     LAYOUT_NODE*         pLayout; // Layout for this set
     SET_NODE*            pNext;
     vector<uint32_t>     dynamicOffsets; // one dynamic offset per dynamic descriptor
+    unordered_set<VkCommandBuffer> boundCmdBuffers; // Cmd buffers that this set has been bound to
     SET_NODE() : pUpdateStructs(NULL), ppDescriptors(NULL), pLayout(NULL), pNext(NULL) {};
 };
 
@@ -423,7 +424,8 @@ typedef enum _CB_STATE
 {
     CB_NEW,       // Newly created CB w/o any cmds
     CB_RECORDING, // BeginCB has been called on this CB
-    CB_RECORDED   // EndCB has been called on this CB
+    CB_RECORDED,  // EndCB has been called on this CB
+    CB_INVALID    // CB had a bound descriptor set destroyed or updated
 } CB_STATE;
 // CB Status -- used to track status of various bindings on cmd buffer objects
 typedef VkFlags CBStatusFlags;
@@ -512,9 +514,12 @@ typedef struct _GLOBAL_CB_NODE {
     VkSubpassContents            activeSubpassContents;
     uint32_t                     activeSubpass;
     VkFramebuffer                framebuffer;
-    // Capture which sets are actually used by the shaders of this CB. This is union of all sets used by each Draw in CB
-    std::set<VkDescriptorSet>    activeSets;
+    // Capture unique std::set of descriptorSets that are bound to this CB.
+    std::set<VkDescriptorSet>    uniqueBoundSets;
     // Keep running track of which sets are bound to which set# at any given time
+    // Track descriptor sets that are destroyed or updated while bound to CB
+    std::set<VkDescriptorSet>    destroyedSets;
+    std::set<VkDescriptorSet>    updatedSets;
     vector<VkDescriptorSet>      boundDescriptorSets; // Index is set# that given set is bound to
     vector<VkEvent>              waitedEvents;
     unordered_map<QueryObject, vector<VkEvent> > waitedEventsBeforeQueryReset;

@@ -1525,8 +1525,6 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
                         "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u is not compatible with overlapping VkPipelineLayout %#" PRIxLEAST64 " due to: %s",
                             (uint64_t)setHandle, setIndex, (uint64_t)pPipe->graphicsPipelineCI.layout, errorString.c_str());
                 } else { // Valid set is bound and layout compatible, validate that it's updated and verify any dynamic offsets
-                    // Add this set as a valid set for this CB
-                    pCB->activeSets.insert(pCB->boundDescriptorSets[setIndex]);
                     // Pull the set node
                     SET_NODE* pSet = getSetNode(my_data, pCB->boundDescriptorSets[setIndex]);
                     // Make sure set has been updated
@@ -2256,6 +2254,16 @@ VkBool32 validateIdleDescriptorSet(const layer_data* my_data, VkDescriptorSet se
     }
     return skip_call;
 }
+static void invalidateBoundCmdBuffers(layer_data* dev_data, const SET_NODE* pSet)
+{
+    // Flag any CBs this set is bound to as INVALID
+    for (auto cb : pSet->boundCmdBuffers) {
+        auto cb_node = dev_data->commandBufferMap.find(cb);
+        if (cb_node != dev_data->commandBufferMap.end()) {
+            cb_node->second->state = CB_INVALID;
+        }
+    }
+}
 // update DS mappings based on write and copy update arrays
 static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pWDS, uint32_t descriptorCopyCount, const VkCopyDescriptorSet* pCDS)
 {
@@ -2272,6 +2280,8 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
         // Set being updated cannot be in-flight
         if ((skipCall = validateIdleDescriptorSet(my_data, ds, "VkUpdateDescriptorSets")) == VK_TRUE)
             return skipCall;
+        // If set is bound to any cmdBuffers, mark them invalid
+        invalidateBoundCmdBuffers(my_data, pSet);
         GENERIC_HEADER* pUpdate = (GENERIC_HEADER*) &pWDS[i];
         pLayout = pSet->pLayout;
         // First verify valid update struct
@@ -2332,6 +2342,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
         // Set being updated cannot be in-flight
         if ((skipCall = validateIdleDescriptorSet(my_data, pDstSet->set, "VkUpdateDescriptorSets")) == VK_TRUE)
             return skipCall;
+        invalidateBoundCmdBuffers(my_data, pDstSet);
         pSrcLayout = pSrcSet->pLayout;
         pDstLayout = pDstSet->pLayout;
         // Validate that src binding is valid for src set layout
@@ -2642,7 +2653,14 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->lastBoundPipelineLayout = 0;
         pCB->activeRenderPass = 0;
         pCB->activeSubpass = 0;
-        pCB->activeSets.clear();
+        // Before clearing uniqueBoundSets, remove this CB off of its boundCBs
+        for (auto set : pCB->uniqueBoundSets) {
+            auto set_node = my_data->setMap.find(set);
+            if (set_node != my_data->setMap.end()) {
+                set_node->second->boundCmdBuffers.erase(pCB->commandBuffer);
+            }
+        }
+        pCB->uniqueBoundSets.clear();
         pCB->framebuffer = 0;
         pCB->boundDescriptorSets.clear();
         pCB->drawData.clear();
@@ -3134,25 +3152,7 @@ VkBool32 ValidateCmdBufImageLayouts(VkCommandBuffer cmdBuffer) {
     }
     return skip_call;
 }
-// Descriptor sets are unique vs. other resources in that they may be consumed at bind time:
-//  From spec section on vkCmdBindDescriptorSets - The descriptor set contents bound by a call
-//   to vkCmdBindDescriptorSets may be consumed during host execution of the command, or during
-//   shader execution of the resulting draws, or any time in between.
-VkBool32 validateAndIncrementDescriptorSets(layer_data* my_data, GLOBAL_CB_NODE* pCB) {
-    VkBool32 skip_call = VK_FALSE;
-    // Verify that any active sets for this CB are valid and mark them in use
-    for (auto set : pCB->activeSets) {
-        auto setNode = my_data->setMap.find(set);
-        if (setNode == my_data->setMap.end()) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)(set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
-                "Cannot submit cmd buffer using deleted descriptor set %" PRIu64 ".", (uint64_t)(set));
-        } else {
-            setNode->second->in_use.fetch_add(1);
-        }
-    }
-    return skip_call;
-}
-
+// Track which resources are in-flight by atomically incrementing their "in_use" count
 VkBool32 validateAndIncrementResources(layer_data* my_data, GLOBAL_CB_NODE* pCB) {
     VkBool32 skip_call = VK_FALSE;
     for (auto drawDataElement : pCB->drawData) {
@@ -3164,6 +3164,15 @@ VkBool32 validateAndIncrementResources(layer_data* my_data, GLOBAL_CB_NODE* pCB)
             } else {
                 buffer_data->second.in_use.fetch_add(1);
             }
+        }
+    }
+    for (auto set : pCB->uniqueBoundSets) {
+        auto setNode = my_data->setMap.find(set);
+        if (setNode == my_data->setMap.end()) {
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)(set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
+                "Cannot submit cmd buffer using deleted descriptor set %" PRIu64 ".", (uint64_t)(set));
+        } else {
+            setNode->second->in_use.fetch_add(1);
         }
     }
     return skip_call;
@@ -3179,7 +3188,7 @@ void decrementResources(layer_data* my_data, VkCommandBuffer cmdBuffer) {
             }
         }
     }
-    for (auto set : pCB->activeSets) {
+    for (auto set : pCB->uniqueBoundSets) {
         auto setNode = my_data->setMap.find(set);
         if (setNode != my_data->setMap.end()) {
             setNode->second->in_use.fetch_sub(1);
@@ -3335,36 +3344,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
              skipCall |= ValidateCmdBufImageLayouts(submit->pCommandBuffers[i]);
 #endif // DISABLE_IMAGE_LAYOUT_VALIDATION
 
-            // Validate that cmd buffers have been updated
             pCB = getCBNode(dev_data, submit->pCommandBuffers[i]);
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->submitCount++; // increment submit count
-            // Track in-use for resources off of primary and any secondary CBs
-            skipCall |= validateAndIncrementResources(dev_data, pCB);
-            if (!pCB->secondaryCommandBuffers.empty()) {
-                for (auto secondaryCmdBuffer : pCB->secondaryCommandBuffers) {
-                    skipCall |= validateAndIncrementResources(dev_data, dev_data->commandBufferMap[secondaryCmdBuffer]);
-                }
-            }
-            if ((pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) && (pCB->submitCount > 1)) {
-                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
-                        "CB %#" PRIxLEAST64 " was begun w/ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set, but has been submitted %#" PRIxLEAST64 " times.",
-                        (uint64_t)(pCB->commandBuffer), pCB->submitCount);
-            }
-            if (CB_RECORDED != pCB->state) {
-                // Flag error for using CB w/o vkEndCommandBuffer() called
-                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NO_END_COMMAND_BUFFER, "DS",
-                        "You must call vkEndCommandBuffer() on CB %#" PRIxLEAST64 " before this call to vkQueueSubmit()!", (uint64_t)(pCB->commandBuffer));
-                loader_platform_thread_unlock_mutex(&globalLock);
-                return VK_ERROR_VALIDATION_FAILED_EXT;
-            }
-            // If USAGE_SIMULTANEOUS_USE_BIT not set then CB cannot already be executing on device
-            if (!(pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
-                if (dev_data->inFlightCmdBuffers.find(pCB->commandBuffer) != dev_data->inFlightCmdBuffers.end()) {
-                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
-                        "Attempt to simultaneously execute CB %#" PRIxLEAST64 " w/o VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!", (uint64_t)(pCB->commandBuffer));
-                }
-            }
+            skipCall |= validateCommandBufferState(dev_data, pCB);
             loader_platform_thread_unlock_mutex(&globalLock);
         }
         trackCommandBuffers(dev_data, queue, submit->commandBufferCount, submit->pCommandBuffers, fence);
@@ -3415,7 +3398,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(VkDevice device, 
     VkResult result = dev_data->device_dispatch_table->WaitForFences(device, fenceCount, pFences, waitAll, timeout);
     VkBool32 skip_call = VK_FALSE;
     if (result == VK_SUCCESS) {
-        // In simple case we know every fence is complete
+        // When we know that all fences are complete we can clean/remove their CBs
         if (waitAll || fenceCount == 1) {
             for (uint32_t i = 0; i < fenceCount; ++i) {
                 VkQueue fence_queue = dev_data->fenceMap[pFences[i]].queue;
@@ -3425,17 +3408,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(VkDevice device, 
                 }
             }
             decrementResources(dev_data, fenceCount, pFences);
-        } else { // tricky case, need to check each fence to see which finished
-            for (uint32_t i=0; i < fenceCount; ++i) {
-                if (VK_SUCCESS == dev_data->device_dispatch_table->GetFenceStatus(device, pFences[i])) {
-                    VkQueue fence_queue = dev_data->fenceMap[pFences[i]].queue;
-                    for (auto cmdBuffer : dev_data->fenceMap[pFences[i]].cmdBuffers) {
-                        skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
-                        removeInFlightCmdBuffer(dev_data, fence_queue, cmdBuffer);
-                    }
-                }
-            }
         }
+        // NOTE : Alternate case not handled here is when some fences have completed. In
+        //  this case for app to guarantee which fences completed it will have to call
+        //  vkGetFenceStatus() at which point we'll clean/remove their CBs if complete.
     }
     if (VK_FALSE != skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -3685,6 +3661,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(VkDevice device,
         // Delete CB information structure, and remove from commandBufferMap
         auto cb = dev_data->commandBufferMap.find(pCommandBuffers[i]);
         if (cb != dev_data->commandBufferMap.end()) {
+            // reset prior to delete for data clean-up
+            resetCB(dev_data, (*cb).second->commandBuffer);
             delete (*cb).second;
             dev_data->commandBufferMap.erase(cb);
         }
@@ -4203,6 +4181,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFreeDescriptorSets(VkDevice dev
         // For each freed descriptor add it back into the pool as available
         for (uint32_t i=0; i<count; ++i) {
             SET_NODE* pSet = dev_data->setMap[pDescriptorSets[i]]; // getSetNode() without locking
+            invalidateBoundCmdBuffers(dev_data, pSet);
             LAYOUT_NODE* pLayout = pSet->pLayout;
             uint32_t typeIndex = 0, poolSizeCount = 0;
             for (uint32_t j=0; j<pLayout->createInfo.bindingCount; ++j) {
@@ -4603,6 +4582,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                     SET_NODE* pSet = getSetNode(dev_data, pDescriptorSets[i]);
                     if (pSet) {
                         loader_platform_thread_lock_mutex(&globalLock);
+                        pCB->uniqueBoundSets.insert(pDescriptorSets[i]);
+                        pSet->boundCmdBuffers.insert(commandBuffer);
                         pCB->lastBoundDescriptorSet = pDescriptorSets[i];
                         pCB->lastBoundPipelineLayout = layout;
                         pCB->boundDescriptorSets[i+firstSet] = pDescriptorSets[i];
@@ -4681,7 +4662,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                     skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t) commandBuffer, __LINE__, DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT, "DS",
                             "Attempting to bind %u descriptorSets with %u dynamic descriptors, but dynamicOffsetCount is %u. It should exactly match the number of dynamic descriptors.", setCount, totalDynamicDescriptors, dynamicOffsetCount);
                 }
-                validateAndIncrementDescriptorSets(dev_data, pCB);
             }
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdBindDescriptorSets()");
