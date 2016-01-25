@@ -25,6 +25,7 @@ libs/Win32/Debug/*
 *.sdf
 *.filters
 build
+build32
 dbuild
 vktrace/src/vktrace_extensions/vktracevulkan/codegen_vktrace_utils
 vktrace/src/vktrace_extensions/vktracevulkan/vkreplay/codegen
