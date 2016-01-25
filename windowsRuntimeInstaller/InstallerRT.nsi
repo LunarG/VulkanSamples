@@ -223,10 +223,12 @@ Section
         File /oname=vulkaninfo-$FileVersion.exe ..\build\demos\Release\vulkaninfo.exe
         SetOutPath "$INSTDIR"
         File ..\build\demos\Release\vulkaninfo.exe
+        File /oname=vulkaninfo32.exe ..\build32\demos\Release\vulkaninfo.exe
         SetShellVarContext all
         CreateDirectory "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}"
         CreateDirectory "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos"
         CreateShortCut "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos\vulkaninfo.lnk" "$INSTDIR\vulkaninfo.exe"
+        CreateShortCut "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos\vulkaninfo32.lnk" "$INSTDIR\vulkaninfo32.exe"
 
         SetOutPath "$INSTDIR"
         File ${ICOFILE}
@@ -389,6 +391,12 @@ Section "uninstall"
         # Delete vulkan start menu if the vulkan start menu is empty
         SetShellVarContext all
         Delete "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos\vulkaninfo.lnk"
+
+        # If running on a 64-bit OS machine
+        ${If} ${RunningX64}
+            Delete "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos\vulkaninfo32.lnk"
+        ${EndIf}
+         
         StrCpy $0 "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos"
         Call un.DeleteDirIfEmpty
         StrCpy $0 "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}"
