@@ -96,7 +96,8 @@ struct layer_data {
     VkLayerInstanceDispatchTable* instance_dispatch_table;
     devExts device_extensions;
     vector<VkQueue> queues; // all queues under given device
-    unordered_set<VkCommandBuffer> inFlightCmdBuffers;
+    // Global set of all cmdBuffers that are inFlight on this device
+    unordered_set<VkCommandBuffer> globalInFlightCmdBuffers;
     // Layer specific data
     unordered_map<VkSampler,             unique_ptr<SAMPLER_NODE>>           sampleMap;
     unordered_map<VkImageView,           unique_ptr<VkImageViewCreateInfo>>  imageViewMap;
@@ -2612,7 +2613,7 @@ static VkBool32 addCmd(const layer_data* my_data, GLOBAL_CB_NODE* pCB, const CMD
 //  Maintain the createInfo and set state to CB_NEW, but clear all other state
 static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
 {
-    GLOBAL_CB_NODE* pCB = getCBNode(my_data, cb);
+    GLOBAL_CB_NODE* pCB = my_data->commandBufferMap[cb];
     if (pCB) {
         pCB->cmds.clear();
         // Reset CB state (note that createInfo is not cleared)
@@ -3229,6 +3230,7 @@ void trackCommandBuffers(layer_data* my_data, VkQueue queue, uint32_t cmdBufferC
         my_data->fenceMap[fence].cmdBuffers.clear();
         my_data->fenceMap[fence].priorFence = priorFence;
         my_data->fenceMap[fence].needsSignaled = true;
+        my_data->fenceMap[fence].queue = queue;
         for (uint32_t i = 0; i < cmdBufferCount; ++i) {
             for (auto secondaryCmdBuffer : my_data->commandBufferMap[pCmdBuffers[i]]->secondaryCommandBuffers) {
                 my_data->fenceMap[fence].cmdBuffers.push_back(secondaryCmdBuffer);
@@ -3249,11 +3251,61 @@ void trackCommandBuffers(layer_data* my_data, VkQueue queue, uint32_t cmdBufferC
         for (uint32_t i = 0; i < cmdBufferCount; ++i) {
             // Add cmdBuffers to both the global set and queue set
             for (auto secondaryCmdBuffer : my_data->commandBufferMap[pCmdBuffers[i]]->secondaryCommandBuffers) {
-                my_data->inFlightCmdBuffers.insert(secondaryCmdBuffer);
-                my_data->queueMap[queue].inFlightCmdBuffers.insert(secondaryCmdBuffer);
+                my_data->globalInFlightCmdBuffers.insert(secondaryCmdBuffer);
+                queue_data->second.inFlightCmdBuffers.insert(secondaryCmdBuffer);
             }
-            my_data->inFlightCmdBuffers.insert(pCmdBuffers[i]);
-            my_data->queueMap[queue].inFlightCmdBuffers.insert(pCmdBuffers[i]);
+            my_data->globalInFlightCmdBuffers.insert(pCmdBuffers[i]);
+            queue_data->second.inFlightCmdBuffers.insert(pCmdBuffers[i]);
+        }
+    }
+}
+
+static VkBool32 validateCommandBufferState(layer_data* dev_data, GLOBAL_CB_NODE* pCB)
+{
+    // Track in-use for resources off of primary and any secondary CBs
+    VkBool32 skipCall = validateAndIncrementResources(dev_data, pCB);
+    if (!pCB->secondaryCommandBuffers.empty()) {
+        for (auto secondaryCmdBuffer : pCB->secondaryCommandBuffers) {
+            skipCall |= validateAndIncrementResources(dev_data, dev_data->commandBufferMap[secondaryCmdBuffer]);
+        }
+    }
+    if ((pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) && (pCB->submitCount > 1)) {
+        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
+                "CB %#" PRIxLEAST64 " was begun w/ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set, but has been submitted %#" PRIxLEAST64 " times.",
+                (uint64_t)(pCB->commandBuffer), pCB->submitCount);
+    }
+    // Validate that cmd buffers have been updated
+    if (CB_RECORDED != pCB->state) {
+        if (CB_INVALID == pCB->state) {
+            // Inform app of reason CB invalid
+            if (!pCB->destroyedSets.empty()) {
+                std::stringstream set_string;
+                for (auto set : pCB->destroyedSets) {
+                    set_string << " " << set;
+                }
+                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
+                    "You are submitting command buffer %#" PRIxLEAST64 " that is invalid because it had the following bound descriptor set(s) destroyed: %s", (uint64_t)(pCB->commandBuffer), set_string.str().c_str());
+            }
+            if (!pCB->updatedSets.empty()) {
+                std::stringstream set_string;
+                for (auto set : pCB->updatedSets) {
+                    set_string << " " << set;
+                }
+                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
+                    "You are submitting command buffer %#" PRIxLEAST64 " that is invalid because it had the following bound descriptor set(s) updated: %s", (uint64_t)(pCB->commandBuffer), set_string.str().c_str());
+            }
+        } else { // Flag error for using CB w/o vkEndCommandBuffer() called
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_NO_END_COMMAND_BUFFER, "DS",
+                "You must call vkEndCommandBuffer() on CB %#" PRIxLEAST64 " before this call to vkQueueSubmit()!", (uint64_t)(pCB->commandBuffer));
+            loader_platform_thread_unlock_mutex(&globalLock);
+            return VK_ERROR_VALIDATION_FAILED_EXT;
+        }
+    }
+    // If USAGE_SIMULTANEOUS_USE_BIT not set then CB cannot already be executing on device
+    if (!(pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
+        if (dev_data->globalInFlightCmdBuffers.find(pCB->commandBuffer) != dev_data->globalInFlightCmdBuffers.end()) {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
+                "Attempt to simultaneously execute CB %#" PRIxLEAST64 " w/o VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!", (uint64_t)(pCB->commandBuffer));
         }
     }
 }
@@ -3338,17 +3390,21 @@ VkBool32 cleanInFlightCmdBuffer(layer_data* my_data, VkCommandBuffer cmdBuffer) 
     }
     return skip_call;
 }
-// Remove given cmd_buffer from inFlight set for given queue
-// If cmd_buffer is not inFlight on any other queues, also remove it from global inFlight set
-static inline void removeInFlightCmdBuffer(layer_data* dev_data, VkQueue queue, VkCommandBuffer cmd_buffer)
+// Remove given cmd_buffer from the global inFlight set.
+//  Also, if given queue is valid, then remove the cmd_buffer from that queues
+//  inFlightCmdBuffer set. Finally, check all other queues and if given cmd_buffer
+//  is still in flight on another queue, add it back into the global set.
+static inline void removeInFlightCmdBuffer(layer_data* dev_data, VkCommandBuffer cmd_buffer, VkQueue queue)
 {
-    dev_data->queueMap[queue].inFlightCmdBuffers.erase(cmd_buffer);
     // Pull it off of global list initially, but if we find it in any other queue list, add it back in
-    dev_data->inFlightCmdBuffers.erase(cmd_buffer);
-    for (auto q : dev_data->queues) {
-        if ((q != queue) && (dev_data->queueMap[q].inFlightCmdBuffers.find(cmd_buffer) != dev_data->queueMap[q].inFlightCmdBuffers.end())) {
-            dev_data->inFlightCmdBuffers.insert(cmd_buffer);
-            break;
+    dev_data->globalInFlightCmdBuffers.erase(cmd_buffer);
+    if (dev_data->queueMap.find(queue) != dev_data->queueMap.end()) {
+        dev_data->queueMap[queue].inFlightCmdBuffers.erase(cmd_buffer);
+        for (auto q : dev_data->queues) {
+            if ((q != queue) && (dev_data->queueMap[q].inFlightCmdBuffers.find(cmd_buffer) != dev_data->queueMap[q].inFlightCmdBuffers.end())) {
+                dev_data->globalInFlightCmdBuffers.insert(cmd_buffer);
+                break;
+            }
         }
     }
 }
@@ -3358,15 +3414,28 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(VkDevice device, 
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->WaitForFences(device, fenceCount, pFences, waitAll, timeout);
     VkBool32 skip_call = VK_FALSE;
-    if ((waitAll || fenceCount == 1) && result == VK_SUCCESS) {
-        for (uint32_t i = 0; i < fenceCount; ++i) {
-            VkQueue fence_queue = dev_data->fenceMap[pFences[i]].queue;
-            for (auto cmdBuffer : dev_data->fenceMap[pFences[i]].cmdBuffers) {
-                skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
-                removeInFlightCmdBuffer(dev_data, fence_queue, cmdBuffer);
+    if (result == VK_SUCCESS) {
+        // In simple case we know every fence is complete
+        if (waitAll || fenceCount == 1) {
+            for (uint32_t i = 0; i < fenceCount; ++i) {
+                VkQueue fence_queue = dev_data->fenceMap[pFences[i]].queue;
+                for (auto cmdBuffer : dev_data->fenceMap[pFences[i]].cmdBuffers) {
+                    skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
+                    removeInFlightCmdBuffer(dev_data, cmdBuffer, fence_queue);
+                }
+            }
+            decrementResources(dev_data, fenceCount, pFences);
+        } else { // tricky case, need to check each fence to see which finished
+            for (uint32_t i=0; i < fenceCount; ++i) {
+                if (VK_SUCCESS == dev_data->device_dispatch_table->GetFenceStatus(device, pFences[i])) {
+                    VkQueue fence_queue = dev_data->fenceMap[pFences[i]].queue;
+                    for (auto cmdBuffer : dev_data->fenceMap[pFences[i]].cmdBuffers) {
+                        skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
+                        removeInFlightCmdBuffer(dev_data, fence_queue, cmdBuffer);
+                    }
+                }
             }
         }
-        decrementResources(dev_data, fenceCount, pFences);
     }
     if (VK_FALSE != skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -3383,7 +3452,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(VkDevice device,
         auto fence_queue = dev_data->fenceMap[fence].queue;
         for (auto cmdBuffer : dev_data->fenceMap[fence].cmdBuffers) {
             skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
-            removeInFlightCmdBuffer(dev_data, fence_queue, cmdBuffer);
+            removeInFlightCmdBuffer(dev_data, cmdBuffer, fence_queue);
         }
         decrementResources(dev_data, 1, &fence);
     }
@@ -3409,7 +3478,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(VkQueue queue)
     auto local_cb_set = dev_data->queueMap[queue].inFlightCmdBuffers;
     for (auto cmdBuffer : local_cb_set) {
         skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
-        removeInFlightCmdBuffer(dev_data, queue, cmdBuffer);
+        removeInFlightCmdBuffer(dev_data, cmdBuffer, queue);
     }
     dev_data->queueMap[queue].inFlightCmdBuffers.clear();
     if (VK_FALSE != skip_call)
@@ -3419,16 +3488,21 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(VkQueue queue)
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDeviceWaitIdle(VkDevice device)
 {
+    VkBool32 skip_call = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     for (auto queue : dev_data->queues) {
         decrementResources(dev_data, queue);
-        // Clear all of the queue inFlightCmdBuffers (global set cleared below)
-        dev_data->queueMap[queue].inFlightCmdBuffers.clear();
+        if (dev_data->queueMap.find(queue) != dev_data->queueMap.end()) {
+            // Clear all of the queue inFlightCmdBuffers (global set cleared below)
+            dev_data->queueMap[queue].inFlightCmdBuffers.clear();
+        }
     }
-    for (auto cmdBuffer : dev_data->inFlightCmdBuffers) {
-        cleanInFlightCmdBuffer(dev_data, cmdBuffer);
+    for (auto cmdBuffer : dev_data->globalInFlightCmdBuffers) {
+        skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
     }
-    dev_data->inFlightCmdBuffers.clear();
+    dev_data->globalInFlightCmdBuffers.clear();
+    if (VK_FALSE != skip_call)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     return dev_data->device_dispatch_table->DeviceWaitIdle(device);
 }
 
@@ -3463,7 +3537,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice device, VkQueryPoo
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     unordered_map<QueryObject, vector<VkCommandBuffer>> queriesInFlight;
     GLOBAL_CB_NODE* pCB = nullptr;
-    for (auto cmdBuffer : dev_data->inFlightCmdBuffers) {
+    for (auto cmdBuffer : dev_data->globalInFlightCmdBuffers) {
         pCB = getCBNode(dev_data, cmdBuffer);
         for (auto queryStatePair : pCB->queryToStateMap) {
             queriesInFlight[queryStatePair.first].push_back(cmdBuffer);
@@ -3607,9 +3681,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(VkDevice device,
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
     for (uint32_t i = 0; i < count; i++) {
+        loader_platform_thread_lock_mutex(&globalLock);
         // Delete CB information structure, and remove from commandBufferMap
         auto cb = dev_data->commandBufferMap.find(pCommandBuffers[i]);
-        loader_platform_thread_lock_mutex(&globalLock);
         if (cb != dev_data->commandBufferMap.end()) {
             delete (*cb).second;
             dev_data->commandBufferMap.erase(cb);
@@ -3643,10 +3717,10 @@ VkBool32 validateCommandBuffersNotInUse(const layer_data* dev_data, VkCommandPoo
     auto pool_data = dev_data->commandPoolMap.find(commandPool);
     if (pool_data != dev_data->commandPoolMap.end()) {
         for (auto cmdBuffer : pool_data->second.commandBuffers) {
-            if (dev_data->inFlightCmdBuffers.count(cmdBuffer)) {
-                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, (uint64_t)(commandPool),
-                                    __LINE__, DRAWSTATE_OBJECT_INUSE, "DS", "Cannot reset command pool %" PRIx64 " when allocated command buffer %" PRIx64 " is in use.",
-                                    (uint64_t)(commandPool), (uint64_t)(cmdBuffer));
+            if (dev_data->globalInFlightCmdBuffers.count(cmdBuffer)) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, (uint64_t)(commandPool),
+                                     __LINE__, DRAWSTATE_OBJECT_INUSE, "DS", "Cannot reset command pool %" PRIx64 " when allocated command buffer %" PRIx64 " is in use.",
+                                     (uint64_t)(commandPool), (uint64_t)(cmdBuffer));
             }
         }
     }
@@ -3693,11 +3767,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
     result = dev_data->device_dispatch_table->ResetCommandPool(device, commandPool, flags);
     // Reset all of the CBs allocated from this pool
     if (VK_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
         auto it = dev_data->commandPoolMap[commandPool].commandBuffers.begin();
         while (it != dev_data->commandPoolMap[commandPool].commandBuffers.end()) {
             resetCB(dev_data, (*it));
             ++it;
         }
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -4163,11 +4239,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(VkDevice
                 GLOBAL_CB_NODE* pCB = new GLOBAL_CB_NODE;
                 // Add command buffer to map
                 dev_data->commandBufferMap[pCommandBuffer[i]] = pCB;
-                loader_platform_thread_unlock_mutex(&globalLock);
                 resetCB(dev_data, pCommandBuffer[i]);
                 pCB->commandBuffer = pCommandBuffer[i];
                 pCB->createInfo    = *pCreateInfo;
                 pCB->device        = device;
+                loader_platform_thread_unlock_mutex(&globalLock);
             }
         }
     }
@@ -4218,16 +4294,19 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
                     "Call to vkBeginCommandBuffer() on command buffer (%#" PRIxLEAST64 ") attempts to implicitly reset cmdBuffer created from command pool (%#" PRIxLEAST64 ") that does NOT have the VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT bit set.",
                     (uint64_t) commandBuffer, (uint64_t) cmdPool);
             }
+            loader_platform_thread_lock_mutex(&globalLock);
             resetCB(dev_data, commandBuffer);
+            loader_platform_thread_unlock_mutex(&globalLock);
         }
         // Set updated state here in case implicit reset occurs above
+        loader_platform_thread_lock_mutex(&globalLock);
         pCB->state = CB_RECORDING;
         pCB->beginInfo = *pBeginInfo;
-
         if (pCB->beginInfo.pInheritanceInfo) {
             pCB->inheritanceInfo = *(pCB->beginInfo.pInheritanceInfo);
             pCB->beginInfo.pInheritanceInfo = &pCB->inheritanceInfo;
         }
+        loader_platform_thread_unlock_mutex(&globalLock);
     } else {
         skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
                 "In vkBeginCommandBuffer() and unable to find CommandBuffer Node for CB %p!", (void*)commandBuffer);
@@ -4280,7 +4359,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandBuffer(VkCommandBuf
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->ResetCommandBuffer(commandBuffer, flags);
     if (VK_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
         resetCB(dev_data, commandBuffer);
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -5966,9 +6047,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer 
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
-        // TODO : If secondary CB was not created w/ *_USAGE_SIMULTANEOUS_USE_BIT it cannot be used more than once in given primary CB
-        //         ALSO if secondary w/o this flag is set in primary, then primary must not be pending execution more than once at a time
-        //   If not w/ SIMULTANEOUS bit, then any other references to those 2ndary CBs are invalidated, should warn on that case
         GLOBAL_CB_NODE* pSubCB = NULL;
         for (uint32_t i=0; i<commandBuffersCount; i++) {
             pSubCB = getCBNode(dev_data, pCommandBuffers[i]);
@@ -6001,7 +6079,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer 
             }
             // Secondary cmdBuffers are considered pending execution starting w/ being recorded
             if (!(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
-                if (dev_data->inFlightCmdBuffers.find(pSubCB->commandBuffer) != dev_data->inFlightCmdBuffers.end()) {
+                if (dev_data->globalInFlightCmdBuffers.find(pSubCB->commandBuffer) != dev_data->globalInFlightCmdBuffers.end()) {
                     skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
                             "Attempt to simultaneously execute CB %#" PRIxLEAST64 " w/o VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!", (uint64_t)(pCB->commandBuffer));
                 }
@@ -6014,7 +6092,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer 
                 }
             }
             pCB->secondaryCommandBuffers.insert(pSubCB->commandBuffer);
-            dev_data->inFlightCmdBuffers.insert(pSubCB->commandBuffer);
+            dev_data->globalInFlightCmdBuffers.insert(pSubCB->commandBuffer);
         }
         skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdExecuteComands");
         skipCall |= addCmd(dev_data, pCB, CMD_EXECUTECOMMANDS, "vkCmdExecuteComands()");
