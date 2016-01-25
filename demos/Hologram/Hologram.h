@@ -83,7 +83,18 @@ private:
         Animation animation;
         Path path;
 
+        uint32_t frame_data_offset;
+
         glm::mat4 model;
+    };
+
+    struct FrameData {
+        VkBuffer buf;
+        VkDeviceMemory mem;
+        uint8_t *base;
+
+        VkPushConstantRange push_const_range;
+        std::vector<glm::mat4> object_mvp;
     };
 
     // called by the constructor
@@ -93,10 +104,13 @@ private:
     std::random_device random_dev_;
 
     bool multithread_;
+    bool use_push_constants_;
     std::vector<std::unique_ptr<Worker>> workers_;
     std::vector<Object> objects_;
 
     // called by attach_shell
+    void create_frame_data();
+    void create_descriptor_set();
     void create_render_pass();
     void create_shader_modules();
     void create_pipeline_layout();
@@ -111,7 +125,16 @@ private:
     uint32_t queue_family_;
     VkFormat format_;
 
+    VkPhysicalDeviceProperties physical_dev_props_;
+    std::vector<VkMemoryPropertyFlags> mem_flags_;
+
     const Meshes *meshes_;
+
+    FrameData frame_data_;
+
+    VkDescriptorPool desc_pool_;
+    VkDescriptorSetLayout desc_set_layout_;
+    VkDescriptorSet desc_set_;
 
     VkRenderPass render_pass_;
     VkClearValue render_pass_clear_value_;
@@ -147,15 +170,16 @@ private:
     // called mostly by on_key
     void update_projection();
 
-    bool paused_;
     glm::vec3 eye_pos_;
     glm::mat4 view_projection_;
 
     // called by workers
-    void step_object(Object &obj, float obj_time) const;
+    void step_object(Object &obj, float obj_time, FrameData &data) const;
     void draw_object(const Object &obj, VkCommandBuffer cmd) const;
     void step_objects(const Worker &worker);
     void draw_objects(Worker &worker);
+
+    bool pause_objects_;
 };
 
 #endif // HOLOGRAM_H

@@ -7,14 +7,17 @@
 #define OBJECT_COUNT 10000
 
 Hologram::Hologram(const std::vector<std::string> &args)
-    : Game("Hologram", args), random_dev_(), multithread_(true),
-      render_pass_clear_value_(), render_pass_begin_info_(),
+    : Game("Hologram", args), random_dev_(),
+      multithread_(true), use_push_constants_(false),
+      frame_data_(), render_pass_clear_value_(), render_pass_begin_info_(),
       primary_cmd_begin_info_(), primary_cmd_submit_info_(),
-      paused_(false), eye_pos_(8.0f)
+      eye_pos_(8.0f), pause_objects_(false)
 {
     for (auto it = args.begin(); it != args.end(); ++it) {
         if (*it == "-s")
             multithread_ = false;
+        else if (*it == "-p")
+            use_push_constants_ = true;
     }
 
     init_workers();
@@ -71,8 +74,18 @@ void Hologram::attach_shell(Shell &sh)
     queue_family_ = ctx.game_queue_family;
     format_ = ctx.format.format;
 
+    vk::GetPhysicalDeviceProperties(physical_dev_, &physical_dev_props_);
+
+    VkPhysicalDeviceMemoryProperties mem_props;
+    vk::GetPhysicalDeviceMemoryProperties(physical_dev_, &mem_props);
+    mem_flags_.reserve(mem_props.memoryTypeCount);
+    for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++)
+        mem_flags_.push_back(mem_props.memoryTypes[i].propertyFlags);
+
     meshes_ = new Meshes(random_dev_(), physical_dev_, dev_, OBJECT_COUNT);
 
+    create_frame_data();
+    create_descriptor_set();
     create_render_pass();
     create_shader_modules();
     create_pipeline_layout();
@@ -96,9 +109,141 @@ void Hologram::detach_shell()
 
     vk::DestroyRenderPass(dev_, render_pass_, nullptr);
 
+    if (!use_push_constants_) {
+        vk::DestroyDescriptorSetLayout(dev_, desc_set_layout_, nullptr);
+        vk::DestroyDescriptorPool(dev_, desc_pool_, nullptr);
+
+        vk::UnmapMemory(dev_, frame_data_.mem);
+        vk::FreeMemory(dev_, frame_data_.mem, nullptr);
+        vk::DestroyBuffer(dev_, frame_data_.buf, nullptr);
+    }
+
     delete meshes_;
 
     Game::detach_shell();
+}
+
+void Hologram::create_frame_data()
+{
+    VkDeviceSize object_data_size = sizeof(glm::mat4);
+
+    if (use_push_constants_) {
+        frame_data_.push_const_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        frame_data_.push_const_range.offset = 0;
+        frame_data_.push_const_range.size = object_data_size;
+
+        frame_data_.object_mvp.resize(objects_.size());
+        for (size_t i = 0; i < objects_.size(); i++)
+            objects_[i].frame_data_offset = i;
+
+        return;
+    }
+
+    // align object data to device limit
+    const VkDeviceSize &alignment =
+        physical_dev_props_.limits.minStorageBufferOffsetAlignment;
+    if (object_data_size % alignment)
+        object_data_size += alignment - (object_data_size % alignment);
+
+    uint32_t frame_data_offset = 0;
+    for (auto &obj : objects_) {
+        obj.frame_data_offset = frame_data_offset;
+        frame_data_offset += object_data_size;
+    }
+
+    VkBufferCreateInfo buf_info = {};
+    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.size = frame_data_offset;
+    buf_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    vk::assert_success(vk::CreateBuffer(dev_, &buf_info, nullptr, &frame_data_.buf));
+
+    VkMemoryRequirements mem_reqs;
+    vk::GetBufferMemoryRequirements(dev_, frame_data_.buf, &mem_reqs);
+
+    // allocate memory
+    VkMemoryAllocateInfo mem_info = {};
+    mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_info.allocationSize = mem_reqs.size;
+
+    for (uint32_t idx = 0; idx < mem_flags_.size(); idx++) {
+        if ((mem_reqs.memoryTypeBits & (1 << idx)) &&
+            (mem_flags_[idx] & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
+            (mem_flags_[idx] & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+            // TODO is this guaranteed to exist?
+            mem_info.memoryTypeIndex = idx;
+            break;
+        }
+    }
+
+    vk::AllocateMemory(dev_, &mem_info, nullptr, &frame_data_.mem);
+
+    vk::MapMemory(dev_, frame_data_.mem, 0, VK_WHOLE_SIZE, 0,
+            reinterpret_cast<void **>(&frame_data_.base));
+
+    vk::BindBufferMemory(dev_, frame_data_.buf, frame_data_.mem, 0);
+}
+
+void Hologram::create_descriptor_set()
+{
+    if (use_push_constants_)
+        return;
+
+    const VkDescriptorType desc_type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+    const uint32_t desc_count = 1;
+
+    VkDescriptorPoolSize pool_size = {};
+    pool_size.type = desc_type;
+    pool_size.descriptorCount = desc_count;
+
+    VkDescriptorPoolCreateInfo pool_info = {};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.maxSets = 1;
+    pool_info.poolSizeCount = 1;
+    pool_info.pPoolSizes = &pool_size;
+
+    vk::assert_success(vk::CreateDescriptorPool(dev_, &pool_info, nullptr,
+                &desc_pool_));
+
+    VkDescriptorSetLayoutBinding layout_binding = {};
+    layout_binding.binding = 0;
+    layout_binding.descriptorType = desc_type;
+    layout_binding.descriptorCount = desc_count;
+    layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkDescriptorSetLayoutCreateInfo layout_info = {};
+    layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_info.bindingCount = 1;
+    layout_info.pBindings = &layout_binding;
+
+    vk::assert_success(vk::CreateDescriptorSetLayout(dev_, &layout_info, nullptr,
+                &desc_set_layout_));
+
+    VkDescriptorSetAllocateInfo set_info = {};
+    set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    set_info.descriptorPool = desc_pool_;
+    set_info.descriptorSetCount = 1;
+    set_info.pSetLayouts = &desc_set_layout_;
+
+    vk::assert_success(vk::AllocateDescriptorSets(dev_, &set_info,
+                &desc_set_));
+
+    VkDescriptorBufferInfo desc_buf = {};
+    desc_buf.buffer = frame_data_.buf;
+    desc_buf.offset = 0;
+    desc_buf.range = VK_WHOLE_SIZE;
+
+    VkWriteDescriptorSet set_write = {};
+    set_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    set_write.dstSet = desc_set_;
+    set_write.dstBinding = 0;
+    set_write.dstArrayElement = 0;
+    set_write.descriptorCount = desc_count;
+    set_write.descriptorType = desc_type;
+    set_write.pBufferInfo = &desc_buf;
+
+    vk::UpdateDescriptorSets(dev_, 1, &set_write, 0, nullptr);
 }
 
 void Hologram::create_render_pass()
@@ -160,9 +305,15 @@ void Hologram::create_shader_modules()
 {
     VkShaderModuleCreateInfo sh_info = {};
     sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    if (use_push_constants_) {
+#include "Hologram.push_constant.vert.h"
+        sh_info.codeSize = sizeof(Hologram_push_constant_vert);
+        sh_info.pCode = Hologram_push_constant_vert;
+    } else {
 #include "Hologram.vert.h"
-    sh_info.codeSize = sizeof(Hologram_vert);
-    sh_info.pCode = Hologram_vert;
+        sh_info.codeSize = sizeof(Hologram_vert);
+        sh_info.pCode = Hologram_vert;
+    }
     vk::assert_success(vk::CreateShaderModule(dev_, &sh_info, nullptr, &vs_));
 
 #include "Hologram.frag.h"
@@ -173,19 +324,19 @@ void Hologram::create_shader_modules()
 
 void Hologram::create_pipeline_layout()
 {
-    VkPushConstantRange push_const_range = {};
-    push_const_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    push_const_range.offset = 0;
-    push_const_range.size = sizeof(glm::mat4);
-
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount = 0;
-    pipeline_layout_info.pSetLayouts = nullptr;
-    pipeline_layout_info.pushConstantRangeCount = 1;
-    pipeline_layout_info.pPushConstantRanges = &push_const_range;
 
-    vk::assert_success(vk::CreatePipelineLayout(dev_, &pipeline_layout_info, nullptr, &pipeline_layout_));
+    if (use_push_constants_) {
+        pipeline_layout_info.pushConstantRangeCount = 1;
+        pipeline_layout_info.pPushConstantRanges = &frame_data_.push_const_range;
+    } else {
+        pipeline_layout_info.setLayoutCount = 1;
+        pipeline_layout_info.pSetLayouts = &desc_set_layout_;
+    }
+
+    vk::assert_success(vk::CreatePipelineLayout(dev_, &pipeline_layout_info,
+                nullptr, &pipeline_layout_));
 }
 
 void Hologram::create_pipeline()
@@ -442,19 +593,34 @@ void Hologram::update_projection()
     view_projection_ = projection * view;
 }
 
-void Hologram::step_object(Object &obj, float obj_time) const
+void Hologram::step_object(Object &obj, float obj_time, FrameData &data) const
 {
-    glm::vec3 pos = obj.path.position(obj_time);
-    glm::mat4 trans = obj.animation.transformation(obj_time);
+    if (!pause_objects_) {
+        glm::vec3 pos = obj.path.position(obj_time);
+        glm::mat4 trans = obj.animation.transformation(obj_time);
+        obj.model = glm::translate(glm::mat4(1.0f), pos) * trans;
+    }
 
-    obj.model = glm::translate(glm::mat4(1.0f), pos) * trans;
+    if (use_push_constants_) {
+        auto &mvp = data.object_mvp[obj.frame_data_offset];
+        mvp = view_projection_ * obj.model;
+    } else {
+        glm::mat4 mvp = view_projection_ * obj.model;
+        uint8_t *dst = data.base + obj.frame_data_offset;
+        memcpy(dst, glm::value_ptr(mvp), sizeof(mvp));
+    }
 }
 
 void Hologram::draw_object(const Object &obj, VkCommandBuffer cmd) const
 {
-    glm::mat4 mvp = view_projection_ * obj.model;
-    vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
-            0, sizeof(mvp), glm::value_ptr(mvp));
+    if (use_push_constants_) {
+        const auto &mvp = frame_data_.object_mvp[obj.frame_data_offset];
+        vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
+                0, sizeof(mvp), glm::value_ptr(mvp));
+    } else {
+        vk::CmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                pipeline_layout_, 0, 1, &desc_set_, 1, &obj.frame_data_offset);
+    }
 
     meshes_->cmd_draw(cmd, obj.mesh);
 }
@@ -464,7 +630,7 @@ void Hologram::step_objects(const Worker &worker)
     for (int i = worker.object_begin_; i < worker.object_end_; i++) {
         auto &obj = objects_[i];
 
-        step_object(obj, worker.object_time_);
+        step_object(obj, worker.object_time_, frame_data_);
     }
 }
 
@@ -516,7 +682,7 @@ void Hologram::on_key(Key key)
         update_projection();
         break;
     case KEY_SPACE:
-        paused_ = !paused_;
+        pause_objects_ = !pause_objects_;
         break;
     default:
         break;
@@ -525,9 +691,6 @@ void Hologram::on_key(Key key)
 
 void Hologram::on_tick()
 {
-    if (paused_)
-        return;
-
     for (auto &worker : workers_)
         worker->step_objects();
 }

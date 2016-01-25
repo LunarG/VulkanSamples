@@ -19,6 +19,7 @@ generate_dispatch_table(HelpersDispatchTable.h)
 generate_dispatch_table(HelpersDispatchTable.cpp)
 glsl_to_spirv(Hologram.frag)
 glsl_to_spirv(Hologram.vert)
+glsl_to_spirv(Hologram.push_constant.vert)
 
 set(sources
     Animation.cpp
@@ -31,6 +32,7 @@ set(sources
     Hologram.h
     Hologram.frag.h
     Hologram.vert.h
+    Hologram.push_constant.vert.h
     Main.cpp
     Meshes.cpp
     Meshes.h
