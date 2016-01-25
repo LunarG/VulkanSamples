@@ -227,8 +227,8 @@ Section
         SetShellVarContext all
         CreateDirectory "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}"
         CreateDirectory "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos"
-        CreateShortCut "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos\vulkaninfo.lnk" "$INSTDIR\vulkaninfo.exe"
         CreateShortCut "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos\vulkaninfo32.lnk" "$INSTDIR\vulkaninfo32.exe"
+        CreateShortCut "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos\vulkaninfo.lnk" "$INSTDIR\vulkaninfo.exe"
 
         SetOutPath "$INSTDIR"
         File ${ICOFILE}
