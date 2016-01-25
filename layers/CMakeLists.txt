@@ -96,7 +96,7 @@ if (WIN32)
     # optimizations are enabled in a release build, this only affects the debug build.  For now,
     # enable /bigobj mode for all debug layer files. An alternative for the future is to split
     # draw_state.cpp into multiple files, which will also alleviate the compilation error.
-    if (NOT (MSVC_VERSION LESS 1900))
+    if (MSVC AND NOT (MSVC_VERSION LESS 1900))
         set (CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} -D_CRT_SECURE_NO_WARNINGS /bigobj")
         set (CMAKE_C_FLAGS_DEBUG     "${CMAKE_C_FLAGS_DEBUG} -D_CRT_SECURE_NO_WARNINGS /bigobj")
     else()
