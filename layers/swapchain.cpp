@@ -997,6 +997,13 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(VkInstance  insta
                  it != pSurface->swapchains.end() ; it++) {
                 // Delete all SwpImage's
                 it->second->images.clear();
+                // In case the swapchain's device hasn't been destroyed yet
+                // (which isn't likely, but is possible), delete its
+                // association with this swapchain (i.e. so we can't point to
+                // this swpchain from that device, later on):
+                if (it->second->pDevice) {
+                    it->second->pDevice->swapchains.clear();
+                }
             }
             pSurface->swapchains.clear();
         }
@@ -1118,6 +1125,13 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
                  it != pDevice->swapchains.end() ; it++) {
                 // Delete all SwpImage's
                 it->second->images.clear();
+                // In case the swapchain's surface hasn't been destroyed yet
+                // (which is likely) delete its association with this swapchain
+                // (i.e. so we can't point to this swpchain from that surface,
+                // later on):
+                if (it->second->pSurface) {
+                    it->second->pSurface->swapchains.clear();
+                }
             }
             pDevice->swapchains.clear();
         }
@@ -1863,6 +1877,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
                           "VkSwapchainKHR was created with.",
                           __FUNCTION__);
             }
+        }
+        if (pSwapchain->pSurface) {
+            pSwapchain->pSurface->swapchains.erase(swapchain);
         }
         if (pSwapchain->imageCount) {
             pSwapchain->images.clear();
