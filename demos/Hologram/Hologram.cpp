@@ -82,7 +82,7 @@ void Hologram::attach_shell(Shell &sh)
     for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++)
         mem_flags_.push_back(mem_props.memoryTypes[i].propertyFlags);
 
-    meshes_ = new Meshes(random_dev_(), physical_dev_, dev_, OBJECT_COUNT);
+    meshes_ = new Meshes(random_dev_(), mem_flags_, dev_, objects_.size());
 
     create_frame_data();
     create_descriptor_set();
