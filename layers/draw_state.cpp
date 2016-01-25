@@ -146,7 +146,7 @@ struct spirv_inst_iter {
     uint32_t len() { return *it >> 16; }
     uint32_t opcode() { return *it & 0x0ffffu; }
     uint32_t const & word(unsigned n) { return it[n]; }
-    uint32_t offset() { return it - zero; }
+    uint32_t offset() { return (uint32_t)(it - zero); }
 
     spirv_inst_iter(std::vector<uint32_t>::const_iterator zero,
         std::vector<uint32_t>::const_iterator it) : zero(zero), it(it) {}

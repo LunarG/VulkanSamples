@@ -35,8 +35,10 @@
 #include <iostream>
 #include <vector>
 
+const uint32_t unsignedNegOne = (uint32_t)(-1);
+
 struct Options {
-  uint32_t device_index = -1u;
+  uint32_t device_index = unsignedNegOne;
   std::string device_name;
   std::string output_file;
 };
@@ -70,12 +72,12 @@ bool ParseOptions(int argc, char* argv[], Options* options) {
       }
     }
   }
-  if (options->device_index != -1u && !options->device_name.empty()) {
+  if (options->device_index != unsignedNegOne && !options->device_name.empty()) {
     std::cerr << "Must specify only one of device index and device name."
               << std::endl;
     return false;
   }
-  if (!options->output_file.empty() && options->device_index == -1u &&
+  if (!options->output_file.empty() && options->device_index == unsignedNegOne &&
       options->device_name.empty()) {
     std::cerr << "Must specify device index or device name when specifying "
                  "output file"
@@ -162,7 +164,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  if (options.device_index != -1u) {
+  if (options.device_index != unsignedNegOne) {
     if (static_cast<uint32_t>(options.device_index) >= device_count) {
       std::cerr << "Error: device " << options.device_index
                 << " requested but only " << device_count << " found."

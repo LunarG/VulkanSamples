@@ -313,7 +313,7 @@ class SET_NODE : public BASE_NODE {
     uint32_t             descriptorCount;
     GENERIC_HEADER**     ppDescriptors; // Array where each index points to update node for its slot
     LAYOUT_NODE*         pLayout; // Layout for this set
-    struct SET_NODE*     pNext;
+    SET_NODE*            pNext;
     vector<uint32_t>     dynamicOffsets; // one dynamic offset per dynamic descriptor
     SET_NODE() : pUpdateStructs(NULL), ppDescriptors(NULL), pLayout(NULL), pNext(NULL) {};
 };

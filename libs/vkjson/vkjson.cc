@@ -572,7 +572,7 @@ inline bool AsValue(cJSON* json_value, std::map<F, S>* value) {
   if (json_value->type != cJSON_Array)
     return false;
   int size = cJSON_GetArraySize(json_value);
-  for (unsigned int i = 0; i < size; ++i) {
+  for (int i = 0; i < size; ++i) {
     std::pair<F, S> elem;
     if (!AsValue(cJSON_GetArrayItem(json_value, i), &elem))
       return false;
