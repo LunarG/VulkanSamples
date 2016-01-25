@@ -157,6 +157,7 @@ int main(int argc, char **argv)
     writes[0].dstBinding = 0;
 
     writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[1].pNext = NULL;
     writes[1].dstSet = info.desc_set[0];
     writes[1].dstBinding = 1;
     writes[1].descriptorCount = 1;
