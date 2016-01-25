@@ -41,8 +41,6 @@ private:
 
 ShellWin32::ShellWin32(Game &game) : Shell(game), hwnd_(nullptr)
 {
-    init_window();
-
     global_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     init_vk();
 }
@@ -51,11 +49,9 @@ ShellWin32::~ShellWin32()
 {
     cleanup_vk();
     FreeLibrary(hmodule_);
-
-    DestroyWindow(hwnd_);
 }
 
-void ShellWin32::init_window()
+void ShellWin32::create_window()
 {
     const std::string class_name(settings_.name + "WindowClass");
 
@@ -194,6 +190,8 @@ void ShellWin32::quit()
 
 void ShellWin32::run()
 {
+    create_window();
+
     create_context();
     resize_swapchain(settings_.initial_width, settings_.initial_height);
 
@@ -231,4 +229,6 @@ void ShellWin32::run()
     }
 
     destroy_context();
+
+    DestroyWindow(hwnd_);
 }

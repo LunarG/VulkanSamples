@@ -67,20 +67,17 @@ xcb_atom_t intern_atom(xcb_connection_t *c, xcb_intern_atom_cookie_t cookie)
 
 ShellXcb::ShellXcb(Game &game) : Shell(game)
 {
-    init_connection();
-    init_window();
-
     global_extensions_.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+
+    init_connection();
     init_vk();
 }
 
 ShellXcb::~ShellXcb()
 {
     cleanup_vk();
-
     dlclose(lib_handle_);
 
-    xcb_destroy_window(c_, win_);
     xcb_disconnect(c_);
 }
 
@@ -102,7 +99,7 @@ void ShellXcb::init_connection()
     scr_ = iter.data;
 }
 
-void ShellXcb::init_window()
+void ShellXcb::create_window()
 {
     win_ = xcb_generate_id(c_);
 
@@ -300,11 +297,12 @@ void ShellXcb::loop_poll()
 
 void ShellXcb::run()
 {
-    create_context();
-    resize_swapchain(settings_.initial_width, settings_.initial_height);
-
+    create_window();
     xcb_map_window(c_, win_);
     xcb_flush(c_);
+
+    create_context();
+    resize_swapchain(settings_.initial_width, settings_.initial_height);
 
     quit_ = false;
     if (settings_.animate)
@@ -314,6 +312,6 @@ void ShellXcb::run()
 
     destroy_context();
 
-    xcb_unmap_window(c_, win_);
+    xcb_destroy_window(c_, win_);
     xcb_flush(c_);
 }
