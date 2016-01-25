@@ -588,11 +588,11 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUpdateDescriptorSets(
     VkResult    result   = VK_ERROR_VALIDATION_FAILED_EXT;
     VkBool32    skipCall = VK_FALSE;
 
-    for (auto i = 0; i < descriptorWriteCount; i++) {
+    for (uint32_t i = 0; i < descriptorWriteCount; i++) {
         if ((pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)         ||
             (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC))  {
             VkDeviceSize uniformAlignment = dev_data->physDevPropertyMap[device].limits.minUniformBufferOffsetAlignment;
-            for (auto j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
+            for (uint32_t j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
                 if (vk_safe_modulo(pDescriptorWrites[i].pBufferInfo[j].offset, uniformAlignment) != 0) {
                     skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
                     __LINE__, DEVLIMITS_INVALID_UNIFORM_BUFFER_OFFSET, "DL",
@@ -603,7 +603,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUpdateDescriptorSets(
         } else if ((pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)         ||
                    (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC))  {
             VkDeviceSize storageAlignment = dev_data->physDevPropertyMap[device].limits.minStorageBufferOffsetAlignment;
-            for (auto j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
+            for (uint32_t j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
                 if (vk_safe_modulo(pDescriptorWrites[i].pBufferInfo[j].offset, storageAlignment) != 0) {
                     skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
                     __LINE__, DEVLIMITS_INVALID_STORAGE_BUFFER_OFFSET, "DL",

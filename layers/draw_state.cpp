@@ -1121,7 +1121,7 @@ static VkBool32 validate_status(layer_data* my_data, GLOBAL_CB_NODE* pNode, CBSt
         if ((pNode->status & status_mask) != status_flag) {
             // TODO : How to pass dispatchable objects as srcObject? Here src obj should be cmd buffer
             return log_msg(my_data->report_data, msg_flags, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, error_code, "DS",
-                    "CB object %#" PRIxLEAST64 ": %s", reinterpret_cast<uint64_t>(pNode->commandBuffer), fail_msg);
+                    "CB object %#" PRIxLEAST64 ": %s", (uint64_t)(pNode->commandBuffer), fail_msg);
         }
     }
     return VK_FALSE;
@@ -2199,12 +2199,12 @@ VkBool32 validateIdleDescriptorSet(const layer_data* my_data, VkDescriptorSet se
     VkBool32 skip_call = VK_FALSE;
     auto set_node = my_data->setMap.find(set);
     if (set_node == my_data->setMap.end()) {
-        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, reinterpret_cast<uint64_t>(set), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
-                             "Cannot call %s() on descriptor set %" PRIxLEAST64 " that has not been allocated.", func_str.c_str(), reinterpret_cast<uint64_t>(set));
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)(set), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
+                             "Cannot call %s() on descriptor set %" PRIxLEAST64 " that has not been allocated.", func_str.c_str(), (uint64_t)(set));
     } else {
         if (set_node->second->in_use.load()) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, reinterpret_cast<uint64_t>(set), __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
-                                 "Cannot call %s() on descriptor set %" PRIxLEAST64 " that is in use by a command buffer.", func_str.c_str(), reinterpret_cast<uint64_t>(set));
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)(set), __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
+                                 "Cannot call %s() on descriptor set %" PRIxLEAST64 " that is in use by a command buffer.", func_str.c_str(), (uint64_t)(set));
         }
     }
     return skip_call;
@@ -2506,7 +2506,7 @@ static GLOBAL_CB_NODE* getCBNode(layer_data* my_data, const VkCommandBuffer cb)
         loader_platform_thread_unlock_mutex(&globalLock);
         // TODO : How to pass cb as srcObj here?
         log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
-                "Attempt to use CommandBuffer %#" PRIxLEAST64 " that doesn't exist!", reinterpret_cast<uint64_t>(cb));
+                "Attempt to use CommandBuffer %#" PRIxLEAST64 " that doesn't exist!", (uint64_t)(cb));
         return NULL;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -3097,8 +3097,8 @@ VkBool32 validateAndIncrementDescriptorSets(layer_data* my_data, GLOBAL_CB_NODE*
     for (auto set : pCB->activeSets) {
         auto setNode = my_data->setMap.find(set);
         if (setNode == my_data->setMap.end()) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, reinterpret_cast<uint64_t>(set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
-                "Cannot submit cmd buffer using deleted descriptor set %" PRIu64 ".", reinterpret_cast<uint64_t>(set));
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)(set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
+                "Cannot submit cmd buffer using deleted descriptor set %" PRIu64 ".", (uint64_t)(set));
         } else {
             setNode->second->in_use.fetch_add(1);
         }
@@ -3225,7 +3225,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
             } else {
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
                         "Queue %#" PRIx64 " is waiting on semaphore %#" PRIx64 " that has no way to be signaled.",
-                        reinterpret_cast<uint64_t>(queue), (uint64_t)(submit->pWaitSemaphores[i]));
+                        (uint64_t)(queue), (uint64_t)(submit->pWaitSemaphores[i]));
             }
         }
         for (uint32_t i=0; i < submit->signalSemaphoreCount; ++i) {
@@ -3251,20 +3251,20 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
             if ((pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) && (pCB->submitCount > 1)) {
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
                         "CB %#" PRIxLEAST64 " was begun w/ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set, but has been submitted %#" PRIxLEAST64 " times.",
-                        reinterpret_cast<uint64_t>(pCB->commandBuffer), pCB->submitCount);
+                        (uint64_t)(pCB->commandBuffer), pCB->submitCount);
             }
             if (CB_RECORDED != pCB->state) {
                 // Flag error for using CB w/o vkEndCommandBuffer() called
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NO_END_COMMAND_BUFFER, "DS",
-                        "You must call vkEndCommandBuffer() on CB %#" PRIxLEAST64 " before this call to vkQueueSubmit()!", reinterpret_cast<uint64_t>(pCB->commandBuffer));
+                        "You must call vkEndCommandBuffer() on CB %#" PRIxLEAST64 " before this call to vkQueueSubmit()!", (uint64_t)(pCB->commandBuffer));
                 loader_platform_thread_unlock_mutex(&globalLock);
                 return VK_ERROR_VALIDATION_FAILED_EXT;
             }
             // If USAGE_SIMULTANEOUS_USE_BIT not set then CB cannot already be executing on device
             if (!(pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
                 if (dev_data->inFlightCmdBuffers.find(pCB->commandBuffer) != dev_data->inFlightCmdBuffers.end()) {
-                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
-                        "Attempt to simultaneously execute CB %#" PRIxLEAST64 " w/o VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!", reinterpret_cast<uint64_t>(pCB->commandBuffer));
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
+                        "Attempt to simultaneously execute CB %#" PRIxLEAST64 " w/o VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!", (uint64_t)(pCB->commandBuffer));
                 }
             }
             loader_platform_thread_unlock_mutex(&globalLock);
@@ -4909,7 +4909,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(
             // TODO : commandBuffer should be srcObj
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
                     "vkCmdClearAttachments() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
-                    " It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.", reinterpret_cast<uint64_t>(commandBuffer));
+                    " It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.", (uint64_t)(commandBuffer));
         }
         skipCall |= outsideRenderPass(dev_data, pCB, "vkCmdClearAttachments");
     }
@@ -5929,14 +5929,14 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer 
             // Secondary cmdBuffers are considered pending execution starting w/ being recorded
             if (!(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
                 if (dev_data->inFlightCmdBuffers.find(pSubCB->commandBuffer) != dev_data->inFlightCmdBuffers.end()) {
-                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
-                            "Attempt to simultaneously execute CB %#" PRIxLEAST64 " w/o VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!", reinterpret_cast<uint64_t>(pCB->commandBuffer));
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
+                            "Attempt to simultaneously execute CB %#" PRIxLEAST64 " w/o VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!", (uint64_t)(pCB->commandBuffer));
                 }
                 if (pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT) {
                     // Warn that non-simultaneous secondary cmd buffer renders primary non-simultaneous
-                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(pCommandBuffers[i]), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCommandBuffers[i]), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
                             "vkCmdExecuteCommands(): Secondary Command Buffer (%#" PRIxLEAST64 ") does not have VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set and will cause primary command buffer (%#" PRIxLEAST64 ") to be treated as if it does not have VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set, even though it does.",
-                            reinterpret_cast<uint64_t>(pCommandBuffers[i]), reinterpret_cast<uint64_t>(pCB->commandBuffer));
+                            (uint64_t)(pCommandBuffers[i]), (uint64_t)(pCB->commandBuffer));
                     pCB->beginInfo.flags &= ~VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
                 }
             }
@@ -6026,7 +6026,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
             } else {
                 skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
                         "Queue %#" PRIx64 " is waiting on semaphore %#" PRIx64 " that has no way to be signaled.",
-                        reinterpret_cast<uint64_t>(queue), (uint64_t)(bindInfo.pWaitSemaphores[i]));
+                        (uint64_t)(queue), (uint64_t)(bindInfo.pWaitSemaphores[i]));
             }
         }
         for (uint32_t i=0; i < bindInfo.signalSemaphoreCount; ++i) {
@@ -6136,7 +6136,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
             } else {
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
                         "Queue %#" PRIx64 " is waiting on semaphore %#" PRIx64 " that has no way to be signaled.",
-                        reinterpret_cast<uint64_t>(queue), reinterpret_cast<uint64_t>(pPresentInfo->pWaitSemaphores[i]));
+                        (uint64_t)(queue), (uint64_t)(pPresentInfo->pWaitSemaphores[i]));
             }
         }
         for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
