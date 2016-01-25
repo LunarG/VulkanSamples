@@ -14,10 +14,11 @@ public:
 
 private:
     void init_connection();
-    void init_window();
 
     PFN_vkGetInstanceProcAddr load_vk();
     bool can_present(VkPhysicalDevice phy, uint32_t queue_family);
+
+    void create_window();
     VkSurfaceKHR create_surface(VkInstance instance);
 
     void handle_event(const xcb_generic_event_t *ev);
