@@ -164,6 +164,12 @@ PFN_vkGetInstanceProcAddr ShellXcb::load_vk()
     return reinterpret_cast<PFN_vkGetInstanceProcAddr>(symbol);
 }
 
+bool ShellXcb::can_present(VkPhysicalDevice phy, uint32_t queue_family)
+{
+    return vk::GetPhysicalDeviceXcbPresentationSupportKHR(phy,
+            queue_family, c_, scr_->root_visual);
+}
+
 VkSurfaceKHR ShellXcb::create_surface(VkInstance instance)
 {
     VkXcbSurfaceCreateInfoKHR surface_info = {};

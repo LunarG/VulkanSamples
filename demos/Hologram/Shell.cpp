@@ -164,10 +164,7 @@ void Shell::init_physical_dev()
                 game_queue_family = i;
 
             // present queue must support the surface
-            VkBool32 can_present;
-            if (present_queue_family < 0 &&
-                vk::GetPhysicalDeviceSurfaceSupportKHR(phy, i, ctx_.surface,
-                    &can_present) == VK_SUCCESS && can_present)
+            if (present_queue_family < 0 && can_present(phy, i))
                 present_queue_family = i;
 
             if (game_queue_family >= 0 && present_queue_family >= 0)

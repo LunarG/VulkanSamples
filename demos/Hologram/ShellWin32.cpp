@@ -120,6 +120,11 @@ PFN_vkGetInstanceProcAddr ShellWin32::load_vk()
     return get_proc;
 }
 
+bool ShellWin32::can_present(VkPhysicalDevice phy, uint32_t queue_family)
+{
+    return vk::GetPhysicalDeviceWin32PresentationSupportKHR(phy, queue_family);
+}
+
 VkSurfaceKHR ShellWin32::create_surface(VkInstance instance)
 {
     VkWin32SurfaceCreateInfoKHR surface_info = {};

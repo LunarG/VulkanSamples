@@ -82,6 +82,7 @@ private:
     bool has_all_device_extensions(VkPhysicalDevice phy) const;
 
     virtual PFN_vkGetInstanceProcAddr load_vk() = 0;
+    virtual bool can_present(VkPhysicalDevice phy, uint32_t queue_family) = 0;
     virtual VkSurfaceKHR create_surface(VkInstance instance) = 0;
     VkInstance create_instance();
 
