@@ -50,15 +50,17 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
 
     loader_platform_thread_once(&once_init, loader_initialize);
 
-    if (pAllocator) {
+#if 0
+	if (pAllocator) {
         ptr_instance = (struct loader_instance *) pAllocator->pfnAllocation(
                            pAllocator->pUserData,
                            sizeof(struct loader_instance),
                            sizeof(int *),
                            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     } else {
+#endif
         ptr_instance = (struct loader_instance *) malloc(sizeof(struct loader_instance));
-    }
+    //}
     if (ptr_instance == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -66,10 +68,11 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     tls_instance = ptr_instance;
     loader_platform_thread_lock_mutex(&loader_lock);
     memset(ptr_instance, 0, sizeof(struct loader_instance));
-
+#if 0
     if (pAllocator) {
         ptr_instance->alloc_callbacks = *pAllocator;
     }
+#endif
 
     /*
      * Look for a debug report create info structure
@@ -78,7 +81,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     while (pNext) {
         if (((VkInstanceCreateInfo *)pNext)->sType == VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT) {
             instance_callback = (VkDebugReportCallbackEXT) ptr_instance;
-            if (util_CreateDebugReportCallback(ptr_instance, pNext, pAllocator, instance_callback)) {
+            if (util_CreateDebugReportCallback(ptr_instance, pNext, NULL, instance_callback)) {
                 loader_heap_free(ptr_instance, ptr_instance);
                 loader_platform_thread_unlock_mutex(&loader_lock);
                 return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -102,7 +105,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
                                      pCreateInfo->ppEnabledLayerNames,
                                      &ptr_instance->instance_layer_list);
         if (res != VK_SUCCESS) {
-            util_DestroyDebugReportCallback(ptr_instance, instance_callback, pAllocator);
+            util_DestroyDebugReportCallback(ptr_instance, instance_callback, NULL);
             loader_heap_free(ptr_instance, ptr_instance);
             loader_platform_thread_unlock_mutex(&loader_lock);
             return res;
@@ -128,7 +131,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
         loader_scanned_icd_clear(ptr_instance, &ptr_instance->icd_libs);
         loader_destroy_generic_list(ptr_instance, (struct loader_generic_list *)
                                     &ptr_instance->ext_list);
-        util_DestroyDebugReportCallback(ptr_instance, instance_callback, pAllocator);
+        util_DestroyDebugReportCallback(ptr_instance, instance_callback, NULL);
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance);
         return res;
@@ -147,7 +150,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
                                  &ptr_instance->icd_libs);
         loader_destroy_generic_list(ptr_instance, (struct loader_generic_list *)
                                 &ptr_instance->ext_list);
-        util_DestroyDebugReportCallback(ptr_instance, instance_callback, pAllocator);
+        util_DestroyDebugReportCallback(ptr_instance, instance_callback, NULL);
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -170,7 +173,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
         loader_destroy_generic_list(ptr_instance, (struct loader_generic_list *)
                                 &ptr_instance->ext_list);
         loader.instances = ptr_instance->next;
-        util_DestroyDebugReportCallback(ptr_instance, instance_callback, pAllocator);
+        util_DestroyDebugReportCallback(ptr_instance, instance_callback, NULL);
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance->disp);
         loader_heap_free(ptr_instance, ptr_instance);
@@ -178,7 +181,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     }
 
     created_instance = (VkInstance) ptr_instance;
-    res = loader_create_instance_chain(pCreateInfo, pAllocator, ptr_instance, created_instance);
+    res = loader_create_instance_chain(pCreateInfo, NULL, ptr_instance, created_instance);
 
     if (res == VK_SUCCESS) {
         wsi_create_instance(ptr_instance, pCreateInfo);
@@ -198,7 +201,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     }
 
     /* Remove temporary debug_report callback */
-    util_DestroyDebugReportCallback(ptr_instance, instance_callback, pAllocator);
+    util_DestroyDebugReportCallback(ptr_instance, instance_callback, NULL);
 
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
