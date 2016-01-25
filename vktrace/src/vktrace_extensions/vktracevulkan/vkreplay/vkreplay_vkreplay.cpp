@@ -977,9 +977,8 @@ VkResult vkReplay::manually_replay_vkCreateDescriptorSetLayout(packet_vkCreateDe
     if (remappedDevice == VK_NULL_HANDLE)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    // TODO: Need to make a whole new CreateInfo struct so that we can remap pImmutableSamplers without affecting the packet.
     VkDescriptorSetLayoutCreateInfo *pInfo = (VkDescriptorSetLayoutCreateInfo*) pPacket->pCreateInfo;
-    while (pInfo != NULL)
+    if (pInfo != NULL)
     {
         if (pInfo->pBindings != NULL)
         {
@@ -996,7 +995,6 @@ VkResult vkReplay::manually_replay_vkCreateDescriptorSetLayout(packet_vkCreateDe
                 }
             }
         }
-        pInfo = (VkDescriptorSetLayoutCreateInfo*)pPacket->pCreateInfo->pNext;
     }
     VkDescriptorSetLayout setLayout;
     replayResult = m_vkFuncs.real_vkCreateDescriptorSetLayout(remappedDevice, pPacket->pCreateInfo, NULL, &setLayout);

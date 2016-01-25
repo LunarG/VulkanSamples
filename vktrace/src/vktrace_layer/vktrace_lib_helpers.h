@@ -288,20 +288,21 @@ static void add_VkPipelineShaderStageCreateInfo_to_trace_packet(vktrace_trace_pa
 
 static void add_create_ds_layout_to_trace_packet(vktrace_trace_packet_header* pHeader, const VkDescriptorSetLayoutCreateInfo** ppOut, const VkDescriptorSetLayoutCreateInfo* pIn)
 {
-    const VkDescriptorSetLayoutCreateInfo* pInNow = pIn;
-    VkDescriptorSetLayoutCreateInfo** ppOutNext = (VkDescriptorSetLayoutCreateInfo**)ppOut;
-    while (pInNow != NULL)
-    {
-        VkDescriptorSetLayoutCreateInfo** ppOutNow = ppOutNext;
-        ppOutNext = NULL;
-        vktrace_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(VkDescriptorSetLayoutCreateInfo), pInNow);
-        ppOutNext = (VkDescriptorSetLayoutCreateInfo**)&(*ppOutNow)->pNext;
-        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppOutNow)->pBindings), sizeof(VkDescriptorSetLayoutBinding) * pInNow->bindingCount, pInNow->pBindings);
-        vktrace_finalize_buffer_address(pHeader, (void**)&((*ppOutNow)->pBindings));
-        ppOutNext = (VkDescriptorSetLayoutCreateInfo**)&(*ppOutNow)->pNext;
-        pInNow = (VkDescriptorSetLayoutCreateInfo*)pInNow->pNext;
-        vktrace_finalize_buffer_address(pHeader, (void**)(ppOutNow));
+    uint32_t i;
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)(ppOut), sizeof(VkDescriptorSetLayoutCreateInfo), pIn);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppOut)->pBindings), sizeof(VkDescriptorSetLayoutBinding) * pIn->bindingCount, pIn->pBindings);
+    for (i = 0; i < pIn->bindingCount; i++) {
+        if (pIn->pBindings[i].pImmutableSamplers != NULL &&
+                (pIn->pBindings[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
+                 pIn->pBindings[i].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)) {
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppOut)->pBindings[i].pImmutableSamplers),
+                                               sizeof(VkSampler) * pIn->pBindings[i].descriptorCount,
+                                               pIn->pBindings[i].pImmutableSamplers);
+            vktrace_finalize_buffer_address(pHeader, (void**)&((*ppOut)->pBindings[i].pImmutableSamplers));
+        }
     }
+    vktrace_finalize_buffer_address(pHeader, (void**)&((*ppOut)->pBindings));
+    vktrace_finalize_buffer_address(pHeader, (void**)(ppOut));
     return;
 }
 
