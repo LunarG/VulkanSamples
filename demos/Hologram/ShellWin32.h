@@ -16,6 +16,7 @@ private:
     void init_window();
 
     PFN_vkGetInstanceProcAddr load_vk();
+    bool can_present(VkPhysicalDevice phy, uint32_t queue_family);
     VkSurfaceKHR create_surface(VkInstance instance);
 
     static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
