@@ -300,6 +300,7 @@ void ShellXcb::loop_poll()
 
 void ShellXcb::run()
 {
+    create_context();
     resize_swapchain(settings_.initial_width, settings_.initial_height);
 
     xcb_map_window(c_, win_);
@@ -310,6 +311,8 @@ void ShellXcb::run()
         loop_poll();
     else
         loop_wait();
+
+    destroy_context();
 
     xcb_unmap_window(c_, win_);
     xcb_flush(c_);

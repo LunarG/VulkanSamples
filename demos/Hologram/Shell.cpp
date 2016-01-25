@@ -31,14 +31,10 @@ void Shell::init_vk()
     vk::init_dispatch_table_middle(ctx_.instance, false);
 
     init_physical_dev();
-
-    create_context();
 }
 
 void Shell::cleanup_vk()
 {
-    destroy_context();
-
     vk::DestroyInstance(ctx_.instance, nullptr);
 }
 

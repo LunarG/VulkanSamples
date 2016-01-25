@@ -194,6 +194,7 @@ void ShellWin32::quit()
 
 void ShellWin32::run()
 {
+    create_context();
     resize_swapchain(settings_.initial_width, settings_.initial_height);
 
     Win32Timer timer;
@@ -228,4 +229,6 @@ void ShellWin32::run()
 
         current_time = t;
     }
+
+    destroy_context();
 }
