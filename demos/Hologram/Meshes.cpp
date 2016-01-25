@@ -135,10 +135,10 @@ private:
     std::uniform_real_distribution<float> color_;
 };
 
-Meshes::Meshes(unsigned int rng_seed, VkPhysicalDevice phy, VkDevice dev, int count)
-    : physical_dev_(phy), dev_(dev), vertex_input_state_(), input_assembly_state_()
+Meshes::Meshes(unsigned int rng_seed, const std::vector<VkMemoryPropertyFlags> &mem_flags, VkDevice dev, int count)
+    : dev_(dev), vertex_input_state_(), input_assembly_state_()
 {
-    generate(rng_seed, count);
+    generate(rng_seed, mem_flags, count);
 }
 
 Meshes::~Meshes()
@@ -162,7 +162,7 @@ void Meshes::cmd_draw(VkCommandBuffer cmd, int mesh) const
     vk::CmdDrawIndexed(cmd, m.index_count, 1, m.first_index, m.vertex_offset, 0);
 }
 
-void Meshes::generate(unsigned int rng_seed, int count)
+void Meshes::generate(unsigned int rng_seed, const std::vector<VkMemoryPropertyFlags> &mem_flags, int count)
 {
     MeshGenerator gen(rng_seed, count);
 
@@ -196,11 +196,11 @@ void Meshes::generate(unsigned int rng_seed, int count)
     vb_size_ = gen.vertex_size() * vertex_total;
     ib_size_ = gen.index_size() * index_total;
 
-    allocate_resources();
+    allocate_resources(mem_flags);
     upload_meshes(gen);
 }
 
-void Meshes::allocate_resources()
+void Meshes::allocate_resources(const std::vector<VkMemoryPropertyFlags> &mem_flags)
 {
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -227,18 +227,14 @@ void Meshes::allocate_resources()
 
     // find any supported and mappable memory type
     uint32_t mem_types = (vb_mem_reqs.memoryTypeBits & ib_mem_reqs.memoryTypeBits);
-    VkPhysicalDeviceMemoryProperties mem_props;
-    vk::GetPhysicalDeviceMemoryProperties(physical_dev_, &mem_props);
-    for (uint32_t idx = 0; idx < mem_props.memoryTypeCount; idx++) {
-        if (!(mem_types & (1 << idx)))
-            continue;
-
-        if (!(mem_props.memoryTypes[idx].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT))
-            continue;
-
-        // TODO this may not be reachable
-        mem_info.memoryTypeIndex = idx;
-        break;
+    for (uint32_t idx = 0; idx < mem_flags.size(); idx++) {
+        if ((mem_types & (1 << idx)) &&
+            (mem_flags[idx] & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
+            (mem_flags[idx] & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+            // TODO this may not be reachable
+            mem_info.memoryTypeIndex = idx;
+            break;
+        }
     }
 
     vk::AllocateMemory(dev_, &mem_info, nullptr, &mem_);

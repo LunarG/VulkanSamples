@@ -8,7 +8,7 @@ class MeshGenerator;
 
 class Meshes {
 public:
-    Meshes(unsigned int rng_seed, VkPhysicalDevice phy, VkDevice dev, int count);
+    Meshes(unsigned int rng_seed, const std::vector<VkMemoryPropertyFlags> &mem_flags, VkDevice dev, int count);
     ~Meshes();
 
     const VkPipelineVertexInputStateCreateInfo &vertex_input_state() const { return vertex_input_state_; }
@@ -17,11 +17,10 @@ public:
     void cmd_draw(VkCommandBuffer cmd, int mesh) const;
 
 private:
-    void generate(unsigned int rng_seed, int count);
-    void allocate_resources();
+    void generate(unsigned int rng_seed, const std::vector<VkMemoryPropertyFlags> &mem_flags, int count);
+    void allocate_resources(const std::vector<VkMemoryPropertyFlags> &mem_flags);
     void upload_meshes(MeshGenerator &gen);
 
-    VkPhysicalDevice physical_dev_;
     VkDevice dev_;
 
     struct Mesh {
