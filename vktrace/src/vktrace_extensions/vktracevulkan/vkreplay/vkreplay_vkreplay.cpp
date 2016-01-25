@@ -1259,9 +1259,12 @@ VkResult vkReplay::manually_replay_vkCreatePipelineLayout(packet_vkCreatePipelin
 
     // array to store the original trace-time layouts, so that we can remap them inside the packet and then
     // restore them after replaying the API call.
-    VkDescriptorSetLayout* pSaveLayouts = (VkDescriptorSetLayout*) vktrace_malloc(sizeof(VkDescriptorSetLayout) * pPacket->pCreateInfo->setLayoutCount);
-    if (!pSaveLayouts) {
-        vktrace_LogError("Replay of CreatePipelineLayout out of memory.");
+    VkDescriptorSetLayout* pSaveLayouts = NULL;
+    if (pPacket->pCreateInfo->setLayoutCount > 0) {
+        pSaveLayouts = (VkDescriptorSetLayout*) vktrace_malloc(sizeof(VkDescriptorSetLayout) * pPacket->pCreateInfo->setLayoutCount);
+        if (!pSaveLayouts) {
+            vktrace_LogError("Replay of CreatePipelineLayout out of memory.");
+        }
     }
     uint32_t i = 0;
     for (i = 0; (i < pPacket->pCreateInfo->setLayoutCount) && (pPacket->pCreateInfo->pSetLayouts != NULL); i++) {
@@ -1280,7 +1283,9 @@ VkResult vkReplay::manually_replay_vkCreatePipelineLayout(packet_vkCreatePipelin
         VkDescriptorSetLayout* pSL = (VkDescriptorSetLayout*) &(pPacket->pCreateInfo->pSetLayouts[k]);
         *pSL = pSaveLayouts[k];
     }
-    vktrace_free(pSaveLayouts);
+    if (pSaveLayouts != NULL) {
+        vktrace_free(pSaveLayouts);
+    }
     return replayResult;
 }
 

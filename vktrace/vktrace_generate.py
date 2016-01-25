@@ -348,7 +348,8 @@ class Subcommand(object):
     # return result if needed
     def _generate_trace_funcs(self, extensionName):
         func_body = []
-        manually_written_hooked_funcs = ['AllocateMemory',
+        manually_written_hooked_funcs = ['AllocateCommandBuffers',
+                                         'AllocateMemory',
                                          'AllocateDescriptorSets',
                                          'BeginCommandBuffer',
                                          'CreateDescriptorPool',
