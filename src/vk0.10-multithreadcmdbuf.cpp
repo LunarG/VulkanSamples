@@ -118,6 +118,28 @@ int main(int argc, char **argv)
     init_device_queue(info);
     init_swap_chain(info);
 
+    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
+    presentCompleteSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    presentCompleteSemaphoreCreateInfo.pNext = NULL;
+    presentCompleteSemaphoreCreateInfo.flags = 0;
+
+    res = vkCreateSemaphore(info.device,
+                            &presentCompleteSemaphoreCreateInfo,
+                            NULL,
+                            &info.presentCompleteSemaphore);
+    assert(res == VK_SUCCESS);
+
+    // Get the index of the next available swapchain image:
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain,
+                                      UINT64_MAX,
+                                      info.presentCompleteSemaphore,
+                                      NULL,
+                                      &info.current_buffer);
+    // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
+    // return codes
+    assert(res == VK_SUCCESS);
+
+
     VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
     pPipelineLayoutCreateInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pPipelineLayoutCreateInfo.pNext                  = NULL;
@@ -179,8 +201,8 @@ int main(int argc, char **argv)
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info[0].waitSemaphoreCount = 0;
-    submit_info[0].pWaitSemaphores = NULL;
+    submit_info[0].waitSemaphoreCount = 1;
+    submit_info[0].pWaitSemaphores = &info.presentCompleteSemaphore;
     submit_info[0].pWaitDstStageMask = NULL;
     submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
@@ -190,27 +212,6 @@ int main(int argc, char **argv)
     /* Queue the command buffer for execution */
     res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
     assert(!res);
-
-    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
-    presentCompleteSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    presentCompleteSemaphoreCreateInfo.pNext = NULL;
-    presentCompleteSemaphoreCreateInfo.flags = 0;
-
-    res = vkCreateSemaphore(info.device,
-                            &presentCompleteSemaphoreCreateInfo,
-                            NULL,
-                            &info.presentCompleteSemaphore);
-    assert(res == VK_SUCCESS);
-
-    // Get the index of the next available swapchain image:
-    res = vkAcquireNextImageKHR(info.device, info.swap_chain,
-                                      UINT64_MAX,
-                                      info.presentCompleteSemaphore,
-                                      NULL,
-                                      &info.current_buffer);
-    // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
-    // return codes
-    assert(res == VK_SUCCESS);
 
     /* VULKAN_KEY_START */
 
@@ -261,8 +262,8 @@ int main(int argc, char **argv)
     VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info[0].waitSemaphoreCount = 1;
-    submit_info[0].pWaitSemaphores = &info.presentCompleteSemaphore;
+    submit_info[0].waitSemaphoreCount = 0;
+    submit_info[0].pWaitSemaphores = NULL;
     submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
     submit_info[0].commandBufferCount = 4; /* 3 from threads + prePresentBarrier */
     submit_info[0].pCommandBuffers = threadCmdBufs;
