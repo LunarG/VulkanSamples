@@ -927,6 +927,10 @@ static void demo_prepare_buffers(struct demo *demo)
                 &color_image_view, NULL, &demo->buffers[i].view);
         assert(!err);
     }
+    
+    if (NULL != presentModes) {
+        free(presentModes);
+    }
 }
 
 static void demo_prepare_depth(struct demo *demo)

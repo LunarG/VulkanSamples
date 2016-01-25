@@ -718,6 +718,10 @@ static void demo_prepare_buffers(struct demo *demo)
     }
 
     demo->current_buffer = 0;
+    
+    if (NULL != presentModes) {
+        free(presentModes);
+    }
 }
 
 static void demo_prepare_depth(struct demo *demo)
