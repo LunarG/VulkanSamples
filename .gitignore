@@ -16,4 +16,5 @@ out64/*
 *.sdf
 *.filters
 build
+build32
 dbuild
