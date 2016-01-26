@@ -13,9 +13,6 @@ void main()
 {
 	vec4 pos = matrices.mvp * vec4(in_pos, 1.0);
 
-	pos.y = -pos.y;
-	pos.z = (pos.z + pos.w) / 2.0;
-
 	gl_Position = pos;
 	color = in_color;
 }
