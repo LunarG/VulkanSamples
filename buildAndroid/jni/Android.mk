@@ -67,6 +67,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := VkLayer_device_limits
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/device_limits.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_debug_marker_table.cpp
+LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/buildAndroid/generated \
                     $(SRC_DIR)/loader
