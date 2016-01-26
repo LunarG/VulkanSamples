@@ -1737,6 +1737,7 @@ VKAPI_ATTR void* VKAPI_CALL myalloc(
     return aligned_alloc(alignment, size);
 #endif
 }
+
 VKAPI_ATTR void VKAPI_CALL myfree(
     void*                           pUserData,
     void*                           pMemory)
