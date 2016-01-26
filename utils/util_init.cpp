@@ -725,35 +725,19 @@ void init_swapchain_extension(struct sample_info &info)
     // Search for a graphics queue and a present queue in the array of queue
     // families, try to find one that supports both
     uint32_t graphicsQueueNodeIndex = UINT32_MAX;
-    uint32_t presentQueueNodeIndex  = UINT32_MAX;
     for (uint32_t i = 0; i < info.queue_count; i++) {
         if ((info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
-            if (graphicsQueueNodeIndex == UINT32_MAX) {
-                graphicsQueueNodeIndex = i;
-            }
-
             if (supportsPresent[i] == VK_TRUE) {
                 graphicsQueueNodeIndex = i;
-                presentQueueNodeIndex = i;
-                break;
-            }
-        }
-    }
-    if (presentQueueNodeIndex == UINT32_MAX) {
-        // If didn't find a queue that supports both graphics and present, then
-        // find a separate present queue.
-        for (uint32_t i = 0; i < info.queue_count; ++i) {
-            if (supportsPresent[i] == VK_TRUE) {
-                presentQueueNodeIndex = i;
                 break;
             }
         }
     }
     free(supportsPresent);
 
-    // Generate error if could not find both a graphics and a present queue
-    if (graphicsQueueNodeIndex == UINT32_MAX || presentQueueNodeIndex == UINT32_MAX) {
-        std::cout << "Could not find a graphics and a present queue\nCould not find a graphics and a present queue\n";
+    // Generate error if could not find a queue that supports both a graphics and present
+    if (graphicsQueueNodeIndex == UINT32_MAX) {
+        std::cout << "Could not find a queue that supports both graphics and present";
         exit(-1);
     }
 
