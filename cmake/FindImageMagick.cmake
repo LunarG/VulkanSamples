@@ -108,8 +108,8 @@ function(FIND_REGISTRY)
     set (IMAGEMAGIC_REGLIB_PATH ${IM_BIN_PATH}/lib PARENT_SCOPE)
 
   else()
-  
-#  message(WARNING "In FIND_REGISTRY:  LINUX_BUILD")
+
+    # No registry exists for Linux.  So, just set these to empty strings.
     set (IMAGEMAGIC_REG_PATH "" PARENT_SCOPE)
     set (IMAGEMAGIC_REGINCLUDE_PATH "" PARENT_SCOPE)
     set (IMAGEMAGIC_REGLIB_PATH "" PARENT_SCOPE)
@@ -130,8 +130,17 @@ FUNCTION(FIND_IMAGEMAGICK_API component header)
       ${ImageMagick_INCLUDE_DIRS}
       ${IMAGEMAGIC_REGINCLUDE_PATH}
     PATH_SUFFIXES
-      ImageMagick
+      ImageMagick ImageMagick-6
     DOC "Path to the ImageMagick include dir."
+    )
+  FIND_PATH(ImageMagick_${component}_ARCH_INCLUDE_DIR
+    NAMES magick/magick-baseconfig.h
+    PATHS
+      ${ImageMagick_INCLUDE_DIRS}
+      ${IMAGEMAGIC_REGINCLUDE_PATH}
+    PATH_SUFFIXES
+      ImageMagick ImageMagick-6
+    DOC "Path to the ImageMagick arch-specific include dir."
     )
   FIND_LIBRARY(ImageMagick_${component}_LIBRARY
     NAMES ${ARGN}
@@ -141,10 +150,13 @@ FUNCTION(FIND_IMAGEMAGICK_API component header)
     )
 
   IF(ImageMagick_${component}_INCLUDE_DIR AND ImageMagick_${component}_LIBRARY)
-    SET(ImageMagick_${component}_FOUND TRUE PARENT_SCOPE)
 
+    SET(ImageMagick_${component}_FOUND TRUE PARENT_SCOPE)
     LIST(APPEND ImageMagick_INCLUDE_DIRS
       ${ImageMagick_${component}_INCLUDE_DIR}
+      )
+    LIST(APPEND ImageMagick_${component}_INCLUDE_DIRS
+      ${ImageMagick_${component}_ARCH_INCLUDE_DIR}
       )
     LIST(REMOVE_DUPLICATES ImageMagick_INCLUDE_DIRS)
     SET(ImageMagick_INCLUDE_DIRS ${ImageMagick_INCLUDE_DIRS} PARENT_SCOPE)
@@ -154,6 +166,7 @@ FUNCTION(FIND_IMAGEMAGICK_API component header)
       )
     SET(ImageMagick_LIBRARIES ${ImageMagick_LIBRARIES} PARENT_SCOPE)
   ENDIF(ImageMagick_${component}_INCLUDE_DIR AND ImageMagick_${component}_LIBRARY)
+
 ENDFUNCTION(FIND_IMAGEMAGICK_API)
 
 FUNCTION(FIND_IMAGEMAGICK_EXE component)
@@ -197,15 +210,15 @@ FOREACH(component ${ImageMagick_FIND_COMPONENTS}
     )
   IF(component STREQUAL "Magick++")
     FIND_IMAGEMAGICK_API(Magick++ Magick++.h
-      Magick++ CORE_RL_Magick++_
+      Magick++ CORE_RL_Magick++_ Magick++-6.Q16 Magick++-Q16 Magick++-6.Q8 Magick++-Q8 Magick++-6.Q16HDRI Magick++-Q16HDRI Magick++-6.Q8HDRI Magick++-Q8HDRI
       )
   ELSEIF(component STREQUAL "MagickWand")
     FIND_IMAGEMAGICK_API(MagickWand wand/MagickWand.h
-      Wand MagickWand CORE_RL_wand_
+      Wand MagickWand CORE_RL_wand_ MagickWand-6.Q16 MagickWand-Q16 MagickWand-6.Q8 MagickWand-Q8 MagickWand-6.Q16HDRI MagickWand-Q16HDRI MagickWand-6.Q8HDRI MagickWand-Q8HDRI
       )
   ELSEIF(component STREQUAL "MagickCore")
     FIND_IMAGEMAGICK_API(MagickCore magick/MagickCore.h
-      Magick MagickCore CORE_RL_magick_
+      Magick MagickCore CORE_RL_magick_ MagickCore-6.Q16 MagickCore-Q16 MagickCore-6.Q8 MagickCore-Q8 MagickCore-6.Q16HDRI MagickCore-Q16HDRI MagickCore-6.Q8HDRI MagickCore-Q8HDRI
       )
   ELSE(component STREQUAL "Magick++")
     IF(ImageMagick_EXECUTABLE_DIR)
