@@ -155,9 +155,11 @@ FUNCTION(FIND_IMAGEMAGICK_API component header)
     LIST(APPEND ImageMagick_INCLUDE_DIRS
       ${ImageMagick_${component}_INCLUDE_DIR}
       )
-    LIST(APPEND ImageMagick_INCLUDE_DIRS
-      ${ImageMagick_${component}_ARCH_INCLUDE_DIR}
-      )
+    IF(EXISTS ${ImageMagick_${component}_ARCH_INCLUDE_DIR})
+      LIST(APPEND ImageMagick_INCLUDE_DIRS
+        ${ImageMagick_${component}_ARCH_INCLUDE_DIR}
+        )
+    ENDIF(EXISTS ${ImageMagick_${component}_ARCH_INCLUDE_DIR})
     LIST(REMOVE_DUPLICATES ImageMagick_INCLUDE_DIRS)
     SET(ImageMagick_INCLUDE_DIRS ${ImageMagick_INCLUDE_DIRS} PARENT_SCOPE)
 
