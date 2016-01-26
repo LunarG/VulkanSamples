@@ -39,6 +39,10 @@
 #include <stdbool.h>
 #include <assert.h>
 
+#ifndef _MSC_VER
+#define _ISOC11_SOURCE /* for aligned_alloc() */
+#endif
+
 #ifdef _WIN32
 #pragma comment(linker, "/subsystem:windows")
 #define APP_NAME_STR_LEN 80
