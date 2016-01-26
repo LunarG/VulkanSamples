@@ -155,7 +155,7 @@ FUNCTION(FIND_IMAGEMAGICK_API component header)
     LIST(APPEND ImageMagick_INCLUDE_DIRS
       ${ImageMagick_${component}_INCLUDE_DIR}
       )
-    LIST(APPEND ImageMagick_${component}_INCLUDE_DIRS
+    LIST(APPEND ImageMagick_INCLUDE_DIRS
       ${ImageMagick_${component}_ARCH_INCLUDE_DIR}
       )
     LIST(REMOVE_DUPLICATES ImageMagick_INCLUDE_DIRS)
