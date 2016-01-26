@@ -373,7 +373,7 @@ This layer is a work in progress. VK_LAYER_LUNARG_swapchain layer is intended to
 | Valid sType | Validates that a struct has correct value for sType | WRONG_STYPE | vkCreateSwapchainKHR vkQueuePresentKHR | NA | None |
 | Valid pNext | Validates that a struct has NULL for the value of pNext | WRONG_NEXT | vkCreateSwapchainKHR vkQueuePresentKHR | NA | None |
 | Non-zero value | Validates that a required value should be non-zero | ZERO_VALUE | vkQueuePresentKHR | NA | None |
-| Compaitible Allocator | Validates that pAllocator is compatible (i.e. NULL or not) when an object is created and destroyed | INCOMPATIBLE_ALLOCATOR | vkDestroySurfaceKHR | NA | None |
+| Compatible Allocator | Validates that pAllocator is compatible (i.e. NULL or not) when an object is created and destroyed | INCOMPATIBLE_ALLOCATOR | vkDestroySurfaceKHR | NA | None |
 | Valid use of queueFamilyIndex | Validates that a queueFamilyIndex not used before vkGetPhysicalDeviceQueueFamilyProperties() was called | DID_NOT_QUERY_QUEUE_FAMILIES | vkGetPhysicalDeviceSurfaceSupportKHR | NA | None |
 | Valid queueFamilyIndex value | Validates that a queueFamilyIndex value is less-than pQueueFamilyPropertyCount returned by vkGetPhysicalDeviceQueueFamilyProperties | QUEUE_FAMILY_INDEX_TOO_LARGE | vkGetPhysicalDeviceSurfaceSupportKHR | NA | None |
 | Supported combination of queue and surface | Validates that the surface associated with a swapchain was seen to support the queueFamilyIndex of a given queue | SURFACE_NOT_SUPPORTED_WITH_QUEUE | vkQueuePresentKHR | NA | None |
