@@ -26,13 +26,6 @@
 
 #include "wsi.h"
 
-VkResult intel_wsi_gpu_get_info(struct intel_gpu *gpu,
-                                VkPhysicalGpuInfoType type,
-                                size_t *size, void *data)
-{
-    return VK_ERROR_INVALID_VALUE;
-}
-
 void intel_wsi_gpu_cleanup(struct intel_gpu *gpu)
 {
 }

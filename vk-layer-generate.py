@@ -1805,6 +1805,8 @@ class ObjectTrackerSubcommand(Subcommand):
             "QueueBindSparse",
             "AllocateDescriptorSets",
             "FreeDescriptorSets",
+            "CreateGraphicsPipelines",
+            "CreateComputePipelines",
             "AllocateCommandBuffers",
             "FreeCommandBuffers",
             "DestroyDescriptorPool",

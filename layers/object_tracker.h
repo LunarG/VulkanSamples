@@ -459,6 +459,12 @@ static VkBool32 validate_descriptor_pool(VkDevice dispatchable_object, VkDescrip
 static VkBool32 validate_descriptor_set_layout(VkDevice dispatchable_object, VkDescriptorSetLayout object, VkDebugReportObjectTypeEXT objType, bool null_allowed);
 static VkBool32 validate_command_pool(VkDevice dispatchable_object, VkCommandPool object, VkDebugReportObjectTypeEXT objType, bool null_allowed);
 static VkBool32 validate_buffer(VkQueue dispatchable_object, VkBuffer object, VkDebugReportObjectTypeEXT objType, bool null_allowed);
+static void create_pipeline(VkDevice dispatchable_object, VkPipeline vkObj, VkDebugReportObjectTypeEXT objType);
+static VkBool32 validate_pipeline_cache(VkDevice dispatchable_object, VkPipelineCache object, VkDebugReportObjectTypeEXT objType, bool null_allowed);
+static VkBool32 validate_render_pass(VkDevice dispatchable_object, VkRenderPass object, VkDebugReportObjectTypeEXT objType, bool null_allowed);
+static VkBool32 validate_shader_module(VkDevice dispatchable_object, VkShaderModule object, VkDebugReportObjectTypeEXT objType, bool null_allowed);
+static VkBool32 validate_pipeline_layout(VkDevice dispatchable_object, VkPipelineLayout object, VkDebugReportObjectTypeEXT objType, bool null_allowed);
+static VkBool32 validate_pipeline(VkDevice dispatchable_object, VkPipeline object, VkDebugReportObjectTypeEXT objType, bool null_allowed);
 static void destroy_command_pool(VkDevice dispatchable_object, VkCommandPool object);
 static void destroy_command_buffer(VkCommandBuffer dispatchable_object, VkCommandBuffer object);
 static void destroy_descriptor_pool(VkDevice dispatchable_object, VkDescriptorPool object);
@@ -1123,3 +1129,95 @@ explicit_GetSwapchainImagesKHR(
     return result;
 }
 
+// TODO: Add special case to codegen to cover validating all the pipelines instead of just the first
+VkResult
+explicit_CreateGraphicsPipelines(
+    VkDevice                            device,
+    VkPipelineCache                     pipelineCache,
+    uint32_t                            createInfoCount,
+    const VkGraphicsPipelineCreateInfo *pCreateInfos,
+    const VkAllocationCallbacks        *pAllocator,
+    VkPipeline                         *pPipelines)
+{
+    VkBool32 skipCall = VK_FALSE;
+    loader_platform_thread_lock_mutex(&objLock);
+    skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
+    if (pCreateInfos) {
+        for (uint32_t idx0=0; idx0<createInfoCount; ++idx0) {
+            if (pCreateInfos[idx0].basePipelineHandle) {
+                skipCall |= validate_pipeline(device, pCreateInfos[idx0].basePipelineHandle, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, true);
+            }
+            if (pCreateInfos[idx0].layout) {
+                skipCall |= validate_pipeline_layout(device, pCreateInfos[idx0].layout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, false);
+            }
+            if (pCreateInfos[idx0].pStages) {
+                for (uint32_t idx1=0; idx1<pCreateInfos[idx0].stageCount; ++idx1) {
+                    if (pCreateInfos[idx0].pStages[idx1].module) {
+                        skipCall |= validate_shader_module(device, pCreateInfos[idx0].pStages[idx1].module, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, false);
+                    }
+                }
+            }
+            if (pCreateInfos[idx0].renderPass) {
+                skipCall |= validate_render_pass(device, pCreateInfos[idx0].renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, false);
+            }
+        }
+    }
+    if (pipelineCache) {
+        skipCall |= validate_pipeline_cache(device, pipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, false);
+    }
+    loader_platform_thread_unlock_mutex(&objLock);
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    VkResult result = get_dispatch_table(object_tracker_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
+    loader_platform_thread_lock_mutex(&objLock);
+    if (result == VK_SUCCESS) {
+        for (uint32_t idx2 = 0; idx2 < createInfoCount; ++idx2) {
+            create_pipeline(device, pPipelines[idx2], VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT);
+        }
+    }
+    loader_platform_thread_unlock_mutex(&objLock);
+    return result;
+}
+
+// TODO: Add special case to codegen to cover validating all the pipelines instead of just the first
+VkResult
+explicit_CreateComputePipelines(
+    VkDevice                           device,
+    VkPipelineCache                    pipelineCache,
+    uint32_t                           createInfoCount,
+    const VkComputePipelineCreateInfo *pCreateInfos,
+    const VkAllocationCallbacks       *pAllocator,
+    VkPipeline                        *pPipelines)
+{
+    VkBool32 skipCall = VK_FALSE;
+    loader_platform_thread_lock_mutex(&objLock);
+    skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
+    if (pCreateInfos) {
+        for (uint32_t idx0=0; idx0<createInfoCount; ++idx0) {
+            if (pCreateInfos[idx0].basePipelineHandle) {
+                skipCall |= validate_pipeline(device, pCreateInfos[idx0].basePipelineHandle, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, true);
+            }
+            if (pCreateInfos[idx0].layout) {
+                skipCall |= validate_pipeline_layout(device, pCreateInfos[idx0].layout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, false);
+            }
+            if (pCreateInfos[idx0].stage.module) {
+                skipCall |= validate_shader_module(device, pCreateInfos[idx0].stage.module, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, false);
+            }
+        }
+    }
+    if (pipelineCache) {
+        skipCall |= validate_pipeline_cache(device, pipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, false);
+    }
+    loader_platform_thread_unlock_mutex(&objLock);
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    VkResult result = get_dispatch_table(object_tracker_device_table_map, device)->CreateComputePipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
+    loader_platform_thread_lock_mutex(&objLock);
+    if (result == VK_SUCCESS) {
+        for (uint32_t idx1 = 0; idx1 < createInfoCount; ++idx1) {
+            create_pipeline(device, pPipelines[idx1], VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT);
+        }
+    }
+    loader_platform_thread_unlock_mutex(&objLock);
+    return result;
+}
