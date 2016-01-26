@@ -3344,8 +3344,6 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateInstance(
         }
     }
 
-    *pInstance = (VkInstance) ptr_instance;
-
     return VK_SUCCESS;
 }
 
