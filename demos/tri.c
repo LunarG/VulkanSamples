@@ -1610,6 +1610,8 @@ static void demo_handle_event(struct demo *demo,
         const xcb_configure_notify_event_t *cfg =
             (const xcb_configure_notify_event_t *)event;
         if ((demo->width != cfg->width) || (demo->height != cfg->height)) {
+            demo->width = cfg->width;
+            demo->height = cfg->height;
             demo_resize(demo);
         }
     } break;
