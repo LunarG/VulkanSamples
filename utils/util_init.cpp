@@ -578,6 +578,11 @@ void destroy_window(struct sample_info &info)
 
 #endif // _WIN32
 
+void init_window_size(struct sample_info &info, int32_t default_width, int32_t default_height) {
+    info.width = default_width;
+    info.height = default_height;
+}
+
 void init_depth_buffer(struct sample_info &info)
 {
     VkResult U_ASSERT_ONLY res;

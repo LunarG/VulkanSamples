@@ -247,3 +247,6 @@ void print_UUID(uint8_t* pipelineCacheUUID);
 
 typedef unsigned long long timestamp_t;
 timestamp_t get_milliseconds();
+
+// Main entry point of samples
+int sample_main();

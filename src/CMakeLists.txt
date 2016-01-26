@@ -17,7 +17,7 @@ include_directories("${CMAKE_SOURCE_DIR}/../spirv-tools/include"
 #     the list of shader files of that type, with .vert and .frag omitted
 #   - uses glslangValidator to convert glsl to spirv
 function(sampleExtGLSLShaders SNAME)
-    set(SAMPLE_NAME ${VULKAN_VERSION}-${SNAME})
+    set(SAMPLE_NAME ${SNAME})
     set(SHADER_DIR ${SAMPLES_DATA_DIR}/${VULKAN_VERSION})
     foreach(SFILE ${SAMPLE_GLSL_VERT_SHADERS})
         add_custom_command(OUTPUT ${SHADER_DIR}/${SFILE}-vert.spv
@@ -35,7 +35,7 @@ function(sampleExtGLSLShaders SNAME)
         )
         set(SHADER_FILES ${SHADER_FILES} ${SHADER_DIR}/${SFILE}-frag.spv)
     endforeach(SFILE)
-    add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}.cpp ${SHADER_FILES})
+    add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp ${SHADER_FILES})
     target_link_libraries(${SAMPLE_NAME} ${VULKAN_LOADER} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${PTHREAD})
 endfunction(sampleExtGLSLShaders)
 
@@ -44,12 +44,12 @@ endfunction(sampleExtGLSLShaders)
 #   - assumes SAMPLE_SPIRV_SHADERS is set to list to list of spirv shsders
 #     used by the sample, with the .spv omitted
 function(sampleExtSPIRVShaders SNAME)
-    set(SAMPLE_NAME ${VULKAN_VERSION}-${SNAME})
+    set(SAMPLE_NAME ${SNAME})
     set(SHADER_DIR ${SAMPLES_DATA_DIR}/${VULKAN_VERSION})
     foreach(SFILE ${SAMPLE_SPIRV_SHADERS})
         set(SHADER_FILES ${SHADER_FILES} ${SHADER_DIR}/${SFILE}.spv)
     endforeach(SFILE)
-    add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}.cpp ${SHADER_FILES})
+    add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp ${SHADER_FILES})
     target_link_libraries(${SAMPLE_NAME} ${VULKAN_LOADER} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${PTHREAD})
 endfunction(sampleExtSPIRVShaders)
 
@@ -58,12 +58,12 @@ endfunction(sampleExtSPIRVShaders)
 #   - assumes S_TARGETS set to list of build targets
 function(sampleWithSingleFile)
     foreach(TARG ${S_TARGETS})
-        set(SAMPLE_NAME ${VULKAN_VERSION}-${TARG})
+        set(SAMPLE_NAME ${TARG})
         if(UNIX)
-            add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}.cpp)
+            add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD} ${SPIRV_TOOLS_LIBRARIES})
         else()
-            add_executable(${SAMPLE_NAME} WIN32 ${SAMPLE_NAME}.cpp)
+            add_executable(${SAMPLE_NAME} WIN32 ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${VULKAN_LOADER} ${WINLIBS} ${SPIRV_TOOLS_LIBRARIES})
         endif()
     endforeach(TARG)
@@ -75,12 +75,12 @@ endfunction(sampleWithSingleFile)
 #   - assumes S_TARGETS set to list of build targets
 function(sampleInlineGLSLShaders)
     foreach(TARG ${S_TARGETS})
-        set(SAMPLE_NAME ${VULKAN_VERSION}-${TARG})
+        set(SAMPLE_NAME ${TARG}/${TARG})
         if(UNIX)
             add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}.cpp)
             target_link_libraries(${SAMPLE_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD})
         else()
-            add_executable(${SAMPLE_NAME} WIN32 ${SAMPLE_NAME}.cpp)
+            add_executable(${SAMPLE_NAME} WIN32 ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
             target_link_libraries(${SAMPLE_NAME} ${GLSLANG_LIBRARIES} ${VULKAN_LOADER} ${WINLIBS})
         endif()
     endforeach(TARG)
@@ -104,11 +104,11 @@ find_library(VULKAN_LOADER NAMES vulkan-1 vulkan
              HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader"
                    "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader/Release"
                    "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader/Debug"
-                   "${PROJECT_SOURCE_DIR}\\..\\Bin\\Release" )
+                   "${PROJECT_SOURCE_DIR}/../Bin" )
 
 find_program(GLSLANG_VALIDATOR NAMES glslangValidator
              HINTS "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/install/bin"
-                   "${PROJECT_SOURCE_DIR}\\..\\Bin" )
+                   "${PROJECT_SOURCE_DIR}/../Bin" )
 
 if(WIN32)
     set (MOVE_CMD "move")
