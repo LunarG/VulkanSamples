@@ -1739,10 +1739,12 @@ static void demo_init_vk(struct demo *demo) {
 
     char *instance_validation_layers[] = {
         "VK_LAYER_LUNARG_mem_tracker",
+        "VK_LAYER_GOOGLE_unique_objects",
     };
 
     demo->device_validation_layers[0] = "VK_LAYER_LUNARG_mem_tracker";
-    device_validation_layer_count = 1;
+    demo->device_validation_layers[1] = "VK_LAYER_GOOGLE_unique_objects";
+    device_validation_layer_count = 2;
 
     /* Look for validation layers */
     VkBool32 validation_found = 0;
