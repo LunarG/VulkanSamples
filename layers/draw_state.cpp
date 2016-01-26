@@ -425,6 +425,23 @@ storage_class_name(unsigned sc)
     }
 }
 
+/* get the value of an integral constant */
+unsigned
+get_constant_value(shader_module const *src, unsigned id)
+{
+    auto value = src->get_def(id);
+    assert(value != src->end());
+
+    if (value.opcode() != spv::OpConstant) {
+        /* TODO: Either ensure that the specialization transform is already performed on a module we're
+            considering here, OR -- specialize on the fly now.
+            */
+        return 1;
+    }
+
+    return value.word(3);
+}
+
 /* returns ptr to null terminator */
 static char *
 describe_type(char *dst, shader_module const *src, unsigned type)
