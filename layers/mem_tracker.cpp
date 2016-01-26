@@ -78,6 +78,7 @@ struct layer_data {
     unordered_map<VkFramebuffer,       MT_FB_INFO>               fbMap;
     unordered_map<VkRenderPass,        MT_PASS_INFO>             passMap;
     unordered_map<VkImageView,         MT_IMAGE_VIEW_INFO>       imageViewMap;
+    unordered_map<VkDescriptorSet,     MT_DESCRIPTOR_SET_INFO>   descriptorSetMap;
     // Images and Buffers are 2 objects that can have memory bound to them so they get special treatment
     unordered_map<uint64_t,            MT_OBJ_BINDING_INFO>      imageMap;
     unordered_map<uint64_t,            MT_OBJ_BINDING_INFO>      bufferMap;
@@ -581,6 +582,7 @@ clear_cmd_buf_and_mem_references(
             }
         }
         pCBInfo->pMemObjList.clear();
+        pCBInfo->activeDescriptorSets.clear();
         pCBInfo->validate_functions.clear();
     }
     return skipCall;
@@ -2380,6 +2382,16 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(
     const uint32_t        *pDynamicOffsets)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    auto cb_data = my_data->cbMap.find(commandBuffer);
+    if (cb_data != my_data->cbMap.end()) {
+        std::vector<VkDescriptorSet>& activeDescriptorSets = cb_data->second.activeDescriptorSets;
+        if (activeDescriptorSets.size() < (setCount + firstSet)) {
+            activeDescriptorSets.resize(setCount + firstSet);
+        }
+        for (uint32_t i = 0; i < setCount; ++i) {
+            activeDescriptorSets[i + firstSet] = pDescriptorSets[i];
+        }
+    }
     // TODO : Somewhere need to verify that all textures referenced by shaders in DS are in some type of *SHADER_READ* state
     my_data->device_dispatch_table->CmdBindDescriptorSets(
         commandBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
@@ -2432,6 +2444,87 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(
         my_data->device_dispatch_table->CmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUpdateDescriptorSets(
+    VkDevice                                    device,
+    uint32_t                                    descriptorWriteCount,
+    const VkWriteDescriptorSet*                 pDescriptorWrites,
+    uint32_t                                    descriptorCopyCount,
+    const VkCopyDescriptorSet*                  pDescriptorCopies)
+{
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    for (uint32_t i = 0; i < descriptorWriteCount; ++i) {
+        if (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
+            my_data->descriptorSetMap[pDescriptorWrites[i].dstSet].images.push_back(pDescriptorWrites[i].pImageInfo->imageView);
+        } else if (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER ||
+                   pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
+                   pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+            my_data->descriptorSetMap[pDescriptorWrites[i].dstSet].buffers.push_back(pDescriptorWrites[i].pBufferInfo->buffer);
+        }
+    }
+    my_data->device_dispatch_table->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
+}
+
+bool markStoreImagesAndBuffersAsWritten(
+    VkCommandBuffer commandBuffer)
+{
+    bool skip_call = false;
+    loader_platform_thread_lock_mutex(&globalLock);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    auto cb_data = my_data->cbMap.find(commandBuffer);
+    if (cb_data == my_data->cbMap.end()) return skip_call;
+    std::vector<VkDescriptorSet>& activeDescriptorSets = cb_data->second.activeDescriptorSets;
+    for (auto descriptorSet : activeDescriptorSets) {
+        auto ds_data = my_data->descriptorSetMap.find(descriptorSet);
+        if (ds_data == my_data->descriptorSetMap.end()) continue;
+        std::vector<VkImageView> images = ds_data->second.images;
+        std::vector<VkBuffer> buffers = ds_data->second.buffers;
+        for (auto imageView : images) {
+            auto iv_data = my_data->imageViewMap.find(imageView);
+            if (iv_data == my_data->imageViewMap.end()) continue;
+            VkImage image = iv_data->second.image;
+            VkDeviceMemory mem;
+            skip_call |= get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
+            std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, mem, true, image); return VK_FALSE; };
+            cb_data->second.validate_functions.push_back(function);
+        }
+        for (auto buffer : buffers) {
+            VkDeviceMemory mem;
+            skip_call |= get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
+            std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, mem, true); return VK_FALSE; };
+            cb_data->second.validate_functions.push_back(function);
+        }
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return skip_call;
+}
+
+VKAPI_ATTR void VKAPI_CALL vkCmdDraw(
+    VkCommandBuffer                             commandBuffer,
+    uint32_t                                    vertexCount,
+    uint32_t                                    instanceCount,
+    uint32_t                                    firstVertex,
+    uint32_t                                    firstInstance)
+{
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    bool skip_call = markStoreImagesAndBuffersAsWritten(commandBuffer);
+    if (!skip_call)
+        my_data->device_dispatch_table->CmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+}
+
+VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexed(
+    VkCommandBuffer                             commandBuffer,
+    uint32_t                                    indexCount,
+    uint32_t                                    instanceCount,
+    uint32_t                                    firstIndex,
+    int32_t                                     vertexOffset,
+    uint32_t                                    firstInstance)
+{
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    bool skip_call = markStoreImagesAndBuffersAsWritten(commandBuffer);
+    if (!skip_call)
+        my_data->device_dispatch_table->CmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndirect(
     VkCommandBuffer commandBuffer,
      VkBuffer       buffer,
@@ -2444,6 +2537,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndirect(
     loader_platform_thread_lock_mutex(&globalLock);
     VkBool32 skipCall  = get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     skipCall          |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdDrawIndirect");
+    skipCall |= markStoreImagesAndBuffersAsWritten(commandBuffer);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdDrawIndirect(commandBuffer, buffer, offset, count, stride);
@@ -2462,10 +2556,24 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexedIndirect(
     loader_platform_thread_lock_mutex(&globalLock);
     VkBool32 skipCall = get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     skipCall         |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdDrawIndexedIndirect");
+    skipCall |= markStoreImagesAndBuffersAsWritten(commandBuffer);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdDrawIndexedIndirect(commandBuffer, buffer, offset, count, stride);
     }
+}
+
+
+VKAPI_ATTR void VKAPI_CALL vkCmdDispatch(
+    VkCommandBuffer                             commandBuffer,
+    uint32_t                                    x,
+    uint32_t                                    y,
+    uint32_t                                    z)
+{
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    bool skip_call = markStoreImagesAndBuffersAsWritten(commandBuffer);
+    if (!skip_call)
+        my_data->device_dispatch_table->CmdDispatch(commandBuffer, x, y, z);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatchIndirect(
@@ -2478,6 +2586,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatchIndirect(
     loader_platform_thread_lock_mutex(&globalLock);
     VkBool32 skipCall = get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     skipCall         |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdDispatchIndirect");
+    skipCall |= markStoreImagesAndBuffersAsWritten(commandBuffer);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdDispatchIndirect(commandBuffer, buffer, offset);
@@ -3328,6 +3437,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkCreateImageView;
     if (!strcmp(funcName, "vkCreateBufferView"))
         return (PFN_vkVoidFunction) vkCreateBufferView;
+    if (!strcmp(funcName, "vkUpdateDescriptorSets"))
+        return (PFN_vkVoidFunction) vkUpdateDescriptorSets;
     if (!strcmp(funcName, "vkAllocateCommandBuffers"))
         return (PFN_vkVoidFunction) vkAllocateCommandBuffers;
     if (!strcmp(funcName, "vkFreeCommandBuffers"))
@@ -3352,10 +3463,16 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkCmdBindVertexBuffers;
     if (!strcmp(funcName, "vkCmdBindIndexBuffer"))
         return (PFN_vkVoidFunction) vkCmdBindIndexBuffer;
+    if (!strcmp(funcName, "vkCmdDraw"))
+        return (PFN_vkVoidFunction) vkCmdDraw;
+    if (!strcmp(funcName, "vkCmdDrawIndexed"))
+        return (PFN_vkVoidFunction) vkCmdDrawIndexed;
     if (!strcmp(funcName, "vkCmdDrawIndirect"))
         return (PFN_vkVoidFunction) vkCmdDrawIndirect;
     if (!strcmp(funcName, "vkCmdDrawIndexedIndirect"))
         return (PFN_vkVoidFunction) vkCmdDrawIndexedIndirect;
+    if (!strcmp(funcName, "vkCmdDispatch"))
+        return (PFN_vkVoidFunction)vkCmdDispatch;
     if (!strcmp(funcName, "vkCmdDispatchIndirect"))
         return (PFN_vkVoidFunction)vkCmdDispatchIndirect;
     if (!strcmp(funcName, "vkCmdCopyBuffer"))

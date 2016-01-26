@@ -145,6 +145,7 @@ typedef struct _MT_CB_INFO {
     VkFence                     lastSubmittedFence;
     VkQueue                     lastSubmittedQueue;
     VkRenderPass                pass;
+    vector<VkDescriptorSet>     activeDescriptorSets;
     vector<std::function<VkBool32()> > validate_functions;
     // Order dependent, stl containers must be at end of struct
     list<VkDeviceMemory>        pMemObjList; // List container of Mem objs referenced by this CB
@@ -198,6 +199,11 @@ struct MT_QUEUE_INFO {
     uint64_t                    lastSubmittedId;
     list<VkCommandBuffer>       pQueueCommandBuffers;
     list<VkDeviceMemory>        pMemRefList;
+};
+
+struct MT_DESCRIPTOR_SET_INFO {
+    std::vector<VkImageView> images;
+    std::vector<VkBuffer> buffers;
 };
 
 // Track Swapchain Information
