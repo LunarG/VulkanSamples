@@ -411,6 +411,11 @@ Section "uninstall"
         Delete /REBOOTOK "$INSTDIR\Vulkan.ico"
         Delete /REBOOTOK "$INSTDIR\ConfigLayersAndVulkanDLL.ps1"
         Delete /REBOOTOK "$INSTDIR\vulkaninfo.exe"
+        
+        # If running on a 64-bit OS machine
+        ${If} ${RunningX64}
+            Delete /REBOOTOK "$INSTDIR\vulkaninfo32.exe"
+        ${EndIf}
 
         # Need to do a SetOutPath to something outside of INSTDIR,
         # or the uninstall will think INSTDIR is busy
