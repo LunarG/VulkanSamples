@@ -100,11 +100,11 @@ find_library(VULKAN_LOADER NAMES vulkan-1 vulkan
              HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader"
                    "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader/Release"
                    "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader/Debug"
-                   "${PROJECT_SOURCE_DIR}\\..\\Bin\\Release" )
+                   "${PROJECT_SOURCE_DIR}/../Bin" )
 
 find_program(GLSLANG_VALIDATOR NAMES glslangValidator
              HINTS "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/install/bin"
-                   "${PROJECT_SOURCE_DIR}\\..\\Bin" )
+                   "${PROJECT_SOURCE_DIR}/../Bin" )
 
 if(WIN32)
     set (MOVE_CMD "move")
