@@ -33,15 +33,15 @@
  * should.  It also does no error checking.
  */
 
+#ifndef _MSC_VER
+#define _ISOC11_SOURCE /* for aligned_alloc() */
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include <assert.h>
-
-#ifndef _MSC_VER
-#define _ISOC11_SOURCE /* for aligned_alloc() */
-#endif
 
 #ifdef _WIN32
 #pragma comment(linker, "/subsystem:windows")
