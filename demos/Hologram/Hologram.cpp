@@ -585,12 +585,20 @@ void Hologram::prepare_framebuffers(VkSwapchainKHR swapchain)
 
 void Hologram::update_projection()
 {
-    float aspect = static_cast<float>(extent_.width) / static_cast<float>(extent_.height);
     const glm::vec3 center(0.0f);
     const glm::vec3 up(0.f, 0.0f, 1.0f);
     const glm::mat4 view = glm::lookAt(eye_pos_, center, up);
+
+    float aspect = static_cast<float>(extent_.width) / static_cast<float>(extent_.height);
     const glm::mat4 projection = glm::perspective(0.4f, aspect, 0.1f, 100.0f);
-    view_projection_ = projection * view;
+
+    // Vulkan clip space has inverted Y and half Z.
+    const glm::mat4 clip(1.0f,  0.0f, 0.0f, 0.0f,
+                         0.0f, -1.0f, 0.0f, 0.0f,
+                         0.0f,  0.0f, 0.5f, 0.0f,
+                         0.0f,  0.0f, 0.5f, 1.0f);
+
+    view_projection_ = clip * projection * view;
 }
 
 void Hologram::step_object(Object &obj, float obj_time, FrameData &data) const
