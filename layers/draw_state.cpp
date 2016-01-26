@@ -446,7 +446,7 @@ describe_type(char *dst, shader_module const *src, unsigned type)
             dst += sprintf(dst, "mat%d of ", insn.word(3));
             return describe_type(dst, src, insn.word(2));
         case spv::OpTypeArray:
-            dst += sprintf(dst, "arr[%d] of ", insn.word(3));
+            dst += sprintf(dst, "arr[%d] of ", get_constant_value(src, insn.word(3)));
             return describe_type(dst, src, insn.word(2));
         case spv::OpTypePointer:
             dst += sprintf(dst, "ptr to %s ", storage_class_name(insn.word(2)));
@@ -497,10 +497,18 @@ types_match(shader_module const *a, shader_module const *b, unsigned a_type, uns
             return a_insn.word(2) == b_insn.word(2) && !b_arrayed;
         case spv::OpTypeVector:
         case spv::OpTypeMatrix:
-        case spv::OpTypeArray:
             /* match on element type, count. these all have the same layout. we don't get here if
              * b_arrayed -- that is handled above. */
-            return !b_arrayed && types_match(a, b, a_insn.word(2), b_insn.word(2), b_arrayed) && a_insn.word(3) == b_insn.word(3);
+            return !b_arrayed &&
+                types_match(a, b, a_insn.word(2), b_insn.word(2), b_arrayed) &&
+                a_insn.word(3) == b_insn.word(3);
+        case spv::OpTypeArray:
+            /* match on element type, count. these all have the same layout. we don't get here if
+             * b_arrayed. This differs from vector & matrix types in that the array size is the id of a constant instruction,
+             * not a literal within OpTypeArray */
+            return !b_arrayed &&
+                types_match(a, b, a_insn.word(2), b_insn.word(2), b_arrayed) &&
+                get_constant_value(a, a_insn.word(3)) == get_constant_value(b, b_insn.word(3));
         case spv::OpTypeStruct:
             /* match on all element types */
             {
@@ -561,7 +569,7 @@ get_locations_consumed_by_type(shader_module const *src, unsigned type, bool str
                 return get_locations_consumed_by_type(src, insn.word(2), false);
             }
             else {
-                return insn.word(3) * get_locations_consumed_by_type(src, insn.word(2), false);
+                return get_constant_value(src, insn.word(3)) * get_locations_consumed_by_type(src, insn.word(2), false);
             }
         case spv::OpTypeMatrix:
             /* num locations is the dimension * element size */
