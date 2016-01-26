@@ -4754,6 +4754,58 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvidedInBlock)
     }
 }
 
+TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize)
+{
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Type mismatch on location 0: 'ptr to output arr[2] of float32' vs 'ptr to input arr[3] of float32'");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    char const *vsSource =
+        "#version 400\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) out float x[2];\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   x[0] = 0; x[1] = 0;\n"
+        "   gl_Position = vec4(1);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 400\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) in float x[3];\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(x[0] + x[1] + x[2]);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        m_errorMonitor->DumpFailureMsgs();
+        FAIL() << "Did not receive Error 'Type mismatch on location 0: 'ptr to output arr[2] of float32' vs 'ptr to input arr[3] of float32''";
+    }
+}
+
 TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch)
 {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
