@@ -346,6 +346,7 @@ build_def_index(shader_module *module)
 {
     for (auto insn : *module) {
         switch (insn.opcode()) {
+        /* Types */
         case spv::OpTypeVoid:
         case spv::OpTypeBool:
         case spv::OpTypeInt:
@@ -369,8 +370,27 @@ build_def_index(shader_module *module)
             module->def_index[insn.word(1)] = insn.offset();
             break;
 
+        /* Fixed constants */
+        case spv::OpConstantTrue:
+        case spv::OpConstantFalse:
+        case spv::OpConstant:
+        case spv::OpConstantComposite:
+        case spv::OpConstantSampler:
+        case spv::OpConstantNull:
+            module->def_index[insn.word(2)] = insn.offset();
+            break;
+
+        /* Specialization constants */
+        case spv::OpSpecConstantTrue:
+        case spv::OpSpecConstantFalse:
+        case spv::OpSpecConstant:
+        case spv::OpSpecConstantComposite:
+        case spv::OpSpecConstantOp:
+            module->def_index[insn.word(2)] = insn.offset();
+            break;
+
         default:
-            /* We only care about type definitions */
+            /* We don't care about any other defs for now. */
             break;
         }
     }
