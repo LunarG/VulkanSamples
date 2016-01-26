@@ -362,6 +362,7 @@ class Subcommand(object):
                                          'CmdPipelineBarrier',
                                          'CmdWaitEvents',
                                          'CmdBeginRenderPass',
+                                         'CmdPushConstants',
                                          'EnumeratePhysicalDevices',
                                          'FreeMemory',
                                          'FreeDescriptorSets',

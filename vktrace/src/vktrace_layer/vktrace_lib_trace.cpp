@@ -1032,6 +1032,30 @@ VKTRACER_EXPORT VKAPI_ATTR void VKAPI_CALL __HOOKED_vkCmdPipelineBarrier(
     FINISH_TRACE_PACKET();
 }
 
+VKTRACER_EXPORT VKAPI_ATTR void VKAPI_CALL __HOOKED_vkCmdPushConstants(
+    VkCommandBuffer commandBuffer,
+    VkPipelineLayout layout,
+    VkShaderStageFlags stageFlags,
+    uint32_t offset,
+    uint32_t size,
+    const void* pValues)
+{
+    vktrace_trace_packet_header* pHeader;
+    packet_vkCmdPushConstants* pPacket = NULL;
+    CREATE_TRACE_PACKET(vkCmdPushConstants, size);
+    mdd(commandBuffer)->devTable.CmdPushConstants(commandBuffer, layout, stageFlags, offset, size, pValues);
+    vktrace_set_packet_entrypoint_end_time(pHeader);
+    pPacket = interpret_body_as_vkCmdPushConstants(pHeader);
+    pPacket->commandBuffer = commandBuffer;
+    pPacket->layout = layout;
+    pPacket->stageFlags = stageFlags;
+    pPacket->offset = offset;
+    pPacket->size = size;
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pValues), size, pValues);
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pValues));
+    FINISH_TRACE_PACKET();
+}
+
 VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateGraphicsPipelines(
     VkDevice device,
     VkPipelineCache pipelineCache,
