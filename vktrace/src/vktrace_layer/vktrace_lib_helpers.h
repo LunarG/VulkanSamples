@@ -274,16 +274,17 @@ static void add_VkPipelineShaderStageCreateInfo_to_trace_packet(vktrace_trace_pa
     vktrace_finalize_buffer_address(pHeader, (void**)&packetShader->pName);
 
     // Specialization info
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&packetShader->pSpecializationInfo, sizeof(VkSpecializationInfo), paramShader->pSpecializationInfo);
     if (packetShader->pSpecializationInfo != NULL)
     {
-        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&packetShader->pSpecializationInfo, sizeof(VkPipelineShaderStageCreateInfo), paramShader->pSpecializationInfo);
-        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&packetShader->pSpecializationInfo->pMapEntries, sizeof(VkSpecializationMapEntry) * paramShader->pSpecializationInfo->mapEntryCount, paramShader->pSpecializationInfo->pMapEntries);
-        // TODO: packetShader->pSpecializationInfo->pData is not yet supported because we don't know what size it is.
-        //   We now have dataSize so fix this
-        vktrace_LogError("VkSpecializationInfo is not yet supported because we don't know how many bytes it is.");
-        vktrace_finalize_buffer_address(pHeader, (void**)&packetShader->pSpecializationInfo->pMapEntries);
-        vktrace_finalize_buffer_address(pHeader, (void**)&packetShader->pSpecializationInfo);
+        if (paramShader->pSpecializationInfo != NULL) {
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&packetShader->pSpecializationInfo->pMapEntries, sizeof(VkSpecializationMapEntry) * paramShader->pSpecializationInfo->mapEntryCount, paramShader->pSpecializationInfo->pMapEntries);
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&packetShader->pSpecializationInfo->pData, paramShader->pSpecializationInfo->dataSize, paramShader->pSpecializationInfo->pData);
+            vktrace_finalize_buffer_address(pHeader, (void**)&packetShader->pSpecializationInfo->pMapEntries);
+            vktrace_finalize_buffer_address(pHeader, (void**)&packetShader->pSpecializationInfo->pData);
+        }
     }
+    vktrace_finalize_buffer_address(pHeader, (void**)&packetShader->pSpecializationInfo);
 }
 
 static void add_create_ds_layout_to_trace_packet(vktrace_trace_packet_header* pHeader, const VkDescriptorSetLayoutCreateInfo** ppOut, const VkDescriptorSetLayoutCreateInfo* pIn)
