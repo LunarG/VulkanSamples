@@ -135,7 +135,7 @@ struct layer_data {
 
 // Code imported from ShaderChecker
 static void
-build_type_def_index(shader_module *);
+build_def_index(shader_module *);
 
 // A forward iterator over spirv instructions. Provides easy access to len, opcode, and content words
 // without the caller needing to care too much about the physical SPIRV module layout.
@@ -179,15 +179,15 @@ struct shader_module {
     /* the spirv image itself */
     vector<uint32_t> words;
     /* a mapping of <id> to the first word of its def. this is useful because walking type
-     * trees requires jumping all over the instruction stream.
+     * trees, constant expressions, etc requires jumping all over the instruction stream.
      */
-    unordered_map<unsigned, unsigned> type_def_index;
+    unordered_map<unsigned, unsigned> def_index;
 
     shader_module(VkShaderModuleCreateInfo const *pCreateInfo) :
         words((uint32_t *)pCreateInfo->pCode, (uint32_t *)pCreateInfo->pCode + pCreateInfo->codeSize / sizeof(uint32_t)),
-        type_def_index() {
+        def_index() {
 
-        build_type_def_index(this);
+        build_def_index(this);
     }
 
     /* expose begin() / end() to enable range-based for */
@@ -196,9 +196,10 @@ struct shader_module {
     /* given an offset into the module, produce an iterator there. */
     spirv_inst_iter at(unsigned offset) const { return spirv_inst_iter(words.begin(), words.begin() + offset); }
 
-    spirv_inst_iter get_type_def(unsigned type_id) const {
-        auto it = type_def_index.find(type_id);
-        if (it == type_def_index.end()) {
+    /* gets an iterator to the definition of an id */
+    spirv_inst_iter get_def(unsigned id) const {
+        auto it = def_index.find(id);
+        if (it == def_index.end()) {
             return end();
         }
         return at(it->second);
@@ -341,7 +342,7 @@ static string cmdTypeToString(CMD_TYPE cmd)
 
 // SPIRV utility functions
 static void
-build_type_def_index(shader_module *module)
+build_def_index(shader_module *module)
 {
     for (auto insn : *module) {
         switch (insn.opcode()) {
@@ -365,7 +366,7 @@ build_type_def_index(shader_module *module)
         case spv::OpTypeReserveId:
         case spv::OpTypeQueue:
         case spv::OpTypePipe:
-            module->type_def_index[insn.word(1)] = insn.offset();
+            module->def_index[insn.word(1)] = insn.offset();
             break;
 
         default:
@@ -408,7 +409,7 @@ storage_class_name(unsigned sc)
 static char *
 describe_type(char *dst, shader_module const *src, unsigned type)
 {
-    auto insn = src->get_type_def(type);
+    auto insn = src->get_def(type);
     assert(insn != src->end());
 
     switch (insn.opcode()) {
@@ -450,8 +451,8 @@ static bool
 types_match(shader_module const *a, shader_module const *b, unsigned a_type, unsigned b_type, bool b_arrayed)
 {
     /* walk two type trees together, and complain about differences */
-    auto a_insn = a->get_type_def(a_type);
-    auto b_insn = b->get_type_def(b_type);
+    auto a_insn = a->get_def(a_type);
+    auto b_insn = b->get_def(b_type);
     assert(a_insn != a->end());
     assert(b_insn != b->end());
 
@@ -527,7 +528,7 @@ value_or_default(std::unordered_map<unsigned, unsigned> const &map, unsigned id,
 static unsigned
 get_locations_consumed_by_type(shader_module const *src, unsigned type, bool strip_array_level)
 {
-    auto insn = src->get_type_def(type);
+    auto insn = src->get_def(type);
     assert(insn != src->end());
 
     switch (insn.opcode()) {
@@ -574,15 +575,15 @@ collect_interface_block_members(layer_data *my_data, VkDevice dev,
                                 uint32_t type_id)
 {
     /* Walk down the type_id presented, trying to determine whether it's actually an interface block. */
-    auto type = src->get_type_def(type_id);
+    auto type = src->get_def(type_id);
 
     while (true) {
 
         if (type.opcode() == spv::OpTypePointer) {
-            type = src->get_type_def(type.word(3));
+            type = src->get_def(type.word(3));
         }
         else if (type.opcode() == spv::OpTypeArray && is_array_of_verts) {
-            type = src->get_type_def(type.word(2));
+            type = src->get_def(type.word(2));
             is_array_of_verts = false;
         }
         else if (type.opcode() == spv::OpTypeStruct) {
@@ -881,7 +882,7 @@ get_format_type(VkFormat fmt) {
 static unsigned
 get_fundamental_type(shader_module const *src, unsigned type)
 {
-    auto insn = src->get_type_def(type);
+    auto insn = src->get_def(type);
     assert(insn != src->end());
 
     switch (insn.opcode()) {
