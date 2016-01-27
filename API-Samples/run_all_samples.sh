@@ -7,7 +7,7 @@
 CMDDIR="$(dirname "$(readlink -f ${BASH_SOURCE[0]})")"
 
 # get the list of built samples to run
-SAMP2RUN=`ls $CMDDIR/vk*`
+SAMP2RUN=`ls $CMDDIR/*.cpp`
 #echo "SAMP2RUN is $SAMP2RUN"
 
 # display short description of the sample and run it

@@ -166,7 +166,7 @@ get_file_contents(char const *filename, std::vector<unsigned char> &vec)
     fseek(f, 0, SEEK_SET);
 
     vec.resize(length);
-    if (length != fread(&vec[0], 1, length, f)) {
+    if ((uint32_t)length != fread(&vec[0], 1, length, f)) {
 #ifdef OVERLAY_DEBUG
         printf("Short read `%s`\n", filename);
 #endif
@@ -809,7 +809,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     if (pImages) {
         auto data = (*my_data->swapChains)[swapChain];
 
-        for (int i = 0; i < *pCount; i++) {
+        for (uint32_t i = 0; i < *pCount; i++) {
 
             /* Create attachment view for each */
             VkImageViewCreateInfo ivci;
@@ -1016,7 +1016,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
 
-    for (int i = 0; i < pPresentInfo->swapchainCount; i++) {
+    for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
 
         auto data = my_data->swapChains->find(pPresentInfo->pSwapchains[i]);
         assert(data != my_data->swapChains->end());
@@ -1049,7 +1049,7 @@ void SwapChainData::Cleanup(VkDevice dev)
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
 
-    for (int i = 0; i < presentableImages.size(); i++) {
+    for (uint32_t i = 0; i < presentableImages.size(); i++) {
         presentableImages[i]->Cleanup(dev);
         delete presentableImages[i];
     }

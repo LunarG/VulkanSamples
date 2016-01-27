@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.11)
 
-set(SHADER_DIR ${SAMPLES_DATA_DIR}/${VULKAN_VERSION})
+set(SHADER_DIR ${SAMPLES_DATA_DIR})
 set(SFILE overlay)
 add_custom_command(OUTPUT ${SHADER_DIR}/${SFILE}-vert.spv
 	COMMAND ${GLSLANG_VALIDATOR} -s -V ${SHADER_DIR}/${SFILE}.vert
@@ -17,6 +17,7 @@ message(STATUS "Shader dir: ${SHADER_DIR}")
 message(STATUS "Cxxflags: ${CMAKE_CXX_FLAGS}")
 
 set(SDK_SOURCE "${CMAKE_SOURCE_DIR}/../LoaderAndTools")
+set(UTILDIR "${CMAKE_SOURCE_DIR}/Layer-Samples/utils")
 
 if (EXISTS "${SDK_SOURCE}")
 
@@ -27,7 +28,7 @@ if (EXISTS "${SDK_SOURCE}")
 			HINTS "${SDK_SOURCE}/build/layers"
 			)
 
-		add_library(VKLayerOverlay SHARED ${VULKAN_VERSION}-overlay.cpp
+		add_library(VKLayerOverlay SHARED overlay.cpp
 			${SDK_SOURCE}/layers/vk_layer_table.cpp
 			${SHADER_DIR}/overlay-vert.spv
 			${SHADER_DIR}/overlay-frag.spv
@@ -46,7 +47,7 @@ if (EXISTS "${SDK_SOURCE}")
 			"${SDK_SOURCE}/build/layers"
 			"${SDK_SOURCE}/layers"
 			"${SDK_SOURCE}/loader"
-			"${EXTDIR}/stb"
+			"${UTILDIR}/stb"
 			)
 	endif()
 

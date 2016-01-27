@@ -72,7 +72,7 @@ string get_file_name(const string& s) {
 
 std::string get_base_data_dir()
 {
-    return std::string(VULKAN_SAMPLES_BASE_DIR) + "/data/";
+    return std::string(VULKAN_SAMPLES_BASE_DIR) + "/API-Samples/data/";
 }
 
 std::string get_data_dir( std::string filename )
