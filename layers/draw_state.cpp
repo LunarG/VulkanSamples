@@ -3636,6 +3636,24 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(VkDevice devi
     }
     return result;
 }
+
+bool validateCommandBuffersNotInUse(const layer_data* dev_data, VkCommandPool commandPool) {
+    bool skip_call = false;
+    loader_platform_thread_lock_mutex(&globalLock);
+    auto pool_data = dev_data->commandPoolMap.find(commandPool);
+    if (pool_data != dev_data->commandPoolMap.end()) {
+        for (auto cmdBuffer : pool_data->second.commandBuffers) {
+            if (dev_data->inFlightCmdBuffers.count(cmdBuffer)) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, reinterpret_cast<uint64_t>(commandPool),
+                                     __LINE__, DRAWSTATE_OBJECT_INUSE, "DS", "Cannot reset command pool %" PRIx64 " when allocated command buffer %" PRIx64 " is in use.",
+                                     reinterpret_cast<uint64_t>(commandPool), reinterpret_cast<uint64_t>(cmdBuffer));
+            }
+        }
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return skip_call;
+}
+
 // Destroy commandPool along with all of the commandBuffers allocated from that pool
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocationCallbacks* pAllocator)
 {
@@ -3654,6 +3672,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(VkDevice device,
     dev_data->commandPoolMap.erase(commandPool);
 
     loader_platform_thread_unlock_mutex(&globalLock);
+
+    if (validateCommandBuffersNotInUse(dev_data, commandPool))
+        return;
+
     dev_data->device_dispatch_table->DestroyCommandPool(device, commandPool, pAllocator);
 }
 
@@ -3665,21 +3687,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
     layer_data *dev_data               = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult    result                = VK_ERROR_VALIDATION_FAILED_EXT;
 
-    bool skip_call = false;
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto pool_data = dev_data->commandPoolMap.find(commandPool);
-    if (pool_data != dev_data->commandPoolMap.end()) {
-        for (auto cmdBuffer : pool_data->second.commandBuffers) {
-            if (dev_data->inFlightCmdBuffers.count(cmdBuffer)) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, reinterpret_cast<uint64_t>(commandPool),
-                                     __LINE__, DRAWSTATE_OBJECT_INUSE, "DS", "Cannot reset command pool %" PRIx64 " when allocated command buffer %" PRIx64 " is in use.",
-                                     reinterpret_cast<uint64_t>(commandPool), reinterpret_cast<uint64_t>(cmdBuffer));
-            }
-        }
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-
-    if (skip_call)
+    if (validateCommandBuffersNotInUse(dev_data, commandPool))
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
     result = dev_data->device_dispatch_table->ResetCommandPool(device, commandPool, flags);
