@@ -19,8 +19,7 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
 endif()
 
 
-set (EXTDIR "${CMAKE_SOURCE_DIR}/ext")
-set (GLMINCLUDES "${EXTDIR}")
+set (GLMINCLUDES "${CMAKE_SOURCE_DIR}/API-Samples/utils")
 
 # to run with source glslang libs/headers
 if(UNIX)
@@ -49,15 +48,13 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools")
     include_directories("${CMAKE_SOURCE_DIR}/../LoaderAndTools/include")
 endif()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/utils)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/API-Samples/utils)
 if(WIN32)
     include_directories(${CMAKE_SOURCE_DIR}\\..\\Include)
 else()
     include_directories("/usr/include/vulkan")
 endif()
 
-add_subdirectory(utils)
-
-add_subdirectory(src)
-add_subdirectory(demos/Hologram)
-
+add_subdirectory(API-Samples)
+add_subdirectory(Demos/Hologram)
+add_subdirectory(Layer-Samples/Overlay)

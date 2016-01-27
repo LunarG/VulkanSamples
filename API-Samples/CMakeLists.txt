@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.11)
-set(SAMPLES_DATA_DIR ${SAMPLES_DATA_DIR} "${PROJECT_SOURCE_DIR}/data")
+set(SAMPLES_DATA_DIR ${SAMPLES_DATA_DIR} "${PROJECT_SOURCE_DIR}/API-Samples/data")
 set(SHADER_FILES ${SHADER_FILES} "")
 include_directories( ${SAMPLES_DATA_DIR} ${GLSLANG_PREFIX} ${GLMINC_PREFIX})
 
@@ -12,12 +12,11 @@ include_directories("${CMAKE_SOURCE_DIR}/../spirv-tools/include"
 
 
 # function to build a single-source-file sample that uses glsl shaders;
-#   - assumes VULKAN_VERSION set (i.e. vk0.10)
 #   - assumes SAMPLE_GLSL_VERT_SHADERS and SAMPLE_GLSL_FRAG_SHADERS is set to
 #     the list of shader files of that type, with .vert and .frag omitted
 #   - uses glslangValidator to convert glsl to spirv
 function(sampleExtGLSLShaders SNAME)
-    set(SAMPLE_NAME ${VULKAN_VERSION}-${SNAME})
+    set(SAMPLE_NAME ${SNAME})
     set(SHADER_DIR ${SAMPLES_DATA_DIR}/${VULKAN_VERSION})
     foreach(SFILE ${SAMPLE_GLSL_VERT_SHADERS})
         add_custom_command(OUTPUT ${SHADER_DIR}/${SFILE}-vert.spv
@@ -40,11 +39,10 @@ function(sampleExtGLSLShaders SNAME)
 endfunction(sampleExtGLSLShaders)
 
 # function to build a single-source-file sample that uses spirv shaders
-#   - assumes VULKAN_VERSION set (i.e. vk0.10)
 #   - assumes SAMPLE_SPIRV_SHADERS is set to list to list of spirv shsders
 #     used by the sample, with the .spv omitted
 function(sampleExtSPIRVShaders SNAME)
-    set(SAMPLE_NAME ${VULKAN_VERSION}-${SNAME})
+    set(SAMPLE_NAME ${SNAME})
     set(SHADER_DIR ${SAMPLES_DATA_DIR}/${VULKAN_VERSION})
     foreach(SFILE ${SAMPLE_SPIRV_SHADERS})
         set(SHADER_FILES ${SHADER_FILES} ${SHADER_DIR}/${SFILE}.spv)
@@ -54,11 +52,10 @@ function(sampleExtSPIRVShaders SNAME)
 endfunction(sampleExtSPIRVShaders)
 
 # function to build a simple single-source-file sample
-#   - assumes VULKAN_VERSION set (i.e. vk0.10)
 #   - assumes S_TARGETS set to list of build targets
 function(sampleWithSingleFile)
     foreach(TARG ${S_TARGETS})
-        set(SAMPLE_NAME ${VULKAN_VERSION}-${TARG})
+        set(SAMPLE_NAME ${TARG})
         if(UNIX)
             add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}.cpp)
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD} ${SPIRV_TOOLS_LIBRARIES})
@@ -71,11 +68,10 @@ endfunction(sampleWithSingleFile)
 
 # function to build a simple single-source-file sample
 #   - assumes that code is standalone and doesn't depend on utilitites
-#   - assumes VULKAN_VERSION set (i.e. vk0.10)
 #   - assumes S_TARGETS set to list of build targets
 function(sampleInlineGLSLShaders)
     foreach(TARG ${S_TARGETS})
-        set(SAMPLE_NAME ${VULKAN_VERSION}-${TARG})
+        set(SAMPLE_NAME ${TARG})
         if(UNIX)
             add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}.cpp)
             target_link_libraries(${SAMPLE_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD})
@@ -246,9 +242,6 @@ endif()
 # START BUILDING SAMPLES HERE
 #
 
-# TARGETS FOR VULKAN VERSION 0.10
-set(VULKAN_VERSION vk0.10)
-
 # simple one file sample targets, no additional files
 set (S_TARGETS instance device enumerate enumerate-adv
     depthbuffer initswapchain inittexture uniformbuffer
@@ -265,6 +258,8 @@ set (S_TARGETS instance device enumerate enumerate-adv
     spirv_assembly spirv_specialization)
 sampleWithSingleFile()
 
+add_subdirectory(utils)
+
 # targets that use spv shaders
 
 # usespirvshader
@@ -278,4 +273,3 @@ sampleWithSingleFile()
 # set(SAMPLE_GLSL_VERT_SHADERS glslshader)
 # sampleExtGLSLShaders()
 
-add_subdirectory(layers)
