@@ -51,6 +51,11 @@ struct layer_data {
     debug_report_data *report_data;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
 
+    //TODO: Split instance/device structs
+    //Device Data
+    //Map for queue family index to queue count
+    std::unordered_map<uint32_t, uint32_t> queueFamilyIndexMap;
+
     layer_data() :
         report_data(nullptr)
     {};
@@ -2079,6 +2084,14 @@ void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDeviceCre
     }
 }
 
+void storeCreateDeviceData(VkDevice device, const VkDeviceCreateInfo* pCreateInfo) {
+    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; ++i) {
+        my_device_data->queueFamilyIndexMap.insert(
+            std::make_pair(pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex, pCreateInfo->pQueueCreateInfos[i].queueCount));
+    }
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     VkPhysicalDevice physicalDevice,
     const VkDeviceCreateInfo* pCreateInfo,
@@ -2118,6 +2131,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, &properties[0]);
 
     validateDeviceCreateInfo(physicalDevice, pCreateInfo, properties);
+    storeCreateDeviceData(*pDevice, pCreateInfo);
 
     return result;
 }
@@ -2135,6 +2149,26 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(
 
     get_dispatch_table(pc_device_table_map, device)->DestroyDevice(device, pAllocator);
     pc_device_table_map.erase(key);
+}
+
+bool PreGetDeviceQueue(
+    VkDevice device,
+    uint32_t queueFamilyIndex,
+    uint32_t queueIndex)
+{
+    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    auto queue_data = my_device_data->queueFamilyIndexMap.find(queueFamilyIndex);
+    if (queue_data == my_device_data->queueFamilyIndexMap.end()) {
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+            "VkGetDeviceQueue parameter, uint32_t queueFamilyIndex %d, must have been given when the device was created.", queueFamilyIndex);
+        return false;
+    }
+    if (queue_data->second <= queueIndex) {
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+            "VkGetDeviceQueue parameter, uint32_t queueIndex %d, must be less than the number of queues given when the device was created.", queueIndex);
+        return false;
+    }
+    return true;
 }
 
 bool PostGetDeviceQueue(
@@ -2159,6 +2193,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(
     uint32_t queueIndex,
     VkQueue* pQueue)
 {
+    PreGetDeviceQueue(device, queueFamilyIndex, queueIndex);
+
     get_dispatch_table(pc_device_table_map, device)->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
 
     PostGetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
