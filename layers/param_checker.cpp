@@ -33,6 +33,7 @@
 #include <string>
 #include <sstream>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "vk_loader_platform.h"
@@ -2049,6 +2050,18 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceMemoryProperties(
     PostGetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperties);
 }
 
+void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo) {
+    std::unordered_set<uint32_t> set;
+    for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; ++i) {
+        if (set.count(pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex)) {
+            log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+                "VkDeviceCreateInfo parameter, uint32_t pQueueCreateInfos[%d]->queueFamilyIndex, is not unique within this structure.", i);
+        } else {
+            set.insert(pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex);
+        }
+    }
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     VkPhysicalDevice physicalDevice,
     const VkDeviceCreateInfo* pCreateInfo,
@@ -2081,6 +2094,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
     my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
     initDeviceTable(*pDevice, fpGetDeviceProcAddr, pc_device_table_map);
+
+    validateDeviceCreateInfo(physicalDevice, pCreateInfo);
 
     return result;
 }
