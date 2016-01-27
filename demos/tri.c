@@ -1691,6 +1691,7 @@ static VkBool32 demo_check_layers(uint32_t check_count, char **check_names,
         for (uint32_t j = 0; j < layer_count; j++) {
             if (!strcmp(check_names[i], layers[j].layerName)) {
                 found = 1;
+                break;
             }
         }
         if (!found) {
@@ -1727,10 +1728,6 @@ VKAPI_ATTR void VKAPI_CALL myfree(void *pUserData, void *pMemory) {
 
 static void demo_init_vk(struct demo *demo) {
     VkResult err;
-    VkExtensionProperties *instance_extensions;
-    VkPhysicalDevice *physical_devices;
-    VkLayerProperties *instance_layers;
-    VkLayerProperties *device_layers;
     uint32_t instance_extension_count = 0;
     uint32_t instance_layer_count = 0;
     uint32_t device_validation_layer_count = 0;
@@ -1751,68 +1748,82 @@ static void demo_init_vk(struct demo *demo) {
     err = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
     assert(!err);
 
-    instance_layers = malloc(sizeof(VkLayerProperties) * instance_layer_count);
-    err = vkEnumerateInstanceLayerProperties(&instance_layer_count,
-                                             instance_layers);
-    assert(!err);
+    if (instance_layer_count > 0) {
+        VkLayerProperties *instance_layers =
+            malloc(sizeof(VkLayerProperties) * instance_layer_count);
+        err = vkEnumerateInstanceLayerProperties(&instance_layer_count,
+                                                 instance_layers);
+        assert(!err);
 
-    if (demo->validate) {
-        validation_found = demo_check_layers(
-            ARRAY_SIZE(instance_validation_layers), instance_validation_layers,
-            instance_layer_count, instance_layers);
-        if (!validation_found) {
-            ERR_EXIT("vkEnumerateInstanceLayerProperties failed to find"
-                     "required validation layer.\n\n"
-                     "Please look at the Getting Started guide for additional "
-                     "information.\n",
-                     "vkCreateInstance Failure");
+        if (demo->validate) {
+            validation_found = demo_check_layers(
+                ARRAY_SIZE(instance_validation_layers),
+                instance_validation_layers, instance_layer_count,
+                instance_layers);
+            demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers);
         }
-        demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers);
+
+        free(instance_layers);
     }
+
+    if (demo->validate && !validation_found) {
+        ERR_EXIT("vkEnumerateInstanceLayerProperties failed to find"
+                 "required validation layer.\n\n"
+                 "Please look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateInstance Failure");
+    }
+
+    /* Look for instance extensions */
+    VkBool32 surfaceExtFound = 0;
+    VkBool32 platformSurfaceExtFound = 0;
+    memset(demo->extension_names, 0, sizeof(demo->extension_names));
 
     err = vkEnumerateInstanceExtensionProperties(
         NULL, &instance_extension_count, NULL);
     assert(!err);
 
-    VkBool32 surfaceExtFound = 0;
-    VkBool32 platformSurfaceExtFound = 0;
-    memset(demo->extension_names, 0, sizeof(demo->extension_names));
-    instance_extensions =
-        malloc(sizeof(VkExtensionProperties) * instance_extension_count);
-    err = vkEnumerateInstanceExtensionProperties(
-        NULL, &instance_extension_count, instance_extensions);
-    assert(!err);
-    for (uint32_t i = 0; i < instance_extension_count; i++) {
-        if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME,
-                    instance_extensions[i].extensionName)) {
-            surfaceExtFound = 1;
-            demo->extension_names[demo->enabled_extension_count++] =
-                VK_KHR_SURFACE_EXTENSION_NAME;
-        }
-#ifdef _WIN32
-        if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-                    instance_extensions[i].extensionName)) {
-            platformSurfaceExtFound = 1;
-            demo->extension_names[demo->enabled_extension_count++] =
-                VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
-        }
-#else  // _WIN32
-        if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME,
-                    instance_extensions[i].extensionName)) {
-            platformSurfaceExtFound = 1;
-            demo->extension_names[demo->enabled_extension_count++] =
-                VK_KHR_XCB_SURFACE_EXTENSION_NAME;
-        }
-#endif // _WIN32
-        if (!strcmp(VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-                    instance_extensions[i].extensionName)) {
-            if (demo->validate) {
+    if (instance_extension_count > 0) {
+        VkExtensionProperties *instance_extensions =
+            malloc(sizeof(VkExtensionProperties) * instance_extension_count);
+        err = vkEnumerateInstanceExtensionProperties(
+            NULL, &instance_extension_count, instance_extensions);
+        assert(!err);
+        for (uint32_t i = 0; i < instance_extension_count; i++) {
+            if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME,
+                        instance_extensions[i].extensionName)) {
+                surfaceExtFound = 1;
                 demo->extension_names[demo->enabled_extension_count++] =
-                    VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
+                    VK_KHR_SURFACE_EXTENSION_NAME;
             }
+#ifdef _WIN32
+            if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+                        instance_extensions[i].extensionName)) {
+                platformSurfaceExtFound = 1;
+                demo->extension_names[demo->enabled_extension_count++] =
+                    VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+            }
+#else  // _WIN32
+            if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME,
+                        instance_extensions[i].extensionName)) {
+                platformSurfaceExtFound = 1;
+                demo->extension_names[demo->enabled_extension_count++] =
+                    VK_KHR_XCB_SURFACE_EXTENSION_NAME;
+            }
+#endif // _WIN32
+            if (!strcmp(VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+                        instance_extensions[i].extensionName)) {
+                if (demo->validate) {
+                    demo->extension_names[demo->enabled_extension_count++] =
+                        VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
+                }
+            }
+            assert(demo->enabled_extension_count < 64);
         }
-        assert(demo->enabled_extension_count < 64);
+
+        free(instance_extensions);
     }
+
     if (!surfaceExtFound) {
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_SURFACE_EXTENSION_NAME
@@ -1883,18 +1894,26 @@ static void demo_init_vk(struct demo *demo) {
                  "vkCreateInstance Failure");
     }
 
-    free(instance_layers);
-    free(instance_extensions);
-
     /* Make initial call to query gpu_count, then second call for gpu info*/
     err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count, NULL);
     assert(!err && gpu_count > 0);
-    physical_devices = malloc(sizeof(VkPhysicalDevice) * gpu_count);
-    err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count, physical_devices);
-    assert(!err);
-    /* For tri demo we just grab the first physical device */
-    demo->gpu = physical_devices[0];
-    free(physical_devices);
+
+    if (gpu_count > 0) {
+        VkPhysicalDevice *physical_devices =
+            malloc(sizeof(VkPhysicalDevice) * gpu_count);
+        err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count,
+                                         physical_devices);
+        assert(!err);
+        /* For tri demo we just grab the first physical device */
+        demo->gpu = physical_devices[0];
+        free(physical_devices);
+    } else {
+        ERR_EXIT("vkEnumeratePhysicalDevices reported zero accessible devices."
+                 "\n\nDo you have a compatible Vulkan installable client"
+                 " driver (ICD) installed?\nPlease look at the Getting Started"
+                 " guide for additional information.\n",
+                 "vkEnumeratePhysicalDevices Failure");
+    }
 
     /* Look for validation layers */
     validation_found = 0;
@@ -1904,49 +1923,62 @@ static void demo_init_vk(struct demo *demo) {
         vkEnumerateDeviceLayerProperties(demo->gpu, &device_layer_count, NULL);
     assert(!err);
 
-    device_layers = malloc(sizeof(VkLayerProperties) * device_layer_count);
-    err = vkEnumerateDeviceLayerProperties(demo->gpu, &device_layer_count,
-                                           device_layers);
-    assert(!err);
+    if (device_layer_count > 0) {
+        VkLayerProperties *device_layers =
+            malloc(sizeof(VkLayerProperties) * device_layer_count);
+        err = vkEnumerateDeviceLayerProperties(demo->gpu, &device_layer_count,
+                                               device_layers);
+        assert(!err);
 
-    if (demo->validate) {
-        validation_found = demo_check_layers(device_validation_layer_count,
-                                             demo->device_validation_layers,
-                                             device_layer_count, device_layers);
-        if (!validation_found) {
-            ERR_EXIT("vkEnumerateDeviceLayerProperties failed to find "
-                     "a required validation layer.\n\n"
-                     "Please look at the Getting Started guide for additional "
-                     "information.\n",
-                     "vkCreateDevice Failure");
+        if (demo->validate) {
+            validation_found = demo_check_layers(device_validation_layer_count,
+                                                 demo->device_validation_layers,
+                                                 device_layer_count,
+                                                 device_layers);
+            demo->enabled_layer_count = device_validation_layer_count;
         }
-        demo->enabled_layer_count = device_validation_layer_count;
+
+        free(device_layers);
     }
 
+    if (demo->validate && !validation_found) {
+        ERR_EXIT("vkEnumerateDeviceLayerProperties failed to find "
+                 "a required validation layer.\n\n"
+                 "Please look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateDevice Failure");
+    }
+
+    /* Loog for device extensions */
     uint32_t device_extension_count = 0;
-    VkExtensionProperties *device_extensions = NULL;
+    VkBool32 swapchainExtFound = 0;
+    demo->enabled_extension_count = 0;
+    memset(demo->extension_names, 0, sizeof(demo->extension_names));
+
     err = vkEnumerateDeviceExtensionProperties(demo->gpu, NULL,
                                                &device_extension_count, NULL);
     assert(!err);
 
-    VkBool32 swapchainExtFound = 0;
-    demo->enabled_extension_count = 0;
-    memset(demo->extension_names, 0, sizeof(demo->extension_names));
-    device_extensions =
-        malloc(sizeof(VkExtensionProperties) * device_extension_count);
-    err = vkEnumerateDeviceExtensionProperties(
-        demo->gpu, NULL, &device_extension_count, device_extensions);
-    assert(!err);
+    if (device_extension_count > 0) {
+        VkExtensionProperties *device_extensions =
+                malloc(sizeof(VkExtensionProperties) * device_extension_count);
+        err = vkEnumerateDeviceExtensionProperties(
+            demo->gpu, NULL, &device_extension_count, device_extensions);
+        assert(!err);
 
-    for (uint32_t i = 0; i < device_extension_count; i++) {
-        if (!strcmp(VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-                    device_extensions[i].extensionName)) {
-            swapchainExtFound = 1;
-            demo->extension_names[demo->enabled_extension_count++] =
-                VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+        for (uint32_t i = 0; i < device_extension_count; i++) {
+            if (!strcmp(VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+                        device_extensions[i].extensionName)) {
+                swapchainExtFound = 1;
+                demo->extension_names[demo->enabled_extension_count++] =
+                    VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+            }
+            assert(demo->enabled_extension_count < 64);
         }
-        assert(demo->enabled_extension_count < 64);
+
+        free(device_extensions);
     }
+
     if (!swapchainExtFound) {
         ERR_EXIT("vkEnumerateDeviceExtensionProperties failed to find "
                  "the " VK_KHR_SWAPCHAIN_EXTENSION_NAME
