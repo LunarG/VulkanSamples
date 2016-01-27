@@ -260,6 +260,12 @@ struct RENDER_PASS_NODE {
     }
 };
 
+class PHYS_DEV_PROPERTIES_NODE {
+  public:
+    VkPhysicalDeviceProperties properties;
+    vector<VkQueueFamilyProperties> queue_family_properties;
+};
+
 class FENCE_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;

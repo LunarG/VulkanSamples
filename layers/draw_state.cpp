@@ -81,6 +81,7 @@ using std::unordered_set;
 // Track command pools and their command buffers
 struct CMD_POOL_INFO {
     VkCommandPoolCreateFlags    createFlags;
+    uint32_t queueFamilyIndex;
     list<VkCommandBuffer>       commandBuffers; // list container of cmd buffers allocated from this pool
 };
 
@@ -129,7 +130,9 @@ struct layer_data {
     // Current render pass
     VkRenderPassBeginInfo                renderPassBeginInfo;
     uint32_t                             currentSubpass;
-    unordered_map<VkDevice,              VkPhysicalDeviceProperties>         physDevPropertyMap;
+
+    // Device specific data
+    PHYS_DEV_PROPERTIES_NODE             physDevProperties;
 
     layer_data() :
         report_data(nullptr),
@@ -2614,11 +2617,93 @@ VkBool32 validateCmdsInCmdBuffer(const layer_data* dev_data, const GLOBAL_CB_NOD
     return skip_call;
 }
 
+static bool checkGraphicsBit(const layer_data* my_data, VkQueueFlags flags, const char* name) {
+    if (!(flags & VK_QUEUE_GRAPHICS_BIT))
+        return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+            DRAWSTATE_INVALID_COMMAND_BUFFER, "DS", "Cannot call %s on a command buffer allocated from a pool without graphics capabilities.", name);
+    return false;
+}
+
+static bool checkComputeBit(const layer_data* my_data, VkQueueFlags flags, const char* name) {
+    if (!(flags & VK_QUEUE_COMPUTE_BIT))
+        return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+            DRAWSTATE_INVALID_COMMAND_BUFFER, "DS", "Cannot call %s on a command buffer allocated from a pool without compute capabilities.", name);
+    return false;
+}
+
+static bool checkGraphicsOrComputeBit(const layer_data* my_data, VkQueueFlags flags, const char* name) {
+    if (!((flags & VK_QUEUE_GRAPHICS_BIT) || (flags & VK_QUEUE_COMPUTE_BIT)))
+        return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+            DRAWSTATE_INVALID_COMMAND_BUFFER, "DS", "Cannot call %s on a command buffer allocated from a pool without graphics capabilities.", name);
+    return false;
+}
+
 // Add specified CMD to the CmdBuffer in given pCB, flagging errors if CB is not
 //  in the recording state or if there's an issue with the Cmd ordering
 static VkBool32 addCmd(const layer_data* my_data, GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd, const char* caller_name)
 {
     VkBool32 skipCall = VK_FALSE;
+    auto pool_data = my_data->commandPoolMap.find(pCB->createInfo.commandPool);
+    if (pool_data != my_data->commandPoolMap.end()) {
+        VkQueueFlags flags = my_data->physDevProperties.queue_family_properties[pool_data->second.queueFamilyIndex].queueFlags;
+        switch (cmd)
+        {
+            case CMD_BINDPIPELINE:
+            case CMD_BINDPIPELINEDELTA:
+            case CMD_BINDDESCRIPTORSETS:
+            case CMD_FILLBUFFER:
+            case CMD_CLEARCOLORIMAGE:
+            case CMD_SETEVENT:
+            case CMD_RESETEVENT:
+            case CMD_WAITEVENTS:
+            case CMD_BEGINQUERY:
+            case CMD_ENDQUERY:
+            case CMD_RESETQUERYPOOL:
+            case CMD_COPYQUERYPOOLRESULTS:
+            case CMD_WRITETIMESTAMP:
+                skipCall |= checkGraphicsOrComputeBit(my_data, flags, cmdTypeToString(cmd).c_str());
+                break;
+            case CMD_SETVIEWPORTSTATE:
+            case CMD_SETSCISSORSTATE:
+            case CMD_SETLINEWIDTHSTATE:
+            case CMD_SETDEPTHBIASSTATE:
+            case CMD_SETBLENDSTATE:
+            case CMD_SETDEPTHBOUNDSSTATE:
+            case CMD_SETSTENCILREADMASKSTATE:
+            case CMD_SETSTENCILWRITEMASKSTATE:
+            case CMD_SETSTENCILREFERENCESTATE:
+            case CMD_BINDINDEXBUFFER:
+            case CMD_BINDVERTEXBUFFER:
+            case CMD_DRAW:
+            case CMD_DRAWINDEXED:
+            case CMD_DRAWINDIRECT:
+            case CMD_DRAWINDEXEDINDIRECT:
+            case CMD_BLITIMAGE:
+            case CMD_CLEARATTACHMENTS:
+            case CMD_CLEARDEPTHSTENCILIMAGE:
+            case CMD_RESOLVEIMAGE:
+            case CMD_BEGINRENDERPASS:
+            case CMD_NEXTSUBPASS:
+            case CMD_ENDRENDERPASS:
+                skipCall |= checkGraphicsBit(my_data, flags, cmdTypeToString(cmd).c_str());
+                break;
+            case CMD_DISPATCH:
+            case CMD_DISPATCHINDIRECT:
+                skipCall |= checkComputeBit(my_data, flags, cmdTypeToString(cmd).c_str());
+                break;
+            case CMD_COPYBUFFER:
+            case CMD_COPYIMAGE:
+            case CMD_COPYBUFFERTOIMAGE:
+            case CMD_COPYIMAGETOBUFFER:
+            case CMD_CLONEIMAGEDATA:
+            case CMD_UPDATEBUFFER:
+            case CMD_PIPELINEBARRIER:
+            case CMD_EXECUTECOMMANDS:
+                break;
+            default:
+                break;
+        }
+    }
     if (pCB->state != CB_RECORDING) {
         skipCall |= report_error_no_cb_begin(my_data, pCB->commandBuffer, caller_name);
         skipCall |= validateCmdsInCmdBuffer(my_data, pCB, cmd);
@@ -3032,7 +3117,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
     my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
     createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     // Get physical device limits for this device
-    my_instance_data->instance_dispatch_table->GetPhysicalDeviceProperties(gpu, &(my_instance_data->physDevPropertyMap[*pDevice]));
+    my_instance_data->instance_dispatch_table->GetPhysicalDeviceProperties(gpu, &(my_device_data->physDevProperties.properties));
+    uint32_t count;
+    my_instance_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(gpu, &count, nullptr);
+    my_device_data->physDevProperties.queue_family_properties.resize(count);
+    my_instance_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(gpu, &count, &my_device_data->physDevProperties.queue_family_properties[0]);
     return result;
 }
 
@@ -4620,19 +4709,19 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                                 uint32_t cur_dyn_offset = totalDynamicDescriptors;
                                 for (uint32_t d = 0; d < pSet->descriptorCount; d++) {
                                     if (pSet->pLayout->descriptorTypes[i] == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
-                                        if (vk_safe_modulo(pDynamicOffsets[cur_dyn_offset], dev_data->physDevPropertyMap[pCB->device].limits.minUniformBufferOffsetAlignment) != 0) {
+                                        if (vk_safe_modulo(pDynamicOffsets[cur_dyn_offset], dev_data->physDevProperties.properties.limits.minUniformBufferOffsetAlignment) != 0) {
                                             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
                                             __LINE__, DRAWSTATE_INVALID_UNIFORM_BUFFER_OFFSET, "DS",
                                             "vkCmdBindDescriptorSets(): pDynamicOffsets[%d] is %d but must be a multiple of device limit minUniformBufferOffsetAlignment %#" PRIxLEAST64,
-                                            cur_dyn_offset, pDynamicOffsets[cur_dyn_offset], dev_data->physDevPropertyMap[pCB->device].limits.minUniformBufferOffsetAlignment);
+                                            cur_dyn_offset, pDynamicOffsets[cur_dyn_offset], dev_data->physDevProperties.properties.limits.minUniformBufferOffsetAlignment);
                                         }
                                         cur_dyn_offset++;
                                     } else if (pSet->pLayout->descriptorTypes[i] == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
-                                        if (vk_safe_modulo(pDynamicOffsets[cur_dyn_offset], dev_data->physDevPropertyMap[pCB->device].limits.minStorageBufferOffsetAlignment) != 0) {
+                                        if (vk_safe_modulo(pDynamicOffsets[cur_dyn_offset], dev_data->physDevProperties.properties.limits.minStorageBufferOffsetAlignment) != 0) {
                                             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
                                             __LINE__, DRAWSTATE_INVALID_STORAGE_BUFFER_OFFSET, "DS",
                                             "vkCmdBindDescriptorSets(): pDynamicOffsets[%d] is %d but must be a multiple of device limit minStorageBufferOffsetAlignment %#" PRIxLEAST64,
-                                            cur_dyn_offset, pDynamicOffsets[cur_dyn_offset], dev_data->physDevPropertyMap[pCB->device].limits.minStorageBufferOffsetAlignment);
+                                            cur_dyn_offset, pDynamicOffsets[cur_dyn_offset], dev_data->physDevProperties.properties.limits.minStorageBufferOffsetAlignment);
                                         }
                                         cur_dyn_offset++;
                                     }
