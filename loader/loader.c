@@ -193,7 +193,7 @@ void* loader_heap_realloc(
             return NULL;
         memcpy(new_ptr, pMemory, orig_size);
         instance->alloc_callbacks.pfnFree(instance->alloc_callbacks.pUserData, pMemory);
-	return new_ptr;
+        return new_ptr;
     }
     return realloc(pMemory, size);
 }
@@ -3712,13 +3712,13 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
     /* activate any layers on device chain which terminates with device*/
     res = loader_enable_device_layers(inst, icd, &dev->activated_layer_list, pCreateInfo, &inst->device_layer_list);
     if (res != VK_SUCCESS) {
-        loader_destroy_logical_device(inst, dev);
+        loader_remove_logical_device(inst, icd, dev);
         return res;
     }
 
     res = loader_create_device_chain(physicalDevice, pCreateInfo, pAllocator, inst, icd, dev);
     if (res != VK_SUCCESS) {
-        loader_destroy_logical_device(inst, dev);
+        loader_remove_logical_device(inst, icd, dev);
         return res;
     }
 
