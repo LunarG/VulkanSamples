@@ -2055,9 +2055,13 @@ void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDeviceCre
     for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; ++i) {
         if (set.count(pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex)) {
             log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "VkDeviceCreateInfo parameter, uint32_t pQueueCreateInfos[%d]->queueFamilyIndex, is not unique within this structure.", i);
+                "VkDeviceCreateInfo parameter, uint32_t pQueueCreateInfos[%d]->queueFamilyIndex is not unique within this structure.", i);
         } else {
             set.insert(pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex);
+        }
+        if (pCreateInfo->pQueueCreateInfos[i].queueCount == 0) {
+            log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+                "VkDeviceCreateInfo parameter, uint32_t pQueueCreateInfos[%d]->queueCount cannot be zero.", i);
         }
     }
 }
