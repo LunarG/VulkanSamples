@@ -2050,7 +2050,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceMemoryProperties(
     PostGetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperties);
 }
 
-void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo) {
+void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, const std::vector<VkQueueFamilyProperties> properties) {
     std::unordered_set<uint32_t> set;
     for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; ++i) {
         if (set.count(pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex)) {
@@ -2068,6 +2068,13 @@ void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDeviceCre
                 log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
                     "VkDeviceCreateInfo parameter, uint32_t pQueueCreateInfos[%d]->pQueuePriorities[%d], must be between 0 and 1. Actual value is %f", i, j, pCreateInfo->pQueueCreateInfos[i].pQueuePriorities[j]);
             }
+        }
+        if (pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex >= properties.size()) {
+            log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+                "VkDeviceCreateInfo parameter, uint32_t pQueueCreateInfos[%d]->queueFamilyIndex cannot be more than the number of queue families.", i);
+        } else if (pCreateInfo->pQueueCreateInfos[i].queueCount > properties[pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex].queueCount) {
+            log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+                "VkDeviceCreateInfo parameter, uint32_t pQueueCreateInfos[%d]->queueCount cannot be more than the number of queues for the given family index.", i);
         }
     }
 }
@@ -2105,7 +2112,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
     initDeviceTable(*pDevice, fpGetDeviceProcAddr, pc_device_table_map);
 
-    validateDeviceCreateInfo(physicalDevice, pCreateInfo);
+    uint32_t count;
+    get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, nullptr);
+    std::vector<VkQueueFamilyProperties> properties(count);
+    get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, &properties[0]);
+
+    validateDeviceCreateInfo(physicalDevice, pCreateInfo, properties);
 
     return result;
 }
