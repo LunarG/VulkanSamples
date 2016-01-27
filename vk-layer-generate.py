@@ -957,7 +957,7 @@ class GenericLayerSubcommand(Subcommand):
 
         return "\n\n".join(body)
 
-class APIDumpSubcommand(Subcommand):
+class ApiDumpSubcommand(Subcommand):
     def generate_header(self):
         header_txt = []
         header_txt.append('%s' % self.lineinfo.get())
@@ -1011,7 +1011,7 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('}')
         header_txt.append('')
         header_txt.append('%s' % self.lineinfo.get())
-        header_txt.append('static bool g_APIDumpDetailed = true;')
+        header_txt.append('static bool g_ApiDumpDetailed = true;')
         header_txt.append('')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
         header_txt.append('')
@@ -1051,26 +1051,26 @@ class APIDumpSubcommand(Subcommand):
         func_body.append('{')
         func_body.append('    using namespace StreamControl;')
         func_body.append('')
-        func_body.append('    char const*const logName = getLayerOption("APIDumpLogFilename");')
+        func_body.append('    char const*const logName = getLayerOption("ApiDumpLogFilename");')
         func_body.append('    if(logName != NULL)')
         func_body.append('    {')
         func_body.append('        fileName = logName;')
         func_body.append('    }')
         func_body.append('')
-        func_body.append('    char const*const detailedStr = getLayerOption("APIDumpDetailed");')
+        func_body.append('    char const*const detailedStr = getLayerOption("ApiDumpDetailed");')
         func_body.append('    if(detailedStr != NULL)')
         func_body.append('    {')
         func_body.append('        if(strcmp(detailedStr, "TRUE") == 0)')
         func_body.append('        {')
-        func_body.append('            g_APIDumpDetailed = true;')
+        func_body.append('            g_ApiDumpDetailed = true;')
         func_body.append('        }')
         func_body.append('        else if(strcmp(detailedStr, "FALSE") == 0)')
         func_body.append('        {')
-        func_body.append('            g_APIDumpDetailed = false;')
+        func_body.append('            g_ApiDumpDetailed = false;')
         func_body.append('        }')
         func_body.append('    }')
         func_body.append('')
-        func_body.append('    char const*const writeToFileStr = getLayerOption("APIDumpFile");')
+        func_body.append('    char const*const writeToFileStr = getLayerOption("ApiDumpFile");')
         func_body.append('    bool writeToFile = false;')
         func_body.append('    if(writeToFileStr != NULL)')
         func_body.append('    {')
@@ -1085,7 +1085,7 @@ class APIDumpSubcommand(Subcommand):
         func_body.append('    }')
         func_body.append('')
         func_body.append('%s' % self.lineinfo.get())
-        func_body.append('    char const*const noAddrStr = getLayerOption("APIDumpNoAddr");')
+        func_body.append('    char const*const noAddrStr = getLayerOption("ApiDumpNoAddr");')
         func_body.append('    if(noAddrStr != NULL)')
         func_body.append('    {')
         func_body.append('        if(strcmp(noAddrStr, "FALSE") == 0)')
@@ -1098,7 +1098,7 @@ class APIDumpSubcommand(Subcommand):
         func_body.append('        }')
         func_body.append('    }')
         func_body.append('')
-        func_body.append('    char const*const flushAfterWriteStr = getLayerOption("APIDumpFlush");')
+        func_body.append('    char const*const flushAfterWriteStr = getLayerOption("ApiDumpFlush");')
         func_body.append('    bool flushAfterWrite = false;')
         func_body.append('    if(flushAfterWriteStr != NULL)')
         func_body.append('    {')
@@ -1198,7 +1198,7 @@ class APIDumpSubcommand(Subcommand):
         # log_func += '\n// Proto %s has param_dict: %s' % (proto.name, sp_param_dict)
         if len(sp_param_dict) > 0:
             indent = '    '
-            log_func += '\n%sif (g_APIDumpDetailed) {' % indent
+            log_func += '\n%sif (g_ApiDumpDetailed) {' % indent
             indent += '    '
             i_decl = False
             log_func += '\n%s' % self.lineinfo.get()
@@ -2566,7 +2566,7 @@ def main():
     subcommands = {
             "layer-funcs" : LayerFuncsSubcommand,
             "generic" : GenericLayerSubcommand,
-            "api_dump" : APIDumpSubcommand,
+            "api_dump" : ApiDumpSubcommand,
             "object_tracker" : ObjectTrackerSubcommand,
             "threading" : ThreadingSubcommand,
             "unique_objects" : UniqueObjectsSubcommand,
