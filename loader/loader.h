@@ -427,7 +427,7 @@ VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceMemoryProperties (
         VkPhysicalDevice physicalDevice,
         VkPhysicalDeviceMemoryProperties * pProperties);
 
-VkResult loader_create_device_terminator(
+VKAPI_ATTR VkResult VKAPI_CALL loader_create_device_terminator(
         VkPhysicalDevice                            physicalDevice,
         const VkDeviceCreateInfo*                   pCreateInfo,
         const VkAllocationCallbacks*                pAllocator,
