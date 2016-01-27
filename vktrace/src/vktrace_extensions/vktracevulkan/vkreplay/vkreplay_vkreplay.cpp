@@ -1849,56 +1849,87 @@ VkResult vkReplay::manually_replay_vkGetSwapchainImagesKHR(packet_vkGetSwapchain
 
 VkResult vkReplay::manually_replay_vkQueuePresentKHR(packet_vkQueuePresentKHR* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
-    VkQueue remappedqueue = m_objMapper.remap_queues(pPacket->queue);
-
-    uint32_t i;
-    VkSwapchainKHR* remappedswapchains = VKTRACE_NEW_ARRAY(VkSwapchainKHR, pPacket->pPresentInfo->swapchainCount);
-    for (i=0; i<pPacket->pPresentInfo->swapchainCount; i++) {
-        remappedswapchains[i] = m_objMapper.remap_swapchainkhrs(pPacket->pPresentInfo->pSwapchains[i]);
-    }
-    // TODO : Probably need some kind of remapping from image indices grabbed w/
-    //   AcquireNextImageKHR call, and then the indicies that are passed in here
+    VkResult replayResult = VK_SUCCESS;
+    VkQueue remappedQueue = m_objMapper.remap_queues(pPacket->queue);
+    VkSemaphore localSemaphores[5];
+    VkSwapchainKHR localSwapchains[5];
+    VkResult localResults[5];
+    VkSemaphore *pRemappedWaitSems = localSemaphores;
+    VkSwapchainKHR *pRemappedSwapchains = localSwapchains;
+    VkResult *pResults = localResults;
     VkPresentInfoKHR present;
-    present.sType = pPacket->pPresentInfo->sType;
-    present.pNext = pPacket->pPresentInfo->pNext;
-    present.swapchainCount = pPacket->pPresentInfo->swapchainCount;
-    present.pSwapchains = remappedswapchains;
-    present.pImageIndices = pPacket->pPresentInfo->pImageIndices;
-    present.waitSemaphoreCount = pPacket->pPresentInfo->waitSemaphoreCount;
-    present.pWaitSemaphores = NULL;
-    if (present.waitSemaphoreCount != 0) {
-        VkSemaphore *pRemappedWaitSems = VKTRACE_NEW_ARRAY(VkSemaphore, pPacket->pPresentInfo->waitSemaphoreCount);
-        present.pWaitSemaphores = pRemappedWaitSems;
-        for (i = 0; i < pPacket->pPresentInfo->waitSemaphoreCount; i++) {
-            (*(pRemappedWaitSems + i)) = m_objMapper.remap_semaphores((*(pPacket->pPresentInfo->pWaitSemaphores + i)));
-            if (*(pRemappedWaitSems + i) == VK_NULL_HANDLE) {
-                VKTRACE_DELETE(pRemappedWaitSems);
-                return replayResult;
+    uint32_t i;
+
+    if (pPacket->pPresentInfo->swapchainCount > 5) {
+        pRemappedSwapchains = VKTRACE_NEW_ARRAY(VkSwapchainKHR, pPacket->pPresentInfo->swapchainCount);
+    }
+
+    if (pPacket->pPresentInfo->swapchainCount > 5 && pPacket->pPresentInfo->pResults != NULL) {
+        pResults = VKTRACE_NEW_ARRAY(VkResult, pPacket->pPresentInfo->swapchainCount);
+    }
+
+    if (pPacket->pPresentInfo->waitSemaphoreCount > 5) {
+        pRemappedWaitSems = VKTRACE_NEW_ARRAY(VkSemaphore, pPacket->pPresentInfo->waitSemaphoreCount);
+    }
+
+    if (pRemappedSwapchains == NULL || pRemappedWaitSems == NULL || pResults == NULL)
+    {
+        replayResult = VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+
+    if (replayResult == VK_SUCCESS) {
+        for (i=0; i<pPacket->pPresentInfo->swapchainCount; i++) {
+            pRemappedSwapchains[i] = m_objMapper.remap_swapchainkhrs(pPacket->pPresentInfo->pSwapchains[i]);
+        }
+        present.sType = pPacket->pPresentInfo->sType;
+        present.pNext = pPacket->pPresentInfo->pNext;
+        present.swapchainCount = pPacket->pPresentInfo->swapchainCount;
+        present.pSwapchains = pRemappedSwapchains;
+        present.pImageIndices = pPacket->pPresentInfo->pImageIndices;
+        present.waitSemaphoreCount = pPacket->pPresentInfo->waitSemaphoreCount;
+        present.pWaitSemaphores = NULL;
+        if (present.waitSemaphoreCount != 0) {
+            present.pWaitSemaphores = pRemappedWaitSems;
+            for (i = 0; i < pPacket->pPresentInfo->waitSemaphoreCount; i++) {
+                (*(pRemappedWaitSems + i)) = m_objMapper.remap_semaphores((*(pPacket->pPresentInfo->pWaitSemaphores + i)));
+                if (*(pRemappedWaitSems + i) == VK_NULL_HANDLE) {
+                    replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
+                    break;
+                }
             }
         }
+        present.pResults = NULL;
+    }
+
+    if (replayResult == VK_SUCCESS) {
+        // If the application requested per-swapchain results, set up to get the results from the replay.
+        if (pPacket->pPresentInfo->pResults != NULL) {
+            present.pResults = pResults;
+        }
+
+        replayResult = m_vkFuncs.real_vkQueuePresentKHR(remappedQueue, &present);
+
+        m_frameNumber++;
+
+        // Compare the results from the trace file with those just received from the replay.  Report any differences.
+        if (present.pResults != NULL) {
+            for (i=0; i<pPacket->pPresentInfo->swapchainCount; i++) {
+                if (present.pResults[i] != pPacket->pPresentInfo->pResults[i]) {
+                    vktrace_LogError("Return value %s from API call (VkQueuePresentKHR) does not match return value from trace file %s for swapchain %d.",
+                                     string_VkResult(present.pResults[i]), string_VkResult(pPacket->pPresentInfo->pResults[i]), i);
+                }
+            }
+        }
+    }
+
+    if (pRemappedWaitSems != NULL && pRemappedWaitSems != localSemaphores) {
         VKTRACE_DELETE(pRemappedWaitSems);
     }
-    present.pResults = NULL;
-
-    // If the application requested per-swapchain results, set up to get the results from the replay.
-    if (pPacket->pPresentInfo->pResults != NULL) {
-        present.pResults = VKTRACE_NEW_ARRAY(VkResult, pPacket->pPresentInfo->swapchainCount);
+    if (pResults != NULL && pResults != localResults) {
+        VKTRACE_DELETE(pResults);
     }
-
-    replayResult = m_vkFuncs.real_vkQueuePresentKHR(remappedqueue, &present);
-
-    m_frameNumber++;
-
-    // Compare the results from the trace file with those just received from the replay.  Report any differences.
-    if (present.pResults != NULL) {
-        for (i=0; i <pPacket->pPresentInfo->swapchainCount; i++) {
-            if (present.pResults[i] != pPacket->pPresentInfo->pResults[i]) {
-                vktrace_LogError("Return value %s from API call (VkQueuePresentKHR) does not match return value from trace file %s for swapchain %d.",
-                                 string_VkResult(present.pResults[i]), string_VkResult(pPacket->pPresentInfo->pResults[i]), i);
-            }
-        }
-        VKTRACE_DELETE(present.pResults);
+    if (pRemappedSwapchains != NULL && pRemappedSwapchains != localSwapchains) {
+        VKTRACE_DELETE(pRemappedSwapchains);
     }
 
     return replayResult;

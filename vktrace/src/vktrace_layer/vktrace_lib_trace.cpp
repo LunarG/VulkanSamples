@@ -177,9 +177,16 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkMapMemory(
     vktrace_trace_packet_header* pHeader;
     VkResult result;
     packet_vkMapMemory* pPacket = NULL;
+    VKAllocInfo *entry;
     CREATE_TRACE_PACKET(vkMapMemory, sizeof(void*));
     result = mdd(device)->devTable.MapMemory(device, memory, offset, size, flags, ppData);
     vktrace_set_packet_entrypoint_end_time(pHeader);
+    entry = find_mem_info_entry(memory);
+
+    // For vktrace usage, clamp the memory size to the total size if VK_WHOLE_SIZE is specified.
+    if (size == VK_WHOLE_SIZE) {
+        size = entry->totalSize;
+    }
     pPacket = interpret_body_as_vkMapMemory(pHeader);
     pPacket->device = device;
     pPacket->memory = memory;

@@ -1358,7 +1358,7 @@ class StructWrapperGen:
                             sh_funcs.append('%sstructSize += pStruct->%s*sizeof(%s);' % (indent, self.struct_dict[s][m]['array_size'], self.struct_dict[s][m]['type']))
                 elif self.struct_dict[s][m]['ptr'] and 'pNext' != self.struct_dict[s][m]['name']:
                     if 'char' in self.struct_dict[s][m]['type'].lower():
-                        sh_funcs.append('%sstructSize += sizeof(%s)*(1+strlen(pStruct->%s));' % (indent, self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
+                        sh_funcs.append('%sstructSize += (pStruct->%s != NULL) ? sizeof(%s)*(1+strlen(pStruct->%s)) : 0;' % (indent, self.struct_dict[s][m]['name'], self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
                     elif is_type(self.struct_dict[s][m]['type'], 'struct'):
                         sh_funcs.append('%sstructSize += %s(pStruct->%s);' % (indent, self._get_size_helper_func_name(self.struct_dict[s][m]['type']), self.struct_dict[s][m]['name']))
                     elif 'void' not in self.struct_dict[s][m]['type'].lower():
