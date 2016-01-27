@@ -468,4 +468,4 @@ if __name__ == "__main__":
             contents = generate_source(base.replace(".cpp", ".h"))
 
         with open(filename, "w") as f:
-            print(contents, end="", file=f)
+            print(contents, file=f)
