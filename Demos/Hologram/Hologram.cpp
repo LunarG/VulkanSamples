@@ -30,10 +30,10 @@ Hologram::~Hologram()
 
 void Hologram::init_workers()
 {
-    int worker_count = std::thread::hardware_concurrency() - 2;
+    int worker_count = std::thread::hardware_concurrency();
 
     // not enough cores
-    if (!multithread_ || worker_count < 0) {
+    if (!multithread_ || worker_count < 2) {
         multithread_ = false;
         worker_count = 1;
     }
