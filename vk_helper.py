@@ -1004,6 +1004,12 @@ class StructWrapperGen:
                         sh_funcs.append('        ss[%u] << pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
                         sh_funcs.append('    else')
                         sh_funcs.append('        ss[%u].str("address");' % (index))
+                    elif 'char' in self.struct_dict[s][m]['type'].lower() and self.struct_dict[s][m]['ptr']:
+                        sh_funcs.append('%s' % lineinfo.get())
+                        sh_funcs.append('    if (NULL != pStruct->%s)' % (self.struct_dict[s][m]['name']))
+                        sh_funcs.append('        ss[%u] << pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
+                        sh_funcs.append('    else')
+                        sh_funcs.append('        ss[%u].str("");' % (index))
                     else:
                         sh_funcs.append('%s' % lineinfo.get())
                         (po, pa) = self._get_struct_print_formatted(self.struct_dict[s][m])
