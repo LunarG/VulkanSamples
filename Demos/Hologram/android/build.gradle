@@ -44,6 +44,7 @@ model {
         cppFlags.addAll([
             "-DVK_NO_PROTOTYPES",
             "-DVK_USE_PLATFORM_ANDROID_KHR",
+            "-DGLM_FORCE_RADIANS",
         ])
 
         cppFlags.addAll([

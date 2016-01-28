@@ -1,17 +1,19 @@
 #include <array>
+
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "Helpers.h"
 #include "Hologram.h"
 #include "Meshes.h"
 #include "Shell.h"
 
-#define OBJECT_COUNT 10000
-
 Hologram::Hologram(const std::vector<std::string> &args)
-    : Game("Hologram", args), random_dev_(),
-      multithread_(true), use_push_constants_(false),
-      frame_data_(), render_pass_clear_value_(), render_pass_begin_info_(),
+    : Game("Hologram", args), multithread_(true), use_push_constants_(false),
+      sim_paused_(false), sim_(10000), frame_data_(),
+      render_pass_clear_value_(), render_pass_begin_info_(),
       primary_cmd_begin_info_(), primary_cmd_submit_info_(),
-      eye_pos_(8.0f), pause_objects_(false)
+      eye_pos_(8.0f)
 {
     for (auto it = args.begin(); it != args.end(); ++it) {
         if (*it == "-s")
@@ -21,7 +23,6 @@ Hologram::Hologram(const std::vector<std::string> &args)
     }
 
     init_workers();
-    init_objects();
 }
 
 Hologram::~Hologram()
@@ -38,7 +39,7 @@ void Hologram::init_workers()
         worker_count = 1;
     }
 
-    const int object_per_worker = OBJECT_COUNT / worker_count;
+    const int object_per_worker = sim_.objects().size() / worker_count;
     int object_begin = 0, object_end = 0;
 
     workers_.reserve(worker_count);
@@ -47,19 +48,10 @@ void Hologram::init_workers()
         if (i < worker_count - 1)
             object_end += object_per_worker;
         else
-            object_end = OBJECT_COUNT;
+            object_end = sim_.objects().size();
 
         Worker *worker = new Worker(*this, object_begin, object_end);
         workers_.emplace_back(std::unique_ptr<Worker>(worker));
-    }
-}
-
-void Hologram::init_objects()
-{
-    objects_.reserve(OBJECT_COUNT);
-    for (int i = 0; i < OBJECT_COUNT; i++) {
-        Object obj = { i, random_dev_(), random_dev_() };
-        objects_.push_back(obj);
     }
 }
 
@@ -82,7 +74,7 @@ void Hologram::attach_shell(Shell &sh)
     for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++)
         mem_flags_.push_back(mem_props.memoryTypes[i].propertyFlags);
 
-    meshes_ = new Meshes(random_dev_(), mem_flags_, dev_, objects_.size());
+    meshes_ = new Meshes(sim_.rng_seed(), mem_flags_, dev_, sim_.objects().size());
 
     create_frame_data();
     create_descriptor_set();
@@ -141,15 +133,11 @@ void Hologram::create_frame_data()
     if (object_data_size % alignment)
         object_data_size += alignment - (object_data_size % alignment);
 
-    uint32_t frame_data_offset = 0;
-    for (auto &obj : objects_) {
-        obj.frame_data_offset = frame_data_offset;
-        frame_data_offset += object_data_size;
-    }
+    sim_.set_frame_data_size(object_data_size);
 
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buf_info.size = frame_data_offset;
+    buf_info.size = object_data_size * sim_.objects().size();
     buf_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -597,17 +585,7 @@ void Hologram::update_projection()
     view_projection_ = clip * projection * view;
 }
 
-void Hologram::step_object(Object &obj, float obj_time) const
-{
-    if (pause_objects_)
-        return;
-
-    glm::vec3 pos = obj.path.position(obj_time);
-    glm::mat4 trans = obj.animation.transformation(obj_time);
-    obj.model = glm::translate(glm::mat4(1.0f), pos) * trans;
-}
-
-void Hologram::draw_object(const Object &obj, FrameData &data, VkCommandBuffer cmd) const
+void Hologram::draw_object(const Simulation::Object &obj, FrameData &data, VkCommandBuffer cmd) const
 {
     glm::mat4 mvp = view_projection_ * obj.model;
 
@@ -625,13 +603,9 @@ void Hologram::draw_object(const Object &obj, FrameData &data, VkCommandBuffer c
     meshes_->cmd_draw(cmd, obj.mesh);
 }
 
-void Hologram::step_objects(const Worker &worker)
+void Hologram::update_simulation(const Worker &worker)
 {
-    for (int i = worker.object_begin_; i < worker.object_end_; i++) {
-        auto &obj = objects_[i];
-
-        step_object(obj, worker.object_time_);
-    }
+    sim_.update(worker.object_time_, worker.object_begin_, worker.object_end_);
 }
 
 void Hologram::draw_objects(Worker &worker)
@@ -658,7 +632,7 @@ void Hologram::draw_objects(Worker &worker)
     meshes_->cmd_bind_buffers(cmd);
 
     for (int i = worker.object_begin_; i < worker.object_end_; i++) {
-        auto &obj = objects_[i];
+        auto &obj = sim_.objects()[i];
 
         draw_object(obj, frame_data_, cmd);
     }
@@ -682,7 +656,7 @@ void Hologram::on_key(Key key)
         update_projection();
         break;
     case KEY_SPACE:
-        pause_objects_ = !pause_objects_;
+        sim_paused_ = !sim_paused_;
         break;
     default:
         break;
@@ -691,8 +665,11 @@ void Hologram::on_key(Key key)
 
 void Hologram::on_tick()
 {
+    if (sim_paused_)
+        return;
+
     for (auto &worker : workers_)
-        worker->step_objects();
+        worker->update_simulation();
 }
 
 void Hologram::on_frame(float frame_pred)
@@ -755,7 +732,7 @@ void Hologram::Worker::stop()
     thread_.join();
 }
 
-void Hologram::Worker::step_objects()
+void Hologram::Worker::update_simulation()
 {
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -766,7 +743,7 @@ void Hologram::Worker::step_objects()
 
         // step directly
         if (!started) {
-            hologram_.step_objects(*this);
+            hologram_.update_simulation(*this);
             state_ = INIT;
         }
     }
@@ -814,7 +791,7 @@ void Hologram::Worker::update_loop()
 
         assert(state_ == STEP || state_ == DRAW);
         if (state_ == STEP)
-            hologram_.step_objects(*this);
+            hologram_.update_simulation(*this);
         else
             hologram_.draw_objects(*this);
 
