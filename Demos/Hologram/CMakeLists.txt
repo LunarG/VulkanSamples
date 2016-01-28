@@ -34,8 +34,6 @@ set(sources
     Main.cpp
     Meshes.cpp
     Meshes.h
-    Path.cpp
-    Path.h
     Simulation.cpp
     Simulation.h
     Shell.cpp
