@@ -94,7 +94,6 @@ private:
         uint8_t *base;
 
         VkPushConstantRange push_const_range;
-        std::vector<glm::mat4> object_mvp;
     };
 
     // called by the constructor
@@ -174,8 +173,8 @@ private:
     glm::mat4 view_projection_;
 
     // called by workers
-    void step_object(Object &obj, float obj_time, FrameData &data) const;
-    void draw_object(const Object &obj, VkCommandBuffer cmd) const;
+    void step_object(Object &obj, float obj_time) const;
+    void draw_object(const Object &obj, FrameData &data, VkCommandBuffer cmd) const;
     void step_objects(const Worker &worker);
     void draw_objects(Worker &worker);
 
