@@ -3118,6 +3118,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
     createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     // Get physical device limits for this device
     my_instance_data->instance_dispatch_table->GetPhysicalDeviceProperties(gpu, &(my_device_data->physDevProperties.properties));
+    my_instance_data->instance_dispatch_table->GetPhysicalDeviceFeatures(gpu, &(my_device_data->physDevProperties.features));
     uint32_t count;
     my_instance_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(gpu, &count, nullptr);
     my_device_data->physDevProperties.queue_family_properties.resize(count);
@@ -4344,27 +4345,41 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
     if (pCB) {
         if (pCB->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
             // Secondary Command Buffer
-            // TODO : Add check here from spec "If commandBuffer is a secondary command buffer and either the
-            //  occlusionQueryEnable member of pBeginInfo is VK_FALSE, or the precise occlusion queries feature
-            //  is not enabled, the queryFlags member of pBeginInfo must not contain VK_QUERY_CONTROL_PRECISE_BIT"
             const VkCommandBufferInheritanceInfo *pInfo = pBeginInfo->pInheritanceInfo;
-            if (pBeginInfo->flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
-                if (!pInfo->renderPass) { // renderpass should NOT be null for an Secondary CB
-                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
-                        "vkBeginCommandBuffer(): Secondary Command Buffers (%p) must specify a valid renderpass parameter.", (void*)commandBuffer);
-                }
-                if (!pInfo->framebuffer) { // framebuffer may be null for an Secondary CB, but this affects perf
-                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
-                        "vkBeginCommandBuffer(): Secondary Command Buffers (%p) may perform better if a valid framebuffer parameter is specified.", (void*)commandBuffer);
-                } else {
-                    string errorString = "";
-                    VkRenderPass fbRP = dev_data->frameBufferMap[pInfo->framebuffer]->renderPass;
-                    if (!verify_renderpass_compatibility(dev_data, fbRP, pInfo->renderPass, errorString)) {
-                        // renderPass that framebuffer was created with must be compatible with local renderPass
-                        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
-                            "vkBeginCommandBuffer(): Secondary Command Buffer (%p) renderPass (%#" PRIxLEAST64 ") is incompatible w/ framebuffer (%#" PRIxLEAST64 ") w/ render pass (%#" PRIxLEAST64 ") due to: %s",
-                            (void*)commandBuffer, (uint64_t)pInfo->renderPass, (uint64_t)pInfo->framebuffer, (uint64_t)fbRP, errorString.c_str());
+            if (!pInfo) {
+                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer), __LINE__,
+                                    DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS", "vkBeginCommandBuffer(): Secondary Command Buffer (%p) must have inheritance info.",
+                                    reinterpret_cast<void*>(commandBuffer));
+            } else {
+                if (pBeginInfo->flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
+                    if (!pInfo->renderPass) { // renderpass should NOT be null for an Secondary CB
+                        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer),
+                                            __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
+                                            "vkBeginCommandBuffer(): Secondary Command Buffers (%p) must specify a valid renderpass parameter.", reinterpret_cast<void*>(commandBuffer));
                     }
+                    if (!pInfo->framebuffer) { // framebuffer may be null for an Secondary CB, but this affects perf
+                        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer),
+                                            __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS", 
+                                            "vkBeginCommandBuffer(): Secondary Command Buffers (%p) may perform better if a valid framebuffer parameter is specified.",
+                                            reinterpret_cast<void*>(commandBuffer));
+                    } else {
+                        string errorString = "";
+                        VkRenderPass fbRP = dev_data->frameBufferMap[pInfo->framebuffer]->renderPass;
+                        if (!verify_renderpass_compatibility(dev_data, fbRP, pInfo->renderPass, errorString)) {
+                            // renderPass that framebuffer was created with must be compatible with local renderPass
+                            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer),
+                                                __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
+                                                "vkBeginCommandBuffer(): Secondary Command Buffer (%p) renderPass (%#" PRIxLEAST64 ") is incompatible w/ framebuffer (%#" PRIxLEAST64
+                                                ") w/ render pass (%#" PRIxLEAST64 ") due to: %s", reinterpret_cast<void*>(commandBuffer), reinterpret_cast<uint64_t>(pInfo->renderPass),
+                                                reinterpret_cast<uint64_t>(pInfo->framebuffer), reinterpret_cast<uint64_t>(fbRP), errorString.c_str());
+                        }
+                    }
+                }
+                if ((pInfo->occlusionQueryEnable == VK_FALSE || dev_data->physDevProperties.features.occlusionQueryPrecise == VK_FALSE) && (pInfo->queryFlags & VK_QUERY_CONTROL_PRECISE_BIT)) {
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer),
+                                        __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
+                                        "vkBeginCommandBuffer(): Secondary Command Buffer (%p) must not have VK_QUERY_CONTROL_PRECISE_BIT if occulusionQuery is disabled or the device does not "
+                                        "support precise occlusion queries.", reinterpret_cast<void*>(commandBuffer));
                 }
             }
         }

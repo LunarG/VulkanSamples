@@ -263,6 +263,7 @@ struct RENDER_PASS_NODE {
 class PHYS_DEV_PROPERTIES_NODE {
   public:
     VkPhysicalDeviceProperties properties;
+    VkPhysicalDeviceFeatures features;
     vector<VkQueueFamilyProperties> queue_family_properties;
 };
 
