@@ -3755,8 +3755,14 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(VkDevice device,
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
+    bool skip_call = false;
     for (uint32_t i = 0; i < count; i++) {
         loader_platform_thread_lock_mutex(&globalLock);
+        if (dev_data->globalInFlightCmdBuffers.count(pCommandBuffers[i])) {
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                reinterpret_cast<uint64_t>(pCommandBuffers[i]), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER_RESET, "DS",
+                "Attempt to free command buffer (%#" PRIxLEAST64 ") which is in use.", reinterpret_cast<uint64_t>(pCommandBuffers[i]));
+        }
         // Delete CB information structure, and remove from commandBufferMap
         auto cb = dev_data->commandBufferMap.find(pCommandBuffers[i]);
         if (cb != dev_data->commandBufferMap.end()) {
@@ -3771,7 +3777,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(VkDevice device,
         loader_platform_thread_unlock_mutex(&globalLock);
     }
 
-    dev_data->device_dispatch_table->FreeCommandBuffers(device, commandPool, count, pCommandBuffers);
+    if (!skip_call)
+        dev_data->device_dispatch_table->FreeCommandBuffers(device, commandPool, count, pCommandBuffers);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(VkDevice device, const VkCommandPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkCommandPool* pCommandPool)
@@ -4432,6 +4439,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandBuffer(VkCommandBuf
                         __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER_RESET, "DS",
                         "Attempt to reset command buffer (%#" PRIxLEAST64 ") created from command pool (%#" PRIxLEAST64 ") that does NOT have the VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT bit set.",
                         (uint64_t) commandBuffer, (uint64_t) cmdPool);
+    }
+    if (dev_data->globalInFlightCmdBuffers.count(commandBuffer)) {
+        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t) commandBuffer,
+                        __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER_RESET, "DS",
+                        "Attempt to reset command buffer (%#" PRIxLEAST64 ") which is in use.", reinterpret_cast<uint64_t>(commandBuffer));
     }
     if (skipCall != VK_FALSE)
         return VK_ERROR_VALIDATION_FAILED_EXT;
