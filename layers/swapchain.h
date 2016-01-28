@@ -189,7 +189,7 @@ struct _SwpInstance {
     VkInstance instance;
 
     // Remember the VkSurfaceKHR's that are created for this VkInstance:
-    unordered_map<const void*, SwpSurface*> surfaces;
+    unordered_map<VkSurfaceKHR, SwpSurface*> surfaces;
 
     // When vkEnumeratePhysicalDevices is called, the VkPhysicalDevice's are
     // remembered:
@@ -269,7 +269,7 @@ struct _SwpPhysicalDevice {
 
     // Record all surfaces that vkGetPhysicalDeviceSurfaceSupportKHR() was
     // called for:
-    unordered_map<const void*, SwpSurface*> supportedSurfaces;
+    unordered_map<VkSurfaceKHR, SwpSurface*> supportedSurfaces;
 
 // TODO: Record/use this info per-surface, not per-device, once a
 // non-dispatchable surface object is added to WSI:
@@ -362,7 +362,7 @@ struct layer_data {
     // NOTE: The following are for keeping track of info that is used for
     // validating the WSI extensions.
     std::unordered_map<void *, SwpInstance>       instanceMap;
-    std::unordered_map<void *, SwpSurface>        surfaceMap;
+    std::unordered_map<VkSurfaceKHR, SwpSurface>        surfaceMap;
     std::unordered_map<void *, SwpPhysicalDevice> physicalDeviceMap;
     std::unordered_map<void *, SwpDevice>         deviceMap;
     std::unordered_map<VkSwapchainKHR, SwpSwapchain>    swapchainMap;
