@@ -43,7 +43,7 @@ int main(int argc, char **argv)
     assert(gpu_count);
     info.gpus.resize(gpu_count);
     res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, info.gpus.data());
-    assert(!res && gpu_count == 1);
+    assert(!res && gpu_count >= 1);
 
     /* VULKAN_KEY_END */
 
