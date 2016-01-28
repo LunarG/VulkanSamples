@@ -132,10 +132,6 @@ void Hologram::create_frame_data()
         frame_data_.push_const_range.offset = 0;
         frame_data_.push_const_range.size = object_data_size;
 
-        frame_data_.object_mvp.resize(objects_.size());
-        for (size_t i = 0; i < objects_.size(); i++)
-            objects_[i].frame_data_offset = i;
-
         return;
     }
 
@@ -601,31 +597,27 @@ void Hologram::update_projection()
     view_projection_ = clip * projection * view;
 }
 
-void Hologram::step_object(Object &obj, float obj_time, FrameData &data) const
+void Hologram::step_object(Object &obj, float obj_time) const
 {
-    if (!pause_objects_) {
-        glm::vec3 pos = obj.path.position(obj_time);
-        glm::mat4 trans = obj.animation.transformation(obj_time);
-        obj.model = glm::translate(glm::mat4(1.0f), pos) * trans;
-    }
+    if (pause_objects_)
+        return;
 
-    if (use_push_constants_) {
-        auto &mvp = data.object_mvp[obj.frame_data_offset];
-        mvp = view_projection_ * obj.model;
-    } else {
-        glm::mat4 mvp = view_projection_ * obj.model;
-        uint8_t *dst = data.base + obj.frame_data_offset;
-        memcpy(dst, glm::value_ptr(mvp), sizeof(mvp));
-    }
+    glm::vec3 pos = obj.path.position(obj_time);
+    glm::mat4 trans = obj.animation.transformation(obj_time);
+    obj.model = glm::translate(glm::mat4(1.0f), pos) * trans;
 }
 
-void Hologram::draw_object(const Object &obj, VkCommandBuffer cmd) const
+void Hologram::draw_object(const Object &obj, FrameData &data, VkCommandBuffer cmd) const
 {
+    glm::mat4 mvp = view_projection_ * obj.model;
+
     if (use_push_constants_) {
-        const auto &mvp = frame_data_.object_mvp[obj.frame_data_offset];
         vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
                 0, sizeof(mvp), glm::value_ptr(mvp));
     } else {
+        uint8_t *dst = data.base + obj.frame_data_offset;
+        memcpy(dst, glm::value_ptr(mvp), sizeof(mvp));
+
         vk::CmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 pipeline_layout_, 0, 1, &desc_set_, 1, &obj.frame_data_offset);
     }
@@ -638,7 +630,7 @@ void Hologram::step_objects(const Worker &worker)
     for (int i = worker.object_begin_; i < worker.object_end_; i++) {
         auto &obj = objects_[i];
 
-        step_object(obj, worker.object_time_, frame_data_);
+        step_object(obj, worker.object_time_);
     }
 }
 
@@ -668,7 +660,7 @@ void Hologram::draw_objects(Worker &worker)
     for (int i = worker.object_begin_; i < worker.object_end_; i++) {
         auto &obj = objects_[i];
 
-        draw_object(obj, cmd);
+        draw_object(obj, frame_data_, cmd);
     }
 
     vk::EndCommandBuffer(cmd);
