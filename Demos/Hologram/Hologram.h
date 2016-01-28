@@ -79,6 +79,7 @@ private:
     };
 
     struct FrameData {
+        // signaled when this struct is ready for reuse
         VkFence fence;
 
         VkBuffer buf;
