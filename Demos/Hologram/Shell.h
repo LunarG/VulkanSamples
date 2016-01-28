@@ -21,6 +21,8 @@ public:
 
         VkSemaphore acquire_semaphore;
         VkSemaphore render_semaphore;
+
+        // signaled when this struct is ready for reuse
         VkFence present_fence;
     };
 
