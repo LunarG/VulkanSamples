@@ -1,22 +1,17 @@
 #ifndef HOLOGRAM_H
 #define HOLOGRAM_H
 
-#include <memory>
-#include <string>
-#include <vector>
-#include <random>
-#include <thread>
-#include <mutex>
 #include <condition_variable>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <vector>
+
 #include <vulkan/vulkan.h>
-
-#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
-#include "Animation.h"
-#include "Path.h"
+#include "Simulation.h"
 #include "Game.h"
 
 class Meshes;
@@ -44,7 +39,7 @@ private:
 
         void start();
         void stop();
-        void step_objects();
+        void update_simulation();
         void draw_objects(VkFramebuffer fb);
         void wait_idle();
 
@@ -78,16 +73,6 @@ private:
         const float tick_interval_;
     };
 
-    struct Object {
-        int mesh;
-        Animation animation;
-        Path path;
-
-        uint32_t frame_data_offset;
-
-        glm::mat4 model;
-    };
-
     struct FrameData {
         VkBuffer buf;
         VkDeviceMemory mem;
@@ -98,14 +83,14 @@ private:
 
     // called by the constructor
     void init_workers();
-    void init_objects();
-
-    std::random_device random_dev_;
 
     bool multithread_;
     bool use_push_constants_;
+
+    bool sim_paused_;
+    Simulation sim_;
+
     std::vector<std::unique_ptr<Worker>> workers_;
-    std::vector<Object> objects_;
 
     // called by attach_shell
     void create_frame_data();
@@ -173,12 +158,9 @@ private:
     glm::mat4 view_projection_;
 
     // called by workers
-    void step_object(Object &obj, float obj_time) const;
-    void draw_object(const Object &obj, FrameData &data, VkCommandBuffer cmd) const;
-    void step_objects(const Worker &worker);
+    void update_simulation(const Worker &worker);
+    void draw_object(const Simulation::Object &obj, FrameData &data, VkCommandBuffer cmd) const;
     void draw_objects(Worker &worker);
-
-    bool pause_objects_;
 };
 
 #endif // HOLOGRAM_H

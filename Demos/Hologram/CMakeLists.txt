@@ -38,13 +38,16 @@ set(sources
     Meshes.h
     Path.cpp
     Path.h
+    Simulation.cpp
+    Simulation.h
     Shell.cpp
     Shell.h
     )
 
 set(definitions
     PRIVATE -DVULKAN_LOADER="${VULKAN_LOADER}"
-    PRIVATE -DVK_NO_PROTOTYPES)
+    PRIVATE -DVK_NO_PROTOTYPES
+    PRIVATE -DGLM_FORCE_RADIANS)
 
 set(includes
     PRIVATE ${GLMINC_PREFIX}
