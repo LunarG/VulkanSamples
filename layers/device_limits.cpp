@@ -739,6 +739,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkAllocateCommandBuffers;
     if (!strcmp(funcName, "vkFreeCommandBuffers"))
         return (PFN_vkVoidFunction) vkFreeCommandBuffers;
+    if (!strcmp(funcName, "vkBeginCommandBuffer"))
+        return (PFN_vkVoidFunction) vkBeginCommandBuffer;
     if (!strcmp(funcName, "vkCmdUpdateBuffer"))
         return (PFN_vkVoidFunction) vkCmdUpdateBuffer;
     if (!strcmp(funcName, "vkBindBufferMemory"))
