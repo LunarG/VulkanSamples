@@ -22,8 +22,6 @@ glsl_to_spirv(Hologram.vert)
 glsl_to_spirv(Hologram.push_constant.vert)
 
 set(sources
-    Animation.cpp
-    Animation.h
     Game.h
     Helpers.h
     HelpersDispatchTable.cpp
