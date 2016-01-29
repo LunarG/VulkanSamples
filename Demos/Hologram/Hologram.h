@@ -82,13 +82,12 @@ private:
         // signaled when this struct is ready for reuse
         VkFence fence;
 
-        VkBuffer buf;
-        uint8_t *base;
-
-        VkDescriptorSet desc_set;
-
         VkCommandBuffer primary_cmd;
         std::vector<VkCommandBuffer> worker_cmds;
+
+        VkBuffer buf;
+        uint8_t *base;
+        VkDescriptorSet desc_set;
     };
 
     // called by the constructor
@@ -113,10 +112,13 @@ private:
     void create_pipeline_layout();
     void create_pipeline();
 
-    void create_frame_data();
-    void create_command_pools();
-    void create_descriptor_pool();
-    void create_descriptor_set();
+    void create_frame_data(int count);
+    void destroy_frame_data();
+    void create_fences();
+    void create_command_buffers();
+    void create_buffers();
+    void create_buffer_memory();
+    void create_descriptor_sets();
 
     VkPhysicalDevice physical_dev_;
     VkDevice dev_;
@@ -140,7 +142,7 @@ private:
     std::vector<VkCommandPool> worker_cmd_pools_;
     VkDescriptorPool desc_pool_;
     VkDeviceMemory frame_data_mem_;
-    FrameData frame_data_;
+    std::vector<FrameData> frame_data_;
 
     VkClearValue render_pass_clear_value_;
     VkRenderPassBeginInfo render_pass_begin_info_;
