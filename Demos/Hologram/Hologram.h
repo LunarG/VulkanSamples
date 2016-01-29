@@ -84,6 +84,9 @@ private:
         uint8_t *base;
 
         VkPushConstantRange push_const_range;
+
+        VkCommandBuffer primary_cmd;
+        std::vector<VkCommandBuffer> worker_cmds;
     };
 
     // called by the constructor
@@ -110,8 +113,6 @@ private:
     void create_pipeline_layout();
     void create_pipeline();
     void create_primary_cmd();
-    void start_workers();
-    void stop_workers();
 
     VkPhysicalDevice physical_dev_;
     VkDevice dev_;
@@ -141,13 +142,10 @@ private:
     VkPipelineLayout pipeline_layout_;
     VkPipeline pipeline_;
 
-    VkCommandBuffer primary_cmd_;
     VkFence primary_cmd_fence_;
     VkCommandBufferBeginInfo primary_cmd_begin_info_;
     VkPipelineStageFlags primary_cmd_submit_wait_stages_;
     VkSubmitInfo primary_cmd_submit_info_;
-
-    std::vector<VkCommandBuffer> worker_cmds_;
 
     // called by attach_swapchain
     void prepare_viewport(const VkExtent2D &extent);

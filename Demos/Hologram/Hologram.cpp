@@ -84,12 +84,18 @@ void Hologram::attach_shell(Shell &sh)
     create_pipeline();
     create_primary_cmd();
 
-    start_workers();
+    if (multithread_) {
+        for (auto &worker : workers_)
+            worker->start();
+    }
 }
 
 void Hologram::detach_shell()
 {
-    stop_workers();
+    if (multithread_) {
+        for (auto &worker : workers_)
+            worker->stop();
+    }
 
     vk::DestroyFence(dev_, primary_cmd_fence_, nullptr);
 
@@ -99,6 +105,8 @@ void Hologram::detach_shell()
     vk::DestroyShaderModule(dev_, vs_, nullptr);
 
     vk::DestroyRenderPass(dev_, render_pass_, nullptr);
+
+    frame_data_.worker_cmds.clear();
 
     if (!use_push_constants_) {
         vk::DestroyDescriptorSetLayout(dev_, desc_set_layout_, nullptr);
@@ -148,50 +156,69 @@ void Hologram::create_frame_data()
         frame_data_.push_const_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         frame_data_.push_const_range.offset = 0;
         frame_data_.push_const_range.size = object_data_size;
+    } else {
+        // align object data to device limit
+        const VkDeviceSize &alignment =
+            physical_dev_props_.limits.minStorageBufferOffsetAlignment;
+        if (object_data_size % alignment)
+            object_data_size += alignment - (object_data_size % alignment);
 
-        return;
-    }
+        sim_.set_frame_data_size(object_data_size);
 
-    // align object data to device limit
-    const VkDeviceSize &alignment =
-        physical_dev_props_.limits.minStorageBufferOffsetAlignment;
-    if (object_data_size % alignment)
-        object_data_size += alignment - (object_data_size % alignment);
+        VkBufferCreateInfo buf_info = {};
+        buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buf_info.size = object_data_size * sim_.objects().size();
+        buf_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    sim_.set_frame_data_size(object_data_size);
+        vk::assert_success(vk::CreateBuffer(dev_, &buf_info, nullptr, &frame_data_.buf));
 
-    VkBufferCreateInfo buf_info = {};
-    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buf_info.size = object_data_size * sim_.objects().size();
-    buf_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        VkMemoryRequirements mem_reqs;
+        vk::GetBufferMemoryRequirements(dev_, frame_data_.buf, &mem_reqs);
 
-    vk::assert_success(vk::CreateBuffer(dev_, &buf_info, nullptr, &frame_data_.buf));
+        // allocate memory
+        VkMemoryAllocateInfo mem_info = {};
+        mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        mem_info.allocationSize = mem_reqs.size;
 
-    VkMemoryRequirements mem_reqs;
-    vk::GetBufferMemoryRequirements(dev_, frame_data_.buf, &mem_reqs);
-
-    // allocate memory
-    VkMemoryAllocateInfo mem_info = {};
-    mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_info.allocationSize = mem_reqs.size;
-
-    for (uint32_t idx = 0; idx < mem_flags_.size(); idx++) {
-        if ((mem_reqs.memoryTypeBits & (1 << idx)) &&
-            (mem_flags_[idx] & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
-            (mem_flags_[idx] & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
-            // TODO is this guaranteed to exist?
-            mem_info.memoryTypeIndex = idx;
-            break;
+        for (uint32_t idx = 0; idx < mem_flags_.size(); idx++) {
+            if ((mem_reqs.memoryTypeBits & (1 << idx)) &&
+                (mem_flags_[idx] & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) &&
+                (mem_flags_[idx] & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+                // TODO is this guaranteed to exist?
+                mem_info.memoryTypeIndex = idx;
+                break;
+            }
         }
+
+        vk::AllocateMemory(dev_, &mem_info, nullptr, &frame_data_.mem);
+
+        vk::MapMemory(dev_, frame_data_.mem, 0, VK_WHOLE_SIZE, 0,
+                reinterpret_cast<void **>(&frame_data_.base));
+
+        vk::BindBufferMemory(dev_, frame_data_.buf, frame_data_.mem, 0);
     }
 
-    vk::AllocateMemory(dev_, &mem_info, nullptr, &frame_data_.mem);
+    VkCommandBufferAllocateInfo cmd_info = {};
+    cmd_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmd_info.commandPool = primary_cmd_pool_;
+    cmd_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmd_info.commandBufferCount = 1;
 
-    vk::MapMemory(dev_, frame_data_.mem, 0, VK_WHOLE_SIZE, 0,
-            reinterpret_cast<void **>(&frame_data_.base));
+    vk::assert_success(vk::AllocateCommandBuffers(dev_, &cmd_info,
+                &frame_data_.primary_cmd));
 
-    vk::BindBufferMemory(dev_, frame_data_.buf, frame_data_.mem, 0);
+    assert(frame_data_.worker_cmds.empty());
+    frame_data_.worker_cmds.reserve(worker_cmd_pools_.size());
+    cmd_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+    for (auto cmd_pool : worker_cmd_pools_) {
+        cmd_info.commandPool = cmd_pool;
+
+        VkCommandBuffer cmd;
+        vk::assert_success(vk::AllocateCommandBuffers(dev_, &cmd_info, &cmd));
+
+        frame_data_.worker_cmds.push_back(cmd);
+    }
 }
 
 void Hologram::create_descriptor_set()
@@ -433,14 +460,6 @@ void Hologram::create_pipeline()
 
 void Hologram::create_primary_cmd()
 {
-    VkCommandBufferAllocateInfo cmd_buf_info = {};
-    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    cmd_buf_info.commandPool = primary_cmd_pool_;
-    cmd_buf_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cmd_buf_info.commandBufferCount = 1;
-
-    vk::assert_success(vk::AllocateCommandBuffers(dev_, &cmd_buf_info, &primary_cmd_));
-
     VkFenceCreateInfo fence_info = {};
     fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -456,42 +475,8 @@ void Hologram::create_primary_cmd()
     primary_cmd_submit_info_.waitSemaphoreCount = 1;
     primary_cmd_submit_info_.pWaitDstStageMask = &primary_cmd_submit_wait_stages_;
     primary_cmd_submit_info_.commandBufferCount = 1;
-    primary_cmd_submit_info_.pCommandBuffers = &primary_cmd_;
+    primary_cmd_submit_info_.pCommandBuffers = &frame_data_.primary_cmd;
     primary_cmd_submit_info_.signalSemaphoreCount = 1;
-}
-
-void Hologram::start_workers()
-{
-    // should have been stopped
-    assert(worker_cmds_.empty());
-
-    worker_cmds_.reserve(workers_.size());
-
-    for (auto &worker : workers_) {
-        VkCommandBufferAllocateInfo cmd_buf_info = {};
-        cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        cmd_buf_info.commandPool = worker_cmd_pools_[worker->index_];
-        cmd_buf_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-        cmd_buf_info.commandBufferCount = 1;
-
-        VkCommandBuffer cmd;
-        vk::assert_success(vk::AllocateCommandBuffers(dev_, &cmd_buf_info, &cmd));
-
-        worker_cmds_.push_back(cmd);
-
-        if (multithread_)
-            worker->start();
-    }
-}
-
-void Hologram::stop_workers()
-{
-    if (multithread_) {
-        for (auto &worker : workers_)
-            worker->stop();
-    }
-
-    worker_cmds_.clear();
 }
 
 void Hologram::attach_swapchain()
@@ -611,7 +596,7 @@ void Hologram::update_simulation(const Worker &worker)
 
 void Hologram::draw_objects(Worker &worker)
 {
-    auto cmd = worker_cmds_[worker.index_];
+    auto cmd = frame_data_.worker_cmds[worker.index_];
 
     VkCommandBufferInheritanceInfo inherit_info = {};
     inherit_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
@@ -685,20 +670,22 @@ void Hologram::on_frame(float frame_pred)
     for (auto &worker : workers_)
         worker->draw_objects(framebuffers_[back.image_index]);
 
-    VkResult res = vk::BeginCommandBuffer(primary_cmd_, &primary_cmd_begin_info_);
+    VkResult res = vk::BeginCommandBuffer(frame_data_.primary_cmd, &primary_cmd_begin_info_);
 
     render_pass_begin_info_.framebuffer = framebuffers_[back.image_index];
     render_pass_begin_info_.renderArea.extent = extent_;
-    vk::CmdBeginRenderPass(primary_cmd_, &render_pass_begin_info_,
+    vk::CmdBeginRenderPass(frame_data_.primary_cmd, &render_pass_begin_info_,
             VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
     // record render pass commands
     for (auto &worker : workers_)
         worker->wait_idle();
-    vk::CmdExecuteCommands(primary_cmd_, (uint32_t)worker_cmds_.size(), worker_cmds_.data());
+    vk::CmdExecuteCommands(frame_data_.primary_cmd,
+            static_cast<uint32_t>(frame_data_.worker_cmds.size()),
+            frame_data_.worker_cmds.data());
 
-    vk::CmdEndRenderPass(primary_cmd_);
-    vk::EndCommandBuffer(primary_cmd_);
+    vk::CmdEndRenderPass(frame_data_.primary_cmd);
+    vk::EndCommandBuffer(frame_data_.primary_cmd);
 
     // wait for the image to be owned and signal for render completion
     primary_cmd_submit_info_.pWaitSemaphores = &back.acquire_semaphore;
