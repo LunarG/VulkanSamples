@@ -2112,7 +2112,10 @@ void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDeviceCre
                 "VkDeviceCreateInfo parameter, uint32_t pQueueCreateInfos[%d]->queueCount, cannot be zero.", i);
         }
         for (uint32_t j = 0; j < pCreateInfo->pQueueCreateInfos[i].queueCount; ++j) {
-            if (pCreateInfo->pQueueCreateInfos[i].pQueuePriorities[j] < 0.f || pCreateInfo->pQueueCreateInfos[i].pQueuePriorities[j] > 1.f) {
+            if (pCreateInfo->pQueueCreateInfos[i].pQueuePriorities == nullptr) {
+                log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+                    "VkDeviceCreateInfo parameter, uint32_t pQueueCreateInfos[%d]->pQueuePriorities, must not be NULL.", i);
+            } else if (pCreateInfo->pQueueCreateInfos[i].pQueuePriorities[j] < 0.f || pCreateInfo->pQueueCreateInfos[i].pQueuePriorities[j] > 1.f) {
                 log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
                     "VkDeviceCreateInfo parameter, uint32_t pQueueCreateInfos[%d]->pQueuePriorities[%d], must be between 0 and 1. Actual value is %f", i, j, pCreateInfo->pQueueCreateInfos[i].pQueuePriorities[j]);
             }
