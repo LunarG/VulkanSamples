@@ -10,10 +10,9 @@
 
 Hologram::Hologram(const std::vector<std::string> &args)
     : Game("Hologram", args), multithread_(true), use_push_constants_(false),
-      sim_paused_(false), sim_(10000), frame_data_(),
+      sim_paused_(false), sim_(10000), camera_(8.0f), frame_data_(),
       render_pass_clear_value_(), render_pass_begin_info_(),
-      primary_cmd_begin_info_(), primary_cmd_submit_info_(),
-      eye_pos_(8.0f)
+      primary_cmd_begin_info_(), primary_cmd_submit_info_()
 {
     for (auto it = args.begin(); it != args.end(); ++it) {
         if (*it == "-s")
@@ -500,7 +499,7 @@ void Hologram::attach_swapchain()
     prepare_viewport(ctx.extent);
     prepare_framebuffers(ctx.swapchain);
 
-    update_projection();
+    update_camera();
 }
 
 void Hologram::detach_swapchain()
@@ -567,11 +566,11 @@ void Hologram::prepare_framebuffers(VkSwapchainKHR swapchain)
     }
 }
 
-void Hologram::update_projection()
+void Hologram::update_camera()
 {
     const glm::vec3 center(0.0f);
     const glm::vec3 up(0.f, 0.0f, 1.0f);
-    const glm::mat4 view = glm::lookAt(eye_pos_, center, up);
+    const glm::mat4 view = glm::lookAt(camera_.eye_pos, center, up);
 
     float aspect = static_cast<float>(extent_.width) / static_cast<float>(extent_.height);
     const glm::mat4 projection = glm::perspective(0.4f, aspect, 0.1f, 100.0f);
@@ -582,12 +581,12 @@ void Hologram::update_projection()
                          0.0f,  0.0f, 0.5f, 0.0f,
                          0.0f,  0.0f, 0.5f, 1.0f);
 
-    view_projection_ = clip * projection * view;
+    camera_.view_projection = clip * projection * view;
 }
 
 void Hologram::draw_object(const Simulation::Object &obj, FrameData &data, VkCommandBuffer cmd) const
 {
-    glm::mat4 mvp = view_projection_ * obj.model;
+    glm::mat4 mvp = camera_.view_projection * obj.model;
 
     if (use_push_constants_) {
         vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
@@ -648,12 +647,12 @@ void Hologram::on_key(Key key)
         shell_->quit();
         break;
     case KEY_UP:
-        eye_pos_ -= glm::vec3(0.05f);
-        update_projection();
+        camera_.eye_pos -= glm::vec3(0.05f);
+        update_camera();
         break;
     case KEY_DOWN:
-        eye_pos_ += glm::vec3(0.05f);
-        update_projection();
+        camera_.eye_pos += glm::vec3(0.05f);
+        update_camera();
         break;
     case KEY_SPACE:
         sim_paused_ = !sim_paused_;
