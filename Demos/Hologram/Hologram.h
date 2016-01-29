@@ -106,15 +106,16 @@ private:
     std::vector<std::unique_ptr<Worker>> workers_;
 
     // called by attach_shell
-    void create_command_pools();
-    void create_descriptor_pool();
-    void create_frame_data();
-    void create_descriptor_set_layout();
-    void create_descriptor_set();
     void create_render_pass();
     void create_shader_modules();
+    void create_descriptor_set_layout();
     void create_pipeline_layout();
     void create_pipeline();
+
+    void create_frame_data();
+    void create_command_pools();
+    void create_descriptor_pool();
+    void create_descriptor_set();
 
     VkPhysicalDevice physical_dev_;
     VkDevice dev_;
@@ -127,19 +128,18 @@ private:
 
     const Meshes *meshes_;
 
+    VkRenderPass render_pass_;
+    VkShaderModule vs_;
+    VkShaderModule fs_;
+    VkDescriptorSetLayout desc_set_layout_;
+    VkPipelineLayout pipeline_layout_;
+    VkPipeline pipeline_;
+
     VkCommandPool primary_cmd_pool_;
     std::vector<VkCommandPool> worker_cmd_pools_;
     VkDescriptorPool desc_pool_;
     FrameData frame_data_;
-
-    VkDescriptorSetLayout desc_set_layout_;
     VkDescriptorSet desc_set_;
-
-    VkRenderPass render_pass_;
-    VkShaderModule vs_;
-    VkShaderModule fs_;
-    VkPipelineLayout pipeline_layout_;
-    VkPipeline pipeline_;
 
     VkClearValue render_pass_clear_value_;
     VkRenderPassBeginInfo render_pass_begin_info_;
