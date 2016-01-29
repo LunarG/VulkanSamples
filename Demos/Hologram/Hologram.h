@@ -86,8 +86,6 @@ private:
         VkDeviceMemory mem;
         uint8_t *base;
 
-        VkPushConstantRange push_const_range;
-
         VkCommandBuffer primary_cmd;
         std::vector<VkCommandBuffer> worker_cmds;
     };
