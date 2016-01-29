@@ -83,7 +83,6 @@ private:
         VkFence fence;
 
         VkBuffer buf;
-        VkDeviceMemory mem;
         uint8_t *base;
 
         VkCommandBuffer primary_cmd;
@@ -138,6 +137,7 @@ private:
     VkCommandPool primary_cmd_pool_;
     std::vector<VkCommandPool> worker_cmd_pools_;
     VkDescriptorPool desc_pool_;
+    VkDeviceMemory frame_data_mem_;
     FrameData frame_data_;
     VkDescriptorSet desc_set_;
 

@@ -118,8 +118,9 @@ void Hologram::detach_shell()
     frame_data_.worker_cmds.clear();
 
     if (!use_push_constants_) {
-        vk::UnmapMemory(dev_, frame_data_.mem);
-        vk::FreeMemory(dev_, frame_data_.mem, nullptr);
+        vk::UnmapMemory(dev_, frame_data_mem_);
+        vk::FreeMemory(dev_, frame_data_mem_, nullptr);
+
         vk::DestroyBuffer(dev_, frame_data_.buf, nullptr);
 
         vk::DestroyDescriptorPool(dev_, desc_pool_, nullptr);
@@ -388,12 +389,12 @@ void Hologram::create_frame_data()
             }
         }
 
-        vk::AllocateMemory(dev_, &mem_info, nullptr, &frame_data_.mem);
+        vk::AllocateMemory(dev_, &mem_info, nullptr, &frame_data_mem_);
+        void *ptr;
+        vk::MapMemory(dev_, frame_data_mem_, 0, VK_WHOLE_SIZE, 0, &ptr);
 
-        vk::MapMemory(dev_, frame_data_.mem, 0, VK_WHOLE_SIZE, 0,
-                reinterpret_cast<void **>(&frame_data_.base));
-
-        vk::BindBufferMemory(dev_, frame_data_.buf, frame_data_.mem, 0);
+        vk::BindBufferMemory(dev_, frame_data_.buf, frame_data_mem_, 0);
+        frame_data_.base = reinterpret_cast<uint8_t *>(ptr);
     }
 
     VkCommandBufferAllocateInfo cmd_info = {};
