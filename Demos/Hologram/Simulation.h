@@ -19,7 +19,6 @@ private:
         float speed;
         float scale;
 
-        float time;
         glm::mat4 matrix;
     };
 
@@ -44,11 +43,12 @@ private:
         glm::vec3 origin;
         float start;
         float end;
+        float now;
 
         std::shared_ptr<Curve> curve;
     };
 
-    void generate_subpath(float t);
+    void generate_subpath();
 
     std::mt19937 rng_;
     std::uniform_int_distribution<> type_;
@@ -76,7 +76,7 @@ public:
     unsigned int rng_seed() { return random_dev_(); }
 
     void set_frame_data_size(uint32_t size);
-    void update(float obj_time, int begin, int end);
+    void update(float time, int begin, int end);
 
 private:
     std::random_device random_dev_;
