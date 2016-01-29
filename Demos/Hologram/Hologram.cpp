@@ -81,7 +81,7 @@ void Hologram::attach_shell(Shell &sh)
     create_pipeline_layout();
     create_pipeline();
 
-    create_frame_data(1);
+    create_frame_data(2);
 
     render_pass_begin_info_.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     render_pass_begin_info_.renderPass = render_pass_;
@@ -337,6 +337,8 @@ void Hologram::create_frame_data(int count)
         create_buffer_memory();
         create_descriptor_sets();
     }
+
+    frame_data_index_ = 0;
 }
 
 void Hologram::destroy_frame_data()
@@ -651,7 +653,7 @@ void Hologram::update_simulation(const Worker &worker)
 
 void Hologram::draw_objects(Worker &worker)
 {
-    auto &data = frame_data_.front();
+    auto &data = frame_data_[frame_data_index_];
     auto cmd = data.worker_cmds[worker.index_];
 
     VkCommandBufferInheritanceInfo inherit_info = {};
@@ -716,9 +718,9 @@ void Hologram::on_tick()
 
 void Hologram::on_frame(float frame_pred)
 {
-    auto data = frame_data_.front();
+    auto &data = frame_data_[frame_data_index_];
 
-    // wait for the last submission since we reuse command buffers
+    // wait for the last submission since we reuse frame data
     vk::assert_success(vk::WaitForFences(dev_, 1, &data.fence, true, UINT64_MAX));
     vk::assert_success(vk::ResetFences(dev_, 1, &data.fence));
 
@@ -751,6 +753,8 @@ void Hologram::on_frame(float frame_pred)
     primary_cmd_submit_info_.pSignalSemaphores = &back.render_semaphore;
 
     res = vk::QueueSubmit(queue_, 1, &primary_cmd_submit_info_, data.fence);
+
+    frame_data_index_ = (frame_data_index_ + 1) % frame_data_.size();
 
     (void) res;
 }
