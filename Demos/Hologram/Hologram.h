@@ -35,7 +35,7 @@ public:
 private:
     class Worker {
     public:
-        Worker(Hologram &hologram, int object_begin, int object_end);
+        Worker(Hologram &hologram, int index, int object_begin, int object_end);
 
         void start();
         void stop();
@@ -45,12 +45,11 @@ private:
 
         Hologram &hologram_;
 
+        const int index_;
         const int object_begin_;
         const int object_end_;
 
         const float tick_interval_;
-
-        VkCommandBuffer cmd_;
 
         VkFramebuffer fb_;
 
@@ -103,6 +102,7 @@ private:
     std::vector<std::unique_ptr<Worker>> workers_;
 
     // called by attach_shell
+    void create_command_pools();
     void create_frame_data();
     void create_descriptor_set();
     void create_render_pass();
@@ -124,6 +124,8 @@ private:
 
     const Meshes *meshes_;
 
+    VkCommandPool primary_cmd_pool_;
+    std::vector<VkCommandPool> worker_cmd_pools_;
     FrameData frame_data_;
 
     VkDescriptorPool desc_pool_;
@@ -139,14 +141,12 @@ private:
     VkPipelineLayout pipeline_layout_;
     VkPipeline pipeline_;
 
-    VkCommandPool primary_cmd_pool_;
     VkCommandBuffer primary_cmd_;
     VkFence primary_cmd_fence_;
     VkCommandBufferBeginInfo primary_cmd_begin_info_;
     VkPipelineStageFlags primary_cmd_submit_wait_stages_;
     VkSubmitInfo primary_cmd_submit_info_;
 
-    std::vector<VkCommandPool> worker_cmd_pools_;
     std::vector<VkCommandBuffer> worker_cmds_;
 
     // called by attach_swapchain

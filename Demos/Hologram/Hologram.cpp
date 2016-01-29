@@ -49,7 +49,7 @@ void Hologram::init_workers()
         else
             object_end = sim_.objects().size();
 
-        Worker *worker = new Worker(*this, object_begin, object_end);
+        Worker *worker = new Worker(*this, i, object_begin, object_end);
         workers_.emplace_back(std::unique_ptr<Worker>(worker));
     }
 }
@@ -75,6 +75,7 @@ void Hologram::attach_shell(Shell &sh)
 
     meshes_ = new Meshes(sim_.rng_seed(), mem_flags_, dev_, sim_.objects().size());
 
+    create_command_pools();
     create_frame_data();
     create_descriptor_set();
     create_render_pass();
@@ -91,7 +92,6 @@ void Hologram::detach_shell()
     stop_workers();
 
     vk::DestroyFence(dev_, primary_cmd_fence_, nullptr);
-    vk::DestroyCommandPool(dev_, primary_cmd_pool_, nullptr);
 
     vk::DestroyPipeline(dev_, pipeline_, nullptr);
     vk::DestroyPipelineLayout(dev_, pipeline_layout_, nullptr);
@@ -109,9 +109,35 @@ void Hologram::detach_shell()
         vk::DestroyBuffer(dev_, frame_data_.buf, nullptr);
     }
 
+    for (auto cmd_pool : worker_cmd_pools_)
+        vk::DestroyCommandPool(dev_, cmd_pool, nullptr);
+    worker_cmd_pools_.clear();
+
+    vk::DestroyCommandPool(dev_, primary_cmd_pool_, nullptr);
+
     delete meshes_;
 
     Game::detach_shell();
+}
+
+void Hologram::create_command_pools()
+{
+    VkCommandPoolCreateInfo cmd_pool_info = {};
+    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    cmd_pool_info.queueFamilyIndex = queue_family_;
+
+    vk::assert_success(vk::CreateCommandPool(dev_, &cmd_pool_info,
+                nullptr, &primary_cmd_pool_));
+
+    assert(worker_cmd_pools_.empty());
+    for (size_t i = 0; i < workers_.size(); i++) {
+        VkCommandPool cmd_pool;
+        vk::assert_success(vk::CreateCommandPool(dev_, &cmd_pool_info,
+                    nullptr, &cmd_pool));
+
+        worker_cmd_pools_.push_back(cmd_pool);
+    }
 }
 
 void Hologram::create_frame_data()
@@ -407,14 +433,6 @@ void Hologram::create_pipeline()
 
 void Hologram::create_primary_cmd()
 {
-    // create a pool first
-    VkCommandPoolCreateInfo cmd_pool_info = {};
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    cmd_pool_info.queueFamilyIndex = queue_family_;
-
-    vk::assert_success(vk::CreateCommandPool(dev_, &cmd_pool_info, nullptr, &primary_cmd_pool_));
-
     VkCommandBufferAllocateInfo cmd_buf_info = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     cmd_buf_info.commandPool = primary_cmd_pool_;
@@ -447,31 +465,19 @@ void Hologram::start_workers()
     // should have been stopped
     assert(worker_cmds_.empty());
 
-    worker_cmd_pools_.reserve(workers_.size());
     worker_cmds_.reserve(workers_.size());
 
     for (auto &worker : workers_) {
-        VkCommandPoolCreateInfo cmd_pool_info = {};
-        cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        cmd_pool_info.queueFamilyIndex = queue_family_;
-
-        VkCommandPool cmd_pool;
-        vk::assert_success(vk::CreateCommandPool(dev_, &cmd_pool_info, nullptr, &cmd_pool));
-
         VkCommandBufferAllocateInfo cmd_buf_info = {};
         cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        cmd_buf_info.commandPool = cmd_pool;
+        cmd_buf_info.commandPool = worker_cmd_pools_[worker->index_];
         cmd_buf_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
         cmd_buf_info.commandBufferCount = 1;
 
         VkCommandBuffer cmd;
         vk::assert_success(vk::AllocateCommandBuffers(dev_, &cmd_buf_info, &cmd));
 
-        worker_cmd_pools_.push_back(cmd_pool);
         worker_cmds_.push_back(cmd);
-
-        worker->cmd_ = cmd;
 
         if (multithread_)
             worker->start();
@@ -485,10 +491,6 @@ void Hologram::stop_workers()
             worker->stop();
     }
 
-    for (auto &pool : worker_cmd_pools_)
-        vk::DestroyCommandPool(dev_, pool, nullptr);
-
-    worker_cmd_pools_.clear();
     worker_cmds_.clear();
 }
 
@@ -609,7 +611,7 @@ void Hologram::update_simulation(const Worker &worker)
 
 void Hologram::draw_objects(Worker &worker)
 {
-    auto cmd = worker.cmd_;
+    auto cmd = worker_cmds_[worker.index_];
 
     VkCommandBufferInheritanceInfo inherit_info = {};
     inherit_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
@@ -707,8 +709,9 @@ void Hologram::on_frame(float frame_pred)
     (void) res;
 }
 
-Hologram::Worker::Worker(Hologram &hologram, int object_begin, int object_end)
-    : hologram_(hologram), object_begin_(object_begin), object_end_(object_end),
+Hologram::Worker::Worker(Hologram &hologram, int index, int object_begin, int object_end)
+    : hologram_(hologram), index_(index),
+      object_begin_(object_begin), object_end_(object_end),
       tick_interval_(1.0f / hologram.settings_.ticks_per_second), state_(INIT)
 {
 }
