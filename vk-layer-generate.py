@@ -1553,6 +1553,8 @@ class UniqueObjectsSubcommand(Subcommand):
                                              'CreateDevice',
                                              'CreateComputePipelines',
                                              'CreateGraphicsPipelines']
+        # TODO : This is hacky, need to make this a more general-purpose solution for all layers
+        ifdef_dict = {'CreateXcbSurfaceKHR': 'VK_USE_PLATFORM_XCB_KHR'}
         # Give special treatment to create functions that return multiple new objects
         # This dict stores array name and size of array
         custom_create_dict = {'pDescriptorSets' : 'pAllocateInfo->descriptorSetCount'}
@@ -1641,13 +1643,20 @@ class UniqueObjectsSubcommand(Subcommand):
         else:
             table_type = "device"
         pre_call_txt += '%s\n' % (self.lineinfo.get())
-        funcs.append('%s%s\n'
+        open_ifdef = ''
+        close_ifdef = ''
+        if proto.name in ifdef_dict:
+            open_ifdef = '#ifdef %s\n' % (ifdef_dict[proto.name])
+            close_ifdef = '#endif\n'
+        funcs.append('%s'
+                     '%s%s\n'
                      '{\n'
                      '%s'
                      '    %sget_dispatch_table(unique_objects_%s_table_map, %s)->%s;\n'
                      '%s'
                      '%s'
-                     '}' % (qual, decl, pre_call_txt, ret_val, table_type, dispatch_param, call_sig, post_call_txt, ret_stmt))
+                     '}\n'
+                     '%s' % (open_ifdef, qual, decl, pre_call_txt, ret_val, table_type, dispatch_param, call_sig, post_call_txt, ret_stmt, close_ifdef))
         return "\n\n".join(funcs)
 
     def generate_body(self):
