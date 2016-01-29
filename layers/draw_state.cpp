@@ -4254,7 +4254,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(VkDevice
                     pNewNode->pLayout = pLayout;
                     pNewNode->pool = pAllocateInfo->descriptorPool;
                     pNewNode->set = pDescriptorSets[i];
-                    pNewNode->descriptorCount = pLayout->endIndex + 1;
+                    pNewNode->descriptorCount = (pLayout->createInfo.bindingCount != 0) ? pLayout->endIndex + 1 : 0;
                     if (pNewNode->descriptorCount) {
                         size_t descriptorArraySize = sizeof(GENERIC_HEADER*)*pNewNode->descriptorCount;
                         pNewNode->ppDescriptors = new GENERIC_HEADER*[descriptorArraySize];
