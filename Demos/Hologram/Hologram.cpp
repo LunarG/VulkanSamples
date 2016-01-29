@@ -195,11 +195,7 @@ void Hologram::create_frame_data()
 
     VkDeviceSize object_data_size = sizeof(glm::mat4);
 
-    if (use_push_constants_) {
-        frame_data_.push_const_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        frame_data_.push_const_range.offset = 0;
-        frame_data_.push_const_range.size = object_data_size;
-    } else {
+    if (!use_push_constants_) {
         // align object data to device limit
         const VkDeviceSize &alignment =
             physical_dev_props_.limits.minStorageBufferOffsetAlignment;
@@ -388,12 +384,18 @@ void Hologram::create_shader_modules()
 
 void Hologram::create_pipeline_layout()
 {
+    VkPushConstantRange push_const_range = {};
+
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
     if (use_push_constants_) {
+        push_const_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        push_const_range.offset = 0;
+        push_const_range.size = sizeof(glm::mat4);
+
         pipeline_layout_info.pushConstantRangeCount = 1;
-        pipeline_layout_info.pPushConstantRanges = &frame_data_.push_const_range;
+        pipeline_layout_info.pPushConstantRanges = &push_const_range;
     } else {
         pipeline_layout_info.setLayoutCount = 1;
         pipeline_layout_info.pSetLayouts = &desc_set_layout_;
