@@ -35,6 +35,12 @@
 #include "vk_layer_config.h"
 #include "vk_layer_logging.h"
 
+#if defined(__LP64__) || defined(_WIN64) || defined(__x86_64__) || defined(_M_X64) || defined(__ia64) || defined (_M_IA64) || defined(__aarch64__) || defined(__powerpc64__)
+// If pointers are 64-bit, then there can be separate counters for each
+// NONDISPATCHABLE_HANDLE type.  Otherwise they are all typedef uint64_t.
+#define DISTINCT_NONDISPATCHABLE_HANDLES
+#endif
+
 // Draw State ERROR codes
 typedef enum _THREADING_CHECKER_ERROR
 {
@@ -211,6 +217,7 @@ struct layer_data {
     counter<VkDevice> c_VkDevice;
     counter<VkInstance> c_VkInstance;
     counter<VkQueue> c_VkQueue;
+#ifdef DISTINCT_NONDISPATCHABLE_HANDLES
     counter<VkBuffer> c_VkBuffer;
     counter<VkBufferView> c_VkBufferView;
     counter<VkCommandPool> c_VkCommandPool;
@@ -232,12 +239,16 @@ struct layer_data {
     counter<VkSemaphore> c_VkSemaphore;
     counter<VkShaderModule> c_VkShaderModule;
     counter<VkDebugReportCallbackEXT> c_VkDebugReportCallbackEXT;
+#else // DISTINCT_NONDISPATCHABLE_HANDLES
+    counter<uint64_t> c_uint64_t;
+#endif // DISTINCT_NONDISPATCHABLE_HANDLES
     layer_data():
         report_data(nullptr),
         c_VkCommandBuffer("VkCommandBuffer", VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT),
         c_VkDevice("VkDevice", VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT),
         c_VkInstance("VkInstance", VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT),
         c_VkQueue("VkQueue", VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT),
+#ifdef DISTINCT_NONDISPATCHABLE_HANDLES
         c_VkBuffer("VkBuffer", VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT),
         c_VkBufferView("VkBufferView", VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT),
         c_VkCommandPool("VkCommandPool", VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT),
@@ -259,6 +270,9 @@ struct layer_data {
         c_VkSemaphore("VkSemaphore", VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT),
         c_VkShaderModule("VkShaderModule", VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT),
         c_VkDebugReportCallbackEXT("VkDebugReportCallbackEXT", VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT)
+#else // DISTINCT_NONDISPATCHABLE_HANDLES
+        c_uint64_t("NON_DISPATCHABLE_HANDLE", VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT)
+#endif // DISTINCT_NONDISPATCHABLE_HANDLES
     {};
 };
 
@@ -271,6 +285,7 @@ static void finishReadObject(struct layer_data *my_data, type object){my_data->c
 WRAPPER(VkDevice)
 WRAPPER(VkInstance)
 WRAPPER(VkQueue)
+#ifdef DISTINCT_NONDISPATCHABLE_HANDLES
 WRAPPER(VkBuffer)
 WRAPPER(VkBufferView)
 WRAPPER(VkCommandPool)
@@ -292,6 +307,9 @@ WRAPPER(VkSampler)
 WRAPPER(VkSemaphore)
 WRAPPER(VkShaderModule)
 WRAPPER(VkDebugReportCallbackEXT)
+#else // DISTINCT_NONDISPATCHABLE_HANDLES
+WRAPPER(uint64_t)
+#endif // DISTINCT_NONDISPATCHABLE_HANDLES
 
 static std::unordered_map<void*, layer_data *> layer_data_map;
 static std::unordered_map<VkCommandBuffer, VkCommandPool> command_pool_map;
@@ -300,7 +318,7 @@ static std::unordered_map<VkCommandBuffer, VkCommandPool> command_pool_map;
 static void startWriteObject(struct layer_data *my_data, VkCommandBuffer object, bool lockPool=true)
 {
     if (lockPool) {
-        my_data->c_VkCommandPool.startWrite(my_data->report_data, command_pool_map[object]);
+        startWriteObject(my_data, command_pool_map[object]);
     }
     my_data->c_VkCommandBuffer.startWrite(my_data->report_data, object);
 }
@@ -308,13 +326,13 @@ static void finishWriteObject(struct layer_data *my_data, VkCommandBuffer object
 {
     my_data->c_VkCommandBuffer.finishWrite(object);
     if (lockPool) {
-        my_data->c_VkCommandPool.finishWrite(command_pool_map[object]);
+        finishWriteObject(my_data, command_pool_map[object]);
     }
 }
 static void startReadObject(struct layer_data *my_data, VkCommandBuffer object, bool lockPool=false)
 {
     if (lockPool) {
-        my_data->c_VkCommandPool.startRead(my_data->report_data, command_pool_map[object]);
+        startReadObject(my_data, command_pool_map[object]);
     }
     my_data->c_VkCommandBuffer.startRead(my_data->report_data, object);
 }
@@ -322,7 +340,7 @@ static void finishReadObject(struct layer_data *my_data, VkCommandBuffer object,
 {
     my_data->c_VkCommandBuffer.finishRead(object);
     if (lockPool) {
-        my_data->c_VkCommandPool.finishRead(command_pool_map[object]);
+        finishReadObject(my_data, command_pool_map[object]);
     }
 }
 #endif // THREADING_H
