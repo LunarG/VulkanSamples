@@ -143,6 +143,7 @@ private:
     VkDescriptorPool desc_pool_;
     VkDeviceMemory frame_data_mem_;
     std::vector<FrameData> frame_data_;
+    int frame_data_index_;
 
     VkClearValue render_pass_clear_value_;
     VkRenderPassBeginInfo render_pass_begin_info_;
