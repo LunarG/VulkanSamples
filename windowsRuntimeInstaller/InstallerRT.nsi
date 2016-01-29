@@ -180,7 +180,9 @@ RequestExecutionLevel admin
 AddBrandingImage left 150
 Caption "${PRODUCTNAME} ${PRODUCTVERSION} Setup"
 Name "${PRODUCTNAME} ${PRODUCTVERSION}"
+LIcenseData "VULKANRT_LICENSE.rtf"
 Page custom brandimage "" ": Brand Image"
+Page license
 Page directory
 Page instfiles
 UninstallCaption "\${PRODUCTNAME} ${PRODUCTVERSION} Uninstall"
@@ -232,7 +234,8 @@ Section
 
         SetOutPath "$INSTDIR"
         File ${ICOFILE}
-        File LICENSE.rtf
+        FILE VULKANRT_LICENSE.RTF
+        File ..\LICENSE.txt
         File ConfigLayersAndVulkanDLL.ps1
 
         # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
@@ -263,7 +266,8 @@ Section
 
         SetOutPath "$INSTDIR"
         File ${ICOFILE}
-        File LICENSE.rtf
+        File VULKANRT_LICENSE.rtf
+        File ..\LICENSE.txt
         File ConfigLayersAndVulkanDLL.ps1
 
         # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
@@ -402,7 +406,8 @@ Section "uninstall"
         DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}"
 
         # Remove files in install dir
-        Delete /REBOOTOK "$INSTDIR\LICENSE.rtf"
+        Delete /REBOOTOK "$INSTDIR\VULKANRT_LICENSE.rtf"
+        Delete /REBOOTOK "$INSTDIR\LICENSE.txt"
         Delete /REBOOTOK "$INSTDIR\UninstallVulkanRT.exe"
         Delete /REBOOTOK "$INSTDIR\Vulkan.ico"
         Delete /REBOOTOK "$INSTDIR\ConfigLayersAndVulkanDLL.ps1"
