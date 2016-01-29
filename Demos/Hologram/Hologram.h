@@ -109,6 +109,7 @@ private:
 
     // called by attach_shell
     void create_command_pools();
+    void create_descriptor_pool();
     void create_frame_data();
     void create_descriptor_set();
     void create_render_pass();
@@ -129,9 +130,9 @@ private:
 
     VkCommandPool primary_cmd_pool_;
     std::vector<VkCommandPool> worker_cmd_pools_;
+    VkDescriptorPool desc_pool_;
     FrameData frame_data_;
 
-    VkDescriptorPool desc_pool_;
     VkDescriptorSetLayout desc_set_layout_;
     VkDescriptorSet desc_set_;
 
