@@ -83,6 +83,11 @@ void Hologram::attach_shell(Shell &sh)
     create_pipeline_layout();
     create_pipeline();
 
+    render_pass_begin_info_.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    render_pass_begin_info_.renderPass = render_pass_;
+    render_pass_begin_info_.clearValueCount = 1;
+    render_pass_begin_info_.pClearValues = &render_pass_clear_value_;
+
     primary_cmd_begin_info_.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     primary_cmd_begin_info_.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
@@ -346,11 +351,6 @@ void Hologram::create_render_pass()
     render_pass_info.pDependencies = subpass_deps.data();
 
     vk::assert_success(vk::CreateRenderPass(dev_, &render_pass_info, nullptr, &render_pass_));
-
-    render_pass_begin_info_.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    render_pass_begin_info_.renderPass = render_pass_;
-    render_pass_begin_info_.clearValueCount = 1;
-    render_pass_begin_info_.pClearValues = &render_pass_clear_value_;
 }
 
 void Hologram::create_shader_modules()

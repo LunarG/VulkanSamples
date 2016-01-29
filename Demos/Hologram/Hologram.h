@@ -135,13 +135,13 @@ private:
     VkDescriptorSet desc_set_;
 
     VkRenderPass render_pass_;
-    VkClearValue render_pass_clear_value_;
-    VkRenderPassBeginInfo render_pass_begin_info_;
-
     VkShaderModule vs_;
     VkShaderModule fs_;
     VkPipelineLayout pipeline_layout_;
     VkPipeline pipeline_;
+
+    VkClearValue render_pass_clear_value_;
+    VkRenderPassBeginInfo render_pass_begin_info_;
 
     VkCommandBufferBeginInfo primary_cmd_begin_info_;
     VkPipelineStageFlags primary_cmd_submit_wait_stages_;
