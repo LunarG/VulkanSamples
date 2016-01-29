@@ -472,7 +472,7 @@ void Hologram::create_descriptor_set()
     set_info.pSetLayouts = &desc_set_layout_;
 
     vk::assert_success(vk::AllocateDescriptorSets(dev_, &set_info,
-                &desc_set_));
+                &frame_data_.desc_set));
 
     VkDescriptorBufferInfo desc_buf = {};
     desc_buf.buffer = frame_data_.buf;
@@ -481,7 +481,7 @@ void Hologram::create_descriptor_set()
 
     VkWriteDescriptorSet set_write = {};
     set_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    set_write.dstSet = desc_set_;
+    set_write.dstSet = frame_data_.desc_set;
     set_write.dstBinding = 0;
     set_write.dstArrayElement = 0;
     set_write.descriptorCount = 1;
@@ -595,7 +595,7 @@ void Hologram::draw_object(const Simulation::Object &obj, FrameData &data, VkCom
         memcpy(dst, glm::value_ptr(mvp), sizeof(mvp));
 
         vk::CmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                pipeline_layout_, 0, 1, &desc_set_, 1, &obj.frame_data_offset);
+                pipeline_layout_, 0, 1, &data.desc_set, 1, &obj.frame_data_offset);
     }
 
     meshes_->cmd_draw(cmd, obj.mesh);
