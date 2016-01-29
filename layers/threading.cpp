@@ -27,7 +27,6 @@
 #include <string.h>
 #include <unordered_map>
 #include <list>
-using namespace std;
 
 #include "vulkan/vk_layer.h"
 #include "vk_layer_config.h"

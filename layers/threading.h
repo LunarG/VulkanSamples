@@ -56,7 +56,6 @@ struct object_use_data {
 };
 
 struct layer_data;
-using namespace std;
 
 static int threadingLockInitialized = 0;
 static loader_platform_thread_mutex threadingLock;
@@ -66,7 +65,7 @@ template <typename T> class counter {
     public:
     const char *typeName;
     VkDebugReportObjectTypeEXT objectType;
-    unordered_map<T, object_use_data> uses;
+    std::unordered_map<T, object_use_data> uses;
     void startWrite(debug_report_data *report_data, T object)
     {
         VkBool32 skipCall = VK_FALSE;
