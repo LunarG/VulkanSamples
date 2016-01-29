@@ -2120,7 +2120,13 @@ class UniqueObjectsSubcommand(Subcommand):
                     indent = indent[4:]
                     pre_code += '%s}\n' % (indent)
                     if not first_level_param: # embedded in a ptr/struct so need to undo the update
-                        decls += '    %s local_%s = %s%s;\n' % (struct_uses[obj], name, prefix, name)
+                        if '->' in prefix:
+                            # Since this variable is embedded under a ptr, need to decl up front, but wait
+                            #  to assign it inside of the "if" block(s) for surrounding ptr(s)
+                            decls += '    %s local_%s = VK_NULL_HANDLE;\n' % (struct_uses[obj], name)
+                            pre_code = '%slocal_%s = %s%s;\n%s' % (indent, name, prefix, name, pre_code)
+                        else:
+                            decls += '    %s local_%s = %s%s;\n' % (struct_uses[obj], name, prefix, name)
                         post_code += '%sif (%s%s) {\n' %(indent, prefix, name)
                         post_code += '%s    %s* p%s = (%s*)%s%s%s;\n' % (indent, struct_uses[obj], name, struct_uses[obj], deref_txt, prefix, name)
                         post_code += '%s    *p%s = local_%s;\n' % (indent, name, name)
