@@ -1462,40 +1462,40 @@ static SET_NODE* getSetNode(layer_data* my_data, const VkDescriptorSet set)
     loader_platform_thread_unlock_mutex(&globalLock);
     return my_data->setMap[set];
 }
-
-// For the given set, verify that for each dynamic descriptor in that set that its
-//  dynamic offset combined with the offet and range from its descriptor update
-//  do not overflow the size of its buffer being updated
-static VkBool32 validate_dynamic_offsets(layer_data* my_data, const SET_NODE* pSet)
+// For the given command buffer, verify that for each set set in activeSetNodes
+//  that any dynamic descriptor in that set has a valid dynamic offset bound.
+//  To be valid, the dynamic offset combined with the offet and range from its
+//  descriptor update must not overflow the size of its buffer being updated
+static VkBool32 validate_dynamic_offsets(layer_data* my_data, const GLOBAL_CB_NODE* pCB, const vector<SET_NODE*> activeSetNodes)
 {
     VkBool32 result = VK_FALSE;
-    if (pSet->dynamicOffsets.empty())
-        return result;
 
     VkWriteDescriptorSet* pWDS = NULL;
     uint32_t dynOffsetIndex = 0;
     VkDeviceSize bufferSize = 0;
-    for (uint32_t i=0; i < pSet->descriptorCount; ++i) {
-        switch (pSet->ppDescriptors[i]->sType) {
-            case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
-                pWDS = (VkWriteDescriptorSet*)pSet->ppDescriptors[i];
-                if ((pWDS->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
-                    (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
-                    for (uint32_t j=0; j<pWDS->descriptorCount; ++j) {
-                        bufferSize = my_data->bufferMap[pWDS->pBufferInfo[j].buffer].create_info->size;
-                        if ((pSet->dynamicOffsets[dynOffsetIndex] + pWDS->pBufferInfo[j].offset + pWDS->pBufferInfo[j].range) > bufferSize) {
-                            result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pSet->set, __LINE__, DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, "DS",
-                                    "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u has dynamic offset %u. Combined with offet %#" PRIxLEAST64 " and range %#" PRIxLEAST64 " from its update, this oversteps its buffer (%#" PRIxLEAST64 ") which has a size of %#" PRIxLEAST64 ".",
-                                    (uint64_t)pSet->set, i, pSet->dynamicOffsets[dynOffsetIndex], pWDS->pBufferInfo[j].offset, pWDS->pBufferInfo[j].range, (uint64_t)pWDS->pBufferInfo[j].buffer, bufferSize);
+    for (auto set_node : activeSetNodes) {
+        for (uint32_t i=0; i < set_node->descriptorCount; ++i) {
+            switch (set_node->ppDescriptors[i]->sType) {
+                case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
+                    pWDS = (VkWriteDescriptorSet*)set_node->ppDescriptors[i];
+                    if ((pWDS->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
+                        (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
+                        for (uint32_t j=0; j<pWDS->descriptorCount; ++j) {
+                            bufferSize = my_data->bufferMap[pWDS->pBufferInfo[j].buffer].create_info->size;
+                            if ((pCB->dynamicOffsets[dynOffsetIndex] + pWDS->pBufferInfo[j].offset + pWDS->pBufferInfo[j].range) > bufferSize) {
+                                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)set_node->set, __LINE__, DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, "DS",
+                                        "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u has dynamic offset %u. Combined with offet %#" PRIxLEAST64 " and range %#" PRIxLEAST64 " from its update, this oversteps its buffer (%#" PRIxLEAST64 ") which has a size of %#" PRIxLEAST64 ".",
+                                        (uint64_t)set_node->set, i, pCB->dynamicOffsets[dynOffsetIndex], pWDS->pBufferInfo[j].offset, pWDS->pBufferInfo[j].range, (uint64_t)pWDS->pBufferInfo[j].buffer, bufferSize);
+                            }
+                            dynOffsetIndex++;
+                            i += j; // Advance i to end of this set of descriptors (++i at end of for loop will move 1 index past last of these descriptors)
                         }
-                        dynOffsetIndex++;
-                        i += j; // Advance i to end of this set of descriptors (++i at end of for loop will move 1 index past last of these descriptors)
                     }
-                }
-                break;
-            default: // Currently only shadowing Write update nodes so shouldn't get here
-                assert(0);
-                continue;
+                    break;
+                default: // Currently only shadowing Write update nodes so shouldn't get here
+                    assert(0);
+                    continue;
+            }
         }
     }
     return result;
@@ -1511,8 +1511,11 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
     //  There is probably a better way to gate when this check happens, and to know if something *should* have been bound
     //  We should have that check separately and then gate this check based on that check
     if (pPipe) {
+        loader_platform_thread_lock_mutex(&globalLock);
         if (pCB->lastBoundPipelineLayout) {
             string errorString;
+            // Need a vector (vs. std::set) of active Sets for dynamicOffset validation in case same set bound w/ different offsets
+            vector<SET_NODE*> activeSetNodes;
             for (auto setIndex : pPipe->active_sets) {
                 // If valid set is not bound throw an error
                 if ((pCB->boundDescriptorSets.size() <= setIndex) || (!pCB->boundDescriptorSets[setIndex])) {
@@ -1526,18 +1529,20 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
                             (uint64_t)setHandle, setIndex, (uint64_t)pPipe->graphicsPipelineCI.layout, errorString.c_str());
                 } else { // Valid set is bound and layout compatible, validate that it's updated and verify any dynamic offsets
                     // Pull the set node
-                    SET_NODE* pSet = getSetNode(my_data, pCB->boundDescriptorSets[setIndex]);
+                    SET_NODE* pSet = my_data->setMap[pCB->boundDescriptorSets[setIndex]];
+                    // Save vector of all active sets to verify dynamicOffsets below
+                    activeSetNodes.push_back(pSet);
                     // Make sure set has been updated
                     if (!pSet->pUpdateStructs) {
                         result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pSet->set, __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
                             "DS %#" PRIxLEAST64 " bound but it was never updated. It is now being used to draw so this will result in undefined behavior.", (uint64_t) pSet->set);
                     }
-                    // For each dynamic descriptor, make sure dynamic offset doesn't overstep buffer
-                    result |= validate_dynamic_offsets(my_data, pSet);
                 }
             }
+            // For each dynamic descriptor, make sure dynamic offset doesn't overstep buffer
+            if (!pCB->dynamicOffsets.empty())
+                result |= validate_dynamic_offsets(my_data, pCB, activeSetNodes);
         }
-
         // Verify Vtx binding
         if (pPipe->vtxBindingCount > 0) {
             VkPipelineVertexInputStateCreateInfo *vtxInCI = &pPipe->vertexInputCI;
@@ -1556,7 +1561,6 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
                     (uint64_t)pCB->commandBuffer, (uint64_t)pCB->lastBoundPipeline);
             }
         }
-
         // If Viewport or scissors are dynamic, verify that dynamic count matches PSO count
         VkBool32 dynViewport = isDynamic(pPipe, VK_DYNAMIC_STATE_VIEWPORT);
         VkBool32 dynScissor = isDynamic(pPipe, VK_DYNAMIC_STATE_SCISSOR);
@@ -1572,6 +1576,7 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
                     "Dynamic scissorCount from vkCmdSetScissor() is " PRINTF_SIZE_T_SPECIFIER ", but PSO scissorCount is %u. These counts must match.", pCB->scissors.size(), pPipe->graphicsPipelineCI.pViewportState->scissorCount);
             }
         }
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -4627,9 +4632,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                                         cur_dyn_offset++;
                                     }
                                 }
-                                // Store offsets
-                                const uint32_t* pStartDynOffset = pDynamicOffsets + totalDynamicDescriptors;
-                                pSet->dynamicOffsets.assign(pStartDynOffset, pStartDynOffset + pSet->pLayout->dynamicDescriptorCount);
+                                // Keep running total of dynamic descriptor count to verify at the end
                                 totalDynamicDescriptors += pSet->pLayout->dynamicDescriptorCount;
                             }
                         }
@@ -4661,6 +4664,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                 if (totalDynamicDescriptors != dynamicOffsetCount) {
                     skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t) commandBuffer, __LINE__, DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT, "DS",
                             "Attempting to bind %u descriptorSets with %u dynamic descriptors, but dynamicOffsetCount is %u. It should exactly match the number of dynamic descriptors.", setCount, totalDynamicDescriptors, dynamicOffsetCount);
+                }
+                if (dynamicOffsetCount) {
+                    // Save dynamicOffsets bound to this CB
+                    pCB->dynamicOffsets.assign(pDynamicOffsets, pDynamicOffsets + dynamicOffsetCount);
                 }
             }
         } else {

@@ -314,7 +314,6 @@ class SET_NODE : public BASE_NODE {
     GENERIC_HEADER**     ppDescriptors; // Array where each index points to update node for its slot
     LAYOUT_NODE*         pLayout; // Layout for this set
     SET_NODE*            pNext;
-    vector<uint32_t>     dynamicOffsets; // one dynamic offset per dynamic descriptor
     unordered_set<VkCommandBuffer> boundCmdBuffers; // Cmd buffers that this set has been bound to
     SET_NODE() : pUpdateStructs(NULL), ppDescriptors(NULL), pLayout(NULL), pNext(NULL) {};
 };
@@ -529,6 +528,7 @@ typedef struct _GLOBAL_CB_NODE {
     DRAW_DATA                    currentDrawData;
     // If cmd buffer is primary, track secondary command buffers pending execution
     std::unordered_set<VkCommandBuffer> secondaryCommandBuffers;
+    vector<uint32_t>             dynamicOffsets; // one dynamic offset per dynamic descriptor bound to this CB
 } GLOBAL_CB_NODE;
 
 typedef struct _SWAPCHAIN_NODE {
