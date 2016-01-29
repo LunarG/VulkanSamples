@@ -48,9 +48,10 @@ private:
         const int object_begin_;
         const int object_end_;
 
+        const float tick_interval_;
+
         VkCommandBuffer cmd_;
 
-        float object_time_;
         VkFramebuffer fb_;
 
     private:
@@ -69,8 +70,6 @@ private:
         std::mutex mutex_;
         std::condition_variable state_cv_;
         State state_;
-
-        const float tick_interval_;
     };
 
     struct FrameData {

@@ -605,7 +605,7 @@ void Hologram::draw_object(const Simulation::Object &obj, FrameData &data, VkCom
 
 void Hologram::update_simulation(const Worker &worker)
 {
-    sim_.update(worker.object_time_, worker.object_begin_, worker.object_end_);
+    sim_.update(worker.tick_interval_, worker.object_begin_, worker.object_end_);
 }
 
 void Hologram::draw_objects(Worker &worker)
@@ -710,8 +710,7 @@ void Hologram::on_frame(float frame_pred)
 
 Hologram::Worker::Worker(Hologram &hologram, int object_begin, int object_end)
     : hologram_(hologram), object_begin_(object_begin), object_end_(object_end),
-      object_time_(0.0f), state_(INIT),
-      tick_interval_(1.0f / hologram.settings_.ticks_per_second)
+      tick_interval_(1.0f / hologram.settings_.ticks_per_second), state_(INIT)
 {
 }
 
@@ -738,7 +737,6 @@ void Hologram::Worker::update_simulation()
         std::lock_guard<std::mutex> lock(mutex_);
         bool started = (state_ != INIT);
 
-        object_time_ += tick_interval_;
         state_ = STEP;
 
         // step directly

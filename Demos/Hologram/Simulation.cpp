@@ -15,14 +15,12 @@ Animation::Animation(unsigned int rng_seed)
     current_.speed = speed_(rng_);
     current_.scale = scale_(rng_);
 
-    current_.time = 0;
     current_.matrix = glm::scale(glm::mat4(1.0f), glm::vec3(current_.scale));
 }
 
 glm::mat4 Animation::transformation(float t)
 {
-    current_.matrix = glm::rotate(current_.matrix, current_.speed * (t - current_.time), current_.axis);
-    current_.time = t;
+    current_.matrix = glm::rotate(current_.matrix, current_.speed * t, current_.axis);
 
     return current_.matrix;
 }
@@ -135,17 +133,20 @@ Path::Path(unsigned int rng_seed)
 {
     // trigger a subpath generation
     current_.end = -1.0f;
+    current_.now = 0.0f;
 }
 
 glm::vec3 Path::position(float t)
 {
-    while (t >= current_.end)
-        generate_subpath(t);
+    current_.now += t;
 
-    return current_.origin + current_.curve->evaluate(t - current_.start);
+    while (current_.now >= current_.end)
+        generate_subpath();
+
+    return current_.origin + current_.curve->evaluate(current_.now - current_.start);
 }
 
-void Path::generate_subpath(float t)
+void Path::generate_subpath()
 {
     float duration = duration_(rng_);
     CurveType type = static_cast<CurveType>(type_(rng_));
@@ -156,7 +157,7 @@ void Path::generate_subpath(float t)
     } else {
         std::uniform_real_distribution<float> origin(0.0f, 2.0f);
         current_.origin = glm::vec3(origin(rng_), origin(rng_), origin(rng_));
-        current_.start = t;
+        current_.start = current_.now;
     }
 
     current_.end = current_.start + duration;
@@ -206,13 +207,13 @@ void Simulation::set_frame_data_size(uint32_t size)
     }
 }
 
-void Simulation::update(float obj_time, int begin, int end)
+void Simulation::update(float time, int begin, int end)
 {
     for (int i = begin; i < end; i++) {
         auto &obj = objects_[i];
 
-        glm::vec3 pos = obj.path.position(obj_time);
-        glm::mat4 trans = obj.animation.transformation(obj_time);
+        glm::vec3 pos = obj.path.position(time);
+        glm::mat4 trans = obj.animation.transformation(time);
         obj.model = glm::translate(glm::mat4(1.0f), pos) * trans;
     }
 }
