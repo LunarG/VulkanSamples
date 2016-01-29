@@ -79,6 +79,8 @@ private:
     };
 
     struct FrameData {
+        VkFence fence;
+
         VkBuffer buf;
         VkDeviceMemory mem;
         uint8_t *base;
@@ -112,7 +114,6 @@ private:
     void create_shader_modules();
     void create_pipeline_layout();
     void create_pipeline();
-    void create_primary_cmd();
 
     VkPhysicalDevice physical_dev_;
     VkDevice dev_;
@@ -142,7 +143,6 @@ private:
     VkPipelineLayout pipeline_layout_;
     VkPipeline pipeline_;
 
-    VkFence primary_cmd_fence_;
     VkCommandBufferBeginInfo primary_cmd_begin_info_;
     VkPipelineStageFlags primary_cmd_submit_wait_stages_;
     VkSubmitInfo primary_cmd_submit_info_;

@@ -82,7 +82,19 @@ void Hologram::attach_shell(Shell &sh)
     create_shader_modules();
     create_pipeline_layout();
     create_pipeline();
-    create_primary_cmd();
+
+    primary_cmd_begin_info_.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    primary_cmd_begin_info_.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    // we will render to the swapchain images
+    primary_cmd_submit_wait_stages_ = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    primary_cmd_submit_info_.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    primary_cmd_submit_info_.waitSemaphoreCount = 1;
+    primary_cmd_submit_info_.pWaitDstStageMask = &primary_cmd_submit_wait_stages_;
+    primary_cmd_submit_info_.commandBufferCount = 1;
+    primary_cmd_submit_info_.pCommandBuffers = &frame_data_.primary_cmd;
+    primary_cmd_submit_info_.signalSemaphoreCount = 1;
 
     if (multithread_) {
         for (auto &worker : workers_)
@@ -97,8 +109,6 @@ void Hologram::detach_shell()
             worker->stop();
     }
 
-    vk::DestroyFence(dev_, primary_cmd_fence_, nullptr);
-
     vk::DestroyPipeline(dev_, pipeline_, nullptr);
     vk::DestroyPipelineLayout(dev_, pipeline_layout_, nullptr);
     vk::DestroyShaderModule(dev_, fs_, nullptr);
@@ -106,6 +116,7 @@ void Hologram::detach_shell()
 
     vk::DestroyRenderPass(dev_, render_pass_, nullptr);
 
+    vk::DestroyFence(dev_, frame_data_.fence, nullptr);
     frame_data_.worker_cmds.clear();
 
     if (!use_push_constants_) {
@@ -150,6 +161,11 @@ void Hologram::create_command_pools()
 
 void Hologram::create_frame_data()
 {
+    VkFenceCreateInfo fence_info = {};
+    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    vk::assert_success(vk::CreateFence(dev_, &fence_info, nullptr, &frame_data_.fence));
+
     VkDeviceSize object_data_size = sizeof(glm::mat4);
 
     if (use_push_constants_) {
@@ -458,27 +474,6 @@ void Hologram::create_pipeline()
     vk::assert_success(vk::CreateGraphicsPipelines(dev_, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline_));
 }
 
-void Hologram::create_primary_cmd()
-{
-    VkFenceCreateInfo fence_info = {};
-    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-    vk::assert_success(vk::CreateFence(dev_, &fence_info, nullptr, &primary_cmd_fence_));
-
-    primary_cmd_begin_info_.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    primary_cmd_begin_info_.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    // we will render to the swapchain images
-    primary_cmd_submit_wait_stages_ = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-    primary_cmd_submit_info_.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    primary_cmd_submit_info_.waitSemaphoreCount = 1;
-    primary_cmd_submit_info_.pWaitDstStageMask = &primary_cmd_submit_wait_stages_;
-    primary_cmd_submit_info_.commandBufferCount = 1;
-    primary_cmd_submit_info_.pCommandBuffers = &frame_data_.primary_cmd;
-    primary_cmd_submit_info_.signalSemaphoreCount = 1;
-}
-
 void Hologram::attach_swapchain()
 {
     const Shell::Context &ctx = shell_->context();
@@ -661,8 +656,8 @@ void Hologram::on_tick()
 void Hologram::on_frame(float frame_pred)
 {
     // wait for the last submission since we reuse command buffers
-    vk::assert_success(vk::WaitForFences(dev_, 1, &primary_cmd_fence_, true, UINT64_MAX));
-    vk::assert_success(vk::ResetFences(dev_, 1, &primary_cmd_fence_));
+    vk::assert_success(vk::WaitForFences(dev_, 1, &frame_data_.fence, true, UINT64_MAX));
+    vk::assert_success(vk::ResetFences(dev_, 1, &frame_data_.fence));
 
     const Shell::BackBuffer &back = shell_->context().acquired_back_buffer;
 
@@ -691,7 +686,7 @@ void Hologram::on_frame(float frame_pred)
     primary_cmd_submit_info_.pWaitSemaphores = &back.acquire_semaphore;
     primary_cmd_submit_info_.pSignalSemaphores = &back.render_semaphore;
 
-    res = vk::QueueSubmit(queue_, 1, &primary_cmd_submit_info_, primary_cmd_fence_);
+    res = vk::QueueSubmit(queue_, 1, &primary_cmd_submit_info_, frame_data_.fence);
 
     (void) res;
 }
