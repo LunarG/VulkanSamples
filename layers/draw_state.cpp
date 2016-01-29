@@ -3696,7 +3696,7 @@ VkBool32 validateCommandBuffersNotInUse(const layer_data* dev_data, VkCommandPoo
     if (pool_data != dev_data->commandPoolMap.end()) {
         for (auto cmdBuffer : pool_data->second.commandBuffers) {
             if (dev_data->globalInFlightCmdBuffers.count(cmdBuffer)) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, (uint64_t)(commandPool),
+                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, (uint64_t)(commandPool),
                                      __LINE__, DRAWSTATE_OBJECT_INUSE, "DS", "Cannot reset command pool %" PRIx64 " when allocated command buffer %" PRIx64 " is in use.",
                                      (uint64_t)(commandPool), (uint64_t)(cmdBuffer));
             }
