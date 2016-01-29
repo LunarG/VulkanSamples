@@ -72,6 +72,13 @@ private:
         State state_;
     };
 
+    struct Camera {
+        glm::vec3 eye_pos;
+        glm::mat4 view_projection;
+
+        Camera(float eye) : eye_pos(eye) {}
+    };
+
     struct FrameData {
         VkBuffer buf;
         VkDeviceMemory mem;
@@ -86,8 +93,12 @@ private:
     bool multithread_;
     bool use_push_constants_;
 
+    // called mostly by on_key
+    void update_camera();
+
     bool sim_paused_;
     Simulation sim_;
+    Camera camera_;
 
     std::vector<std::unique_ptr<Worker>> workers_;
 
@@ -149,12 +160,6 @@ private:
     std::vector<VkImage> images_;
     std::vector<VkImageView> image_views_;
     std::vector<VkFramebuffer> framebuffers_;
-
-    // called mostly by on_key
-    void update_projection();
-
-    glm::vec3 eye_pos_;
-    glm::mat4 view_projection_;
 
     // called by workers
     void update_simulation(const Worker &worker);
