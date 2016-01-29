@@ -76,6 +76,7 @@ void Hologram::attach_shell(Shell &sh)
     meshes_ = new Meshes(sim_.rng_seed(), mem_flags_, dev_, sim_.objects().size());
 
     create_command_pools();
+    create_descriptor_pool();
     create_frame_data();
     create_descriptor_set();
     create_render_pass();
@@ -126,11 +127,12 @@ void Hologram::detach_shell()
 
     if (!use_push_constants_) {
         vk::DestroyDescriptorSetLayout(dev_, desc_set_layout_, nullptr);
-        vk::DestroyDescriptorPool(dev_, desc_pool_, nullptr);
 
         vk::UnmapMemory(dev_, frame_data_.mem);
         vk::FreeMemory(dev_, frame_data_.mem, nullptr);
         vk::DestroyBuffer(dev_, frame_data_.buf, nullptr);
+
+        vk::DestroyDescriptorPool(dev_, desc_pool_, nullptr);
     }
 
     for (auto cmd_pool : worker_cmd_pools_)
@@ -162,6 +164,25 @@ void Hologram::create_command_pools()
 
         worker_cmd_pools_.push_back(cmd_pool);
     }
+}
+
+void Hologram::create_descriptor_pool()
+{
+    if (use_push_constants_)
+        return;
+
+    VkDescriptorPoolSize desc_pool_size = {};
+    desc_pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+    desc_pool_size.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo desc_pool_info = {};
+    desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    desc_pool_info.maxSets = 1;
+    desc_pool_info.poolSizeCount = 1;
+    desc_pool_info.pPoolSizes = &desc_pool_size;
+
+    vk::assert_success(vk::CreateDescriptorPool(dev_, &desc_pool_info,
+                nullptr, &desc_pool_));
 }
 
 void Hologram::create_frame_data()
@@ -247,26 +268,10 @@ void Hologram::create_descriptor_set()
     if (use_push_constants_)
         return;
 
-    const VkDescriptorType desc_type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-    const uint32_t desc_count = 1;
-
-    VkDescriptorPoolSize pool_size = {};
-    pool_size.type = desc_type;
-    pool_size.descriptorCount = desc_count;
-
-    VkDescriptorPoolCreateInfo pool_info = {};
-    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool_info.maxSets = 1;
-    pool_info.poolSizeCount = 1;
-    pool_info.pPoolSizes = &pool_size;
-
-    vk::assert_success(vk::CreateDescriptorPool(dev_, &pool_info, nullptr,
-                &desc_pool_));
-
     VkDescriptorSetLayoutBinding layout_binding = {};
     layout_binding.binding = 0;
-    layout_binding.descriptorType = desc_type;
-    layout_binding.descriptorCount = desc_count;
+    layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+    layout_binding.descriptorCount = 1;
     layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
     VkDescriptorSetLayoutCreateInfo layout_info = {};
@@ -274,8 +279,8 @@ void Hologram::create_descriptor_set()
     layout_info.bindingCount = 1;
     layout_info.pBindings = &layout_binding;
 
-    vk::assert_success(vk::CreateDescriptorSetLayout(dev_, &layout_info, nullptr,
-                &desc_set_layout_));
+    vk::assert_success(vk::CreateDescriptorSetLayout(dev_, &layout_info,
+                nullptr, &desc_set_layout_));
 
     VkDescriptorSetAllocateInfo set_info = {};
     set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -296,8 +301,8 @@ void Hologram::create_descriptor_set()
     set_write.dstSet = desc_set_;
     set_write.dstBinding = 0;
     set_write.dstArrayElement = 0;
-    set_write.descriptorCount = desc_count;
-    set_write.descriptorType = desc_type;
+    set_write.descriptorCount = 1;
+    set_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
     set_write.pBufferInfo = &desc_buf;
 
     vk::UpdateDescriptorSets(dev_, 1, &set_write, 0, nullptr);
