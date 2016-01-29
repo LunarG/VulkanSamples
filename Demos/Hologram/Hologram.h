@@ -111,6 +111,7 @@ private:
     void create_command_pools();
     void create_descriptor_pool();
     void create_frame_data();
+    void create_descriptor_set_layout();
     void create_descriptor_set();
     void create_render_pass();
     void create_shader_modules();

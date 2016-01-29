@@ -78,6 +78,7 @@ void Hologram::attach_shell(Shell &sh)
     create_command_pools();
     create_descriptor_pool();
     create_frame_data();
+    create_descriptor_set_layout();
     create_descriptor_set();
     create_render_pass();
     create_shader_modules();
@@ -263,7 +264,7 @@ void Hologram::create_frame_data()
     }
 }
 
-void Hologram::create_descriptor_set()
+void Hologram::create_descriptor_set_layout()
 {
     if (use_push_constants_)
         return;
@@ -281,6 +282,12 @@ void Hologram::create_descriptor_set()
 
     vk::assert_success(vk::CreateDescriptorSetLayout(dev_, &layout_info,
                 nullptr, &desc_set_layout_));
+}
+
+void Hologram::create_descriptor_set()
+{
+    if (use_push_constants_)
+        return;
 
     VkDescriptorSetAllocateInfo set_info = {};
     set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
