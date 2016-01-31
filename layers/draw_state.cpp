@@ -708,7 +708,9 @@ collect_interface_block_members(layer_data *my_data, VkDevice dev,
 
 static void
 collect_interface_by_location(layer_data *my_data, VkDevice dev,
-                              shader_module const *src, spv::StorageClass sinterface,
+                              shader_module const *src,
+                              spirv_inst_iter entrypoint,
+                              spv::StorageClass sinterface,
                               std::map<uint32_t, interface_var> &out,
                               std::map<uint32_t, interface_var> &builtins_out,
                               bool is_array_of_verts)
@@ -852,8 +854,8 @@ collect_interface_by_descriptor_slot(layer_data *my_data, VkDevice dev,
 
 static bool
 validate_interface_between_stages(layer_data *my_data, VkDevice dev,
-                                  shader_module const *producer, char const *producer_name,
-                                  shader_module const *consumer, char const *consumer_name,
+                                  shader_module const *producer, spirv_inst_iter producer_entrypoint, char const *producer_name,
+                                  shader_module const *consumer, spirv_inst_iter consumer_entrypoint, char const *consumer_name,
                                   bool consumer_arrayed_input)
 {
     std::map<uint32_t, interface_var> outputs;
@@ -864,8 +866,8 @@ validate_interface_between_stages(layer_data *my_data, VkDevice dev,
 
     bool pass = true;
 
-    collect_interface_by_location(my_data, dev, producer, spv::StorageClassOutput, outputs, builtin_outputs, false);
-    collect_interface_by_location(my_data, dev, consumer, spv::StorageClassInput, inputs, builtin_inputs,
+    collect_interface_by_location(my_data, dev, producer, producer_entrypoint, spv::StorageClassOutput, outputs, builtin_outputs, false);
+    collect_interface_by_location(my_data, dev, consumer, consumer_entrypoint, spv::StorageClassInput, inputs, builtin_inputs,
             consumer_arrayed_input);
 
     auto a_it = outputs.begin();
@@ -1019,7 +1021,7 @@ validate_vi_consistency(layer_data *my_data, VkDevice dev, VkPipelineVertexInput
 }
 
 static bool
-validate_vi_against_vs_inputs(layer_data *my_data, VkDevice dev, VkPipelineVertexInputStateCreateInfo const *vi, shader_module const *vs)
+validate_vi_against_vs_inputs(layer_data *my_data, VkDevice dev, VkPipelineVertexInputStateCreateInfo const *vi, shader_module const *vs, spirv_inst_iter entrypoint)
 {
     std::map<uint32_t, interface_var> inputs;
     /* we collect builtin inputs, but they will never appear in the VI state --
@@ -1028,7 +1030,7 @@ validate_vi_against_vs_inputs(layer_data *my_data, VkDevice dev, VkPipelineVerte
     std::map<uint32_t, interface_var> builtin_inputs;
     bool pass = true;
 
-    collect_interface_by_location(my_data, dev, vs, spv::StorageClassInput, inputs, builtin_inputs, false);
+    collect_interface_by_location(my_data, dev, vs, entrypoint, spv::StorageClassInput, inputs, builtin_inputs, false);
 
     /* Build index by location */
     std::map<uint32_t, VkVertexInputAttributeDescription const *> attribs;
@@ -1084,7 +1086,7 @@ validate_vi_against_vs_inputs(layer_data *my_data, VkDevice dev, VkPipelineVerte
 }
 
 static bool
-validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevice dev, shader_module const *fs, RENDER_PASS_NODE const *rp, uint32_t subpass)
+validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevice dev, shader_module const *fs, spirv_inst_iter entrypoint, RENDER_PASS_NODE const *rp, uint32_t subpass)
 {
     const std::vector<VkFormat> &color_formats = rp->subpassColorFormats[subpass];
     std::map<uint32_t, interface_var> outputs;
@@ -1093,7 +1095,7 @@ validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevice dev, shade
 
     /* TODO: dual source blend index (spv::DecIndex, zero if not provided) */
 
-    collect_interface_by_location(my_data, dev, fs, spv::StorageClassOutput, outputs, builtin_outputs, false);
+    collect_interface_by_location(my_data, dev, fs, entrypoint, spv::StorageClassOutput, outputs, builtin_outputs, false);
 
     auto it = outputs.begin();
     uint32_t attachment = 0;
@@ -1505,7 +1507,7 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
     }
 
     if (shaders[vertex_stage]) {
-        pass = validate_vi_against_vs_inputs(my_data, dev, vi, shaders[vertex_stage]) && pass;
+        pass = validate_vi_against_vs_inputs(my_data, dev, vi, shaders[vertex_stage], entrypoints[vertex_stage]) && pass;
     }
 
     /* TODO: enforce rules about present combinations of shaders */
@@ -1521,8 +1523,10 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
         assert(shaders[producer]);
         if (shaders[consumer]) {
             pass = validate_interface_between_stages(my_data, dev,
-                                                     shaders[producer], shader_stage_attribs[producer].name,
-                                                     shaders[consumer], shader_stage_attribs[consumer].name,
+                                                     shaders[producer], entrypoints[producer],
+                                                     shader_stage_attribs[producer].name,
+                                                     shaders[consumer], entrypoints[consumer],
+                                                     shader_stage_attribs[consumer].name,
                                                      shader_stage_attribs[consumer].arrayed_input) && pass;
 
             producer = consumer;
@@ -1530,7 +1534,8 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
     }
 
     if (shaders[fragment_stage] && rp) {
-        pass = validate_fs_outputs_against_render_pass(my_data, dev, shaders[fragment_stage], rp, pCreateInfo->subpass) && pass;
+        pass = validate_fs_outputs_against_render_pass(my_data, dev, shaders[fragment_stage],
+            entrypoints[fragment_stage], rp, pCreateInfo->subpass) && pass;
     }
 
     return pass;
