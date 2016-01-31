@@ -152,6 +152,8 @@ struct spirv_inst_iter {
     uint32_t const & word(unsigned n) { return it[n]; }
     uint32_t offset() { return (uint32_t)(it - zero); }
 
+    spirv_inst_iter() {}
+
     spirv_inst_iter(std::vector<uint32_t>::const_iterator zero,
         std::vector<uint32_t>::const_iterator it) : zero(zero), it(it) {}
 
@@ -398,6 +400,25 @@ build_def_index(shader_module *module)
         }
     }
 }
+
+
+static spirv_inst_iter
+find_entrypoint(shader_module *src, char const *name, VkShaderStageFlagBits stageBits)
+{
+    for (auto insn : *src) {
+        if (insn.opcode() == spv::OpEntryPoint) {
+            auto entrypointName = (char const *) &insn.word(3);
+            auto entrypointStageBits = 1u << insn.word(1);
+
+            if (!strcmp(entrypointName, name) && (entrypointStageBits & stageBits)) {
+                return insn;
+            }
+        }
+    }
+
+    return src->end();
+}
+
 
 bool
 shader_is_spirv(VkShaderModuleCreateInfo const *pCreateInfo)
@@ -1391,6 +1412,8 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
 
     shader_module *shaders[5];
     memset(shaders, 0, sizeof(shaders));
+    spirv_inst_iter entrypoints[5];
+    memset(entrypoints, 0, sizeof(entrypoints));
     RENDER_PASS_NODE const *rp = 0;
     VkPipelineVertexInputStateCreateInfo const *vi = 0;
     VkBool32 pass = VK_TRUE;
@@ -1409,8 +1432,18 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
             else {
                 pass = validate_specialization_offsets(my_data, pStage) && pass;
 
+                auto stage_id = get_shader_stage_id(pStage->stage);
                 shader_module *module = my_data->shaderModuleMap[pStage->module];
-                shaders[get_shader_stage_id(pStage->stage)] = module;
+                shaders[stage_id] = module;
+
+                /* find the entrypoint */
+                entrypoints[stage_id] = find_entrypoint(module, pStage->pName, pStage->stage);
+                if (entrypoints[stage_id] == module->end()) {
+                    if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_MISSING_ENTRYPOINT, "SC",
+                        "No entrypoint found named `%s` for stages %u", pStage->pName, pStage->stage)) {
+                        pass = VK_FALSE;
+                    }
+                }
 
                 /* validate descriptor set layout against what the spirv module actually uses */
                 std::map<std::pair<unsigned, unsigned>, interface_var> descriptor_uses;
