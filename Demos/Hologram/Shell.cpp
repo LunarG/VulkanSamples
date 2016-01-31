@@ -115,10 +115,8 @@ void Shell::init_physical_dev()
         for (uint32_t i = 0; i < queues.size(); i++) {
             const VkQueueFamilyProperties &q = queues[i];
 
-            // requires GRAPHICS and TRANSFER for game queues
-            const VkFlags game_queue_flags = VK_QUEUE_GRAPHICS_BIT |
-                                             VK_QUEUE_COMPUTE_BIT |
-                                             VK_QUEUE_TRANSFER_BIT;
+            // requires only GRAPHICS for game queues
+            const VkFlags game_queue_flags = VK_QUEUE_GRAPHICS_BIT;
             if (game_queue_family < 0 &&
                 (q.queueFlags & game_queue_flags) == game_queue_flags)
                 game_queue_family = i;
