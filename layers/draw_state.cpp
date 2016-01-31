@@ -1389,8 +1389,8 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
     int vertex_stage = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
     int fragment_stage = get_shader_stage_id(VK_SHADER_STAGE_FRAGMENT_BIT);
 
-    shader_module **shaders = new shader_module*[fragment_stage + 1];  /* exclude CS */
-    memset(shaders, 0, sizeof(shader_module *) * (fragment_stage +1));
+    shader_module *shaders[5];
+    memset(shaders, 0, sizeof(shaders));
     RENDER_PASS_NODE const *rp = 0;
     VkPipelineVertexInputStateCreateInfo const *vi = 0;
     VkBool32 pass = VK_TRUE;
@@ -1479,8 +1479,6 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
     if (shaders[fragment_stage] && rp) {
         pass = validate_fs_outputs_against_render_pass(my_data, dev, shaders[fragment_stage], rp, pCreateInfo->subpass) && pass;
     }
-
-    delete [] shaders;
 
     return pass;
 }
