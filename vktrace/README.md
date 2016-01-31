@@ -15,16 +15,16 @@ Vktrace as a server one should omit the "-p" option.
 cd <vktrace build directory>
 ./vktrace <options>
 Example to trace spinning cube demo.
-export VK_ICD_FILENAMES=/home/jon/LoaderAndValidationLayers/main_icd.json
-export LD_LIBRARY_PATH=/home/jon/LoaderAndValidationLayers/dbuild/loader
+export VK_ICD_FILENAMES=/home/jon/LoaderAndTools/main_icd.json
+export LD_LIBRARY_PATH=/home/jon/LoaderAndTools/dbuild/loader
 ./vktrace -o vktrace_cube.vktrace
 ```
 
 In a separate terminal run your app, the cube demo in this example:
 ```
-cd /home/jon/LoaderAndValidationLayers/dbuild/demos
-export VK_ICD_FILENAMES=/home/jon/LoaderAndValidationLayers/dbuild/icd/intel/intel_icd.json
-export LD_LIBRARY_PATH=/home/jon/LoaderAndValidationLayers/dbuild/loader
+cd /home/jon/LoaderAndTools/dbuild/demos
+export VK_ICD_FILENAMES=/home/jon/LoaderAndTools/dbuild/icd/intel/intel_icd.json
+export LD_LIBRARY_PATH=/home/jon/LoaderAndTools/dbuild/loader
 VK_INSTANCE_LAYERS=Vktrace VK_DEVICE_LAYERS=Vktrace ./cube
 ```
 
@@ -46,9 +46,9 @@ cd <vktrace build dir>
 ```
 Example to trace the spinning cube demo from sample implementation
 ```
-export VK_ICD_FILENAMES=/home/jon/LoaderAndValidationLayers/main_icd.json
-export LD_LIBRARY_PATH=/home/jon/LoaderAndValidationLayers/dbuild/loader
-./vktrace -p /home/jon/LoaderAndValidationLayers/dbuild/demos/cube -o vktrace_cube.vktrace -w /home/jon/LoaderAndValidationLayers/dbuild/demos
+export VK_ICD_FILENAMES=/home/jon/LoaderAndTools/main_icd.json
+export LD_LIBRARY_PATH=/home/jon/LoaderAndTools/dbuild/loader
+./vktrace -p /home/jon/LoaderAndTools/dbuild/demos/cube -o vktrace_cube.vktrace -w /home/jon/LoaderAndTools/dbuild/demos
 ```
 Trace file is in "vktrace_cube.vktrace".
 
@@ -62,8 +62,8 @@ export LD_LIBRARY_PATH=<path to libvulkan-1.so>
 ```
 Example to replay trace file captured above
 ```
-export VK_ICD_FILENAMES=/home/jon/LoaderAndValidationLayers/main_icd.json
-export LD_LIBRARY_PATH=/home/jon/LoaderAndValidationLayers/dbuild:/home/jon/LoaderAndValidationLayers/dbuild/loader
+export VK_ICD_FILENAMES=/home/jon/LoaderAndTools/main_icd.json
+export LD_LIBRARY_PATH=/home/jon/LoaderAndTools/dbuild:/home/jon/LoaderAndTools/dbuild/loader
 ./vkreplay -t vktrace_cube.vktrace
 ```
 
@@ -85,8 +85,8 @@ Example to trace the spinning cube demo (Note: see other files for how to config
 ```
 cd C:\\Users\developer\\Vktrace\\_out64\\Debug
 
-vktrace -p C:\\Users\developer\\LoaderAndValidationLayers\\_out64\\demos\\cube.exe
-        -w C:\\Users\developer\\LoaderAndValidationLayers\\_out64\\demos
+vktrace -p C:\\Users\developer\\LoaderAndTools\\_out64\\demos\\cube.exe
+        -w C:\\Users\developer\\LoaderAndTools\\_out64\\demos
         -o vktrace_cube.vktrace
 ```
 Trace file is in "vktrace_cube.vktrace".

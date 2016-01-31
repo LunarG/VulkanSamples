@@ -6,7 +6,7 @@ To build the Installer:
    1. Install Nullsoft Install System version 3.0b1 or greater. (Available from
       http://nsis.sourceforge.net/Download.)
 
-   2. Build Vulkan LoaderAndValidationLayers as described in ../BUILD.md.
+   2. Build Vulkan LoaderAndTools as described in ../BUILD.md.
 
    3. Edit the InstallerRT.nsi file in this folder and modify the following lines
       to match the version of the Windows Vulkan Runtime you wish to build:

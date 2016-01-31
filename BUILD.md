@@ -244,8 +244,8 @@ To create your local git repository:
 ```
 mkdir YOUR_DEV_DIRECTORY  # it's called GL-Next on Github, but the name doesn't matter
 cd YOUR_DEV_DIRECTORY
-git clone -o khronos git@gitlab.khronos.org:vulkan/LoaderAndValidationLayers.git .
-# Or substitute the URL from your forked repo for git@gitlab.khronos.org:vulkan/LoaderAndValidationLayers.git above.
+git clone -o khronos git@gitlab.khronos.org:vulkan/LoaderAndTools.git .
+# Or substitute the URL from your forked repo for git@gitlab.khronos.org:vulkan/LoaderAndTools.git above.
 ```
 
 ## Linux Build
@@ -357,7 +357,7 @@ Cygwin is used in order to obtain a local copy of the Git repository, and to run
 
 Example debug x64 build (e.g. in a "Developer Command Prompt for VS2013" window):
 ```
-cd LoaderAndValidationLayers  # cd to the root of the Vulkan git repository
+cd LoaderAndTools  # cd to the root of the Vulkan git repository
 update_external_sources.bat --all
 mkdir build
 cd build
@@ -381,7 +381,7 @@ If you plan on creating a Windows Install file (done in the windowsRuntimeInstal
 
 To do this, simply create and build the release versions of each target:
 ```
-cd LoaderAndValidationLayers  # cd to the root of the Vulkan git repository
+cd LoaderAndTools  # cd to the root of the Vulkan git repository
 update_external_sources.bat --all
 mkdir build
 cd build
