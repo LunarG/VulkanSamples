@@ -17,11 +17,11 @@
   - Windows dependencies include:
     - Vulkan SDK required components
     - cmake
-  - Note that if you have a LoaderAndTools repository, and/or a glslang
-    repository that are file system peers to VulkanSamplesKit, cmake will
-    look in those repositories for headers and libraries before looking in
-    SDK or system locations.  Build directories in those repositories should
-    be named "build".
+  - Note that if you have a LoaderAndTools (LoaderAndValidationLayers) repository,
+    and/or a glslang repository that are file system peers to VulkanSamplesKit,
+    cmake will look in those repositories for headers and libraries before
+    looking in SDK or system locations.  Build directories in those repositories
+    should be named "build".
 
 ## Kit Structure
   - The Vulkan Samples Kit is a set of source and data files in a specific
