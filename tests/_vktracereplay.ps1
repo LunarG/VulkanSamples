@@ -1,7 +1,7 @@
 # Powershell script for running the vktrace trace/replay auto test
 # To run this test:
 #    cd <this-dir>
-#    powershell C:\src\LoaderAndTools\vktracereplay.ps1 [-Debug]
+#    powershell C:\src\LoaderAndValidationLayers\vktracereplay.ps1 [-Debug]
 $exitstatus = 0
 
 if ($args[0] -eq "-Debug") {
