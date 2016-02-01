@@ -394,6 +394,11 @@ build_def_index(shader_module *module)
             module->def_index[insn.word(2)] = insn.offset();
             break;
 
+        /* Variables */
+        case spv::OpVariable:
+            module->def_index[insn.word(2)] = insn.offset();
+            break;
+
         default:
             /* We don't care about any other defs for now. */
             break;
@@ -730,12 +735,27 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
                 blocks[insn.word(1)] = 1;
             }
         }
+    }
 
         /* TODO: handle grouped decorations */
         /* TODO: handle index=1 dual source outputs from FS -- two vars will
          * have the same location, and we DONT want to clobber. */
 
-        else if (insn.opcode() == spv::OpVariable && insn.word(3) == sinterface) {
+    /* find the end of the entrypoint's name string. additional zero bytes follow the actual null
+       terminator, to fill out the rest of the word - so we only need to look at the last byte in
+       the word to determine which word contains the terminator. */
+    auto word = 3;
+    while (entrypoint.word(word) & 0xff000000u) {
+        ++word;
+    }
+    ++word;
+
+    for (; word < entrypoint.len(); word++) {
+        auto insn = src->get_def(entrypoint.word(word));
+        assert(insn != src->end());
+        assert(insn.opcode() == spv::OpVariable);
+
+        if (insn.word(3) == sinterface) {
             unsigned id = insn.word(2);
             unsigned type = insn.word(1);
 
