@@ -3406,8 +3406,6 @@ static VkBool32 validateCommandBufferState(layer_data* dev_data, GLOBAL_CB_NODE*
         } else { // Flag error for using CB w/o vkEndCommandBuffer() called
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_NO_END_COMMAND_BUFFER, "DS",
                 "You must call vkEndCommandBuffer() on CB %#" PRIxLEAST64 " before this call to vkQueueSubmit()!", (uint64_t)(pCB->commandBuffer));
-            loader_platform_thread_unlock_mutex(&globalLock);
-            return VK_ERROR_VALIDATION_FAILED_EXT;
         }
     }
     // If USAGE_SIMULTANEOUS_USE_BIT not set then CB cannot already be executing on device
@@ -3417,6 +3415,7 @@ static VkBool32 validateCommandBufferState(layer_data* dev_data, GLOBAL_CB_NODE*
                 "Attempt to simultaneously execute CB %#" PRIxLEAST64 " w/o VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!", (uint64_t)(pCB->commandBuffer));
         }
     }
+    return skipCall;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence)
