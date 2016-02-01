@@ -1431,7 +1431,7 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
 
     /* TODO: enforce rules about present combinations of shaders */
     int producer = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
-    int consumer = get_shader_stage_id(VK_SHADER_STAGE_GEOMETRY_BIT);
+    int consumer = get_shader_stage_id(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
 
     while (!shaders[producer] && producer != fragment_stage) {
         producer++;
