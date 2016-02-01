@@ -27,7 +27,7 @@ echo Generating 64-bit spirv-tools CMake files for Visual Studio %VS_VERSION%
 cmake -G "Visual Studio %VS_VERSION% Win64" ..
    
 echo Building 64-bit Debug LoaderAndTools 
-msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug
+msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
    
 REM Check for existence of one DLL, even though we should check for all results
 if not exist .\loader\Debug\vulkan-1.dll (
@@ -37,7 +37,7 @@ if not exist .\loader\Debug\vulkan-1.dll (
 )
    
 echo Building 64-bit Release LoaderAndTools 
-msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release
+msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
 
 REM Check for existence of one DLL, even though we should check for all results
 if not exist .\loader\Release\vulkan-1.dll (
@@ -58,7 +58,7 @@ echo Generating 32-bit LoaderAndTools CMake files for Visual Studio %VS_VERSION%
 cmake -G "Visual Studio %VS_VERSION%" ..
    
 echo Building 32-bit Debug LoaderAndTools 
-msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug
+msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
    
 REM Check for existence of one DLL, even though we should check for all results
 if not exist .\loader\Debug\vulkan-1.dll (
@@ -68,7 +68,7 @@ if not exist .\loader\Debug\vulkan-1.dll (
 )
    
 echo Building 32-bit Release LoaderAndTools 
-msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release
+msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
 
 REM Check for existence of one DLL, even though we should check for all results
 if not exist .\loader\Release\vulkan-1.dll (
