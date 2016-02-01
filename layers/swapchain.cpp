@@ -33,7 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <vk_loader_platform.h>
-#include <vk_icd.h>
+#include <vulkan/vk_icd.h>
 #include "swapchain.h"
 #include "vk_layer_extension_utils.h"
 #include "vk_enum_string_helper.h"
@@ -443,13 +443,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
 
     // Validate that the platform extension was enabled:
-    if (pInstance && !pInstance->SurfaceExtensionEnabled) {
+    if (pInstance && !pInstance->androidSurfaceExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pInstance,
                               "VkInstance",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkInstance.",
-                              __FUNCTION__, VK_KHR_x_SURFACE_EXTENSION_NAME);
+                              __FUNCTION__, VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
     }
 
     if (!pCreateInfo) {
