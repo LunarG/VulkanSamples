@@ -399,6 +399,11 @@ build_def_index(shader_module *module)
             module->def_index[insn.word(2)] = insn.offset();
             break;
 
+        /* Functions */
+        case spv::OpFunction:
+            module->def_index[insn.word(2)] = insn.offset();
+            break;
+
         default:
             /* We don't care about any other defs for now. */
             break;
