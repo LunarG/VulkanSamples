@@ -23,5 +23,6 @@ python ../vk_helper.py --gen_enum_string_helper ../include/vulkan/vulkan.h --abs
 python ../vk_helper.py --gen_struct_wrappers ../include/vulkan/vulkan.h --abs_out_dir generated
 
 python ../vk-layer-generate.py object_tracker ../include/vulkan/vulkan.h > generated/object_tracker.cpp
+python ../vk-layer-generate.py unique_objects ../include/vulkan/vulkan.h > generated/unique_objects.cpp
 ( cd generated; python ../../genvk.py threading -registry ../../vk.xml thread_check.h )
 
