@@ -30,6 +30,14 @@
 #include "Meshes.h"
 #include "Shell.h"
 
+namespace {
+
+struct ShaderParamBlock {
+    float mvp[4 * 4];
+};
+
+} // namespace
+
 Hologram::Hologram(const std::vector<std::string> &args)
     : Game("Hologram", args), multithread_(true), use_push_constants_(false),
       sim_paused_(false), sim_(5000), camera_(2.5f), frame_data_(),
@@ -89,6 +97,12 @@ void Hologram::attach_shell(Shell &sh)
     format_ = ctx.format.format;
 
     vk::GetPhysicalDeviceProperties(physical_dev_, &physical_dev_props_);
+
+    if (use_push_constants_ &&
+        sizeof(ShaderParamBlock) > physical_dev_props_.limits.maxPushConstantsSize) {
+        shell_->log(Shell::LOG_WARN, "cannot enable push constants");
+        use_push_constants_ = false;
+    }
 
     VkPhysicalDeviceMemoryProperties mem_props;
     vk::GetPhysicalDeviceMemoryProperties(physical_dev_, &mem_props);
@@ -252,7 +266,7 @@ void Hologram::create_pipeline_layout()
     if (use_push_constants_) {
         push_const_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         push_const_range.offset = 0;
-        push_const_range.size = sizeof(glm::mat4);
+        push_const_range.size = sizeof(ShaderParamBlock);
 
         pipeline_layout_info.pushConstantRangeCount = 1;
         pipeline_layout_info.pPushConstantRanges = &push_const_range;
@@ -444,7 +458,7 @@ void Hologram::create_command_buffers()
 
 void Hologram::create_buffers()
 {
-    VkDeviceSize object_data_size = sizeof(glm::mat4);
+    VkDeviceSize object_data_size = sizeof(ShaderParamBlock);
     // align object data to device limit
     const VkDeviceSize &alignment =
         physical_dev_props_.limits.minStorageBufferOffsetAlignment;
@@ -656,11 +670,15 @@ void Hologram::draw_object(const Simulation::Object &obj, FrameData &data, VkCom
     glm::mat4 mvp = camera_.view_projection * obj.model;
 
     if (use_push_constants_) {
+        ShaderParamBlock params;
+        memcpy(params.mvp, glm::value_ptr(mvp), sizeof(mvp));
+
         vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
-                0, sizeof(mvp), glm::value_ptr(mvp));
+                0, sizeof(params), &params);
     } else {
-        uint8_t *dst = data.base + obj.frame_data_offset;
-        memcpy(dst, glm::value_ptr(mvp), sizeof(mvp));
+        ShaderParamBlock *params =
+            reinterpret_cast<ShaderParamBlock *>(data.base + obj.frame_data_offset);
+        memcpy(params->mvp, glm::value_ptr(mvp), sizeof(mvp));
 
         vk::CmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 pipeline_layout_, 0, 1, &data.desc_set, 1, &obj.frame_data_offset);
