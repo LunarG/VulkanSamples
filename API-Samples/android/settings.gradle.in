@@ -1,0 +1,2 @@
+include ':nativeactivity'@SETTINGS_GRADLE@
+project(':nativeactivity').projectDir = new File(settingsDir, 'external/nativeactivity')

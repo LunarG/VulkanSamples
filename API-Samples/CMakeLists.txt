@@ -54,7 +54,23 @@ endfunction(sampleExtSPIRVShaders)
 function(sampleWithSingleFile)
     foreach(TARG ${S_TARGETS})
         set(SAMPLE_NAME ${TARG})
-        if(UNIX)
+        if(ANDROID)
+            # Generate AndroidStudio project files.
+            MESSAGE("Generating AndroidStudio project:" ${SAMPLE_NAME})
+            set (PACKAGE_NAME org.khronos.vulkan.samples.${SAMPLE_NAME})
+            set (SAMPLE_DESCRIPTION "Vulkan sample: ${SAMPLE_NAME}")
+            file(COPY ./android/project_template/ DESTINATION ./android/${SAMPLE_NAME}/)
+            set (TEMPLATE_FILES
+                android/${SAMPLE_NAME}/src/main/res/values/strings.xml
+                android/${SAMPLE_NAME}/src/main/AndroidManifest.xml
+                android/${SAMPLE_NAME}/build.gradle
+                android/${SAMPLE_NAME}/README.md
+            )
+            foreach(TEMPLATE_FILE ${TEMPLATE_FILES})
+                configure_file(${TEMPLATE_FILE} ${TEMPLATE_FILE} @ONLY)
+            endforeach(TEMPLATE_FILE)
+            SET(SETTINGS_GRADLE "${SETTINGS_GRADLE} ,\n':${SAMPLE_NAME}'")
+        elseif(UNIX)
             add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD} ${SPIRV_TOOLS_LIBRARIES})
         else()
@@ -62,6 +78,11 @@ function(sampleWithSingleFile)
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${VULKAN_LOADER} ${WINLIBS} ${SPIRV_TOOLS_LIBRARIES})
         endif()
     endforeach(TARG)
+
+    if(ANDROID)
+        #generate Settings.gradle
+        configure_file(android/settings.gradle.in android/settings.gradle @ONLY)
+    endif()
 endfunction(sampleWithSingleFile)
 
 # function to build a simple single-source-file sample
@@ -246,6 +267,9 @@ endif()
 # START BUILDING SAMPLES HERE
 #
 
+# Generate Android project.
+option(ANDROID OFF)
+
 # simple one file sample targets, no additional files
 set (S_TARGETS instance device enumerate enumerate-adv
     depthbuffer initswapchain inittexture uniformbuffer
@@ -276,4 +300,5 @@ add_subdirectory(utils)
 # set(SAMPLE_GLSL_FRAG_SHADERS glslshader)
 # set(SAMPLE_GLSL_VERT_SHADERS glslshader)
 # sampleExtGLSLShaders()
+
 
