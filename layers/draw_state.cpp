@@ -813,6 +813,7 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
 static void
 collect_interface_by_descriptor_slot(layer_data *my_data, VkDevice dev,
                               shader_module const *src, spv::StorageClass sinterface,
+                              std::unordered_set<uint32_t> const &accessible_ids,
                               std::map<std::pair<unsigned, unsigned>, interface_var> &out)
 {
 
@@ -832,8 +833,13 @@ collect_interface_by_descriptor_slot(layer_data *my_data, VkDevice dev,
                 var_bindings[insn.word(1)] = insn.word(3);
             }
         }
+    }
 
-        else if (insn.opcode() == spv::OpVariable &&
+    for (auto id : accessible_ids) {
+        auto insn = src->get_def(id);
+        assert(insn != src->end());
+
+        if (insn.opcode() == spv::OpVariable &&
                 (insn.word(3) == spv::StorageClassUniform ||
                  insn.word(3) == spv::StorageClassUniformConstant)) {
             unsigned set = value_or_default(var_sets, insn.word(2), 0);
@@ -1599,6 +1605,7 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
                 /* validate descriptor set layout against what the entrypoint actually uses */
                 std::map<std::pair<unsigned, unsigned>, interface_var> descriptor_uses;
                 collect_interface_by_descriptor_slot(my_data, dev, module, spv::StorageClassUniform,
+                        accessible_ids,
                         descriptor_uses);
 
                 auto layouts = pCreateInfo->layout != VK_NULL_HANDLE ?
