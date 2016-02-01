@@ -1149,6 +1149,126 @@ validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevice dev, shade
 }
 
 
+/* For some analyses, we need to know about all ids referenced by the static call tree of a particular
+ * entrypoint. This is important for identifying the set of shader resources actually used by an entrypoint,
+ * for example.
+ * Note: we only explore parts of the image which might actually contain ids we care about for the above analyses.
+ *  - NOT the shader input/output interfaces.
+ *
+ * TODO: The set of interesting opcodes here was determined by eyeballing the SPIRV spec. It might be worth
+ * converting parts of this to be generated from the machine-readable spec instead.
+ */
+static void
+mark_accessible_ids(shader_module const *src, spirv_inst_iter entrypoint, std::unordered_set<uint32_t> &ids)
+{
+    std::unordered_set<uint32_t> worklist;
+    worklist.insert(entrypoint.word(2));
+
+    while (!worklist.empty()) {
+        auto id_iter = worklist.begin();
+        auto id = *id_iter;
+        worklist.erase(id_iter);
+
+        auto insn = src->get_def(id);
+        if (insn == src->end()) {
+            /* id is something we didnt collect in build_def_index. that's OK -- we'll stumble
+             * across all kinds of things here that we may not care about. */
+            continue;
+        }
+
+        /* try to add to the output set */
+        if (!ids.insert(id).second) {
+            continue;       /* if we already saw this id, we don't want to walk it again. */
+        }
+
+        switch (insn.opcode()) {
+        case spv::OpFunction:
+            /* scan whole body of the function, enlisting anything interesting */
+            while (++insn, insn.opcode() != spv::OpFunctionEnd) {
+                switch (insn.opcode()) {
+                case spv::OpLoad:
+                case spv::OpAtomicLoad:
+                case spv::OpAtomicExchange:
+                case spv::OpAtomicCompareExchange:
+                case spv::OpAtomicCompareExchangeWeak:
+                case spv::OpAtomicIIncrement:
+                case spv::OpAtomicIDecrement:
+                case spv::OpAtomicIAdd:
+                case spv::OpAtomicISub:
+                case spv::OpAtomicSMin:
+                case spv::OpAtomicUMin:
+                case spv::OpAtomicSMax:
+                case spv::OpAtomicUMax:
+                case spv::OpAtomicAnd:
+                case spv::OpAtomicOr:
+                case spv::OpAtomicXor:
+                    worklist.insert(insn.word(3));  /* ptr */
+                    break;
+                case spv::OpStore:
+                case spv::OpAtomicStore:
+                    worklist.insert(insn.word(1));  /* ptr */
+                    break;
+                case spv::OpAccessChain:
+                case spv::OpInBoundsAccessChain:
+                    worklist.insert(insn.word(3));  /* base ptr */
+                    break;
+                case spv::OpSampledImage:
+                case spv::OpImageSampleImplicitLod:
+                case spv::OpImageSampleExplicitLod:
+                case spv::OpImageSampleDrefImplicitLod:
+                case spv::OpImageSampleDrefExplicitLod:
+                case spv::OpImageSampleProjImplicitLod:
+                case spv::OpImageSampleProjExplicitLod:
+                case spv::OpImageSampleProjDrefImplicitLod:
+                case spv::OpImageSampleProjDrefExplicitLod:
+                case spv::OpImageFetch:
+                case spv::OpImageGather:
+                case spv::OpImageDrefGather:
+                case spv::OpImageRead:
+                case spv::OpImage:
+                case spv::OpImageQueryFormat:
+                case spv::OpImageQueryOrder:
+                case spv::OpImageQuerySizeLod:
+                case spv::OpImageQuerySize:
+                case spv::OpImageQueryLod:
+                case spv::OpImageQueryLevels:
+                case spv::OpImageQuerySamples:
+                case spv::OpImageSparseSampleImplicitLod:
+                case spv::OpImageSparseSampleExplicitLod:
+                case spv::OpImageSparseSampleDrefImplicitLod:
+                case spv::OpImageSparseSampleDrefExplicitLod:
+                case spv::OpImageSparseSampleProjImplicitLod:
+                case spv::OpImageSparseSampleProjExplicitLod:
+                case spv::OpImageSparseSampleProjDrefImplicitLod:
+                case spv::OpImageSparseSampleProjDrefExplicitLod:
+                case spv::OpImageSparseFetch:
+                case spv::OpImageSparseGather:
+                case spv::OpImageSparseDrefGather:
+                case spv::OpImageTexelPointer:
+                    worklist.insert(insn.word(3));  /* image or sampled image */
+                    break;
+                case spv::OpImageWrite:
+                    worklist.insert(insn.word(1));  /* image -- different operand order to above */
+                    break;
+                case spv::OpFunctionCall:
+                    for (auto i = 3; i < insn.len(); i++) {
+                        worklist.insert(insn.word(i));  /* fn itself, and all args */
+                    }
+                    break;
+
+                case spv::OpExtInst:
+                    for (auto i = 5; i < insn.len(); i++) {
+                        worklist.insert(insn.word(i));  /* operands to ext inst */
+                    }
+                    break;
+                }
+            }
+            break;
+        }
+    }
+}
+
+
 struct shader_stage_attributes {
     char const * const name;
     bool arrayed_input;
@@ -1472,7 +1592,11 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
                     }
                 }
 
-                /* validate descriptor set layout against what the spirv module actually uses */
+                /* mark accessible ids */
+                std::unordered_set<uint32_t> accessible_ids;
+                mark_accessible_ids(module, entrypoints[stage_id], accessible_ids);
+
+                /* validate descriptor set layout against what the entrypoint actually uses */
                 std::map<std::pair<unsigned, unsigned>, interface_var> descriptor_uses;
                 collect_interface_by_descriptor_slot(my_data, dev, module, spv::StorageClassUniform,
                         descriptor_uses);
