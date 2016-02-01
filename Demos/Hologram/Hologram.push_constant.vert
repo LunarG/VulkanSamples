@@ -4,19 +4,14 @@ layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec3 in_normal;
 
 layout(std140, push_constant) uniform param_block {
-	vec3 light_pos;
-	vec3 light_color;
-	mat4 model;
-	mat4 view_projection;
+	mat4 mvp;
 } params;
 
 out vec3 color;
 
 void main()
 {
-	vec3 world_light = vec3(params.model * vec4(params.light_pos, 1.0));
-	vec3 world_pos = vec3(params.model * vec4(in_pos, 1.0));
-	vec3 world_normal = mat3(params.model) * in_normal;
+	vec4 pos = params.mvp * vec4(in_pos, 1.0);
 
 	gl_Position = pos;
 	color = in_normal;
