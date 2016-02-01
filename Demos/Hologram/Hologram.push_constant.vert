@@ -3,15 +3,15 @@
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec3 in_normal;
 
-layout(push_constant) uniform transformation {
+layout(std140, push_constant) uniform param_block {
 	mat4 mvp;
-} matrices;
+} params;
 
 out vec3 color;
 
 void main()
 {
-	vec4 pos = matrices.mvp * vec4(in_pos, 1.0);
+	vec4 pos = params.mvp * vec4(in_pos, 1.0);
 
 	gl_Position = pos;
 	color = in_normal;
