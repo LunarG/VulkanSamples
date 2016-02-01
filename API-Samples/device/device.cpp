@@ -78,7 +78,7 @@ int sample_main()
     device_info.pQueueCreateInfos = &queue_info;
     device_info.enabledExtensionCount = 0;
     device_info.ppEnabledExtensionNames = NULL;
-    device_info.enabledExtensionCount = 0;
+    device_info.enabledLayerCount = 0;
     device_info.ppEnabledLayerNames = NULL;
     device_info.pEnabledFeatures = NULL;
 
