@@ -8,9 +8,7 @@ include_directories("${CMAKE_SOURCE_DIR}/../spirv-tools/include"
                     "${CMAKE_SOURCE_DIR}/../spirv-tools/external/include"
                     "${CMAKE_SOURCE_DIR}/../source/spirv-tools/include"
                     "${CMAKE_SOURCE_DIR}/../source/spirv-tools/external/include")
-
-
-
+                    
 # function to build a single-source-file sample that uses glsl shaders;
 #   - assumes SAMPLE_GLSL_VERT_SHADERS and SAMPLE_GLSL_FRAG_SHADERS is set to
 #     the list of shader files of that type, with .vert and .frag omitted
@@ -85,14 +83,20 @@ endfunction(sampleInlineGLSLShaders)
 if(NOT WIN32)
     find_package(XCB REQUIRED)
     set (BUILDTGT_DIR build)
+    set (BINDATA_DIR Bin)
+    set (LIBSOURCE_DIR Lib)
 else()
     # For Windows, since 32-bit and 64-bit items can co-exist, we build each in its own build directory.
     # 32-bit target data goes in build32, and 64-bit target data goes into build.  So, include/link the
     # appropriate data at build time.
     if (CMAKE_CL_64)
         set (BUILDTGT_DIR build)
-    else ()
+        set (BINDATA_DIR Bin)
+        set (LIBSOURCE_DIR Lib)
+    else()
         set (BUILDTGT_DIR build32)
+        set (BINDATA_DIR Bin32)
+        set (LIBSOURCE_DIR Lib32)
     endif()
 endif()
 
@@ -100,11 +104,11 @@ find_library(VULKAN_LOADER NAMES vulkan-1 vulkan
              HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader"
                    "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader/Release"
                    "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader/Debug"
-                   "${PROJECT_SOURCE_DIR}/../Bin" )
+                   "${PROJECT_SOURCE_DIR}/../${BINDATA_DIR}" )
 
 find_program(GLSLANG_VALIDATOR NAMES glslangValidator
              HINTS "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/install/bin"
-                   "${PROJECT_SOURCE_DIR}/../Bin" )
+                   "${PROJECT_SOURCE_DIR}/../${BINDATA_DIR}" )
 
 if(WIN32)
     set (MOVE_CMD "move")
@@ -208,7 +212,7 @@ if (WIN32)
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
     find_library(LOADER_DLIB NAMES vulkan-1
                  HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader/Debug"
-                       "${PROJECT_SOURCE_DIR}\\..\\Bin\\Debug" )
+                       "${PROJECT_SOURCE_DIR}/../Source/${LIBSOURCE_DIR}" )
     find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Tools
                  HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH} )
 
