@@ -9,10 +9,11 @@
 #include "Shell.h"
 
 Hologram::Hologram(const std::vector<std::string> &args)
-    : Game("Hologram", args), random_dev_(), multithread_(true),
-      render_pass_clear_value_(), render_pass_begin_info_(),
+    : Game("Hologram", args), random_dev_(),
+      multithread_(true), use_push_constants_(false),
+      frame_data_(), render_pass_clear_value_(), render_pass_begin_info_(),
       primary_cmd_begin_info_(), primary_cmd_submit_info_(),
-      paused_(false), eye_pos_(8.0f)
+      eye_pos_(8.0f), pause_objects_(false)
 {
     for (auto it = args.begin(); it != args.end(); ++it) {
         if (*it == "-s")
@@ -182,7 +183,7 @@ void Hologram::create_render_pass()
     render_pass_info.pAttachments = &attachment;
     render_pass_info.subpassCount = 1;
     render_pass_info.pSubpasses = &subpass;
-    render_pass_info.dependencyCount = subpass_deps.size();
+    render_pass_info.dependencyCount = (uint32_t)subpass_deps.size();
     render_pass_info.pDependencies = subpass_deps.data();
 
     vk::assert_success(vk::CreateRenderPass(dev_, &render_pass_info, nullptr, &render_pass_));
@@ -231,11 +232,6 @@ void Hologram::create_descriptor_set_layout()
 
 void Hologram::create_pipeline_layout()
 {
-    VkPushConstantRange push_const_range = {};
-    push_const_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    push_const_range.offset = 0;
-    push_const_range.size = sizeof(glm::mat4);
-
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
@@ -621,27 +617,50 @@ void Hologram::prepare_framebuffers(VkSwapchainKHR swapchain)
 
 void Hologram::update_projection()
 {
-    float aspect = static_cast<float>(extent_.width) / static_cast<float>(extent_.height);
     const glm::vec3 center(0.0f);
     const glm::vec3 up(0.f, 0.0f, 1.0f);
     const glm::mat4 view = glm::lookAt(eye_pos_, center, up);
+
+    float aspect = static_cast<float>(extent_.width) / static_cast<float>(extent_.height);
     const glm::mat4 projection = glm::perspective(0.4f, aspect, 0.1f, 100.0f);
-    view_projection_ = projection * view;
+
+    // Vulkan clip space has inverted Y and half Z.
+    const glm::mat4 clip(1.0f,  0.0f, 0.0f, 0.0f,
+                         0.0f, -1.0f, 0.0f, 0.0f,
+                         0.0f,  0.0f, 0.5f, 0.0f,
+                         0.0f,  0.0f, 0.5f, 1.0f);
+
+    view_projection_ = clip * projection * view;
 }
 
-void Hologram::step_object(Object &obj, float obj_time) const
+void Hologram::step_object(Object &obj, float obj_time, FrameData &data) const
 {
-    glm::vec3 pos = obj.path.position(obj_time);
-    glm::mat4 trans = obj.animation.transformation(obj_time);
+    if (!pause_objects_) {
+        glm::vec3 pos = obj.path.position(obj_time);
+        glm::mat4 trans = obj.animation.transformation(obj_time);
+        obj.model = glm::translate(glm::mat4(1.0f), pos) * trans;
+    }
 
-    obj.model = glm::translate(glm::mat4(1.0f), pos) * trans;
+    if (use_push_constants_) {
+        auto &mvp = data.object_mvp[obj.frame_data_offset];
+        mvp = view_projection_ * obj.model;
+    } else {
+        glm::mat4 mvp = view_projection_ * obj.model;
+        uint8_t *dst = data.base + obj.frame_data_offset;
+        memcpy(dst, glm::value_ptr(mvp), sizeof(mvp));
+    }
 }
 
 void Hologram::draw_object(const Object &obj, VkCommandBuffer cmd) const
 {
-    glm::mat4 mvp = view_projection_ * obj.model;
-    vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
-            0, sizeof(mvp), glm::value_ptr(mvp));
+    if (use_push_constants_) {
+        const auto &mvp = frame_data_.object_mvp[obj.frame_data_offset];
+        vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
+                0, sizeof(mvp), glm::value_ptr(mvp));
+    } else {
+        vk::CmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                pipeline_layout_, 0, 1, &desc_set_, 1, &obj.frame_data_offset);
+    }
 
     meshes_->cmd_draw(cmd, obj.mesh);
 }
@@ -651,7 +670,7 @@ void Hologram::step_objects(const Worker &worker)
     for (int i = worker.object_begin_; i < worker.object_end_; i++) {
         auto &obj = objects_[i];
 
-        step_object(obj, worker.object_time_);
+        step_object(obj, worker.object_time_, frame_data_);
     }
 }
 
@@ -704,7 +723,7 @@ void Hologram::on_key(Key key)
         update_projection();
         break;
     case KEY_SPACE:
-        paused_ = !paused_;
+        pause_objects_ = !pause_objects_;
         break;
     default:
         break;
@@ -713,9 +732,6 @@ void Hologram::on_key(Key key)
 
 void Hologram::on_tick()
 {
-    if (paused_)
-        return;
-
     for (auto &worker : workers_)
         worker->step_objects();
 }
@@ -742,7 +758,7 @@ void Hologram::on_frame(float frame_pred)
     // record render pass commands
     for (auto &worker : workers_)
         worker->wait_idle();
-    vk::CmdExecuteCommands(primary_cmd_, worker_cmds_.size(), worker_cmds_.data());
+    vk::CmdExecuteCommands(primary_cmd_, (uint32_t)worker_cmds_.size(), worker_cmds_.data());
 
     vk::CmdEndRenderPass(data.primary_cmd);
     vk::EndCommandBuffer(data.primary_cmd);

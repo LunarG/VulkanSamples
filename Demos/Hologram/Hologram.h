@@ -80,6 +80,8 @@ private:
         Animation animation;
         Path path;
 
+        uint32_t frame_data_offset;
+
         glm::mat4 model;
     };
 
@@ -168,15 +170,16 @@ private:
     // called mostly by on_key
     void update_projection();
 
-    bool paused_;
     glm::vec3 eye_pos_;
     glm::mat4 view_projection_;
 
     // called by workers
-    void step_object(Object &obj, float obj_time) const;
+    void step_object(Object &obj, float obj_time, FrameData &data) const;
     void draw_object(const Object &obj, VkCommandBuffer cmd) const;
     void step_objects(const Worker &worker);
     void draw_objects(Worker &worker);
+
+    bool pause_objects_;
 };
 
 #endif // HOLOGRAM_H

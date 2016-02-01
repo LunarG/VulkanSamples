@@ -12,10 +12,6 @@ Shell::Shell(Game &game)
     : game_(game), settings_(game.settings()), ctx_(),
       game_tick_(1.0f / settings_.ticks_per_second), game_time_(game_tick_)
 {
-}
-
-void Shell::init_vk()
-{
     // require generic WSI extensions
     global_extensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     device_extensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -35,43 +31,10 @@ void Shell::init_vk()
     vk::init_dispatch_table_middle(ctx_.instance, false);
 
     init_physical_dev();
-    init_dev();
-
-    vk::init_dispatch_table_bottom(ctx_.instance, ctx_.dev);
-
-    vk::GetDeviceQueue(ctx_.dev, ctx_.game_queue_family, 0, &ctx_.game_queue);
-    vk::GetDeviceQueue(ctx_.dev, ctx_.present_queue_family, 0, &ctx_.present_queue);
-
-    init_back_buffers();
-    init_swapchain();
-
-    game_.attach_shell(*this);
 }
 
 void Shell::cleanup_vk()
 {
-    vk::DeviceWaitIdle(ctx_.dev);
-
-    if (ctx_.swapchain != VK_NULL_HANDLE)
-        game_.detach_swapchain();
-
-    game_.detach_shell();
-
-    vk::DestroySwapchainKHR(ctx_.dev, ctx_.swapchain, nullptr);
-
-    while (!ctx_.back_buffers.empty()) {
-        const auto &buf = ctx_.back_buffers.front();
-
-        vk::DestroySemaphore(ctx_.dev, buf.acquire_semaphore, nullptr);
-        vk::DestroySemaphore(ctx_.dev, buf.render_semaphore, nullptr);
-        vk::DestroyFence(ctx_.dev, buf.present_fence, nullptr);
-
-        ctx_.back_buffers.pop();
-    }
-
-    vk::DestroyDevice(ctx_.dev, nullptr);
-
-    vk::DestroySurfaceKHR(ctx_.instance, ctx_.surface, nullptr);
     vk::DestroyInstance(ctx_.instance, nullptr);
 }
 
@@ -250,7 +213,7 @@ void Shell::create_dev()
     vk::assert_success(vk::CreateDevice(ctx_.physical_dev, &dev_info, nullptr, &ctx_.dev));
 }
 
-void Shell::init_back_buffers()
+void Shell::create_back_buffers()
 {
     VkSemaphoreCreateInfo sem_info = {};
     sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -274,7 +237,7 @@ void Shell::init_back_buffers()
     }
 }
 
-void Shell::init_swapchain()
+void Shell::destroy_back_buffers()
 {
     while (!ctx_.back_buffers.empty()) {
         const auto &buf = ctx_.back_buffers.front();
@@ -340,14 +303,19 @@ void Shell::resize_swapchain(uint32_t width_hint, uint32_t height_hint)
     if (ctx_.extent.width == extent.width && ctx_.extent.height == extent.height)
         return;
 
-    assert(caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR);
-    assert(caps.supportedUsageFlags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-
     uint32_t image_count = settings_.back_buffer_count;
     if (image_count < caps.minImageCount)
         image_count = caps.minImageCount;
     else if (image_count > caps.maxImageCount)
         image_count = caps.maxImageCount;
+
+    assert(caps.supportedUsageFlags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+    assert(caps.supportedTransforms & caps.currentTransform);
+    assert(caps.supportedCompositeAlpha & (VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR |
+                                           VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR));
+    VkCompositeAlphaFlagBitsKHR composite_alpha =
+        (caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) ?
+        VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR : VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 
     std::vector<VkPresentModeKHR> modes;
     vk::get(ctx_.physical_dev, ctx_.surface, modes);
@@ -377,14 +345,14 @@ void Shell::resize_swapchain(uint32_t width_hint, uint32_t height_hint)
         queue_families.push_back(ctx_.present_queue_family);
 
         swapchain_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        swapchain_info.queueFamilyIndexCount = queue_families.size();
+        swapchain_info.queueFamilyIndexCount = (uint32_t)queue_families.size();
         swapchain_info.pQueueFamilyIndices = queue_families.data();
     } else {
         swapchain_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     }
 
-    swapchain_info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-    swapchain_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchain_info.preTransform = caps.currentTransform;;
+    swapchain_info.compositeAlpha = composite_alpha;
     swapchain_info.presentMode = mode;
     swapchain_info.clipped = true;
     swapchain_info.oldSwapchain = ctx_.swapchain;

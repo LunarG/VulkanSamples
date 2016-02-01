@@ -41,8 +41,6 @@ private:
 
 ShellWin32::ShellWin32(Game &game) : Shell(game), hwnd_(nullptr)
 {
-    init_window();
-
     global_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     init_vk();
 }
@@ -229,4 +227,8 @@ void ShellWin32::run()
 
         current_time = t;
     }
+
+    destroy_context();
+
+    DestroyWindow(hwnd_);
 }

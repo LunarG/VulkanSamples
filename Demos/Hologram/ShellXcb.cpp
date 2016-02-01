@@ -73,7 +73,7 @@ ShellXcb::ShellXcb(Game &game) : Shell(game)
     init_vk();
 }
 
-ShellXCB::~ShellXCB()
+ShellXcb::~ShellXcb()
 {
     cleanup_vk();
     dlclose(lib_handle_);
@@ -180,7 +180,7 @@ VkSurfaceKHR ShellXcb::create_surface(VkInstance instance)
     return surface;
 }
 
-void ShellXCB::handle_event(const xcb_generic_event_t *ev)
+void ShellXcb::handle_event(const xcb_generic_event_t *ev)
 {
     switch (ev->response_type & 0x7f) {
     case XCB_CONFIGURE_NOTIFY:
@@ -231,7 +231,7 @@ void ShellXCB::handle_event(const xcb_generic_event_t *ev)
     }
 }
 
-void ShellXCB::loop_wait()
+void ShellXcb::loop_wait()
 {
     while (true) {
         xcb_generic_event_t *ev = xcb_wait_for_event(c_);
@@ -249,7 +249,7 @@ void ShellXCB::loop_wait()
     }
 }
 
-void ShellXCB::loop_poll()
+void ShellXcb::loop_poll()
 {
     PosixTimer timer;
 
@@ -283,9 +283,11 @@ void ShellXCB::loop_poll()
         profile_present_count++;
         if (current_time - profile_start_time >= 5.0) {
             const double fps = profile_present_count / (current_time - profile_start_time);
-            std::cout << profile_present_count << " presents in " <<
-                         current_time - profile_start_time << " seconds " <<
-                         "(FPS: " << fps << ")\n";
+            std::stringstream ss;
+            ss << profile_present_count << " presents in " <<
+                  current_time - profile_start_time << " seconds " <<
+                  "(FPS: " << fps << ")";
+            log(LOG_INFO, ss.str().c_str());
 
             profile_start_time = current_time;
             profile_present_count = 0;
@@ -293,12 +295,14 @@ void ShellXCB::loop_poll()
     }
 }
 
-void ShellXCB::run()
+void ShellXcb::run()
 {
-    resize_swapchain(settings_.initial_width, settings_.initial_height);
-
+    create_window();
     xcb_map_window(c_, win_);
     xcb_flush(c_);
+
+    create_context();
+    resize_swapchain(settings_.initial_width, settings_.initial_height);
 
     quit_ = false;
     if (settings_.animate)
