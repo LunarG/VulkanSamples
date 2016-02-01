@@ -433,7 +433,7 @@ goto:eof
    cmake -G "Visual Studio %VS_VERSION%" -DCMAKE_INSTALL_PREFIX=install ..
    
    echo Building 32-bit Glslang: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug
-   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug
+   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
    
    REM Check for existence of one lib, even though we should check for all results
    if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslang.lib (
@@ -442,7 +442,7 @@ goto:eof
       set errorCode=1
    )
    echo Building Glslang: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release
-   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release
+   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
    
    REM Check for existence of one lib, even though we should check for all results
    if not exist %GLSLANG_BUILD_DIR%\glslang\Release\glslang.lib (
@@ -463,7 +463,7 @@ goto:eof
    cmake -G "Visual Studio %VS_VERSION% Win64" -DCMAKE_INSTALL_PREFIX=install ..
    
    echo Building 64-bit Glslang: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
-   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
    
    REM Check for existence of one lib, even though we should check for all results
    if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslang.lib (
@@ -472,7 +472,7 @@ goto:eof
       set errorCode=1
    )
    echo Building Glslang: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
-   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
+   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
    
    REM Check for existence of one lib, even though we should check for all results
    if not exist %GLSLANG_BUILD_DIR%\glslang\Release\glslang.lib (
@@ -502,7 +502,7 @@ goto:eof
    cmake -G "Visual Studio %VS_VERSION%" -DCMAKE_INSTALL_PREFIX=install ..
    
    echo Building 32-bit LLVM: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release
-   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release
+   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
    REM Check for existence of one lib, even though we should check for all results
    if not exist %LLVM_BUILD_DIR%\lib\Release\LLVMCore.lib (
       echo.
@@ -514,7 +514,7 @@ goto:eof
    REM handle Debug and Release builds of glslang simultaneously, instead of
    REM whatever last lands in "./build32/install"
    REM   echo Building 32-bit LLVM: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug
-   REM   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug
+   REM   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
    REM Check for existence of one lib, even though we should check for all results
    REM   if not exist %LLVM_BUILD_DIR%\lib\Debug\LLVMCore.lib (
    REM      echo.
@@ -535,7 +535,7 @@ goto:eof
    cmake -G "Visual Studio %VS_VERSION% Win64" -DCMAKE_INSTALL_PREFIX=install ..
    
    echo Building 64-bit LLVM: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
-   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
+   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
    REM Check for existence of one lib, even though we should check for all results
    if not exist %LLVM_BUILD_DIR%\lib\Release\LLVMCore.lib (
       echo.
@@ -547,7 +547,7 @@ goto:eof
    REM handle Debug and Release builds of glslang simultaneously, instead of
    REM whatever last lands in "./build/install"
    REM   echo Building 64-bit LLVM: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
-   REM   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   REM   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
    REM Check for existence of one lib, even though we should check for all results
    REM   if not exist %LLVM_BUILD_DIR%\lib\Debug\LLVMCore.lib (
    REM      echo.
@@ -572,7 +572,7 @@ goto:eof
    cmake -G "Visual Studio %VS_VERSION%" -DCMAKE_INSTALL_PREFIX=install ..
    
    echo Building 32-bit LunarGlass: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release
-   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release
+   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
    
    REM Check for existence of one lib, even though we should check for all results
    if not exist %LUNARGLASS_BUILD_DIR%\Core\Release\core.lib (
@@ -586,7 +586,7 @@ goto:eof
    REM handle Debug and Release builds of glslang simultaneously, instead of
    REM whatever last lands in "./build/install"
    REM   echo Building 32-bit LunarGlass: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug
-   REM   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug
+   REM   msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
    REM Check for existence of one lib, even though we should check for all results
    REM  if not exist %LUNARGLASS_BUILD_DIR%\Core\Debug\core.lib (
    REM     echo.
@@ -607,7 +607,7 @@ goto:eof
    cmake -G "Visual Studio %VS_VERSION% Win64" -DCMAKE_INSTALL_PREFIX=install ..
    
    echo Building 64-bit LunarGlass: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
-   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
+   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
    
    REM Check for existence of one lib, even though we should check for all results
    if not exist %LUNARGLASS_BUILD_DIR%\Core\Release\core.lib (
@@ -621,7 +621,7 @@ goto:eof
    REM handle Debug and Release builds of glslang simultaneously, instead of
    REM whatever last lands in "./build/install"
    REM   echo Building 64-bit LunarGlass: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
-   REM   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   REM   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
    REM Check for existence of one lib, even though we should check for all results
    REM  if not exist %LUNARGLASS_BUILD_DIR%\Core\Debug\core.lib (
    REM     echo.
@@ -651,7 +651,7 @@ goto:eof
    cmake -G "Visual Studio %VS_VERSION%" ..
    
    echo Building 32-bit spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug
-   msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug
+   msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
    
    REM Check for existence of one lib, even though we should check for all results
    if not exist %SPIRV_TOOLS_BUILD_DIR%\Debug\SPIRV-Tools.lib (
@@ -661,7 +661,7 @@ goto:eof
    )
    
    echo Building 32-bit spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release
-   msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release
+   msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
 
    REM Check for existence of one lib, even though we should check for all results
    if not exist %SPIRV_TOOLS_BUILD_DIR%\Release\SPIRV-Tools.lib (
@@ -682,7 +682,7 @@ goto:eof
    cmake -G "Visual Studio %VS_VERSION% Win64" ..
    
    echo Building 64-bit spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug
-   msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
    
    REM Check for existence of one lib, even though we should check for all results
    if not exist %SPIRV_TOOLS_BUILD_DIR%\Debug\SPIRV-Tools.lib (
@@ -692,7 +692,7 @@ goto:eof
    )
    
    echo Building 64-bit spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release
-   msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release
+   msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
 
    REM Check for existence of one lib, even though we should check for all results
    if not exist %SPIRV_TOOLS_BUILD_DIR%\Release\SPIRV-Tools.lib (
