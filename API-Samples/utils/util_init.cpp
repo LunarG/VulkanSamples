@@ -303,7 +303,13 @@ VkResult init_device(struct sample_info &info)
 
     res = vkCreateDevice(info.gpus[0], &device_info, NULL, &info.device);
     assert(res == VK_SUCCESS);
-
+#ifdef __ANDROID__
+    GET_DEVICE_PROC_ADDR(info.device, CreateSwapchainKHR);
+    GET_DEVICE_PROC_ADDR(info.device, DestroySwapchainKHR);
+    GET_DEVICE_PROC_ADDR(info.device, GetSwapchainImagesKHR);
+    GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
+    GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
+#endif
     return res;
 }
 
@@ -357,8 +363,8 @@ void init_queue_family_index(struct sample_info &info)
     assert(found);
  }
 
-#ifndef __ANDROID__
-vkResult init_debug_report_callback(struct sample_info &info, PFN_vkDebugReportCallbackEXT dbgFunc)
+#ifdef USE_DEBUG_EXTENTIONS
+VkResult init_debug_report_callback(struct sample_info &info, PFN_vkDebugReportCallbackEXT dbgFunc)
 {
     VkResult res;
     VkDebugReportCallbackEXT debug_report_callback;
@@ -740,11 +746,6 @@ void init_swapchain_extension(struct sample_info &info)
     GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfacePresentModesKHR);
     GET_INSTANCE_PROC_ADDR(info.inst, DestroySurfaceKHR);
     GET_INSTANCE_PROC_ADDR(info.inst, CreateAndroidSurfaceKHR);
-    GET_DEVICE_PROC_ADDR(info.device, CreateSwapchainKHR);
-    GET_DEVICE_PROC_ADDR(info.device, DestroySwapchainKHR);
-    GET_DEVICE_PROC_ADDR(info.device, GetSwapchainImagesKHR);
-    GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
-    GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
 
     VkAndroidSurfaceCreateInfoKHR createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
@@ -760,7 +761,7 @@ void init_swapchain_extension(struct sample_info &info)
     createInfo.window = info.window;
     res = vkCreateXcbSurfaceKHR(info.inst, &createInfo,
                                 NULL, &info.surface);
-#endif // _WIN32
+#endif // __ANDROID__  && _WIN32
     assert(res == VK_SUCCESS);
 
     // Iterate over each queue to learn whether it supports presenting:
@@ -1078,7 +1079,10 @@ void init_uniform_buffer(struct sample_info &info)
 {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
-    info.Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
+    info.Projection = glm::perspective(glm::radians(45.0f),
+                                       static_cast<float>(info.width)
+                                       / static_cast<float>(info.height),
+                                       0.1f, 100.0f);
     info.View       = glm::lookAt(
                           glm::vec3(5,3,10), // Camera is at (5,3,10), in World Space
                           glm::vec3(0,0,0), // and looks at the origin
@@ -1539,11 +1543,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
         info.shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
         info.shaderStages[0].pName = "main";
 
-#ifdef __ANDROID__
-        retVal = AndroidLoadFile(vertShaderText, vtx_spv);
-#else
         retVal = GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vertShaderText, vtx_spv);
-#endif
         assert(retVal);
 
         VkShaderModuleCreateInfo moduleCreateInfo;
@@ -1565,11 +1565,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
         info.shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
         info.shaderStages[1].pName = "main";
 
-#ifdef __ANDROID__
-        retVal = AndroidLoadFile(fragShaderText, frag_spv);
-#else
         retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText, frag_spv);
-#endif
         assert(retVal);
 
         VkShaderModuleCreateInfo moduleCreateInfo;
@@ -1676,7 +1672,8 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth, VkBool32 in
     vp.pScissors = NULL;
     vp.pViewports = NULL;
 #else
-    // Temporary disabling dynamic viewport on Android.
+    // Temporary disabling dynamic viewport on Android because some of drivers doesn't
+    // support the feature.
     VkViewport viewports;
     viewports.minDepth = 0.0f;
     viewports.maxDepth = 1.0f;

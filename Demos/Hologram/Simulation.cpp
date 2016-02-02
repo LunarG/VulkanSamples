@@ -1,19 +1,116 @@
+/*
+ * Copyright (C) 2016 Google, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
 #include <cassert>
 #include <cmath>
+#include <array>
 #include <glm/gtc/matrix_transform.hpp>
 #include "Simulation.h"
 
-Animation::Animation(unsigned int rng_seed)
-    : rng_(rng_seed), dir_(-1.0f, 1.0f), speed_(0.1f, 1.0f), scale_(0.005f, 0.02f)
+namespace {
+
+class MeshPicker {
+public:
+    MeshPicker() :
+        pattern_({
+                Meshes::MESH_PYRAMID,
+                Meshes::MESH_ICOSPHERE,
+                Meshes::MESH_TEAPOT,
+                Meshes::MESH_PYRAMID,
+                Meshes::MESH_ICOSPHERE,
+                Meshes::MESH_PYRAMID,
+                Meshes::MESH_PYRAMID,
+                Meshes::MESH_PYRAMID,
+                Meshes::MESH_PYRAMID,
+                Meshes::MESH_PYRAMID,
+                }), cur_(-1)
+    {
+    }
+
+    Meshes::Type pick()
+    {
+        cur_ = (cur_ + 1) % pattern_.size();
+        return pattern_[cur_];
+    }
+
+    float scale(Meshes::Type type) const
+    {
+        float base = 0.005f;
+
+        switch (type) {
+        case Meshes::MESH_PYRAMID:
+        default:
+            return base * 1.0f;
+        case Meshes::MESH_ICOSPHERE:
+            return base * 3.0f;
+        case Meshes::MESH_TEAPOT:
+            return base * 10.0f;
+        }
+    }
+
+private:
+    const std::array<Meshes::Type, 10> pattern_;
+    int cur_;
+};
+
+class HolographicColorPicker {
+public:
+    HolographicColorPicker(unsigned int rng_seed) :
+        rng_(rng_seed),
+        red_(0.0f, 0.1f),
+        green_(0.7f, 0.8f),
+        blue_(0.8f, 1.0f)
+    {
+    }
+
+    glm::vec3 pick()
+    {
+        return glm::vec3{ red_(rng_),
+                          green_(rng_),
+                          blue_(rng_) };
+    }
+
+private:
+    std::mt19937 rng_;
+    std::uniform_real_distribution<float> red_;
+    std::uniform_real_distribution<float> green_;
+    std::uniform_real_distribution<float> blue_;
+};
+
+} // namespace
+
+Animation::Animation(unsigned int rng_seed, float scale)
+    : rng_(rng_seed), dir_(-1.0f, 1.0f), speed_(0.1f, 1.0f)
 {
     float x = dir_(rng_);
     float y = dir_(rng_);
-    float z = std::sqrt(1 - x * x - y * y);
-    z = std::copysign(z, dir_(rng_));
-    current_.axis = glm::vec3(x, y, z);
+    float z = dir_(rng_);
+    if (std::abs(x) + std::abs(y) + std::abs(z) == 0.0f)
+        x = 1.0f;
+
+    current_.axis = glm::normalize(glm::vec3(x, y, z));
 
     current_.speed = speed_(rng_);
-    current_.scale = scale_(rng_);
+    current_.scale = scale;
 
     current_.matrix = glm::scale(glm::mat4(1.0f), glm::vec3(current_.scale));
 }
@@ -42,7 +139,7 @@ enum CurveType {
 class RandomCurve : public Curve {
 public:
     RandomCurve(unsigned int rng_seed)
-        : rng_(rng_seed), direction_(-0.5f, 0.5f), duration_(0.5f, 5.0f),
+        : rng_(rng_seed), direction_(-0.3f, 0.3f), duration_(1.0f, 5.0f),
           segment_start_(0.0f), segment_direction_(0.0f),
           time_start_(0.0f), time_duration_(0.0f)
     {
@@ -175,7 +272,7 @@ void Path::generate_subpath()
             if (axis.x == 0.0f && axis.y == 0.0f && axis.z == 0.0f)
                 axis.x = 1.0f;
 
-            std::uniform_real_distribution<float> radius_(0.01f, 0.5f);
+            std::uniform_real_distribution<float> radius_(0.02f, 0.2f);
             curve = new CircleCurve(radius_(rng_), axis);
         }
         break;
@@ -191,10 +288,21 @@ void Path::generate_subpath()
 Simulation::Simulation(int object_count)
     : random_dev_()
 {
+    MeshPicker mesh;
+    HolographicColorPicker color(random_dev_());
+
     objects_.reserve(object_count);
     for (int i = 0; i < object_count; i++) {
-        Object obj = { i, random_dev_(), random_dev_() };
-        objects_.push_back(obj);
+        Meshes::Type type = mesh.pick();
+        float scale = mesh.scale(type);
+
+        objects_.emplace_back(Object{
+            type,
+            glm::vec3(0.5 + 0.5 * (float) i / object_count),
+            color.pick(),
+            Animation(random_dev_(), scale),
+            Path(random_dev_()),
+        });
     }
 }
 

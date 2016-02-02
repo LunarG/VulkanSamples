@@ -1,3 +1,25 @@
+/*
+ * Copyright (C) 2016 Google, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
 #include <array>
 
 #include <glm/gtc/type_ptr.hpp>
@@ -8,12 +30,25 @@
 #include "Meshes.h"
 #include "Shell.h"
 
+namespace {
+
+// TODO do not rely on compiler to use std140 layout
+// TODO move lower frequency data to another descriptor set
+struct ShaderParamBlock {
+    float light_pos[4];
+    float light_color[4];
+    float model[4 * 4];
+    float view_projection[4 * 4];
+};
+
+} // namespace
+
 Hologram::Hologram(const std::vector<std::string> &args)
-    : Game("Hologram", args), random_dev_(),
-      multithread_(true), use_push_constants_(false),
-      frame_data_(), render_pass_clear_value_(), render_pass_begin_info_(),
-      primary_cmd_begin_info_(), primary_cmd_submit_info_(),
-      eye_pos_(8.0f), pause_objects_(false)
+    : Game("Hologram", args), multithread_(true), use_push_constants_(false),
+      sim_paused_(false), sim_(5000), camera_(2.5f), frame_data_(),
+      render_pass_clear_value_({{ 0.0f, 0.1f, 0.2f, 1.0f }}),
+      render_pass_begin_info_(),
+      primary_cmd_begin_info_(), primary_cmd_submit_info_()
 {
     for (auto it = args.begin(); it != args.end(); ++it) {
         if (*it == "-s")
@@ -55,15 +90,6 @@ void Hologram::init_workers()
     }
 }
 
-void Hologram::init_objects()
-{
-    objects_.reserve(OBJECT_COUNT);
-    for (int i = 0; i < OBJECT_COUNT; i++) {
-        Object obj = { i, random_dev_(), random_dev_() };
-        objects_.push_back(obj);
-    }
-}
-
 void Hologram::attach_shell(Shell &sh)
 {
     Game::attach_shell(sh);
@@ -77,13 +103,19 @@ void Hologram::attach_shell(Shell &sh)
 
     vk::GetPhysicalDeviceProperties(physical_dev_, &physical_dev_props_);
 
+    if (use_push_constants_ &&
+        sizeof(ShaderParamBlock) > physical_dev_props_.limits.maxPushConstantsSize) {
+        shell_->log(Shell::LOG_WARN, "cannot enable push constants");
+        use_push_constants_ = false;
+    }
+
     VkPhysicalDeviceMemoryProperties mem_props;
     vk::GetPhysicalDeviceMemoryProperties(physical_dev_, &mem_props);
     mem_flags_.reserve(mem_props.memoryTypeCount);
     for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++)
         mem_flags_.push_back(mem_props.memoryTypes[i].propertyFlags);
 
-    meshes_ = new Meshes(sim_.rng_seed(), mem_flags_, dev_, sim_.objects().size());
+    meshes_ = new Meshes(dev_, mem_flags_);
 
     create_render_pass();
     create_shader_modules();
@@ -123,8 +155,7 @@ void Hologram::detach_shell()
             worker->stop();
     }
 
-    vk::DestroyFence(dev_, primary_cmd_fence_, nullptr);
-    vk::DestroyCommandPool(dev_, primary_cmd_pool_, nullptr);
+    destroy_frame_data();
 
     vk::DestroyPipeline(dev_, pipeline_, nullptr);
     vk::DestroyPipelineLayout(dev_, pipeline_layout_, nullptr);
@@ -232,13 +263,15 @@ void Hologram::create_descriptor_set_layout()
 
 void Hologram::create_pipeline_layout()
 {
+    VkPushConstantRange push_const_range = {};
+
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
     if (use_push_constants_) {
         push_const_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         push_const_range.offset = 0;
-        push_const_range.size = sizeof(glm::mat4);
+        push_const_range.size = sizeof(ShaderParamBlock);
 
         pipeline_layout_info.pushConstantRangeCount = 1;
         pipeline_layout_info.pPushConstantRanges = &push_const_range;
@@ -292,8 +325,8 @@ void Hologram::create_pipeline()
     blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
     blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
-    blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-    blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
     blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
                                       VK_COLOR_COMPONENT_G_BIT |
@@ -405,28 +438,32 @@ void Hologram::create_command_buffers()
         vk::assert_success(vk::CreateCommandPool(dev_, &cmd_pool_info,
                     nullptr, &cmd_pool));
 
-    VkFenceCreateInfo fence_info = {};
-    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-    vk::assert_success(vk::CreateFence(dev_, &fence_info, nullptr, &primary_cmd_fence_));
+        cmd_info.commandPool = cmd_pool;
+        cmd_info.level = (cmd_pool == cmd_pools.back()) ?
+            VK_COMMAND_BUFFER_LEVEL_PRIMARY : VK_COMMAND_BUFFER_LEVEL_SECONDARY;
 
-    primary_cmd_begin_info_.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    primary_cmd_begin_info_.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vk::assert_success(vk::AllocateCommandBuffers(dev_, &cmd_info, cmds.data()));
+    }
 
-    // we will render to the swapchain images
-    primary_cmd_submit_wait_stages_ = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    // update frame_data_
+    for (size_t i = 0; i < frame_data_.size(); i++) {
+        for (const auto &cmds : cmds_vec) {
+            if (cmds == cmds_vec.back()) {
+                frame_data_[i].primary_cmd = cmds[i];
+            } else {
+                frame_data_[i].worker_cmds.push_back(cmds[i]);
+            }
+        }
+    }
 
-    primary_cmd_submit_info_.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    primary_cmd_submit_info_.waitSemaphoreCount = 1;
-    primary_cmd_submit_info_.pWaitDstStageMask = &primary_cmd_submit_wait_stages_;
-    primary_cmd_submit_info_.commandBufferCount = 1;
-    primary_cmd_submit_info_.pCommandBuffers = &primary_cmd_;
-    primary_cmd_submit_info_.signalSemaphoreCount = 1;
+    primary_cmd_pool_ = cmd_pools.back();
+    cmd_pools.pop_back();
+    worker_cmd_pools_ = cmd_pools;
 }
 
 void Hologram::create_buffers()
 {
-    VkDeviceSize object_data_size = sizeof(glm::mat4);
+    VkDeviceSize object_data_size = sizeof(ShaderParamBlock);
     // align object data to device limit
     const VkDeviceSize &alignment =
         physical_dev_props_.limits.minStorageBufferOffsetAlignment;
@@ -548,7 +585,7 @@ void Hologram::attach_swapchain()
     prepare_viewport(ctx.extent);
     prepare_framebuffers(ctx.swapchain);
 
-    update_projection();
+    update_camera();
 }
 
 void Hologram::detach_swapchain()
@@ -615,11 +652,11 @@ void Hologram::prepare_framebuffers(VkSwapchainKHR swapchain)
     }
 }
 
-void Hologram::update_projection()
+void Hologram::update_camera()
 {
     const glm::vec3 center(0.0f);
     const glm::vec3 up(0.f, 0.0f, 1.0f);
-    const glm::mat4 view = glm::lookAt(eye_pos_, center, up);
+    const glm::mat4 view = glm::lookAt(camera_.eye_pos, center, up);
 
     float aspect = static_cast<float>(extent_.width) / static_cast<float>(extent_.height);
     const glm::mat4 projection = glm::perspective(0.4f, aspect, 0.1f, 100.0f);
@@ -630,48 +667,38 @@ void Hologram::update_projection()
                          0.0f,  0.0f, 0.5f, 0.0f,
                          0.0f,  0.0f, 0.5f, 1.0f);
 
-    view_projection_ = clip * projection * view;
+    camera_.view_projection = clip * projection * view;
 }
 
-void Hologram::step_object(Object &obj, float obj_time, FrameData &data) const
-{
-    if (!pause_objects_) {
-        glm::vec3 pos = obj.path.position(obj_time);
-        glm::mat4 trans = obj.animation.transformation(obj_time);
-        obj.model = glm::translate(glm::mat4(1.0f), pos) * trans;
-    }
-
-    if (use_push_constants_) {
-        auto &mvp = data.object_mvp[obj.frame_data_offset];
-        mvp = view_projection_ * obj.model;
-    } else {
-        glm::mat4 mvp = view_projection_ * obj.model;
-        uint8_t *dst = data.base + obj.frame_data_offset;
-        memcpy(dst, glm::value_ptr(mvp), sizeof(mvp));
-    }
-}
-
-void Hologram::draw_object(const Object &obj, VkCommandBuffer cmd) const
+void Hologram::draw_object(const Simulation::Object &obj, FrameData &data, VkCommandBuffer cmd) const
 {
     if (use_push_constants_) {
-        const auto &mvp = frame_data_.object_mvp[obj.frame_data_offset];
+        ShaderParamBlock params;
+        memcpy(params.light_pos, glm::value_ptr(obj.light_pos), sizeof(obj.light_pos));
+        memcpy(params.light_color, glm::value_ptr(obj.light_color), sizeof(obj.light_color));
+        memcpy(params.model, glm::value_ptr(obj.model), sizeof(obj.model));
+        memcpy(params.view_projection, glm::value_ptr(camera_.view_projection), sizeof(camera_.view_projection));
+
         vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
-                0, sizeof(mvp), glm::value_ptr(mvp));
+                0, sizeof(params), &params);
     } else {
+        ShaderParamBlock *params =
+            reinterpret_cast<ShaderParamBlock *>(data.base + obj.frame_data_offset);
+        memcpy(params->light_pos, glm::value_ptr(obj.light_pos), sizeof(obj.light_pos));
+        memcpy(params->light_color, glm::value_ptr(obj.light_color), sizeof(obj.light_color));
+        memcpy(params->model, glm::value_ptr(obj.model), sizeof(obj.model));
+        memcpy(params->view_projection, glm::value_ptr(camera_.view_projection), sizeof(camera_.view_projection));
+
         vk::CmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                pipeline_layout_, 0, 1, &desc_set_, 1, &obj.frame_data_offset);
+                pipeline_layout_, 0, 1, &data.desc_set, 1, &obj.frame_data_offset);
     }
 
     meshes_->cmd_draw(cmd, obj.mesh);
 }
 
-void Hologram::step_objects(const Worker &worker)
+void Hologram::update_simulation(const Worker &worker)
 {
-    for (int i = worker.object_begin_; i < worker.object_end_; i++) {
-        auto &obj = objects_[i];
-
-        step_object(obj, worker.object_time_, frame_data_);
-    }
+    sim_.update(worker.tick_interval_, worker.object_begin_, worker.object_end_);
 }
 
 void Hologram::draw_objects(Worker &worker)
@@ -701,7 +728,7 @@ void Hologram::draw_objects(Worker &worker)
     for (int i = worker.object_begin_; i < worker.object_end_; i++) {
         auto &obj = sim_.objects()[i];
 
-        draw_object(obj, cmd);
+        draw_object(obj, data, cmd);
     }
 
     vk::EndCommandBuffer(cmd);
@@ -715,15 +742,15 @@ void Hologram::on_key(Key key)
         shell_->quit();
         break;
     case KEY_UP:
-        eye_pos_ -= glm::vec3(0.05f);
-        update_projection();
+        camera_.eye_pos -= glm::vec3(0.05f);
+        update_camera();
         break;
     case KEY_DOWN:
-        eye_pos_ += glm::vec3(0.05f);
-        update_projection();
+        camera_.eye_pos += glm::vec3(0.05f);
+        update_camera();
         break;
     case KEY_SPACE:
-        pause_objects_ = !pause_objects_;
+        sim_paused_ = !sim_paused_;
         break;
     default:
         break;
@@ -732,15 +759,20 @@ void Hologram::on_key(Key key)
 
 void Hologram::on_tick()
 {
+    if (sim_paused_)
+        return;
+
     for (auto &worker : workers_)
-        worker->step_objects();
+        worker->update_simulation();
 }
 
 void Hologram::on_frame(float frame_pred)
 {
-    // wait for the last submission since we reuse command buffers
-    vk::assert_success(vk::WaitForFences(dev_, 1, &primary_cmd_fence_, true, UINT64_MAX));
-    vk::assert_success(vk::ResetFences(dev_, 1, &primary_cmd_fence_));
+    auto &data = frame_data_[frame_data_index_];
+
+    // wait for the last submission since we reuse frame data
+    vk::assert_success(vk::WaitForFences(dev_, 1, &data.fence, true, UINT64_MAX));
+    vk::assert_success(vk::ResetFences(dev_, 1, &data.fence));
 
     const Shell::BackBuffer &back = shell_->context().acquired_back_buffer;
 
@@ -748,7 +780,20 @@ void Hologram::on_frame(float frame_pred)
     for (auto &worker : workers_)
         worker->draw_objects(framebuffers_[back.image_index]);
 
-    VkResult res = vk::BeginCommandBuffer(primary_cmd_, &primary_cmd_begin_info_);
+    VkResult res = vk::BeginCommandBuffer(data.primary_cmd, &primary_cmd_begin_info_);
+
+    VkBufferMemoryBarrier buf_barrier = {};
+    buf_barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    buf_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+    buf_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    buf_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    buf_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    buf_barrier.buffer = data.buf;
+    buf_barrier.offset = 0;
+    buf_barrier.size = VK_WHOLE_SIZE;
+    vk::CmdPipelineBarrier(data.primary_cmd,
+            VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+            0, 0, nullptr, 1, &buf_barrier, 0, nullptr);
 
     render_pass_begin_info_.framebuffer = framebuffers_[back.image_index];
     render_pass_begin_info_.renderArea.extent = extent_;
@@ -758,24 +803,29 @@ void Hologram::on_frame(float frame_pred)
     // record render pass commands
     for (auto &worker : workers_)
         worker->wait_idle();
-    vk::CmdExecuteCommands(primary_cmd_, (uint32_t)worker_cmds_.size(), worker_cmds_.data());
+    vk::CmdExecuteCommands(data.primary_cmd,
+            static_cast<uint32_t>(data.worker_cmds.size()),
+            data.worker_cmds.data());
 
     vk::CmdEndRenderPass(data.primary_cmd);
     vk::EndCommandBuffer(data.primary_cmd);
 
     // wait for the image to be owned and signal for render completion
     primary_cmd_submit_info_.pWaitSemaphores = &back.acquire_semaphore;
+    primary_cmd_submit_info_.pCommandBuffers = &data.primary_cmd;
     primary_cmd_submit_info_.pSignalSemaphores = &back.render_semaphore;
 
-    res = vk::QueueSubmit(queue_, 1, &primary_cmd_submit_info_, primary_cmd_fence_);
+    res = vk::QueueSubmit(queue_, 1, &primary_cmd_submit_info_, data.fence);
+
+    frame_data_index_ = (frame_data_index_ + 1) % frame_data_.size();
 
     (void) res;
 }
 
-Hologram::Worker::Worker(Hologram &hologram, int object_begin, int object_end)
-    : hologram_(hologram), object_begin_(object_begin), object_end_(object_end),
-      object_time_(0.0f), state_(INIT),
-      tick_interval_(1.0f / hologram.settings_.ticks_per_second)
+Hologram::Worker::Worker(Hologram &hologram, int index, int object_begin, int object_end)
+    : hologram_(hologram), index_(index),
+      object_begin_(object_begin), object_end_(object_end),
+      tick_interval_(1.0f / hologram.settings_.ticks_per_second), state_(INIT)
 {
 }
 
@@ -796,18 +846,17 @@ void Hologram::Worker::stop()
     thread_.join();
 }
 
-void Hologram::Worker::step_objects()
+void Hologram::Worker::update_simulation()
 {
     {
         std::lock_guard<std::mutex> lock(mutex_);
         bool started = (state_ != INIT);
 
-        object_time_ += tick_interval_;
         state_ = STEP;
 
         // step directly
         if (!started) {
-            hologram_.step_objects(*this);
+            hologram_.update_simulation(*this);
             state_ = INIT;
         }
     }
@@ -855,7 +904,7 @@ void Hologram::Worker::update_loop()
 
         assert(state_ == STEP || state_ == DRAW);
         if (state_ == STEP)
-            hologram_.step_objects(*this);
+            hologram_.update_simulation(*this);
         else
             hologram_.draw_objects(*this);
 

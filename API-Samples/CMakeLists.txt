@@ -57,9 +57,34 @@ function(sampleWithSingleFile)
         if(ANDROID)
             # Generate AndroidStudio project files.
             MESSAGE("Generating AndroidStudio project:" ${SAMPLE_NAME})
-            set (PACKAGE_NAME org.khronos.vulkan.samples.${SAMPLE_NAME})
+            # Replace "-" to "_", which is invalid in a package name.
+            STRING(REPLACE "-" "_" PACKAGE_NAME ${SAMPLE_NAME})
+            set (PACKAGE_NAME org.khronos.vulkan.samples.${PACKAGE_NAME})
             set (SAMPLE_DESCRIPTION "Vulkan sample: ${SAMPLE_NAME}")
             file(COPY ./android/project_template/ DESTINATION ./android/${SAMPLE_NAME}/)
+
+            # Add extra setting for some samples.
+            set (SAMPLE_WITH_RESOURCES
+             drawtexturedcube immutable_sampler multiple_sets pipeline_cache
+             pipeline_derivative secondarycmd separate_image_sampler spirv_assembly
+             spirv_specialization template)
+            if (";${SAMPLE_WITH_RESOURCES};" MATCHES ";${SAMPLE_NAME};")
+                set (ASSET_DIR "srcDir '../../data/'")
+            else()
+                set (ASSET_DIR "")
+            endif()
+            set (SAMPLE_WITH_EXTERNALSTORAGEACCESS pipeline_cache)
+            if (";${SAMPLE_WITH_EXTERNALSTORAGEACCESS};" MATCHES ";${SAMPLE_NAME};")
+                set (EXTRA_PERMISSIONS "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>")
+            else()
+                set (EXTRA_PERMISSIONS "")
+            endif()
+            set (SAMPLE_WITH_TOOLS dbgcreatemsgcallback enable_validation_with_callback)
+            if (";${SAMPLE_WITH_TOOLS};" MATCHES ";${SAMPLE_NAME};")
+                set (OTHER_FLAGS "cppFlags.add(\"-D USE_DEBUG_EXTENTIONS\")\n        cppFlags.add(\"-I\${validationLayerDir}/include\".toString())")
+            else()
+                set (OTHER_FLAGS "")
+            endif()
             set (TEMPLATE_FILES
                 android/${SAMPLE_NAME}/src/main/res/values/strings.xml
                 android/${SAMPLE_NAME}/src/main/AndroidManifest.xml
@@ -140,7 +165,7 @@ endif()
 
 set (LIBGLM_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/libs)
 
-if(NOT WIN32)
+if(NOT WIN32 AND NOT ANDROID)
     include_directories(
         ${XCB_INCLUDE_DIRS}
     )

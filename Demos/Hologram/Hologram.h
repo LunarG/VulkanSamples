@@ -1,3 +1,25 @@
+/*
+ * Copyright (C) 2016 Google, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
 #ifndef HOLOGRAM_H
 #define HOLOGRAM_H
 
@@ -11,8 +33,7 @@
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 
-#include "Animation.h"
-#include "Path.h"
+#include "Simulation.h"
 #include "Game.h"
 
 class Meshes;
@@ -40,7 +61,7 @@ private:
 
         void start();
         void stop();
-        void step_objects();
+        void update_simulation();
         void draw_objects(VkFramebuffer fb);
         void wait_idle();
 
@@ -50,9 +71,8 @@ private:
         const int object_begin_;
         const int object_end_;
 
-        VkCommandBuffer cmd_;
+        const float tick_interval_;
 
-        float object_time_;
         VkFramebuffer fb_;
 
     private:
@@ -71,18 +91,13 @@ private:
         std::mutex mutex_;
         std::condition_variable state_cv_;
         State state_;
-
-        const float tick_interval_;
     };
 
-    struct Object {
-        int mesh;
-        Animation animation;
-        Path path;
+    struct Camera {
+        glm::vec3 eye_pos;
+        glm::mat4 view_projection;
 
-        uint32_t frame_data_offset;
-
-        glm::mat4 model;
+        Camera(float eye) : eye_pos(eye) {}
     };
 
     struct FrameData {
@@ -99,9 +114,6 @@ private:
 
     // called by the constructor
     void init_workers();
-    void init_objects();
-
-    std::random_device random_dev_;
 
     bool multithread_;
     bool use_push_constants_;
@@ -149,8 +161,15 @@ private:
     VkPipeline pipeline_;
 
     VkCommandPool primary_cmd_pool_;
-    VkCommandBuffer primary_cmd_;
-    VkFence primary_cmd_fence_;
+    std::vector<VkCommandPool> worker_cmd_pools_;
+    VkDescriptorPool desc_pool_;
+    VkDeviceMemory frame_data_mem_;
+    std::vector<FrameData> frame_data_;
+    int frame_data_index_;
+
+    VkClearValue render_pass_clear_value_;
+    VkRenderPassBeginInfo render_pass_begin_info_;
+
     VkCommandBufferBeginInfo primary_cmd_begin_info_;
     VkPipelineStageFlags primary_cmd_submit_wait_stages_;
     VkSubmitInfo primary_cmd_submit_info_;
@@ -167,19 +186,10 @@ private:
     std::vector<VkImageView> image_views_;
     std::vector<VkFramebuffer> framebuffers_;
 
-    // called mostly by on_key
-    void update_projection();
-
-    glm::vec3 eye_pos_;
-    glm::mat4 view_projection_;
-
     // called by workers
-    void step_object(Object &obj, float obj_time, FrameData &data) const;
-    void draw_object(const Object &obj, VkCommandBuffer cmd) const;
-    void step_objects(const Worker &worker);
+    void update_simulation(const Worker &worker);
+    void draw_object(const Simulation::Object &obj, FrameData &data, VkCommandBuffer cmd) const;
     void draw_objects(Worker &worker);
-
-    bool pause_objects_;
 };
 
 #endif // HOLOGRAM_H

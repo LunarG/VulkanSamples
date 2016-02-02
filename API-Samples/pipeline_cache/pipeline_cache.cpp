@@ -114,8 +114,9 @@ int sample_main()
     size_t startCacheSize = 0;
     void*  startCacheData = nullptr;
 
-    const char* readFileName = "pipeline_cache_data.bin";
-    FILE *pReadFile = fopen(readFileName, "rb");
+    std::string directoryName = get_file_directory();
+    std::string readFileName = directoryName + "pipeline_cache_data.bin";
+    FILE *pReadFile = fopen(readFileName.c_str(), "rb");
 
     if (pReadFile) {
 
@@ -142,7 +143,7 @@ int sample_main()
         // Clean up and print results
         fclose(pReadFile);
         printf("  Pipeline cache HIT!\n");
-        printf("  cacheData loaded from %s\n", readFileName);
+        printf("  cacheData loaded from %s\n", readFileName.c_str());
 
     } else {
         // No cache found on disk
@@ -153,20 +154,8 @@ int sample_main()
         //
         // Check for cache validity
         //
-        // TODO: Update this as the spec evolves. The fields are not defined by the header.
-        //
-        // The code below supports SDK 0.10 Vulkan spec, which contains the following table:
-        //
-        // Offset	 Size            Meaning
-        // ------    ------------    ------------------------------------------------------------------
-        //      0               4    a device ID equal to VkPhysicalDeviceProperties::DeviceId written
-        //                           as a stream of bytes, with the least significant byte first
-        //
-        //      4    VK_UUID_SIZE    a pipeline cache ID equal to VkPhysicalDeviceProperties::pipelineCacheUUID
-        //
-        //
-        // The code must be updated for latest Vulkan spec, which contains the following table:
-        //
+        // The code below supports SDK 1.0 Vulkan spec, which contains the following table:
+        ////
         // Offset	 Size            Meaning
         // ------    ------------    ------------------------------------------------------------------
         //      0               4    length in bytes of the entire pipeline cache header written as a
@@ -197,33 +186,33 @@ int sample_main()
 
         if (headerLength <= 0) {
             badCache = true;
-            printf("  Bad header length in %s.\n", readFileName);
+            printf("  Bad header length in %s.\n", readFileName.c_str());
             printf("    Cache contains: 0x%.8x\n", headerLength);
         }
 
         if (cacheHeaderVersion != VK_PIPELINE_CACHE_HEADER_VERSION_ONE) {
             badCache = true;
-            printf("  Unsupported cache header version in %s.\n", readFileName);
+            printf("  Unsupported cache header version in %s.\n", readFileName.c_str());
             printf("    Cache contains: 0x%.8x\n", cacheHeaderVersion);
         }
 
         if (vendorID != info.gpu_props.vendorID) {
             badCache = true;
-            printf("  Vendor ID mismatch in %s.\n", readFileName);
+            printf("  Vendor ID mismatch in %s.\n", readFileName.c_str());
             printf("    Cache contains: 0x%.8x\n", vendorID);
             printf("    Driver expects: 0x%.8x\n", info.gpu_props.vendorID);
         }
 
         if (deviceID != info.gpu_props.deviceID) {
             badCache = true;
-            printf("  Device ID mismatch in %s.\n", readFileName);
+            printf("  Device ID mismatch in %s.\n", readFileName.c_str());
             printf("    Cache contains: 0x%.8x\n", deviceID);
             printf("    Driver expects: 0x%.8x\n", info.gpu_props.deviceID);
         }
 
         if (memcmp(pipelineCacheUUID, info.gpu_props.pipelineCacheUUID, sizeof(pipelineCacheUUID)) != 0) {
             badCache = true;
-            printf("  UUID mismatch in %s.\n", readFileName);
+            printf("  UUID mismatch in %s.\n", readFileName.c_str());
             printf("    Cache contains: ");
             print_UUID(pipelineCacheUUID);
             printf("\n");
@@ -239,8 +228,8 @@ int sample_main()
             startCacheData = nullptr;
 
             // And clear out the old cache file for use in next run
-            printf("  Deleting cache entry %s to repopulate.\n", readFileName);
-            if (remove(readFileName) != 0) {
+            printf("  Deleting cache entry %s to repopulate.\n", readFileName.c_str());
+            if (remove(readFileName.c_str()) != 0) {
                 fputs("Reading error", stderr);
                 exit(EXIT_FAILURE);
             }
@@ -335,12 +324,12 @@ int sample_main()
 
     // Write the file to disk, overwriting whatever was there
     FILE * pWriteFile;
-    const char* writeFileName = "pipeline_cache_data.bin";
-    pWriteFile = fopen(writeFileName, "wb");
+    std::string writeFileName = directoryName + "pipeline_cache_data.bin";
+    pWriteFile = fopen(writeFileName.c_str(), "wb");
     if (pWriteFile) {
         fwrite(endCacheData, sizeof(char), endCacheSize, pWriteFile);
         fclose(pWriteFile);
-        printf("  cacheData written to %s\n", writeFileName);
+        printf("  cacheData written to %s\n", writeFileName.c_str());
     } else {
         // Something bad happened
         printf("  Unable to write cache data to disk!\n");
