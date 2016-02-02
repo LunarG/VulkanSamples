@@ -34,7 +34,7 @@
 #include "test_common.h"
 #include "vkrenderframework.h"
 #include "vk_layer_config.h"
-#include "../icd/common/icd-spv.h"
+#include "icd-spv.h"
 
 #define GLM_FORCE_RADIANS
 #include "glm/glm.hpp"

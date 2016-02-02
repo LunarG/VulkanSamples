@@ -65,32 +65,17 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
 endif()
 
 option(BUILD_LOADER "Build loader" ON)
-if(WIN32)
-    option(BUILD_ICD "Build LunarG intel icd" OFF)
-else()
-    option(BUILD_ICD "Build LunarG intel icd" ON)
-endif()
 option(BUILD_TESTS "Build tests" ON)
 option(BUILD_LAYERS "Build layers" ON)
 option(BUILD_DEMOS "Build demos" ON)
-option(BUILD_VKTRACE "Build VkTrace" ON)
 option(BUILD_VKJSON "Build vkjson" ON)
 
-if (BUILD_ICD OR BUILD_TESTS)
+if (BUILD_TESTS)
     # Hard code our glslang path for now
     get_filename_component(GLSLANG_PREFIX ../glslang ABSOLUTE)
 
     if(NOT EXISTS ${GLSLANG_PREFIX})
         message(FATAL_ERROR "Necessary glslang components do not exist: " ${GLSLANG_PREFIX})
-    endif()
-endif()
-
-if (BUILD_ICD)
-    # Hard code our LunarGLASS path for now
-    get_filename_component(LUNARGLASS_PREFIX ../LunarGLASS ABSOLUTE)
-
-    if(NOT EXISTS ${LUNARGLASS_PREFIX})
-        message(FATAL_ERROR "Necessary LunarGLASS components do not exist: " ${LUNARGLASS_PREFIX})
     endif()
 endif()
 
@@ -111,14 +96,9 @@ else()
 endif()
 
 # loader: Generic VULKAN ICD loader
-# icd: Device dependent (DD) VULKAN components
 # tests: VULKAN tests
 if(BUILD_LOADER)
     add_subdirectory(loader)
-endif()
-
-if(BUILD_ICD)
-    add_subdirectory(icd)
 endif()
 
 if(BUILD_TESTS)
@@ -131,10 +111,6 @@ endif()
 
 if(BUILD_DEMOS)
     add_subdirectory(demos)
-endif()
-
-if(BUILD_VKTRACE)
-    add_subdirectory(vktrace)
 endif()
 
 if(BUILD_VKJSON)

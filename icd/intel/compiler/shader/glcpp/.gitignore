@@ -1,6 +1,0 @@
-glcpp
-glcpp-lex.c
-glcpp-parse.output
-glcpp-parse.c
-glcpp-parse.h
-tests/*.out
