@@ -1136,9 +1136,10 @@ has_descriptor_binding(layer_data* my_data,
     if (slot.first >= pipelineLayout->size())
         return false;
 
-    auto set = my_data->descriptorSetLayoutMap[(*pipelineLayout)[slot.first]]->bindings;
+    const auto &bindingMap = my_data->descriptorSetLayoutMap[(*pipelineLayout)[slot.first]]
+                   ->bindingToIndexMap;
 
-    return (set.find(slot.second) != set.end());
+    return (bindingMap.find(slot.second) != bindingMap.end());
 }
 
 static uint32_t get_shader_stage_id(VkShaderStageFlagBits stage)
@@ -2328,10 +2329,18 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
         }
         uint32_t binding = 0, endIndex = 0;
         binding = pWDS[i].dstBinding;
+        auto bindingToIndex = pLayout->bindingToIndexMap.find(binding);
         // Make sure that layout being updated has the binding being updated
-        if (pLayout->bindings.find(binding) == pLayout->bindings.end()) {
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)(ds), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
-                    "Descriptor Set %" PRIu64 " does not have binding to match update binding %u for update type %s!", (uint64_t)(ds), binding, string_VkStructureType(pUpdate->sType));
+        if (bindingToIndex == pLayout->bindingToIndexMap.end()) {
+            skipCall |= log_msg(
+                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)(ds),
+                __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
+                "Descriptor Set %" PRIu64 " does not have binding to match "
+                                          "update binding %u for update type "
+                                          "%s!",
+                (uint64_t)(ds), binding,
+                string_VkStructureType(pUpdate->sType));
         } else {
             // Next verify that update falls within size of given binding
             endIndex = getUpdateEndIndex(my_data, device, pLayout, binding, pWDS[i].dstArrayElement, pUpdate);
@@ -2342,11 +2351,20 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
                         "Descriptor update type of %s is out of bounds for matching binding %u in Layout w/ CI:\n%s!", string_VkStructureType(pUpdate->sType), binding, DSstr.c_str());
             } else { // TODO : should we skip update on a type mismatch or force it?
                 uint32_t startIndex;
-                startIndex = getUpdateStartIndex(my_data, device, pLayout, binding, pWDS[i].dstArrayElement, pUpdate);
-                // Layout bindings match w/ update, now verify that update type & stageFlags are the same for entire update
-                if ((skipCall = validateUpdateConsistency(my_data, device, pLayout, pUpdate, startIndex, endIndex)) == VK_FALSE) {
-                    // The update is within bounds and consistent, but need to make sure contents make sense as well
-                    if ((skipCall = validateUpdateContents(my_data, &pWDS[i], &pLayout->createInfo.pBindings[binding])) == VK_FALSE) {
+                startIndex =
+                    getUpdateStartIndex(my_data, device, pLayout, binding,
+                                        pWDS[i].dstArrayElement, pUpdate);
+                // Layout bindings match w/ update, now verify that update type
+                // & stageFlags are the same for entire update
+                if ((skipCall = validateUpdateConsistency(
+                         my_data, device, pLayout, pUpdate, startIndex,
+                         endIndex)) == VK_FALSE) {
+                    // The update is within bounds and consistent, but need to
+                    // make sure contents make sense as well
+                    if ((skipCall = validateUpdateContents(
+                             my_data, &pWDS[i],
+                             &pLayout->createInfo.pBindings[bindingToIndex->second])) ==
+                        VK_FALSE) {
                         // Update is good. Save the update info
                         // Create new update struct for this set's shadow copy
                         GENERIC_HEADER* pNewNode = NULL;
@@ -2384,14 +2402,30 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
         pSrcLayout = pSrcSet->pLayout;
         pDstLayout = pDstSet->pLayout;
         // Validate that src binding is valid for src set layout
-        if (pSrcLayout->bindings.find(pCDS[i].srcBinding) == pSrcLayout->bindings.end()) {
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pSrcSet->set, __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
-                "Copy descriptor update %u has srcBinding %u which is out of bounds for underlying SetLayout %#" PRIxLEAST64 " which only has bindings 0-%u.",
-                i, pCDS[i].srcBinding, (uint64_t) pSrcLayout->layout, pSrcLayout->createInfo.bindingCount-1);
-        } else if (pDstLayout->bindings.find(pCDS[i].dstBinding) == pDstLayout->bindings.end()) {
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDstSet->set, __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
-                "Copy descriptor update %u has dstBinding %u which is out of bounds for underlying SetLayout %#" PRIxLEAST64 " which only has bindings 0-%u.",
-                i, pCDS[i].dstBinding, (uint64_t) pDstLayout->layout, pDstLayout->createInfo.bindingCount-1);
+        if (pSrcLayout->bindingToIndexMap.find(pCDS[i].srcBinding) ==
+            pSrcLayout->bindingToIndexMap.end()) {
+            skipCall |=
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                        (uint64_t)pSrcSet->set, __LINE__,
+                        DRAWSTATE_INVALID_UPDATE_INDEX,
+                        "DS", "Copy descriptor update %u has srcBinding %u "
+                              "which is out of bounds for underlying SetLayout "
+                              "%#" PRIxLEAST64 " which only has bindings 0-%u.",
+                        i, pCDS[i].srcBinding, (uint64_t)pSrcLayout->layout,
+                        pSrcLayout->createInfo.bindingCount - 1);
+        } else if (pDstLayout->bindingToIndexMap.find(pCDS[i].dstBinding) ==
+                   pDstLayout->bindingToIndexMap.end()) {
+            skipCall |=
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                        (uint64_t)pDstSet->set, __LINE__,
+                        DRAWSTATE_INVALID_UPDATE_INDEX,
+                        "DS", "Copy descriptor update %u has dstBinding %u "
+                              "which is out of bounds for underlying SetLayout "
+                              "%#" PRIxLEAST64 " which only has bindings 0-%u.",
+                        i, pCDS[i].dstBinding, (uint64_t)pDstLayout->layout,
+                        pDstLayout->createInfo.bindingCount - 1);
         } else {
             // Proceed with validation. Bindings are ok, but make sure update is within bounds of given layout
             srcEndIndex = getUpdateEndIndex(my_data, device, pSrcLayout, pCDS[i].srcBinding, pCDS[i].srcArrayElement, (const GENERIC_HEADER*)&(pCDS[i]));
@@ -4275,15 +4309,21 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(VkDev
         memcpy((void*)pNewNode->createInfo.pBindings, pCreateInfo->pBindings, sizeof(VkDescriptorSetLayoutBinding)*pCreateInfo->bindingCount);
         // g++ does not like reserve with size 0
         if (pCreateInfo->bindingCount)
-            pNewNode->bindings.reserve(pCreateInfo->bindingCount);
+            pNewNode->bindingToIndexMap.reserve(pCreateInfo->bindingCount);
         uint32_t totalCount = 0;
-        for (uint32_t i=0; i<pCreateInfo->bindingCount; i++) {
-            if (!pNewNode->bindings.insert(pCreateInfo->pBindings[i].binding).second) {
-                if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, (uint64_t) *pSetLayout, __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
-                            "duplicated binding number in VkDescriptorSetLayoutBinding"))
+        for (uint32_t i = 0; i < pCreateInfo->bindingCount; i++) {
+            if (!pNewNode->bindingToIndexMap.emplace(pCreateInfo->pBindings[i].binding, i).second) {
+                if (log_msg(
+                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
+                        (uint64_t)*pSetLayout, __LINE__,
+                        DRAWSTATE_INVALID_LAYOUT, "DS",
+                        "duplicated binding number in "
+                        "VkDescriptorSetLayoutBinding"))
                     return VK_ERROR_VALIDATION_FAILED_EXT;
+            } else {
+                pNewNode->bindingToIndexMap[pCreateInfo->pBindings[i].binding] = i;
             }
-
             totalCount += pCreateInfo->pBindings[i].descriptorCount;
             if (pCreateInfo->pBindings[i].pImmutableSamplers) {
                 VkSampler** ppIS = (VkSampler**)&pNewNode->createInfo.pBindings[i].pImmutableSamplers;

@@ -362,12 +362,17 @@ class QUEUE_NODE {
 typedef struct _LAYOUT_NODE {
     VkDescriptorSetLayout           layout;
     VkDescriptorSetLayoutCreateInfo createInfo;
-    uint32_t                        startIndex; // 1st index of this layout
-    uint32_t                        endIndex; // last index of this layout
-    uint32_t                        dynamicDescriptorCount; // Total count of dynamic descriptors used by this layout
-    vector<VkDescriptorType>        descriptorTypes; // Type per descriptor in this layout to verify correct updates
-    vector<VkShaderStageFlags>      stageFlags; // stageFlags per descriptor in this layout to verify correct updates
-    unordered_set<uint32_t>         bindings;
+    uint32_t startIndex;             // 1st index of this layout
+    uint32_t endIndex;               // last index of this layout
+    uint32_t dynamicDescriptorCount; // Total count of dynamic descriptors used
+                                     // by this layout
+    vector<VkDescriptorType> descriptorTypes; // Type per descriptor in this
+                                              // layout to verify correct
+                                              // updates
+    vector<VkShaderStageFlags> stageFlags; // stageFlags per descriptor in this
+                                           // layout to verify correct updates
+    unordered_map<uint32_t, uint32_t> bindingToIndexMap; // map set binding # to
+                                                         // pBindings index
     // Default constructor
     _LAYOUT_NODE():layout{},
                    createInfo{},
