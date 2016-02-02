@@ -2733,6 +2733,8 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->submitCount = 0;
         pCB->status = 0;
         pCB->lastBoundPipeline = 0;
+        pCB->lastVtxBinding = 0;
+        pCB->boundVtxBuffers.clear();
         pCB->viewports.clear();
         pCB->scissors.clear();
         pCB->lineWidth = 0;
@@ -2746,8 +2748,11 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         memset(&pCB->back, 0, sizeof(stencil_data));
         pCB->lastBoundDescriptorSet = 0;
         pCB->lastBoundPipelineLayout = 0;
+        memset(&pCB->activeRenderPassBeginInfo, 0, sizeof(pCB->activeRenderPassBeginInfo));
         pCB->activeRenderPass = 0;
+        pCB->activeSubpassContents = VK_SUBPASS_CONTENTS_INLINE;
         pCB->activeSubpass = 0;
+        pCB->framebuffer = 0;
         // Before clearing uniqueBoundSets, remove this CB off of its boundCBs
         for (auto set : pCB->uniqueBoundSets) {
             auto set_node = my_data->setMap.find(set);
@@ -2756,16 +2761,18 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
             }
         }
         pCB->uniqueBoundSets.clear();
-        pCB->framebuffer = 0;
+        pCB->destroyedSets.clear();
+        pCB->updatedSets.clear();
         pCB->boundDescriptorSets.clear();
-        pCB->drawData.clear();
-        pCB->currentDrawData.buffers.clear();
-        pCB->imageLayoutMap.clear();
         pCB->waitedEvents.clear();
         pCB->waitedEventsBeforeQueryReset.clear();
         pCB->queryToStateMap.clear();
         pCB->activeQueries.clear();
+        pCB->imageLayoutMap.clear();
+        pCB->drawData.clear();
+        pCB->currentDrawData.buffers.clear();
         pCB->secondaryCommandBuffers.clear();
+        pCB->dynamicOffsets.clear();
     }
 }
 
@@ -4327,7 +4334,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(VkDevice
                 // Add command buffer to map
                 dev_data->commandBufferMap[pCommandBuffer[i]] = pCB;
                 resetCB(dev_data, pCommandBuffer[i]);
-                pCB->commandBuffer = pCommandBuffer[i];
                 pCB->createInfo    = *pCreateInfo;
                 pCB->device        = device;
                 loader_platform_thread_unlock_mutex(&globalLock);
