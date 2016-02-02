@@ -435,9 +435,10 @@ Section "uninstall"
         Call un.DeleteDirIfEmpty
 
         # If any of the remove commands failed, request a reboot
-        IfRebootFlag 0 noreboot
-             MessageBox MB_YESNO "A reboot is required to finish the uninstall. Do you wish to reboot now?" IDNO noreboot
-        Reboot
+        IfSilent noreboot
+            IfRebootFlag 0 noreboot
+                MessageBox MB_YESNO "A reboot is required to finish the uninstall. Do you wish to reboot now?" IDNO noreboot
+                Reboot
         noreboot:
 
     ${Endif}
