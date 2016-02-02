@@ -1,25 +1,30 @@
 /*
+ * Copyright (c) 2015-2016 The Khronos Group Inc.
+ * Copyright (c) 2015-2016 Valve Corporation
+ * Copyright (c) 2015-2016 LunarG, Inc.
  *
- * Copyright (C) 2015 Valve Corporation
- * Copyright (C) 2015 Google Inc.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and/or associated documentation files (the "Materials"), to
+ * deal in the Materials without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Materials, and to permit persons to whom the Materials are
+ * furnished to do so, subject to the following conditions:
  *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * The above copyright notice(s) and this permission notice shall be included in
+ * all copies or substantial portions of the Materials.
  *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
+ * The Materials are Confidential Information as defined by the Khronos
+ * Membership Agreement until designated non-confidential by Khronos, at which
+ * point this condition clause shall be removed.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ *
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
+ * USE OR OTHER DEALINGS IN THE MATERIALS.
  *
  * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
  * Author: David Pinedo <david@lunarg.com>
@@ -37,12 +42,12 @@
 #include <io.h>
 #endif // _WIN32
 
-
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_ext_debug_report.h>
 
-#define ERR(err) printf("%s:%d: failed with %s\n", \
-    __FILE__, __LINE__, vk_result_string(err));
+#define ERR(err)                                                               \
+    printf("%s:%d: failed with %s\n", __FILE__, __LINE__,                      \
+           vk_result_string(err));
 
 #ifdef _WIN32
 
@@ -50,23 +55,22 @@
 
 bool consoleCreated = false;
 
-#define WAIT_FOR_CONSOLE_DESTROY \
-    do { \
-        if (consoleCreated) \
-            Sleep(INFINITE); \
+#define WAIT_FOR_CONSOLE_DESTROY                                               \
+    do {                                                                       \
+        if (consoleCreated)                                                    \
+            Sleep(INFINITE);                                                   \
     } while (0)
 #else
-    #define WAIT_FOR_CONSOLE_DESTROY
+#define WAIT_FOR_CONSOLE_DESTROY
 #endif
 
-
-#define ERR_EXIT(err) \
-    do { \
-        ERR(err); \
-        fflush(stdout); \
-        WAIT_FOR_CONSOLE_DESTROY; \
-        exit(-1); \
-   } while (0)
+#define ERR_EXIT(err)                                                          \
+    do {                                                                       \
+        ERR(err);                                                              \
+        fflush(stdout);                                                        \
+        WAIT_FOR_CONSOLE_DESTROY;                                              \
+        exit(-1);                                                              \
+    } while (0)
 
 #if defined(NDEBUG) && defined(__GNUC__)
 #define U_ASSERT_ONLY __attribute__((unused))
@@ -88,7 +92,6 @@ struct app_dev {
 
     VkDevice obj;
 
-
     VkFormatProperties format_props[VK_FORMAT_RANGE_SIZE];
 };
 
@@ -99,7 +102,7 @@ struct layer_extension_list {
 };
 
 struct app_instance {
-    VkInstance  instance;
+    VkInstance instance;
     uint32_t global_layer_count;
     struct layer_extension_list *global_layers;
     uint32_t global_extension_count;
@@ -129,32 +132,29 @@ struct app_gpu {
     struct app_dev dev;
 };
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL dbg_callback(
-    VkFlags                             msgFlags,
-    VkDebugReportObjectTypeEXT          objType,
-    uint64_t                            srcObject,
-    size_t                              location,
-    int32_t                             msgCode,
-    const char*                         pLayerPrefix,
-    const char*                         pMsg,
-    void*                               pUserData)
-{
-    char *message = (char *) malloc(strlen(pMsg)+100);
+static VKAPI_ATTR VkBool32 VKAPI_CALL
+dbg_callback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
+             uint64_t srcObject, size_t location, int32_t msgCode,
+             const char *pLayerPrefix, const char *pMsg, void *pUserData) {
+    char *message = (char *)malloc(strlen(pMsg) + 100);
 
-    assert (message);
+    assert(message);
 
     if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        sprintf(message,"ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+        sprintf(message, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode,
+                pMsg);
     } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT_EXT) {
-        sprintf(message,"WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+        sprintf(message, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode,
+                pMsg);
     } else if (msgFlags & VK_DEBUG_REPORT_INFO_BIT_EXT) {
-        sprintf(message,"INFO: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+        sprintf(message, "INFO: [%s] Code %d : %s", pLayerPrefix, msgCode,
+                pMsg);
     } else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
-        sprintf(message,"DEBUG: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+        sprintf(message, "DEBUG: [%s] Code %d : %s", pLayerPrefix, msgCode,
+                pMsg);
     }
 
-
-    printf("%s\n",message);
+    printf("%s\n", message);
     fflush(stdout);
     free(message);
 
@@ -168,268 +168,273 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL dbg_callback(
     return false;
 }
 
-static const char *vk_result_string(VkResult err)
-{
+static const char *vk_result_string(VkResult err) {
     switch (err) {
-#define STR(r) case r: return #r
-    STR(VK_SUCCESS);
-    STR(VK_NOT_READY);
-    STR(VK_TIMEOUT);
-    STR(VK_EVENT_SET);
-    STR(VK_EVENT_RESET);
-    STR(VK_ERROR_INITIALIZATION_FAILED);
-    STR(VK_ERROR_OUT_OF_HOST_MEMORY);
-    STR(VK_ERROR_OUT_OF_DEVICE_MEMORY);
-    STR(VK_ERROR_DEVICE_LOST);
-    STR(VK_ERROR_LAYER_NOT_PRESENT);
-    STR(VK_ERROR_EXTENSION_NOT_PRESENT);
-    STR(VK_ERROR_MEMORY_MAP_FAILED);
-    STR(VK_ERROR_INCOMPATIBLE_DRIVER);
+#define STR(r)                                                                 \
+    case r:                                                                    \
+        return #r
+        STR(VK_SUCCESS);
+        STR(VK_NOT_READY);
+        STR(VK_TIMEOUT);
+        STR(VK_EVENT_SET);
+        STR(VK_EVENT_RESET);
+        STR(VK_ERROR_INITIALIZATION_FAILED);
+        STR(VK_ERROR_OUT_OF_HOST_MEMORY);
+        STR(VK_ERROR_OUT_OF_DEVICE_MEMORY);
+        STR(VK_ERROR_DEVICE_LOST);
+        STR(VK_ERROR_LAYER_NOT_PRESENT);
+        STR(VK_ERROR_EXTENSION_NOT_PRESENT);
+        STR(VK_ERROR_MEMORY_MAP_FAILED);
+        STR(VK_ERROR_INCOMPATIBLE_DRIVER);
 #undef STR
-    default: return "UNKNOWN_RESULT";
+    default:
+        return "UNKNOWN_RESULT";
     }
 }
 
-static const char *vk_physical_device_type_string(VkPhysicalDeviceType type)
-{
+static const char *vk_physical_device_type_string(VkPhysicalDeviceType type) {
     switch (type) {
-#define STR(r) case VK_PHYSICAL_DEVICE_TYPE_ ##r: return #r
-    STR(OTHER);
-    STR(INTEGRATED_GPU);
-    STR(DISCRETE_GPU);
-    STR(VIRTUAL_GPU);
+#define STR(r)                                                                 \
+    case VK_PHYSICAL_DEVICE_TYPE_##r:                                          \
+        return #r
+        STR(OTHER);
+        STR(INTEGRATED_GPU);
+        STR(DISCRETE_GPU);
+        STR(VIRTUAL_GPU);
 #undef STR
-    default: return "UNKNOWN_DEVICE";
+    default:
+        return "UNKNOWN_DEVICE";
     }
 }
 
-static const char *vk_format_string(VkFormat fmt)
-{
+static const char *vk_format_string(VkFormat fmt) {
     switch (fmt) {
-#define STR(r) case VK_FORMAT_ ##r: return #r
-    STR(UNDEFINED);
-    STR(R4G4_UNORM_PACK8);
-    STR(R4G4B4A4_UNORM_PACK16);
-    STR(B4G4R4A4_UNORM_PACK16);
-    STR(R5G6B5_UNORM_PACK16);
-    STR(B5G6R5_UNORM_PACK16);
-    STR(R5G5B5A1_UNORM_PACK16);
-    STR(B5G5R5A1_UNORM_PACK16);
-    STR(A1R5G5B5_UNORM_PACK16);
-    STR(R8_UNORM);
-    STR(R8_SNORM);
-    STR(R8_USCALED);
-    STR(R8_SSCALED);
-    STR(R8_UINT);
-    STR(R8_SINT);
-    STR(R8_SRGB);
-    STR(R8G8_UNORM);
-    STR(R8G8_SNORM);
-    STR(R8G8_USCALED);
-    STR(R8G8_SSCALED);
-    STR(R8G8_UINT);
-    STR(R8G8_SINT);
-    STR(R8G8_SRGB);
-    STR(R8G8B8_UNORM);
-    STR(R8G8B8_SNORM);
-    STR(R8G8B8_USCALED);
-    STR(R8G8B8_SSCALED);
-    STR(R8G8B8_UINT);
-    STR(R8G8B8_SINT);
-    STR(R8G8B8_SRGB);
-    STR(B8G8R8_UNORM);
-    STR(B8G8R8_SNORM);
-    STR(B8G8R8_USCALED);
-    STR(B8G8R8_SSCALED);
-    STR(B8G8R8_UINT);
-    STR(B8G8R8_SINT);
-    STR(B8G8R8_SRGB);
-    STR(R8G8B8A8_UNORM);
-    STR(R8G8B8A8_SNORM);
-    STR(R8G8B8A8_USCALED);
-    STR(R8G8B8A8_SSCALED);
-    STR(R8G8B8A8_UINT);
-    STR(R8G8B8A8_SINT);
-    STR(R8G8B8A8_SRGB);
-    STR(B8G8R8A8_UNORM);
-    STR(B8G8R8A8_SNORM);
-    STR(B8G8R8A8_USCALED);
-    STR(B8G8R8A8_SSCALED);
-    STR(B8G8R8A8_UINT);
-    STR(B8G8R8A8_SINT);
-    STR(B8G8R8A8_SRGB);
-    STR(A8B8G8R8_UNORM_PACK32);
-    STR(A8B8G8R8_SNORM_PACK32);
-    STR(A8B8G8R8_USCALED_PACK32);
-    STR(A8B8G8R8_SSCALED_PACK32);
-    STR(A8B8G8R8_UINT_PACK32);
-    STR(A8B8G8R8_SINT_PACK32);
-    STR(A8B8G8R8_SRGB_PACK32);
-    STR(A2R10G10B10_UNORM_PACK32);
-    STR(A2R10G10B10_SNORM_PACK32);
-    STR(A2R10G10B10_USCALED_PACK32);
-    STR(A2R10G10B10_SSCALED_PACK32);
-    STR(A2R10G10B10_UINT_PACK32);
-    STR(A2R10G10B10_SINT_PACK32);
-    STR(A2B10G10R10_UNORM_PACK32);
-    STR(A2B10G10R10_SNORM_PACK32);
-    STR(A2B10G10R10_USCALED_PACK32);
-    STR(A2B10G10R10_SSCALED_PACK32);
-    STR(A2B10G10R10_UINT_PACK32);
-    STR(A2B10G10R10_SINT_PACK32);
-    STR(R16_UNORM);
-    STR(R16_SNORM);
-    STR(R16_USCALED);
-    STR(R16_SSCALED);
-    STR(R16_UINT);
-    STR(R16_SINT);
-    STR(R16_SFLOAT);
-    STR(R16G16_UNORM);
-    STR(R16G16_SNORM);
-    STR(R16G16_USCALED);
-    STR(R16G16_SSCALED);
-    STR(R16G16_UINT);
-    STR(R16G16_SINT);
-    STR(R16G16_SFLOAT);
-    STR(R16G16B16_UNORM);
-    STR(R16G16B16_SNORM);
-    STR(R16G16B16_USCALED);
-    STR(R16G16B16_SSCALED);
-    STR(R16G16B16_UINT);
-    STR(R16G16B16_SINT);
-    STR(R16G16B16_SFLOAT);
-    STR(R16G16B16A16_UNORM);
-    STR(R16G16B16A16_SNORM);
-    STR(R16G16B16A16_USCALED);
-    STR(R16G16B16A16_SSCALED);
-    STR(R16G16B16A16_UINT);
-    STR(R16G16B16A16_SINT);
-    STR(R16G16B16A16_SFLOAT);
-    STR(R32_UINT);
-    STR(R32_SINT);
-    STR(R32_SFLOAT);
-    STR(R32G32_UINT);
-    STR(R32G32_SINT);
-    STR(R32G32_SFLOAT);
-    STR(R32G32B32_UINT);
-    STR(R32G32B32_SINT);
-    STR(R32G32B32_SFLOAT);
-    STR(R32G32B32A32_UINT);
-    STR(R32G32B32A32_SINT);
-    STR(R32G32B32A32_SFLOAT);
-    STR(R64_UINT);
-    STR(R64_SINT);
-    STR(R64_SFLOAT);
-    STR(R64G64_UINT);
-    STR(R64G64_SINT);
-    STR(R64G64_SFLOAT);
-    STR(R64G64B64_UINT);
-    STR(R64G64B64_SINT);
-    STR(R64G64B64_SFLOAT);
-    STR(R64G64B64A64_UINT);
-    STR(R64G64B64A64_SINT);
-    STR(R64G64B64A64_SFLOAT);
-    STR(B10G11R11_UFLOAT_PACK32);
-    STR(E5B9G9R9_UFLOAT_PACK32);
-    STR(D16_UNORM);
-    STR(X8_D24_UNORM_PACK32);
-    STR(D32_SFLOAT);
-    STR(S8_UINT);
-    STR(D16_UNORM_S8_UINT);
-    STR(D24_UNORM_S8_UINT);
-    STR(D32_SFLOAT_S8_UINT);
-    STR(BC1_RGB_UNORM_BLOCK);
-    STR(BC1_RGB_SRGB_BLOCK);
-    STR(BC2_UNORM_BLOCK);
-    STR(BC2_SRGB_BLOCK);
-    STR(BC3_UNORM_BLOCK);
-    STR(BC3_SRGB_BLOCK);
-    STR(BC4_UNORM_BLOCK);
-    STR(BC4_SNORM_BLOCK);
-    STR(BC5_UNORM_BLOCK);
-    STR(BC5_SNORM_BLOCK);
-    STR(BC6H_UFLOAT_BLOCK);
-    STR(BC6H_SFLOAT_BLOCK);
-    STR(BC7_UNORM_BLOCK);
-    STR(BC7_SRGB_BLOCK);
-    STR(ETC2_R8G8B8_UNORM_BLOCK);
-    STR(ETC2_R8G8B8A1_UNORM_BLOCK);
-    STR(ETC2_R8G8B8A8_UNORM_BLOCK);
-    STR(EAC_R11_UNORM_BLOCK);
-    STR(EAC_R11_SNORM_BLOCK);
-    STR(EAC_R11G11_UNORM_BLOCK);
-    STR(EAC_R11G11_SNORM_BLOCK);
-    STR(ASTC_4x4_UNORM_BLOCK);
-    STR(ASTC_4x4_SRGB_BLOCK);
-    STR(ASTC_5x4_UNORM_BLOCK);
-    STR(ASTC_5x4_SRGB_BLOCK);
-    STR(ASTC_5x5_UNORM_BLOCK);
-    STR(ASTC_5x5_SRGB_BLOCK);
-    STR(ASTC_6x5_UNORM_BLOCK);
-    STR(ASTC_6x5_SRGB_BLOCK);
-    STR(ASTC_6x6_UNORM_BLOCK);
-    STR(ASTC_6x6_SRGB_BLOCK);
-    STR(ASTC_8x5_UNORM_BLOCK);
-    STR(ASTC_8x5_SRGB_BLOCK);
-    STR(ASTC_8x6_UNORM_BLOCK);
-    STR(ASTC_8x6_SRGB_BLOCK);
-    STR(ASTC_8x8_UNORM_BLOCK);
-    STR(ASTC_8x8_SRGB_BLOCK);
-    STR(ASTC_10x5_UNORM_BLOCK);
-    STR(ASTC_10x5_SRGB_BLOCK);
-    STR(ASTC_10x6_UNORM_BLOCK);
-    STR(ASTC_10x6_SRGB_BLOCK);
-    STR(ASTC_10x8_UNORM_BLOCK);
-    STR(ASTC_10x8_SRGB_BLOCK);
-    STR(ASTC_10x10_UNORM_BLOCK);
-    STR(ASTC_10x10_SRGB_BLOCK);
-    STR(ASTC_12x10_UNORM_BLOCK);
-    STR(ASTC_12x10_SRGB_BLOCK);
-    STR(ASTC_12x12_UNORM_BLOCK);
-    STR(ASTC_12x12_SRGB_BLOCK);
+#define STR(r)                                                                 \
+    case VK_FORMAT_##r:                                                        \
+        return #r
+        STR(UNDEFINED);
+        STR(R4G4_UNORM_PACK8);
+        STR(R4G4B4A4_UNORM_PACK16);
+        STR(B4G4R4A4_UNORM_PACK16);
+        STR(R5G6B5_UNORM_PACK16);
+        STR(B5G6R5_UNORM_PACK16);
+        STR(R5G5B5A1_UNORM_PACK16);
+        STR(B5G5R5A1_UNORM_PACK16);
+        STR(A1R5G5B5_UNORM_PACK16);
+        STR(R8_UNORM);
+        STR(R8_SNORM);
+        STR(R8_USCALED);
+        STR(R8_SSCALED);
+        STR(R8_UINT);
+        STR(R8_SINT);
+        STR(R8_SRGB);
+        STR(R8G8_UNORM);
+        STR(R8G8_SNORM);
+        STR(R8G8_USCALED);
+        STR(R8G8_SSCALED);
+        STR(R8G8_UINT);
+        STR(R8G8_SINT);
+        STR(R8G8_SRGB);
+        STR(R8G8B8_UNORM);
+        STR(R8G8B8_SNORM);
+        STR(R8G8B8_USCALED);
+        STR(R8G8B8_SSCALED);
+        STR(R8G8B8_UINT);
+        STR(R8G8B8_SINT);
+        STR(R8G8B8_SRGB);
+        STR(B8G8R8_UNORM);
+        STR(B8G8R8_SNORM);
+        STR(B8G8R8_USCALED);
+        STR(B8G8R8_SSCALED);
+        STR(B8G8R8_UINT);
+        STR(B8G8R8_SINT);
+        STR(B8G8R8_SRGB);
+        STR(R8G8B8A8_UNORM);
+        STR(R8G8B8A8_SNORM);
+        STR(R8G8B8A8_USCALED);
+        STR(R8G8B8A8_SSCALED);
+        STR(R8G8B8A8_UINT);
+        STR(R8G8B8A8_SINT);
+        STR(R8G8B8A8_SRGB);
+        STR(B8G8R8A8_UNORM);
+        STR(B8G8R8A8_SNORM);
+        STR(B8G8R8A8_USCALED);
+        STR(B8G8R8A8_SSCALED);
+        STR(B8G8R8A8_UINT);
+        STR(B8G8R8A8_SINT);
+        STR(B8G8R8A8_SRGB);
+        STR(A8B8G8R8_UNORM_PACK32);
+        STR(A8B8G8R8_SNORM_PACK32);
+        STR(A8B8G8R8_USCALED_PACK32);
+        STR(A8B8G8R8_SSCALED_PACK32);
+        STR(A8B8G8R8_UINT_PACK32);
+        STR(A8B8G8R8_SINT_PACK32);
+        STR(A8B8G8R8_SRGB_PACK32);
+        STR(A2R10G10B10_UNORM_PACK32);
+        STR(A2R10G10B10_SNORM_PACK32);
+        STR(A2R10G10B10_USCALED_PACK32);
+        STR(A2R10G10B10_SSCALED_PACK32);
+        STR(A2R10G10B10_UINT_PACK32);
+        STR(A2R10G10B10_SINT_PACK32);
+        STR(A2B10G10R10_UNORM_PACK32);
+        STR(A2B10G10R10_SNORM_PACK32);
+        STR(A2B10G10R10_USCALED_PACK32);
+        STR(A2B10G10R10_SSCALED_PACK32);
+        STR(A2B10G10R10_UINT_PACK32);
+        STR(A2B10G10R10_SINT_PACK32);
+        STR(R16_UNORM);
+        STR(R16_SNORM);
+        STR(R16_USCALED);
+        STR(R16_SSCALED);
+        STR(R16_UINT);
+        STR(R16_SINT);
+        STR(R16_SFLOAT);
+        STR(R16G16_UNORM);
+        STR(R16G16_SNORM);
+        STR(R16G16_USCALED);
+        STR(R16G16_SSCALED);
+        STR(R16G16_UINT);
+        STR(R16G16_SINT);
+        STR(R16G16_SFLOAT);
+        STR(R16G16B16_UNORM);
+        STR(R16G16B16_SNORM);
+        STR(R16G16B16_USCALED);
+        STR(R16G16B16_SSCALED);
+        STR(R16G16B16_UINT);
+        STR(R16G16B16_SINT);
+        STR(R16G16B16_SFLOAT);
+        STR(R16G16B16A16_UNORM);
+        STR(R16G16B16A16_SNORM);
+        STR(R16G16B16A16_USCALED);
+        STR(R16G16B16A16_SSCALED);
+        STR(R16G16B16A16_UINT);
+        STR(R16G16B16A16_SINT);
+        STR(R16G16B16A16_SFLOAT);
+        STR(R32_UINT);
+        STR(R32_SINT);
+        STR(R32_SFLOAT);
+        STR(R32G32_UINT);
+        STR(R32G32_SINT);
+        STR(R32G32_SFLOAT);
+        STR(R32G32B32_UINT);
+        STR(R32G32B32_SINT);
+        STR(R32G32B32_SFLOAT);
+        STR(R32G32B32A32_UINT);
+        STR(R32G32B32A32_SINT);
+        STR(R32G32B32A32_SFLOAT);
+        STR(R64_UINT);
+        STR(R64_SINT);
+        STR(R64_SFLOAT);
+        STR(R64G64_UINT);
+        STR(R64G64_SINT);
+        STR(R64G64_SFLOAT);
+        STR(R64G64B64_UINT);
+        STR(R64G64B64_SINT);
+        STR(R64G64B64_SFLOAT);
+        STR(R64G64B64A64_UINT);
+        STR(R64G64B64A64_SINT);
+        STR(R64G64B64A64_SFLOAT);
+        STR(B10G11R11_UFLOAT_PACK32);
+        STR(E5B9G9R9_UFLOAT_PACK32);
+        STR(D16_UNORM);
+        STR(X8_D24_UNORM_PACK32);
+        STR(D32_SFLOAT);
+        STR(S8_UINT);
+        STR(D16_UNORM_S8_UINT);
+        STR(D24_UNORM_S8_UINT);
+        STR(D32_SFLOAT_S8_UINT);
+        STR(BC1_RGB_UNORM_BLOCK);
+        STR(BC1_RGB_SRGB_BLOCK);
+        STR(BC2_UNORM_BLOCK);
+        STR(BC2_SRGB_BLOCK);
+        STR(BC3_UNORM_BLOCK);
+        STR(BC3_SRGB_BLOCK);
+        STR(BC4_UNORM_BLOCK);
+        STR(BC4_SNORM_BLOCK);
+        STR(BC5_UNORM_BLOCK);
+        STR(BC5_SNORM_BLOCK);
+        STR(BC6H_UFLOAT_BLOCK);
+        STR(BC6H_SFLOAT_BLOCK);
+        STR(BC7_UNORM_BLOCK);
+        STR(BC7_SRGB_BLOCK);
+        STR(ETC2_R8G8B8_UNORM_BLOCK);
+        STR(ETC2_R8G8B8A1_UNORM_BLOCK);
+        STR(ETC2_R8G8B8A8_UNORM_BLOCK);
+        STR(EAC_R11_UNORM_BLOCK);
+        STR(EAC_R11_SNORM_BLOCK);
+        STR(EAC_R11G11_UNORM_BLOCK);
+        STR(EAC_R11G11_SNORM_BLOCK);
+        STR(ASTC_4x4_UNORM_BLOCK);
+        STR(ASTC_4x4_SRGB_BLOCK);
+        STR(ASTC_5x4_UNORM_BLOCK);
+        STR(ASTC_5x4_SRGB_BLOCK);
+        STR(ASTC_5x5_UNORM_BLOCK);
+        STR(ASTC_5x5_SRGB_BLOCK);
+        STR(ASTC_6x5_UNORM_BLOCK);
+        STR(ASTC_6x5_SRGB_BLOCK);
+        STR(ASTC_6x6_UNORM_BLOCK);
+        STR(ASTC_6x6_SRGB_BLOCK);
+        STR(ASTC_8x5_UNORM_BLOCK);
+        STR(ASTC_8x5_SRGB_BLOCK);
+        STR(ASTC_8x6_UNORM_BLOCK);
+        STR(ASTC_8x6_SRGB_BLOCK);
+        STR(ASTC_8x8_UNORM_BLOCK);
+        STR(ASTC_8x8_SRGB_BLOCK);
+        STR(ASTC_10x5_UNORM_BLOCK);
+        STR(ASTC_10x5_SRGB_BLOCK);
+        STR(ASTC_10x6_UNORM_BLOCK);
+        STR(ASTC_10x6_SRGB_BLOCK);
+        STR(ASTC_10x8_UNORM_BLOCK);
+        STR(ASTC_10x8_SRGB_BLOCK);
+        STR(ASTC_10x10_UNORM_BLOCK);
+        STR(ASTC_10x10_SRGB_BLOCK);
+        STR(ASTC_12x10_UNORM_BLOCK);
+        STR(ASTC_12x10_SRGB_BLOCK);
+        STR(ASTC_12x12_UNORM_BLOCK);
+        STR(ASTC_12x12_SRGB_BLOCK);
 #undef STR
-    default: return "UNKNOWN_FORMAT";
+    default:
+        return "UNKNOWN_FORMAT";
     }
 }
 
-static void app_dev_init_formats(struct app_dev *dev)
-{
+static void app_dev_init_formats(struct app_dev *dev) {
     VkFormat f;
 
     for (f = 0; f < VK_FORMAT_RANGE_SIZE; f++) {
         const VkFormat fmt = f;
 
-        vkGetPhysicalDeviceFormatProperties(dev->gpu->obj, fmt, &dev->format_props[f]);
+        vkGetPhysicalDeviceFormatProperties(dev->gpu->obj, fmt,
+                                            &dev->format_props[f]);
     }
 }
 
-static void extract_version(uint32_t version, uint32_t *major, uint32_t *minor, uint32_t *patch)
-{
+static void extract_version(uint32_t version, uint32_t *major, uint32_t *minor,
+                            uint32_t *patch) {
     *major = version >> 22;
     *minor = (version >> 12) & 0x3ff;
     *patch = version & 0xfff;
 }
 
 static void app_get_physical_device_layer_extensions(
-        struct app_gpu *gpu,
-        char *layer_name,
-        uint32_t *extension_count,
-        VkExtensionProperties **extension_properties)
-{
+    struct app_gpu *gpu, char *layer_name, uint32_t *extension_count,
+    VkExtensionProperties **extension_properties) {
     VkResult err;
     uint32_t ext_count = 0;
     VkExtensionProperties *ext_ptr = NULL;
 
     /* repeat get until VK_INCOMPLETE goes away */
     do {
-        err = vkEnumerateDeviceExtensionProperties(gpu->obj, layer_name, &ext_count, NULL);
+        err = vkEnumerateDeviceExtensionProperties(gpu->obj, layer_name,
+                                                   &ext_count, NULL);
         assert(!err);
 
         if (ext_ptr) {
             free(ext_ptr);
         }
         ext_ptr = malloc(ext_count * sizeof(VkExtensionProperties));
-        err = vkEnumerateDeviceExtensionProperties(gpu->obj, layer_name, &ext_count, ext_ptr);
+        err = vkEnumerateDeviceExtensionProperties(gpu->obj, layer_name,
+                                                   &ext_count, ext_ptr);
     } while (err == VK_INCOMPLETE);
     assert(!err);
 
@@ -437,8 +442,7 @@ static void app_get_physical_device_layer_extensions(
     *extension_properties = ext_ptr;
 }
 
-static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
-{
+static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu) {
     VkDeviceCreateInfo info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = NULL,
@@ -477,7 +481,8 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
         device_layers = malloc(sizeof(struct layer_extension_list) * count);
         assert(device_layers);
 
-        err = vkEnumerateDeviceLayerProperties(gpu->obj, &count, device_layer_properties);
+        err = vkEnumerateDeviceLayerProperties(gpu->obj, &count,
+                                               device_layer_properties);
     } while (err == VK_INCOMPLETE);
     assert(!err);
 
@@ -487,22 +492,18 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     for (uint32_t i = 0; i < gpu->device_layer_count; i++) {
         VkLayerProperties *src_info = &device_layer_properties[i];
         struct layer_extension_list *dst_info = &gpu->device_layers[i];
-        memcpy(&dst_info->layer_properties, src_info, sizeof(VkLayerProperties));
+        memcpy(&dst_info->layer_properties, src_info,
+               sizeof(VkLayerProperties));
 
         /* Save away layer extension info for report */
         app_get_physical_device_layer_extensions(
-                    gpu,
-                    src_info->layerName,
-                    &dst_info->extension_count,
-                    &dst_info->extension_properties);
+            gpu, src_info->layerName, &dst_info->extension_count,
+            &dst_info->extension_properties);
     }
     free(device_layer_properties);
 
     app_get_physical_device_layer_extensions(
-                gpu,
-                NULL,
-                &gpu->device_extension_count,
-                &gpu->device_extensions);
+        gpu, NULL, &gpu->device_extension_count, &gpu->device_extensions);
 
     fflush(stdout);
 
@@ -532,38 +533,36 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     info.enabledLayerCount = 0;
     info.ppEnabledLayerNames = NULL;
     info.enabledExtensionCount = enabled_extension_count;
-    info.ppEnabledExtensionNames = (const char*const*) known_extensions;
+    info.ppEnabledExtensionNames = (const char *const *)known_extensions;
     dev->gpu = gpu;
     err = vkCreateDevice(gpu->obj, &info, NULL, &dev->obj);
     if (err)
         ERR_EXIT(err);
-
 }
 
-static void app_dev_destroy(struct app_dev *dev)
-{
+static void app_dev_destroy(struct app_dev *dev) {
     vkDestroyDevice(dev->obj, NULL);
 }
 
-static void app_get_global_layer_extensions(
-        char *layer_name,
-        uint32_t *extension_count,
-        VkExtensionProperties **extension_properties)
-{
+static void
+app_get_global_layer_extensions(char *layer_name, uint32_t *extension_count,
+                                VkExtensionProperties **extension_properties) {
     VkResult err;
     uint32_t ext_count = 0;
     VkExtensionProperties *ext_ptr = NULL;
 
     /* repeat get until VK_INCOMPLETE goes away */
     do {
-        err = vkEnumerateInstanceExtensionProperties(layer_name, &ext_count, NULL);
+        err = vkEnumerateInstanceExtensionProperties(layer_name, &ext_count,
+                                                     NULL);
         assert(!err);
 
         if (ext_ptr) {
             free(ext_ptr);
         }
         ext_ptr = malloc(ext_count * sizeof(VkExtensionProperties));
-        err = vkEnumerateInstanceExtensionProperties(layer_name, &ext_count, ext_ptr);
+        err = vkEnumerateInstanceExtensionProperties(layer_name, &ext_count,
+                                                     ext_ptr);
     } while (err == VK_INCOMPLETE);
     assert(!err);
 
@@ -571,8 +570,7 @@ static void app_get_global_layer_extensions(
     *extension_properties = ext_ptr;
 }
 
-static void app_create_instance(struct app_instance *inst)
-{
+static void app_create_instance(struct app_instance *inst) {
     const VkApplicationInfo app_info = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
@@ -638,7 +636,8 @@ static void app_create_instance(struct app_instance *inst)
         global_layers = malloc(sizeof(struct layer_extension_list) * count);
         assert(global_layers);
 
-        err = vkEnumerateInstanceLayerProperties(&count, global_layer_properties);
+        err =
+            vkEnumerateInstanceLayerProperties(&count, global_layer_properties);
     } while (err == VK_INCOMPLETE);
     assert(!err);
 
@@ -648,22 +647,20 @@ static void app_create_instance(struct app_instance *inst)
     for (uint32_t i = 0; i < inst->global_layer_count; i++) {
         VkLayerProperties *src_info = &global_layer_properties[i];
         struct layer_extension_list *dst_info = &inst->global_layers[i];
-        memcpy(&dst_info->layer_properties, src_info, sizeof(VkLayerProperties));
+        memcpy(&dst_info->layer_properties, src_info,
+               sizeof(VkLayerProperties));
 
         /* Save away layer extension info for report */
-        app_get_global_layer_extensions(
-                    src_info->layerName,
-                    &dst_info->extension_count,
-                    &dst_info->extension_properties);
+        app_get_global_layer_extensions(src_info->layerName,
+                                        &dst_info->extension_count,
+                                        &dst_info->extension_properties);
     }
     free(global_layer_properties);
 
     /* Collect global extensions */
     inst->global_extension_count = 0;
-    app_get_global_layer_extensions(
-                NULL,
-                &inst->global_extension_count,
-                &inst->global_extensions);
+    app_get_global_layer_extensions(NULL, &inst->global_extension_count,
+                                    &inst->global_extensions);
 
     for (uint32_t i = 0; i < ARRAY_SIZE(known_extensions); i++) {
         VkBool32 extension_found = 0;
@@ -682,12 +679,14 @@ static void app_create_instance(struct app_instance *inst)
     }
 
     inst_info.enabledExtensionCount = global_extension_count;
-    inst_info.ppEnabledExtensionNames = (const char * const *) known_extensions;
+    inst_info.ppEnabledExtensionNames = (const char *const *)known_extensions;
 
     VkDebugReportCallbackCreateInfoEXT dbg_info;
     memset(&dbg_info, 0, sizeof(dbg_info));
     dbg_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-    dbg_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT | VK_DEBUG_REPORT_INFO_BIT_EXT;
+    dbg_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT |
+                     VK_DEBUG_REPORT_WARN_BIT_EXT |
+                     VK_DEBUG_REPORT_INFO_BIT_EXT;
     dbg_info.pfnCallback = dbg_callback;
     inst_info.pNext = &dbg_info;
 
@@ -700,15 +699,13 @@ static void app_create_instance(struct app_instance *inst)
     }
 }
 
-static void app_destroy_instance(struct app_instance *inst)
-{
+static void app_destroy_instance(struct app_instance *inst) {
     free(inst->global_extensions);
     vkDestroyInstance(inst->instance, NULL);
 }
 
-
-static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
-{
+static void app_gpu_init(struct app_gpu *gpu, uint32_t id,
+                         VkPhysicalDevice obj) {
     uint32_t i;
 
     memset(gpu, 0, sizeof(*gpu));
@@ -721,20 +718,22 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
     /* get queue count */
     vkGetPhysicalDeviceQueueFamilyProperties(gpu->obj, &gpu->queue_count, NULL);
 
-    gpu->queue_props =
-            malloc(sizeof(gpu->queue_props[0]) * gpu->queue_count);
+    gpu->queue_props = malloc(sizeof(gpu->queue_props[0]) * gpu->queue_count);
 
     if (!gpu->queue_props)
         ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
-    vkGetPhysicalDeviceQueueFamilyProperties(gpu->obj, &gpu->queue_count, gpu->queue_props);
+    vkGetPhysicalDeviceQueueFamilyProperties(gpu->obj, &gpu->queue_count,
+                                             gpu->queue_props);
 
     /* set up queue requests */
     gpu->queue_reqs = malloc(sizeof(*gpu->queue_reqs) * gpu->queue_count);
     if (!gpu->queue_reqs)
         ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
     for (i = 0; i < gpu->queue_count; i++) {
-        float *queue_priorities = malloc(gpu->queue_props[i].queueCount * sizeof(float));
-        memset(queue_priorities, 0, gpu->queue_props[i].queueCount * sizeof(float));
+        float *queue_priorities =
+            malloc(gpu->queue_props[i].queueCount * sizeof(float));
+        memset(queue_priorities, 0,
+               gpu->queue_props[i].queueCount * sizeof(float));
         gpu->queue_reqs[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         gpu->queue_reqs[i].pNext = NULL;
         gpu->queue_reqs[i].queueFamilyIndex = i;
@@ -750,18 +749,18 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
     app_dev_init_formats(&gpu->dev);
 }
 
-static void app_gpu_destroy(struct app_gpu *gpu)
-{
+static void app_gpu_destroy(struct app_gpu *gpu) {
     app_dev_destroy(&gpu->dev);
     free(gpu->device_extensions);
 
     for (uint32_t i = 0; i < gpu->queue_count; i++) {
-        free((void *) gpu->queue_reqs[i].pQueuePriorities);
+        free((void *)gpu->queue_reqs[i].pQueuePriorities);
     }
     free(gpu->queue_reqs);
     free(gpu->queue_props);
 }
 
+// clang-format off
 static void app_dev_dump_format_props(const struct app_dev *dev, VkFormat fmt)
 {
     const VkFormatProperties *props = &dev->format_props[fmt];
@@ -847,7 +846,7 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\ttextureCompressionETC2                  = %u\n", features->textureCompressionETC2                 );
     printf("\ttextureCompressionASTC_LDR              = %u\n", features->textureCompressionASTC_LDR             );
     printf("\ttextureCompressionBC                    = %u\n", features->textureCompressionBC                   );
-    printf("\tocclusionQueryPrecise           = %u\n", features->occlusionQueryPrecise          );
+    printf("\tocclusionQueryPrecise                   = %u\n", features->occlusionQueryPrecise                  );
     printf("\tpipelineStatisticsQuery                 = %u\n", features->pipelineStatisticsQuery                );
     printf("\tvertexSideEffects                       = %u\n", features->vertexPipelineStoresAndAtomics         );
     printf("\ttessellationSideEffects                 = %u\n", features->fragmentStoresAndAtomics               );
@@ -888,11 +887,11 @@ static void app_dump_sparse_props(const VkPhysicalDeviceSparseProperties *sparse
     printf("\tVkPhysicalDeviceSparseProperties:\n");
     printf("\t---------------------------------\n");
 
-    printf("\t\tresidencyStandard2DBlockShape     = %u\n", sparseProps->residencyStandard2DBlockShape    );
+    printf("\t\tresidencyStandard2DBlockShape            = %u\n", sparseProps->residencyStandard2DBlockShape           );
     printf("\t\tresidencyStandard2DMultisampleBlockShape = %u\n", sparseProps->residencyStandard2DMultisampleBlockShape);
-    printf("\t\tresidencyStandard3DBlockShape     = %u\n", sparseProps->residencyStandard3DBlockShape    );
-    printf("\t\tresidencyAlignedMipSize           = %u\n", sparseProps->residencyAlignedMipSize          );
-    printf("\t\tresidencyNonResidentStrict        = %u\n", sparseProps->residencyNonResidentStrict       );
+    printf("\t\tresidencyStandard3DBlockShape            = %u\n", sparseProps->residencyStandard3DBlockShape           );
+    printf("\t\tresidencyAlignedMipSize                  = %u\n", sparseProps->residencyAlignedMipSize                 );
+    printf("\t\tresidencyNonResidentStrict               = %u\n", sparseProps->residencyNonResidentStrict              );
 }
 
 static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
@@ -906,8 +905,8 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tmaxImageDimensionCube                   = 0x%" PRIxLEAST32 "\n", limits->maxImageDimensionCube                  );
     printf("\t\tmaxImageArrayLayers                     = 0x%" PRIxLEAST32 "\n", limits->maxImageArrayLayers                    );
     printf("\t\tmaxTexelBufferElements                  = 0x%" PRIxLEAST32 "\n", limits->maxTexelBufferElements                 );
-    printf("\t\tmaxUniformBufferRange                    = 0x%" PRIxLEAST32 "\n", limits->maxUniformBufferRange                 );
-    printf("\t\tmaxStorageBufferRange                    = 0x%" PRIxLEAST32 "\n", limits->maxStorageBufferRange                 );
+    printf("\t\tmaxUniformBufferRange                   = 0x%" PRIxLEAST32 "\n", limits->maxUniformBufferRange                  );
+    printf("\t\tmaxStorageBufferRange                   = 0x%" PRIxLEAST32 "\n", limits->maxStorageBufferRange                  );
     printf("\t\tmaxPushConstantsSize                    = 0x%" PRIxLEAST32 "\n", limits->maxPushConstantsSize                   );
     printf("\t\tmaxMemoryAllocationCount                = 0x%" PRIxLEAST32 "\n", limits->maxMemoryAllocationCount               );
     printf("\t\tmaxSamplerAllocationCount               = 0x%" PRIxLEAST32 "\n", limits->maxSamplerAllocationCount              );
@@ -934,7 +933,7 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tmaxVertexInputAttributeOffset           = 0x%" PRIxLEAST32 "\n", limits->maxVertexInputAttributeOffset          );
     printf("\t\tmaxVertexInputBindingStride             = 0x%" PRIxLEAST32 "\n", limits->maxVertexInputBindingStride            );
     printf("\t\tmaxVertexOutputComponents               = 0x%" PRIxLEAST32 "\n", limits->maxVertexOutputComponents              );
-    printf("\t\tmaxTessellationGenerationLevel                         = 0x%" PRIxLEAST32 "\n", limits->maxTessellationGenerationLevel          );
+    printf("\t\tmaxTessellationGenerationLevel          = 0x%" PRIxLEAST32 "\n", limits->maxTessellationGenerationLevel         );
     printf("\t\tmaxTessellationPatchSize                        = 0x%" PRIxLEAST32 "\n", limits->maxTessellationPatchSize                       );
     printf("\t\tmaxTessellationControlPerVertexInputComponents  = 0x%" PRIxLEAST32 "\n", limits->maxTessellationControlPerVertexInputComponents );
     printf("\t\tmaxTessellationControlPerVertexOutputComponents = 0x%" PRIxLEAST32 "\n", limits->maxTessellationControlPerVertexOutputComponents);
@@ -1032,13 +1031,12 @@ static void app_gpu_dump_props(const struct app_gpu *gpu)
 
     fflush(stdout);
 }
+// clang-format on
 
-static void app_dump_extensions(
-        const char *indent,
-        const char *layer_name,
-        const uint32_t extension_count,
-        const VkExtensionProperties *extension_properties)
-{
+static void
+app_dump_extensions(const char *indent, const char *layer_name,
+                    const uint32_t extension_count,
+                    const VkExtensionProperties *extension_properties) {
     uint32_t i;
     if (layer_name && (strlen(layer_name) > 0)) {
         printf("%s%s Extensions", indent, layer_name);
@@ -1046,38 +1044,36 @@ static void app_dump_extensions(
         printf("Extensions");
     }
     printf("\tcount = %d\n", extension_count);
-    for (i=0; i< extension_count; i++) {
+    for (i = 0; i < extension_count; i++) {
         VkExtensionProperties const *ext_prop = &extension_properties[i];
 
         printf("%s\t", indent);
-        printf("%-32s: extension revision %2d\n",
-                       ext_prop->extensionName, ext_prop->specVersion);
+        printf("%-32s: extension revision %2d\n", ext_prop->extensionName,
+               ext_prop->specVersion);
     }
     printf("\n");
     fflush(stdout);
 }
 
-static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id)
-{
+static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id) {
     const VkQueueFamilyProperties *props = &gpu->queue_props[id];
 
     printf("VkQueueFamilyProperties[%d]:\n", id);
     printf("============================\n");
     printf("\tqueueFlags         = %c%c%c\n",
-            (props->queueFlags & VK_QUEUE_GRAPHICS_BIT) ? 'G' : '.',
-            (props->queueFlags & VK_QUEUE_COMPUTE_BIT)  ? 'C' : '.',
-            (props->queueFlags & VK_QUEUE_TRANSFER_BIT)      ? 'D' : '.');
-    printf("\tqueueCount         = %u\n",   props->queueCount);
-    printf("\ttimestampValidBits = %u\n",   props->timestampValidBits);
+           (props->queueFlags & VK_QUEUE_GRAPHICS_BIT) ? 'G' : '.',
+           (props->queueFlags & VK_QUEUE_COMPUTE_BIT) ? 'C' : '.',
+           (props->queueFlags & VK_QUEUE_TRANSFER_BIT) ? 'D' : '.');
+    printf("\tqueueCount         = %u\n", props->queueCount);
+    printf("\ttimestampValidBits = %u\n", props->timestampValidBits);
     printf("\tminImageTransferGranularity = (%d, %d, %d)\n",
-            props->minImageTransferGranularity.width,
-            props->minImageTransferGranularity.height,
-            props->minImageTransferGranularity.depth);
+           props->minImageTransferGranularity.width,
+           props->minImageTransferGranularity.height,
+           props->minImageTransferGranularity.depth);
     fflush(stdout);
 }
 
-static void app_gpu_dump_memory_props(const struct app_gpu *gpu)
-{
+static void app_gpu_dump_memory_props(const struct app_gpu *gpu) {
     const VkPhysicalDeviceMemoryProperties *props = &gpu->memory_props;
 
     printf("VkPhysicalDeviceMemoryProperties:\n");
@@ -1088,16 +1084,16 @@ static void app_gpu_dump_memory_props(const struct app_gpu *gpu)
         printf("\t\tpropertyFlags = %u\n", props->memoryTypes[i].propertyFlags);
         printf("\t\theapIndex     = %u\n", props->memoryTypes[i].heapIndex);
     }
-    printf("\tmemoryHeapCount       = %u\n",                props->memoryHeapCount);
+    printf("\tmemoryHeapCount       = %u\n", props->memoryHeapCount);
     for (uint32_t i = 0; i < props->memoryHeapCount; i++) {
         printf("\tmemoryHeaps[%u] : \n", i);
-        printf("\t\tsize          = " PRINTF_SIZE_T_SPECIFIER "\n", (size_t)props->memoryHeaps[i].size);
+        printf("\t\tsize          = " PRINTF_SIZE_T_SPECIFIER "\n",
+               (size_t)props->memoryHeaps[i].size);
     }
     fflush(stdout);
 }
 
-static void app_gpu_dump(const struct app_gpu *gpu)
-{
+static void app_gpu_dump(const struct app_gpu *gpu) {
     uint32_t i;
 
     printf("Device Extensions and layers:\n");
@@ -1105,7 +1101,8 @@ static void app_gpu_dump(const struct app_gpu *gpu)
     printf("GPU%u\n", gpu->id);
     app_gpu_dump_props(gpu);
     printf("\n");
-    app_dump_extensions("", "Device", gpu->device_extension_count, gpu->device_extensions);
+    app_dump_extensions("", "Device", gpu->device_extension_count,
+                        gpu->device_extensions);
     printf("\n");
     printf("Layers\tcount = %d\n", gpu->device_layer_count);
     for (uint32_t i = 0; i < gpu->device_layer_count; i++) {
@@ -1113,16 +1110,18 @@ static void app_gpu_dump(const struct app_gpu *gpu)
         char spec_version[64], layer_version[64];
         struct layer_extension_list const *layer_info = &gpu->device_layers[i];
 
-        extract_version(layer_info->layer_properties.specVersion, &major, &minor, &patch);
-        snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", major, minor, patch);
-        snprintf(layer_version, sizeof(layer_version), "%d", layer_info->layer_properties.implementationVersion);
+        extract_version(layer_info->layer_properties.specVersion, &major,
+                        &minor, &patch);
+        snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", major, minor,
+                 patch);
+        snprintf(layer_version, sizeof(layer_version), "%d",
+                 layer_info->layer_properties.implementationVersion);
         printf("\t%s (%s) Vulkan version %s, layer version %s\n",
                layer_info->layer_properties.layerName,
-               (char*) layer_info->layer_properties.description,
-               spec_version, layer_version);
+               (char *)layer_info->layer_properties.description, spec_version,
+               layer_version);
 
-        app_dump_extensions("\t",
-                            layer_info->layer_properties.layerName,
+        app_dump_extensions("\t", layer_info->layer_properties.layerName,
                             layer_info->extension_count,
                             layer_info->extension_properties);
         fflush(stdout);
@@ -1139,8 +1138,7 @@ static void app_gpu_dump(const struct app_gpu *gpu)
     app_dev_dump(&gpu->dev);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     unsigned int major, minor, patch;
     struct app_gpu gpus[MAX_GPUS];
     VkPhysicalDevice objs[MAX_GPUS];
@@ -1152,7 +1150,7 @@ int main(int argc, char **argv)
     minor = (VK_API_VERSION >> 12) & 0x3ff;
     patch = VK_API_VERSION & 0xfff;
     printf("===========\n");
-	printf("VULKAN INFO\n");
+    printf("VULKAN INFO\n");
     printf("===========\n\n");
     printf("Vulkan API Version: %d.%d.%d\n\n", major, minor, patch);
 
@@ -1160,19 +1158,24 @@ int main(int argc, char **argv)
 
     printf("Instance Extensions and layers:\n");
     printf("===============================\n");
-    app_dump_extensions("", "Instance", inst.global_extension_count, inst.global_extensions);
+    app_dump_extensions("", "Instance", inst.global_extension_count,
+                        inst.global_extensions);
 
     printf("Instance Layers\tcount = %d\n", inst.global_layer_count);
     for (uint32_t i = 0; i < inst.global_layer_count; i++) {
         uint32_t major, minor, patch;
         char spec_version[64], layer_version[64];
-        VkLayerProperties const *layer_prop = &inst.global_layers[i].layer_properties;
+        VkLayerProperties const *layer_prop =
+            &inst.global_layers[i].layer_properties;
 
         extract_version(layer_prop->specVersion, &major, &minor, &patch);
-        snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", major, minor, patch);
-        snprintf(layer_version, sizeof(layer_version), "%d", layer_prop->implementationVersion);
+        snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", major, minor,
+                 patch);
+        snprintf(layer_version, sizeof(layer_version), "%d",
+                 layer_prop->implementationVersion);
         printf("\t%s (%s) Vulkan version %s, layer version %s\n",
-               layer_prop->layerName, (char*) layer_prop->description, spec_version, layer_version);
+               layer_prop->layerName, (char *)layer_prop->description,
+               spec_version, layer_version);
 
         app_dump_extensions("\t",
                             inst.global_layers[i].layer_properties.layerName,
@@ -1209,8 +1212,7 @@ int main(int argc, char **argv)
 
 // Create a console window with a large scrollback size to which to send stdout.
 // Returns true if console window was successfully created, false otherwise.
-bool SetStdOutToNewConsole()
-{
+bool SetStdOutToNewConsole() {
     // don't do anything if we already have a console
     if (GetStdHandle(STD_OUTPUT_HANDLE))
         return false;
@@ -1221,9 +1223,9 @@ bool SetStdOutToNewConsole()
     // redirect unbuffered STDOUT to the console
     HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     int fileDescriptor = _open_osfhandle((intptr_t)consoleHandle, _O_TEXT);
-    FILE *fp = _fdopen( fileDescriptor, "w" );
+    FILE *fp = _fdopen(fileDescriptor, "w");
     *stdout = *fp;
-    setvbuf( stdout, NULL, _IONBF, 0 );
+    setvbuf(stdout, NULL, _IONBF, 0);
 
     // make the console window bigger
     CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -1231,12 +1233,12 @@ bool SetStdOutToNewConsole()
     COORD bufferSize;
     if (!GetConsoleScreenBufferInfo(consoleHandle, &csbi))
         return false;
-    bufferSize.X = csbi.dwSize.X+30;
+    bufferSize.X = csbi.dwSize.X + 30;
     bufferSize.Y = 20000;
     if (!SetConsoleScreenBufferSize(consoleHandle, bufferSize))
         return false;
     r.Left = r.Top = 0;
-    r.Right = csbi.dwSize.X-1+30;
+    r.Right = csbi.dwSize.X - 1 + 30;
     r.Bottom = 50;
     if (!SetConsoleWindowInfo(consoleHandle, true, &r))
         return false;
@@ -1248,8 +1250,8 @@ bool SetStdOutToNewConsole()
     return true;
 }
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, int nCmdShow)
-{
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine,
+                   int nCmdShow) {
     char *argv = pCmdLine;
     consoleCreated = SetStdOutToNewConsole();
     main(1, &argv);
