@@ -95,7 +95,7 @@ void ShellAndroid::log(LogPriority priority, const char *msg)
 PFN_vkGetInstanceProcAddr ShellAndroid::load_vk()
 {
     const char filename[] = "libvulkan.so";
-    void *handle, *symbol;
+    void *handle = nullptr, *symbol = nullptr;
 
     handle = dlopen(filename, RTLD_LAZY);
     if (handle)
