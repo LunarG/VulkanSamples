@@ -37,6 +37,13 @@ Shell::Shell(Game &game)
     // require generic WSI extensions
     instance_extensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     device_extensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+    // require "standard" validation layers
+    if (settings_.validate) {
+        device_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
+
+        instance_extensions_.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+    }
 }
 
 void Shell::log(LogPriority priority, const char *msg)
@@ -52,12 +59,62 @@ void Shell::init_vk()
     init_instance();
     vk::init_dispatch_table_middle(ctx_.instance, false);
 
+    init_debug_report();
     init_physical_dev();
 }
 
 void Shell::cleanup_vk()
 {
+    if (settings_.validate)
+        vk::DestroyDebugReportCallbackEXT(ctx_.instance, ctx_.debug_report, nullptr);
+
     vk::DestroyInstance(ctx_.instance, nullptr);
+}
+
+bool Shell::debug_report_callback(VkDebugReportFlagsEXT flags,
+                                  VkDebugReportObjectTypeEXT obj_type,
+                                  uint64_t object,
+                                  size_t location,
+                                  int32_t msg_code,
+                                  const char *layer_prefix,
+                                  const char *msg)
+{
+    LogPriority prio = LOG_WARN;
+    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+        prio = LOG_ERR;
+    else if (flags & (VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT))
+        prio = LOG_WARN;
+    else if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
+        prio = LOG_INFO;
+    else if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
+        prio = LOG_DEBUG;
+
+    std::stringstream ss;
+    ss << layer_prefix << ": " << msg;
+
+    log(prio, ss.str().c_str());
+
+    return false;
+}
+
+void Shell::assert_all_instance_layers() const
+{
+    // enumerate instance layer
+    std::vector<VkLayerProperties> layers;
+    vk::enumerate(layers);
+
+    std::set<std::string> layer_names;
+    for (const auto &layer : layers)
+        layer_names.insert(layer.layerName);
+
+    // all listed instance layers are required
+    for (const auto &name : instance_layers_) {
+        if (layer_names.find(name) == layer_names.end()) {
+            std::stringstream ss;
+            ss << "instance layer " << name << " is missing";
+            throw std::runtime_error(ss.str());
+        }
+    }
 }
 
 void Shell::assert_all_instance_extensions() const
@@ -78,6 +135,25 @@ void Shell::assert_all_instance_extensions() const
             throw std::runtime_error(ss.str());
         }
     }
+}
+
+bool Shell::has_all_device_layers(VkPhysicalDevice phy) const
+{
+    // enumerate device layers
+    std::vector<VkLayerProperties> layers;
+    vk::enumerate(phy, layers);
+
+    std::set<std::string> layer_names;
+    for (const auto &layer : layers)
+        layer_names.insert(layer.layerName);
+
+    // all listed device layers are required
+    for (const auto &name : device_layers_) {
+        if (layer_names.find(name) == layer_names.end())
+            return false;
+    }
+
+    return true;
 }
 
 bool Shell::has_all_device_extensions(VkPhysicalDevice phy) const
@@ -101,6 +177,7 @@ bool Shell::has_all_device_extensions(VkPhysicalDevice phy) const
 
 void Shell::init_instance()
 {
+    assert_all_instance_layers();
     assert_all_instance_extensions();
 
     VkApplicationInfo app_info = {};
@@ -112,10 +189,35 @@ void Shell::init_instance()
     VkInstanceCreateInfo instance_info = {};
     instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instance_info.pApplicationInfo = &app_info;
+    instance_info.enabledLayerCount = static_cast<uint32_t>(instance_layers_.size());
+    instance_info.ppEnabledLayerNames = instance_layers_.data();
     instance_info.enabledExtensionCount = static_cast<uint32_t>(instance_extensions_.size());
     instance_info.ppEnabledExtensionNames = instance_extensions_.data();
 
     vk::assert_success(vk::CreateInstance(&instance_info, nullptr, &ctx_.instance));
+}
+
+void Shell::init_debug_report()
+{
+    if (!settings_.validate)
+        return;
+
+    VkDebugReportCallbackCreateInfoEXT debug_report_info = {};
+    debug_report_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+
+    debug_report_info.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT |
+                              VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
+                              VK_DEBUG_REPORT_ERROR_BIT_EXT;
+    if (settings_.validate_verbose) {
+        debug_report_info.flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
+                                  VK_DEBUG_REPORT_DEBUG_BIT_EXT;
+    }
+
+    debug_report_info.pfnCallback = debug_report_callback;
+    debug_report_info.pUserData = reinterpret_cast<void *>(this);
+
+    vk::assert_success(vk::CreateDebugReportCallbackEXT(ctx_.instance,
+                &debug_report_info, nullptr, &ctx_.debug_report));
 }
 
 void Shell::init_physical_dev()
@@ -126,7 +228,7 @@ void Shell::init_physical_dev()
 
     ctx_.physical_dev = VK_NULL_HANDLE;
     for (auto phy : phys) {
-        if (!has_all_device_extensions(phy))
+        if (!has_all_device_layers(phy) || !has_all_device_extensions(phy))
             continue;
 
         // get queue properties
@@ -224,7 +326,9 @@ void Shell::create_dev()
 
     dev_info.pQueueCreateInfos = queue_info.data();
 
-    dev_info.enabledExtensionCount = (uint32_t)device_extensions_.size();
+    dev_info.enabledLayerCount = static_cast<uint32_t>(device_layers_.size());
+    dev_info.ppEnabledLayerNames = device_layers_.data();
+    dev_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions_.size());
     dev_info.ppEnabledExtensionNames = device_extensions_.data();
 
     // disable all features

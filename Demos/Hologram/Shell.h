@@ -50,6 +50,7 @@ public:
 
     struct Context {
         VkInstance instance;
+        VkDebugReportCallbackEXT debug_report;
 
         VkPhysicalDevice physical_dev;
         uint32_t game_queue_family;
@@ -101,17 +102,45 @@ protected:
     Game &game_;
     const Game::Settings &settings_;
 
+    std::vector<const char *> instance_layers_;
     std::vector<const char *> instance_extensions_;
+
+    std::vector<const char *> device_layers_;
     std::vector<const char *> device_extensions_;
 
 private:
+    bool debug_report_callback(VkDebugReportFlagsEXT flags,
+                               VkDebugReportObjectTypeEXT obj_type,
+                               uint64_t object,
+                               size_t location,
+                               int32_t msg_code,
+                               const char *layer_prefix,
+                               const char *msg);
+    static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report_callback(
+                               VkDebugReportFlagsEXT flags,
+                               VkDebugReportObjectTypeEXT obj_type,
+                               uint64_t object,
+                               size_t location,
+                               int32_t msg_code,
+                               const char *layer_prefix,
+                               const char *msg,
+                               void *user_data)
+    {
+        Shell *shell = reinterpret_cast<Shell *>(user_data);
+        return shell->debug_report_callback(flags, obj_type, object, location, msg_code, layer_prefix, msg);
+    }
+
+    void assert_all_instance_layers() const;
     void assert_all_instance_extensions() const;
+
+    bool has_all_device_layers(VkPhysicalDevice phy) const;
     bool has_all_device_extensions(VkPhysicalDevice phy) const;
 
     // called by init_vk
     virtual PFN_vkGetInstanceProcAddr load_vk() = 0;
     virtual bool can_present(VkPhysicalDevice phy, uint32_t queue_family) = 0;
     void init_instance();
+    void init_debug_report();
     void init_physical_dev();
 
     // called by create_context

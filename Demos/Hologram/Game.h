@@ -24,6 +24,7 @@
 #define GAME_H
 
 #include <string>
+#include <vector>
 
 class Shell;
 
@@ -42,6 +43,9 @@ public:
         int ticks_per_second;
         bool vsync;
         bool animate;
+
+        bool validate;
+        bool validate_verbose;
 
         bool no_tick;
         bool no_render;
@@ -83,6 +87,9 @@ protected:
         settings_.vsync = true;
         settings_.animate = true;
 
+        settings_.validate = false;
+        settings_.validate_verbose = false;
+
         settings_.no_tick = false;
         settings_.no_render = false;
         settings_.no_present = false;
@@ -105,6 +112,11 @@ private:
             } else if (*it == "-h") {
                 ++it;
                 settings_.initial_height = std::stoi(*it);
+            } else if (*it == "-v") {
+                settings_.validate = true;
+            } else if (*it == "-vv") {
+                settings_.validate = true;
+                settings_.validate_verbose = true;
             } else if (*it == "-nt") {
                 settings_.no_tick = true;
             } else if (*it == "-nr") {
