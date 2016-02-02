@@ -527,7 +527,7 @@ class StructWrapperGen:
         copyright.append('/*');
         copyright.append(' * Vulkan');
         copyright.append(' *');
-        copyright.append(' * Copyright (C) 2015 Valive Corporation');
+        copyright.append(' * Copyright (C) 2015 Valve Corporation');
         copyright.append(' *');
         copyright.append(' * Permission is hereby granted, free of charge, to any person obtaining a');
         copyright.append(' * copy of this software and associated documentation files (the "Software"),');
@@ -1884,6 +1884,11 @@ def main(argv=None):
     input_header = os.path.basename(opts.input_file)
     if 'vulkan.h' == input_header:
         input_header = "vulkan/vulkan.h"
+    if 'vk_ext_debug_report.h' == input_header:
+        input_header = "vulkan/vk_ext_debug_report.h"
+    if 'vk_lunarg_debug_marker.h' == input_header:
+        input_header = "vulkan/vk_lunarg_debug_marker.h"
+
     prefix = os.path.basename(opts.input_file).strip(".h")
     if prefix == "vulkan":
         prefix = "vk"
