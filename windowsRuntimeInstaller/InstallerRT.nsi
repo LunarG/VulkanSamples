@@ -52,7 +52,7 @@
 !define errorMessage2 "Uninstalling any installed items and exiting.$\r$\n"
 
 # Set the icon
-!define ICOFILE "Vulkan.ico"
+!define ICOFILE "V.ico"
 Icon ${ICOFILE}
 UninstallIcon ${ICOFILE}
 WindowIcon off
@@ -416,7 +416,7 @@ Section "uninstall"
         Delete /REBOOTOK "$INSTDIR\VULKANRT_LICENSE.rtf"
         Delete /REBOOTOK "$INSTDIR\LICENSE.txt"
         Delete /REBOOTOK "$INSTDIR\UninstallVulkanRT.exe"
-        Delete /REBOOTOK "$INSTDIR\Vulkan.ico"
+        Delete /REBOOTOK "$INSTDIR\V.ico"
         Delete /REBOOTOK "$INSTDIR\ConfigLayersAndVulkanDLL.ps1"
         Delete /REBOOTOK "$INSTDIR\vulkaninfo.exe"
 
@@ -452,17 +452,17 @@ SectionEnd
 
 Function brandimage
   SetOutPath "$TEMP"
-  SetFileAttributes VulkanLogo.bmp temporary
-  File VulkanLogo.bmp
-  SetBrandingImage "$TEMP/VulkanLogo.bmp"
+  SetFileAttributes V.bmp temporary
+  File V.bmp
+  SetBrandingImage "$TEMP/V.bmp"
 Functionend
 
 
 Function un.brandimage
   SetOutPath "$TEMP"
-  SetFileAttributes VulkanLogo.bmp temporary
-  File VulkanLogo.bmp
-  SetBrandingImage "$TEMP/VulkanLogo.bmp"
+  SetFileAttributes V.bmp temporary
+  File V.bmp
+  SetBrandingImage "$TEMP/V.bmp"
 Functionend
 
 Function un.DeleteDirIfEmpty
