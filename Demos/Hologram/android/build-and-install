@@ -2,8 +2,10 @@
 
 set -e
 
-SDK_DIR="$HOME/android/android-sdk-linux"
-NDK_DIR="$HOME/android/android-ndk-r10e"
+#SDK_DIR="$HOME/android/android-sdk-linux"
+#NDK_DIR="$HOME/android/android-ndk-r10e"
+SDK_DIR="$HOME/Android/Sdk"
+NDK_DIR="$HOME/Android/Sdk/ndk-bundle"
 
 generate_local_properties() {
 	: > local.properties
