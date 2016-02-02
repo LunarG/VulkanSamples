@@ -18,10 +18,6 @@ void main()
 	vec3 world_pos = vec3(params.model * vec4(in_pos, 1.0));
 	vec3 world_normal = mat3(params.model) * in_normal;
 
-	vec3 light_dir = world_light - world_pos;
-	float brightness = dot(light_dir, world_normal) / length(light_dir) / length(world_normal);
-	brightness = abs(brightness);
-
-	gl_Position = params.view_projection * vec4(world_pos, 1.0);
-	color = params.light_color * brightness;
+	gl_Position = pos;
+	color = in_normal;
 }
