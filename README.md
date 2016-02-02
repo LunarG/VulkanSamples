@@ -85,7 +85,12 @@ Next build the Vulkan Samples:
   
 #### 32-bit Windows
 
-Perform the same operations as 64-bit Windows above, just remove " Win64" from each of the cmake command lines.
+Perform the same operations as 64-bit Windows above, except with the following adjustments:
+  ```
+  PS > mkdir build32
+  PS > cd build32
+  PS > cmake -G "Visual Studio 12" ..
+  ```
   
 ## Contributing
   Refer to the README.contrib file for specific info regarding contributing to
