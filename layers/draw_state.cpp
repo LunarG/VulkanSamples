@@ -4389,6 +4389,17 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
                                         "support precise occlusion queries.", reinterpret_cast<void*>(commandBuffer));
                 }
             }
+            if (pInfo->renderPass != VK_NULL_HANDLE) {
+                auto rp_data = dev_data->renderPassMap.find(pInfo->renderPass);
+                if (rp_data != dev_data->renderPassMap.end() && rp_data->second && rp_data->second->pCreateInfo) {
+                    if (pInfo->subpass >= rp_data->second->pCreateInfo->subpassCount) {
+                        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer,
+                            __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
+                            "vkBeginCommandBuffer(): Secondary Command Buffers (%p) must has a subpass index (%d) that is less than the number of subpasses (%d).",
+                            (void*)commandBuffer, pInfo->subpass, rp_data->second->pCreateInfo->subpassCount);
+                    }
+                }
+            }
         }
         if (CB_RECORDING == pCB->state) {
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
