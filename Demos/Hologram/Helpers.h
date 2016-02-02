@@ -70,6 +70,24 @@ inline VkResult enumerate(VkInstance instance, std::vector<VkPhysicalDevice> &ph
     return vk::EnumeratePhysicalDevices(instance, &count, phys.data());
 }
 
+inline VkResult enumerate(std::vector<VkLayerProperties> &layer_props)
+{
+    uint32_t count = 0;
+    vk::EnumerateInstanceLayerProperties(&count, nullptr);
+
+    layer_props.resize(count);
+    return vk::EnumerateInstanceLayerProperties(&count, layer_props.data());
+}
+
+inline VkResult enumerate(VkPhysicalDevice phy, std::vector<VkLayerProperties> &layer_props)
+{
+    uint32_t count = 0;
+    vk::EnumerateDeviceLayerProperties(phy, &count, nullptr);
+
+    layer_props.resize(count);
+    return vk::EnumerateDeviceLayerProperties(phy, &count, layer_props.data());
+}
+
 inline VkResult get(VkPhysicalDevice phy, std::vector<VkQueueFamilyProperties> &queues)
 {
     uint32_t count = 0;
