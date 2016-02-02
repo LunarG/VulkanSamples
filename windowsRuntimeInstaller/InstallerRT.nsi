@@ -435,10 +435,15 @@ Section "uninstall"
         Call un.DeleteDirIfEmpty
 
         # If any of the remove commands failed, request a reboot
-        IfSilent noreboot
-            IfRebootFlag 0 noreboot
-                MessageBox MB_YESNO "A reboot is required to finish the uninstall. Do you wish to reboot now?" IDNO noreboot
-                Reboot
+        IfRebootFlag 0 noreboot
+            MessageBox MB_YESNO "A reboot is required to finish the uninstall. Do you wish to reboot now?" /SD IDNO IDNO returnerror
+            Reboot
+            
+            returnerror:
+        
+            # Set an error message to output because we should reboot but didn't (whether because silent uninstall or user choice)
+            SetErrorLevel 3 # ERROR_TOO_MANY_OPEN_FILES
+
         noreboot:
 
     ${Endif}
@@ -480,7 +485,7 @@ FunctionEnd
 Function UninstallIfError
     ${If} ${Errors}
         # IHV's using this install may want no message box.
-        MessageBox MB_OK|MB_ICONSTOP "${errorMessage1}${errorMessage2}"
+        MessageBox MB_OK|MB_ICONSTOP "${errorMessage1}${errorMessage2}" /SD IDOK
 
         # Copy the uninstaller to a temp folder of our own creation so we can completely
         # delete the old contents.
