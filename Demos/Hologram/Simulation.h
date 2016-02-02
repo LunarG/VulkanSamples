@@ -29,6 +29,8 @@
 
 #include <glm/glm.hpp>
 
+#include "Meshes.h"
+
 class Animation {
 public:
     Animation(unsigned rng_seed, float scale);
@@ -83,7 +85,7 @@ public:
     Simulation(int object_count);
 
     struct Object {
-        int mesh;
+        Meshes::Type mesh;
         Animation animation;
         Path path;
 
