@@ -1,6 +1,5 @@
 # Build Instructions
-This project fully supports Linux today.
-Support for Windows is for the loader, layers, and the VkTrace trace/replay tools.
+This project fully supports Linux and Windows today.
 Support for Android is TBD.
 
 ## Git the Bits
@@ -16,7 +15,7 @@ Ubuntu 14.04.3 LTS, 14.10, 15.04 and 15.10 have been used with the sample driver
 
 These packages are used for building and running the samples.
 ```
-sudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev libmagickwand-dev qt5-default libpciaccess-dev libpthread-stubs0-dev libudev-dev bison graphviz libpng-dev
+sudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev qt5-default libpciaccess-dev libpthread-stubs0-dev libudev-dev bison graphviz libpng-dev
 sudo apt-get build-dep mesa
 ```
 
@@ -272,15 +271,10 @@ This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
 
 
-## Linux Test
+## Validation Test
 
 The test executibles can be found in the dbuild/tests directory. The tests use the Google
 gtest infrastructure. Tests available so far:
-- vkbase: Test basic entry points
-- vk_blit_tests: Test VK Blits (copy, clear, and resolve)
-- vk_image_tests: Test VK image related calls needed by render_test
-- vk_render_tests: Render a single triangle with VK. Triangle will be in a .ppm in
-the current directory at the end of the test.
 - vk_layer_validation_tests: Test Vulkan layers.
 
 There are also a few shell and Python scripts that run test collections (eg,
@@ -294,36 +288,12 @@ to render directly onto window surfaces.
 - tri: a textured triangle
 - cube: a textured spinning cube
 
-## Linux Render Nodes
-
-The render tests depend on access to DRM render nodes.
-To make that available, a couple of config files need to be created to set a module option
-and make accessible device files.
-The system will need to be rebooted with these files in place to complete initialization.
-These commands will create the config files.
-
-```
-sudo tee /etc/modprobe.d/drm.conf << EOF
-# Enable render nodes
-options drm rnodes=1
-EOF
-# this will add the rnodes=1 option into the boot environment
-sudo update-initramfs -k all -u
-```
-```
-sudo tee /etc/udev/rules.d/drm.rules << EOF
-# Add permissions to render nodes
-SUBSYSTEM=="drm", ACTION=="add", DEVPATH=="/devices/*/renderD*", MODE="020666"
-EOF
-```
-
 ## Windows System Requirements
 
 Windows 7+ with additional required software packages:
 
 - Microsoft Visual Studio 2013 Professional.  Note: it is possible that lesser/older versions may work, but that has not been tested.
 - CMake (from http://www.cmake.org/download/).  Notes:
-  - In order to build the VkTrace tools, you need at least version 3.0.
   - Tell the installer to "Add CMake to the system PATH" environment variable.
 - Python 3 (from https://www.python.org/downloads).  Notes:
   - Select to install the optional sub-package to add Python to the system PATH environment variable.
@@ -332,12 +302,7 @@ Windows 7+ with additional required software packages:
   - Note: If you use Cygwin, you can normally use Cygwin's "git.exe".  However, in order to use the "update_external_sources.bat" script, you must have this version.
   - Tell the installer to allow it to be used for "Developer Prompt" as well as "Git Bash".
   - Tell the installer to treat line endings "as is" (i.e. both DOS and Unix-style line endings).
-- Image Magick is used by the tests to compare images (from http://www.imagemagick.org/script/binary-releases.php)
   - Install each a 32-bit and a 64-bit version, as the 64-bit installer does not install the 32-bit libraries and tools.
-    - Here are some helpful links (warning they may go out of date with a newer ImageMagick).
-      - 64-bit: http://www.imagemagick.org/download/binaries/ImageMagick-6.9.3-2-Q16-x64-dll.exe
-      - 32-bit: http://www.imagemagick.org/download/binaries/ImageMagick-6.9.3-2-Q16-x86-dll.exe
-  - For each of the installs, be sure to check box to "Install development headers and libraries"
 - glslang is required for demos and tests.
   - You can download and configure it (in a peer directory) here: https://github.com/KhronosGroup/glslang/blob/master/README.md
   - A windows batch file has been included that will pull and build the correct version.  Run it from Developer Command Prompt for VS2013 like so:
