@@ -37,6 +37,12 @@ Shell::Shell(Game &game)
     // require generic WSI extensions
     global_extensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     //device_extensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+#if defined(NDEBUG)
+    validate_ = false;
+#else
+    validate_ = false;
+#endif
 }
 
 void Shell::log(LogPriority priority, const char *msg)
@@ -99,9 +105,53 @@ bool Shell::has_all_device_extensions(VkPhysicalDevice phy) const
     return true;
 }
 
+bool Shell::check_layers(const uint32_t check_count, const char* check_names[],
+                         const uint32_t layer_count, const VkLayerProperties* layers)
+{
+    for (uint32_t i = 0; i < check_count; i++) {
+        bool found = false;
+        for (uint32_t j = 0; j < layer_count; j++) {
+            if (strcmp(check_names[i], layers[j].layerName) == 0)
+                found = true;
+        }
+        if (!found) {
+            std::stringstream ss;
+            ss << "Missing layer " << check_names[i];
+            throw std::runtime_error(ss.str());
+        }
+    }
+
+    return true;
+}
+
 void Shell::init_instance()
 {
     assert_all_global_extensions();
+
+    const char *instance_validation_layers[] = {
+            "VK_LAYER_LUNARG_threading",
+            "VK_LAYER_LUNARG_mem_tracker",
+            "VK_LAYER_LUNARG_object_tracker",
+            "VK_LAYER_LUNARG_draw_state",
+            "VK_LAYER_LUNARG_param_checker",
+            "VK_LAYER_LUNARG_swapchain",
+            "VK_LAYER_LUNARG_device_limits",
+            "VK_LAYER_LUNARG_image",
+    };
+
+    const uint32_t instance_layer_count = ARRAY_SIZE(instance_validation_layers);
+    uint32_t enabled_instance_layer_count = 0;
+    if (validate_) {
+        // Learn about present instance layers
+        std::vector<VkLayerProperties> layer_props;
+        vk::enumerate(layer_props);
+
+        // Only enable layers found on the system
+        if (check_layers(instance_layer_count, instance_validation_layers,
+                         (uint32_t) layer_props.size(), layer_props.data())) {
+            enabled_instance_layer_count = instance_layer_count;
+        }
+    }
 
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -112,6 +162,8 @@ void Shell::init_instance()
     VkInstanceCreateInfo instance_info = {};
     instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instance_info.pApplicationInfo = &app_info;
+    instance_info.enabledLayerCount = enabled_instance_layer_count;
+    instance_info.ppEnabledLayerNames = instance_validation_layers;
     instance_info.enabledExtensionCount = (uint32_t)global_extensions_.size();
     instance_info.ppEnabledExtensionNames = global_extensions_.data();
 
@@ -223,6 +275,34 @@ void Shell::create_dev()
     }
 
     dev_info.pQueueCreateInfos = queue_info.data();
+
+    const char *device_validation_layers[] = {
+            "VK_LAYER_LUNARG_threading",
+            "VK_LAYER_LUNARG_mem_tracker",
+            "VK_LAYER_LUNARG_object_tracker",
+            "VK_LAYER_LUNARG_draw_state",
+            "VK_LAYER_LUNARG_param_checker",
+            "VK_LAYER_LUNARG_swapchain",
+            "VK_LAYER_LUNARG_device_limits",
+            "VK_LAYER_LUNARG_image",
+    };
+
+    const uint32_t device_layer_count = ARRAY_SIZE(device_validation_layers);
+    uint32_t enabled_device_layer_count = 0;
+    if (validate_) {
+        // Learn about present device layers
+        std::vector<VkLayerProperties> layer_props;
+        vk::enumerate(ctx_.physical_dev, layer_props);
+
+        // Only enable layers found on the system
+        if (check_layers(device_layer_count, device_validation_layers,
+                         (uint32_t) layer_props.size(), layer_props.data())) {
+            enabled_device_layer_count = device_layer_count;
+        }
+    }
+
+    dev_info.enabledLayerCount = enabled_device_layer_count;
+    dev_info.ppEnabledLayerNames = device_validation_layers;
 
     dev_info.enabledExtensionCount = (uint32_t)device_extensions_.size();
     dev_info.ppEnabledExtensionNames = device_extensions_.data();
