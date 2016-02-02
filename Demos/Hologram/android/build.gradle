@@ -26,8 +26,8 @@ model {
 
         defaultConfig.with {
             applicationId = "com.example.Hologram"
-            minSdkVersion.apiLevel = 23
-            targetSdkVersion.apiLevel = 23
+            minSdkVersion.apiLevel = 22
+            targetSdkVersion.apiLevel = 22
             versionCode = 1
             versionName = "0.1"
         }
