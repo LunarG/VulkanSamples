@@ -6292,10 +6292,20 @@ bool validateFramebuffer(layer_data* dev_data, VkCommandBuffer primaryBuffer, co
     }
     VkFramebuffer primary_fb = pCB->framebuffer;
     VkFramebuffer secondary_fb = pSubCB->beginInfo.pInheritanceInfo->framebuffer;
-    if (secondary_fb != VK_NULL_HANDLE && primary_fb != secondary_fb) {
-        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
-            "vkCmdExecuteCommands() called w/ invalid Cmd Buffer %p which has a framebuffer %" PRIx64 " that is not compatible with the current framebuffer %" PRIx64 ".",
-            (void*)secondaryBuffer, reinterpret_cast<uint64_t>(secondary_fb), reinterpret_cast<uint64_t>(primary_fb));
+    if (secondary_fb != VK_NULL_HANDLE) {
+        if (primary_fb != secondary_fb) {
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
+                "vkCmdExecuteCommands() called w/ invalid Cmd Buffer %p which has a framebuffer %" PRIx64 " that is not compatible with the current framebuffer %" PRIx64 ".",
+                (void*)secondaryBuffer, reinterpret_cast<uint64_t>(secondary_fb), reinterpret_cast<uint64_t>(primary_fb));
+        }
+        auto fb_data = dev_data->frameBufferMap.find(secondary_fb);
+        if (fb_data == dev_data->frameBufferMap.end() || !fb_data->second) {
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
+                "vkCmdExecuteCommands() called w/ invalid Cmd Buffer %p which has invalid framebuffer %" PRIx64 ".",
+                (void*)secondaryBuffer, reinterpret_cast<uint64_t>(secondary_fb));
+            return skip_call;
+        }
+        skip_call |= validateRenderPassCompatibility(dev_data, secondaryBuffer, fb_data->second->renderPass, secondaryBuffer, pSubCB->beginInfo.pInheritanceInfo->renderPass);
     }
     return skip_call;
 }
