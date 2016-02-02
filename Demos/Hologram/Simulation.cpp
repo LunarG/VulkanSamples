@@ -220,7 +220,7 @@ Simulation::Simulation(int object_count)
         float scale = 0.01f;
 
         objects_.emplace_back(Object{
-            i,
+            Meshes::MESH_PYRAMID,
             Animation(random_dev_(), scale),
             Path(random_dev_()),
         });

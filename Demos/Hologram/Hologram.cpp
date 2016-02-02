@@ -95,7 +95,7 @@ void Hologram::attach_shell(Shell &sh)
     for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++)
         mem_flags_.push_back(mem_props.memoryTypes[i].propertyFlags);
 
-    meshes_ = new Meshes(sim_.rng_seed(), mem_flags_, dev_, sim_.objects().size());
+    meshes_ = new Meshes(dev_, mem_flags_);
 
     create_render_pass();
     create_shader_modules();
