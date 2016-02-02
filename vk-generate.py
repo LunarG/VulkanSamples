@@ -156,92 +156,6 @@ class DispatchTableOpsSubcommand(Subcommand):
 
         return "\n\n".join(body)
 
-class IcdDummyEntrypointsSubcommand(Subcommand):
-    def run(self):
-        if len(self.argv) == 1:
-            self.prefix = self.argv[0]
-            self.qual = "static"
-        else:
-            self.prefix = "vk"
-            self.qual = ""
-
-        super().run()
-
-    def generate_header(self):
-        return "#include \"icd.h\""
-
-    def _generate_stub_decl(self, proto):
-        if proto.name == "GetInstanceProcAddr":
-            return proto.c_pretty_decl(self.prefix + "_icd" + proto.name, attr="ICD_EXPORT VKAPI")
-        else:
-            return proto.c_pretty_decl(self.prefix + proto.name, attr="VKAPI")
-
-    def _generate_stubs(self):
-        stubs = []
-        for proto in self.protos:
-            decl = self._generate_stub_decl(proto)
-            if proto.ret != "void":
-                stmt = "    return VK_ERROR_UNKNOWN;\n"
-            else:
-                stmt = ""
-
-            stubs.append("%s %s\n{\n%s}" % (self.qual, decl, stmt))
-
-        return "\n\n".join(stubs)
-
-    def generate_body(self):
-        return self._generate_stubs()
-
-class IcdGetProcAddrSubcommand(IcdDummyEntrypointsSubcommand):
-    def generate_header(self):
-        return "\n".join(["#include <string.h>", "#include \"icd.h\""])
-
-    def generate_body(self):
-        for proto in self.protos:
-            if proto.name == "GetDeviceProcAddr":
-                gpa_proto = proto
-            if proto.name == "GetInstanceProcAddr":
-                gpa_instance_proto = proto
-
-        gpa_instance_decl = self._generate_stub_decl(gpa_instance_proto)
-        gpa_decl = self._generate_stub_decl(gpa_proto)
-        gpa_pname = gpa_proto.params[-1].name
-
-        lookups = []
-        for proto in self.protos:
-            lookups.append("if (!strcmp(%s, \"%s\"))" %
-                    (gpa_pname, proto.name))
-            if proto.name != "GetInstanceProcAddr":
-                lookups.append("    return (%s) %s%s;" %
-                    (gpa_proto.ret, self.prefix, proto.name))
-            else:
-                lookups.append("    return (%s) %s%s;" %
-                    (gpa_proto.ret, self.prefix, "_icdGetInstanceProcAddr"))
-
-        body = []
-        body.append("%s %s" % (self.qual, gpa_instance_decl))
-        body.append("{")
-        body.append(generate_get_proc_addr_check(gpa_pname))
-        body.append("")
-        body.append("    %s += 2;" % gpa_pname)
-        body.append("    %s" % "\n    ".join(lookups))
-        body.append("")
-        body.append("    return NULL;")
-        body.append("}")
-        body.append("")
-
-        body.append("%s %s" % (self.qual, gpa_decl))
-        body.append("{")
-        body.append(generate_get_proc_addr_check(gpa_pname))
-        body.append("")
-        body.append("    %s += 2;" % gpa_pname)
-        body.append("    %s" % "\n    ".join(lookups))
-        body.append("")
-        body.append("    return NULL;")
-        body.append("}")
-
-        return "\n".join(body)
-
 class WinDefFileSubcommand(Subcommand):
     def run(self):
         library_exports = {
@@ -321,8 +235,6 @@ class WinDefFileSubcommand(Subcommand):
 def main():
     subcommands = {
             "dispatch-table-ops": DispatchTableOpsSubcommand,
-            "icd-dummy-entrypoints": IcdDummyEntrypointsSubcommand,
-            "icd-get-proc-addr": IcdGetProcAddrSubcommand,
             "win-def-file": WinDefFileSubcommand,
     }
 
