@@ -86,6 +86,13 @@ private:
     void assert_all_global_extensions() const;
     bool has_all_device_extensions(VkPhysicalDevice phy) const;
 
+    // Current enabled in debug builds, but should be an option
+    bool validate_;
+    bool check_layers(const uint32_t check_count,
+                      const char* check_names[],
+                      const uint32_t layer_count,
+                      const VkLayerProperties* layers);
+
     // called by init_vk
     virtual PFN_vkGetInstanceProcAddr load_vk() = 0;
     virtual bool can_present(VkPhysicalDevice phy, uint32_t queue_family) = 0;
