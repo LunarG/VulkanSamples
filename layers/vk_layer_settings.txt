@@ -73,17 +73,3 @@ ThreadingDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ThreadingReportFlags = error,warn,perf
 ThreadingLogFilename = stdout
 
-# VK_LUNARG_LAYER_api_dump Settings - NOTE that VK_LUNARG_LAYER_api_dump is
-# not a validation layer and the common settings for ReportFlags and
-# DebugAction do not apply
-# Detailed TRUE causes parameter details to be dumped in addition to API calls
-ApiDumpDetailed = TRUE
-# NoAddr TRUE causes "address" to be dumped in place of hex addresses
-ApiDumpNoAddr = FALSE
-# File = TRUE indicates that output should be written to file instead of STDOUT
-ApiDumpFile = FALSE
-# LogFilename is file to dump to when "File = TRUE" default is "vk_apidump.txt"
-ApiDumpLogFilename = stdout
-# Flush = TRUE causes IO to be flushed after each line that's written
-ApiDumpFlush = FALSE
-

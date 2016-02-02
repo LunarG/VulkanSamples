@@ -399,17 +399,6 @@ Additional checks to be added to VK_LAYER_LUNARG_swapchain
  2. One issue that has already come up is correct UsageFlags for WSI SwapChains and SurfaceProperties.
  3. Tons of other stuff including semaphore and synchronization validation.
 
-# Non-validation Layer Details
-
-## VK_LAYER_LUNARG_api_dump
-
-VK_LAYER_LUNARG_api_dump layer is used for dumping a stream of all the Vulkan API calls that are made, along with details of the parameters to those calls.
-
-### VK_LAYER_LUNARG_api_dump Pending Work
-
- 1. vkAllocateDescriptorSets does not correctly print out all of the created DescriptorSets (no array printing following main API txt)
-
-
 ## General Pending Work
 A place to capture general validation work to be done. This includes new checks that don't clearly fit into the above layers.
 

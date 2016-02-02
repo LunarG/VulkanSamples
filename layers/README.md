@@ -30,21 +30,8 @@ Note that some layers are code-generated and will therefore exist in the directo
 
 -include/vkLayer.h  - header file for layer code.
 
-### Templates
-layers/basic.cpp (name=VK_LAYER_LUNARG_basic) simple example wrapping a few entrypoints. Shows layer features:
-- Multiple dispatch tables for supporting multiple GPUs.
-- Example layer extension function shown.
-- Layer extension advertised by vkGetXXXExtension().
-
-layers/multi.cpp (name=VK_LAYER_LUNARG_multi1:VK_LAYER_LUNARG_multi2) simple example showing multiple layers per library
-
-(build dir)/layer/generic_layer.cpp (name=VK_LAYER_LUNARG_generic) - auto generated example wrapping all VK entrypoints.
-
 ### Layer Details
 For complete details of current validation layers, including all of the validation checks that they perform, please refer to the document layers/vk_validation_layer_details.md. Below is a brief overview of each layer.
-
-### Print API Calls and Parameter Values
-(build dir)/layers/api_dump.cpp (name=VK_LAYER_LUNARG_api_dump) - print out API calls along with parameter values
 
 ### Print Object Stats
 (build dir)/layers/object_tracker.cpp (name=VK_LAYER_LUNARG_object_tracker) - Track object creation, use, and destruction. As objects are created, they're stored in a map. As objects are used, the layer verifies they exist in the map, flagging errors for unknown objects. As objects are destroyed, they're removed from the map. At vkDestroyDevice() and vkDestroyInstance() times, if any objects have not been destroyed, they are reported as leaked objects. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
@@ -72,10 +59,10 @@ layers/device_limits.cpp (name=VK_LAYER_LUNARG_device_limits) - This layer is in
 
 ## Using Layers
 
-1. Build VK loader and i965 icd driver using normal steps (cmake and make)
+1. Build VK loader using normal steps (cmake and make)
 2. Place libVkLayer_<name>.so in the same directory as your VK test or app:
 
-    cp build/layer/libVkLayer_basic.so build/layer/libVkLayer_generic.so build/tests
+    cp build/layer/libVkLayer_threading.so  build/tests
 
     This is required for the Loader to be able to scan and enumerate your library.
     Alternatively, use the VK\_LAYER\_PATH environment variable to specify where the layer libraries reside.
@@ -87,31 +74,13 @@ layers/device_limits.cpp (name=VK_LAYER_LUNARG_device_limits) - This layer is in
 4. Specify which Layers to activate by using
 vkCreateDevice and/or vkCreateInstance or environment variables.
 
-    export VK\_INSTANCE\_LAYERS=VK_LAYER_LUNARG_basic:VK_LAYER_LUNARG_generic
-    export VK\_DEVICE\_LAYERS=VK_LAYER_LUNARG_basic:VK_LAYER_LUNARG_generic
+    export VK\_INSTANCE\_LAYERS=VK_LAYER_LUNARG_param_checker:VK_LAYER_LUNARG_draw_state
+    export VK\_DEVICE\_LAYERS=VK_LAYER_LUNARG_param_checker:VK_LAYER_LUNARG_draw_state
     cd build/tests; ./vkinfo
 
-## Tips for writing new layers
-
-1. Must implement vkGetInstanceProcAddr() (aka GIPA) and vkGetDeviceProcAddr() (aka GDPA);
-2. Must have a local dispatch table to call next layer (see vk_layer.h);
-3. Must have a layer manifest file for each Layer library for Loader to find layer properties (see loader/README.md)
-4. Next layers GXPA can be found in the wrapped instance or device object;
-5. Loader calls a layer's GXPA first so initialization should occur here;
-6. all entrypoints can be wrapped but only will be called after layer is activated
-    via the first vkCreatDevice or vkCreateInstance;
-7. entrypoint names can be any name as specified by the layers vkGetXXXXXProcAddr
-    implementation; exceptions are vkGetXXXXProcAddr,
-    which must have the correct name since the Loader calls these entrypoints;
-8. entrypoint names must be exported to the OSes dynamic loader with VK\_LAYER\_EXPORT;
-9. Layer naming convention is camel case same name as in library: libVkLayer_<name>.so
-10. For multiple layers in one library the manifest file can specify each layer.
 
 ## Status
 
 
 ### Current known issues
 
-- Layers with multiple layers per library: the manifest file parsing in Loader doesn't yet handle this
-- multi.cpp Layer needs rewrite to allow manifest file to specify multiple layers
-- multi1  and multi2 layers from multi.cpp: only multi1 layer working
