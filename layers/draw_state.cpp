@@ -6285,6 +6285,21 @@ bool validateRenderPassCompatibility(layer_data* dev_data, VkCommandBuffer prima
     return skip_call;
 }
 
+bool validateFramebuffer(layer_data* dev_data, VkCommandBuffer primaryBuffer, const GLOBAL_CB_NODE* pCB, VkCommandBuffer secondaryBuffer, const GLOBAL_CB_NODE* pSubCB) {
+    bool skip_call = false;
+    if (!pSubCB->beginInfo.pInheritanceInfo) {
+        return skip_call;
+    }
+    VkFramebuffer primary_fb = pCB->framebuffer;
+    VkFramebuffer secondary_fb = pSubCB->beginInfo.pInheritanceInfo->framebuffer;
+    if (secondary_fb != VK_NULL_HANDLE && primary_fb != secondary_fb) {
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
+            "vkCmdExecuteCommands() called w/ invalid Cmd Buffer %p which has a framebuffer %" PRIx64 " that is not compatible with the current framebuffer %" PRIx64 ".",
+            (void*)secondaryBuffer, reinterpret_cast<uint64_t>(secondary_fb), reinterpret_cast<uint64_t>(primary_fb));
+    }
+    return skip_call;
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, const VkCommandBuffer* pCommandBuffers)
 {
     VkBool32 skipCall = VK_FALSE;
@@ -6307,6 +6322,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer 
                 } else {
                     // Make sure render pass is compatible with parent command buffer pass if has continue
                     skipCall |= validateRenderPassCompatibility(dev_data, commandBuffer, pCB->activeRenderPass, pCommandBuffers[i], pSubCB->beginInfo.pInheritanceInfo->renderPass);
+                    skipCall |= validateFramebuffer(dev_data, commandBuffer, pCB, pCommandBuffers[i], pSubCB);
                 }
                 string errorString = "";
                 if (!verify_renderpass_compatibility(dev_data, pCB->activeRenderPass, pSubCB->beginInfo.pInheritanceInfo->renderPass, errorString)) {
