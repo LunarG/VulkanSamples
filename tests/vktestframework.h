@@ -61,40 +61,17 @@ using namespace std;
 
 class VkImageObj;
 
-
-class VkTestImageRecord
-{
-public:
-    VkTestImageRecord();
-    VkTestImageRecord(const VkTestImageRecord &);
-    ~VkTestImageRecord();
-    VkTestImageRecord &operator=(const VkTestImageRecord &rhs);
-    int operator==(const VkTestImageRecord &rhs) const;
-    int operator<(const VkTestImageRecord &rhs) const;
-
-    string                    m_title;
-    int                       m_width;
-    int                       m_height;
-    void                     *m_data;
-    unsigned                  m_data_size;
-};
-
 class VkTestFramework : public ::testing::Test
 {
 public:
     VkTestFramework();
     ~VkTestFramework();
 
+    VkFormat GetFormat(VkInstance instance, vk_testing::Device *device);
     static bool optionMatch(const char* option, char* optionLine);
     static void InitArgs(int *argc, char *argv[]);
     static void Finish();
 
-    void WritePPM( const char *basename, VkImageObj *image );
-    void Show(const char *comment, VkImageObj *image);
-    void Compare(const char *comment, VkImageObj *image);
-    void RecordImage(VkImageObj * image);
-    void RecordImages(vector<VkImageObj *> image);
-    VkFormat GetFormat(VkInstance instance, vk_testing::Device *device);
     bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
                    const char *pshader,
                    std::vector<unsigned int> &spv);
@@ -116,19 +93,8 @@ private:
     EShLanguage FindLanguage(const VkShaderStageFlagBits shader_type);
     std::string ConfigFile;
     bool SetConfigFile(const std::string& name);
-
-    static bool                             m_show_images;
-    static bool                             m_save_images;
-    static bool                             m_compare_images;
-
-    static std::list<VkTestImageRecord>     m_images;
-    static std::list<VkTestImageRecord>::iterator m_display_image;
-    static int                              m_display_image_idx;
-
-    static int                              m_width;            // Window width
-    static int                              m_height;           // Window height
-
-    int                                     m_frameNum;
+    static int                              m_width;
+    static int                              m_height;
     string                                  m_testName;
 };
 
