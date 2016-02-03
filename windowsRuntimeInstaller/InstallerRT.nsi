@@ -45,7 +45,7 @@
 # doing a "Properties" on the install directory. Add to this the size of the
 # files installed to C:\Windows\System32. And then add a little bit more.
 # The units are 1K bytes.
-!define ESTIMATEDSIZE "500"
+!define ESTIMATEDSIZE "1700"
 
 # This is used for the error message if a problem occurs during install.
 !define errorMessage1 "Installation of ${PRODUCTNAME} failed!$\r$\n"
