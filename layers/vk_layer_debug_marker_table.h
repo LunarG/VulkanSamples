@@ -35,15 +35,19 @@
 #include <cassert>
 #include <unordered_map>
 
-extern std::unordered_map<void *, VkLayerDebugMarkerDispatchTable *> tableDebugMarkerMap;
-VkLayerDebugMarkerDispatchTable * initDebugMarkerTable(VkDevice dev);
+extern std::unordered_map<void *, VkLayerDebugMarkerDispatchTable *>
+    tableDebugMarkerMap;
+VkLayerDebugMarkerDispatchTable *initDebugMarkerTable(VkDevice dev);
 
 // Map lookup must be thread safe
-static inline VkLayerDebugMarkerDispatchTable *debug_marker_dispatch_table(void* object)
-{
-    VkLayerDebugMarkerDispatchTable *pDisp  = *(VkLayerDebugMarkerDispatchTable **) object;
-    std::unordered_map<void *, VkLayerDebugMarkerDispatchTable *>::const_iterator it = tableDebugMarkerMap.find((void *) pDisp);
-    assert(it != tableDebugMarkerMap.end() && "Not able to find debug marker dispatch entry");
+static inline VkLayerDebugMarkerDispatchTable *
+debug_marker_dispatch_table(void *object) {
+    VkLayerDebugMarkerDispatchTable *pDisp =
+        *(VkLayerDebugMarkerDispatchTable **)object;
+    std::unordered_map<void *,
+                       VkLayerDebugMarkerDispatchTable *>::const_iterator it =
+        tableDebugMarkerMap.find((void *)pDisp);
+    assert(it != tableDebugMarkerMap.end() &&
+           "Not able to find debug marker dispatch entry");
     return it->second;
 }
-

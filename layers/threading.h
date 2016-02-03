@@ -35,29 +35,26 @@
 #include "vk_layer_logging.h"
 
 // Draw State ERROR codes
-typedef enum _THREADING_CHECKER_ERROR
-{
-    THREADING_CHECKER_NONE,                             // Used for INFO & other non-error messages
-    THREADING_CHECKER_MULTIPLE_THREADS,                 // Object used simultaneously by multiple threads
-    THREADING_CHECKER_SINGLE_THREAD_REUSE,              // Object used simultaneously by recursion in single thread
+typedef enum _THREADING_CHECKER_ERROR {
+    THREADING_CHECKER_NONE, // Used for INFO & other non-error messages
+    THREADING_CHECKER_MULTIPLE_THREADS,    // Object used simultaneously by
+                                           // multiple threads
+    THREADING_CHECKER_SINGLE_THREAD_REUSE, // Object used simultaneously by
+                                           // recursion in single thread
 } THREADING_CHECKER_ERROR;
 
 struct layer_data {
     debug_report_data *report_data;
-    VkDebugReportCallbackEXT   logging_callback;
+    VkDebugReportCallbackEXT logging_callback;
 
-    layer_data() :
-        report_data(nullptr),
-        logging_callback(VK_NULL_HANDLE)
-    {};
+    layer_data() : report_data(nullptr), logging_callback(VK_NULL_HANDLE){};
 };
 
-static std::unordered_map<void*, layer_data *> layer_data_map;
-static device_table_map                        threading_device_table_map;
-static instance_table_map                      threading_instance_table_map;
+static std::unordered_map<void *, layer_data *> layer_data_map;
+static device_table_map threading_device_table_map;
+static instance_table_map threading_instance_table_map;
 
-static inline debug_report_data *mdd(const void* object)
-{
+static inline debug_report_data *mdd(const void *object) {
     dispatch_key key = get_dispatch_key(object);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     return my_data->report_data;

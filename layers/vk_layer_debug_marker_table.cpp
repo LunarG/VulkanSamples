@@ -31,36 +31,46 @@
 #include <assert.h>
 #include <unordered_map>
 #include "vulkan/vk_debug_marker_layer.h"
-std::unordered_map<void *, VkLayerDebugMarkerDispatchTable *> tableDebugMarkerMap;
+std::unordered_map<void *, VkLayerDebugMarkerDispatchTable *>
+    tableDebugMarkerMap;
 
-/* Various dispatchable objects will use the same underlying dispatch table if they
+/* Various dispatchable objects will use the same underlying dispatch table if
+ * they
  * are created from that "parent" object. Thus use pointer to dispatch table
  * as the key to these table maps.
  *    Instance -> PhysicalDevice
  *    Device -> CommandBuffer or Queue
- * If use the object themselves as key to map then implies Create entrypoints have to be intercepted
+ * If use the object themselves as key to map then implies Create entrypoints
+ * have to be intercepted
  * and a new key inserted into map */
-VkLayerDebugMarkerDispatchTable * initDebugMarkerTable(VkDevice device)
-{
+VkLayerDebugMarkerDispatchTable *initDebugMarkerTable(VkDevice device) {
     VkLayerDebugMarkerDispatchTable *pDebugMarkerTable;
 
     assert(device);
-    VkLayerDispatchTable *pDisp = *(VkLayerDispatchTable **) device;
+    VkLayerDispatchTable *pDisp = *(VkLayerDispatchTable **)device;
 
-    std::unordered_map<void *, VkLayerDebugMarkerDispatchTable *>::const_iterator it = tableDebugMarkerMap.find((void *) pDisp);
-    if (it == tableDebugMarkerMap.end())
-    {
+    std::unordered_map<void *,
+                       VkLayerDebugMarkerDispatchTable *>::const_iterator it =
+        tableDebugMarkerMap.find((void *)pDisp);
+    if (it == tableDebugMarkerMap.end()) {
         pDebugMarkerTable = new VkLayerDebugMarkerDispatchTable;
-        tableDebugMarkerMap[(void *) pDisp] = pDebugMarkerTable;
-    } else
-    {
+        tableDebugMarkerMap[(void *)pDisp] = pDebugMarkerTable;
+    } else {
         return it->second;
     }
 
-    pDebugMarkerTable->CmdDbgMarkerBegin = (PFN_vkCmdDbgMarkerBegin) pDisp->GetDeviceProcAddr(device, "vkCmdDbgMarkerBegin");
-    pDebugMarkerTable->CmdDbgMarkerEnd   = (PFN_vkCmdDbgMarkerEnd) pDisp->GetDeviceProcAddr(device, "vkCmdDbgMarkerEnd");
-    pDebugMarkerTable->DbgSetObjectTag   = (PFN_vkDbgSetObjectTag) pDisp->GetDeviceProcAddr(device, "vkDbgSetObjectTag");
-    pDebugMarkerTable->DbgSetObjectName  = (PFN_vkDbgSetObjectName) pDisp->GetDeviceProcAddr(device, "vkDbgSetObjectName");
+    pDebugMarkerTable->CmdDbgMarkerBegin =
+        (PFN_vkCmdDbgMarkerBegin)pDisp->GetDeviceProcAddr(
+            device, "vkCmdDbgMarkerBegin");
+    pDebugMarkerTable->CmdDbgMarkerEnd =
+        (PFN_vkCmdDbgMarkerEnd)pDisp->GetDeviceProcAddr(device,
+                                                        "vkCmdDbgMarkerEnd");
+    pDebugMarkerTable->DbgSetObjectTag =
+        (PFN_vkDbgSetObjectTag)pDisp->GetDeviceProcAddr(device,
+                                                        "vkDbgSetObjectTag");
+    pDebugMarkerTable->DbgSetObjectName =
+        (PFN_vkDbgSetObjectName)pDisp->GetDeviceProcAddr(device,
+                                                         "vkDbgSetObjectName");
 
     return pDebugMarkerTable;
 }
