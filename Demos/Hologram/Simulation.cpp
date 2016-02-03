@@ -34,9 +34,9 @@ public:
         pattern_({
                 Meshes::MESH_PYRAMID,
                 Meshes::MESH_ICOSPHERE,
+                Meshes::MESH_TEAPOT,
                 Meshes::MESH_PYRAMID,
                 Meshes::MESH_ICOSPHERE,
-                Meshes::MESH_PYRAMID,
                 Meshes::MESH_PYRAMID,
                 Meshes::MESH_PYRAMID,
                 Meshes::MESH_PYRAMID,
@@ -62,6 +62,8 @@ public:
             return base * 1.0f;
         case Meshes::MESH_ICOSPHERE:
             return base * 3.0f;
+        case Meshes::MESH_TEAPOT:
+            return base * 10.0f;
         }
     }
 
