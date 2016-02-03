@@ -16,70 +16,58 @@
 #include "loader.h"
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 typedef ptrdiff_t handle_type; /* C99's intptr_t not sufficiently portable */
 
-struct DIR
-{
-    handle_type         handle; /* -1 for failed rewind */
-    struct _finddata_t  info;
-    struct dirent       result; /* d_name null iff first time */
-    char                *name;  /* null-terminated char string */
+struct DIR {
+    handle_type handle; /* -1 for failed rewind */
+    struct _finddata_t info;
+    struct dirent result; /* d_name null iff first time */
+    char *name;           /* null-terminated char string */
 };
 
-DIR *opendir(const char *name)
-{
+DIR *opendir(const char *name) {
     DIR *dir = 0;
 
-    if(name && name[0])
-    {
+    if (name && name[0]) {
         size_t base_length = strlen(name);
         const char *all = /* search pattern must end with suitable wildcard */
             strchr("/\\", name[base_length - 1]) ? "*" : "/*";
 
-        if((dir = (DIR *) loader_tls_heap_alloc(sizeof *dir)) != 0 &&
-           (dir->name = (char *) loader_tls_heap_alloc(base_length + strlen(all) + 1)) != 0)
-        {
+        if ((dir = (DIR *)loader_tls_heap_alloc(sizeof *dir)) != 0 &&
+            (dir->name = (char *)loader_tls_heap_alloc(base_length +
+                                                       strlen(all) + 1)) != 0) {
             strcat(strcpy(dir->name, name), all);
 
-            if((dir->handle =
-                (handle_type) _findfirst(dir->name, &dir->info)) != -1)
-            {
+            if ((dir->handle =
+                     (handle_type)_findfirst(dir->name, &dir->info)) != -1) {
                 dir->result.d_name = 0;
-            }
-            else /* rollback */
+            } else /* rollback */
             {
                 loader_tls_heap_free(dir->name);
                 loader_tls_heap_free(dir);
                 dir = 0;
             }
-        }
-        else /* rollback */
+        } else /* rollback */
         {
             loader_tls_heap_free(dir);
-            dir   = 0;
+            dir = 0;
             errno = ENOMEM;
         }
-    }
-    else
-    {
+    } else {
         errno = EINVAL;
     }
 
     return dir;
 }
 
-int closedir(DIR *dir)
-{
+int closedir(DIR *dir) {
     int result = -1;
 
-    if(dir)
-    {
-        if(dir->handle != -1)
-        {
+    if (dir) {
+        if (dir->handle != -1) {
             result = _findclose(dir->handle);
         }
 
@@ -87,7 +75,7 @@ int closedir(DIR *dir)
         loader_tls_heap_free(dir);
     }
 
-    if(result == -1) /* map all errors to EBADF */
+    if (result == -1) /* map all errors to EBADF */
     {
         errno = EBADF;
     }
@@ -95,36 +83,27 @@ int closedir(DIR *dir)
     return result;
 }
 
-struct dirent *readdir(DIR *dir)
-{
+struct dirent *readdir(DIR *dir) {
     struct dirent *result = 0;
 
-    if(dir && dir->handle != -1)
-    {
-        if(!dir->result.d_name || _findnext(dir->handle, &dir->info) != -1)
-        {
-            result         = &dir->result;
+    if (dir && dir->handle != -1) {
+        if (!dir->result.d_name || _findnext(dir->handle, &dir->info) != -1) {
+            result = &dir->result;
             result->d_name = dir->info.name;
         }
-    }
-    else
-    {
+    } else {
         errno = EBADF;
     }
 
     return result;
 }
 
-void rewinddir(DIR *dir)
-{
-    if(dir && dir->handle != -1)
-    {
+void rewinddir(DIR *dir) {
+    if (dir && dir->handle != -1) {
         _findclose(dir->handle);
-        dir->handle = (handle_type) _findfirst(dir->name, &dir->info);
+        dir->handle = (handle_type)_findfirst(dir->name, &dir->info);
         dir->result.d_name = 0;
-    }
-    else
-    {
+    } else {
         errno = EBADF;
     }
 }
@@ -136,12 +115,14 @@ void rewinddir(DIR *dir)
 /*
 
     Copyright Kevlin Henney, 1997, 2003, 2012. All rights reserved.
-
+    Copyright (c) 2015 The Khronos Group Inc.
+    Copyright (c) 2015 Valve Corporation
+    Copyright (c) 2015 LunarG, Inc.
     Permission to use, copy, modify, and distribute this software and its
     documentation for any purpose is hereby granted without fee, provided
     that this copyright and permissions notice appear in all copies and
     derivatives.
-    
+
     This software is supplied "as is" without express or implied warranty.
 
     But that said, if there are any problems please get in touch.

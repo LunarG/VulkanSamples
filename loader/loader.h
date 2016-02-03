@@ -1,32 +1,38 @@
 /*
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (c) 2014-2016 The Khronos Group Inc.
+ * Copyright (c) 2014-2016 Valve Corporation
+ * Copyright (c) 2014-2016 LunarG, Inc.
  * Copyright (C) 2015 Google Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and/or associated documentation files (the "Materials"), to
+ * deal in the Materials without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Materials, and to permit persons to whom the Materials are
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
+ * The above copyright notice(s) and this permission notice shall be included in
+ * all copies or substantial portions of the Materials.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * The Materials are Confidential Information as defined by the Khronos
+ * Membership Agreement until designated non-confidential by Khronos, at which
+ * point this condition clause shall be removed.
+ *
+ * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
  *
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
+ * USE OR OTHER DEALINGS IN THE MATERIALS.
+ *
+ * Author: Jon Ashburn <jon@lunarg.com>
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
  * Author: Chia-I Wu <olvaffe@gmail.com>
  * Author: Chia-I Wu <olv@lunarg.com>
- * Author: Chris Forbes <chrisf@ijw.co.nz>
- * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
- * Author: Jon Ashburn <jon@lunarg.com>
- * Author: Tony Barbour <tony@LunarG.com>
+ * Author: Mark Lobodzinski <mark@LunarG.com>
  *
  */
 
@@ -43,11 +49,11 @@
 #include <assert.h>
 
 #if defined(__GNUC__) && __GNUC__ >= 4
-#  define LOADER_EXPORT __attribute__((visibility("default")))
+#define LOADER_EXPORT __attribute__((visibility("default")))
 #elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590)
-#  define LOADER_EXPORT __attribute__((visibility("default")))
+#define LOADER_EXPORT __attribute__((visibility("default")))
 #else
-#  define LOADER_EXPORT
+#define LOADER_EXPORT
 #endif
 
 #define MAX_STRING_SIZE 1024
@@ -58,10 +64,12 @@
 enum layer_type {
     VK_LAYER_TYPE_DEVICE_EXPLICIT = 0x1,
     VK_LAYER_TYPE_INSTANCE_EXPLICIT = 0x2,
-    VK_LAYER_TYPE_GLOBAL_EXPLICIT = 0x3, // both instance and device layer, bitwise
+    VK_LAYER_TYPE_GLOBAL_EXPLICIT =
+        0x3, // both instance and device layer, bitwise
     VK_LAYER_TYPE_DEVICE_IMPLICIT = 0x4,
     VK_LAYER_TYPE_INSTANCE_IMPLICIT = 0x8,
-    VK_LAYER_TYPE_GLOBAL_IMPLICIT = 0xc,   // both instance and device layer, bitwise
+    VK_LAYER_TYPE_GLOBAL_IMPLICIT =
+        0xc, // both instance and device layer, bitwise
 };
 
 // form of all dynamic lists/arrays
@@ -134,19 +142,20 @@ struct loader_layer_library_list {
 struct loader_dispatch_hash_list {
     size_t capacity;
     uint32_t count;
-    uint32_t *index;       // index into the dev_ext dispatch table
+    uint32_t *index; // index into the dev_ext dispatch table
 };
 
 #define MAX_NUM_DEV_EXTS 250
-// loader_dispatch_hash_entry and loader_dev_ext_dispatch_table.DevExt have one to one
+// loader_dispatch_hash_entry and loader_dev_ext_dispatch_table.DevExt have one
+// to one
 // correspondence; one loader_dispatch_hash_entry for one DevExt dispatch entry.
 // Also have a one to one correspondence with functions in dev_ext_trampoline.c
 struct loader_dispatch_hash_entry {
     char *func_name;
-    struct loader_dispatch_hash_list list;   // to handle hashing collisions
+    struct loader_dispatch_hash_list list; // to handle hashing collisions
 };
 
-typedef void (VKAPI_PTR *PFN_vkDevExt)(VkDevice device);
+typedef void(VKAPI_PTR *PFN_vkDevExt)(VkDevice device);
 struct loader_dev_ext_dispatch_table {
     PFN_vkDevExt DevExt[MAX_NUM_DEV_EXTS];
 };
@@ -159,9 +168,9 @@ struct loader_dev_dispatch_table {
 /* per CreateDevice structure */
 struct loader_device {
     struct loader_dev_dispatch_table loader_dispatch;
-    VkDevice device;       // device object from the icd
+    VkDevice device; // device object from the icd
 
-    uint32_t  app_extension_count;
+    uint32_t app_extension_count;
     VkExtensionProperties *app_extension_props;
 
     struct loader_layer_list activated_layer_list;
@@ -176,40 +185,50 @@ struct loader_icd {
     const struct loader_instance *this_instance;
 
     struct loader_device *logical_device_list;
-    VkInstance instance;       // instance object from the icd
+    VkInstance instance; // instance object from the icd
     PFN_vkGetDeviceProcAddr GetDeviceProcAddr;
     PFN_vkDestroyInstance DestroyInstance;
     PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
     PFN_vkGetPhysicalDeviceFeatures GetPhysicalDeviceFeatures;
     PFN_vkGetPhysicalDeviceFormatProperties GetPhysicalDeviceFormatProperties;
-    PFN_vkGetPhysicalDeviceImageFormatProperties GetPhysicalDeviceImageFormatProperties;
+    PFN_vkGetPhysicalDeviceImageFormatProperties
+        GetPhysicalDeviceImageFormatProperties;
     PFN_vkCreateDevice CreateDevice;
     PFN_vkGetPhysicalDeviceProperties GetPhysicalDeviceProperties;
-    PFN_vkGetPhysicalDeviceQueueFamilyProperties GetPhysicalDeviceQueueFamilyProperties;
+    PFN_vkGetPhysicalDeviceQueueFamilyProperties
+        GetPhysicalDeviceQueueFamilyProperties;
     PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;
     PFN_vkEnumerateDeviceExtensionProperties EnumerateDeviceExtensionProperties;
-    PFN_vkGetPhysicalDeviceSparseImageFormatProperties GetPhysicalDeviceSparseImageFormatProperties;
+    PFN_vkGetPhysicalDeviceSparseImageFormatProperties
+        GetPhysicalDeviceSparseImageFormatProperties;
     PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallbackEXT;
     PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT;
     PFN_vkDebugReportMessageEXT DebugReportMessageEXT;
     PFN_vkGetPhysicalDeviceSurfaceSupportKHR GetPhysicalDeviceSurfaceSupportKHR;
-    PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR GetPhysicalDeviceSurfaceCapabilitiesKHR;
+    PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR
+        GetPhysicalDeviceSurfaceCapabilitiesKHR;
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR GetPhysicalDeviceSurfaceFormatsKHR;
-    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR GetPhysicalDeviceSurfacePresentModesKHR;
+    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR
+        GetPhysicalDeviceSurfacePresentModesKHR;
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR GetPhysicalDeviceWin32PresentationSupportKHR;
+    PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR
+        GetPhysicalDeviceWin32PresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_MIR_KHR
-    PFN_vkGetPhysicalDeviceMirPresentationSupportKHR GetPhysicalDeviceMirPresentvationSupportKHR;
+    PFN_vkGetPhysicalDeviceMirPresentationSupportKHR
+        GetPhysicalDeviceMirPresentvationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR GetPhysicalDeviceWaylandPresentationSupportKHR;
+    PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR
+        GetPhysicalDeviceWaylandPresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
-    PFN_vkGetPhysicalDeviceXcbPresentationSupportKHR GetPhysicalDeviceXcbPresentationSupportKHR;
+    PFN_vkGetPhysicalDeviceXcbPresentationSupportKHR
+        GetPhysicalDeviceXcbPresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-    PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR GetPhysicalDeviceXlibPresentationSupportKHR;
+    PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR
+        GetPhysicalDeviceXlibPresentationSupportKHR;
 #endif
 
     struct loader_icd *next;
@@ -231,7 +250,7 @@ struct loader_instance {
     uint32_t total_icd_count;
     struct loader_icd *icds;
     struct loader_instance *next;
-    struct loader_extension_list ext_list;   // icds and loaders extensions
+    struct loader_extension_list ext_list; // icds and loaders extensions
     struct loader_icd_libs icd_libs;
     struct loader_layer_list instance_layer_list;
     struct loader_layer_list device_layer_list;
@@ -274,11 +293,11 @@ struct loader_physical_device {
     VkLayerInstanceDispatchTable *disp; // must be first entry in structure
     struct loader_instance *this_instance;
     struct loader_icd *this_icd;
-    VkPhysicalDevice phys_dev;          // object from ICD
-    /*
-     * Fill in the cache of available device extensions from
-     * this physical device. This cache can be used during CreateDevice
-     */
+    VkPhysicalDevice phys_dev; // object from ICD
+                               /*
+                                * Fill in the cache of available device extensions from
+                                * this physical device. This cache can be used during CreateDevice
+                                */
     struct loader_extension_list device_extension_cache;
 };
 
@@ -299,38 +318,37 @@ struct loader_scanned_icds {
     uint32_t api_version;
     PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
     PFN_vkCreateInstance CreateInstance;
-    PFN_vkEnumerateInstanceExtensionProperties EnumerateInstanceExtensionProperties;
+    PFN_vkEnumerateInstanceExtensionProperties
+        EnumerateInstanceExtensionProperties;
 };
 
 static inline struct loader_instance *loader_instance(VkInstance instance) {
-    return (struct loader_instance *) instance;
+    return (struct loader_instance *)instance;
 }
 
-static inline void loader_set_dispatch(void* obj, const void *data)
-{
-    *((const void **) obj) = data;
+static inline void loader_set_dispatch(void *obj, const void *data) {
+    *((const void **)obj) = data;
 }
 
-static inline VkLayerDispatchTable *loader_get_dispatch(const void* obj)
-{
-    return *((VkLayerDispatchTable **) obj);
+static inline VkLayerDispatchTable *loader_get_dispatch(const void *obj) {
+    return *((VkLayerDispatchTable **)obj);
 }
 
-static inline struct loader_dev_dispatch_table *loader_get_dev_dispatch(const void* obj)
-{
-    return *((struct loader_dev_dispatch_table **) obj);
+static inline struct loader_dev_dispatch_table *
+loader_get_dev_dispatch(const void *obj) {
+    return *((struct loader_dev_dispatch_table **)obj);
 }
 
-static inline VkLayerInstanceDispatchTable *loader_get_instance_dispatch(const void* obj)
-{
-    return *((VkLayerInstanceDispatchTable **) obj);
+static inline VkLayerInstanceDispatchTable *
+loader_get_instance_dispatch(const void *obj) {
+    return *((VkLayerInstanceDispatchTable **)obj);
 }
 
-static inline void loader_init_dispatch(void* obj, const void *data)
-{
+static inline void loader_init_dispatch(void *obj, const void *data) {
 #ifdef DEBUG
     assert(valid_loader_magic_value(obj) &&
-            "Incompatible ICD, first dword must be initialized to ICD_LOADER_MAGIC. See loader/README.md for details.");
+           "Incompatible ICD, first dword must be initialized to "
+           "ICD_LOADER_MAGIC. See loader/README.md for details.");
 #endif
 
     loader_set_dispatch(obj, data);
@@ -349,172 +367,142 @@ struct loader_msg_callback_map_entry {
     VkDebugReportCallbackEXT loader_obj;
 };
 
-bool compare_vk_extension_properties(
-        const VkExtensionProperties*            op1,
-        const VkExtensionProperties*            op2);
+bool compare_vk_extension_properties(const VkExtensionProperties *op1,
+                                     const VkExtensionProperties *op2);
 
-VkResult loader_validate_layers(
-        const uint32_t layer_count,
-        const char * const *ppEnabledLayerNames,
-        const struct loader_layer_list *list);
+VkResult loader_validate_layers(const uint32_t layer_count,
+                                const char *const *ppEnabledLayerNames,
+                                const struct loader_layer_list *list);
 
 VkResult loader_validate_instance_extensions(
-        const struct loader_extension_list *icd_exts,
-        const struct loader_layer_list *instance_layer,
-        const VkInstanceCreateInfo*             pCreateInfo);
+    const struct loader_extension_list *icd_exts,
+    const struct loader_layer_list *instance_layer,
+    const VkInstanceCreateInfo *pCreateInfo);
 
 /* instance layer chain termination entrypoint definitions */
-VKAPI_ATTR VkResult VKAPI_CALL loader_CreateInstance(
-        const VkInstanceCreateInfo*             pCreateInfo,
-        const VkAllocationCallbacks*                 pAllocator,
-        VkInstance*                             pInstance);
+VKAPI_ATTR VkResult VKAPI_CALL
+loader_CreateInstance(const VkInstanceCreateInfo *pCreateInfo,
+                      const VkAllocationCallbacks *pAllocator,
+                      VkInstance *pInstance);
 
-VKAPI_ATTR void VKAPI_CALL loader_DestroyInstance(
-        VkInstance                              instance,
-        const VkAllocationCallbacks*                 pAllocator);
+VKAPI_ATTR void VKAPI_CALL
+loader_DestroyInstance(VkInstance instance,
+                       const VkAllocationCallbacks *pAllocator);
 
-VKAPI_ATTR VkResult VKAPI_CALL loader_EnumeratePhysicalDevices(
-        VkInstance                              instance,
-        uint32_t*                               pPhysicalDeviceCount,
-        VkPhysicalDevice*                       pPhysicalDevices);
+VKAPI_ATTR VkResult VKAPI_CALL
+loader_EnumeratePhysicalDevices(VkInstance instance,
+                                uint32_t *pPhysicalDeviceCount,
+                                VkPhysicalDevice *pPhysicalDevices);
 
-VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceFeatures(
-        VkPhysicalDevice                        physicalDevice,
-        VkPhysicalDeviceFeatures*               pFeatures);
+VKAPI_ATTR void VKAPI_CALL
+loader_GetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice,
+                                 VkPhysicalDeviceFeatures *pFeatures);
 
-VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceFormatProperties(
-        VkPhysicalDevice                        physicalDevice,
-        VkFormat                                format,
-        VkFormatProperties*                     pFormatInfo);
+VKAPI_ATTR void VKAPI_CALL
+loader_GetPhysicalDeviceFormatProperties(VkPhysicalDevice physicalDevice,
+                                         VkFormat format,
+                                         VkFormatProperties *pFormatInfo);
 
 VKAPI_ATTR VkResult VKAPI_CALL loader_GetPhysicalDeviceImageFormatProperties(
-        VkPhysicalDevice                        physicalDevice,
-        VkFormat                                format,
-        VkImageType                             type,
-        VkImageTiling                           tiling,
-        VkImageUsageFlags                       usage,
-        VkImageCreateFlags                      flags,
-        VkImageFormatProperties*                pImageFormatProperties);
+    VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type,
+    VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags,
+    VkImageFormatProperties *pImageFormatProperties);
 
 VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceSparseImageFormatProperties(
-        VkPhysicalDevice                        physicalDevice,
-        VkFormat                                format,
-        VkImageType                             type,
-        VkSampleCountFlagBits                   samples,
-        VkImageUsageFlags                       usage,
-        VkImageTiling                           tiling,
-        uint32_t*                               pNumProperties,
-        VkSparseImageFormatProperties*          pProperties);
+    VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type,
+    VkSampleCountFlagBits samples, VkImageUsageFlags usage,
+    VkImageTiling tiling, uint32_t *pNumProperties,
+    VkSparseImageFormatProperties *pProperties);
 
-VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceProperties (
-        VkPhysicalDevice physicalDevice,
-        VkPhysicalDeviceProperties* pProperties);
+VKAPI_ATTR void VKAPI_CALL
+loader_GetPhysicalDeviceProperties(VkPhysicalDevice physicalDevice,
+                                   VkPhysicalDeviceProperties *pProperties);
 
-VKAPI_ATTR VkResult VKAPI_CALL loader_EnumerateDeviceExtensionProperties (VkPhysicalDevice physicalDevice,
-        const char *pLayerName, uint32_t *pCount,
-        VkExtensionProperties* pProperties);
+VKAPI_ATTR VkResult VKAPI_CALL
+loader_EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
+                                          const char *pLayerName,
+                                          uint32_t *pCount,
+                                          VkExtensionProperties *pProperties);
 
-VKAPI_ATTR VkResult VKAPI_CALL loader_EnumerateDeviceLayerProperties (VkPhysicalDevice physicalDevice,
-        uint32_t *pCount,
-        VkLayerProperties* pProperties);
+VKAPI_ATTR VkResult VKAPI_CALL
+loader_EnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice,
+                                      uint32_t *pCount,
+                                      VkLayerProperties *pProperties);
 
-VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceQueueFamilyProperties (
-        VkPhysicalDevice                        physicalDevice,
-        uint32_t*                               pCount,
-        VkQueueFamilyProperties*                pProperties);
+VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceQueueFamilyProperties(
+    VkPhysicalDevice physicalDevice, uint32_t *pCount,
+    VkQueueFamilyProperties *pProperties);
 
-VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceMemoryProperties (
-        VkPhysicalDevice physicalDevice,
-        VkPhysicalDeviceMemoryProperties * pProperties);
+VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceMemoryProperties(
+    VkPhysicalDevice physicalDevice,
+    VkPhysicalDeviceMemoryProperties *pProperties);
 
-VKAPI_ATTR VkResult VKAPI_CALL loader_create_device_terminator(
-        VkPhysicalDevice                            physicalDevice,
-        const VkDeviceCreateInfo*                   pCreateInfo,
-        const VkAllocationCallbacks*                pAllocator,
-        VkDevice*                                   pDevice);
+VKAPI_ATTR VkResult VKAPI_CALL
+loader_create_device_terminator(VkPhysicalDevice physicalDevice,
+                                const VkDeviceCreateInfo *pCreateInfo,
+                                const VkAllocationCallbacks *pAllocator,
+                                VkDevice *pDevice);
 
-VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
-        VkPhysicalDevice                        gpu,
-        const VkDeviceCreateInfo*               pCreateInfo,
-        const VkAllocationCallbacks*                 pAllocator,
-        VkDevice*                               pDevice);
+VKAPI_ATTR VkResult VKAPI_CALL
+loader_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *pCreateInfo,
+                    const VkAllocationCallbacks *pAllocator, VkDevice *pDevice);
 
 /* helper function definitions */
 void loader_initialize(void);
-bool has_vk_extension_property_array(
-        const VkExtensionProperties *vk_ext_prop,
-        const uint32_t count,
-        const VkExtensionProperties *ext_array);
-bool has_vk_extension_property(
-        const VkExtensionProperties *vk_ext_prop,
-        const struct loader_extension_list *ext_list);
+bool has_vk_extension_property_array(const VkExtensionProperties *vk_ext_prop,
+                                     const uint32_t count,
+                                     const VkExtensionProperties *ext_array);
+bool has_vk_extension_property(const VkExtensionProperties *vk_ext_prop,
+                               const struct loader_extension_list *ext_list);
 
-VkResult loader_add_to_ext_list(
-        const struct loader_instance *inst,
-        struct loader_extension_list *ext_list,
-        uint32_t prop_list_count,
-        const VkExtensionProperties *props);
-void loader_destroy_generic_list(
-        const struct loader_instance *inst,
-        struct loader_generic_list *list);
-void loader_delete_layer_properties(
-        const struct loader_instance *inst,
-        struct loader_layer_list *layer_list);
-void loader_add_to_layer_list(
-        const struct loader_instance *inst,
-        struct loader_layer_list *list,
-        uint32_t prop_list_count,
-        const struct loader_layer_properties *props);
-void loader_scanned_icd_clear(
-        const struct loader_instance *inst,
-        struct loader_icd_libs *icd_libs);
-void loader_icd_scan(
-        const struct loader_instance *inst,
-        struct loader_icd_libs *icds);
-void loader_layer_scan(
-        const struct loader_instance *inst,
-        struct loader_layer_list *instance_layers,
-        struct loader_layer_list *device_layers);
+VkResult loader_add_to_ext_list(const struct loader_instance *inst,
+                                struct loader_extension_list *ext_list,
+                                uint32_t prop_list_count,
+                                const VkExtensionProperties *props);
+void loader_destroy_generic_list(const struct loader_instance *inst,
+                                 struct loader_generic_list *list);
+void loader_delete_layer_properties(const struct loader_instance *inst,
+                                    struct loader_layer_list *layer_list);
+void loader_add_to_layer_list(const struct loader_instance *inst,
+                              struct loader_layer_list *list,
+                              uint32_t prop_list_count,
+                              const struct loader_layer_properties *props);
+void loader_scanned_icd_clear(const struct loader_instance *inst,
+                              struct loader_icd_libs *icd_libs);
+void loader_icd_scan(const struct loader_instance *inst,
+                     struct loader_icd_libs *icds);
+void loader_layer_scan(const struct loader_instance *inst,
+                       struct loader_layer_list *instance_layers,
+                       struct loader_layer_list *device_layers);
 void loader_get_icd_loader_instance_extensions(
-        const struct loader_instance *inst,
-        struct loader_icd_libs *icd_libs,
-        struct loader_extension_list *inst_exts);
-struct loader_icd *loader_get_icd_and_device(
-        const VkDevice device,
-        struct loader_device **found_dev);
-void *loader_dev_ext_gpa(
-        struct loader_instance *inst,
-        const char *funcName);
-void *loader_get_dev_ext_trampoline(
-        uint32_t index);
-struct loader_instance *loader_get_instance(
-        const VkInstance instance);
-void loader_remove_logical_device(
-        const struct loader_instance *inst,
-        struct loader_icd *icd,
-        struct loader_device *found_dev);
-VkResult loader_enable_instance_layers(
-        struct loader_instance *inst,
-        const VkInstanceCreateInfo *pCreateInfo,
-        const struct loader_layer_list *instance_layers);
+    const struct loader_instance *inst, struct loader_icd_libs *icd_libs,
+    struct loader_extension_list *inst_exts);
+struct loader_icd *loader_get_icd_and_device(const VkDevice device,
+                                             struct loader_device **found_dev);
+void *loader_dev_ext_gpa(struct loader_instance *inst, const char *funcName);
+void *loader_get_dev_ext_trampoline(uint32_t index);
+struct loader_instance *loader_get_instance(const VkInstance instance);
+void loader_remove_logical_device(const struct loader_instance *inst,
+                                  struct loader_icd *icd,
+                                  struct loader_device *found_dev);
+VkResult
+loader_enable_instance_layers(struct loader_instance *inst,
+                              const VkInstanceCreateInfo *pCreateInfo,
+                              const struct loader_layer_list *instance_layers);
 void loader_deactivate_instance_layers(struct loader_instance *instance);
 
-VkResult loader_create_instance_chain(
-        const VkInstanceCreateInfo *pCreateInfo,
-        const VkAllocationCallbacks* pAllocator,
-        struct loader_instance *inst,
-        VkInstance created_instance);
+VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
+                                      const VkAllocationCallbacks *pAllocator,
+                                      struct loader_instance *inst,
+                                      VkInstance created_instance);
 
-void loader_activate_instance_layer_extensions(struct loader_instance *inst, VkInstance created_inst);
+void loader_activate_instance_layer_extensions(struct loader_instance *inst,
+                                               VkInstance created_inst);
 
-void* loader_heap_alloc(
-        const struct loader_instance *instance,
-        size_t                       size,
-        VkSystemAllocationScope           allocationScope);
+void *loader_heap_alloc(const struct loader_instance *instance, size_t size,
+                        VkSystemAllocationScope allocationScope);
 
-void loader_heap_free(
-        const struct loader_instance *instance,
-        void                         *pMemory);
+void loader_heap_free(const struct loader_instance *instance, void *pMemory);
 
 void *loader_tls_heap_alloc(size_t size);
 
