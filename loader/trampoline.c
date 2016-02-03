@@ -110,7 +110,8 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
 
     /* validate the app requested layers to be enabled */
     if (pCreateInfo->enabledLayerCount > 0) {
-        res = loader_validate_layers(pCreateInfo->enabledLayerCount,
+        res = loader_validate_layers(ptr_instance,
+                                     pCreateInfo->enabledLayerCount,
                                      pCreateInfo->ppEnabledLayerNames,
                                      &ptr_instance->instance_layer_list);
         if (res != VK_SUCCESS) {
@@ -130,7 +131,7 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
     loader_get_icd_loader_instance_extensions(
         ptr_instance, &ptr_instance->icd_libs, &ptr_instance->ext_list);
     res = loader_validate_instance_extensions(
-        &ptr_instance->ext_list, &ptr_instance->instance_layer_list,
+        ptr_instance, &ptr_instance->ext_list, &ptr_instance->instance_layer_list,
         pCreateInfo);
     if (res != VK_SUCCESS) {
         loader_delete_layer_properties(ptr_instance,

@@ -72,6 +72,24 @@ enum layer_type {
         0xc, // both instance and device layer, bitwise
 };
 
+
+typedef enum VkStringErrorFlagBits {
+    VK_STRING_ERROR_NONE      = 0x00000000,
+    VK_STRING_ERROR_LENGTH    = 0x00000001,
+    VK_STRING_ERROR_BAD_DATA  = 0x00000002,
+} VkStringErrorFlagBits;
+typedef VkFlags VkStringErrorFlags;
+
+static const int  MaxLoaderStringLength = 256;
+static const char UTF8_ONE_BYTE_CODE    = 0xC0;
+static const char UTF8_ONE_BYTE_MASK    = 0xE0;
+static const char UTF8_TWO_BYTE_CODE    = 0xE0;
+static const char UTF8_TWO_BYTE_MASK    = 0xF0;
+static const char UTF8_THREE_BYTE_CODE  = 0xF0;
+static const char UTF8_THREE_BYTE_MASK  = 0xF8;
+static const char UTF8_DATA_BYTE_CODE   = 0x80;
+static const char UTF8_DATA_BYTE_MASK   = 0xC0;
+
 // form of all dynamic lists/arrays
 // only the list element should be changed
 struct loader_generic_list {
@@ -370,11 +388,13 @@ struct loader_msg_callback_map_entry {
 bool compare_vk_extension_properties(const VkExtensionProperties *op1,
                                      const VkExtensionProperties *op2);
 
-VkResult loader_validate_layers(const uint32_t layer_count,
+VkResult loader_validate_layers(const struct loader_instance *inst,
+                                const uint32_t layer_count,
                                 const char *const *ppEnabledLayerNames,
                                 const struct loader_layer_list *list);
 
 VkResult loader_validate_instance_extensions(
+    const struct loader_instance *inst,
     const struct loader_extension_list *icd_exts,
     const struct loader_layer_list *instance_layer,
     const VkInstanceCreateInfo *pCreateInfo);
@@ -507,4 +527,7 @@ void loader_heap_free(const struct loader_instance *instance, void *pMemory);
 void *loader_tls_heap_alloc(size_t size);
 
 void loader_tls_heap_free(void *pMemory);
+
+VkStringErrorFlags vk_string_validate(const int max_length, const char *char_array);
+
 #endif /* LOADER_H */
