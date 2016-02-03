@@ -3312,6 +3312,7 @@ void decrementResources(layer_data* my_data, uint32_t fenceCount, const VkFence*
         auto fence_data = my_data->fenceMap.find(pFences[i]);
         if (fence_data == my_data->fenceMap.end() || !fence_data->second.needsSignaled) return;
         fence_data->second.needsSignaled = false;
+        fence_data->second.in_use.fetch_sub(1);
         if (fence_data->second.priorFence != VK_NULL_HANDLE) {
             decrementResources(my_data, 1, &fence_data->second.priorFence);
         }
@@ -3336,23 +3337,31 @@ void trackCommandBuffers(layer_data* my_data, VkQueue queue, uint32_t cmdBufferC
     auto queue_data = my_data->queueMap.find(queue);
     if (fence != VK_NULL_HANDLE) {
         VkFence priorFence = VK_NULL_HANDLE;
+        auto fence_data = my_data->fenceMap.find(fence);
+        if (fence_data == my_data->fenceMap.end()) {
+            return;
+        }
         if (queue_data != my_data->queueMap.end()) {
             priorFence = queue_data->second.priorFence;
             queue_data->second.priorFence = fence;
             for (auto cmdBuffer : queue_data->second.untrackedCmdBuffers) {
-                my_data->fenceMap[fence].cmdBuffers.push_back(cmdBuffer);
+                fence_data->second.cmdBuffers.push_back(cmdBuffer);
             }
             queue_data->second.untrackedCmdBuffers.clear();
         }
-        my_data->fenceMap[fence].cmdBuffers.clear();
-        my_data->fenceMap[fence].priorFence = priorFence;
-        my_data->fenceMap[fence].needsSignaled = true;
-        my_data->fenceMap[fence].queue = queue;
+        fence_data->second.cmdBuffers.clear();
+        fence_data->second.priorFence = priorFence;
+        fence_data->second.needsSignaled = true;
+        fence_data->second.queue = queue;
+        fence_data->second.in_use.fetch_add(1);
         for (uint32_t i = 0; i < cmdBufferCount; ++i) {
-            for (auto secondaryCmdBuffer : my_data->commandBufferMap[pCmdBuffers[i]]->secondaryCommandBuffers) {
-                my_data->fenceMap[fence].cmdBuffers.push_back(secondaryCmdBuffer);
+            for (auto secondaryCmdBuffer :
+                 my_data->commandBufferMap[pCmdBuffers[i]]
+                     ->secondaryCommandBuffers) {
+                fence_data->second.cmdBuffers.push_back(
+                    secondaryCmdBuffer);
             }
-            my_data->fenceMap[fence].cmdBuffers.push_back(pCmdBuffers[i]);
+            fence_data->second.cmdBuffers.push_back(pCmdBuffers[i]);
         }
     } else {
         if (queue_data != my_data->queueMap.end()) {
@@ -3457,7 +3466,17 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
             skipCall |= validateCommandBufferState(dev_data, pCB);
             loader_platform_thread_unlock_mutex(&globalLock);
         }
-        trackCommandBuffers(dev_data, queue, submit->commandBufferCount, submit->pCommandBuffers, fence);
+        if (dev_data->fenceMap[fence].in_use.load()) {
+            skipCall |= log_msg(
+                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                reinterpret_cast<uint64_t>(fence), __LINE__,
+                DRAWSTATE_INVALID_FENCE, "DS",
+                "Fence %#" PRIx64 " is already in use by another submission.",
+                reinterpret_cast<uint64_t>(fence));
+        }
+        trackCommandBuffers(dev_data, queue, submit->commandBufferCount,
+                            submit->pCommandBuffers, fence);
     }
     if (VK_FALSE == skipCall)
         return dev_data->device_dispatch_table->QueueSubmit(queue, submitCount, pSubmits, fence);
@@ -3937,15 +3956,31 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device
     return result;
 }
 
-//TODO handle pipeline caches
-VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineCache(
-    VkDevice                                    device,
-    const VkPipelineCacheCreateInfo*            pCreateInfo,
-    const VkAllocationCallbacks*                     pAllocator,
-    VkPipelineCache*                            pPipelineCache)
-{
-    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreatePipelineCache(device, pCreateInfo, pAllocator, pPipelineCache);
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+    vkCreateFence(VkDevice device, const VkFenceCreateInfo* pCreateInfo,
+                  const VkAllocationCallbacks* pAllocator, VkFence* pFence) {
+    layer_data *dev_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateFence(
+        device, pCreateInfo, pAllocator, pFence);
+    if (VK_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        dev_data->fenceMap[*pFence].in_use.store(0);
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    return result;
+}
+
+// TODO handle pipeline caches
+VKAPI_ATTR VkResult VKAPI_CALL
+    vkCreatePipelineCache(VkDevice device,
+                          const VkPipelineCacheCreateInfo *pCreateInfo,
+                          const VkAllocationCallbacks *pAllocator,
+                          VkPipelineCache *pPipelineCache) {
+    layer_data *dev_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreatePipelineCache(
+        device, pCreateInfo, pAllocator, pPipelineCache);
     return result;
 }
 
@@ -6743,6 +6778,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkCreateImage;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (PFN_vkVoidFunction) vkCreateImageView;
+    if (!strcmp(funcName, "vkCreateFence"))
+        return (PFN_vkVoidFunction) vkCreateFence;
     if (!strcmp(funcName, "CreatePipelineCache"))
         return (PFN_vkVoidFunction) vkCreatePipelineCache;
     if (!strcmp(funcName, "DestroyPipelineCache"))

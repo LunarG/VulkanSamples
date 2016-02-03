@@ -41,63 +41,130 @@
 using std::vector;
 
 // Draw State ERROR codes
-typedef enum _DRAW_STATE_ERROR
-{
-    DRAWSTATE_NONE,                             // Used for INFO & other non-error messages
-    DRAWSTATE_INTERNAL_ERROR,                   // Error with DrawState internal data structures
-    DRAWSTATE_NO_PIPELINE_BOUND,                // Unable to identify a bound pipeline
-    DRAWSTATE_INVALID_POOL,                     // Invalid DS pool
-    DRAWSTATE_INVALID_SET,                      // Invalid DS
-    DRAWSTATE_INVALID_LAYOUT,                   // Invalid DS layout
-    DRAWSTATE_INVALID_IMAGE_LAYOUT,             // Invalid Image layout
-    DRAWSTATE_INVALID_PIPELINE,                 // Invalid Pipeline handle referenced
-    DRAWSTATE_INVALID_PIPELINE_LAYOUT,          // Invalid PipelineLayout
-    DRAWSTATE_INVALID_PIPELINE_CREATE_STATE,    // Attempt to create a pipeline with invalid state
-    DRAWSTATE_INVALID_COMMAND_BUFFER,           // Invalid CommandBuffer referenced
-    DRAWSTATE_INVALID_BARRIER,                  // Invalid Barrier
-    DRAWSTATE_INVALID_BUFFER,                   // Invalid Buffer
-    DRAWSTATE_INVALID_QUERY,                    // Invalid Query
-    DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,          // binding in vkCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
-    DRAWSTATE_VTX_INDEX_ALIGNMENT_ERROR,        // binding offset in vkCmdBindIndexBuffer() out of alignment based on indexType
-    //DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order to generate png image
-    DRAWSTATE_OUT_OF_MEMORY,                    // malloc failed
-    DRAWSTATE_INVALID_DESCRIPTOR_SET,           // Descriptor Set handle is unknown
-    DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH,         // Type in layout vs. update are not the same
-    DRAWSTATE_DESCRIPTOR_STAGEFLAGS_MISMATCH,   // StageFlags in layout are not the same throughout a single VkWriteDescriptorSet update
-    DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS,  // Descriptors set for update out of bounds for corresponding layout section
-    DRAWSTATE_DESCRIPTOR_POOL_EMPTY,            // Attempt to allocate descriptor from a pool with no more descriptors of that type available
-    DRAWSTATE_CANT_FREE_FROM_NON_FREE_POOL,     // Invalid to call vkFreeDescriptorSets on Sets allocated from a NON_FREE Pool
-    DRAWSTATE_INVALID_UPDATE_INDEX,             // Index of requested update is invalid for specified descriptors set
-    DRAWSTATE_INVALID_UPDATE_STRUCT,            // Struct in DS Update tree is of invalid type
-    DRAWSTATE_NUM_SAMPLES_MISMATCH,             // Number of samples in bound PSO does not match number in FB of current RenderPass
-    DRAWSTATE_NO_END_COMMAND_BUFFER,                // Must call vkEndCommandBuffer() before QueueSubmit on that commandBuffer
-    DRAWSTATE_NO_BEGIN_COMMAND_BUFFER,              // Binding cmds or calling End on CB that never had vkBeginCommandBuffer() called on it
-    DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, // Cmd Buffer created with VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT flag is submitted multiple times
-    DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER,     // vkCmdExecuteCommands() called with a primary commandBuffer in pCommandBuffers array
-    DRAWSTATE_VIEWPORT_NOT_BOUND,               // Draw submitted with no viewport state bound
-    DRAWSTATE_SCISSOR_NOT_BOUND,                // Draw submitted with no scissor state bound
-    DRAWSTATE_LINE_WIDTH_NOT_BOUND,             // Draw submitted with no line width state bound
-    DRAWSTATE_DEPTH_BIAS_NOT_BOUND,             // Draw submitted with no depth bias state bound
-    DRAWSTATE_BLEND_NOT_BOUND,                  // Draw submitted with no blend state bound when color write enabled
-    DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND,           // Draw submitted with no depth bounds state bound when depth enabled
-    DRAWSTATE_STENCIL_NOT_BOUND,                // Draw submitted with no stencil state bound when stencil enabled
-    DRAWSTATE_INDEX_BUFFER_NOT_BOUND,           // Draw submitted with no depth-stencil state bound when depth write enabled
-    DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE,    // Draw submitted PSO Pipeline layout that's not compatible with layout from BindDescriptorSets
-    DRAWSTATE_RENDERPASS_INCOMPATIBLE,          // Incompatible renderpasses between secondary cmdBuffer and primary cmdBuffer or framebuffer
-    DRAWSTATE_FRAMEBUFFER_INCOMPATIBLE,         // Incompatible framebuffer between secondary cmdBuffer and active renderPass
-    DRAWSTATE_INVALID_RENDERPASS,               // Use of a NULL or otherwise invalid RenderPass object
-    DRAWSTATE_INVALID_RENDERPASS_CMD,           // Invalid cmd submitted while a RenderPass is active
-    DRAWSTATE_NO_ACTIVE_RENDERPASS,             // Rendering cmd submitted without an active RenderPass
-    DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED,       // DescriptorSet bound but it was never updated. This is a warning code.
-    DRAWSTATE_DESCRIPTOR_SET_NOT_BOUND,         // DescriptorSet used by pipeline at draw time is not bound, or has been disturbed (which would have flagged previous warning)
-    DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT,     // DescriptorSets bound with different number of dynamic descriptors that were included in dynamicOffsetCount
-    DRAWSTATE_CLEAR_CMD_BEFORE_DRAW,            // Clear cmd issued before any Draw in CommandBuffer, should use RenderPass Ops instead
-    DRAWSTATE_BEGIN_CB_INVALID_STATE,           // CB state at Begin call is bad. Can be Primary/Secondary CB created with mismatched FB/RP information or CB in RECORDING state
-    DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE,      // CmdBuffer is being used in violation of VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT rules (i.e. simultaneous use w/o that bit set)
-    DRAWSTATE_INVALID_COMMAND_BUFFER_RESET,     // Attempting to call Reset (or Begin on recorded cmdBuffer) that was allocated from Pool w/o VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT bit set. Can also happen when the command buffer is being reset (or freed) when in use.
-    DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH,        // Count for viewports and scissors mismatch and/or state doesn't match count
-    DRAWSTATE_INVALID_IMAGE_ASPECT,             // Image aspect is invalid for the current operation
-    DRAWSTATE_MISSING_ATTACHMENT_REFERENCE,     // Attachment reference must be present in active subpass
+typedef enum _DRAW_STATE_ERROR {
+    DRAWSTATE_NONE,           // Used for INFO & other non-error messages
+    DRAWSTATE_INTERNAL_ERROR, // Error with DrawState internal data structures
+    DRAWSTATE_NO_PIPELINE_BOUND,       // Unable to identify a bound pipeline
+    DRAWSTATE_INVALID_POOL,            // Invalid DS pool
+    DRAWSTATE_INVALID_SET,             // Invalid DS
+    DRAWSTATE_INVALID_LAYOUT,          // Invalid DS layout
+    DRAWSTATE_INVALID_IMAGE_LAYOUT,    // Invalid Image layout
+    DRAWSTATE_INVALID_PIPELINE,        // Invalid Pipeline handle referenced
+    DRAWSTATE_INVALID_PIPELINE_LAYOUT, // Invalid PipelineLayout
+    DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, // Attempt to create a pipeline
+                                             // with invalid state
+    DRAWSTATE_INVALID_COMMAND_BUFFER,        // Invalid CommandBuffer referenced
+    DRAWSTATE_INVALID_BARRIER,               // Invalid Barrier
+    DRAWSTATE_INVALID_BUFFER,                // Invalid Buffer
+    DRAWSTATE_INVALID_QUERY,                 // Invalid Query
+    DRAWSTATE_INVALID_FENCE,                 // Invalid Fence
+    DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,   // binding in vkCmdBindVertexData() too
+                                         // large for PSO's
+                                         // pVertexBindingDescriptions array
+    DRAWSTATE_VTX_INDEX_ALIGNMENT_ERROR, // binding offset in
+                                         // vkCmdBindIndexBuffer() out of
+                                         // alignment based on indexType
+    // DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order
+    // to generate png image
+    DRAWSTATE_OUT_OF_MEMORY,            // malloc failed
+    DRAWSTATE_INVALID_DESCRIPTOR_SET,   // Descriptor Set handle is unknown
+    DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH, // Type in layout vs. update are not the
+                                        // same
+    DRAWSTATE_DESCRIPTOR_STAGEFLAGS_MISMATCH,  // StageFlags in layout are not
+                                               // the same throughout a single
+                                               // VkWriteDescriptorSet update
+    DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS, // Descriptors set for update out
+                                               // of bounds for corresponding
+                                               // layout section
+    DRAWSTATE_DESCRIPTOR_POOL_EMPTY, // Attempt to allocate descriptor from a
+                                     // pool with no more descriptors of that
+                                     // type available
+    DRAWSTATE_CANT_FREE_FROM_NON_FREE_POOL, // Invalid to call
+                                            // vkFreeDescriptorSets on Sets
+                                            // allocated from a NON_FREE Pool
+    DRAWSTATE_INVALID_UPDATE_INDEX,  // Index of requested update is invalid for
+                                     // specified descriptors set
+    DRAWSTATE_INVALID_UPDATE_STRUCT, // Struct in DS Update tree is of invalid
+                                     // type
+    DRAWSTATE_NUM_SAMPLES_MISMATCH,  // Number of samples in bound PSO does not
+                                     // match number in FB of current RenderPass
+    DRAWSTATE_NO_END_COMMAND_BUFFER, // Must call vkEndCommandBuffer() before
+                                     // QueueSubmit on that commandBuffer
+    DRAWSTATE_NO_BEGIN_COMMAND_BUFFER, // Binding cmds or calling End on CB that
+                                       // never had vkBeginCommandBuffer()
+                                       // called on it
+    DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, // Cmd Buffer created with
+                                                      // VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+                                                      // flag is submitted
+                                                      // multiple times
+    DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, // vkCmdExecuteCommands() called
+                                                // with a primary commandBuffer
+                                                // in pCommandBuffers array
+    DRAWSTATE_VIEWPORT_NOT_BOUND, // Draw submitted with no viewport state bound
+    DRAWSTATE_SCISSOR_NOT_BOUND,  // Draw submitted with no scissor state bound
+    DRAWSTATE_LINE_WIDTH_NOT_BOUND, // Draw submitted with no line width state
+                                    // bound
+    DRAWSTATE_DEPTH_BIAS_NOT_BOUND, // Draw submitted with no depth bias state
+                                    // bound
+    DRAWSTATE_BLEND_NOT_BOUND, // Draw submitted with no blend state bound when
+                               // color write enabled
+    DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND, // Draw submitted with no depth bounds
+                                      // state bound when depth enabled
+    DRAWSTATE_STENCIL_NOT_BOUND, // Draw submitted with no stencil state bound
+                                 // when stencil enabled
+    DRAWSTATE_INDEX_BUFFER_NOT_BOUND, // Draw submitted with no depth-stencil
+                                      // state bound when depth write enabled
+    DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, // Draw submitted PSO Pipeline
+                                             // layout that's not compatible
+                                             // with layout from
+                                             // BindDescriptorSets
+    DRAWSTATE_RENDERPASS_INCOMPATIBLE,  // Incompatible renderpasses between
+                                        // secondary cmdBuffer and primary
+                                        // cmdBuffer or framebuffer
+    DRAWSTATE_FRAMEBUFFER_INCOMPATIBLE, // Incompatible framebuffer between
+                                        // secondary cmdBuffer and active
+                                        // renderPass
+    DRAWSTATE_INVALID_RENDERPASS,       // Use of a NULL or otherwise invalid
+                                        // RenderPass object
+    DRAWSTATE_INVALID_RENDERPASS_CMD,   // Invalid cmd submitted while a
+                                        // RenderPass is active
+    DRAWSTATE_NO_ACTIVE_RENDERPASS, // Rendering cmd submitted without an active
+                                    // RenderPass
+    DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, // DescriptorSet bound but it was
+                                          // never updated. This is a warning
+                                          // code.
+    DRAWSTATE_DESCRIPTOR_SET_NOT_BOUND,   // DescriptorSet used by pipeline at
+                                          // draw time is not bound, or has been
+                                          // disturbed (which would have flagged
+                                          // previous warning)
+    DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT, // DescriptorSets bound with
+                                            // different number of dynamic
+                                            // descriptors that were included in
+                                            // dynamicOffsetCount
+    DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, // Clear cmd issued before any Draw in
+                                     // CommandBuffer, should use RenderPass Ops
+                                     // instead
+    DRAWSTATE_BEGIN_CB_INVALID_STATE, // CB state at Begin call is bad. Can be
+                                      // Primary/Secondary CB created with
+                                      // mismatched FB/RP information or CB in
+                                      // RECORDING state
+    DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, // CmdBuffer is being used in
+                                           // violation of
+                                           // VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
+                                           // rules (i.e. simultaneous use w/o
+                                           // that bit set)
+    DRAWSTATE_INVALID_COMMAND_BUFFER_RESET, // Attempting to call Reset (or
+                                            // Begin on recorded cmdBuffer) that
+                                            // was allocated from Pool w/o
+                                            // VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+                                            // bit set
+    DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, // Count for viewports and scissors
+                                         // mismatch and/or state doesn't match
+                                         // count
+    DRAWSTATE_INVALID_IMAGE_ASPECT, // Image aspect is invalid for the current
+                                    // operation
+    DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, // Attachment reference must be
+                                            // present in active subpass
     DRAWSTATE_INVALID_EXTENSION,
     DRAWSTATE_SAMPLER_DESCRIPTOR_ERROR,         // A Descriptor of *_SAMPLER type is being updated with an invalid or bad Sampler
     DRAWSTATE_INCONSISTENT_IMMUTABLE_SAMPLER_UPDATE, // Descriptors of *COMBINED_IMAGE_SAMPLER type are being updated where some, but not all, of the updates use immutable samplers
