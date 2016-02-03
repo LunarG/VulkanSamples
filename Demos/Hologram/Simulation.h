@@ -31,7 +31,7 @@
 
 class Animation {
 public:
-    Animation(unsigned rng_seed);
+    Animation(unsigned rng_seed, float scale);
 
     glm::mat4 transformation(float t);
 
@@ -47,7 +47,6 @@ private:
     std::mt19937 rng_;
     std::uniform_real_distribution<float> dir_;
     std::uniform_real_distribution<float> speed_;
-    std::uniform_real_distribution<float> scale_;
 
     Data current_;
 };
