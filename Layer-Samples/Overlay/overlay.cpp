@@ -298,8 +298,8 @@ after_device_create(VkPhysicalDevice gpu, VkDevice device, layer_data *data)
     /* Create the objects we need */
 
     /* Compile the shaders */
-    compile_shader(device, VULKAN_SAMPLES_BASE_DIR "/data/vk0.10/overlay-vert.spv", &data->vsShaderModule);
-    compile_shader(device, VULKAN_SAMPLES_BASE_DIR "/data/vk0.10/overlay-frag.spv", &data->fsShaderModule);
+    compile_shader(device, VULKAN_SAMPLES_BASE_DIR "/Layer-Samples/data/overlay-vert.spv", &data->vsShaderModule);
+    compile_shader(device, VULKAN_SAMPLES_BASE_DIR "/Layer-Samples/data/overlay-frag.spv", &data->fsShaderModule);
 
 
     /* Upload the font bitmap */
@@ -353,7 +353,7 @@ after_device_create(VkPhysicalDevice gpu, VkDevice device, layer_data *data)
 
     /* Load the font glyphs directly into the mapped buffer */
     std::vector<unsigned char> fontData;
-    get_file_contents(VULKAN_SAMPLES_BASE_DIR "/data/FreeSans.ttf", fontData);
+    get_file_contents(VULKAN_SAMPLES_BASE_DIR "/Layer-Samples/data/FreeSans.ttf", fontData);
     stbtt_BakeFontBitmap(&fontData[0], 0, FONT_SIZE_PIXELS, (unsigned char *)bits, FONT_ATLAS_SIZE, FONT_ATLAS_SIZE, 32, 96, data->glyphs);
 
     pTable->UnmapMemory(device, data->fontGlyphsMemory);
