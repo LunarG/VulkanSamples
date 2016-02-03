@@ -2805,6 +2805,7 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->imageLayoutMap.clear();
         pCB->drawData.clear();
         pCB->currentDrawData.buffers.clear();
+        pCB->primaryCommandBuffer = VK_NULL_HANDLE;
         pCB->secondaryCommandBuffers.clear();
         pCB->dynamicOffsets.clear();
     }
@@ -3455,6 +3456,20 @@ static VkBool32 validateCommandBufferState(layer_data *dev_data,
                 dev_data, dev_data->commandBufferMap[secondaryCmdBuffer]);
             GLOBAL_CB_NODE* pSubCB = getCBNode(dev_data, secondaryCmdBuffer);
             skipCall |= validateCommandBufferSimultaneousUse(dev_data, pSubCB);
+            if (pSubCB->primaryCommandBuffer != pCB->commandBuffer) {
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
+                        __LINE__,
+                        DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
+                        "CB %#" PRIxLEAST64
+                        " was submitted with secondary buffer %#" PRIxLEAST64
+                        " but that buffer has subsequently been bound to "
+                        "primary cmd buffer %#" PRIxLEAST64 ".",
+                        reinterpret_cast<uint64_t>(pCB->commandBuffer),
+                        reinterpret_cast<uint64_t>(secondaryCmdBuffer),
+                        reinterpret_cast<uint64_t>(
+                            pSubCB->primaryCommandBuffer));
+            }
         }
     }
     if ((pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) &&
@@ -6593,6 +6608,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer 
                     pCB->beginInfo.flags &= ~VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
                 }
             }
+            pSubCB->primaryCommandBuffer = pCB->commandBuffer;
             pCB->secondaryCommandBuffers.insert(pSubCB->commandBuffer);
             dev_data->globalInFlightCmdBuffers.insert(pSubCB->commandBuffer);
         }

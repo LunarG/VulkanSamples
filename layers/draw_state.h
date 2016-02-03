@@ -608,7 +608,9 @@ typedef struct _GLOBAL_CB_NODE {
     unordered_map<VkImage, IMAGE_CMD_BUF_NODE> imageLayoutMap;
     vector<DRAW_DATA>            drawData;
     DRAW_DATA                    currentDrawData;
-    // If cmd buffer is primary, track secondary command buffers pending execution
+    VkCommandBuffer primaryCommandBuffer;
+    // If cmd buffer is primary, track secondary command buffers pending
+    // execution
     std::unordered_set<VkCommandBuffer> secondaryCommandBuffers;
     vector<uint32_t>             dynamicOffsets; // one dynamic offset per dynamic descriptor bound to this CB
 } GLOBAL_CB_NODE;
