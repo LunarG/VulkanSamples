@@ -1,26 +1,34 @@
-//
-// Copyright (C) 2015 Valve Corporation
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation
-// the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Software, and to permit persons to whom the
-// Software is furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-// DEALINGS IN THE SOFTWARE.
-//
-// Author: Cody Northrop <cody@lunarg.com>
-// Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+/*
+ * Copyright (c) 2015-2016 The Khronos Group Inc.
+ * Copyright (c) 2015-2016 Valve Corporation
+ * Copyright (c) 2015-2016 LunarG, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and/or associated documentation files (the "Materials"), to
+ * deal in the Materials without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Materials, and to permit persons to whom the Materials are
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice(s) and this permission notice shall be included in
+ * all copies or substantial portions of the Materials.
+ *
+ * The Materials are Confidential Information as defined by the Khronos
+ * Membership Agreement until designated non-confidential by Khronos, at which
+ * point this condition clause shall be removed.
+ *
+ * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ *
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
+ * USE OR OTHER DEALINGS IN THE MATERIALS.
+ *
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ * Author: Cody Northrop <cody@lunarg.com>
+ */
 
 #ifndef VKTESTBINDING_H
 #define VKTESTBINDING_H
@@ -32,7 +40,8 @@
 
 namespace vk_testing {
 
-typedef void (*ErrorCallback)(const char *expr, const char *file, unsigned int line, const char *function);
+typedef void (*ErrorCallback)(const char *expr, const char *file,
+                              unsigned int line, const char *function);
 void set_error_callback(ErrorCallback callback);
 
 class PhysicalDevice;
@@ -65,25 +74,23 @@ std::vector<VkExtensionProperties> GetGlobalExtensions(const char *pLayerName);
 
 namespace internal {
 
-template<typename T>
-class Handle {
-public:
+template <typename T> class Handle {
+  public:
     const T &handle() const { return handle_; }
     bool initialized() const { return (handle_ != VK_NULL_HANDLE); }
 
-protected:
+  protected:
     typedef T handle_type;
 
     explicit Handle() : handle_(VK_NULL_HANDLE) {}
     explicit Handle(T handle) : handle_(handle) {}
 
-    void init(T handle)
-    {
+    void init(T handle) {
         assert(!initialized());
         handle_ = handle;
     }
 
-private:
+  private:
     // handles are non-copyable
     Handle(const Handle &);
     Handle &operator=(const Handle &);
@@ -91,55 +98,53 @@ private:
     T handle_;
 };
 
-
-template<typename T>
-class NonDispHandle : public Handle<T> {
-protected:
+template <typename T> class NonDispHandle : public Handle<T> {
+  protected:
     explicit NonDispHandle() : Handle<T>(), dev_handle_(VK_NULL_HANDLE) {}
-    explicit NonDispHandle(VkDevice dev, T handle) : Handle<T>(handle), dev_handle_(dev) {}
+    explicit NonDispHandle(VkDevice dev, T handle)
+        : Handle<T>(handle), dev_handle_(dev) {}
 
     const VkDevice &device() const { return dev_handle_; }
 
-    void init(VkDevice dev, T handle)
-    {
+    void init(VkDevice dev, T handle) {
         assert(!Handle<T>::initialized() && dev_handle_ == VK_NULL_HANDLE);
         Handle<T>::init(handle);
         dev_handle_ = dev;
     }
 
-private:
+  private:
     VkDevice dev_handle_;
 };
 
 } // namespace internal
 
 class PhysicalDevice : public internal::Handle<VkPhysicalDevice> {
-public:
-    explicit PhysicalDevice(VkPhysicalDevice phy) : Handle(phy)
-    {
+  public:
+    explicit PhysicalDevice(VkPhysicalDevice phy) : Handle(phy) {
         memory_properties_ = memory_properties();
         device_properties_ = properties();
     }
-
 
     VkPhysicalDeviceProperties properties() const;
     VkPhysicalDeviceMemoryProperties memory_properties() const;
     std::vector<VkQueueFamilyProperties> queue_properties() const;
 
-    bool set_memory_type(const uint32_t type_bits, VkMemoryAllocateInfo *info, const VkMemoryPropertyFlags properties,
-                             const VkMemoryPropertyFlags forbid = 0) const;
+    bool set_memory_type(const uint32_t type_bits, VkMemoryAllocateInfo *info,
+                         const VkMemoryPropertyFlags properties,
+                         const VkMemoryPropertyFlags forbid = 0) const;
 
     // vkEnumerateDeviceExtensionProperties()
     std::vector<VkExtensionProperties> extensions() const;
-    std::vector<VkExtensionProperties> extensions(const char * pLayerName) const;
+    std::vector<VkExtensionProperties> extensions(const char *pLayerName) const;
 
     // vkEnumerateLayers()
     std::vector<VkLayerProperties> layers() const;
 
-private:
-    void add_extension_dependencies(uint32_t dependency_count,
-                                    VkExtensionProperties *depencency_props,
-                                    std::vector<VkExtensionProperties> &ext_list);
+  private:
+    void
+    add_extension_dependencies(uint32_t dependency_count,
+                               VkExtensionProperties *depencency_props,
+                               std::vector<VkExtensionProperties> &ext_list);
 
     VkPhysicalDeviceMemoryProperties memory_properties_;
 
@@ -147,22 +152,32 @@ private:
 };
 
 class Device : public internal::Handle<VkDevice> {
-public:
+  public:
     explicit Device(VkPhysicalDevice phy) : phy_(phy) {}
     ~Device();
 
     // vkCreateDevice()
     void init(const VkDeviceCreateInfo &info);
-    void init(std::vector<const char*> &layers, std::vector<const char *> &extensions); // all queues, all extensions, etc
-    void init() { std::vector<const char *> layers; std::vector<const char *> extensions; init(layers, extensions); };
+    void init(std::vector<const char *> &layers,
+              std::vector<const char *> &
+                  extensions); // all queues, all extensions, etc
+    void init() {
+        std::vector<const char *> layers;
+        std::vector<const char *> extensions;
+        init(layers, extensions);
+    };
 
     const PhysicalDevice &phy() const { return phy_; }
 
     // vkGetDeviceProcAddr()
-    PFN_vkVoidFunction get_proc(const char *name) const { return vkGetDeviceProcAddr(handle(), name); }
+    PFN_vkVoidFunction get_proc(const char *name) const {
+        return vkGetDeviceProcAddr(handle(), name);
+    }
 
     // vkGetDeviceQueue()
-    const std::vector<Queue *> &graphics_queues() const { return queues_[GRAPHICS]; }
+    const std::vector<Queue *> &graphics_queues() const {
+        return queues_[GRAPHICS];
+    }
     const std::vector<Queue *> &compute_queues() { return queues_[COMPUTE]; }
     const std::vector<Queue *> &dma_queues() { return queues_[DMA]; }
     uint32_t graphics_queue_node_index_;
@@ -180,31 +195,55 @@ public:
     void wait();
 
     // vkWaitForFences()
-    VkResult wait(const std::vector<const Fence *> &fences, bool wait_all, uint64_t timeout);
-    VkResult wait(const Fence &fence) { return wait(std::vector<const Fence *>(1, &fence), true, (uint64_t) -1); }
+    VkResult wait(const std::vector<const Fence *> &fences, bool wait_all,
+                  uint64_t timeout);
+    VkResult wait(const Fence &fence) {
+        return wait(std::vector<const Fence *>(1, &fence), true, (uint64_t)-1);
+    }
 
     // vkUpdateDescriptorSets()
-    void update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &writes, const std::vector<VkCopyDescriptorSet> &copies);
-    void update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &writes) { return update_descriptor_sets(writes, std::vector<VkCopyDescriptorSet>()); }
+    void update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &writes,
+                                const std::vector<VkCopyDescriptorSet> &copies);
+    void
+    update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &writes) {
+        return update_descriptor_sets(writes,
+                                      std::vector<VkCopyDescriptorSet>());
+    }
 
-    static VkWriteDescriptorSet write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
-                                                     VkDescriptorType type, uint32_t count, const VkDescriptorImageInfo *image_info);
-    static VkWriteDescriptorSet write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
-                                                     VkDescriptorType type, uint32_t count, const VkDescriptorBufferInfo *buffer_info);
-    static VkWriteDescriptorSet write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
-                                                     VkDescriptorType type, uint32_t count, const VkBufferView *buffer_views);
-    static VkWriteDescriptorSet write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
-                                                     VkDescriptorType type, const std::vector<VkDescriptorImageInfo> &image_info);
-    static VkWriteDescriptorSet write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
-                                                     VkDescriptorType type, const std::vector<VkDescriptorBufferInfo> &buffer_info);
-    static VkWriteDescriptorSet write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
-                                                     VkDescriptorType type, const std::vector<VkBufferView> &buffer_views);
+    static VkWriteDescriptorSet
+    write_descriptor_set(const DescriptorSet &set, uint32_t binding,
+                         uint32_t array_element, VkDescriptorType type,
+                         uint32_t count,
+                         const VkDescriptorImageInfo *image_info);
+    static VkWriteDescriptorSet
+    write_descriptor_set(const DescriptorSet &set, uint32_t binding,
+                         uint32_t array_element, VkDescriptorType type,
+                         uint32_t count,
+                         const VkDescriptorBufferInfo *buffer_info);
+    static VkWriteDescriptorSet
+    write_descriptor_set(const DescriptorSet &set, uint32_t binding,
+                         uint32_t array_element, VkDescriptorType type,
+                         uint32_t count, const VkBufferView *buffer_views);
+    static VkWriteDescriptorSet
+    write_descriptor_set(const DescriptorSet &set, uint32_t binding,
+                         uint32_t array_element, VkDescriptorType type,
+                         const std::vector<VkDescriptorImageInfo> &image_info);
+    static VkWriteDescriptorSet write_descriptor_set(
+        const DescriptorSet &set, uint32_t binding, uint32_t array_element,
+        VkDescriptorType type,
+        const std::vector<VkDescriptorBufferInfo> &buffer_info);
+    static VkWriteDescriptorSet
+    write_descriptor_set(const DescriptorSet &set, uint32_t binding,
+                         uint32_t array_element, VkDescriptorType type,
+                         const std::vector<VkBufferView> &buffer_views);
 
-    static VkCopyDescriptorSet copy_descriptor_set(const DescriptorSet &src_set, uint32_t src_binding, uint32_t src_array_element,
-                                                   const DescriptorSet &dst_set, uint32_t dst_binding, uint32_t dst_array_element,
-                                                   uint32_t count);
+    static VkCopyDescriptorSet
+    copy_descriptor_set(const DescriptorSet &src_set, uint32_t src_binding,
+                        uint32_t src_array_element,
+                        const DescriptorSet &dst_set, uint32_t dst_binding,
+                        uint32_t dst_array_element, uint32_t count);
 
-private:
+  private:
     enum QueueIndex {
         GRAPHICS,
         COMPUTE,
@@ -222,8 +261,10 @@ private:
 };
 
 class Queue : public internal::Handle<VkQueue> {
-public:
-    explicit Queue(VkQueue queue, int index) : Handle(queue) {family_index_ = index;}
+  public:
+    explicit Queue(VkQueue queue, int index) : Handle(queue) {
+        family_index_ = index;
+    }
 
     // vkQueueSubmit()
     void submit(const std::vector<const CommandBuffer *> &cmds, Fence &fence);
@@ -233,14 +274,14 @@ public:
     // vkQueueWaitIdle()
     void wait();
 
-    int get_family_index() {return family_index_;}
+    int get_family_index() { return family_index_; }
 
-private:
+  private:
     int family_index_;
 };
 
 class DeviceMemory : public internal::NonDispHandle<VkDeviceMemory> {
-public:
+  public:
     ~DeviceMemory();
 
     // vkAllocateMemory()
@@ -248,18 +289,19 @@ public:
 
     // vkMapMemory()
     const void *map(VkFlags flags) const;
-          void *map(VkFlags flags);
+    void *map(VkFlags flags);
     const void *map() const { return map(0); }
-          void *map()       { return map(0); }
+    void *map() { return map(0); }
 
     // vkUnmapMemory()
     void unmap() const;
 
-    static VkMemoryAllocateInfo alloc_info(VkDeviceSize size, uint32_t memory_type_index);
+    static VkMemoryAllocateInfo alloc_info(VkDeviceSize size,
+                                           uint32_t memory_type_index);
 };
 
 class Fence : public internal::NonDispHandle<VkFence> {
-public:
+  public:
     ~Fence();
 
     // vkCreateFence()
@@ -273,7 +315,7 @@ public:
 };
 
 class Semaphore : public internal::NonDispHandle<VkSemaphore> {
-public:
+  public:
     ~Semaphore();
 
     // vkCreateSemaphore()
@@ -283,7 +325,7 @@ public:
 };
 
 class Event : public internal::NonDispHandle<VkEvent> {
-public:
+  public:
     ~Event();
 
     // vkCreateEvent()
@@ -300,39 +342,60 @@ public:
 };
 
 class QueryPool : public internal::NonDispHandle<VkQueryPool> {
-public:
+  public:
     ~QueryPool();
 
     // vkCreateQueryPool()
     void init(const Device &dev, const VkQueryPoolCreateInfo &info);
 
     // vkGetQueryPoolResults()
-    VkResult results(uint32_t first, uint32_t count, size_t size, void *data, size_t stride);
+    VkResult results(uint32_t first, uint32_t count, size_t size, void *data,
+                     size_t stride);
 
-    static VkQueryPoolCreateInfo create_info(VkQueryType type, uint32_t slot_count);
+    static VkQueryPoolCreateInfo create_info(VkQueryType type,
+                                             uint32_t slot_count);
 };
 
 class Buffer : public internal::NonDispHandle<VkBuffer> {
-public:
+  public:
     explicit Buffer() : NonDispHandle() {}
-    explicit Buffer(const Device &dev, const VkBufferCreateInfo &info) { init(dev, info); }
+    explicit Buffer(const Device &dev, const VkBufferCreateInfo &info) {
+        init(dev, info);
+    }
     explicit Buffer(const Device &dev, VkDeviceSize size) { init(dev, size); }
 
     ~Buffer();
 
     // vkCreateBuffer()
-    void init(const Device &dev, const VkBufferCreateInfo &info, VkMemoryPropertyFlags mem_props);
-    void init(const Device &dev, const VkBufferCreateInfo &info) { init(dev, info, 0); }
-    void init(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags mem_props) { init(dev, create_info(size, 0), mem_props); }
+    void init(const Device &dev, const VkBufferCreateInfo &info,
+              VkMemoryPropertyFlags mem_props);
+    void init(const Device &dev, const VkBufferCreateInfo &info) {
+        init(dev, info, 0);
+    }
+    void init(const Device &dev, VkDeviceSize size,
+              VkMemoryPropertyFlags mem_props) {
+        init(dev, create_info(size, 0), mem_props);
+    }
     void init(const Device &dev, VkDeviceSize size) { init(dev, size, 0); }
-    void init_as_src(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT), reqs); }
-    void init_as_dst(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT), reqs); }
-    void init_as_src_and_dst(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT), reqs); }
+    void init_as_src(const Device &dev, VkDeviceSize size,
+                     VkMemoryPropertyFlags &reqs) {
+        init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT), reqs);
+    }
+    void init_as_dst(const Device &dev, VkDeviceSize size,
+                     VkMemoryPropertyFlags &reqs) {
+        init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT), reqs);
+    }
+    void init_as_src_and_dst(const Device &dev, VkDeviceSize size,
+                             VkMemoryPropertyFlags &reqs) {
+        init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                                        VK_BUFFER_USAGE_TRANSFER_DST_BIT),
+             reqs);
+    }
     void init_no_mem(const Device &dev, const VkBufferCreateInfo &info);
 
     // get the internal memory
     const DeviceMemory &memory() const { return internal_mem_; }
-          DeviceMemory &memory()       { return internal_mem_; }
+    DeviceMemory &memory() { return internal_mem_; }
 
     // vkGetObjectMemoryRequirements()
     VkMemoryRequirements memory_requirements() const;
@@ -342,9 +405,10 @@ public:
 
     static VkBufferCreateInfo create_info(VkDeviceSize size, VkFlags usage);
 
-    VkBufferMemoryBarrier buffer_memory_barrier(VkFlags output_mask, VkFlags input_mask,
-                                                 VkDeviceSize offset, VkDeviceSize size) const
-    {
+    VkBufferMemoryBarrier buffer_memory_barrier(VkFlags output_mask,
+                                                VkFlags input_mask,
+                                                VkDeviceSize offset,
+                                                VkDeviceSize size) const {
         VkBufferMemoryBarrier barrier = {};
         barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
         barrier.buffer = handle();
@@ -355,14 +419,14 @@ public:
         return barrier;
     }
 
-private:
+  private:
     VkBufferCreateInfo create_info_;
 
     DeviceMemory internal_mem_;
 };
 
 class BufferView : public internal::NonDispHandle<VkBufferView> {
-public:
+  public:
     ~BufferView();
 
     // vkCreateBufferView()
@@ -370,20 +434,26 @@ public:
 };
 
 class Image : public internal::NonDispHandle<VkImage> {
-public:
+  public:
     explicit Image() : NonDispHandle(), format_features_(0) {}
-    explicit Image(const Device &dev, const VkImageCreateInfo &info) : format_features_(0) { init(dev, info); }
+    explicit Image(const Device &dev, const VkImageCreateInfo &info)
+        : format_features_(0) {
+        init(dev, info);
+    }
 
     ~Image();
 
     // vkCreateImage()
-    void init(const Device &dev, const VkImageCreateInfo &info, VkMemoryPropertyFlags mem_props);
-    void init(const Device &dev, const VkImageCreateInfo &info) { init(dev, info, 0); }
+    void init(const Device &dev, const VkImageCreateInfo &info,
+              VkMemoryPropertyFlags mem_props);
+    void init(const Device &dev, const VkImageCreateInfo &info) {
+        init(dev, info, 0);
+    }
     void init_no_mem(const Device &dev, const VkImageCreateInfo &info);
 
     // get the internal memory
     const DeviceMemory &memory() const { return internal_mem_; }
-          DeviceMemory &memory()       { return internal_mem_; }
+    DeviceMemory &memory() { return internal_mem_; }
 
     // vkGetObjectMemoryRequirements()
     VkMemoryRequirements memory_requirements() const;
@@ -392,22 +462,30 @@ public:
     void bind_memory(const DeviceMemory &mem, VkDeviceSize mem_offset);
 
     // vkGetImageSubresourceLayout()
-    VkSubresourceLayout subresource_layout(const VkImageSubresource &subres) const;
-    VkSubresourceLayout subresource_layout(const VkImageSubresourceLayers &subres) const;
+    VkSubresourceLayout
+    subresource_layout(const VkImageSubresource &subres) const;
+    VkSubresourceLayout
+    subresource_layout(const VkImageSubresourceLayers &subres) const;
 
     bool transparent() const;
-    bool copyable() const { return (format_features_ & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT); }
+    bool copyable() const {
+        return (format_features_ & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+    }
 
-    VkImageSubresourceRange subresource_range(VkImageAspectFlagBits aspect) const { return subresource_range(create_info_, aspect); }
+    VkImageSubresourceRange
+    subresource_range(VkImageAspectFlagBits aspect) const {
+        return subresource_range(create_info_, aspect);
+    }
     VkExtent3D extent() const { return create_info_.extent; }
-    VkExtent3D extent(uint32_t mip_level) const { return extent(create_info_.extent, mip_level); }
-    VkFormat format() const {return create_info_.format;}
+    VkExtent3D extent(uint32_t mip_level) const {
+        return extent(create_info_.extent, mip_level);
+    }
+    VkFormat format() const { return create_info_.format; }
 
-    VkImageMemoryBarrier image_memory_barrier(VkFlags output_mask, VkFlags input_mask,
-                                                  VkImageLayout old_layout,
-                                                  VkImageLayout new_layout,
-                                                  const VkImageSubresourceRange &range) const
-    {
+    VkImageMemoryBarrier
+    image_memory_barrier(VkFlags output_mask, VkFlags input_mask,
+                         VkImageLayout old_layout, VkImageLayout new_layout,
+                         const VkImageSubresourceRange &range) const {
         VkImageMemoryBarrier barrier = {};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         barrier.srcAccessMask = output_mask;
@@ -421,14 +499,28 @@ public:
 
     static VkImageCreateInfo create_info();
     static VkImageAspectFlagBits image_aspect(VkImageAspectFlags flags);
-    static VkImageSubresource subresource(VkImageAspectFlagBits aspect, uint32_t mip_level, uint32_t array_layer);
-    static VkImageSubresource subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer);
-    static VkImageSubresourceLayers subresource(VkImageAspectFlagBits aspect, uint32_t mip_level, uint32_t array_layer, uint32_t array_size);
-    static VkImageSubresourceLayers subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer, uint32_t array_size);
-    static VkImageSubresourceRange subresource_range(VkImageAspectFlags aspect_mask, uint32_t base_mip_level, uint32_t mip_levels,
-                                                     uint32_t base_array_layer, uint32_t num_layers);
-    static VkImageSubresourceRange subresource_range(const VkImageCreateInfo &info, VkImageAspectFlags aspect_mask);
-    static VkImageSubresourceRange subresource_range(const VkImageSubresource &subres);
+    static VkImageSubresource subresource(VkImageAspectFlagBits aspect,
+                                          uint32_t mip_level,
+                                          uint32_t array_layer);
+    static VkImageSubresource subresource(const VkImageSubresourceRange &range,
+                                          uint32_t mip_level,
+                                          uint32_t array_layer);
+    static VkImageSubresourceLayers subresource(VkImageAspectFlagBits aspect,
+                                                uint32_t mip_level,
+                                                uint32_t array_layer,
+                                                uint32_t array_size);
+    static VkImageSubresourceLayers
+    subresource(const VkImageSubresourceRange &range, uint32_t mip_level,
+                uint32_t array_layer, uint32_t array_size);
+    static VkImageSubresourceRange
+    subresource_range(VkImageAspectFlags aspect_mask, uint32_t base_mip_level,
+                      uint32_t mip_levels, uint32_t base_array_layer,
+                      uint32_t num_layers);
+    static VkImageSubresourceRange
+    subresource_range(const VkImageCreateInfo &info,
+                      VkImageAspectFlags aspect_mask);
+    static VkImageSubresourceRange
+    subresource_range(const VkImageSubresource &subres);
 
     static VkExtent2D extent(int32_t width, int32_t height);
     static VkExtent2D extent(const VkExtent2D &extent, uint32_t mip_level);
@@ -437,7 +529,7 @@ public:
     static VkExtent3D extent(int32_t width, int32_t height, int32_t depth);
     static VkExtent3D extent(const VkExtent3D &extent, uint32_t mip_level);
 
-private:
+  private:
     void init_info(const Device &dev, const VkImageCreateInfo &info);
 
     VkImageCreateInfo create_info_;
@@ -447,7 +539,7 @@ private:
 };
 
 class ImageView : public internal::NonDispHandle<VkImageView> {
-public:
+  public:
     ~ImageView();
 
     // vkCreateImageView()
@@ -455,56 +547,62 @@ public:
 };
 
 class ShaderModule : public internal::NonDispHandle<VkShaderModule> {
-public:
+  public:
     ~ShaderModule();
 
     // vkCreateShaderModule()
     void init(const Device &dev, const VkShaderModuleCreateInfo &info);
     VkResult init_try(const Device &dev, const VkShaderModuleCreateInfo &info);
 
-    static VkShaderModuleCreateInfo create_info(size_t code_size, const uint32_t *code, VkFlags flags);
+    static VkShaderModuleCreateInfo
+    create_info(size_t code_size, const uint32_t *code, VkFlags flags);
 };
 
 class Pipeline : public internal::NonDispHandle<VkPipeline> {
-public:
+  public:
     ~Pipeline();
 
     // vkCreateGraphicsPipeline()
     void init(const Device &dev, const VkGraphicsPipelineCreateInfo &info);
     // vkCreateGraphicsPipelineDerivative()
-    void init(const Device &dev, const VkGraphicsPipelineCreateInfo &info, const VkPipeline basePipeline);
+    void init(const Device &dev, const VkGraphicsPipelineCreateInfo &info,
+              const VkPipeline basePipeline);
     // vkCreateComputePipeline()
     void init(const Device &dev, const VkComputePipelineCreateInfo &info);
     // vkLoadPipeline()
-    void init(const Device&dev, size_t size, const void *data);
+    void init(const Device &dev, size_t size, const void *data);
     // vkLoadPipelineDerivative()
-    void init(const Device&dev, size_t size, const void *data, VkPipeline basePipeline);
+    void init(const Device &dev, size_t size, const void *data,
+              VkPipeline basePipeline);
 
     // vkCreateGraphicsPipeline with error return
-    VkResult init_try(const Device &dev, const VkGraphicsPipelineCreateInfo &info);
+    VkResult init_try(const Device &dev,
+                      const VkGraphicsPipelineCreateInfo &info);
 
     // vkStorePipeline()
     size_t store(size_t size, void *data);
 };
 
 class PipelineLayout : public internal::NonDispHandle<VkPipelineLayout> {
-public:
+  public:
     ~PipelineLayout();
 
     // vCreatePipelineLayout()
-    void init(const Device &dev, VkPipelineLayoutCreateInfo &info, const std::vector<const DescriptorSetLayout *> &layouts);
+    void init(const Device &dev, VkPipelineLayoutCreateInfo &info,
+              const std::vector<const DescriptorSetLayout *> &layouts);
 };
 
 class Sampler : public internal::NonDispHandle<VkSampler> {
-public:
+  public:
     ~Sampler();
 
     // vkCreateSampler()
     void init(const Device &dev, const VkSamplerCreateInfo &info);
 };
 
-class DescriptorSetLayout : public internal::NonDispHandle<VkDescriptorSetLayout> {
-public:
+class DescriptorSetLayout
+    : public internal::NonDispHandle<VkDescriptorSetLayout> {
+  public:
     ~DescriptorSetLayout();
 
     // vkCreateDescriptorSetLayout()
@@ -512,10 +610,11 @@ public:
 };
 
 class DescriptorPool : public internal::NonDispHandle<VkDescriptorPool> {
-public:
+  public:
     ~DescriptorPool();
 
-    // Descriptor sets allocated from this pool will need access to the original object
+    // Descriptor sets allocated from this pool will need access to the original
+    // object
     VkDescriptorPool GetObj() { return pool_; }
 
     // vkCreateDescriptorPool()
@@ -529,11 +628,16 @@ public:
     bool getDynamicUsage() { return dynamic_usage_; }
 
     // vkAllocateDescriptorSets()
-    std::vector<DescriptorSet *> alloc_sets(const Device &dev, const std::vector<const DescriptorSetLayout *> &layouts);
-    std::vector<DescriptorSet *> alloc_sets(const Device &dev, const DescriptorSetLayout &layout, uint32_t count);
-    DescriptorSet *alloc_sets(const Device &dev, const DescriptorSetLayout &layout);
+    std::vector<DescriptorSet *>
+    alloc_sets(const Device &dev,
+               const std::vector<const DescriptorSetLayout *> &layouts);
+    std::vector<DescriptorSet *> alloc_sets(const Device &dev,
+                                            const DescriptorSetLayout &layout,
+                                            uint32_t count);
+    DescriptorSet *alloc_sets(const Device &dev,
+                              const DescriptorSetLayout &layout);
 
-private:
+  private:
     VkDescriptorPool pool_;
 
     // Track whether this pool's usage is VK_DESCRIPTOR_POOL_USAGE_DYNAMIC
@@ -541,30 +645,37 @@ private:
 };
 
 class DescriptorSet : public internal::NonDispHandle<VkDescriptorSet> {
-public:
+  public:
     ~DescriptorSet();
 
     explicit DescriptorSet() : NonDispHandle() {}
-    explicit DescriptorSet(const Device &dev, DescriptorPool* pool, VkDescriptorSet set) : NonDispHandle(dev.handle(), set) { containing_pool_ = pool;}
+    explicit DescriptorSet(const Device &dev, DescriptorPool *pool,
+                           VkDescriptorSet set)
+        : NonDispHandle(dev.handle(), set) {
+        containing_pool_ = pool;
+    }
 
-private:
-    DescriptorPool* containing_pool_;
+  private:
+    DescriptorPool *containing_pool_;
 };
 
 class CommandPool : public internal::NonDispHandle<VkCommandPool> {
-public:
+  public:
     ~CommandPool();
 
     explicit CommandPool() : NonDispHandle() {}
-    explicit CommandPool(const Device &dev, const VkCommandPoolCreateInfo &info) { init(dev, info); }
+    explicit CommandPool(const Device &dev,
+                         const VkCommandPoolCreateInfo &info) {
+        init(dev, info);
+    }
 
     void init(const Device &dev, const VkCommandPoolCreateInfo &info);
 
     static VkCommandPoolCreateInfo create_info(uint32_t queue_family_index);
 };
 
-inline VkCommandPoolCreateInfo CommandPool::create_info(uint32_t queue_family_index)
-{
+inline VkCommandPoolCreateInfo
+CommandPool::create_info(uint32_t queue_family_index) {
     VkCommandPoolCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     info.queueFamilyIndex = queue_family_index;
@@ -573,11 +684,14 @@ inline VkCommandPoolCreateInfo CommandPool::create_info(uint32_t queue_family_in
 }
 
 class CommandBuffer : public internal::Handle<VkCommandBuffer> {
-public:
+  public:
     ~CommandBuffer();
 
     explicit CommandBuffer() : Handle() {}
-    explicit CommandBuffer(const Device &dev, const VkCommandBufferAllocateInfo &info) { init(dev, info); }
+    explicit CommandBuffer(const Device &dev,
+                           const VkCommandBufferAllocateInfo &info) {
+        init(dev, info);
+    }
 
     // vkAllocateCommandBuffers()
     void init(const Device &dev, const VkCommandBufferAllocateInfo &info);
@@ -594,13 +708,13 @@ public:
 
     static VkCommandBufferAllocateInfo create_info(VkCommandPool const &pool);
 
-private:
+  private:
     VkDevice dev_handle_;
     VkCommandPool cmd_pool_;
 };
 
-inline VkMemoryAllocateInfo DeviceMemory::alloc_info(VkDeviceSize size, uint32_t memory_type_index)
-{
+inline VkMemoryAllocateInfo
+DeviceMemory::alloc_info(VkDeviceSize size, uint32_t memory_type_index) {
     VkMemoryAllocateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     info.allocationSize = size;
@@ -608,8 +722,8 @@ inline VkMemoryAllocateInfo DeviceMemory::alloc_info(VkDeviceSize size, uint32_t
     return info;
 }
 
-inline VkBufferCreateInfo Buffer::create_info(VkDeviceSize size, VkFlags usage)
-{
+inline VkBufferCreateInfo Buffer::create_info(VkDeviceSize size,
+                                              VkFlags usage) {
     VkBufferCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     info.size = size;
@@ -617,39 +731,35 @@ inline VkBufferCreateInfo Buffer::create_info(VkDeviceSize size, VkFlags usage)
     return info;
 }
 
-inline VkFenceCreateInfo Fence::create_info(VkFenceCreateFlags flags)
-{
+inline VkFenceCreateInfo Fence::create_info(VkFenceCreateFlags flags) {
     VkFenceCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     info.flags = flags;
     return info;
 }
 
-inline VkFenceCreateInfo Fence::create_info()
-{
+inline VkFenceCreateInfo Fence::create_info() {
     VkFenceCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     return info;
 }
 
-inline VkSemaphoreCreateInfo Semaphore::create_info(VkFlags flags)
-{
+inline VkSemaphoreCreateInfo Semaphore::create_info(VkFlags flags) {
     VkSemaphoreCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     info.flags = flags;
     return info;
 }
 
-inline VkEventCreateInfo Event::create_info(VkFlags flags)
-{
+inline VkEventCreateInfo Event::create_info(VkFlags flags) {
     VkEventCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
     info.flags = flags;
     return info;
 }
 
-inline VkQueryPoolCreateInfo QueryPool::create_info(VkQueryType type, uint32_t slot_count)
-{
+inline VkQueryPoolCreateInfo QueryPool::create_info(VkQueryType type,
+                                                    uint32_t slot_count) {
     VkQueryPoolCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
     info.queryType = type;
@@ -657,8 +767,7 @@ inline VkQueryPoolCreateInfo QueryPool::create_info(VkQueryType type, uint32_t s
     return info;
 }
 
-inline VkImageCreateInfo Image::create_info()
-{
+inline VkImageCreateInfo Image::create_info() {
     VkImageCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     info.extent.width = 1;
@@ -670,8 +779,9 @@ inline VkImageCreateInfo Image::create_info()
     return info;
 }
 
-inline VkImageSubresource Image::subresource(VkImageAspectFlagBits aspect, uint32_t mip_level, uint32_t array_layer)
-{
+inline VkImageSubresource Image::subresource(VkImageAspectFlagBits aspect,
+                                             uint32_t mip_level,
+                                             uint32_t array_layer) {
     VkImageSubresource subres = {};
     subres.aspectMask = aspect;
     subres.mipLevel = mip_level;
@@ -679,13 +789,18 @@ inline VkImageSubresource Image::subresource(VkImageAspectFlagBits aspect, uint3
     return subres;
 }
 
-inline VkImageSubresource Image::subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer)
-{
-    return subresource(image_aspect(range.aspectMask), range.baseMipLevel + mip_level, range.baseArrayLayer + array_layer);
+inline VkImageSubresource
+Image::subresource(const VkImageSubresourceRange &range, uint32_t mip_level,
+                   uint32_t array_layer) {
+    return subresource(image_aspect(range.aspectMask),
+                       range.baseMipLevel + mip_level,
+                       range.baseArrayLayer + array_layer);
 }
 
-inline VkImageSubresourceLayers Image::subresource(VkImageAspectFlagBits aspect, uint32_t mip_level, uint32_t array_layer, uint32_t array_size)
-{
+inline VkImageSubresourceLayers Image::subresource(VkImageAspectFlagBits aspect,
+                                                   uint32_t mip_level,
+                                                   uint32_t array_layer,
+                                                   uint32_t array_size) {
     VkImageSubresourceLayers subres = {};
     subres.aspectMask = aspect;
     subres.mipLevel = mip_level;
@@ -694,8 +809,7 @@ inline VkImageSubresourceLayers Image::subresource(VkImageAspectFlagBits aspect,
     return subres;
 }
 
-inline VkImageAspectFlagBits Image::image_aspect(VkImageAspectFlags flags)
-{
+inline VkImageAspectFlagBits Image::image_aspect(VkImageAspectFlags flags) {
     /*
      * This will map VkImageAspectFlags into a single VkImageAspect.
      * If there is more than one bit defined we'll get an assertion.
@@ -715,14 +829,18 @@ inline VkImageAspectFlagBits Image::image_aspect(VkImageAspectFlags flags)
     return VK_IMAGE_ASPECT_COLOR_BIT;
 }
 
-inline VkImageSubresourceLayers Image::subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer, uint32_t array_size)
-{
-    return subresource(image_aspect(range.aspectMask), range.baseMipLevel + mip_level, range.baseArrayLayer + array_layer, array_size);
+inline VkImageSubresourceLayers
+Image::subresource(const VkImageSubresourceRange &range, uint32_t mip_level,
+                   uint32_t array_layer, uint32_t array_size) {
+    return subresource(image_aspect(range.aspectMask),
+                       range.baseMipLevel + mip_level,
+                       range.baseArrayLayer + array_layer, array_size);
 }
 
-inline VkImageSubresourceRange Image::subresource_range(VkImageAspectFlags aspect_mask, uint32_t base_mip_level, uint32_t mip_levels,
-                                                        uint32_t base_array_layer, uint32_t num_layers)
-{
+inline VkImageSubresourceRange
+Image::subresource_range(VkImageAspectFlags aspect_mask,
+                         uint32_t base_mip_level, uint32_t mip_levels,
+                         uint32_t base_array_layer, uint32_t num_layers) {
     VkImageSubresourceRange range = {};
     range.aspectMask = aspect_mask;
     range.baseMipLevel = base_mip_level;
@@ -732,38 +850,39 @@ inline VkImageSubresourceRange Image::subresource_range(VkImageAspectFlags aspec
     return range;
 }
 
-inline VkImageSubresourceRange Image::subresource_range(const VkImageCreateInfo &info, VkImageAspectFlags aspect_mask)
-{
-    return subresource_range(aspect_mask, 0, info.mipLevels, 0, info.arrayLayers);
+inline VkImageSubresourceRange
+Image::subresource_range(const VkImageCreateInfo &info,
+                         VkImageAspectFlags aspect_mask) {
+    return subresource_range(aspect_mask, 0, info.mipLevels, 0,
+                             info.arrayLayers);
 }
 
-inline VkImageSubresourceRange Image::subresource_range(const VkImageSubresource &subres)
-{
-    return subresource_range(subres.aspectMask, subres.mipLevel, 1, subres.arrayLayer, 1);
+inline VkImageSubresourceRange
+Image::subresource_range(const VkImageSubresource &subres) {
+    return subresource_range(subres.aspectMask, subres.mipLevel, 1,
+                             subres.arrayLayer, 1);
 }
 
-inline VkExtent2D Image::extent(int32_t width, int32_t height)
-{
+inline VkExtent2D Image::extent(int32_t width, int32_t height) {
     VkExtent2D extent = {};
     extent.width = width;
     extent.height = height;
     return extent;
 }
 
-inline VkExtent2D Image::extent(const VkExtent2D &extent, uint32_t mip_level)
-{
-    const int32_t width  = (extent.width  >> mip_level) ? extent.width  >> mip_level : 1;
-    const int32_t height = (extent.height >> mip_level) ? extent.height >> mip_level : 1;
+inline VkExtent2D Image::extent(const VkExtent2D &extent, uint32_t mip_level) {
+    const int32_t width =
+        (extent.width >> mip_level) ? extent.width >> mip_level : 1;
+    const int32_t height =
+        (extent.height >> mip_level) ? extent.height >> mip_level : 1;
     return Image::extent(width, height);
 }
 
-inline VkExtent2D Image::extent(const VkExtent3D &extent)
-{
+inline VkExtent2D Image::extent(const VkExtent3D &extent) {
     return Image::extent(extent.width, extent.height);
 }
 
-inline VkExtent3D Image::extent(int32_t width, int32_t height, int32_t depth)
-{
+inline VkExtent3D Image::extent(int32_t width, int32_t height, int32_t depth) {
     VkExtent3D extent = {};
     extent.width = width;
     extent.height = height;
@@ -771,16 +890,19 @@ inline VkExtent3D Image::extent(int32_t width, int32_t height, int32_t depth)
     return extent;
 }
 
-inline VkExtent3D Image::extent(const VkExtent3D &extent, uint32_t mip_level)
-{
-    const int32_t width  = (extent.width  >> mip_level) ? extent.width  >> mip_level : 1;
-    const int32_t height = (extent.height >> mip_level) ? extent.height >> mip_level : 1;
-    const int32_t depth  = (extent.depth  >> mip_level) ? extent.depth  >> mip_level : 1;
+inline VkExtent3D Image::extent(const VkExtent3D &extent, uint32_t mip_level) {
+    const int32_t width =
+        (extent.width >> mip_level) ? extent.width >> mip_level : 1;
+    const int32_t height =
+        (extent.height >> mip_level) ? extent.height >> mip_level : 1;
+    const int32_t depth =
+        (extent.depth >> mip_level) ? extent.depth >> mip_level : 1;
     return Image::extent(width, height, depth);
 }
 
-inline VkShaderModuleCreateInfo ShaderModule::create_info(size_t code_size, const uint32_t *code, VkFlags flags)
-{
+inline VkShaderModuleCreateInfo ShaderModule::create_info(size_t code_size,
+                                                          const uint32_t *code,
+                                                          VkFlags flags) {
     VkShaderModuleCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     info.codeSize = code_size;
@@ -789,9 +911,11 @@ inline VkShaderModuleCreateInfo ShaderModule::create_info(size_t code_size, cons
     return info;
 }
 
-inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
-                                                         VkDescriptorType type, uint32_t count, const VkDescriptorImageInfo *image_info)
-{
+inline VkWriteDescriptorSet
+Device::write_descriptor_set(const DescriptorSet &set, uint32_t binding,
+                             uint32_t array_element, VkDescriptorType type,
+                             uint32_t count,
+                             const VkDescriptorImageInfo *image_info) {
     VkWriteDescriptorSet write = {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.dstSet = set.handle();
@@ -803,9 +927,11 @@ inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &se
     return write;
 }
 
-inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
-                                                         VkDescriptorType type, uint32_t count, const VkDescriptorBufferInfo *buffer_info)
-{
+inline VkWriteDescriptorSet
+Device::write_descriptor_set(const DescriptorSet &set, uint32_t binding,
+                             uint32_t array_element, VkDescriptorType type,
+                             uint32_t count,
+                             const VkDescriptorBufferInfo *buffer_info) {
     VkWriteDescriptorSet write = {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.dstSet = set.handle();
@@ -817,9 +943,10 @@ inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &se
     return write;
 }
 
-inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
-                                                         VkDescriptorType type, uint32_t count, const VkBufferView *buffer_views)
-{
+inline VkWriteDescriptorSet
+Device::write_descriptor_set(const DescriptorSet &set, uint32_t binding,
+                             uint32_t array_element, VkDescriptorType type,
+                             uint32_t count, const VkBufferView *buffer_views) {
     VkWriteDescriptorSet write = {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.dstSet = set.handle();
@@ -831,28 +958,35 @@ inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &se
     return write;
 }
 
-inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
-                                                         VkDescriptorType type, const std::vector<VkDescriptorImageInfo> &image_info)
-{
-    return write_descriptor_set(set, binding, array_element, type, image_info.size(), &image_info[0]);
+inline VkWriteDescriptorSet Device::write_descriptor_set(
+    const DescriptorSet &set, uint32_t binding, uint32_t array_element,
+    VkDescriptorType type,
+    const std::vector<VkDescriptorImageInfo> &image_info) {
+    return write_descriptor_set(set, binding, array_element, type,
+                                image_info.size(), &image_info[0]);
 }
 
-inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
-                                                         VkDescriptorType type, const std::vector<VkDescriptorBufferInfo> &buffer_info)
-{
-    return write_descriptor_set(set, binding, array_element, type, buffer_info.size(), &buffer_info[0]);
+inline VkWriteDescriptorSet Device::write_descriptor_set(
+    const DescriptorSet &set, uint32_t binding, uint32_t array_element,
+    VkDescriptorType type,
+    const std::vector<VkDescriptorBufferInfo> &buffer_info) {
+    return write_descriptor_set(set, binding, array_element, type,
+                                buffer_info.size(), &buffer_info[0]);
 }
 
-inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
-                                                         VkDescriptorType type, const std::vector<VkBufferView> &buffer_views)
-{
-    return write_descriptor_set(set, binding, array_element, type, buffer_views.size(), &buffer_views[0]);
+inline VkWriteDescriptorSet
+Device::write_descriptor_set(const DescriptorSet &set, uint32_t binding,
+                             uint32_t array_element, VkDescriptorType type,
+                             const std::vector<VkBufferView> &buffer_views) {
+    return write_descriptor_set(set, binding, array_element, type,
+                                buffer_views.size(), &buffer_views[0]);
 }
 
-inline VkCopyDescriptorSet Device::copy_descriptor_set(const DescriptorSet &src_set, uint32_t src_binding, uint32_t src_array_element,
-                                                       const DescriptorSet &dst_set, uint32_t dst_binding, uint32_t dst_array_element,
-                                                       uint32_t count)
-{
+inline VkCopyDescriptorSet
+Device::copy_descriptor_set(const DescriptorSet &src_set, uint32_t src_binding,
+                            uint32_t src_array_element,
+                            const DescriptorSet &dst_set, uint32_t dst_binding,
+                            uint32_t dst_array_element, uint32_t count) {
     VkCopyDescriptorSet copy = {};
     copy.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
     copy.srcSet = src_set.handle();
@@ -866,8 +1000,8 @@ inline VkCopyDescriptorSet Device::copy_descriptor_set(const DescriptorSet &src_
     return copy;
 }
 
-inline VkCommandBufferAllocateInfo CommandBuffer::create_info(VkCommandPool const &pool)
-{
+inline VkCommandBufferAllocateInfo
+CommandBuffer::create_info(VkCommandPool const &pool) {
     VkCommandBufferAllocateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     info.commandPool = pool;

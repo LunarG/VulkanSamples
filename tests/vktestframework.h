@@ -1,26 +1,34 @@
-//
-//  Copyright (C) 2015 Valve Corporation
-//
-//  Permission is hereby granted, free of charge, to any person obtaining a
-//  copy of this software and associated documentation files (the "Software"),
-//  to deal in the Software without restriction, including without limitation
-//  the rights to use, copy, modify, merge, publish, distribute, sublicense,
-//  and/or sell copies of the Software, and to permit persons to whom the
-//  Software is furnished to do so, subject to the following conditions:
-//
-//  The above copyright notice and this permission notice shall be included
-//  in all copies or substantial portions of the Software.
-//
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-//  THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-//  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-//  DEALINGS IN THE SOFTWARE.
-//
-// Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
-// Author: Tony Barbour <tony@LunarG.com>
+/*
+ * Copyright (c) 2015-2016 The Khronos Group Inc.
+ * Copyright (c) 2015-2016 Valve Corporation
+ * Copyright (c) 2015-2016 LunarG, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and/or associated documentation files (the "Materials"), to
+ * deal in the Materials without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Materials, and to permit persons to whom the Materials are
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice(s) and this permission notice shall be included in
+ * all copies or substantial portions of the Materials.
+ *
+ * The Materials are Confidential Information as defined by the Khronos
+ * Membership Agreement until designated non-confidential by Khronos, at which
+ * point this condition clause shall be removed.
+ *
+ * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ *
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
+ * USE OR OTHER DEALINGS IN THE MATERIALS.
+ *
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ * Author: Tony Barbour <tony@LunarG.com>
+ */
 
 #ifndef VKTESTFRAMEWORK_H
 #define VKTESTFRAMEWORK_H
@@ -61,49 +69,46 @@ using namespace std;
 
 class VkImageObj;
 
-class VkTestFramework : public ::testing::Test
-{
-public:
+class VkTestFramework : public ::testing::Test {
+  public:
     VkTestFramework();
     ~VkTestFramework();
 
     VkFormat GetFormat(VkInstance instance, vk_testing::Device *device);
-    static bool optionMatch(const char* option, char* optionLine);
+    static bool optionMatch(const char *option, char *optionLine);
     static void InitArgs(int *argc, char *argv[]);
     static void Finish();
 
-    bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
-                   const char *pshader,
+    bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
                    std::vector<unsigned int> &spv);
-    static bool         m_use_glsl;
-    static bool         m_canonicalize_spv;
-    static bool         m_strip_spv;
-    static bool         m_do_everything_spv;
+    static bool m_use_glsl;
+    static bool m_canonicalize_spv;
+    static bool m_strip_spv;
+    static bool m_do_everything_spv;
 
-    char** ReadFileData(const char* fileName);
-    void FreeFileData(char** data);
+    char **ReadFileData(const char *fileName);
+    void FreeFileData(char **data);
 
-private:
+  private:
     int m_compile_options;
     int m_num_shader_strings;
     TBuiltInResource Resources;
-    void SetMessageOptions(EShMessages& messages);
+    void SetMessageOptions(EShMessages &messages);
     void ProcessConfigFile();
-    EShLanguage FindLanguage(const std::string& name);
+    EShLanguage FindLanguage(const std::string &name);
     EShLanguage FindLanguage(const VkShaderStageFlagBits shader_type);
     std::string ConfigFile;
-    bool SetConfigFile(const std::string& name);
-    static int                              m_width;
-    static int                              m_height;
-    string                                  m_testName;
+    bool SetConfigFile(const std::string &name);
+    static int m_width;
+    static int m_height;
+    string m_testName;
 };
 
-class TestEnvironment : public ::testing::Environment
-{
- public:
-  void SetUp();
+class TestEnvironment : public ::testing::Environment {
+  public:
+    void SetUp();
 
-  void TearDown();
+    void TearDown();
 };
 
 #endif // VKTESTFRAMEWORK_H
