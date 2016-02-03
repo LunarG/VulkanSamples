@@ -2550,7 +2550,7 @@ class ThreadOutputGenerator(OutputGenerator):
             'vkDestroyDebugReportCallbackEXT',
         ]
         if name in special_functions:
-            self.intercepts += [ '    "%s", (PFN_vkVoidFunction) %s,' % (name,name) ]
+            self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (name,name) ]
             return
         if "KHR" in name:
             self.appendSection('command', '// TODO - not wrapping KHR function ' + name)
@@ -2563,7 +2563,7 @@ class ThreadOutputGenerator(OutputGenerator):
         # record that the function will be intercepted
         if (self.featureExtraProtect != None):
             self.intercepts += [ '#ifdef %s' % self.featureExtraProtect ]
-        self.intercepts += [ '    "%s", (PFN_vkVoidFunction) %s,' % (name,name) ]
+        self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (name,name) ]
         if (self.featureExtraProtect != None):
             self.intercepts += [ '#endif' ]
 

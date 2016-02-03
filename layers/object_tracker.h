@@ -495,24 +495,6 @@ extern unordered_map<uint64_t, OBJTRACK_NODE*> VkCommandBufferMap;
 extern unordered_map<uint64_t, OBJTRACK_NODE*> VkSwapchainKHRMap;
 extern unordered_map<uint64_t, OBJTRACK_NODE*> VkSurfaceKHRMap;
 
-static VkBool32 set_status(VkQueue dispatchable_object, VkFence object, VkDebugReportObjectTypeEXT objType, ObjectStatusFlags status_flag)
-{
-    VkBool32 skipCall = VK_FALSE;
-    if (object != VK_NULL_HANDLE) {
-        if (VkFenceMap.find((uint64_t)(object)) != VkFenceMap.end()) {
-            OBJTRACK_NODE* pNode = VkFenceMap[(uint64_t)(object)];
-            pNode->status |= status_flag;
-        }
-        else {
-            // If we do not find it print an error
-            skipCall |= log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, (uint64_t) object, __LINE__, OBJTRACK_NONE, "OBJTRACK",
-                "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",
-                (uint64_t)(object), string_VkDebugReportObjectTypeEXT(objType));
-        }
-    }
-    return skipCall;
-}
-
 static void create_physical_device(VkInstance dispatchable_object, VkPhysicalDevice vkObj, VkDebugReportObjectTypeEXT objType)
 {
     log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), __LINE__, OBJTRACK_NONE, "OBJTRACK",

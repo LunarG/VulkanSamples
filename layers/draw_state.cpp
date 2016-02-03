@@ -219,7 +219,6 @@ struct shader_module {
 // TODO : Do we need to guard access to layer_data_map w/ lock?
 static unordered_map<void*, layer_data*> layer_data_map;
 
-static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 // TODO : This can be much smarter, using separate locks for separate global data
 static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
@@ -1362,7 +1361,6 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
     /* We seem to allow pipeline stages to be specified out of order, so collect and identify them
      * before trying to do anything more: */
     int vertex_stage = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
-    int geometry_stage = get_shader_stage_id(VK_SHADER_STAGE_GEOMETRY_BIT);
     int fragment_stage = get_shader_stage_id(VK_SHADER_STAGE_FRAGMENT_BIT);
 
     shader_module **shaders = new shader_module*[fragment_stage + 1];  /* exclude CS */
@@ -1910,9 +1908,10 @@ static uint32_t getUpdateCount(layer_data* my_data, const VkDevice device, const
         case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
             // TODO : Need to understand this case better and make sure code is correct
             return ((VkCopyDescriptorSet*)pUpdateStruct)->descriptorCount;
+        default:
+            return 0;
     }
-
-	return 0;
+    return 0;
 }
 
 // For given Layout Node and binding, return index where that binding begins
@@ -1999,10 +1998,6 @@ static VkBool32 shadowUpdateNode(layer_data* my_data, const VkDevice device, GEN
     VkBool32 skipCall = VK_FALSE;
     VkWriteDescriptorSet* pWDS = NULL;
     VkCopyDescriptorSet* pCDS = NULL;
-    size_t array_size = 0;
-    size_t base_array_size = 0;
-    size_t total_array_size = 0;
-    size_t baseBuffAddr = 0;
     switch (pUpdate->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
@@ -2177,11 +2172,7 @@ static VkBool32 validateUpdateContents(const layer_data* my_data, const VkWriteD
 {
     VkBool32 skipCall = VK_FALSE;
     // First verify that for the given Descriptor type, the correct DescriptorInfo data is supplied
-    VkBufferView* pBufferView = NULL;
     const VkSampler* pSampler = NULL;
-    VkImageView* pImageView = NULL;
-    VkImageLayout* pImageLayout = NULL;
-    VkDescriptorBufferInfo* pBufferInfo = NULL;
     VkBool32 immutable = VK_FALSE;
     uint32_t i = 0;
     // For given update type, verify that update contents are correct
@@ -2234,6 +2225,8 @@ static VkBool32 validateUpdateContents(const layer_data* my_data, const VkWriteD
             for (i=0; i<pWDS->descriptorCount; ++i) {
                 skipCall |= validateBufferInfo(my_data, &(pWDS->pBufferInfo[i]));
             }
+            break;
+        default:
             break;
     }
     return skipCall;
@@ -2464,10 +2457,7 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
     while(pShadowUpdate) {
         pFreeUpdate = pShadowUpdate;
         pShadowUpdate = (GENERIC_HEADER*)pShadowUpdate->pNext;
-        uint32_t index = 0;
         VkWriteDescriptorSet * pWDS = NULL;
-        VkCopyDescriptorSet * pCDS = NULL;
-        void** ppToFree = NULL;
         switch (pFreeUpdate->sType)
         {
             case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
@@ -2873,7 +2863,6 @@ static VkBool32 printPipeline(layer_data* my_data, const VkCommandBuffer cb)
 static VkBool32 printDSConfig(layer_data* my_data, const VkCommandBuffer cb)
 {
     VkBool32 skipCall = VK_FALSE;
-    char ds_config_str[1024*256] = {0}; // TODO : Currently making this buffer HUGE w/o overrun protection.  Need to be smarter, start smaller, and grow as needed.
     GLOBAL_CB_NODE* pCB = getCBNode(my_data, cb);
     if (pCB && pCB->lastBoundDescriptorSet) {
         SET_NODE* pSet = getSetNode(my_data, pCB->lastBoundDescriptorSet);
@@ -3806,7 +3795,6 @@ VkBool32 validateIdleBuffer(const layer_data* my_data, VkBuffer buffer) {
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyBuffer(VkDevice device, VkBuffer buffer, const VkAllocationCallbacks* pAllocator)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkBool32 skip_call = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     if (!validateIdleBuffer(dev_data, buffer)) {
         loader_platform_thread_unlock_mutex(&globalLock);

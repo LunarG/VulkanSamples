@@ -97,8 +97,6 @@ struct layer_data {
 
 static unordered_map<void *, layer_data *> layer_data_map;
 
-static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
-
 // TODO : This can be much smarter, using separate locks for separate global data
 static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
@@ -558,9 +556,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
                             "Cannot enable in occlusion queries in vkBeginCommandBuffer() and set queryFlags to %d which is not a valid combination of VkQueryControlFlagBits.",
                             pInfo->queryFlags);
     }
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     if (!skipCall)
-        return dev_data->device_dispatch_table->BeginCommandBuffer(commandBuffer, pBeginInfo);
-	return VK_ERROR_VALIDATION_FAILED_EXT;
+        result = dev_data->device_dispatch_table->BeginCommandBuffer(
+            commandBuffer, pBeginInfo);
+    return result;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* pQueue)
@@ -613,7 +613,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUpdateDescriptorSets(
     const VkCopyDescriptorSet  *pDescriptorCopies)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult    result   = VK_ERROR_VALIDATION_FAILED_EXT;
     VkBool32    skipCall = VK_FALSE;
 
     for (uint32_t i = 0; i < descriptorWriteCount; i++) {

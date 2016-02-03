@@ -2,6 +2,7 @@
  * Copyright (c) 2015-2016 The Khronos Group Inc.
  * Copyright (c) 2015-2016 Valve Corporation
  * Copyright (c) 2015-2016 LunarG, Inc.
+ * Copyright (c) 2015-2016 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and/or associated documentation files (the "Materials"), to
@@ -3564,7 +3565,8 @@ TEST_F(VkLayerTest, ClearColorImageWithinRenderPass) {
     // Renderpass is started here
     BeginCommandBuffer();
 
-    VkClearColorValue clear_color = {0};
+    VkClearColorValue clear_color;
+    memset(clear_color.uint32, 0, sizeof(uint32_t) * 4);
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
     const int32_t tex_width = 32;

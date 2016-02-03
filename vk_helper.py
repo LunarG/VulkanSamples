@@ -916,8 +916,9 @@ class StructWrapperGen:
                             sh_funcs.append('%sif ((pStruct->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) ||' % (indent))
                             sh_funcs.append('%s    (pStruct->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER))  {' % (indent))
                             indent += '    '
-                        sh_funcs.append('%sif (pStruct->%s) {' % (indent, stp_list[index]['name']))
-                        indent += '    '
+                        if stp_list[index]['dyn_array']:
+                            sh_funcs.append('%sif (pStruct->%s) {' % (indent, stp_list[index]['name']))
+                            indent += '    '
                         sh_funcs.append('%sfor (uint32_t i = 0; i < %s; i++) {' % (indent, array_count))
                         indent += '    '
                         sh_funcs.append('%sindex_ss.str("");' % (indent))
@@ -950,8 +951,9 @@ class StructWrapperGen:
                         sh_funcs.append('%sss[%u].str("");' % (indent, index))
                         indent = indent[4:]
                         sh_funcs.append('%s}' % (indent))
-                        indent = indent[4:]
-                        sh_funcs.append('%s}' % (indent))
+                        if stp_list[index]['dyn_array']:
+                            indent = indent[4:]
+                            sh_funcs.append('%s}' % (indent))
                         #endif
                         if (stp_list[index]['name'] == 'pQueueFamilyIndices') or (stp_list[index]['name'] == 'pImageInfo') or (stp_list[index]['name'] == 'pBufferInfo') or (stp_list[index]['name'] == 'pTexelBufferView'):
                             indent = indent[4:]
@@ -1022,10 +1024,7 @@ class StructWrapperGen:
                         sh_funcs.append('        ss[%u].str("address");' % (index))
                     elif 'char' in self.struct_dict[s][m]['type'].lower() and self.struct_dict[s][m]['ptr']:
                         sh_funcs.append('%s' % lineinfo.get())
-                        sh_funcs.append('    if (NULL != pStruct->%s)' % (self.struct_dict[s][m]['name']))
-                        sh_funcs.append('        ss[%u] << pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
-                        sh_funcs.append('    else')
-                        sh_funcs.append('        ss[%u].str("");' % (index))
+                        sh_funcs.append('    ss[%u] << pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
                     else:
                         sh_funcs.append('%s' % lineinfo.get())
                         (po, pa) = self._get_struct_print_formatted(self.struct_dict[s][m])

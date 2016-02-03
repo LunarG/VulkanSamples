@@ -319,7 +319,7 @@ struct RENDER_PASS_NODE {
                 const uint32_t att = subpass->pColorAttachments[j].attachment;
                 const VkFormat format = pCreateInfo->pAttachments[att].format;
 
-                color_formats.push_back(pCreateInfo->pAttachments[att].format);
+                color_formats.push_back(format);
             }
 
             subpassColorFormats.push_back(color_formats);
@@ -412,10 +412,11 @@ typedef struct _DESCRIPTOR_POOL_NODE {
     vector<uint32_t>           maxDescriptorTypeCount; // max # of descriptors of each type in this pool
     vector<uint32_t>           availableDescriptorTypeCount; // available # of descriptors of each type in this pool
 
-    _DESCRIPTOR_POOL_NODE(const VkDescriptorPool pool, const VkDescriptorPoolCreateInfo* pCreateInfo) :
-    pool(pool), createInfo(*pCreateInfo), maxSets(pCreateInfo->maxSets), pSets(NULL),
-    maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE), availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE)
-    {
+    _DESCRIPTOR_POOL_NODE(const VkDescriptorPool pool,
+                          const VkDescriptorPoolCreateInfo *pCreateInfo)
+        : pool(pool), maxSets(pCreateInfo->maxSets), createInfo(*pCreateInfo),
+          pSets(NULL), maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE),
+          availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE) {
         if (createInfo.poolSizeCount) { // Shadow type struct from ptr into local struct
             size_t poolSizeCountSize = createInfo.poolSizeCount * sizeof(VkDescriptorPoolSize);
             createInfo.pPoolSizes = new VkDescriptorPoolSize[poolSizeCountSize];

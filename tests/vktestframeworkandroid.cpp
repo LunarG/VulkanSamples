@@ -59,6 +59,7 @@ bool VkTestFramework::GLSLtoSPV(const VkShaderStageFlagBits shader_type,
                                 std::vector<unsigned int> &spv)
 {
     assert(false);
+    return false;
 }
 
 void VkTestFramework::InitArgs(int *argc, char *argv[]) {}

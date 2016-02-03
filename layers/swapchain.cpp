@@ -1044,7 +1044,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(VkInstance  insta
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
     SwpSurface *pSurface = &my_data->surfaceMap[surface];
 
     // Regardless of skipCall value, do some internal cleanup:
@@ -1502,7 +1501,6 @@ static VkBool32 validateCreateSwapchainKHR(
 {
 // TODO: Validate cases of re-creating a swapchain (the current code
 // assumes a new swapchain is being created).
-    VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     char fn[] = "vkCreateSwapchainKHR";
@@ -2207,7 +2205,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
     for (uint32_t i = 0;
          pPresentInfo && (i < pPresentInfo->swapchainCount);
          i++) {
-        uint32_t swapchainCount = pPresentInfo->swapchainCount;
         uint32_t index = pPresentInfo->pImageIndices[i];
         SwpSwapchain *pSwapchain =
             &my_data->swapchainMap[pPresentInfo->pSwapchains[i]];

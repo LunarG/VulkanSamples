@@ -2,6 +2,7 @@
  * Copyright (c) 2015-2016 The Khronos Group Inc.
  * Copyright (c) 2015-2016 Valve Corporation
  * Copyright (c) 2015-2016 LunarG, Inc.
+ * Copyright (c) 2015-2016 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and/or associated documentation files (the "Materials"), to
@@ -669,7 +670,7 @@ void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage,
                       VkMemoryPropertyFlags reqs) {
     uint32_t mipCount;
     VkFormatProperties image_fmt;
-    VkImageTiling tiling;
+    VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 
     mipCount = 0;
 
@@ -702,7 +703,7 @@ void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage,
             << "Error: Cannot find requested tiling configuration";
     }
 
-    VkImageFormatProperties imageFormatProperties = {0};
+    VkImageFormatProperties imageFormatProperties;
     vkGetPhysicalDeviceImageFormatProperties(m_device->phy().handle(), fmt,
                                              VK_IMAGE_TYPE_2D, tiling, usage,
                                              0, // VkImageCreateFlags

@@ -343,7 +343,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, co
 {
     VkBool32                skipCall              = VK_FALSE;
     VkResult                result                = VK_ERROR_VALIDATION_FAILED_EXT;
-    VkImageFormatProperties ImageFormatProperties = {0};
+    VkImageFormatProperties ImageFormatProperties;
 
     layer_data       *device_data    = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkPhysicalDevice  physicalDevice = device_data->physicalDevice;

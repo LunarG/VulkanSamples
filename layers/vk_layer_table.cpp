@@ -1,6 +1,7 @@
 /* Copyright (c) 2015-2016 The Khronos Group Inc.
  * Copyright (c) 2015-2016 Valve Corporation
  * Copyright (c) 2015-2016 LunarG, Inc.
+ * Copyright (c) 2015-2016 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and/or associated documentation files (the "Materials"), to
@@ -63,8 +64,8 @@ VkLayerInstanceDispatchTable *instance_dispatch_table(void* object)
 
 void destroy_dispatch_table(device_table_map &map, dispatch_key key)
 {
-    device_table_map::const_iterator it = map.find((void *) key);
 #if DISPATCH_MAP_DEBUG
+    device_table_map::const_iterator it = map.find((void *)key);
     if (it != map.end()) {
         fprintf(stderr, "destroy device dispatch_table: map: %p, key: %p, table: %p\n", &map, key, it->second);
     } else {
@@ -77,8 +78,8 @@ void destroy_dispatch_table(device_table_map &map, dispatch_key key)
 
 void destroy_dispatch_table(instance_table_map &map, dispatch_key key)
 {
-    instance_table_map::const_iterator it = map.find((void *) key);
 #if DISPATCH_MAP_DEBUG
+    instance_table_map::const_iterator it = map.find((void *)key);
     if (it != map.end()) {
         fprintf(stderr, "destroy instance dispatch_table: map: %p, key: %p, table: %p\n", &map, key, it->second);
     } else {

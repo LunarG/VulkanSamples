@@ -52,7 +52,6 @@ using namespace std;
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
 #include "vk_layer_logging.h"
-static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 
 // WSI Image Objects bypass usual Image Object creation methods.  A special Memory
 // Object value will be used to identify them internally.
@@ -127,6 +126,8 @@ static MT_OBJ_BINDING_INFO*
                 return &(*it).second;
             break;
         }
+        default:
+            break;
     }
     return retValue;
 }
@@ -229,6 +230,8 @@ add_object_binding_info(
             pCI->mem = mem;
             break;
         }
+        default:
+            break;
     }
 }
 
@@ -270,6 +273,8 @@ add_object_create_info(
                 const_cast<VkSwapchainCreateInfoKHR*>(static_cast<const VkSwapchainCreateInfoKHR *>(pCreateInfo))->imageUsage;
             break;
         }
+        default:
+            break;
     }
 }
 
@@ -898,7 +903,6 @@ set_sparse_mem_binding(
                 pInfo->refCount++;
             }
             // Need to set mem binding for this object
-            MT_MEM_OBJ_INFO* pPrevBinding = get_mem_obj_info(my_data, pObjBindInfo->mem);
             pObjBindInfo->mem = mem;
         }
     }
