@@ -35,9 +35,8 @@ extern "C" {
 #endif
 
 const char *getLayerOption(const char *_option);
-FILE *getLayerLogOutput(const char *_option, const char *layerName);
-VkDebugReportFlagsEXT getLayerOptionFlags(const char *_option,
-                                          uint32_t optionDefault);
+FILE* getLayerLogOutput(const char *_option, const char *layerName);
+VkDebugReportFlagsEXT getLayerOptionFlags(const char *_option, uint32_t optionDefault);
 bool getLayerOptionEnum(const char *_option, uint32_t *optionDefault);
 
 void setLayerOption(const char *_option, const char *_val);

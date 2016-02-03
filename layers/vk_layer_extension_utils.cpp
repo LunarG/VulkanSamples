@@ -39,8 +39,11 @@
  */
 
 VkResult util_GetExtensionProperties(
-    const uint32_t count, const VkExtensionProperties *layer_extensions,
-    uint32_t *pCount, VkExtensionProperties *pProperties) {
+        const uint32_t count,
+        const VkExtensionProperties *layer_extensions,
+        uint32_t* pCount,
+        VkExtensionProperties* pProperties)
+{
     uint32_t copy_size;
 
     if (pProperties == NULL || layer_extensions == NULL) {
@@ -49,8 +52,7 @@ VkResult util_GetExtensionProperties(
     }
 
     copy_size = *pCount < count ? *pCount : count;
-    memcpy(pProperties, layer_extensions,
-           copy_size * sizeof(VkExtensionProperties));
+    memcpy(pProperties, layer_extensions, copy_size * sizeof(VkExtensionProperties));
     *pCount = copy_size;
     if (copy_size < count) {
         return VK_INCOMPLETE;
@@ -59,10 +61,12 @@ VkResult util_GetExtensionProperties(
     return VK_SUCCESS;
 }
 
-VkResult util_GetLayerProperties(const uint32_t count,
-                                 const VkLayerProperties *layer_properties,
-                                 uint32_t *pCount,
-                                 VkLayerProperties *pProperties) {
+VkResult util_GetLayerProperties(
+        const uint32_t count,
+        const VkLayerProperties *layer_properties,
+        uint32_t* pCount,
+        VkLayerProperties* pProperties)
+{
     uint32_t copy_size;
 
     if (pProperties == NULL || layer_properties == NULL) {
@@ -71,8 +75,7 @@ VkResult util_GetLayerProperties(const uint32_t count,
     }
 
     copy_size = *pCount < count ? *pCount : count;
-    memcpy(pProperties, layer_properties,
-           copy_size * sizeof(VkLayerProperties));
+    memcpy(pProperties, layer_properties, copy_size * sizeof(VkLayerProperties));
     *pCount = copy_size;
     if (copy_size < count) {
         return VK_INCOMPLETE;
