@@ -2865,7 +2865,7 @@ loader_enable_instance_layers(struct loader_instance *inst,
 VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
                                       const VkAllocationCallbacks *pAllocator,
                                       struct loader_instance *inst,
-                                      VkInstance created_instance) {
+                                      VkInstance *created_instance) {
     uint32_t activated_layers = 0;
     VkLayerInstanceCreateInfo chain_info;
     VkLayerInstanceLink *layer_instance_link_info = NULL;
@@ -2940,7 +2940,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
     }
 
     PFN_vkCreateInstance fpCreateInstance =
-        (PFN_vkCreateInstance)nextGIPA(created_instance, "vkCreateInstance");
+        (PFN_vkCreateInstance)nextGIPA(*created_instance, "vkCreateInstance");
     if (fpCreateInstance) {
         VkLayerInstanceCreateInfo instance_create_info;
 
@@ -2956,7 +2956,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
         loader_create_info.pNext = &instance_create_info;
 
         res = fpCreateInstance(&loader_create_info, pAllocator,
-                               &created_instance);
+                               created_instance);
     } else {
         // Couldn't find CreateInstance function!
         res = VK_ERROR_INITIALIZATION_FAILED;
@@ -2966,7 +2966,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
         // TODO: Need to clean up here
     } else {
         loader_init_instance_core_dispatch_table(inst->disp, nextGIPA,
-                                                 created_instance);
+                                                 *created_instance);
     }
 
     return res;
