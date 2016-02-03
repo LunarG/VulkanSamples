@@ -25,8 +25,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "Simulation.h"
 
-Animation::Animation(unsigned int rng_seed)
-    : rng_(rng_seed), dir_(-1.0f, 1.0f), speed_(0.1f, 1.0f), scale_(0.005f, 0.02f)
+Animation::Animation(unsigned int rng_seed, float scale)
+    : rng_(rng_seed), dir_(-1.0f, 1.0f), speed_(0.1f, 1.0f)
 {
     float x = dir_(rng_);
     float y = dir_(rng_);
@@ -37,7 +37,7 @@ Animation::Animation(unsigned int rng_seed)
     current_.axis = glm::normalize(glm::vec3(x, y, z));
 
     current_.speed = speed_(rng_);
-    current_.scale = scale_(rng_);
+    current_.scale = scale;
 
     current_.matrix = glm::scale(glm::mat4(1.0f), glm::vec3(current_.scale));
 }
@@ -217,8 +217,13 @@ Simulation::Simulation(int object_count)
 {
     objects_.reserve(object_count);
     for (int i = 0; i < object_count; i++) {
-        Object obj = { i, random_dev_(), random_dev_() };
-        objects_.push_back(obj);
+        float scale = 0.01f;
+
+        objects_.emplace_back(Object{
+            i,
+            Animation(random_dev_(), scale),
+            Path(random_dev_()),
+        });
     }
 }
 
