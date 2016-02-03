@@ -2764,6 +2764,7 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->waitedEvents.clear();
         pCB->waitedEventsBeforeQueryReset.clear();
         pCB->queryToStateMap.clear();
+        pCB->activeQueries.clear();
         pCB->secondaryCommandBuffers.clear();
     }
 }
@@ -4428,6 +4429,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEndCommandBuffer(VkCommandBuffe
         if (pCB->state != CB_RECORDING) {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkEndCommandBuffer()");
         }
+        for (auto query : pCB->activeQueries) {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
+                "Ending command buffer with in progress query: queryPool %" PRIu64 ", index %d", (uint64_t)(query.pool), query.index);
+        }
     }
     if (VK_FALSE == skipCall) {
         result = dev_data->device_dispatch_table->EndCommandBuffer(commandBuffer);
@@ -5514,6 +5519,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginQuery(VkCommandBuffer comma
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
+        QueryObject query = {queryPool, slot};
+        pCB->activeQueries.insert(query);
         skipCall |= addCmd(dev_data, pCB, CMD_BEGINQUERY, "vkCmdBeginQuery()");
     }
     if (VK_FALSE == skipCall)
@@ -5527,6 +5534,12 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(VkCommandBuffer command
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         QueryObject query = {queryPool, slot};
+        if (!pCB->activeQueries.count(query)) {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
+                "Ending a query before it was started: queryPool %" PRIu64 ", index %d", (uint64_t)(queryPool), slot);
+        } else {
+            pCB->activeQueries.erase(query);
+        }
         pCB->queryToStateMap[query] = 1;
         if (pCB->state == CB_RECORDING) {
             skipCall |= addCmd(dev_data, pCB, CMD_ENDQUERY, "VkCmdEndQuery()");

@@ -537,6 +537,7 @@ typedef struct _GLOBAL_CB_NODE {
     vector<VkEvent>              waitedEvents;
     unordered_map<QueryObject, vector<VkEvent> > waitedEventsBeforeQueryReset;
     unordered_map<QueryObject, bool> queryToStateMap; // 0 is unavailable, 1 is available
+    unordered_set<QueryObject>   activeQueries;
     unordered_map<VkImage, IMAGE_CMD_BUF_NODE> imageLayoutMap;
     vector<DRAW_DATA>            drawData;
     DRAW_DATA                    currentDrawData;

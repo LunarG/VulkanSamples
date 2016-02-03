@@ -71,7 +71,7 @@ The VK_LAYER_LUNARG_draw_state layer tracks state leading into Draw cmds. This i
 | Verify Memory Buffer Not Deleted | Validate Command Buffer not submitted with deleted memory buffer | INVALID_BUFFER | vkQueueSubmit | TBD | None |
 | Verify Memory Buffer Destroy | Validate memory buffers are not destroyed more than once | DOUBLE_DESTROY | vkDestroyBuffer | TBD | None |
 | Verify Object Not In Use | Validate that object being freed or modified is not in use | OBJECT_INUSE | vkDestroyBuffer vkFreeDescriptorSets vkUpdateDescriptorSets | TBD | None |
-| Verify Get Queries| Validate that that queries are properly initialized and synchronized | INVALID_QUERY | vkGetFenceStatus vkQueueWaitIdle vkWaitForFences vkDeviceWaitIdle | TBD | None |
+| Verify Get Queries| Validate that that queries are properly setup, initialized, synchronized | INVALID_QUERY | vkGetFenceStatus vkQueueWaitIdle vkWaitForFences vkDeviceWaitIdle vkCmdBeginQuery vkCmdEndQuery| TBD | None |
 | Live Semaphore  | When waiting on a semaphore, need to make sure that the semaphore is live and therefore can be signalled, otherwise queue is stalled and cannot make forward progress. | QUEUE_FORWARD_PROGRESS | vkQueueSubmit vkQueueBindSparse vkQueuePresentKHR vkAcquireNextImageKHR | TODO | Create test |
 | Storage Buffer Alignment  | Storage Buffer offsets in BindDescriptorSets must agree with offset alignment device limit | INVALID_STORAGE_BUFFER_OFFSET | vkCmdBindDescriptorSets | TODO | Create test |
 | Uniform Buffer Alignment  | Uniform Buffer offsets in BindDescriptorSets must agree with offset alignment device limit | INVALID_UNIFORM_BUFFER_OFFSET | vkCmdBindDescriptorSets | TODO | Create test |
