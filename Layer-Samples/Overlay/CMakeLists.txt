@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 2.8.11)
 
-set(SHADER_DIR ${SAMPLES_DATA_DIR})
+set(SHADER_DIR "${PROJECT_SOURCE_DIR}/Layer-Samples/data")
 set(SFILE overlay)
+
+if(WIN32)
+    set (MOVE_CMD "move")
+else()
+    set (MOVE_CMD "mv")
+endif()
+
 add_custom_command(OUTPUT ${SHADER_DIR}/${SFILE}-vert.spv
 	COMMAND ${GLSLANG_VALIDATOR} -s -V ${SHADER_DIR}/${SFILE}.vert
 	COMMAND ${MOVE_CMD} vert.spv ${SHADER_DIR}/${SFILE}-vert.spv
@@ -16,42 +23,51 @@ add_custom_command(OUTPUT ${SHADER_DIR}/${SFILE}-frag.spv
 message(STATUS "Shader dir: ${SHADER_DIR}")
 message(STATUS "Cxxflags: ${CMAKE_CXX_FLAGS}")
 
-set(SDK_SOURCE "${CMAKE_SOURCE_DIR}/../LoaderAndTools")
+if(EXISTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools")
+    set(SDK_SOURCE "${CMAKE_SOURCE_DIR}/../LoaderAndTools")
+else()
+    set(SDK_SOURCE "${CMAKE_SOURCE_DIR}/../source")
+endif()
+
 set(UTILDIR "${CMAKE_SOURCE_DIR}/Layer-Samples/utils")
 
 if (EXISTS "${SDK_SOURCE}")
+    find_library(LAYERUTILS_DLIB REQUIRED NAMES layer_utils
+            HINTS "${SDK_SOURCE}/build/layers"
+                  "${SDK_SOURCE}/build/layers/Release"
+                  "${SDK_SOURCE}/build/layers/Debug"
+            )
 
-	if (WIN32)
-		message(STATUS "Overlay layer example not enabled on Windows yet")
-	else()
-		find_library(LAYERUTILS_DLIB REQUIRED NAMES layer_utils
-			HINTS "${SDK_SOURCE}/build/layers"
-			)
+    add_library(VKLayerOverlay SHARED overlay.cpp
+            ${SDK_SOURCE}/layers/vk_layer_table.cpp
+            ${SHADER_DIR}/overlay-vert.spv
+            ${SHADER_DIR}/overlay-frag.spv
+            overlay.json)
 
-		add_library(VKLayerOverlay SHARED overlay.cpp
-			${SDK_SOURCE}/layers/vk_layer_table.cpp
-			${SHADER_DIR}/overlay-vert.spv
-			${SHADER_DIR}/overlay-frag.spv
-			overlay.json)
-		target_link_libraries(VKLayerOverlay ${LAYERUTILS_DLIB})
-		set_target_properties(VKLayerOverlay PROPERTIES CXX_FLAGS "-Wno-unused-function")
-		set_target_properties(VKLayerOverlay PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic")
+    if (WIN32)
+        set_target_properties(VKLayerOverlay PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/VkLayer_overlay.def")
+        add_custom_command(OUTPUT overlay.json
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/linux/overlay.json $<CONFIGURATION>/overlay.json
+            VERBATIM)
+    else()
+        set_target_properties(VKLayerOverlay PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic")
+        add_custom_command(OUTPUT overlay.json
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/linux/overlay.json overlay.json
+            VERBATIM)
+    endif()
 
-		add_custom_command(OUTPUT overlay.json
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/linux/overlay.json overlay.json
-			VERBATIM)
+    target_link_libraries(VKLayerOverlay ${LAYERUTILS_DLIB})
+    set_target_properties(VKLayerOverlay PROPERTIES CXX_FLAGS "-Wno-unused-function")
 
-		# ugly: reference unshipped bits of LoaderAndTools that we need for implementing
-		# a layer from the outside.
-		include_directories(
-			"${SDK_SOURCE}/build/layers"
-			"${SDK_SOURCE}/layers"
-			"${SDK_SOURCE}/loader"
-			"${UTILDIR}/stb"
-			)
-	endif()
+    include_directories(
+            "${SDK_SOURCE}/build/layers"
+            "${SDK_SOURCE}/layers"
+            "${SDK_SOURCE}/loader"
+            "${UTILDIR}/stb"
+            )
+
 
 else()
-	message(STATUS "Colocated LoaderAndTools tree not found, not building Overlay example")
+        message(STATUS "Layer utility source code not found, not building Overlay example")
 endif()
 
