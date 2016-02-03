@@ -326,11 +326,13 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkDestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
     const VkLayerDispatchTable *disp;
     struct loader_device *dev;
+
+    loader_platform_thread_lock_mutex(&loader_lock);
+
     struct loader_icd *icd = loader_get_icd_and_device(device, &dev);
     const struct loader_instance *inst = icd->this_instance;
     disp = loader_get_dispatch(device);
 
-    loader_platform_thread_lock_mutex(&loader_lock);
     disp->DestroyDevice(device, pAllocator);
     dev->device = NULL;
     loader_remove_logical_device(inst, icd, dev);
