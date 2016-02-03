@@ -36,6 +36,7 @@ public:
 
     enum Type {
         MESH_PYRAMID,
+        MESH_ICOSPHERE,
 
         MESH_COUNT,
     };

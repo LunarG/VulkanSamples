@@ -24,6 +24,7 @@
 #include <cmath>
 #include <cstring>
 #include <array>
+#include <unordered_map>
 
 #include "Helpers.h"
 #include "Meshes.h"
@@ -199,9 +200,147 @@ public:
     }
 };
 
+class BuildIcosphere {
+public:
+    BuildIcosphere(Mesh &mesh) : mesh_(mesh), radius_(1.0f)
+    {
+        const int tessellate_level = 2;
+
+        build_icosahedron();
+        for (int i = 0; i < tessellate_level; i++)
+            tessellate();
+    }
+
+private:
+    void build_icosahedron()
+    {
+        // https://en.wikipedia.org/wiki/Regular_icosahedron
+        const float l1 = std::sqrt(2.0f / (5.0f + std::sqrt(5.0f))) * radius_;
+        const float l2 = std::sqrt(2.0f / (5.0f - std::sqrt(5.0f))) * radius_;
+        // vertices are from three golden rectangles
+        const std::vector<std::array<float, 6>> icosahedron_vertices = {
+            //   position           normal
+            { -l1, -l2, 0.0f,   -l1, -l2, 0.0f, },
+            {  l1, -l2, 0.0f,    l1, -l2, 0.0f, },
+            {  l1,  l2, 0.0f,    l1,  l2, 0.0f, },
+            { -l1,  l2, 0.0f,   -l1,  l2, 0.0f, },
+
+            { -l2, 0.0f, -l1,   -l2, 0.0f, -l1, },
+            {  l2, 0.0f, -l1,    l2, 0.0f, -l1, },
+            {  l2, 0.0f,  l1,    l2, 0.0f,  l1, },
+            { -l2, 0.0f,  l1,   -l2, 0.0f,  l1, },
+
+            { 0.0f, -l1, -l2,   0.0f, -l1, -l2, },
+            { 0.0f,  l1, -l2,   0.0f,  l1, -l2, },
+            { 0.0f,  l1,  l2,   0.0f,  l1,  l2, },
+            { 0.0f, -l1,  l2,   0.0f, -l1,  l2, },
+        };
+        const std::vector<std::array<int, 3>> icosahedron_faces = {
+            // triangles sharing vertex 0
+            {  0,  1, 11 },
+            {  0, 11,  7 },
+            {  0,  7,  4 },
+            {  0,  4,  8 },
+            {  0,  8,  1 },
+            // adjacent triangles
+            { 11,  1,  6 },
+            {  7, 11, 10 },
+            {  4,  7,  3 },
+            {  8,  4,  9 },
+            {  1,  8,  5 },
+            // triangles sharing vertex 2
+            {  2,  3, 10 },
+            {  2, 10,  6 },
+            {  2,  6,  5 },
+            {  2,  5,  9 },
+            {  2,  9,  3 },
+            // adjacent triangles
+            { 10,  3,  7 },
+            {  6, 10, 11 },
+            {  5,  6,  1 },
+            {  9,  5,  8 },
+            {  3,  9,  4 },
+        };
+
+        mesh_.build(icosahedron_vertices, icosahedron_faces);
+    }
+
+    void tessellate()
+    {
+        size_t middle_point_count = mesh_.faces_.size() * 3 / 2;
+        size_t final_face_count = mesh_.faces_.size() * 4;
+
+        std::vector<Mesh::Face> faces;
+        faces.reserve(final_face_count);
+
+        middle_points_.clear();
+        middle_points_.reserve(middle_point_count);
+
+        mesh_.positions_.reserve(mesh_.vertex_count() + middle_point_count);
+        mesh_.normals_.reserve(mesh_.vertex_count() + middle_point_count);
+
+        for (const auto &f : mesh_.faces_) {
+            int v0 = f.v0;
+            int v1 = f.v1;
+            int v2 = f.v2;
+
+            int v01 = add_middle_point(v0, v1);
+            int v12 = add_middle_point(v1, v2);
+            int v20 = add_middle_point(v2, v0);
+
+            faces.emplace_back(Mesh::Face{ v0, v01, v20 });
+            faces.emplace_back(Mesh::Face{ v1, v12, v01 });
+            faces.emplace_back(Mesh::Face{ v2, v20, v12 });
+            faces.emplace_back(Mesh::Face{ v01, v12, v20 });
+        }
+
+        mesh_.faces_.swap(faces);
+    }
+
+    int add_middle_point(int a, int b)
+    {
+        uint64_t key = (a < b) ? ((uint64_t) a << 32 | b) : ((uint64_t) b << 32 | a);
+        auto it = middle_points_.find(key);
+        if (it != middle_points_.end())
+            return it->second;
+
+        const Mesh::Position &pos_a = mesh_.positions_[a];
+        const Mesh::Position &pos_b = mesh_.positions_[b];
+        Mesh::Position pos_mid = {
+            (pos_a.x + pos_b.x) / 2.0f,
+            (pos_a.y + pos_b.y) / 2.0f,
+            (pos_a.z + pos_b.z) / 2.0f,
+        };
+        float scale = radius_ / std::sqrt(pos_mid.x * pos_mid.x +
+                                          pos_mid.y * pos_mid.y +
+                                          pos_mid.z * pos_mid.z);
+        pos_mid.x *= scale;
+        pos_mid.y *= scale;
+        pos_mid.z *= scale;
+
+        Mesh::Normal normal_mid = { pos_mid.x, pos_mid.y, pos_mid.z };
+        normal_mid.x /= radius_;
+        normal_mid.y /= radius_;
+        normal_mid.z /= radius_;
+
+        mesh_.positions_.emplace_back(pos_mid);
+        mesh_.normals_.emplace_back(normal_mid);
+
+        int mid = mesh_.vertex_count() - 1;
+        middle_points_.emplace(std::make_pair(key, mid));
+
+        return mid;
+    }
+
+    Mesh &mesh_;
+    const float radius_;
+    std::unordered_map<uint64_t, uint32_t> middle_points_;
+};
+
 void build_meshes(std::array<Mesh, Meshes::MESH_COUNT> &meshes)
 {
     BuildPyramid build_pyramid(meshes[Meshes::MESH_PYRAMID]);
+    BuildIcosphere build_icosphere(meshes[Meshes::MESH_ICOSPHERE]);
 }
 
 } // namespace

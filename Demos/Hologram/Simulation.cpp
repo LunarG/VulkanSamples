@@ -26,6 +26,52 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "Simulation.h"
 
+namespace {
+
+class MeshPicker {
+public:
+    MeshPicker() :
+        pattern_({
+                Meshes::MESH_PYRAMID,
+                Meshes::MESH_ICOSPHERE,
+                Meshes::MESH_PYRAMID,
+                Meshes::MESH_ICOSPHERE,
+                Meshes::MESH_PYRAMID,
+                Meshes::MESH_PYRAMID,
+                Meshes::MESH_PYRAMID,
+                Meshes::MESH_PYRAMID,
+                Meshes::MESH_PYRAMID,
+                Meshes::MESH_PYRAMID,
+                }), cur_(-1)
+    {
+    }
+
+    Meshes::Type pick()
+    {
+        cur_ = (cur_ + 1) % pattern_.size();
+        return pattern_[cur_];
+    }
+
+    float scale(Meshes::Type type) const
+    {
+        float base = 0.005f;
+
+        switch (type) {
+        case Meshes::MESH_PYRAMID:
+        default:
+            return base * 1.0f;
+        case Meshes::MESH_ICOSPHERE:
+            return base * 3.0f;
+        }
+    }
+
+private:
+    const std::array<Meshes::Type, 10> pattern_;
+    int cur_;
+};
+
+} // namespace
+
 Animation::Animation(unsigned int rng_seed, float scale)
     : rng_(rng_seed), dir_(-1.0f, 1.0f), speed_(0.1f, 1.0f)
 {
@@ -217,14 +263,14 @@ Simulation::Simulation(int object_count)
     : random_dev_()
 {
     MeshPicker mesh;
-    HolographicColorPicker color(random_dev_());
 
     objects_.reserve(object_count);
     for (int i = 0; i < object_count; i++) {
-        float scale = 0.01f;
+        Meshes::Type type = mesh.pick();
+        float scale = mesh.scale(type);
 
         objects_.emplace_back(Object{
-            Meshes::MESH_PYRAMID,
+            type,
             Animation(random_dev_(), scale),
             Path(random_dev_()),
         });
