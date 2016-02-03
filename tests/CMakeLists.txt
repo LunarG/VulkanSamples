@@ -98,9 +98,8 @@ else()
         FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/_run_all_tests.ps1 RUN_ALL)
         FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/_run_all_tests_with_layers.ps1 RUN_ALL_WITH_LAYERS)
         add_custom_target(binary-dir-symlinks ALL
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${RUN_ALL} run_all_tests.ps1
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${VKVALIDATELAYERDOC} vkvalidatelayerdoc.ps1
-            COMMAND IF NOT EXIST golden mklink /J golden ${GOLDEN}
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${RUN_ALL} _run_all_tests.ps1
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${RUN_ALL} _vkvalidatelayerdoc.ps1
             VERBATIM
             )
     endif()
