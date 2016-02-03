@@ -22,81 +22,8 @@
 
 #include <cassert>
 #include <cmath>
-#include <array>
 #include <glm/gtc/matrix_transform.hpp>
 #include "Simulation.h"
-
-namespace {
-
-class MeshPicker {
-public:
-    MeshPicker() :
-        pattern_({
-                Meshes::MESH_PYRAMID,
-                Meshes::MESH_ICOSPHERE,
-                Meshes::MESH_TEAPOT,
-                Meshes::MESH_PYRAMID,
-                Meshes::MESH_ICOSPHERE,
-                Meshes::MESH_PYRAMID,
-                Meshes::MESH_PYRAMID,
-                Meshes::MESH_PYRAMID,
-                Meshes::MESH_PYRAMID,
-                Meshes::MESH_PYRAMID,
-                }), cur_(-1)
-    {
-    }
-
-    Meshes::Type pick()
-    {
-        cur_ = (cur_ + 1) % pattern_.size();
-        return pattern_[cur_];
-    }
-
-    float scale(Meshes::Type type) const
-    {
-        float base = 0.005f;
-
-        switch (type) {
-        case Meshes::MESH_PYRAMID:
-        default:
-            return base * 1.0f;
-        case Meshes::MESH_ICOSPHERE:
-            return base * 3.0f;
-        case Meshes::MESH_TEAPOT:
-            return base * 10.0f;
-        }
-    }
-
-private:
-    const std::array<Meshes::Type, 10> pattern_;
-    int cur_;
-};
-
-class HolographicColorPicker {
-public:
-    HolographicColorPicker(unsigned int rng_seed) :
-        rng_(rng_seed),
-        red_(0.0f, 0.1f),
-        green_(0.7f, 0.8f),
-        blue_(0.8f, 1.0f)
-    {
-    }
-
-    glm::vec3 pick()
-    {
-        return glm::vec3{ red_(rng_),
-                          green_(rng_),
-                          blue_(rng_) };
-    }
-
-private:
-    std::mt19937 rng_;
-    std::uniform_real_distribution<float> red_;
-    std::uniform_real_distribution<float> green_;
-    std::uniform_real_distribution<float> blue_;
-};
-
-} // namespace
 
 Animation::Animation(unsigned int rng_seed, float scale)
     : rng_(rng_seed), dir_(-1.0f, 1.0f), speed_(0.1f, 1.0f)
@@ -288,18 +215,12 @@ void Path::generate_subpath()
 Simulation::Simulation(int object_count)
     : random_dev_()
 {
-    MeshPicker mesh;
-    HolographicColorPicker color(random_dev_());
-
     objects_.reserve(object_count);
     for (int i = 0; i < object_count; i++) {
-        Meshes::Type type = mesh.pick();
-        float scale = mesh.scale(type);
+        float scale = 0.01f;
 
         objects_.emplace_back(Object{
-            type,
-            glm::vec3(0.5 + 0.5 * (float) i / object_count),
-            color.pick(),
+            i,
             Animation(random_dev_(), scale),
             Path(random_dev_()),
         });
