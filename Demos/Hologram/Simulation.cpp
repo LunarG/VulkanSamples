@@ -30,9 +30,11 @@ Animation::Animation(unsigned int rng_seed)
 {
     float x = dir_(rng_);
     float y = dir_(rng_);
-    float z = std::sqrt(1 - x * x - y * y);
-    z = std::copysign(z, dir_(rng_));
-    current_.axis = glm::vec3(x, y, z);
+    float z = dir_(rng_);
+    if (std::abs(x) + std::abs(y) + std::abs(z) == 0.0f)
+        x = 1.0f;
+
+    current_.axis = glm::normalize(glm::vec3(x, y, z));
 
     current_.speed = speed_(rng_);
     current_.scale = scale_(rng_);
