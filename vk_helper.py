@@ -1,24 +1,32 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2015 Valve Corporation
+# Copyright (c) 2015-2016 The Khronos Group Inc.
+# Copyright (c) 2015-2016 Valve Corporation
+# Copyright (c) 2015-2016 LunarG, Inc.
+# Copyright (c) 2015-2016 Google Inc.
 #
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and associated documentation files (the "Software"),
-# to deal in the Software without restriction, including without limitation
-# the rights to use, copy, modify, merge, publish, distribute, sublicense,
-# and/or sell copies of the Software, and to permit persons to whom the
-# Software is furnished to do so, subject to the following conditions:
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and/or associated documentation files (the "Materials"), to
+# deal in the Materials without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Materials, and to permit persons to whom the Materials
+# are furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included
-# in all copies or substantial portions of the Software.
+# The above copyright notice(s) and this permission notice shall be included
+# in all copies or substantial portions of the Materials.
 #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# The Materials are Confidential Information as defined by the Khronos
+# Membership Agreement until designated non-confidential by Khronos, at which
+# point this condition clause shall be removed.
+#
+# THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-# DEALINGS IN THE SOFTWARE.
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+#
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+# DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+# OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
+# USE OR OTHER DEALINGS IN THE MATERIALS
 #
 # Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
 # Author: Tobin Ehlis <tobin@lunarg.com>
@@ -527,28 +535,36 @@ class StructWrapperGen:
         copyright.append('/*');
         copyright.append(' * Vulkan');
         copyright.append(' *');
-        copyright.append(' * Copyright (C) 2015 Valve Corporation');
+        copyright.append(' * Copyright (c) 2015-2016 The Khronos Group Inc.');
+        copyright.append(' * Copyright (c) 2015-2016 Valve Corporation.');
+        copyright.append(' * Copyright (c) 2015-2016 LunarG, Inc.');
+        copyright.append(' * Copyright (c) 2015-2016 Google Inc.');
         copyright.append(' *');
         copyright.append(' * Permission is hereby granted, free of charge, to any person obtaining a');
-        copyright.append(' * copy of this software and associated documentation files (the "Software"),');
-        copyright.append(' * to deal in the Software without restriction, including without limitation');
+        copyright.append(' * copy of this software and associated documentation files (the "Materials"),');
+        copyright.append(' * to deal in the Materials without restriction, including without limitation');
         copyright.append(' * the rights to use, copy, modify, merge, publish, distribute, sublicense,');
-        copyright.append(' * and/or sell copies of the Software, and to permit persons to whom the');
-        copyright.append(' * Software is furnished to do so, subject to the following conditions:');
+        copyright.append(' * and/or sell copies of the Materials, and to permit persons to whom the');
+        copyright.append(' * Materials is furnished to do so, subject to the following conditions:');
         copyright.append(' *');
         copyright.append(' * The above copyright notice and this permission notice shall be included');
-        copyright.append(' * in all copies or substantial portions of the Software.');
+        copyright.append(' * in all copies or substantial portions of the Materials.');
         copyright.append(' *');
-        copyright.append(' * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR');
+        copyright.append(' * The Materials are Confidential Information as defined by the Khronos');
+        copyright.append(' * Membership Agreement until designated non-confidential by Khronos, at which');
+        copyright.append(' * point this condition clause shall be removed.');
+        copyright.append(' *');
+        copyright.append(' * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR');
         copyright.append(' * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,');
-        copyright.append(' * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL');
-        copyright.append(' * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER');
-        copyright.append(' * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING');
-        copyright.append(' * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER');
-        copyright.append(' * DEALINGS IN THE SOFTWARE.');
-        copyright.append(' *')
-        copyright.append(' * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>')
-        copyright.append(' * Author: Tobin Ehlis <tobin@lunarg.com>')
+        copyright.append(' * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.');
+        copyright.append(' *');
+        copyright.append(' * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,');
+        copyright.append(' * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR');
+        copyright.append(' * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE');
+        copyright.append(' * USE OR OTHER DEALINGS IN THE MATERIALS');
+        copyright.append(' *');
+        copyright.append(' * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>');
+        copyright.append(' * Author: Tobin Ehlis <tobin@lunarg.com>');
         copyright.append(' */');
         copyright.append('');
         return "\n".join(copyright)
