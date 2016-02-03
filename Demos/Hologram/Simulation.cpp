@@ -66,7 +66,7 @@ enum CurveType {
 class RandomCurve : public Curve {
 public:
     RandomCurve(unsigned int rng_seed)
-        : rng_(rng_seed), direction_(-0.5f, 0.5f), duration_(0.5f, 5.0f),
+        : rng_(rng_seed), direction_(-0.3f, 0.3f), duration_(1.0f, 5.0f),
           segment_start_(0.0f), segment_direction_(0.0f),
           time_start_(0.0f), time_duration_(0.0f)
     {
@@ -199,7 +199,7 @@ void Path::generate_subpath()
             if (axis.x == 0.0f && axis.y == 0.0f && axis.z == 0.0f)
                 axis.x = 1.0f;
 
-            std::uniform_real_distribution<float> radius_(0.01f, 0.5f);
+            std::uniform_real_distribution<float> radius_(0.02f, 0.2f);
             curve = new CircleCurve(radius_(rng_), axis);
         }
         break;
