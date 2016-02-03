@@ -337,10 +337,89 @@ private:
     std::unordered_map<uint64_t, uint32_t> middle_points_;
 };
 
+class BuildTeapot {
+public:
+    BuildTeapot(Mesh &mesh)
+    {
+#include "Meshes.teapot.h"
+        const int position_count = sizeof(teapot_positions) / sizeof(teapot_positions[0]);
+        const int index_count = sizeof(teapot_indices) / sizeof(teapot_indices[0]);
+        assert(position_count % 3 == 0 && index_count % 3 == 0);
+
+        Mesh::Position translate;
+        float scale;
+        get_transform(teapot_positions, position_count, translate, scale);
+
+        for (int i = 0; i < position_count; i += 3) {
+            mesh.positions_.emplace_back(Mesh::Position{
+                (teapot_positions[i + 0] + translate.x) * scale,
+                (teapot_positions[i + 1] + translate.y) * scale,
+                (teapot_positions[i + 2] + translate.z) * scale,
+            });
+
+            mesh.normals_.emplace_back(Mesh::Normal{
+                teapot_normals[i + 0],
+                teapot_normals[i + 1],
+                teapot_normals[i + 2],
+            });
+        }
+
+        for (int i = 0; i < index_count; i += 3) {
+            mesh.faces_.emplace_back(Mesh::Face{
+                teapot_indices[i + 0],
+                teapot_indices[i + 1],
+                teapot_indices[i + 2]
+            });
+        }
+    }
+
+    void get_transform(const float *positions, int position_count,
+                       Mesh::Position &translate, float &scale)
+    {
+        float min[3] = {
+            positions[0],
+            positions[1],
+            positions[2],
+        };
+        float max[3] = {
+            positions[0],
+            positions[1],
+            positions[2],
+        };
+        for (int i = 3; i < position_count; i += 3) {
+            for (int j = 0; j < 3; j++) {
+                if (min[j] > positions[i + j])
+                    min[j] = positions[i + j];
+                if (max[j] < positions[i + j])
+                    max[j] = positions[i + j];
+            }
+        }
+
+        translate.x = -(min[0] + max[0]) / 2.0f;
+        translate.y = -(min[1] + max[1]) / 2.0f;
+        translate.z = -(min[2] + max[2]) / 2.0f;
+
+        float extents[3] = {
+            max[0] + translate.x,
+            max[1] + translate.y,
+            max[2] + translate.z,
+        };
+
+        float max_extent = extents[0];
+        if (max_extent < extents[1])
+            max_extent = extents[1];
+        if (max_extent < extents[2])
+            max_extent = extents[2];
+
+        scale = 1.0f / max_extent;
+    }
+};
+
 void build_meshes(std::array<Mesh, Meshes::MESH_COUNT> &meshes)
 {
     BuildPyramid build_pyramid(meshes[Meshes::MESH_PYRAMID]);
     BuildIcosphere build_icosphere(meshes[Meshes::MESH_ICOSPHERE]);
+    BuildTeapot build_teapot(meshes[Meshes::MESH_TEAPOT]);
 }
 
 } // namespace
