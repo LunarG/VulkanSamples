@@ -1123,11 +1123,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInst
                     &my_data->physicalDeviceMap[pPhysicalDevices[i]];
             }
         }
-        loader_platform_thread_unlock_mutex(&globalLock);
-        return result;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    return VK_ERROR_VALIDATION_FAILED_EXT;
+    return result;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
