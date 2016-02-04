@@ -38,8 +38,8 @@
 #include "vk_layer_extension_utils.h"
 #include "vk_enum_string_helper.h"
 
-// FIXME/TODO: Make sure this layer is thread-safe!
-
+static int globalLockInitialized = 0;
+static loader_platform_thread_mutex globalLock;
 
 // The following is for logging error messages:
 static std::unordered_map<void *, layer_data *> layer_data_map;
@@ -264,6 +264,11 @@ static void initSwapchain(layer_data *my_data, const VkAllocationCallbacks *pAll
         layer_create_msg_callback(my_data->report_data, &dbgInfo, pAllocator, &callback);
         my_data->logging_callback.push_back(callback);
     }
+    if (!globalLockInitialized)
+    {
+        loader_platform_thread_create_mutex(&globalLock);
+        globalLockInitialized = 1;
+    }
 }
 
 static const char *surfaceTransformStr(VkSurfaceTransformFlagBitsKHR value)
@@ -329,17 +334,16 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstance
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
 {
-    VkBool32 skipCall = VK_FALSE;
     dispatch_key key = get_dispatch_key(instance);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
 
-    if (VK_FALSE == skipCall) {
-        // Call down the call chain:
-        my_data->instance_dispatch_table->DestroyInstance(instance, pAllocator);
-    }
+    // Call down the call chain:
+    my_data->instance_dispatch_table->DestroyInstance(instance, pAllocator);
 
-    // Regardless of skipCall value, do some internal cleanup:
+    loader_platform_thread_lock_mutex(&globalLock);
+
+    // Do additional internal cleanup:
     if (pInstance) {
         // Delete all of the SwpPhysicalDevice's, SwpSurface's, and the
         // SwpInstance associated with this instance:
@@ -390,6 +394,14 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
 
     delete my_data->instance_dispatch_table;
     layer_data_map.erase(key);
+    if (layer_data_map.empty()) {
+        // Release mutex when destroying last instance
+        loader_platform_thread_unlock_mutex(&globalLock);
+        loader_platform_thread_delete_mutex(&globalLock);
+        globalLockInitialized = 0;
+    } else {
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceQueueFamilyProperties(
@@ -397,25 +409,24 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceQueueFamilyPropert
     uint32_t* pQueueFamilyPropertyCount,
     VkQueueFamilyProperties* pQueueFamilyProperties)
 {
-    VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+
+    // Call down the call chain:
+    my_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(
+            physicalDevice,
+            pQueueFamilyPropertyCount,
+            pQueueFamilyProperties);
+
+    // Record the result of this query:
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
-
-    if (VK_FALSE == skipCall) {
-        // Call down the call chain:
-        my_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(
-                physicalDevice,
-                pQueueFamilyPropertyCount,
-                pQueueFamilyProperties);
-
-        // Record the result of this query:
-        if (pPhysicalDevice &&
-            pQueueFamilyPropertyCount && !pQueueFamilyProperties) {
-            pPhysicalDevice->gotQueueFamilyPropertyCount = true;
-            pPhysicalDevice->numOfQueueFamilies =
-                *pQueueFamilyPropertyCount;
-        }
+    if (pPhysicalDevice &&
+        pQueueFamilyPropertyCount && !pQueueFamilyProperties) {
+        pPhysicalDevice->gotQueueFamilyPropertyCount = true;
+        pPhysicalDevice->numOfQueueFamilies =
+            *pQueueFamilyPropertyCount;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
 }
 
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
@@ -428,6 +439,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
 
     // Validate that the platform extension was enabled:
@@ -460,9 +472,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
+        loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->CreateAndroidSurfaceKHR(
                 instance, pCreateInfo, pAllocator, pSurface);
+        loader_platform_thread_lock_mutex(&globalLock);
 
+        // Obtain this pointer again after locking:
+        pInstance = &(my_data->instanceMap[instance]);
         if ((result == VK_SUCCESS) && pInstance && pSurface) {
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
@@ -474,9 +490,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
-
+        loader_platform_thread_unlock_mutex(&globalLock);
         return result;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 #endif // VK_USE_PLATFORM_ANDROID_KHR
@@ -491,6 +508,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
 
     // Validate that the platform extension was enabled:
@@ -523,9 +541,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
+        loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->CreateMirSurfaceKHR(
                 instance, pCreateInfo, pAllocator, pSurface);
+        loader_platform_thread_lock_mutex(&globalLock);
 
+        // Obtain this pointer again after locking:
+        pInstance = &(my_data->instanceMap[instance]);
         if ((result == VK_SUCCESS) && pInstance && pSurface) {
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
@@ -537,9 +559,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
-
+        loader_platform_thread_unlock_mutex(&globalLock);
         return result;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -551,6 +574,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceMirPresentatio
     VkBool32 result = VK_FALSE;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
 
     // Validate that the platform extension was enabled:
@@ -571,6 +595,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceMirPresentatio
                                                            queueFamilyIndex,
                                                            pPhysicalDevice->numOfQueueFamilies);
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -591,6 +616,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
 
     // Validate that the platform extension was enabled:
@@ -623,9 +649,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
+        loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->CreateWaylandSurfaceKHR(
                 instance, pCreateInfo, pAllocator, pSurface);
+        loader_platform_thread_lock_mutex(&globalLock);
 
+        // Obtain this pointer again after locking:
+        pInstance = &(my_data->instanceMap[instance]);
         if ((result == VK_SUCCESS) && pInstance && pSurface) {
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
@@ -637,9 +667,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
-
+        loader_platform_thread_unlock_mutex(&globalLock);
         return result;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -651,6 +682,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWaylandPresent
     VkBool32 result = VK_FALSE;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
 
     // Validate that the platform extension was enabled:
@@ -671,6 +703,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWaylandPresent
                                                            queueFamilyIndex,
                                                            pPhysicalDevice->numOfQueueFamilies);
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -691,6 +724,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
 
     // Validate that the platform extension was enabled:
@@ -723,9 +757,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
+        loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->CreateWin32SurfaceKHR(
                 instance, pCreateInfo, pAllocator, pSurface);
+        loader_platform_thread_lock_mutex(&globalLock);
 
+        // Obtain this pointer again after locking:
+        pInstance = &(my_data->instanceMap[instance]);
         if ((result == VK_SUCCESS) && pInstance && pSurface) {
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
@@ -737,9 +775,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
-
+        loader_platform_thread_unlock_mutex(&globalLock);
         return result;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -750,6 +789,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWin32Presentat
     VkBool32 result = VK_FALSE;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
 
     // Validate that the platform extension was enabled:
@@ -770,6 +810,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWin32Presentat
                                                            queueFamilyIndex,
                                                            pPhysicalDevice->numOfQueueFamilies);
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -790,6 +831,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
 
     // Validate that the platform extension was enabled:
@@ -822,9 +864,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
+        loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->CreateXcbSurfaceKHR(
                 instance, pCreateInfo, pAllocator, pSurface);
+        loader_platform_thread_lock_mutex(&globalLock);
 
+        // Obtain this pointer again after locking:
+        pInstance = &(my_data->instanceMap[instance]);
         if ((result == VK_SUCCESS) && pInstance && pSurface) {
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
@@ -836,9 +882,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
-
+        loader_platform_thread_unlock_mutex(&globalLock);
         return result;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -851,6 +898,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentatio
     VkBool32 result = VK_FALSE;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
 
     // Validate that the platform extension was enabled:
@@ -871,6 +919,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentatio
                                                            queueFamilyIndex,
                                                            pPhysicalDevice->numOfQueueFamilies);
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -891,6 +940,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
 
     // Validate that the platform extension was enabled:
@@ -923,9 +973,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
+        loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->CreateXlibSurfaceKHR(
                 instance, pCreateInfo, pAllocator, pSurface);
+        loader_platform_thread_lock_mutex(&globalLock);
 
+        // Obtain this pointer again after locking:
+        pInstance = &(my_data->instanceMap[instance]);
         if ((result == VK_SUCCESS) && pInstance && pSurface) {
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
@@ -937,9 +991,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
-
+        loader_platform_thread_unlock_mutex(&globalLock);
         return result;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -952,6 +1007,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentati
     VkBool32 result = VK_FALSE;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
 
     // Validate that the platform extension was enabled:
@@ -972,6 +1028,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentati
                                                            queueFamilyIndex,
                                                            pPhysicalDevice->numOfQueueFamilies);
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -986,6 +1043,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(VkInstance  insta
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
     SwpSurface *pSurface = &my_data->surfaceMap[surface];
 
@@ -1025,6 +1083,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(VkInstance  insta
         }
         my_data->surfaceMap.erase(surface);
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -1036,39 +1095,38 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(VkInstance  insta
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices)
 {
     VkResult result = VK_SUCCESS;
-    VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+
+    // Call down the call chain:
+    result = my_data->instance_dispatch_table->EnumeratePhysicalDevices(
+            instance, pPhysicalDeviceCount, pPhysicalDevices);
+
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
-
-    if (VK_FALSE == skipCall) {
-        // Call down the call chain:
-        result = my_data->instance_dispatch_table->EnumeratePhysicalDevices(
-                instance, pPhysicalDeviceCount, pPhysicalDevices);
-
-        if ((result == VK_SUCCESS) && pInstance && pPhysicalDevices &&
-            (*pPhysicalDeviceCount > 0)) {
-            // Record the VkPhysicalDevices returned by the ICD:
-            for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
-                my_data->physicalDeviceMap[pPhysicalDevices[i]].physicalDevice =
-                    pPhysicalDevices[i];
-                my_data->physicalDeviceMap[pPhysicalDevices[i]].pInstance = pInstance;
-                my_data->physicalDeviceMap[pPhysicalDevices[i]].pDevice = NULL;
-                my_data->physicalDeviceMap[pPhysicalDevices[i]].gotQueueFamilyPropertyCount = false;
-                my_data->physicalDeviceMap[pPhysicalDevices[i]].gotSurfaceCapabilities = false;
-                my_data->physicalDeviceMap[pPhysicalDevices[i]].surfaceFormatCount = 0;
-                my_data->physicalDeviceMap[pPhysicalDevices[i]].pSurfaceFormats = NULL;
-                my_data->physicalDeviceMap[pPhysicalDevices[i]].presentModeCount = 0;
-                my_data->physicalDeviceMap[pPhysicalDevices[i]].pPresentModes = NULL;
-                // Point to the associated SwpInstance:
-                if (pInstance) {
-                    pInstance->physicalDevices[pPhysicalDevices[i]] =
-                        &my_data->physicalDeviceMap[pPhysicalDevices[i]];
-                }
+    if ((result == VK_SUCCESS) && pInstance && pPhysicalDevices &&
+        (*pPhysicalDeviceCount > 0)) {
+        // Record the VkPhysicalDevices returned by the ICD:
+        for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
+            my_data->physicalDeviceMap[pPhysicalDevices[i]].physicalDevice =
+                pPhysicalDevices[i];
+            my_data->physicalDeviceMap[pPhysicalDevices[i]].pInstance = pInstance;
+            my_data->physicalDeviceMap[pPhysicalDevices[i]].pDevice = NULL;
+            my_data->physicalDeviceMap[pPhysicalDevices[i]].gotQueueFamilyPropertyCount = false;
+            my_data->physicalDeviceMap[pPhysicalDevices[i]].gotSurfaceCapabilities = false;
+            my_data->physicalDeviceMap[pPhysicalDevices[i]].surfaceFormatCount = 0;
+            my_data->physicalDeviceMap[pPhysicalDevices[i]].pSurfaceFormats = NULL;
+            my_data->physicalDeviceMap[pPhysicalDevices[i]].presentModeCount = 0;
+            my_data->physicalDeviceMap[pPhysicalDevices[i]].pPresentModes = NULL;
+            // Point to the associated SwpInstance:
+            if (pInstance) {
+                pInstance->physicalDevices[pPhysicalDevices[i]] =
+                    &my_data->physicalDeviceMap[pPhysicalDevices[i]];
             }
         }
-
+        loader_platform_thread_unlock_mutex(&globalLock);
         return result;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -1092,6 +1150,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice p
         return result;
     }
 
+    loader_platform_thread_lock_mutex(&globalLock);
     layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
 
@@ -1101,23 +1160,22 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice p
 
     my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
     createDeviceRegisterExtensions(physicalDevice, pCreateInfo, *pDevice);
+    loader_platform_thread_unlock_mutex(&globalLock);
 
     return result;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
 {
-    VkBool32 skipCall = VK_FALSE;
     dispatch_key key = get_dispatch_key(device);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+
+    // Call down the call chain:
+    my_data->device_dispatch_table->DestroyDevice(device, pAllocator);
+
+    // Do some internal cleanup:
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpDevice *pDevice = &my_data->deviceMap[device];
-
-    if (VK_FALSE == skipCall) {
-        // Call down the call chain:
-        my_data->device_dispatch_table->DestroyDevice(device, pAllocator);
-    }
-
-    // Regardless of skipCall value, do some internal cleanup:
     if (pDevice) {
         // Delete the SwpDevice associated with this device:
         if (pDevice->pPhysicalDevice) {
@@ -1148,6 +1206,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
     }
     delete my_data->device_dispatch_table;
     layer_data_map.erase(key);
+    loader_platform_thread_unlock_mutex(&globalLock);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
@@ -1159,6 +1218,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
 
     // Validate that the surface extension was enabled:
@@ -1196,10 +1256,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
+        loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfaceSupportKHR(
                 physicalDevice, queueFamilyIndex, surface,
                 pSupported);
+        loader_platform_thread_lock_mutex(&globalLock);
 
+        // Obtain this pointer again after locking:
+        pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
         if ((result == VK_SUCCESS) && pSupported && pPhysicalDevice) {
             // Record the result of this query:
             SwpInstance *pInstance = pPhysicalDevice->pInstance;
@@ -1224,9 +1288,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
                 }
             }
         }
-
+        loader_platform_thread_unlock_mutex(&globalLock);
         return result;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -1238,6 +1303,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabil
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
 
     // Validate that the surface extension was enabled:
@@ -1258,18 +1324,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabil
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
+        loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfaceCapabilitiesKHR(
                 physicalDevice, surface, pSurfaceCapabilities);
+        loader_platform_thread_lock_mutex(&globalLock);
 
+        // Obtain this pointer again after locking:
+        pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
         if ((result == VK_SUCCESS) && pPhysicalDevice) {
             // Record the result of this query:
             pPhysicalDevice->gotSurfaceCapabilities = true;
 // FIXME: NEED TO COPY THIS DATA, BECAUSE pSurfaceCapabilities POINTS TO APP-ALLOCATED DATA
             pPhysicalDevice->surfaceCapabilities = *pSurfaceCapabilities;
         }
-
+        loader_platform_thread_unlock_mutex(&globalLock);
         return result;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -1282,6 +1353,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormats
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
 
     // Validate that the surface extension was enabled:
@@ -1302,9 +1374,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormats
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
+        loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfaceFormatsKHR(
                 physicalDevice, surface, pSurfaceFormatCount, pSurfaceFormats);
+        loader_platform_thread_lock_mutex(&globalLock);
 
+        // Obtain this pointer again after locking:
+        pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
         if ((result == VK_SUCCESS) && pPhysicalDevice && !pSurfaceFormats &&
             pSurfaceFormatCount) {
             // Record the result of this preliminary query:
@@ -1336,9 +1412,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormats
                 }
             }
         }
-
+        loader_platform_thread_unlock_mutex(&globalLock);
         return result;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -1351,6 +1428,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresent
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
 
     // Validate that the surface extension was enabled:
@@ -1371,9 +1449,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresent
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
+        loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfacePresentModesKHR(
                 physicalDevice, surface, pPresentModeCount, pPresentModes);
+        loader_platform_thread_lock_mutex(&globalLock);
 
+        // Obtain this pointer again after locking:
+        pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
         if ((result == VK_SUCCESS) && pPhysicalDevice && !pPresentModes &&
             pPresentModeCount) {
             // Record the result of this preliminary query:
@@ -1405,9 +1487,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresent
                 }
             }
         }
-
+        loader_platform_thread_unlock_mutex(&globalLock);
         return result;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -1807,13 +1890,16 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
 {
     VkResult result = VK_SUCCESS;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     VkBool32 skipCall = validateCreateSwapchainKHR(device, pCreateInfo,
                                                    pSwapchain);
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
+        loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->device_dispatch_table->CreateSwapchainKHR(
                 device, pCreateInfo, pAllocator, pSwapchain);
+        loader_platform_thread_lock_mutex(&globalLock);
 
         if (result == VK_SUCCESS) {
             // Remember the swapchain's handle, and link it to the device:
@@ -1845,9 +1931,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
                     &my_data->swapchainMap[*pSwapchain];
             }
         }
-
+        loader_platform_thread_unlock_mutex(&globalLock);
         return result;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -1863,6 +1950,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
 //   application must: have completed execution
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpDevice *pDevice = &my_data->deviceMap[device];
 
     // Validate that the swapchain extension was enabled:
@@ -1902,6 +1990,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
         }
         my_data->swapchainMap.erase(swapchain);
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -1918,6 +2007,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpDevice *pDevice = &my_data->deviceMap[device];
 
     // Validate that the swapchain extension was enabled:
@@ -1936,9 +2026,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
+        loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->device_dispatch_table->GetSwapchainImagesKHR(
                 device, swapchain, pSwapchainImageCount, pSwapchainImages);
+        loader_platform_thread_lock_mutex(&globalLock);
 
+        // Obtain this pointer again after locking:
+        pSwapchain = &my_data->swapchainMap[swapchain];
         if ((result == VK_SUCCESS) && pSwapchain && !pSwapchainImages &&
             pSwapchainImageCount) {
             // Record the result of this preliminary query:
@@ -1966,9 +2060,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
                 }
             }
         }
-
+        loader_platform_thread_unlock_mutex(&globalLock);
         return result;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -1995,6 +2090,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     SwpDevice *pDevice = &my_data->deviceMap[device];
 
     // Validate that the swapchain extension was enabled:
@@ -2040,17 +2136,22 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
+        loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->device_dispatch_table->AcquireNextImageKHR(
                 device, swapchain, timeout, semaphore, fence, pImageIndex);
+        loader_platform_thread_lock_mutex(&globalLock);
 
+        // Obtain this pointer again after locking:
+        pSwapchain = &my_data->swapchainMap[swapchain];
         if (((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR)) &&
             pSwapchain) {
             // Change the state of the image (now owned by the application):
             pSwapchain->images[*pImageIndex].ownedByApp = true;
         }
-
+        loader_platform_thread_unlock_mutex(&globalLock);
         return result;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -2104,6 +2205,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
         // Note: pPresentInfo->pResults is allowed to be NULL
     }
 
+    loader_platform_thread_lock_mutex(&globalLock);
     for (uint32_t i = 0;
          pPresentInfo && (i < pPresentInfo->swapchainCount);
          i++) {
@@ -2166,8 +2268,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
+        loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->device_dispatch_table->QueuePresentKHR(queue,
                                                                  pPresentInfo);
+        loader_platform_thread_lock_mutex(&globalLock);
 
         if (pPresentInfo &&
             ((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR))) {
@@ -2182,9 +2286,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
                 }
             }
         }
-
+        loader_platform_thread_unlock_mutex(&globalLock);
         return result;
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -2203,6 +2308,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(
                 device, queueFamilyIndex, queueIndex, pQueue);
 
         // Remember the queue's handle, and link it to the device:
+        loader_platform_thread_lock_mutex(&globalLock);
         SwpDevice *pDevice = &my_data->deviceMap[device];
         my_data->queueMap[&pQueue].queue = *pQueue;
         if (pDevice) {
@@ -2210,6 +2316,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(
         }
         my_data->queueMap[&pQueue].pDevice = pDevice;
         my_data->queueMap[&pQueue].queueFamilyIndex = queueFamilyIndex;
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
 }
 
@@ -2223,7 +2330,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     VkResult result = my_data->instance_dispatch_table->CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);
     if (VK_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
         result = layer_create_msg_callback(my_data->report_data, pCreateInfo, pAllocator, pMsgCallback);
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -2232,7 +2341,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkIns
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     my_data->instance_dispatch_table->DestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);
+    loader_platform_thread_lock_mutex(&globalLock);
     layer_destroy_msg_callback(my_data->report_data, msgCallback, pAllocator);
+    loader_platform_thread_unlock_mutex(&globalLock);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(
