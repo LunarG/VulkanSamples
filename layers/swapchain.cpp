@@ -357,11 +357,13 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
             // Free memory that was allocated for/by this SwpPhysicalDevice:
             SwpPhysicalDevice *pPhysicalDevice = it->second;
             if (pPhysicalDevice) {
-                LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, instance, "VkInstance",
-                          SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN,
-                          "%s() called before all of its associated "
-                          "VkPhysicalDevices were destroyed.",
-                          __FUNCTION__);
+                if (pPhysicalDevice->pDevice) {
+                    LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, instance, "VkInstance",
+                              SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN,
+                              "%s() called before all of its associated "
+                              "VkDevices were destroyed.",
+                              __FUNCTION__);
+                }
                 free(pPhysicalDevice->pSurfaceFormats);
                 free(pPhysicalDevice->pPresentModes);
             }
