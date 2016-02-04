@@ -3470,10 +3470,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
             skipCall |= log_msg(
                 dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                 VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                reinterpret_cast<uint64_t>(fence), __LINE__,
+                (uint64_t)(fence), __LINE__,
                 DRAWSTATE_INVALID_FENCE, "DS",
                 "Fence %#" PRIx64 " is already in use by another submission.",
-                reinterpret_cast<uint64_t>(fence));
+                (uint64_t)(fence));
         }
         trackCommandBuffers(dev_data, queue, submit->commandBufferCount,
                             submit->pCommandBuffers, fence);
@@ -6218,7 +6218,7 @@ bool logInvalidAttachmentMessage(layer_data* dev_data, VkCommandBuffer secondary
     return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
         "vkCmdExecuteCommands() called w/ invalid Cmd Buffer %p which has a render pass %" PRIx64 " that is not compatible with the current render pass %" PRIx64 "."
         "Attachment %" PRIu32 " is not compatable with %" PRIu32 ". %s",
-        (void*)secondaryBuffer, reinterpret_cast<uint64_t>(secondaryPass), reinterpret_cast<uint64_t>(primaryPass), primaryAttach, secondaryAttach, msg);
+        (void*)secondaryBuffer, (uint64_t)(secondaryPass), (uint64_t)(primaryPass), primaryAttach, secondaryAttach, msg);
 }
 
 bool validateAttachmentCompatibility(layer_data* dev_data, VkCommandBuffer primaryBuffer, VkRenderPass primaryPass, uint32_t primaryAttach, VkCommandBuffer secondaryBuffer, VkRenderPass secondaryPass, uint32_t secondaryAttach, bool is_multi) {
@@ -6308,20 +6308,20 @@ bool validateRenderPassCompatibility(layer_data* dev_data, VkCommandBuffer prima
     if (primary_data == dev_data->renderPassMap.end() || primary_data->second == nullptr) {
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
             "vkCmdExecuteCommands() called w/ invalid current Cmd Buffer %p which has invalid render pass %" PRIx64 ".",
-            (void*)primaryBuffer, reinterpret_cast<uint64_t>(primaryPass));
+            (void*)primaryBuffer, (uint64_t)(primaryPass));
         return skip_call;
     }
     if (secondary_data == dev_data->renderPassMap.end() || secondary_data->second == nullptr) {
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
             "vkCmdExecuteCommands() called w/ invalid secondary Cmd Buffer %p which has invalid render pass %" PRIx64 ".",
-            (void*)secondaryBuffer, reinterpret_cast<uint64_t>(secondaryPass));
+            (void*)secondaryBuffer, (uint64_t)(secondaryPass));
         return skip_call;
     }
     if (primary_data->second->pCreateInfo->subpassCount != secondary_data->second->pCreateInfo->subpassCount) {
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
             "vkCmdExecuteCommands() called w/ invalid Cmd Buffer %p which has a render pass %" PRIx64 " that is not compatible with the current render pass %" PRIx64 "."
             "They have a different number of subpasses.",
-            (void*)secondaryBuffer, reinterpret_cast<uint64_t>(secondaryPass), reinterpret_cast<uint64_t>(primaryPass));
+            (void*)secondaryBuffer, (uint64_t)(secondaryPass), (uint64_t)(primaryPass));
         return skip_call;
     }
     bool is_multi = primary_data->second->pCreateInfo->subpassCount > 1;
@@ -6342,13 +6342,13 @@ bool validateFramebuffer(layer_data* dev_data, VkCommandBuffer primaryBuffer, co
         if (primary_fb != secondary_fb) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
                 "vkCmdExecuteCommands() called w/ invalid Cmd Buffer %p which has a framebuffer %" PRIx64 " that is not compatible with the current framebuffer %" PRIx64 ".",
-                (void*)secondaryBuffer, reinterpret_cast<uint64_t>(secondary_fb), reinterpret_cast<uint64_t>(primary_fb));
+                (void*)secondaryBuffer, (uint64_t)(secondary_fb), (uint64_t)(primary_fb));
         }
         auto fb_data = dev_data->frameBufferMap.find(secondary_fb);
         if (fb_data == dev_data->frameBufferMap.end() || !fb_data->second) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
                 "vkCmdExecuteCommands() called w/ invalid Cmd Buffer %p which has invalid framebuffer %" PRIx64 ".",
-                (void*)secondaryBuffer, reinterpret_cast<uint64_t>(secondary_fb));
+                (void*)secondaryBuffer, (uint64_t)(secondary_fb));
             return skip_call;
         }
         skip_call |= validateRenderPassCompatibility(dev_data, secondaryBuffer, fb_data->second->renderPass, secondaryBuffer, pSubCB->beginInfo.pInheritanceInfo->renderPass);
