@@ -32,7 +32,7 @@
 
 Hologram::Hologram(const std::vector<std::string> &args)
     : Game("Hologram", args), multithread_(true), use_push_constants_(false),
-      sim_paused_(false), sim_(10000), camera_(2.5f), frame_data_(),
+      sim_paused_(false), sim_(5000), camera_(2.5f), frame_data_(),
       render_pass_clear_value_({{ 0.0f, 0.1f, 0.2f, 1.0f }}),
       render_pass_begin_info_(),
       primary_cmd_begin_info_(), primary_cmd_submit_info_()
