@@ -4371,8 +4371,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
                             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer),
                                                 __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
                                                 "vkBeginCommandBuffer(): Secondary Command Buffer (%p) renderPass (%#" PRIxLEAST64 ") is incompatible w/ framebuffer (%#" PRIxLEAST64
-                                                ") w/ render pass (%#" PRIxLEAST64 ") due to: %s", reinterpret_cast<void*>(commandBuffer), reinterpret_cast<uint64_t>(pInfo->renderPass),
-                                                reinterpret_cast<uint64_t>(pInfo->framebuffer), reinterpret_cast<uint64_t>(fbRP), errorString.c_str());
+                                                ") w/ render pass (%#" PRIxLEAST64 ") due to: %s", reinterpret_cast<void*>(commandBuffer), (uint64_t)(pInfo->renderPass),
+                                                (uint64_t)(pInfo->framebuffer), (uint64_t)(fbRP), errorString.c_str());
                         }
                     }
                 }
