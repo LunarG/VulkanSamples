@@ -72,6 +72,30 @@ private:
     int cur_;
 };
 
+class HolographicColorPicker {
+public:
+    HolographicColorPicker(unsigned int rng_seed) :
+        rng_(rng_seed),
+        red_(0.0f, 0.1f),
+        green_(0.7f, 0.8f),
+        blue_(0.8f, 1.0f)
+    {
+    }
+
+    glm::vec3 pick()
+    {
+        return glm::vec3{ red_(rng_),
+                          green_(rng_),
+                          blue_(rng_) };
+    }
+
+private:
+    std::mt19937 rng_;
+    std::uniform_real_distribution<float> red_;
+    std::uniform_real_distribution<float> green_;
+    std::uniform_real_distribution<float> blue_;
+};
+
 } // namespace
 
 Animation::Animation(unsigned int rng_seed, float scale)
@@ -265,6 +289,7 @@ Simulation::Simulation(int object_count)
     : random_dev_()
 {
     MeshPicker mesh;
+    HolographicColorPicker color(random_dev_());
 
     objects_.reserve(object_count);
     for (int i = 0; i < object_count; i++) {
@@ -273,6 +298,8 @@ Simulation::Simulation(int object_count)
 
         objects_.emplace_back(Object{
             type,
+            glm::vec3(0.5 + 0.5 * (float) i / object_count),
+            color.pick(),
             Animation(random_dev_(), scale),
             Path(random_dev_()),
         });
