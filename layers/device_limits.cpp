@@ -559,7 +559,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
                             pInfo->queryFlags);
     }
     if (!skipCall)
-        dev_data->device_dispatch_table->BeginCommandBuffer(commandBuffer, pBeginInfo);
+        return dev_data->device_dispatch_table->BeginCommandBuffer(commandBuffer, pBeginInfo);
+	return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* pQueue)
@@ -587,7 +588,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(
     VkDeviceSize   memoryOffset)
 {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult    result   = VK_ERROR_VALIDATION_FAILED_EXT;
+	VkResult    result = VK_ERROR_VALIDATION_FAILED_EXT;
     VkBool32    skipCall = VK_FALSE;
 
     VkDeviceSize uniformAlignment = dev_data->physDevPropertyMap[device].limits.minUniformBufferOffsetAlignment;
