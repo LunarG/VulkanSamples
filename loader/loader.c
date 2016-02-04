@@ -3050,9 +3050,35 @@ loader_create_device_terminator(VkPhysicalDevice physicalDevice,
     VkDeviceCreateInfo localCreateInfo;
     memcpy(&localCreateInfo, pCreateInfo, sizeof(localCreateInfo));
     localCreateInfo.pNext = loader_strip_create_extensions(pCreateInfo->pNext);
-    // ICDs do not support layers
+
+    /*
+     * NOTE: Need to filter the extensions to only those
+     * supported by the ICD.
+     * No ICD will advertise support for layers. An ICD
+     * library could support a layer, but it would be
+     * independent of the actual ICD, just in the same library.
+     */
+    char **filtered_extension_names = NULL;
+    filtered_extension_names = loader_stack_alloc(pCreateInfo->enabledExtensionCount * sizeof(char *));
+    if (!filtered_extension_names) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+
     localCreateInfo.enabledLayerCount = 0;
     localCreateInfo.ppEnabledLayerNames = NULL;
+
+    localCreateInfo.enabledExtensionCount = 0;
+    localCreateInfo.ppEnabledExtensionNames = (const char * const *) filtered_extension_names;
+
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+        const char *extension_name = pCreateInfo->ppEnabledExtensionNames[i];
+        VkExtensionProperties *prop = get_extension_property(extension_name,
+                                      &phys_dev->device_extension_cache);
+        if (prop) {
+            filtered_extension_names[localCreateInfo.enabledExtensionCount] = (char *) extension_name;
+            localCreateInfo.enabledExtensionCount++;
+        }
+    }
 
     VkDevice localDevice;
     // TODO: Why does fpCreateDevice behave differently than
@@ -3671,8 +3697,6 @@ loader_CreateDevice(VkPhysicalDevice physicalDevice,
     struct loader_device *dev;
     struct loader_instance *inst;
     struct loader_layer_list activated_layer_list = {0};
-    VkDeviceCreateInfo device_create_info;
-    char **filtered_extension_names = NULL;
     VkResult res;
 
     assert(pCreateInfo->queueCreateInfoCount >= 1);
@@ -3733,43 +3757,6 @@ loader_CreateDevice(VkPhysicalDevice physicalDevice,
         loader_destroy_generic_list(
             inst, (struct loader_generic_list *)&activated_layer_list);
         return res;
-    }
-
-    /*
-     * NOTE: Need to filter the extensions to only those
-     * supported by the ICD.
-     * No ICD will advertise support for layers. An ICD
-     * library could support a layer, but it would be
-     * independent of the actual ICD, just in the same library.
-     */
-    filtered_extension_names =
-        loader_stack_alloc(pCreateInfo->enabledExtensionCount * sizeof(char *));
-    if (!filtered_extension_names) {
-        loader_destroy_generic_list(
-            inst, (struct loader_generic_list *)&activated_layer_list);
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-    }
-
-    /* Copy user's data */
-    memcpy(&device_create_info, pCreateInfo, sizeof(VkDeviceCreateInfo));
-
-    /* ICD's do not use layers */
-    device_create_info.enabledLayerCount = 0;
-    device_create_info.ppEnabledLayerNames = NULL;
-
-    device_create_info.enabledExtensionCount = 0;
-    device_create_info.ppEnabledExtensionNames =
-        (const char *const *)filtered_extension_names;
-
-    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        const char *extension_name = pCreateInfo->ppEnabledExtensionNames[i];
-        VkExtensionProperties *prop = get_extension_property(
-            extension_name, &phys_dev->device_extension_cache);
-        if (prop) {
-            filtered_extension_names[device_create_info.enabledExtensionCount] =
-                (char *)extension_name;
-            device_create_info.enabledExtensionCount++;
-        }
     }
 
     dev = loader_add_logical_device(inst, &icd->logical_device_list);
