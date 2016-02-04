@@ -3167,6 +3167,19 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(
     return result;
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyRenderPass(
+    VkDevice                     device,
+    VkRenderPass                 renderPass,
+    const VkAllocationCallbacks *pAllocator)
+{
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    my_data->device_dispatch_table->DestroyRenderPass(device, renderPass, pAllocator);
+
+    loader_platform_thread_lock_mutex(&globalLock);
+    my_data->passMap.erase(renderPass);
+    loader_platform_thread_unlock_mutex(&globalLock);
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(
     VkCommandBuffer cmdBuffer,
     const VkRenderPassBeginInfo *pRenderPassBegin,
@@ -3373,6 +3386,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkCmdResetQueryPool;
     if (!strcmp(funcName, "vkCreateRenderPass"))
         return (PFN_vkVoidFunction) vkCreateRenderPass;
+    if (!strcmp(funcName, "vkDestroyRenderPass"))
+        return (PFN_vkVoidFunction) vkDestroyRenderPass;
     if (!strcmp(funcName, "vkCmdBeginRenderPass"))
         return (PFN_vkVoidFunction) vkCmdBeginRenderPass;
     if (!strcmp(funcName, "vkCmdEndRenderPass"))
