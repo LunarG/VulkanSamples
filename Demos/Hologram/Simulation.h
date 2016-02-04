@@ -86,6 +86,9 @@ public:
 
     struct Object {
         Meshes::Type mesh;
+        glm::vec3 light_pos;
+        glm::vec3 light_color;
+
         Animation animation;
         Path path;
 
