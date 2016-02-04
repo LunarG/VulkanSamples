@@ -128,7 +128,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
     dispatch_key key = get_dispatch_key(instance);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
+    startWriteObject(my_data, instance);
     pTable->DestroyInstance(instance, pAllocator);
+    finishWriteObject(my_data, instance);
 
     // Clean up logging callback, if any
     while (my_data->logging_callback.size() > 0) {
@@ -185,7 +187,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
 {
     dispatch_key key = get_dispatch_key(device);
     layer_data* dev_data = get_my_data_ptr(key, layer_data_map);
+    startWriteObject(dev_data, device);
     dev_data->device_dispatch_table->DestroyDevice(device, pAllocator);
+    finishWriteObject(dev_data, device);
     layer_data_map.erase(key);
 }
 
