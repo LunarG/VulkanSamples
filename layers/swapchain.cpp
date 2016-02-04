@@ -343,14 +343,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
 
     loader_platform_thread_lock_mutex(&globalLock);
 
-    // Clean up logging callback, if any
-    while (my_data->logging_callback.size() > 0) {
-      VkDebugReportCallbackEXT callback = my_data->logging_callback.back();
-      layer_destroy_msg_callback(my_data->report_data, callback, pAllocator);
-      my_data->logging_callback.pop_back();
-    }
-    layer_debug_report_destroy_instance(my_data->report_data);
-
     // Do additional internal cleanup:
     if (pInstance) {
         // Delete all of the SwpPhysicalDevice's, SwpSurface's, and the
@@ -391,6 +383,15 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
         }
         my_data->instanceMap.erase(instance);
     }
+
+    // Clean up logging callback, if any
+    while (my_data->logging_callback.size() > 0) {
+        VkDebugReportCallbackEXT callback = my_data->logging_callback.back();
+        layer_destroy_msg_callback(my_data->report_data, callback, pAllocator);
+        my_data->logging_callback.pop_back();
+    }
+    layer_debug_report_destroy_instance(my_data->report_data);
+
     delete my_data->instance_dispatch_table;
     layer_data_map.erase(key);
     if (layer_data_map.empty()) {
