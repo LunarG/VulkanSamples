@@ -3790,6 +3790,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(VkDevice devi
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         dev_data->commandPoolMap[*pCommandPool].createFlags = pCreateInfo->flags;
+        dev_data->commandPoolMap[*pCommandPool].queueFamilyIndex = pCreateInfo->queueFamilyIndex;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
