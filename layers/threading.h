@@ -98,13 +98,11 @@ template <typename T> class counter {
                         use_data->writer_count = 1;
                     } else {
                         // Continue with an unsafe use of the object.
+                        use_data->thread = tid ;
                         use_data->writer_count += 1;
                     }
                 } else {
-                    skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, objectType, reinterpret_cast<uint64_t>(object),
-                        /*location*/ 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",
-                        "THREADING ERROR : object of type %s is recursively used in thread %ld",
-                        typeName, tid);
+                    // This is either safe multiple use in one call, or recursive use.
                     // There is no way to make recursion safe.  Just forge ahead.
                     use_data->writer_count += 1;
                 }
@@ -127,13 +125,11 @@ template <typename T> class counter {
                         use_data->writer_count = 1;
                     } else {
                         // Continue with an unsafe use of the object.
+                        use_data->thread = tid ;
                         use_data->writer_count += 1;
                     }
                 } else {
-                    skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, objectType, reinterpret_cast<uint64_t>(object),
-                        /*location*/ 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",
-                        "THREADING ERROR : object of type %s is recursively used in thread %ld",
-                        typeName, tid);
+                    // This is either safe multiple use in one call, or recursive use.
                     // There is no way to make recursion safe.  Just forge ahead.
                     use_data->writer_count += 1;
                 }
@@ -165,7 +161,7 @@ template <typename T> class counter {
             use_data->reader_count = 1;
             use_data->writer_count = 0;
             use_data->thread = tid;
-        } else if (uses[object].writer_count > 0) {
+        } else if (uses[object].writer_count > 0 && uses[object].thread != tid) {
             // There is a writer of the object.
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, objectType, reinterpret_cast<uint64_t>(object),
                 /*location*/ 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",
