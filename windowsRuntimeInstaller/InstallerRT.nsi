@@ -212,7 +212,7 @@ Section
     SetOutPath "$INSTDIR"
     File ${ICOFILE}
     File VULKANRT_LICENSE.RTF
-    File ..\LICENSE.txt
+    File LICENSE.txt
     File ConfigLayersAndVulkanDLL.ps1
 
     # Create the uninstaller
