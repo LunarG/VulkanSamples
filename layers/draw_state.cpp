@@ -3480,43 +3480,9 @@ bool validateCommandBufferSimultaneousUse(layer_data *dev_data,
     return skip_call;
 }
 
-static VkBool32 validateCommandBufferState(layer_data *dev_data,
+static bool validateCommandBufferState(layer_data *dev_data,
                                            GLOBAL_CB_NODE *pCB) {
-    // Track in-use for resources off of primary and any secondary CBs
-    VkBool32 skipCall = validateAndIncrementResources(dev_data, pCB);
-    if (!pCB->secondaryCommandBuffers.empty()) {
-        for (auto secondaryCmdBuffer : pCB->secondaryCommandBuffers) {
-            skipCall |= validateAndIncrementResources(
-                dev_data, dev_data->commandBufferMap[secondaryCmdBuffer]);
-            GLOBAL_CB_NODE* pSubCB = getCBNode(dev_data, secondaryCmdBuffer);
-            skipCall |= validateCommandBufferSimultaneousUse(dev_data, pSubCB);
-            if (pSubCB->primaryCommandBuffer != pCB->commandBuffer) {
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                        VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
-                        __LINE__,
-                        DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
-                        "CB %#" PRIxLEAST64
-                        " was submitted with secondary buffer %#" PRIxLEAST64
-                        " but that buffer has subsequently been bound to "
-                        "primary cmd buffer %#" PRIxLEAST64 ".",
-                        reinterpret_cast<uint64_t>(pCB->commandBuffer),
-                        reinterpret_cast<uint64_t>(secondaryCmdBuffer),
-                        reinterpret_cast<uint64_t>(
-                            pSubCB->primaryCommandBuffer));
-            }
-        }
-    }
-    if ((pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) &&
-        (pCB->submitCount > 1)) {
-        skipCall |=
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__,
-                    DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
-                    "CB %#" PRIxLEAST64
-                    " was begun w/ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT "
-                    "set, but has been submitted %#" PRIxLEAST64 " times.",
-                    (uint64_t)(pCB->commandBuffer), pCB->submitCount);
-    }
+    bool skipCall = false;
     // Validate that cmd buffers have been updated
     if (CB_RECORDED != pCB->state) {
         if (CB_INVALID == pCB->state) {
@@ -3553,8 +3519,26 @@ static VkBool32 validatePrimaryCommandBufferState(layer_data *dev_data,
         for (auto secondaryCmdBuffer : pCB->secondaryCommandBuffers) {
             skipCall |= validateAndIncrementResources(
                 dev_data, dev_data->commandBufferMap[secondaryCmdBuffer]);
+            GLOBAL_CB_NODE* pSubCB = getCBNode(dev_data, secondaryCmdBuffer);
+            if (pSubCB->primaryCommandBuffer != pCB->commandBuffer) {
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
+                        __LINE__,
+                        DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
+                        "CB %#" PRIxLEAST64
+                        " was submitted with secondary buffer %#" PRIxLEAST64
+                        " but that buffer has subsequently been bound to "
+                        "primary cmd buffer %#" PRIxLEAST64 ".",
+                        reinterpret_cast<uint64_t>(pCB->commandBuffer),
+                        reinterpret_cast<uint64_t>(secondaryCmdBuffer),
+                        reinterpret_cast<uint64_t>(
+                            pSubCB->primaryCommandBuffer));
+            }
         }
     }
+    // TODO : Verify if this also needs to be checked for secondary command
+    //  buffers. If so, this block of code can move to
+    //   validateCommandBufferState() function. vulkan GL106 filed to clarify
     if ((pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) &&
         (pCB->submitCount > 1)) {
         skipCall |=
