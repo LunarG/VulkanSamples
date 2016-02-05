@@ -6539,7 +6539,7 @@ bool validateSubpassCompatibility(layer_data* dev_data, VkCommandBuffer primaryB
         if (i < primary_desc.colorAttachmentCount) {
             primary_color_attach = primary_desc.pColorAttachments[i].attachment;
         }
-        if (i < secondary_desc.inputAttachmentCount) {
+        if (i < secondary_desc.colorAttachmentCount) {
             secondary_color_attach = secondary_desc.pColorAttachments[i].attachment;
         }
         skip_call |= validateAttachmentCompatibility(dev_data, primaryBuffer, primaryPass, primary_color_attach, secondaryBuffer, secondaryPass, secondary_color_attach, is_multi);
@@ -6547,7 +6547,7 @@ bool validateSubpassCompatibility(layer_data* dev_data, VkCommandBuffer primaryB
         if (i < primary_desc.colorAttachmentCount && primary_desc.pResolveAttachments) {
             primary_resolve_attach = primary_desc.pResolveAttachments[i].attachment;
         }
-        if (i < secondary_desc.inputAttachmentCount && secondary_desc.pResolveAttachments) {
+        if (i < secondary_desc.colorAttachmentCount && secondary_desc.pResolveAttachments) {
             secondary_resolve_attach = secondary_desc.pResolveAttachments[i].attachment;
         }
         skip_call |= validateAttachmentCompatibility(dev_data, primaryBuffer, primaryPass, primary_resolve_attach, secondaryBuffer, secondaryPass, secondary_resolve_attach, is_multi);
@@ -6565,6 +6565,9 @@ bool validateSubpassCompatibility(layer_data* dev_data, VkCommandBuffer primaryB
 
 bool validateRenderPassCompatibility(layer_data* dev_data, VkCommandBuffer primaryBuffer, VkRenderPass primaryPass, VkCommandBuffer secondaryBuffer, VkRenderPass secondaryPass) {
     bool skip_call = false;
+    // Early exit if renderPass objects are identical (and therefore compatible)
+    if (primaryPass == secondaryPass)
+        return skip_call;
     auto primary_data = dev_data->renderPassMap.find(primaryPass);
     auto secondary_data = dev_data->renderPassMap.find(secondaryPass);
     if (primary_data == dev_data->renderPassMap.end() || primary_data->second == nullptr) {
