@@ -28,6 +28,7 @@
 #include <unordered_map>
 #include <list>
 
+#include "vk_loader_platform.h"
 #include "vulkan/vk_layer.h"
 #include "vk_layer_config.h"
 #include "vk_layer_extension_utils.h"
@@ -38,7 +39,6 @@
 #include "vk_layer_logging.h"
 #include "threading.h"
 
-#include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_struct_string_helper_cpp.h"
 #include "vk_layer_data.h"
