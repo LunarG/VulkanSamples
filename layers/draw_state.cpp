@@ -3586,7 +3586,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
             pCB->submitCount++; // increment submit count
             skipCall |= validatePrimaryCommandBufferState(dev_data, pCB);
         }
-        if (dev_data->fenceMap[fence].in_use.load()) {
+        if ((fence != VK_NULL_HANDLE) && dev_data->fenceMap[fence].in_use.load()) {
             skipCall |= log_msg(
                 dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                 VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
