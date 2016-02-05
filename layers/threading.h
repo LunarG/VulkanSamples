@@ -324,18 +324,14 @@ static void finishWriteObject(struct layer_data *my_data, VkCommandBuffer object
         finishWriteObject(my_data, command_pool_map[object]);
     }
 }
-static void startReadObject(struct layer_data *my_data, VkCommandBuffer object, bool lockPool=false)
+static void startReadObject(struct layer_data *my_data, VkCommandBuffer object)
 {
-    if (lockPool) {
-        startReadObject(my_data, command_pool_map[object]);
-    }
+    startReadObject(my_data, command_pool_map[object]);
     my_data->c_VkCommandBuffer.startRead(my_data->report_data, object);
 }
-static void finishReadObject(struct layer_data *my_data, VkCommandBuffer object, bool lockPool=false)
+static void finishReadObject(struct layer_data *my_data, VkCommandBuffer object)
 {
     my_data->c_VkCommandBuffer.finishRead(object);
-    if (lockPool) {
-        finishReadObject(my_data, command_pool_map[object]);
-    }
+    finishReadObject(my_data, command_pool_map[object]);
 }
 #endif // THREADING_H
