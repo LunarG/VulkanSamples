@@ -52,7 +52,7 @@ extern "C" {
 #define VK_EXT_debug_report 1
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDebugReportCallbackEXT)
 
-#define VK_EXT_DEBUG_REPORT_SPEC_VERSION 1
+#define VK_EXT_DEBUG_REPORT_SPEC_VERSION 2
 #define VK_EXT_DEBUG_REPORT_EXTENSION_NAME "VK_EXT_debug_report"
 
 typedef enum VkDebugReportObjectTypeEXT {
