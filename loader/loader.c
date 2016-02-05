@@ -1899,8 +1899,11 @@ loader_add_layer_properties(const struct loader_instance *inst,
                 // entrypoints = cJSON_GetObjectItem(ext_item, "entrypoints");
                 GET_JSON_OBJECT(ext_item, entrypoints)
                 int entry_count;
-                if (entrypoints == NULL)
+                if (entrypoints == NULL) {
+                    loader_add_to_dev_ext_list(inst, &props->device_extension_list,
+                                               &ext_prop, 0, NULL);
                     continue;
+                }
                 entry_count = cJSON_GetArraySize(entrypoints);
                 if (entry_count)
                     entry_array = (char **)loader_stack_alloc(sizeof(char *) *
