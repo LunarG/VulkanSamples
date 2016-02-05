@@ -1,26 +1,34 @@
 # NSIS Script for creating the Windows Vulkan RT installer.
 #
-# Copyright (C) 2016 Valve Corporation
+# Copyright (c) 2015-2016 The Khronos Group Inc.
+# Copyright (c) 2015-2016 Valve Corporation
+# Copyright (c) 2015-2016 LunarG, Inc.
 #
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and associated documentation files (the "Software"),
-# to deal in the Software without restriction, including without limitation
-# the rights to use, copy, modify, merge, publish, distribute, sublicense,
-# and/or sell copies of the Software, and to permit persons to whom the
-# Software is furnished to do so, subject to the following conditions:
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and/or associated documentation files (the "Materials"), to
+# deal in the Materials without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Materials, and to permit persons to whom the Materials are
+# furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included
-# in all copies or substantial portions of the Software.
+# The above copyright notice(s) and this permission notice shall be included in
+# all copies or substantial portions of the Materials.
 #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# The Materials are Confidential Information as defined by the Khronos
+# Membership Agreement until designated non-confidential by Khronos, at which
+# point this condition clause shall be removed.
+#
+# THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-# DEALINGS IN THE SOFTWARE.
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 #
-# Author: David Pinedo <david@lunarg.com>
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+# DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+# OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
+# USE OR OTHER DEALINGS IN THE MATERIALS.
+#
+# Author: David Pinedo <david@LunarG.com>
+# Author: Mark Young <mark@LunarG.com>
 #
 
 
@@ -173,7 +181,7 @@ Var FileVersion
 RequestExecutionLevel admin
 
 Function .onInit
-  
+
 FunctionEnd
 
 AddBrandingImage left 150
@@ -214,7 +222,7 @@ Section
     # The reference count is stored in the regisry value IC
     ReadRegDword $1 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallCount"
     IntOp $1 $1 + 1
-    
+
     # If the registry entry isn't there, it will throw an error as well as return a blank value.  So, clear the errors.
     ${If} ${Errors}
         ClearErrors
@@ -308,7 +316,7 @@ Section
        SetOutPath "$TEMP"
         # If running on a 64-bit OS machine, we need to install the 64-bit Visual Studio re-distributable
         ${If} ${RunningX64}
-        
+
            File vcredist_x64.exe
            ExecWait '"$TEMP\vcredist_x64.exe"  /passive /norestart'
 
@@ -318,9 +326,9 @@ Section
            File vcredist_x86.exe
            ExecWait '"$TEMP\vcredist_x86.exe"  /passive /norestart'
 
-        ${Endif}   
+        ${Endif}
     RedistributablesInstalled:
-     
+
     Call UninstallIfError
 
 SectionEnd
@@ -438,9 +446,9 @@ Section "uninstall"
         IfRebootFlag 0 noreboot
             MessageBox MB_YESNO "A reboot is required to finish the uninstall. Do you wish to reboot now?" /SD IDNO IDNO returnerror
             Reboot
-            
+
             returnerror:
-        
+
             # Set an error message to output because we should reboot but didn't (whether because silent uninstall or user choice)
             SetErrorLevel 3 # ERROR_TOO_MANY_OPEN_FILES
 

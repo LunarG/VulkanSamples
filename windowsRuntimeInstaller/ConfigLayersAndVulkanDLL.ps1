@@ -1,26 +1,34 @@
+# Copyright (c) 2015-2016 The Khronos Group Inc.
+# Copyright (c) 2015-2016 Valve Corporation
+# Copyright (c) 2015-2016 LunarG, Inc.
 #
-# Copyright (C) 2016 Valve Corporation
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and/or associated documentation files (the "Materials"), to
+# deal in the Materials without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Materials, and to permit persons to whom the Materials are
+# furnished to do so, subject to the following conditions:
 #
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and associated documentation files (the "Software"),
-# to deal in the Software without restriction, including without limitation
-# the rights to use, copy, modify, merge, publish, distribute, sublicense,
-# and/or sell copies of the Software, and to permit persons to whom the
-# Software is furnished to do so, subject to the following conditions:
+# The above copyright notice(s) and this permission notice shall be included in
+# all copies or substantial portions of the Materials.
 #
-# The above copyright notice and this permission notice shall be included
-# in all copies or substantial portions of the Software.
+# The Materials are Confidential Information as defined by the Khronos
+# Membership Agreement until designated non-confidential by Khronos, at which
+# point this condition clause shall be removed.
 #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-# DEALINGS IN THE SOFTWARE.
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+#
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+# DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+# OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
+# USE OR OTHER DEALINGS IN THE MATERIALS.
 #
 # Author: David Pinedo <david@LunarG.com>
+# Author: Mark Young <mark@LunarG.com>
 #
+
 
 # This Powershell script is used by the Vulkan Run Time Installer/Uninstaller to:
 #   - Copy the most recent vulkan-<majorabi>-*.dll in C:\Windows\System32
@@ -78,10 +86,10 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
 {
    # Push the current path on the stack and go to $dir
    Push-Location -Path $dir
-   
+
    # Create a list for all the DLLs in the folder
    $VulkanDllList=@()
-   
+
    # Find all DLL objects in this directory
    dir -name vulkan-$majorabi-*.dll |
    ForEach-Object {
@@ -159,7 +167,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
         $mrVulkaninfo=$mrVulkanDll -replace ".dll",".exe"
         $mrVulkaninfo=$mrVulkaninfo -replace "vulkan","vulkaninfo"
         copy $mrVulkaninfo vulkaninfo.exe
-        
+
         # Create the name used in the registry for the SDK associated with $mrVulkanDll.
         $major=$VulkanDLLList[-1].Split('@')[1]
         $minor=$VulkanDLLList[-1].Split('@')[2]
@@ -167,7 +175,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
         $buildno=$VulkanDLLList[-1].Split('@')[4]
         $prerelease=$VulkanDLLList[-1].Split('@')[5]
         $prebuildno=$VulkanDLLList[-1].Split('@')[6]
-        
+
         $sdktempname="VulkanSDK"+$major + "." + $minor + "." + $patch + "." + $buildno
         if ($prerelease -ne "") {
             $sdktempname=$sdktempname + "." + $prerelease
@@ -176,7 +184,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
             $sdktempname=$sdktempname + "." + $prebuildno
         }
     }
-   
+
     # Return to our previous folder
     Pop-Location
 
@@ -201,7 +209,7 @@ UpdateVulkanSysFolder c:\WINDOWS\SYSTEM32 1
 
 $mrVulkanDllInstallDir=""
 $VulkanSdkDirs=@()
-Get-ChildItem -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall | 
+Get-ChildItem -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall |
    ForEach-Object {
        $regkey=$_ -replace ".*\\",""
        if ($_ -match "\\VulkanSDK") {
