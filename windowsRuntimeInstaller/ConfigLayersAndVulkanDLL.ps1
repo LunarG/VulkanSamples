@@ -266,7 +266,7 @@ if ($ossize -eq 64) {
 
 if ($mrVulkanDllInstallDir -ne "") {
     New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers | out-null
-    Get-ChildItem $mrVulkanDllInstallDir\Bin -Filter *json |
+    Get-ChildItem $mrVulkanDllInstallDir\Bin -Filter VkLayer*json |
        ForEach-Object {
            New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin\$_ -PropertyType DWord -Value 0 | out-null
        }
@@ -274,7 +274,7 @@ if ($mrVulkanDllInstallDir -ne "") {
     # Create registry entires for the WOW6432Node registry only if we're targeting a 64-bit OS
     if ($ossize -eq 64) {
         New-Item -Force -ErrorAction Ignore -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | out-null
-        Get-ChildItem $mrVulkanDllInstallDir\Bin32 -Filter *json |
+        Get-ChildItem $mrVulkanDllInstallDir\Bin32 -Filter VkLayer*json |
            ForEach-Object {
                New-ItemProperty -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin32\$_ -PropertyType DWord -Value 0 | out-null
            }
