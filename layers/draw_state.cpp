@@ -4977,7 +4977,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                                 // Validate Dynamic Offset Minimums
                                 uint32_t cur_dyn_offset = totalDynamicDescriptors;
                                 for (uint32_t d = 0; d < pSet->descriptorCount; d++) {
-                                    if (pSet->pLayout->descriptorTypes[i] == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
+                                    if (pSet->pLayout->descriptorTypes[d] == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
                                         if (vk_safe_modulo(pDynamicOffsets[cur_dyn_offset], dev_data->physDevProperties.properties.limits.minUniformBufferOffsetAlignment) != 0) {
                                             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
                                             __LINE__, DRAWSTATE_INVALID_UNIFORM_BUFFER_OFFSET, "DS",
@@ -4985,7 +4985,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                                             cur_dyn_offset, pDynamicOffsets[cur_dyn_offset], dev_data->physDevProperties.properties.limits.minUniformBufferOffsetAlignment);
                                         }
                                         cur_dyn_offset++;
-                                    } else if (pSet->pLayout->descriptorTypes[i] == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+                                    } else if (pSet->pLayout->descriptorTypes[d] == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
                                         if (vk_safe_modulo(pDynamicOffsets[cur_dyn_offset], dev_data->physDevProperties.properties.limits.minStorageBufferOffsetAlignment) != 0) {
                                             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
                                             __LINE__, DRAWSTATE_INVALID_STORAGE_BUFFER_OFFSET, "DS",
