@@ -268,11 +268,11 @@ The VK_LAYER_LUNARG_object_tracker layer maintains a record of all Vulkan object
  9. Use reference counting for non-dispatchable objects.  Multiple object creation calls may return identical handles.
  10. Update codegen for destroy_obj & validate_obj to generate all of the correct signatures and use the generated code
 
-## VK_LAYER_LUNARG_threading
+## VK_LAYER_GOOGLE_threading
 
-### VK_LAYER_LUNARG_threading Overview
+### VK_LAYER_GOOGLE_threading Overview
 
-The VK_LAYER_LUNARG_threading layer checks for simultaneous use of objects by calls from multiple threads.
+The VK_LAYER_GOOGLE_threading layer checks for simultaneous use of objects by calls from multiple threads.
 Application code is responsible for preventing simultaneous use of the same objects by certain calls that modify objects.
 See [bug 13433](https://cvs.khronos.org/bugzilla/show_bug.cgi?id=13433) and
 <https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/vulkan/function_properties.csv>
@@ -293,7 +293,7 @@ But the layer cannot prevent such a reentrant use of an object.
 The layer can only observe when a mutual exclusion rule is actually violated.
 It cannot insure that there is no latent race condition.
 
-### VK_LAYER_LUNARG_threading Details Table
+### VK_LAYER_GOOGLE_threading Details Table
 
 | Check | Overview | ENUM THREADING_CHECKER_* | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ---------------- | -------- | ---------- |
@@ -301,7 +301,7 @@ It cannot insure that there is no latent race condition.
 | Thread Reentrancy | Detects cases of a single thread calling Vulkan reentrantly | SINGLE_THREAD_REUSE | vkQueueSubmit vkFreeMemory vkMapMemory vkUnmapMemory vkFlushMappedMemoryRanges vkInvalidateMappedMemoryRanges vkBindBufferMemory vkBindImageMemory vkQueueBindSparse vkDestroySemaphore vkDestroyBuffer vkDestroyImage vkDestroyDescriptorPool vkResetDescriptorPool vkAllocateDescriptorSets vkFreeDescriptorSets vkFreeCommandBuffers vkBeginCommandBuffer vkEndCommandBuffer vkResetCommandBuffer vkCmdBindPipeline vkCmdSetViewport vkCmdSetBlendConstants vkCmdSetLineWidth vkCmdSetDepthBias vkCmdSetDepthBounds vkCmdSetStencilCompareMask vkCmdSetStencilWriteMask vkCmdSetStencilReference vkCmdBindDescriptorSets vkCmdBindIndexBuffer vkCmdBindVertexBuffers vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatch vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdClearAttachments vkCmdResolveImage vkCmdSetEvent vkCmdResetEvent vkCmdWaitEvents vkCmdPipelineBarrier vkCmdBeginQuery vkCmdEndQuery vkCmdResetQueryPool vkCmdWriteTimestamp vkCmdCopyQueryPoolResults vkCmdBeginRenderPass vkCmdNextSubpass vkCmdPushConstants vkCmdEndRenderPass vkCmdExecuteCommands | ??? | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 
-### VK_LAYER_LUNARG_threading Pending Work
+### VK_LAYER_GOOGLE_threading Pending Work
 Additional work to be done
 
 ## VK_LAYER_LUNARG_device_limits

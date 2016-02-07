@@ -207,9 +207,9 @@ VK_LAYER_EXPORT VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(const
 
 static const VkLayerProperties globalLayerProps[] = {
     {
-        "Threading",
+        "VK_LAYER_GOOGLE_threading",
         VK_API_VERSION, // specVersion
-        VK_MAKE_VERSION(0, 1, 0), // implVersion
+        1,
         "Google Validation Layer",
     }
 };
@@ -222,9 +222,9 @@ VK_LAYER_EXPORT VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(uint32_t 
 
 static const VkLayerProperties deviceLayerProps[] = {
     {
-        "Threading",
-        VK_API_VERSION,
-        VK_MAKE_VERSION(0, 1, 0),
+        "VK_LAYER_GOOGLE_threading",
+        VK_API_VERSION, // specVersion
+        1,
         "Google Validation Layer",
     }
 };
@@ -255,7 +255,6 @@ VK_LAYER_EXPORT VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(VkPhysicalD
 {
     return util_GetLayerProperties(ARRAY_SIZE(deviceLayerProps), deviceLayerProps, pCount, pProperties);
 }
-
 
 static inline PFN_vkVoidFunction layer_intercept_proc(const char *name)
 {

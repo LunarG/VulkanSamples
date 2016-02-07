@@ -49,7 +49,7 @@ layers/param_checker.cpp (name=VK_LAYER_LUNARG_param_checker) - Check the input 
 layers/image.cpp (name=VK_LAYER_LUNARG_image) - The Image layer is intended to validate image parameters, formats, and correct use. Images are a significant enough area that they were given a separate layer. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ### Check threading
-<build dir>/layers/threading.cpp (name=VK_LAYER_LUNARG_threading) - Check multithreading of API calls for validity. Currently this checks that only one thread at a time uses an object in free-threaded API calls. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+<build dir>/layers/threading.cpp (name=VK_LAYER_GOOGLE_threading) - Check multithreading of API calls for validity. Currently this checks that only one thread at a time uses an object in free-threaded API calls. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ### Swapchain
 <build dir>/layer/swapchain.cpp (name=VK_LAYER_LUNARG_swapchain) - Check that WSI extensions are being used correctly.
