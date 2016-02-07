@@ -286,13 +286,13 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance i
     PFN_vkVoidFunction addr;
     layer_data* my_data;
 
-    if (instance == VK_NULL_HANDLE) {
-        return NULL;
-    }
-
     addr = layer_intercept_instance_proc(funcName);
     if (addr) {
         return addr;
+    }
+
+    if (instance == VK_NULL_HANDLE) {
+        return NULL;
     }
 
     my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
