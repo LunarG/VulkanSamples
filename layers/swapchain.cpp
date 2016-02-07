@@ -63,7 +63,7 @@ static const VkLayerProperties swapchain_global_layers[] = {
     {
         "swapchain",
         VK_API_VERSION,
-        VK_MAKE_VERSION(0, 1, 0),
+        1,
         "Validation layer: swapchain",
     }
 };
