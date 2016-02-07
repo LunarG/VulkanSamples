@@ -167,7 +167,7 @@ static const VkLayerProperties dl_global_layers[] = {
     {
         "VK_LAYER_LUNARG_device_limits",
         VK_API_VERSION,
-        VK_MAKE_VERSION(0, 1, 0),
+        1,
         "Validation layer: Device Limits",
     }
 };
