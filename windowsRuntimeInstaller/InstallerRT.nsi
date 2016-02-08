@@ -43,6 +43,7 @@
 !define VERSION_MINOR "0"
 !define VERSION_PATCH "1"
 !define VERSION_BUILDNO "0.pre.1"
+!define PUBLISHER "YourCompany, Inc."
 #!define VERSION_BUILDNO "0"
 !define PRODUCTVERSION "${VERSION_API_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_BUILDNO}"
 
@@ -209,6 +210,14 @@ Section
 
     ${Endif}
 
+    ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallDir"
+    strcmp $INSTDIR $0 notinstalled
+    ${If} $0 != ""
+        MessageBox MB_OK "The Window Vulkan Runtime is already installed to $0. It will be re-installed to the same folder." /SD IDOK
+    ${Endif}
+    Strcpy $INSTDIR $0
+notinstalled:
+
     SetOutPath "$INSTDIR"
     File ${ICOFILE}
     File VULKANRT_LICENSE.RTF
@@ -234,10 +243,11 @@ Section
     # Modify registry for Programs and Features
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "DisplayName" "Vulkan Run Time Libraries ${PRODUCTVERSION}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "UninstallString" "$INSTDIR\Uninstall${PRODUCTNAME}.exe"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "Publisher" "LunarG, Inc."
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "Publisher" "${PUBLISHER}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "DisplayVersion" "${PRODUCTVERSION}"
     WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "EstimatedSize" ${ESTIMATEDSIZE}
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "DisplayIcon" "$\"$INSTDIR\${ICOFILE}$\""
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallDir" "$INSTDIR"
     Call UninstallIfError
 
     # Set up version number for file names
