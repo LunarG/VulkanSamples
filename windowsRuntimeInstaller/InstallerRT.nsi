@@ -214,8 +214,8 @@ Section
     strcmp $INSTDIR $0 notinstalled
     ${If} $0 != ""
         MessageBox MB_OK "The Window Vulkan Runtime is already installed to $0. It will be re-installed to the same folder." /SD IDOK
+        Strcpy $INSTDIR $0
     ${Endif}
-    Strcpy $INSTDIR $0
 notinstalled:
 
     SetOutPath "$INSTDIR"
