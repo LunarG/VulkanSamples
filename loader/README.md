@@ -2,7 +2,7 @@
 
 ## Overview
 The Loader implements the main VK library (e.g. "vulkan-1.dll" on Windows and
-"libvulkan-1.so" on Linux).  It handles layer management and driver management.  The
+"libvulkan.so" on Linux).  It handles layer management and driver management.  The
 loader fully supports multi-gpu operation.  As part of this, it dispatches API
 calls to the correct driver, and to the correct layers, based on the GPU object
 selected by the application.

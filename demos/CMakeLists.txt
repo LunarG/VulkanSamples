@@ -10,7 +10,12 @@ file(COPY ${TEXTURES} DESTINATION ${CMAKE_BINARY_DIR}/demos)
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-set (LIBRARIES "vulkan-${MAJOR}")
+if(WIN32)
+  set (LIBRARIES "vulkan-${MAJOR}")
+elseif(UNIX)
+  set (LIBRARIES "vulkan")
+else()
+endif()
 
 if(WIN32)
     # For Windows, since 32-bit and 64-bit items can co-exist, we build each in its own build directory.
@@ -71,7 +76,7 @@ if(NOT WIN32)
        "${PROJECT_SOURCE_DIR}/icd/common"
        )
 
-    link_libraries(${XCB_LIBRARIES} vulkan-${MAJOR} m)
+    link_libraries(${XCB_LIBRARIES} vulkan m)
 endif()
 if(WIN32)
     include_directories (
