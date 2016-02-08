@@ -357,7 +357,9 @@ VkResult VKAPI_CALL vkAllocateCommandBuffers(
     // Record mapping from command buffer to command pool
     if (VK_SUCCESS == result) {
         for (int index=0;index<pAllocateInfo->commandBufferCount;index++) {
+            loader_platform_thread_lock_mutex(&threadingLock);
             command_pool_map[pCommandBuffers[index]] = pAllocateInfo->commandPool;
+            loader_platform_thread_unlock_mutex(&threadingLock);
         }
     }
 
@@ -385,7 +387,9 @@ void VKAPI_CALL vkFreeCommandBuffers(
     finishWriteObject(my_data, commandPool);
     for (int index=0;index<commandBufferCount;index++) {
         finishWriteObject(my_data, pCommandBuffers[index], lockCommandPool);
+        loader_platform_thread_lock_mutex(&threadingLock);
         command_pool_map.erase(pCommandBuffers[index]);
+        loader_platform_thread_unlock_mutex(&threadingLock);
     }
 }
 

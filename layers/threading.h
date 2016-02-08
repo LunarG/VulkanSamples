@@ -313,7 +313,10 @@ static std::unordered_map<VkCommandBuffer, VkCommandPool> command_pool_map;
 static void startWriteObject(struct layer_data *my_data, VkCommandBuffer object, bool lockPool=true)
 {
     if (lockPool) {
-        startWriteObject(my_data, command_pool_map[object]);
+        loader_platform_thread_lock_mutex(&threadingLock);
+        VkCommandPool pool = command_pool_map[object];
+        loader_platform_thread_unlock_mutex(&threadingLock);
+        startWriteObject(my_data, pool);
     }
     my_data->c_VkCommandBuffer.startWrite(my_data->report_data, object);
 }
@@ -321,17 +324,26 @@ static void finishWriteObject(struct layer_data *my_data, VkCommandBuffer object
 {
     my_data->c_VkCommandBuffer.finishWrite(object);
     if (lockPool) {
-        finishWriteObject(my_data, command_pool_map[object]);
+        loader_platform_thread_lock_mutex(&threadingLock);
+        VkCommandPool pool = command_pool_map[object];
+        loader_platform_thread_unlock_mutex(&threadingLock);
+        finishWriteObject(my_data, pool);
     }
 }
 static void startReadObject(struct layer_data *my_data, VkCommandBuffer object)
 {
-    startReadObject(my_data, command_pool_map[object]);
+    loader_platform_thread_lock_mutex(&threadingLock);
+    VkCommandPool pool = command_pool_map[object];
+    loader_platform_thread_unlock_mutex(&threadingLock);
+    startReadObject(my_data, pool);
     my_data->c_VkCommandBuffer.startRead(my_data->report_data, object);
 }
 static void finishReadObject(struct layer_data *my_data, VkCommandBuffer object)
 {
     my_data->c_VkCommandBuffer.finishRead(object);
-    finishReadObject(my_data, command_pool_map[object]);
+    loader_platform_thread_lock_mutex(&threadingLock);
+    VkCommandPool pool = command_pool_map[object];
+    loader_platform_thread_unlock_mutex(&threadingLock);
+    finishReadObject(my_data, pool);
 }
 #endif // THREADING_H
