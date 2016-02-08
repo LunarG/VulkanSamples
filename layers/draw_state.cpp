@@ -6879,6 +6879,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
     loader_platform_thread_lock_mutex(&globalLock);
+    // FIXME/TODO: Need to add some thing code the "fence" parameter
     dev_data->semaphoreSignaledMap[semaphore] = 1;
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
