@@ -58,7 +58,7 @@ Some notes on the behavior of the Windows Vulkan Runtime Installer:
       be run in silent mode by using the /S command line option
       when invoking the uninstaller. The location of the the
       UninstallVulkanRT.exe can be found in the registry value
-      HKLM\Microsoft\Windows\CurrentVersion\Uninstall\
+      HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\
       VulkanRT<version>\UninstallString
 
    o  The Vulkan Runtime Installer installs the Vulkan loader as
