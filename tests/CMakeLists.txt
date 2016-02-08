@@ -104,7 +104,12 @@ else()
     endif()
 endif()
 
-set (LIBVK "vulkan-${MAJOR}")
+if(WIN32)
+   set (LIBVK "vulkan-${MAJOR}")
+elseif(UNIX)
+   set (LIBVK "vulkan")
+else()
+endif()
 
 add_executable(vk_layer_validation_tests layer_validation_tests.cpp ${COMMON_CPP})
 set_target_properties(vk_layer_validation_tests

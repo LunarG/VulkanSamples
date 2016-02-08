@@ -38,5 +38,12 @@ else()
     add_executable(vkjson_unittest vkjson_unittest.cc)
     add_executable(vkjson_info vkjson_info.cc)
 endif()
+
 target_link_libraries(vkjson_unittest vkjson)
-target_link_libraries(vkjson_info vkjson vulkan-${MAJOR})
+
+if(WIN32)
+    target_link_libraries(vkjson_info vkjson vulkan-${MAJOR})
+elseif(UNIX)
+    target_link_libraries(vkjson_info vkjson vulkan)
+else()
+endif()
