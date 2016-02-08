@@ -377,7 +377,10 @@ class Subcommand(object):
         ggep_body.append('%s' % self.lineinfo.get())
         ggep_body.append('static const VkLayerProperties globalLayerProps[] = {')
         ggep_body.append('    {')
-        ggep_body.append('        "VK_LAYER_LUNARG_%s",' % layer_name)
+        if self.layer_name in ['unique_objects']:
+          ggep_body.append('        "VK_LAYER_GOOGLE_%s",' % layer)
+        else:
+          ggep_body.append('        "VK_LAYER_LUNARG_%s",' % layer)
         ggep_body.append('        VK_API_VERSION, // specVersion')
         ggep_body.append('        1, // implementationVersion')
         ggep_body.append('        "layer: %s",' % layer)
@@ -397,7 +400,10 @@ class Subcommand(object):
         gpdlp_body.append('%s' % self.lineinfo.get())
         gpdlp_body.append('static const VkLayerProperties deviceLayerProps[] = {')
         gpdlp_body.append('    {')
-        gpdlp_body.append('        "VK_LAYER_LUNARG_%s",' % layer)
+        if self.layer_name in ['unique_objects']:
+          gpdlp_body.append('        "VK_LAYER_GOOGLE_%s",' % layer)
+        else:
+          gpdlp_body.append('        "VK_LAYER_LUNARG_%s",' % layer)
         gpdlp_body.append('        VK_API_VERSION,')
         gpdlp_body.append('        1,')
         gpdlp_body.append('        "layer: %s",' % layer)
