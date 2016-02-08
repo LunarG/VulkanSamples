@@ -47,7 +47,7 @@ if (EXISTS "${SDK_SOURCE}")
     if (WIN32)
         set_target_properties(VKLayerOverlay PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/VkLayer_overlay.def")
         add_custom_command(OUTPUT overlay.json
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/linux/overlay.json $<CONFIGURATION>/overlay.json
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/windows/overlay.json $<CONFIGURATION>/overlay.json
             VERBATIM)
     else()
         set_target_properties(VKLayerOverlay PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic")
