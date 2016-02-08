@@ -1203,10 +1203,7 @@ import sys
 if sys.platform.startswith('win32'):
     extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface]
     extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, lunarg_debug_report, lunarg_debug_marker]
-elif sys.platform.startswith('linux'):
-    extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface]
-    extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, lunarg_debug_report, lunarg_debug_marker]
-else: # android
+else: # linux & android
     extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_android_surface]
     extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_android_surface, lunarg_debug_report, lunarg_debug_marker]
 
