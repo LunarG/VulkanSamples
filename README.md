@@ -10,7 +10,7 @@
 ## Requirements/Dependencies
   - A recent version of the LunarG Vulkan SDK must be installed on the system.
     In addtion to the Vulkan headers and libraries, the SDK also includes the
-    glslang components necessary to build the sample progams.
+    glslang and spirv-tools components necessary to build the sample progams.
   - Linux package dependencies:
     - Vulkan SDK required packages
     - cmake
@@ -26,14 +26,11 @@
 ## Kit Structure
   - The Vulkan Samples Kit is a set of source and data files in a specific
     directory hierarchy:
-      - data/ - static data files used in the samples, ie images, shaders, etc; 
-        Vulkan-version-specific files will reside in directories named by the
-        version (i.e. vk0.10)
-      - ext/ - external third party components outside of the Vulkan SDK and
-        samples framework (glm)
-      - src/ - samples source code, where sample file name is prefixed by Vulkan
-        version (i.e. vk0.10-instance.cpp)
-      - utils/ - source code for common utilities used by the sample programs
+      - API-Samples - Samples that demonstrate the use of various aspects of the
+        Vulkan API
+      - Demos - Samples that are more functional and go deeper than simple API use.
+      - Layer-Samples - Samples that are implemented as layers.
+      - Android-Only - Samples that are only meant to be run on Android
 
 ## Sample progression
   - In general, the samples are not interrelated, but there is a progression
