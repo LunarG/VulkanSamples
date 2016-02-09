@@ -265,18 +265,30 @@ if ($ossize -eq 64) {
 # Create layer registry entries associated with Vulkan SDK from which $mrVulkanDll is from
 
 if ($mrVulkanDllInstallDir -ne "") {
-    New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers | out-null
-    Get-ChildItem $mrVulkanDllInstallDir\Bin -Filter VkLayer*json |
-       ForEach-Object {
-           New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin\$_ -PropertyType DWord -Value 0 | out-null
-       }
-
-    # Create registry entires for the WOW6432Node registry only if we're targeting a 64-bit OS
     if ($ossize -eq 64) {
-        New-Item -Force -ErrorAction Ignore -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | out-null
+    
+        # Create registry entires in normal registry location for 64-bit items on a 64-bit OS
+        New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers | out-null
+        Get-ChildItem $mrVulkanDllInstallDir\Bin -Filter VkLayer*json |
+           ForEach-Object {
+               New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin\$_ -PropertyType DWord -Value 0 | out-null
+           }
+
+        # Create registry entires for the WOW6432Node registry location for 32-bit items on a 64-bit OS
+        New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | out-null
         Get-ChildItem $mrVulkanDllInstallDir\Bin32 -Filter VkLayer*json |
            ForEach-Object {
                New-ItemProperty -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin32\$_ -PropertyType DWord -Value 0 | out-null
            }
+           
+    } else {
+    
+        # Create registry entires in normal registry location for 32-bit items on a 32-bit OS
+        New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers | out-null
+        Get-ChildItem $mrVulkanDllInstallDir\Bin32 -Filter VkLayer*json |
+           ForEach-Object {
+               New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin32\$_ -PropertyType DWord -Value 0 | out-null
+           }
+    
     }
 }
