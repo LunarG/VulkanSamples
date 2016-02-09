@@ -72,8 +72,13 @@ OutFile "VulkanRT-${PRODUCTVERSION}-Installer.exe"
 # Define default installation directory
 InstallDir "$PROGRAMFILES\${PRODUCTNAME}\${PRODUCTVERSION}"
 
-# Variable that holds version string used in file names
+# Version string used in file names
 Var FileVersion
+
+# Directory RT was installed to.
+# The uninstaller can't just use $INSTDIR because it is set to the
+# directory the uninstaller exe file is located in.
+Var IDir
 
 
 #############################################
@@ -354,7 +359,12 @@ Section "uninstall"
 
     ${Endif}
 
-    SetOutPath "$INSTDIR"
+    # Look up the install dir and remove files from that directory.
+    # We do this so that the uninstaller can be run from any directory.
+    ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallDir"
+    strcpy $IDir $0
+
+    SetOutPath "$IDir"
 
     # Set up version number for file names
     ${StrRep} $0 ${VERSION_BUILDNO} "." "-"
@@ -391,7 +401,7 @@ Section "uninstall"
             #   Copy the most recent version of vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll
             #   Copy the most recent version of vulkaninfo-<abimajor>-*.exe to vulkaninfo.exe
             #   Set up layer registry entries to use layers from the corresponding SDK
-            nsExec::ExecToStack 'powershell -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File "$INSTDIR\ConfigLayersAndVulkanDLL.ps1" ${VERSION_ABI_MAJOR} 64'
+            nsExec::ExecToStack 'powershell -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File "$IDir\ConfigLayersAndVulkanDLL.ps1" ${VERSION_ABI_MAJOR} 64'
 
         # Else, running on a 32-bit OS machine
         ${Else}
@@ -408,7 +418,7 @@ Section "uninstall"
             #   Copy the most recent version of vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll
             #   Copy the most recent version of vulkaninfo-<abimajor>-*.exe to vulkaninfo.exe
             #   Set up layer registry entries to use layers from the corresponding SDK
-            nsExec::ExecToStack 'powershell -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File "$INSTDIR\ConfigLayersAndVulkanDLL.ps1" ${VERSION_ABI_MAJOR} 32'
+            nsExec::ExecToStack 'powershell -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File "$IDir\ConfigLayersAndVulkanDLL.ps1" ${VERSION_ABI_MAJOR} 32'
 
         ${EndIf}
 
@@ -431,24 +441,24 @@ Section "uninstall"
         DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}"
 
         # Remove files in install dir
-        Delete /REBOOTOK "$INSTDIR\VULKANRT_LICENSE.rtf"
-        Delete /REBOOTOK "$INSTDIR\LICENSE.txt"
-        Delete /REBOOTOK "$INSTDIR\UninstallVulkanRT.exe"
-        Delete /REBOOTOK "$INSTDIR\V.ico"
-        Delete /REBOOTOK "$INSTDIR\ConfigLayersAndVulkanDLL.ps1"
-        Delete /REBOOTOK "$INSTDIR\vulkaninfo.exe"
+        Delete /REBOOTOK "$IDir\VULKANRT_LICENSE.rtf"
+        Delete /REBOOTOK "$IDir\LICENSE.txt"
+        Delete /REBOOTOK "$IDir\UninstallVulkanRT.exe"
+        Delete /REBOOTOK "$IDir\V.ico"
+        Delete /REBOOTOK "$IDir\ConfigLayersAndVulkanDLL.ps1"
+        Delete /REBOOTOK "$IDir\vulkaninfo.exe"
 
         # If running on a 64-bit OS machine
         ${If} ${RunningX64}
-            Delete /REBOOTOK "$INSTDIR\vulkaninfo32.exe"
+            Delete /REBOOTOK "$IDir\vulkaninfo32.exe"
         ${EndIf}
 
-        # Need to do a SetOutPath to something outside of INSTDIR,
-        # or the uninstall will think INSTDIR is busy
+        # Need to do a SetOutPath to something outside of install dir,
+        # or the uninstall will think install dir is busy
         SetOutPath "$TEMP"
 
         # Remove install directories
-        Rmdir /REBOOTOK "$INSTDIR"
+        Rmdir /REBOOTOK "$IDir"
         StrCpy $0 "$PROGRAMFILES\${PRODUCTNAME}"
         Call un.DeleteDirIfEmpty
 
