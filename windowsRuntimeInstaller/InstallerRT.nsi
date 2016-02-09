@@ -80,6 +80,9 @@ Var FileVersion
 # directory the uninstaller exe file is located in.
 Var IDir
 
+# Install count
+Var IC
+
 
 #############################################
 # StrRep - string replace
@@ -233,17 +236,35 @@ notinstalled:
     WriteUninstaller "$INSTDIR\Uninstall${PRODUCTNAME}.exe"
 
     # Reference count the number of times we have been installed.
-    # The reference count is stored in the regisry value IC
+    # The reference count is stored in the registry value InstallCount
     ReadRegDword $1 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallCount"
     IntOp $1 $1 + 1
+    StrCpy $IC $1
+
+    # We need to create a new folder for each install. Since we are using counted installs,
+    # an uninstall when the count is greater than one would result in the install
+    # count being decremented and nothing being removed. But Windows Add/Remove Programs
+    # generates a warning Window if the install dir for a package that is removed is not
+    # deleted. So we create a unique folder for each counted install.
+    # We fudge it a little and only create one folder, and rename it after each
+    # install/uninstall.
+
+    # Create the install instance folder. We rename the install instance folder if it already exists.
+    # Then copy the uninstaller to it.
+    ${If} $IC > 2
+        IntOp $1 $IC - 1
+        Rename "$INSTDIR\Instance_$1" "$INSTDIR\Instance_$IC"
+        CopyFiles /SILENT "$INSTDIR\Uninstall${PRODUCTNAME}.exe" "$INSTDIR\Instance_$IC"
+    ${ElseIf} $IC = 2
+        CreateDirectory "$INSTDIR\Instance_$IC"
+        CopyFiles /SILENT "$INSTDIR\Uninstall${PRODUCTNAME}.exe" "$INSTDIR\Instance_$IC"
+    ${EndIf}
+
 
     # If the registry entry isn't there, it will throw an error as well as return a blank value.  So, clear the errors.
     ${If} ${Errors}
         ClearErrors
     ${EndIf}
-
-    WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallCount" $1
-    Call UninstallIfError
 
     # Modify registry for Programs and Features
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "DisplayName" "Vulkan Run Time Libraries ${PRODUCTVERSION}"
@@ -253,6 +274,32 @@ notinstalled:
     WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "EstimatedSize" ${ESTIMATEDSIZE}
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "DisplayIcon" "$\"$INSTDIR\${ICOFILE}$\""
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallDir" "$INSTDIR"
+    WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallCount" $IC
+
+    ${If} $IC > 1
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "DisplayName" "Vulkan Run Time Libraries ${PRODUCTVERSION}"
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "UninstallString" "$INSTDIR\Instance_$IC\Uninstall${PRODUCTNAME}.exe"
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "Publisher" "${PUBLISHER}"
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "DisplayVersion" "${PRODUCTVERSION}"
+        WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "EstimatedSize" ${ESTIMATEDSIZE}
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "DisplayIcon" "$\"$INSTDIR\${ICOFILE}$\""
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "InstallDir" "$INSTDIR\Instance_$IC"
+        WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "InstallCount" $IC
+    ${EndIf}
+
+    # Set SystemComponent to 1 for those instances that are not to be visible to Add/Remove Programs.
+    # Set SystemComponent to 0 for the instance that is to be visible to Add/Remove Programs.
+    ${If} $IC > 2
+        IntOp $1 $IC - 1
+        WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "SystemComponent" 0
+        WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$1" "SystemComponent" 1
+    ${ElseIf} $IC = 2
+        WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "SystemComponent" 0
+        WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "SystemComponent" 1
+    ${Else}
+        WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "SystemComponent" 0
+    ${EndIf}
+
     Call UninstallIfError
 
     # Set up version number for file names
@@ -362,7 +409,7 @@ Section "uninstall"
     # Look up the install dir and remove files from that directory.
     # We do this so that the uninstaller can be run from any directory.
     ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallDir"
-    strcpy $IDir $0
+    StrCpy $IDir $0
 
     SetOutPath "$IDir"
 
@@ -371,12 +418,34 @@ Section "uninstall"
     StrCpy $FileVersion ${VERSION_ABI_MAJOR}-${VERSION_API_MAJOR}-${VERSION_MINOR}-${VERSION_PATCH}-$0
 
     # Decrement the number of times we have been installed.
-    ReadRegDword $1 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallCount"
-    IntOp $1 $1 - 1
+    ReadRegDword $IC HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallCount"
+    IntOp $1 $IC - 1
     WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallCount" $1
 
-    # Ref count is in $1. If it is zero, uninstall.
-    ${If} $1 <= 0
+    # Rename the install dir for this instance if is not the last uninstall
+    ${If} $IC > 2
+        IntOp $1 $IC - 1
+        Rename "$IDir\Instance_$IC" "$IDir\Instance_$1"
+    ${ElseIf} $IC = 2
+        Delete /REBOOTOK "$IDir\Instance_$IC\UninstallVulkanRT.exe"
+        Rmdir /REBOOTOK "$IDir\Instance_$IC"
+    ${Endif}
+
+    # Modify registry for Programs and Features
+    DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC"
+    ${If} $IC > 2
+        IntOp $IC $IC - 1
+        WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "SystemComponent" 0
+    ${ElseIf} $IC = 2
+        WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "SystemComponent" 0
+    ${Else}
+        # Last uninstall
+        IntOp $IC $IC - 1
+        DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}"
+    ${EndIf}
+
+    # Ref count is in $1. If it is zero, uninstall everything
+    ${If} $IC <= 0
 
         # Install the ConfigLayersAndVulkanDLL.ps1 so we can run it.
         # It will be deleted later when we remove the install directory.
@@ -436,9 +505,6 @@ Section "uninstall"
         Call un.DeleteDirIfEmpty
         StrCpy $0 "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}"
         Call un.DeleteDirIfEmpty
-
-        # Modify registry for Programs and Features
-        DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}"
 
         # Remove files in install dir
         Delete /REBOOTOK "$IDir\VULKANRT_LICENSE.rtf"
