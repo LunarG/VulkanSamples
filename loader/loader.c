@@ -2032,8 +2032,15 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
 #if defined(_WIN32)
         loc = loader_get_registry_files(inst, loc);
         if (loc == NULL) {
-            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "Registry lookup failed can't get manifest files");
+			if (!is_layer) {
+				loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+					"Registry lookup failed can't get ICD manifest files, do you have a Vulkan driver installed");
+			}
+			else {
+				//warning only for layers
+				loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
+					"Registry lookup failed can't get layer manifest files");
+			}
             return;
         }
 #endif
