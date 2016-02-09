@@ -3696,7 +3696,22 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDeviceWaitIdle(VkDevice device)
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFence(VkDevice device, VkFence fence, const VkAllocationCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyFence(device, fence, pAllocator);
+    layer_data *dev_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    bool skipCall = false;
+    loader_platform_thread_lock_mutex(&globalLock);
+    if (dev_data->fenceMap[fence].in_use.load()) {
+        skipCall |=
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, (uint64_t)(fence),
+                    __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
+                    "Fence %#" PRIx64 " is in use by a command buffer.",
+                    (uint64_t)(fence));
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    if (!skipCall)
+        dev_data->device_dispatch_table->DestroyFence(device, fence,
+                                                      pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
