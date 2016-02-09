@@ -357,6 +357,11 @@ class QUEUE_NODE {
     unordered_set<VkCommandBuffer> inFlightCmdBuffers;
 };
 
+class QUERY_POOL_NODE : public BASE_NODE {
+  public:
+    VkQueryPoolCreateInfo createInfo;
+};
+
 // Descriptor Data structures
 // Layout Node has the core layout data
 typedef struct _LAYOUT_NODE {

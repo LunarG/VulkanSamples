@@ -122,6 +122,7 @@ struct layer_data {
     unordered_map<VkQueue,               QUEUE_NODE>                         queueMap;
     unordered_map<VkEvent,               EVENT_NODE>                         eventMap;
     unordered_map<QueryObject,           bool>                               queryToStateMap;
+    unordered_map<VkQueryPool, QUERY_POOL_NODE> queryPoolMap;
     unordered_map<VkSemaphore,           uint32_t>                           semaphoreSignaledMap;
     unordered_map<void*,                 GLOBAL_CB_NODE*>                    commandBufferMap;
     unordered_map<VkFramebuffer,         VkFramebufferCreateInfo*>           frameBufferMap;
@@ -3499,7 +3500,7 @@ static VkBool32 validatePrimaryCommandBufferState(layer_data *dev_data,
                     "set, but has been submitted %#" PRIxLEAST64 " times.",
                     (uint64_t)(pCB->commandBuffer), pCB->submitCount);
     }
-    validateCommandBufferState(dev_data, pCB);
+    skipCall |= validateCommandBufferState(dev_data, pCB);
     // If USAGE_SIMULTANEOUS_USE_BIT not set then CB cannot already be executing
     // on device
     skipCall |= validateCommandBufferSimultaneousUse(dev_data, pCB);
@@ -3913,6 +3914,22 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(VkDevice devi
         loader_platform_thread_lock_mutex(&globalLock);
         dev_data->commandPoolMap[*pCommandPool].createFlags = pCreateInfo->flags;
         dev_data->commandPoolMap[*pCommandPool].queueFamilyIndex = pCreateInfo->queueFamilyIndex;
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateQueryPool(
+    VkDevice device, const VkQueryPoolCreateInfo *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator, VkQueryPool *pQueryPool) {
+
+    layer_data *dev_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateQueryPool(
+        device, pCreateInfo, pAllocator, pQueryPool);
+    if (result == VK_SUCCESS) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        dev_data->queryPoolMap[*pQueryPool].createInfo = *pCreateInfo;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -6565,6 +6582,58 @@ bool validateFramebuffer(layer_data* dev_data, VkCommandBuffer primaryBuffer, co
     return skip_call;
 }
 
+bool validateSecondaryCommandBufferState(layer_data *dev_data,
+                                         GLOBAL_CB_NODE *pCB,
+                                         GLOBAL_CB_NODE *pSubCB) {
+    bool skipCall = false;
+    for (auto queryObject : pCB->activeQueries) {
+        auto queryPoolData = dev_data->queryPoolMap.find(queryObject.pool);
+        if (queryPoolData != dev_data->queryPoolMap.end() &&
+            queryPoolData->second.createInfo.queryType ==
+                VK_QUERY_TYPE_PIPELINE_STATISTICS &&
+            pSubCB->beginInfo.pInheritanceInfo) {
+            VkQueryPipelineStatisticFlags cmdBufStatistics =
+                pSubCB->beginInfo.pInheritanceInfo->pipelineStatistics;
+            if ((cmdBufStatistics &
+                 queryPoolData->second.createInfo.pipelineStatistics) !=
+                cmdBufStatistics) {
+              skipCall |= log_msg(
+                  dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                  (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                  DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
+                  "vkCmdExecuteCommands() called w/ invalid Cmd Buffer %p "
+                  "which has invalid active query pool %" PRIx64
+                  ". Pipeline statistics is being queried so the command "
+                  "buffer must have all bits set on the queryPool.",
+                  reinterpret_cast<void *>(pCB->commandBuffer),
+                  reinterpret_cast<uint64_t>(queryPoolData->first));
+            }
+            }
+            activeTypes.insert(queryPoolData->second.createInfo.queryType);
+        }
+    }
+    for (auto queryObject : pSubCB->startedQueries) {
+      auto queryPoolData = dev_data->queryPoolMap.find(queryObject.pool);
+      if (queryPoolData != dev_data->queryPoolMap.end() &&
+          activeTypes.count(queryPoolData->second.createInfo.queryType)) {
+        skipCall |=
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                    DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
+                    "vkCmdExecuteCommands() called w/ invalid Cmd Buffer %p "
+                    "which has invalid active query pool %" PRIx64
+                    "of type %d but a query of that type has been started on "
+                    "secondary Cmd Buffer %p.",
+                    reinterpret_cast<void *>(pCB->commandBuffer),
+                    reinterpret_cast<uint64_t>(queryPoolData->first),
+                    queryPoolData->second.createInfo.queryType,
+                    reinterpret_cast<void *>(pSubCB->commandBuffer));
+            }
+        }
+    }
+    return skipCall;
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, const VkCommandBuffer* pCommandBuffers)
 {
     VkBool32 skipCall = VK_FALSE;
@@ -6606,7 +6675,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer 
                     }
                 }
             }
-            validateCommandBufferState(dev_data, pSubCB);
+            // TODO(mlentine): Move more logic into this method
+            skipCall |=
+                validateSecondaryCommandBufferState(dev_data, pCB, pSubCB);
+            skipCall |= validateCommandBufferState(dev_data, pSubCB);
             // Secondary cmdBuffers are considered pending execution starting w/
             // being recorded
             if (!(pSubCB->beginInfo.flags &
@@ -7072,6 +7144,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkDestroyCommandPool;
     if (!strcmp(funcName, "vkResetCommandPool"))
         return (PFN_vkVoidFunction) vkResetCommandPool;
+    if (!strcmp(funcName, "vkCreateQueryPool"))
+        return (PFN_vkVoidFunction)vkCreateQueryPool;
     if (!strcmp(funcName, "vkAllocateCommandBuffers"))
         return (PFN_vkVoidFunction) vkAllocateCommandBuffers;
     if (!strcmp(funcName, "vkFreeCommandBuffers"))
