@@ -3148,6 +3148,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
     my_instance_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(gpu, &count, nullptr);
     my_device_data->physDevProperties.queue_family_properties.resize(count);
     my_instance_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(gpu, &count, &my_device_data->physDevProperties.queue_family_properties[0]);
+    // TODO: device limits should make sure these are compatible
+    if (pCreateInfo->pEnabledFeatures) {
+        my_device_data->physDevProperties.features =
+            *pCreateInfo->pEnabledFeatures;
+    } else {
+        my_instance_data->instance_dispatch_table->GetPhysicalDeviceFeatures(
+            gpu, &my_device_data->physDevProperties.features);
+    }
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -6623,6 +6631,19 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer 
                             (uint64_t)(pCommandBuffers[i]), (uint64_t)(pCB->commandBuffer));
                     pCB->beginInfo.flags &= ~VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
                 }
+            }
+            if (!pCB->activeQueries.empty() &&
+                !dev_data->physDevProperties.features.inheritedQueries) {
+                skipCall |= log_msg(
+                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    reinterpret_cast<uint64_t>(pCommandBuffers[i]), __LINE__,
+                    DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
+                    "vkCmdExecuteCommands(): Secondary Command Buffer "
+                    "(%#" PRIxLEAST64 ") cannot be submitted with a query in "
+                                      "flight and inherited queries not "
+                                      "supported on this device.",
+                    reinterpret_cast<uint64_t>(pCommandBuffers[i]));
             }
             pSubCB->primaryCommandBuffer = pCB->commandBuffer;
             pCB->secondaryCommandBuffers.insert(pSubCB->commandBuffer);
