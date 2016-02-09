@@ -4012,6 +4012,31 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
     return result;
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkResetFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences) {
+    layer_data *dev_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    bool skipCall = false;
+    loader_platform_thread_lock_mutex(&globalLock);
+    for (uint32_t i = 0; i < fenceCount; ++i) {
+        if (dev_data->fenceMap[pFences[i]].in_use.load()) {
+            skipCall |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                        reinterpret_cast<const uint64_t &>(pFences[i]),
+                        __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
+                        "Fence %#" PRIx64 " is in use by a command buffer.",
+                        reinterpret_cast<const uint64_t &>(pFences[i]));
+        }
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    if (!skipCall)
+        result = dev_data->device_dispatch_table->ResetFences(
+            device, fenceCount, pFences);
+    return result;
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyFramebuffer(device, framebuffer, pAllocator);
@@ -7085,6 +7110,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkDestroyDevice;
     if (!strcmp(funcName, "vkDestroyFence"))
         return (PFN_vkVoidFunction) vkDestroyFence;
+    if (!strcmp(funcName, "vkResetFences"))
+        return (PFN_vkVoidFunction)vkResetFences;
     if (!strcmp(funcName, "vkDestroySemaphore"))
         return (PFN_vkVoidFunction) vkDestroySemaphore;
     if (!strcmp(funcName, "vkDestroyEvent"))
