@@ -2774,6 +2774,7 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->waitedEventsBeforeQueryReset.clear();
         pCB->queryToStateMap.clear();
         pCB->activeQueries.clear();
+        pCB->startedQueries.clear();
         pCB->imageLayoutMap.clear();
         pCB->drawData.clear();
         pCB->currentDrawData.buffers.clear();
@@ -5775,6 +5776,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginQuery(VkCommandBuffer comma
     if (pCB) {
         QueryObject query = {queryPool, slot};
         pCB->activeQueries.insert(query);
+        if (!pCB->startedQueries.count(query)) {
+          pCB->startedQueries.insert(query);
+        }
         skipCall |= addCmd(dev_data, pCB, CMD_BEGINQUERY, "vkCmdBeginQuery()");
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -6586,12 +6590,13 @@ bool validateSecondaryCommandBufferState(layer_data *dev_data,
                                          GLOBAL_CB_NODE *pCB,
                                          GLOBAL_CB_NODE *pSubCB) {
     bool skipCall = false;
+    unordered_set<int> activeTypes;
     for (auto queryObject : pCB->activeQueries) {
         auto queryPoolData = dev_data->queryPoolMap.find(queryObject.pool);
-        if (queryPoolData != dev_data->queryPoolMap.end() &&
-            queryPoolData->second.createInfo.queryType ==
-                VK_QUERY_TYPE_PIPELINE_STATISTICS &&
-            pSubCB->beginInfo.pInheritanceInfo) {
+        if (queryPoolData != dev_data->queryPoolMap.end()) {
+          if (queryPoolData->second.createInfo.queryType ==
+                  VK_QUERY_TYPE_PIPELINE_STATISTICS &&
+              pSubCB->beginInfo.pInheritanceInfo) {
             VkQueryPipelineStatisticFlags cmdBufStatistics =
                 pSubCB->beginInfo.pInheritanceInfo->pipelineStatistics;
             if ((cmdBufStatistics &
@@ -6628,7 +6633,6 @@ bool validateSecondaryCommandBufferState(layer_data *dev_data,
                     reinterpret_cast<uint64_t>(queryPoolData->first),
                     queryPoolData->second.createInfo.queryType,
                     reinterpret_cast<void *>(pSubCB->commandBuffer));
-            }
         }
     }
     return skipCall;
