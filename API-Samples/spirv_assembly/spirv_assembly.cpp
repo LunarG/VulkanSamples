@@ -227,7 +227,7 @@ int sample_main()
     assert(vertexResult == SPV_SUCCESS);
 
     // Convert the fragment assembly into binary format
-    spv_binary fragmentBinary = {};
+    spv_binary frause_SPIRV_asmgmentBinary = {};
     spv_diagnostic fragmentDiag = {};
     spv_result_t fragmentResult = spvTextToBinary(spvContext, fragmentSPIRV.c_str(), fragmentSPIRV.length(), &fragmentBinary, &fragmentDiag);
     if (fragmentDiag) {

@@ -36,11 +36,16 @@ samples utility functions
 #include "util.hpp"
 #ifdef __ANDROID__
 // Android specific stuff.
+#include <unordered_map>
 
 // Header files.
 #include <android_native_app_glue.h>
+#ifndef ANDROID_NO_SHADERC
 #include "shaderc.hpp"
-
+#else
+bool AndroidFillShaderMap(const char *current_path,
+                          std::unordered_map<std::string, std::string> *map_shaders);
+#endif
 // Static variable that keeps ANativeWindow and asset manager instances.
 static android_app* Android_application = nullptr;
 #else
@@ -397,6 +402,7 @@ void finalize_glslang()
 }
 
 #ifdef __ANDROID__
+#ifndef ANDROID_NO_SHADERC
 // Android specific helper functions for shaderc.
 struct shader_type_mapping {
     VkShaderStageFlagBits vkshader_type;
@@ -436,6 +442,7 @@ shaderc_shader_kind MapShadercType(VkShaderStageFlagBits vkShader) {
     assert(false);
     return shaderc_glsl_infer_from_source;
 }
+#endif
 #endif
 
 //
@@ -481,6 +488,33 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
 
     glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
 #else
+
+#ifdef ANDROID_NO_SHADERC
+    // This one is a temporary workaround when shaderc is not available.
+    static std::unordered_map<std::string, std::string> map_shaders;
+    if (!map_shaders.size()) {
+        // Fill the map.
+        AndroidFillShaderMap("shaders", &map_shaders);
+    }
+
+    // Remove \n to make the lookup more robust.
+    std::string shader = pshader;
+    while (1) {
+        auto ret_pos = shader.find("\n");
+        if (ret_pos == std::string::npos) {
+            break;
+        }
+        shader.erase(ret_pos, 1);
+    }
+
+    auto spirv_file = map_shaders.find(shader);
+    assert (spirv_file != map_shaders.end());
+
+    std::string file;
+    AndroidLoadFile(spirv_file->second.c_str(), &file);
+    spirv.resize(file.size() / sizeof(uint32_t));
+    memcpy(spirv.data(), &file[0], file.size());
+#else
     // On Android, use shaderc instead.
     shaderc::Compiler compiler;
     shaderc::SpvModule module =
@@ -497,6 +531,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
     assert(module.GetLength());
     spirv.resize(module.GetLength() >> 2);
     memcpy(spirv.data(), module.GetData(), module.GetLength());
+#endif
 #endif
     return true;
 }
@@ -654,7 +689,57 @@ ANativeWindow* AndroidGetApplicationWindow() {
     return Android_application->window;
 }
 
-bool AndroidLoadFile(const char* filePath, std::vector<uint8_t> *data){
+bool AndroidFillShaderMap(const char *path,
+                          std::unordered_map<std::string, std::string> *map_shaders) {
+    assert(Android_application != nullptr);
+    auto directory = AAssetManager_openDir(Android_application->activity->assetManager,
+                                           path);
+
+    const char *name = nullptr;
+    while (1) {
+        name =  AAssetDir_getNextFileName(directory);
+        if (name == nullptr) {
+            break;
+        }
+
+        std::string file_name = name;
+        if (file_name.find(".frag") != std::string::npos ||
+                file_name.find(".vert") != std::string::npos) {
+            // Add path to the filename.
+            file_name = std::string(path) + "/" + file_name;
+            std::string shader;
+            if (!AndroidLoadFile(file_name.c_str(), &shader)) {
+                continue;
+            }
+            // Remove \n to make the lookup more robust.
+            while (1) {
+                auto ret_pos = shader.find("\n");
+                if (ret_pos == std::string::npos) {
+                    break;
+                }
+                shader.erase(ret_pos, 1);
+            }
+
+            auto pos = file_name.find_last_of (".");
+            if (pos == std::string::npos) {
+                // Invalid file nmae.
+                continue;
+            }
+            // Generate filename for SPIRV binary.
+            std::string spirv_name = file_name.replace(pos, 1, "-") + ".spirv";
+            // Store the SPIRV file name with GLSL contents as a key.
+            // The file contents can be long, but as we are using unordered map, it wouldn't take
+            // much storage space.
+            // Put the file into the map.
+            (*map_shaders)[shader] = spirv_name;
+        }
+    };
+
+    AAssetDir_close(directory);
+    return true;
+}
+
+bool AndroidLoadFile(const char* filePath, std::string *data){
     assert(Android_application != nullptr);
     AAsset* file = AAssetManager_open(Android_application->activity->assetManager,
                                       filePath, AASSET_MODE_BUFFER);

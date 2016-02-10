@@ -285,4 +285,5 @@ ANativeWindow* AndroidGetApplicationWindow();
 bool AndroidLoadFile(const char* filePath, std::vector<uint8_t>* data);
 FILE* AndroidFopen(const char* fname, const char* mode);
 void AndroidGetWindowSize(int32_t *width, int32_t *height);
+bool AndroidLoadFile(const char* filePath, std::string *data);
 #endif
