@@ -219,21 +219,37 @@ Section
     ${Endif}
 
     ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallDir"
-    strcmp $INSTDIR $0 notinstalled
-    ${If} $0 != ""
-        MessageBox MB_OK "The Window Vulkan Runtime is already installed to $0. It will be re-installed to the same folder." /SD IDOK
-        Strcpy $INSTDIR $0
-    ${Endif}
-notinstalled:
+
+    # If the registry entry isn't there, it will throw an error as well as return a blank value.  So, clear the errors.
+    ${If} ${Errors}
+
+        # Nothing else to do since there is no previous install
+        ClearErrors
+
+    ${Else}
+
+        # Use the previous install directory, so we don't have to keep tracking every possible runtime install.
+        strcmp $INSTDIR $0 notinstalled
+
+        ${If} $0 != ""
+            MessageBox MB_OK "The Window Vulkan Runtime is already installed to $0. It will be re-installed to the same folder." /SD IDOK
+            Strcpy $INSTDIR $0
+        ${Endif}
+
+        notinstalled:
+
+    ${EndIf}
 
     SetOutPath "$INSTDIR"
     File ${ICOFILE}
     File VULKANRT_LICENSE.RTF
     File LICENSE.txt
     File ConfigLayersAndVulkanDLL.ps1
+    Call CheckForError
 
     # Create the uninstaller
     WriteUninstaller "$INSTDIR\Uninstall${PRODUCTNAME}.exe"
+    Call CheckForError
 
     # Reference count the number of times we have been installed.
     # The reference count is stored in the registry value InstallCount
@@ -300,7 +316,7 @@ notinstalled:
         WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "SystemComponent" 0
     ${EndIf}
 
-    Call UninstallIfError
+    Call CheckForError
 
     # Set up version number for file names
     ${StrRep} $0 ${VERSION_BUILDNO} "." "-"
@@ -314,13 +330,13 @@ notinstalled:
         SetOutPath $WINDIR\SysWow64
         File /oname=vulkan-$FileVersion.dll ..\build32\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
         File /oname=vulkaninfo-$FileVersion.exe ..\build32\demos\Release\vulkaninfo.exe
-        Call UninstallIfError
+        Call CheckForError
 
         # 64-bit DLLs/EXEs
         ##########################################
         SetOutPath $WINDIR\System32
         File /oname=vulkan-$FileVersion.dll ..\build\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
-        Call UninstallIfError
+        Call CheckForError
 
         # vulkaninfo.exe
         File /oname=vulkaninfo-$FileVersion.exe ..\build\demos\Release\vulkaninfo.exe
@@ -332,13 +348,13 @@ notinstalled:
         CreateDirectory "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos"
         CreateShortCut "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos\vulkaninfo32.lnk" "$INSTDIR\vulkaninfo32.exe"
         CreateShortCut "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos\vulkaninfo.lnk" "$INSTDIR\vulkaninfo.exe"
-        Call UninstallIfError
+        Call CheckForError
 
         # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
         # vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll, and to set up layer registry
         # entries to use layers from the corresponding SDK
         nsExec::ExecToStack 'powershell -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File ConfigLayersAndVulkanDLL.ps1 ${VERSION_ABI_MAJOR} 64'
-        Call UninstallIfError
+        Call CheckForError
 
     # Else, running on a 32-bit OS machine
     ${Else}
@@ -347,7 +363,7 @@ notinstalled:
         ##########################################
         SetOutPath $WINDIR\System32
         File /oname=vulkan-$FileVersion.dll ..\build32\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
-        Call UninstallIfError
+        Call CheckForError
 
         # vulkaninfo.exe
         File /oname=vulkaninfo-$FileVersion.exe ..\build32\demos\Release\vulkaninfo.exe
@@ -357,13 +373,13 @@ notinstalled:
         CreateDirectory "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}"
         CreateDirectory "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos"
         CreateShortCut "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos\vulkaninfo.lnk" "$INSTDIR\vulkaninfo.exe"
-        Call UninstallIfError
+        Call CheckForError
 
         # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
         # vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll, and to set up layer registry
         # entries to use layers from the corresponding SDK
         nsExec::ExecToStack 'powershell -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File ConfigLayersAndVulkanDLL.ps1 ${VERSION_ABI_MAJOR} 32'
-        Call UninstallIfError
+        Call CheckForError
 
     ${Endif}
 
@@ -391,7 +407,7 @@ notinstalled:
         ${Endif}
     RedistributablesInstalled:
 
-    Call UninstallIfError
+    Call CheckForError
 
 SectionEnd
 
@@ -410,6 +426,8 @@ Section "uninstall"
     # We do this so that the uninstaller can be run from any directory.
     ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallDir"
     StrCpy $IDir $0
+
+    Call un.CheckForError
 
     SetOutPath "$IDir"
 
@@ -519,6 +537,8 @@ Section "uninstall"
             Delete /REBOOTOK "$IDir\vulkaninfo32.exe"
         ${EndIf}
 
+        Call un.CheckForError
+
         # Need to do a SetOutPath to something outside of install dir,
         # or the uninstall will think install dir is busy
         SetOutPath "$TEMP"
@@ -541,6 +561,8 @@ Section "uninstall"
         noreboot:
 
     ${Endif}
+
+    Call un.CheckForError
 
 SectionEnd
 
@@ -574,9 +596,9 @@ Function un.DeleteDirIfEmpty
    FindClose $R0
 FunctionEnd
 
-# Error handler.  If we hit an error, stop, uninstall what we've put in so far, and quit.
+# Check for errors during install.  If we hit an error, stop, uninstall what we've put in so far, and quit.
 # NOTE: We return a non-zero error code as well.
-Function UninstallIfError
+Function CheckForError
     ${If} ${Errors}
         # IHV's using this install may want no message box.
         MessageBox MB_OK|MB_ICONSTOP "${errorMessage1}${errorMessage2}" /SD IDOK
@@ -592,6 +614,20 @@ Function UninstallIfError
         # Delete the copy of the uninstaller we ran
         Delete /REBOOTOK "$TEMP\tempun\Uninstall${PRODUCTNAME}.exe"
         RmDir /R /REBOOTOK "$TEMP\tempun"
+
+        # Set an error message to output
+        SetErrorLevel 10 # ERROR_BAD_ENVIRONMENT
+
+        Quit
+    ${EndIf}
+FunctionEnd
+
+# Check for errors during uninstall.  If we hit an error, don't attempt
+# to do anything. Just set a non-zero return code and quit.
+Function un.CheckForError
+    ${If} ${Errors}
+        # IHV's using this install may want no message box.
+        MessageBox MB_OK|MB_ICONSTOP "${errorMessage1}${errorMessage2}" /SD IDOK
 
         # Set an error message to output
         SetErrorLevel 10 # ERROR_BAD_ENVIRONMENT
