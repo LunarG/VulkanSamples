@@ -65,3 +65,18 @@ Some notes on the behavior of the Windows Vulkan Runtime Installer:
      vulkan-1-2-0-1-1.dll) to vulkan-1.dll. This is repeated for
      C:\Windows\SYSWOW64 on 64-bit Windows systems to set up the
      32-bit loader.
+
+   o The Vulkan Runtime Installer returns the following exit codes:
+         0 - Success
+        10 - Failure
+      If the Installer returns an error code of 10, the Installer
+      will have attempted to uninstall whatever it installed
+      before it detected an error.
+
+   o The Vulkan Runtime Uninstaller returns the following exit codes:
+         0 - Success
+         3 - Success, reboot required
+        10 - Failure
+      If the Uninstaller returns an error code of 10, it will have
+      simply exited when the failure was detected and will
+      not have attempted to do further uninstall work.
