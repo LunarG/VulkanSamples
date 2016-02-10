@@ -418,7 +418,7 @@ For example:
 
 "library\_path": "vkOverlayLayer.dll"
 
-"api\_version" : "1.0.0",
+"api\_version" : "1.0.3",
 
 "implementation\_version" : "2",
 
