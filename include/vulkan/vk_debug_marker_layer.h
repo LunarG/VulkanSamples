@@ -32,8 +32,8 @@
 
 #pragma once
 
-#include "vulkan/vulkan.h"
-#include "vulkan/vk_lunarg_debug_marker.h"
+#include "vulkan.h"
+#include "vk_lunarg_debug_marker.h"
 #include "vk_layer.h"
 
 typedef struct VkLayerDebugMarkerDispatchTable_ {

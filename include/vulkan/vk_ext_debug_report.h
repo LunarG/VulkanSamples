@@ -33,7 +33,7 @@
 
 #pragma once
 
-#include "vulkan/vulkan.h"
+#include "vulkan.h"
 
 #ifdef __cplusplus
 extern "C" {
