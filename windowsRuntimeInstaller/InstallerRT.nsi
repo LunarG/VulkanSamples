@@ -203,6 +203,14 @@ UninstPage custom un.brandimage "" ": Brand Image"
 UninstPage uninstConfirm
 UninstPage instFiles
 
+# File Properties
+VIProductVersion "${PRODUCTVERSION}"
+VIAddVersionKey  "ProductName" "Vulkan Runtime"
+VIAddVersionKey  "FileVersion" "${PRODUCTVERSION}"
+VIAddVersionKey  "ProductVersion" "${PRODUCTVERSION}"
+VIAddVersionKey  "FileDescription" "Vulkan Runtime Installer"
+VIAddVersionKey  "LegalCopyright" ""
+
 # Start default section
 Section
 
