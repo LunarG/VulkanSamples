@@ -58,11 +58,17 @@ void Shell::init_vk()
     init_instance();
     vk::init_dispatch_table_middle(ctx_.instance, false);
 
+    if (validate_)
+        init_debug_callback(ctx_.instance);
+
     init_physical_dev();
 }
 
 void Shell::cleanup_vk()
 {
+    if (validate_)
+        cleanup_debug_callback(ctx_.instance);
+
     vk::DestroyInstance(ctx_.instance, nullptr);
 }
 
