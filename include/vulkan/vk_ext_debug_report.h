@@ -16,10 +16,6 @@
  * The above copyright notice(s) and this permission notice shall be included in
  * all copies or substantial portions of the Materials.
  *
- * The Materials are Confidential Information as defined by the Khronos
- * Membership Agreement until designated non-confidential by Khronos, at which
- * point this condition clause shall be removed.
- *
  * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.

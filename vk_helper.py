@@ -15,10 +15,6 @@
 # The above copyright notice(s) and this permission notice shall be included
 # in all copies or substantial portions of the Materials.
 #
-# The Materials are Confidential Information as defined by the Khronos
-# Membership Agreement until designated non-confidential by Khronos, at which
-# point this condition clause shall be removed.
-#
 # THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -549,10 +545,6 @@ class StructWrapperGen:
         copyright.append(' *');
         copyright.append(' * The above copyright notice and this permission notice shall be included');
         copyright.append(' * in all copies or substantial portions of the Materials.');
-        copyright.append(' *');
-        copyright.append(' * The Materials are Confidential Information as defined by the Khronos');
-        copyright.append(' * Membership Agreement until designated non-confidential by Khronos, at which');
-        copyright.append(' * point this condition clause shall be removed.');
         copyright.append(' *');
         copyright.append(' * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR');
         copyright.append(' * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,');
