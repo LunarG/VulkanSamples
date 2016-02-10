@@ -185,6 +185,8 @@ struct MT_PASS_INFO {
 struct MT_FENCE_INFO {
     uint64_t          fenceId;          // Sequence number for fence at last submit
     VkQueue           queue;            // Queue that this fence is submitted against or NULL
+    VkSwapchainKHR
+        swapchain; // Swapchain that this fence is submitted against or NULL
     VkBool32          firstTimeFlag;    // Fence was created in signaled state, avoid warnings for first use
     VkFenceCreateInfo createInfo;
 };
