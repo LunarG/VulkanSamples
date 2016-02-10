@@ -119,6 +119,7 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE := VkLayer_unique_objects
 LOCAL_SRC_FILES += $(SRC_DIR)/buildAndroid/generated/unique_objects.cpp
+LOCAL_SRC_FILES += $(SRC_DIR)/buildAndroid/generated/vk_safe_struct.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/layers \

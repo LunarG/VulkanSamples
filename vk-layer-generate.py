@@ -137,6 +137,7 @@ def gather_object_uses_in_struct(obj_list, struct_type):
 # TODO : This analysis could be done up-front at vk_helper time
 def get_object_uses(obj_list, params):
     obj_uses = {}
+    local_decls = {}
     param_count = 'NONE' # track params that give array sizes
     for p in params:
         base_type = p.ty.replace('const ', '').strip('*')
@@ -144,11 +145,15 @@ def get_object_uses(obj_list, params):
         is_ptr = False
         if 'count' in p.name.lower():
             param_count = p.name
+        ptr_txt = ''
         if '*' in p.ty:
             is_ptr = True
+            ptr_txt = '*'
         if base_type in obj_list:
             if is_ptr and 'const' in p.ty and param_count != 'NONE':
                 array_len = "[%s]" % param_count
+                # Non-arrays we can overwrite in place, but need local decl for arrays
+                local_decls[p.name] = '%s%s' % (base_type, ptr_txt)
             #if array_len not in obj_uses:
             #    obj_uses[array_len] = {}
             # obj_uses[array_len][p.name] = base_type
@@ -160,7 +165,9 @@ def get_object_uses(obj_list, params):
             struct_uses = gather_object_uses_in_struct(obj_list, base_type)
             if len(struct_uses) > 0:
                 obj_uses[struct_name] = struct_uses
-    return obj_uses
+                # This is a top-level struct w/ uses below it, so need local decl
+                local_decls['%s' % (p.name)] = '%s%s' % (base_type, ptr_txt)
+    return (obj_uses, local_decls)
 
 class Subcommand(object):
     def __init__(self, argv):
@@ -1286,7 +1293,7 @@ class ObjectTrackerSubcommand(Subcommand):
         if True in [create_txt in proto.name for create_txt in ['Create', 'Allocate']]:
             create_func = True
             last_param_index = -1 # For create funcs don't validate last object
-        struct_uses = get_object_uses(vulkan.object_type_list, proto.params[:last_param_index])
+        (struct_uses, local_decls) = get_object_uses(vulkan.object_type_list, proto.params[:last_param_index])
         funcs = []
         mutex_unlock = False
         funcs.append('%s\n' % self.lineinfo.get())
@@ -1426,7 +1433,7 @@ class UniqueObjectsSubcommand(Subcommand):
     # vector_name_set is used to make sure we don't replicate vector names
     # first_level_param indicates if elements are passed directly into the function else they're below a ptr/struct
     # TODO : Comment this code
-    def _gen_obj_code(self, struct_uses, indent, prefix, array_index, vector_name_set, first_level_param):
+    def _gen_obj_code(self, struct_uses, param_type, indent, prefix, array_index, vector_name_set, first_level_param):
         decls = ''
         pre_code = ''
         post_code = ''
@@ -1444,85 +1451,77 @@ class UniqueObjectsSubcommand(Subcommand):
                 name = '%s%s' % (prefix, name)
                 if ptr_type:
                     pre_code += '%sif (%s) {\n' % (indent, name)
-                    post_code += '%sif (%s) {\n' % (indent, name)
                     indent += '    '
                 if array != '':
                     idx = 'idx%s' % str(array_index)
                     array_index += 1
+                    if first_level_param and name in param_type:
+                        pre_code += '%slocal_%s = new safe_%s[%s];\n' % (indent, name, param_type[name].strip('*'), array)
+                        post_code += '    if (local_%s)\n' % (name)
+                        post_code += '        delete[] local_%s;\n' % (name)
                     pre_code += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, idx, idx, prefix, array, idx)
-                    post_code += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, idx, idx, prefix, array, idx)
                     indent += '    '
+                    if first_level_param:
+                        pre_code += '%slocal_%s[%s].initialize(&%s[%s]);\n' % (indent, name, idx, name, idx)
                     local_prefix = '%s[%s].' % (name, idx)
                 elif ptr_type:
+                    if first_level_param and name in param_type:
+                        pre_code += '%slocal_%s = new safe_%s(%s);\n' % (indent, name, param_type[name].strip('*'), name)
+                        post_code += '    if (local_%s)\n' % (name)
+                        post_code += '        delete local_%s;\n' % (name)
                     local_prefix = '%s->' % (name)
                 else:
                     local_prefix = '%s.' % (name)
                 assert isinstance(decls, object)
-                (tmp_decl, tmp_pre, tmp_post) = self._gen_obj_code(struct_uses[obj], indent, local_prefix, array_index, vector_name_set, False)
+                (tmp_decl, tmp_pre, tmp_post) = self._gen_obj_code(struct_uses[obj], param_type, indent, local_prefix, array_index, vector_name_set, False)
                 decls += tmp_decl
                 pre_code += tmp_pre
                 post_code += tmp_post
                 if array != '':
                     indent = indent[4:]
                     pre_code += '%s}\n' % (indent)
-                    post_code += '%s}\n' % (indent)
                 if ptr_type:
                     indent = indent[4:]
                     pre_code += '%s}\n' % (indent)
-                    post_code += '%s}\n' % (indent)
             else:
                 if (array_index > 0) or array != '': # TODO : This is not ideal, really want to know if we're anywhere under an array
+                    if first_level_param:
+                        pre_code += '%s%s* local_%s = NULL;\n' % (indent, struct_uses[obj], name)
                     pre_code += '%sif (%s%s) {\n' %(indent, prefix, name)
-                    post_code += '%sif (%s%s) {\n' %(indent, prefix, name)
                     indent += '    '
-                    # Append unique_count to make sure name is unique (some aliasing for "buffer" and "image" names
-                    vec_name = 'original_%s' % (name)
                     if array != '':
                         idx = 'idx%s' % str(array_index)
                         array_index += 1
+                        if first_level_param:
+                            pre_code += '%slocal_%s = new %s[%s];\n' % (indent, name, struct_uses[obj], array)
+                            post_code += '    if (local_%s)\n' % (name)
+                            post_code += '        delete[] local_%s;\n' % (name)
                         pre_code += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, idx, idx, prefix, array, idx)
-                        post_code += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, idx, idx, prefix, array, idx)
                         indent += '    '
                         name = '%s[%s]' % (name, idx)
                     pName = 'p%s' % (struct_uses[obj][2:])
-                    pre_code += '%s%s* %s = (%s*)&(%s%s);\n' % (indent, struct_uses[obj], pName, struct_uses[obj], prefix, name)
-                    post_code += '%s%s* %s = (%s*)&(%s%s);\n' % (indent, struct_uses[obj], pName, struct_uses[obj], prefix, name)
                     if name not in vector_name_set:
                         vector_name_set.add(name)
-                        decls += '    std::vector<%s> %s = {};\n' % (struct_uses[obj], vec_name)
-                    pre_code += '%s%s.push_back(%s%s);\n' % (indent, vec_name, prefix, name)
-                    pre_code += '%s*(%s) = (%s)((VkUniqueObject*)%s%s)->actualObject;\n' % (indent, pName, struct_uses[obj], prefix, name)
-                    post_code += '%s*(%s) = %s.front();\n' % (indent, pName, vec_name)
-                    post_code += '%s%s.erase(%s.begin());\n' % (indent, vec_name, vec_name)
+                    pre_code += '%slocal_%s%s = (%s)((VkUniqueObject*)%s%s)->actualObject;\n' % (indent, prefix, name, struct_uses[obj], prefix, name)
                     if array != '':
                         indent = indent[4:]
                         pre_code += '%s}\n' % (indent)
-                        post_code += '%s}\n' % (indent)
                     indent = indent[4:]
                     pre_code += '%s}\n' % (indent)
-                    post_code += '%s}\n' % (indent)
                 else:
+                    pre_code += '%s\n' % (self.lineinfo.get())
                     pre_code += '%sif (%s%s) {\n' %(indent, prefix, name)
                     indent += '    '
                     deref_txt = '&'
                     if ptr_type:
                         deref_txt = ''
-                    pre_code += '%s%s* p%s = (%s*)%s%s%s;\n' % (indent, struct_uses[obj], name, struct_uses[obj], deref_txt, prefix, name)
-                    pre_code += '%s*p%s = (%s)((VkUniqueObject*)%s%s)->actualObject;\n' % (indent, name, struct_uses[obj], prefix, name)
+                    if '->' in prefix: # need to update local struct
+                        pre_code += '%slocal_%s%s = (%s)((VkUniqueObject*)%s%s)->actualObject;\n' % (indent, prefix, name, struct_uses[obj], prefix, name)
+                    else:
+                        pre_code += '%s%s* p%s = (%s*)%s%s%s;\n' % (indent, struct_uses[obj], name, struct_uses[obj], deref_txt, prefix, name)
+                        pre_code += '%s*p%s = (%s)((VkUniqueObject*)%s%s)->actualObject;\n' % (indent, name, struct_uses[obj], prefix, name)
                     indent = indent[4:]
                     pre_code += '%s}\n' % (indent)
-                    if not first_level_param: # embedded in a ptr/struct so need to undo the update
-                        if '->' in prefix:
-                            # Since this variable is embedded under a ptr, need to decl up front, but wait
-                            #  to assign it inside of the "if" block(s) for surrounding ptr(s)
-                            decls += '    %s local_%s = VK_NULL_HANDLE;\n' % (struct_uses[obj], name)
-                            pre_code = '%slocal_%s = %s%s;\n%s' % (indent, name, prefix, name, pre_code)
-                        else:
-                            decls += '    %s local_%s = %s%s;\n' % (struct_uses[obj], name, prefix, name)
-                        post_code += '%sif (%s%s) {\n' %(indent, prefix, name)
-                        post_code += '%s    %s* p%s = (%s*)%s%s%s;\n' % (indent, struct_uses[obj], name, struct_uses[obj], deref_txt, prefix, name)
-                        post_code += '%s    *p%s = local_%s;\n' % (indent, name, name)
-                        post_code += '%s}\n' % (indent)
         return decls, pre_code, post_code
 
     def generate_intercept(self, proto, qual):
@@ -1540,7 +1539,8 @@ class UniqueObjectsSubcommand(Subcommand):
                                              'CreateInstance',
                                              'CreateDevice',
                                              'CreateComputePipelines',
-                                             'CreateGraphicsPipelines']
+                                             'CreateGraphicsPipelines'
+                                             ]
         # TODO : This is hacky, need to make this a more general-purpose solution for all layers
         ifdef_dict = {'CreateXcbSurfaceKHR': 'VK_USE_PLATFORM_XCB_KHR'}
         # Give special treatment to create functions that return multiple new objects
@@ -1561,16 +1561,25 @@ class UniqueObjectsSubcommand(Subcommand):
                 destroy_func = True
 
         # First thing we need to do is gather uses of non-dispatchable-objects (ndos)
-        struct_uses = get_object_uses(vulkan.object_non_dispatch_list, proto.params[1:last_param_index])
+        (struct_uses, local_decls) = get_object_uses(vulkan.object_non_dispatch_list, proto.params[1:last_param_index])
 
         if len(struct_uses) > 0:
             pre_call_txt += '// STRUCT USES:%s\n' % struct_uses
+            if len(local_decls) > 0:
+                pre_call_txt += '//LOCAL DECLS:%s\n' % local_decls
             if destroy_func: # only one object
                 for del_obj in struct_uses:
                     pre_call_txt += '%s%s local_%s = %s;\n' % (indent, struct_uses[del_obj], del_obj, del_obj)
-            (pre_decl, pre_code, post_code) = self._gen_obj_code(struct_uses, '    ', '', 0, set(), True)
+            (pre_decl, pre_code, post_code) = self._gen_obj_code(struct_uses, local_decls, '    ', '', 0, set(), True)
+            # This is a bit hacky but works for now. Need to decl local versions of top-level structs
+            for ld in local_decls:
+                init_null_txt = 'NULL';
+                if '*' not in local_decls[ld]:
+                    init_null_txt = '{}';
+                if local_decls[ld].strip('*') not in vulkan.object_non_dispatch_list:
+                    pre_decl += '    safe_%s local_%s = %s;\n' % (local_decls[ld], ld, init_null_txt)
             pre_call_txt += '%s%s' % (pre_decl, pre_code)
-            post_call_txt += post_code
+            post_call_txt += '%s' % (post_code)
         elif create_func:
             base_type = proto.params[-1].ty.replace('const ', '').strip('*')
             if base_type not in vulkan.object_non_dispatch_list:
@@ -1626,6 +1635,9 @@ class UniqueObjectsSubcommand(Subcommand):
                 post_call_txt = '%sdelete (VkUniqueObject*)local_%s;\n' % (indent, proto.params[-2].name)
 
         call_sig = proto.c_call()
+        # Replace default params with any custom local params
+        for ld in local_decls:
+            call_sig = call_sig.replace(ld, '(const %s)local_%s' % (local_decls[ld], ld))
         if proto_is_global(proto):
             table_type = "instance"
         else:

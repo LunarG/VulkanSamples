@@ -42,6 +42,7 @@
 #include "vk_layer_data.h"
 #include "vk_layer_logging.h"
 #include "vk_layer_extension_utils.h"
+#include "vk_safe_struct.h"
 
 struct layer_data {
     bool wsi_enabled;
@@ -424,50 +425,31 @@ VkResult explicit_QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const V
 
 VkResult explicit_CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount, const VkComputePipelineCreateInfo* pCreateInfos, const VkAllocationCallbacks* pAllocator, VkPipeline* pPipelines)
 {
-// UNWRAP USES:
-//  0 : pipelineCache,VkPipelineCache, pCreateInfos[createInfoCount]->stage[0]->module,VkShaderModule, pCreateInfos[createInfoCount]->layout,VkPipelineLayout, pCreateInfos[createInfoCount]->basePipelineHandle,VkPipeline
-    if (VK_NULL_HANDLE != pipelineCache) {
+// STRUCT USES:{'pipelineCache': 'VkPipelineCache', 'pCreateInfos[createInfoCount]': {'stage': {'module': 'VkShaderModule'}, 'layout': 'VkPipelineLayout', 'basePipelineHandle': 'VkPipeline'}}
+//LOCAL DECLS:{'pCreateInfos': 'VkComputePipelineCreateInfo*'}
+    safe_VkComputePipelineCreateInfo* local_pCreateInfos = NULL;
+    if (pCreateInfos) {
+        local_pCreateInfos = new safe_VkComputePipelineCreateInfo[createInfoCount];
+        for (uint32_t idx0=0; idx0<createInfoCount; ++idx0) {
+            local_pCreateInfos[idx0].initialize(&pCreateInfos[idx0]);
+            if (pCreateInfos[idx0].basePipelineHandle) {
+                local_pCreateInfos[idx0].basePipelineHandle = (VkPipeline)((VkUniqueObject*)pCreateInfos[idx0].basePipelineHandle)->actualObject;
+            }
+            if (pCreateInfos[idx0].layout) {
+                local_pCreateInfos[idx0].layout = (VkPipelineLayout)((VkUniqueObject*)pCreateInfos[idx0].layout)->actualObject;
+            }
+            if (pCreateInfos[idx0].stage.module) {
+                local_pCreateInfos[idx0].stage.module = (VkShaderModule)((VkUniqueObject*)pCreateInfos[idx0].stage.module)->actualObject;
+            }
+        }
+    }
+    if (pipelineCache) {
         pipelineCache = (VkPipelineCache)((VkUniqueObject*)pipelineCache)->actualObject;
     }
-    std::vector<VkShaderModule> original_module = {};
-    std::vector<VkPipelineLayout> original_layout = {};
-    std::vector<VkPipeline> original_basePipelineHandle = {};
-    if (pCreateInfos) {
-        for (uint32_t index0=0; index0<createInfoCount; ++index0) {
-            if (pCreateInfos[index0].stage.module) {
-                VkShaderModule* pShaderModule = (VkShaderModule*)&(pCreateInfos[index0].stage.module);
-                original_module.push_back(pCreateInfos[index0].stage.module);
-                *(pShaderModule) = (VkShaderModule)((VkUniqueObject*)pCreateInfos[index0].stage.module)->actualObject;
-            }
-            if (pCreateInfos[index0].layout) {
-                VkPipelineLayout* pPipelineLayout = (VkPipelineLayout*)&(pCreateInfos[index0].layout);
-                original_layout.push_back(pCreateInfos[index0].layout);
-                *(pPipelineLayout) = (VkPipelineLayout)((VkUniqueObject*)pCreateInfos[index0].layout)->actualObject;
-            }
-            if (pCreateInfos[index0].basePipelineHandle) {
-                VkPipeline* pPipeline = (VkPipeline*)&(pCreateInfos[index0].basePipelineHandle);
-                original_basePipelineHandle.push_back(pCreateInfos[index0].basePipelineHandle);
-                *(pPipeline) = (VkPipeline)((VkUniqueObject*)pCreateInfos[index0].basePipelineHandle)->actualObject;
-            }
-        }
-    }
-    VkResult result = get_dispatch_table(unique_objects_device_table_map, device)->CreateComputePipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
-    if (pCreateInfos) {
-        for (uint32_t index0=0; index0<createInfoCount; ++index0) {
-            if (pCreateInfos[index0].stage.module) {
-                VkShaderModule* pShaderModule = (VkShaderModule*)&(pCreateInfos[index0].stage.module);
-                *(pShaderModule) = original_module[index0];
-            }
-            if (pCreateInfos[index0].layout) {
-                VkPipelineLayout* pPipelineLayout = (VkPipelineLayout*)&(pCreateInfos[index0].layout);
-                *(pPipelineLayout) = original_layout[index0];
-            }
-            if (pCreateInfos[index0].basePipelineHandle) {
-                VkPipeline* pPipeline = (VkPipeline*)&(pCreateInfos[index0].basePipelineHandle);
-                *(pPipeline) = original_basePipelineHandle[index0];
-            }
-        }
-    }
+// CODEGEN : file /usr/local/google/home/tobine/vulkan_work/LoaderAndTools/vk-layer-generate.py line #1671
+    VkResult result = get_dispatch_table(unique_objects_device_table_map, device)->CreateComputePipelines(device, pipelineCache, createInfoCount, (const VkComputePipelineCreateInfo*)local_pCreateInfos, pAllocator, pPipelines);
+    if (local_pCreateInfos)
+        delete[] local_pCreateInfos;
     if (VK_SUCCESS == result) {
         VkUniqueObject* pUO = NULL;
         for (uint32_t i=0; i<createInfoCount; ++i) {
@@ -481,68 +463,38 @@ VkResult explicit_CreateComputePipelines(VkDevice device, VkPipelineCache pipeli
 
 VkResult explicit_CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount, const VkGraphicsPipelineCreateInfo* pCreateInfos, const VkAllocationCallbacks* pAllocator, VkPipeline* pPipelines)
 {
-// UNWRAP USES:
-//  0 : pipelineCache,VkPipelineCache, pCreateInfos[createInfoCount]->pStages[stageCount]->module,VkShaderModule, pCreateInfos[createInfoCount]->layout,VkPipelineLayout, pCreateInfos[createInfoCount]->renderPass,VkRenderPass, pCreateInfos[createInfoCount]->basePipelineHandle,VkPipeline
-    if (VK_NULL_HANDLE != pipelineCache) {
+// STRUCT USES:{'pipelineCache': 'VkPipelineCache', 'pCreateInfos[createInfoCount]': {'layout': 'VkPipelineLayout', 'pStages[stageCount]': {'module': 'VkShaderModule'}, 'renderPass': 'VkRenderPass', 'basePipelineHandle': 'VkPipeline'}}
+//LOCAL DECLS:{'pCreateInfos': 'VkGraphicsPipelineCreateInfo*'}
+    safe_VkGraphicsPipelineCreateInfo* local_pCreateInfos = NULL;
+    if (pCreateInfos) {
+        local_pCreateInfos = new safe_VkGraphicsPipelineCreateInfo[createInfoCount];
+        for (uint32_t idx0=0; idx0<createInfoCount; ++idx0) {
+            local_pCreateInfos[idx0].initialize(&pCreateInfos[idx0]);
+            if (pCreateInfos[idx0].basePipelineHandle) {
+                local_pCreateInfos[idx0].basePipelineHandle = (VkPipeline)((VkUniqueObject*)pCreateInfos[idx0].basePipelineHandle)->actualObject;
+            }
+            if (pCreateInfos[idx0].layout) {
+                local_pCreateInfos[idx0].layout = (VkPipelineLayout)((VkUniqueObject*)pCreateInfos[idx0].layout)->actualObject;
+            }
+            if (pCreateInfos[idx0].pStages) {
+                for (uint32_t idx1=0; idx1<pCreateInfos[idx0].stageCount; ++idx1) {
+                    if (pCreateInfos[idx0].pStages[idx1].module) {
+                        local_pCreateInfos[idx0].pStages[idx1].module = (VkShaderModule)((VkUniqueObject*)pCreateInfos[idx0].pStages[idx1].module)->actualObject;
+                    }
+                }
+            }
+            if (pCreateInfos[idx0].renderPass) {
+                local_pCreateInfos[idx0].renderPass = (VkRenderPass)((VkUniqueObject*)pCreateInfos[idx0].renderPass)->actualObject;
+            }
+        }
+    }
+    if (pipelineCache) {
         pipelineCache = (VkPipelineCache)((VkUniqueObject*)pipelineCache)->actualObject;
     }
-    std::vector<VkShaderModule> original_module = {};
-    std::vector<VkPipelineLayout> original_layout = {};
-    std::vector<VkRenderPass> original_renderPass = {};
-    std::vector<VkPipeline> original_basePipelineHandle = {};
-    if (pCreateInfos) {
-        for (uint32_t index0=0; index0<createInfoCount; ++index0) {
-            if (pCreateInfos[index0].pStages) {
-                for (uint32_t index1=0; index1<pCreateInfos[index0].stageCount; ++index1) {
-                    if (pCreateInfos[index0].pStages[index1].module) {
-                        VkShaderModule* pShaderModule = (VkShaderModule*)&(pCreateInfos[index0].pStages[index1].module);
-                        original_module.push_back(pCreateInfos[index0].pStages[index1].module);
-                        *(pShaderModule) = (VkShaderModule)((VkUniqueObject*)pCreateInfos[index0].pStages[index1].module)->actualObject;
-                    }
-                }
-            }
-            if (pCreateInfos[index0].layout) {
-                VkPipelineLayout* pPipelineLayout = (VkPipelineLayout*)&(pCreateInfos[index0].layout);
-                original_layout.push_back(pCreateInfos[index0].layout);
-                *(pPipelineLayout) = (VkPipelineLayout)((VkUniqueObject*)pCreateInfos[index0].layout)->actualObject;
-            }
-            if (pCreateInfos[index0].renderPass) {
-                VkRenderPass* pRenderPass = (VkRenderPass*)&(pCreateInfos[index0].renderPass);
-                original_renderPass.push_back(pCreateInfos[index0].renderPass);
-                *(pRenderPass) = (VkRenderPass)((VkUniqueObject*)pCreateInfos[index0].renderPass)->actualObject;
-            }
-            if (pCreateInfos[index0].basePipelineHandle) {
-                VkPipeline* pPipeline = (VkPipeline*)&(pCreateInfos[index0].basePipelineHandle);
-                original_basePipelineHandle.push_back(pCreateInfos[index0].basePipelineHandle);
-                *(pPipeline) = (VkPipeline)((VkUniqueObject*)pCreateInfos[index0].basePipelineHandle)->actualObject;
-            }
-        }
-    }
-    VkResult result = get_dispatch_table(unique_objects_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
-    if (pCreateInfos) {
-        for (uint32_t index0=0; index0<createInfoCount; ++index0) {
-            if (pCreateInfos[index0].pStages) {
-                for (uint32_t index1=0; index1<pCreateInfos[index0].stageCount; ++index1) {
-                    if (pCreateInfos[index0].pStages[index1].module) {
-                        VkShaderModule* pShaderModule = (VkShaderModule*)&(pCreateInfos[index0].pStages[index1].module);
-                        *(pShaderModule) = original_module[index1];
-                    }
-                }
-            }
-            if (pCreateInfos[index0].layout) {
-                VkPipelineLayout* pPipelineLayout = (VkPipelineLayout*)&(pCreateInfos[index0].layout);
-                *(pPipelineLayout) = original_layout[index0];
-            }
-            if (pCreateInfos[index0].renderPass) {
-                VkRenderPass* pRenderPass = (VkRenderPass*)&(pCreateInfos[index0].renderPass);
-                *(pRenderPass) = original_renderPass[index0];
-            }
-            if (pCreateInfos[index0].basePipelineHandle) {
-                VkPipeline* pPipeline = (VkPipeline*)&(pCreateInfos[index0].basePipelineHandle);
-                *(pPipeline) = original_basePipelineHandle[index0];
-            }
-        }
-    }
+// CODEGEN : file /usr/local/google/home/tobine/vulkan_work/LoaderAndTools/vk-layer-generate.py line #1671
+    VkResult result = get_dispatch_table(unique_objects_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, createInfoCount, (const VkGraphicsPipelineCreateInfo*)local_pCreateInfos, pAllocator, pPipelines);
+    if (local_pCreateInfos)
+        delete[] local_pCreateInfos;
     if (VK_SUCCESS == result) {
         VkUniqueObject* pUO = NULL;
         for (uint32_t i=0; i<createInfoCount; ++i) {

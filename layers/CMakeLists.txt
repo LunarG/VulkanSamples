@@ -126,6 +126,8 @@ run_vk_helper(gen_struct_wrappers
     vk_struct_size_helper.c
 	vk_struct_wrappers.h
 	vk_struct_wrappers.cpp
+    vk_safe_struct.h
+    vk_safe_struct.cpp
 )
 
 add_custom_target(generate_vk_layer_helpers DEPENDS
@@ -139,6 +141,8 @@ add_custom_target(generate_vk_layer_helpers DEPENDS
     vk_struct_size_helper.c
 	vk_struct_wrappers.h
 	vk_struct_wrappers.cpp
+    vk_safe_struct.h
+    vk_safe_struct.cpp
 )
 
 run_vk_layer_generate(object_tracker object_tracker.cpp)
@@ -163,4 +167,4 @@ add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
 # generated
 add_vk_layer(object_tracker object_tracker.cpp vk_layer_table.cpp)
 add_vk_layer(threading threading.cpp thread_check.h vk_layer_table.cpp)
-add_vk_layer(unique_objects unique_objects.cpp vk_layer_table.cpp)
+add_vk_layer(unique_objects unique_objects.cpp vk_layer_table.cpp vk_safe_struct.cpp)
