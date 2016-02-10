@@ -1829,11 +1829,15 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     // support is in place until now, if we survive we can report the issue now.
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     if (pCreateInfo->pApplicationInfo) {
-      skipCall |= validate_string(my_device_data, "vkCreateInstance()", "VkInstanceCreateInfo->VkApplicationInfo->pApplicationName",
-                                  pCreateInfo->pApplicationInfo->pApplicationName);
+        if (pCreateInfo->pApplicationInfo->pApplicationName) {
+            skipCall |= validate_string(my_device_data, "vkCreateInstance()", "VkInstanceCreateInfo->VkApplicationInfo->pApplicationName",
+                                        pCreateInfo->pApplicationInfo->pApplicationName);
+        }
 
-      skipCall |= validate_string(my_device_data, "vkCreateInstance()", "VkInstanceCreateInfo->VkApplicationInfo->pEngineName",
-                                  pCreateInfo->pApplicationInfo->pEngineName);
+        if (pCreateInfo->pApplicationInfo->pEngineName) {
+          skipCall |= validate_string(my_device_data, "vkCreateInstance()", "VkInstanceCreateInfo->VkApplicationInfo->pEngineName",
+                                        pCreateInfo->pApplicationInfo->pEngineName);
+        }
     }
 
     return result;
