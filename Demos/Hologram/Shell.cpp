@@ -135,7 +135,7 @@ void Shell::init_instance()
     assert_all_global_extensions();
 
     const char *instance_validation_layers[] = {
-            "VK_LAYER_LUNARG_threading",
+            "VK_LAYER_GOOGLE_threading",  // this must be first!
             "VK_LAYER_LUNARG_mem_tracker",
             "VK_LAYER_LUNARG_object_tracker",
             "VK_LAYER_LUNARG_draw_state",
@@ -143,6 +143,7 @@ void Shell::init_instance()
             "VK_LAYER_LUNARG_swapchain",
             "VK_LAYER_LUNARG_device_limits",
             "VK_LAYER_LUNARG_image",
+            "VK_LAYER_GOOGLE_unique_objects", // this must be last!
     };
 
     const uint32_t instance_layer_count = ARRAY_SIZE(instance_validation_layers);
@@ -283,7 +284,7 @@ void Shell::create_dev()
     dev_info.pQueueCreateInfos = queue_info.data();
 
     const char *device_validation_layers[] = {
-            "VK_LAYER_LUNARG_threading",
+            "VK_LAYER_GOOGLE_threading", // this must be first!
             "VK_LAYER_LUNARG_mem_tracker",
             "VK_LAYER_LUNARG_object_tracker",
             "VK_LAYER_LUNARG_draw_state",
@@ -291,6 +292,7 @@ void Shell::create_dev()
             "VK_LAYER_LUNARG_swapchain",
             "VK_LAYER_LUNARG_device_limits",
             "VK_LAYER_LUNARG_image",
+            "VK_LAYER_GOOGLE_unique_objects", // this must be last!
     };
 
     const uint32_t device_layer_count = ARRAY_SIZE(device_validation_layers);
