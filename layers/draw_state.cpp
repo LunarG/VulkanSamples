@@ -2768,6 +2768,7 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->boundDescriptorSets.clear();
         pCB->waitedEvents.clear();
         pCB->semaphores.clear();
+        pCB->events.clear();
         pCB->waitedEventsBeforeQueryReset.clear();
         pCB->queryToStateMap.clear();
         pCB->activeQueries.clear();
@@ -3322,6 +3323,20 @@ VkBool32 validateAndIncrementResources(layer_data* my_data, GLOBAL_CB_NODE* pCB)
             semaphoreNode->second.in_use.fetch_add(1);
         }
     }
+    for (auto event : pCB->events) {
+        auto eventNode = my_data->eventMap.find(event);
+        if (eventNode == my_data->eventMap.end()) {
+            skip_call |= log_msg(
+                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                reinterpret_cast<uint64_t &>(event), __LINE__,
+                DRAWSTATE_INVALID_EVENT, "DS",
+                "Cannot submit cmd buffer using deleted event %" PRIu64 ".",
+                reinterpret_cast<uint64_t &>(event));
+        } else {
+            eventNode->second.in_use.fetch_add(1);
+        }
+    }
     return skip_call;
 }
 
@@ -3345,6 +3360,12 @@ void decrementResources(layer_data* my_data, VkCommandBuffer cmdBuffer) {
         auto semaphoreNode = my_data->semaphoreMap.find(semaphore);
         if (semaphoreNode != my_data->semaphoreMap.end()) {
             semaphoreNode->second.in_use.fetch_sub(1);
+        }
+    }
+    for (auto event : pCB->events) {
+        auto eventNode = my_data->eventMap.find(event);
+        if (eventNode != my_data->eventMap.end()) {
+            eventNode->second.in_use.fetch_sub(1);
         }
     }
     for (auto queryStatePair : pCB->queryToStateMap) {
@@ -3756,7 +3777,26 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySemaphore(VkDevice device, V
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyEvent(VkDevice device, VkEvent event, const VkAllocationCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyEvent(device, event, pAllocator);
+    layer_data *dev_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    bool skip_call = false;
+    loader_platform_thread_lock_mutex(&globalLock);
+    auto event_data = dev_data->eventMap.find(event);
+    if (event_data != dev_data->eventMap.end() &&
+        event_data->second.in_use.load()) {
+        skip_call |=
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                    reinterpret_cast<uint64_t &>(event), __LINE__,
+                    DRAWSTATE_INVALID_EVENT, "DS",
+                    "Cannot delete event %" PRIu64
+                    " which is in use by a command buffer.",
+                    reinterpret_cast<uint64_t &>(event));
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    if (!skip_call)
+        dev_data->device_dispatch_table->DestroyEvent(device, event,
+                                                      pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
@@ -5595,6 +5635,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetEvent(VkCommandBuffer command
     if (pCB) {
         skipCall |= addCmd(dev_data, pCB, CMD_SETEVENT, "vkCmdSetEvent()");
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdSetEvent");
+        pCB->events.push_back(event);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall)
@@ -5610,6 +5651,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetEvent(VkCommandBuffer comma
     if (pCB) {
         skipCall |= addCmd(dev_data, pCB, CMD_RESETEVENT, "vkCmdResetEvent()");
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdResetEvent");
+        pCB->events.push_back(event);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall)
@@ -5795,6 +5837,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(
     if (pCB) {
         for (uint32_t i = 0; i < eventCount; ++i) {
             pCB->waitedEvents.push_back(pEvents[i]);
+            pCB->events.push_back(pEvents[i]);
         }
         if (pCB->state == CB_RECORDING) {
             skipCall |= addCmd(dev_data, pCB, CMD_WAITEVENTS, "vkCmdWaitEvents()");
