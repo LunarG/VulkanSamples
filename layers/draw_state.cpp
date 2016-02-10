@@ -119,7 +119,7 @@ struct layer_data {
     unordered_map<VkEvent,               EVENT_NODE>                         eventMap;
     unordered_map<QueryObject,           bool>                               queryToStateMap;
     unordered_map<VkQueryPool, QUERY_POOL_NODE> queryPoolMap;
-    unordered_map<VkSemaphore,           uint32_t>                           semaphoreSignaledMap;
+    unordered_map<VkSemaphore, SEMAPHORE_NODE> semaphoreMap;
     unordered_map<void*,                 GLOBAL_CB_NODE*>                    commandBufferMap;
     unordered_map<VkFramebuffer,         VkFramebufferCreateInfo*>           frameBufferMap;
     unordered_map<VkImage,               IMAGE_NODE*>                        imageLayoutMap;
@@ -2767,6 +2767,7 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->updatedSets.clear();
         pCB->boundDescriptorSets.clear();
         pCB->waitedEvents.clear();
+        pCB->semaphores.clear();
         pCB->waitedEventsBeforeQueryReset.clear();
         pCB->queryToStateMap.clear();
         pCB->activeQueries.clear();
@@ -3307,6 +3308,20 @@ VkBool32 validateAndIncrementResources(layer_data* my_data, GLOBAL_CB_NODE* pCB)
             setNode->second->in_use.fetch_add(1);
         }
     }
+    for (auto semaphore : pCB->semaphores) {
+        auto semaphoreNode = my_data->semaphoreMap.find(semaphore);
+        if (semaphoreNode == my_data->semaphoreMap.end()) {
+            skip_call |= log_msg(
+                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                reinterpret_cast<uint64_t &>(semaphore), __LINE__,
+                DRAWSTATE_INVALID_SEMAPHORE, "DS",
+                "Cannot submit cmd buffer using deleted semaphore %" PRIu64 ".",
+                reinterpret_cast<uint64_t &>(semaphore));
+        } else {
+            semaphoreNode->second.in_use.fetch_add(1);
+        }
+    }
     return skip_call;
 }
 
@@ -3324,6 +3339,12 @@ void decrementResources(layer_data* my_data, VkCommandBuffer cmdBuffer) {
         auto setNode = my_data->setMap.find(set);
         if (setNode != my_data->setMap.end()) {
             setNode->second->in_use.fetch_sub(1);
+        }
+    }
+    for (auto semaphore : pCB->semaphores) {
+        auto semaphoreNode = my_data->semaphoreMap.find(semaphore);
+        if (semaphoreNode != my_data->semaphoreMap.end()) {
+            semaphoreNode->second.in_use.fetch_sub(1);
         }
     }
     for (auto queryStatePair : pCB->queryToStateMap) {
@@ -3512,9 +3533,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
     loader_platform_thread_lock_mutex(&globalLock);
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
         const VkSubmitInfo *submit = &pSubmits[submit_idx];
+        vector<VkSemaphore> semaphoreList;
         for (uint32_t i=0; i < submit->waitSemaphoreCount; ++i) {
-            if (dev_data->semaphoreSignaledMap[submit->pWaitSemaphores[i]]) {
-                dev_data->semaphoreSignaledMap[submit->pWaitSemaphores[i]] = 0;
+            semaphoreList.push_back(submit->pWaitSemaphores[i]);
+            if (dev_data->semaphoreMap[submit->pWaitSemaphores[i]].signaled) {
+                dev_data->semaphoreMap[submit->pWaitSemaphores[i]].signaled = 0;
             } else {
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
                         "Queue %#" PRIx64 " is waiting on semaphore %#" PRIx64 " that has no way to be signaled.",
@@ -3522,7 +3545,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
             }
         }
         for (uint32_t i=0; i < submit->signalSemaphoreCount; ++i) {
-            dev_data->semaphoreSignaledMap[submit->pSignalSemaphores[i]] = 1;
+            semaphoreList.push_back(submit->pSignalSemaphores[i]);
+            dev_data->semaphoreMap[submit->pSignalSemaphores[i]].signaled = 1;
         }
         for (uint32_t i=0; i < submit->commandBufferCount; i++) {
 #ifndef DISABLE_IMAGE_LAYOUT_VALIDATION
@@ -3530,6 +3554,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
 #endif // DISABLE_IMAGE_LAYOUT_VALIDATION
 
             pCB = getCBNode(dev_data, submit->pCommandBuffers[i]);
+            pCB->semaphores = semaphoreList;
             pCB->submitCount++; // increment submit count
             skipCall |= validatePrimaryCommandBufferState(dev_data, pCB);
         }
@@ -3716,7 +3741,15 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySemaphore(VkDevice device, V
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     dev_data->device_dispatch_table->DestroySemaphore(device, semaphore, pAllocator);
     loader_platform_thread_lock_mutex(&globalLock);
-    dev_data->semaphoreSignaledMap.erase(semaphore);
+    if (dev_data->semaphoreMap[semaphore].in_use.load()) {
+        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
+                reinterpret_cast<uint64_t &>(semaphore), __LINE__,
+                DRAWSTATE_INVALID_SEMAPHORE, "DS",
+                "Cannot delete semaphore %" PRIx64 " which is in use.",
+                reinterpret_cast<uint64_t &>(semaphore));
+    }
+    dev_data->semaphoreMap.erase(semaphore);
     loader_platform_thread_unlock_mutex(&globalLock);
     // TODO : Clean up any internal data structures using this obj.
 }
@@ -6845,8 +6878,9 @@ VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
     for (uint32_t bindIdx=0; bindIdx < bindInfoCount; ++bindIdx) {
         const VkBindSparseInfo& bindInfo = pBindInfo[bindIdx];
         for (uint32_t i=0; i < bindInfo.waitSemaphoreCount; ++i) {
-            if (dev_data->semaphoreSignaledMap[bindInfo.pWaitSemaphores[i]]) {
-                dev_data->semaphoreSignaledMap[bindInfo.pWaitSemaphores[i]] = 0;
+            if (dev_data->semaphoreMap[bindInfo.pWaitSemaphores[i]].signaled) {
+                dev_data->semaphoreMap[bindInfo.pWaitSemaphores[i]].signaled =
+                    0;
             } else {
                 skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
                         "Queue %#" PRIx64 " is waiting on semaphore %#" PRIx64 " that has no way to be signaled.",
@@ -6854,7 +6888,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
             }
         }
         for (uint32_t i=0; i < bindInfo.signalSemaphoreCount; ++i) {
-            dev_data->semaphoreSignaledMap[bindInfo.pSignalSemaphores[i]] = 1;
+            dev_data->semaphoreMap[bindInfo.pSignalSemaphores[i]].signaled = 1;
         }
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -6875,7 +6909,8 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(
     VkResult result = dev_data->device_dispatch_table->CreateSemaphore(device, pCreateInfo, pAllocator, pSemaphore);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        dev_data->semaphoreSignaledMap[*pSemaphore] = 0;
+        dev_data->semaphoreMap[*pSemaphore].signaled = 0;
+        dev_data->semaphoreMap[*pSemaphore].in_use.store(0);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -6959,8 +6994,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
     if (pPresentInfo) {
         loader_platform_thread_lock_mutex(&globalLock);
         for (uint32_t i=0; i < pPresentInfo->waitSemaphoreCount; ++i) {
-            if (dev_data->semaphoreSignaledMap[pPresentInfo->pWaitSemaphores[i]]) {
-                dev_data->semaphoreSignaledMap[pPresentInfo->pWaitSemaphores[i]] = 0;
+            if (dev_data->semaphoreMap[pPresentInfo->pWaitSemaphores[i]]
+                    .signaled) {
+                dev_data->semaphoreMap[pPresentInfo->pWaitSemaphores[i]]
+                    .signaled = 0;
             } else {
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
                         "Queue %#" PRIx64 " is waiting on semaphore %#" PRIx64 " that has no way to be signaled.",
@@ -7001,7 +7038,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     VkResult result = dev_data->device_dispatch_table->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
     loader_platform_thread_lock_mutex(&globalLock);
     // FIXME/TODO: Need to add some thing code the "fence" parameter
-    dev_data->semaphoreSignaledMap[semaphore] = 1;
+    dev_data->semaphoreMap[semaphore].signaled = 1;
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }

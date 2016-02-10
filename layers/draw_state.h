@@ -54,6 +54,7 @@ typedef enum _DRAW_STATE_ERROR {
     DRAWSTATE_INVALID_BUFFER,                // Invalid Buffer
     DRAWSTATE_INVALID_QUERY,                 // Invalid Query
     DRAWSTATE_INVALID_FENCE,                 // Invalid Fence
+    DRAWSTATE_INVALID_SEMAPHORE,             // Invalid Semaphore
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,   // binding in vkCmdBindVertexData() too
                                          // large for PSO's
                                          // pVertexBindingDescriptions array
@@ -90,9 +91,9 @@ typedef enum _DRAW_STATE_ERROR {
                                        // never had vkBeginCommandBuffer()
                                        // called on it
     DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, // Cmd Buffer created with
-                                                      // VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-                                                      // flag is submitted
-                                                      // multiple times
+    // VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+    // flag is submitted
+    // multiple times
     DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, // vkCmdExecuteCommands() called
                                                 // with a primary commandBuffer
                                                 // in pCommandBuffers array
@@ -146,14 +147,14 @@ typedef enum _DRAW_STATE_ERROR {
                                       // RECORDING state
     DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, // CmdBuffer is being used in
                                            // violation of
-                                           // VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
-                                           // rules (i.e. simultaneous use w/o
-                                           // that bit set)
+    // VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
+    // rules (i.e. simultaneous use w/o
+    // that bit set)
     DRAWSTATE_INVALID_COMMAND_BUFFER_RESET, // Attempting to call Reset (or
                                             // Begin on recorded cmdBuffer) that
                                             // was allocated from Pool w/o
-                                            // VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
-                                            // bit set
+    // VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+    // bit set
     DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, // Count for viewports and scissors
                                          // mismatch and/or state doesn't match
                                          // count
@@ -162,17 +163,36 @@ typedef enum _DRAW_STATE_ERROR {
     DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, // Attachment reference must be
                                             // present in active subpass
     DRAWSTATE_INVALID_EXTENSION,
-    DRAWSTATE_SAMPLER_DESCRIPTOR_ERROR,         // A Descriptor of *_SAMPLER type is being updated with an invalid or bad Sampler
-    DRAWSTATE_INCONSISTENT_IMMUTABLE_SAMPLER_UPDATE, // Descriptors of *COMBINED_IMAGE_SAMPLER type are being updated where some, but not all, of the updates use immutable samplers
-    DRAWSTATE_IMAGEVIEW_DESCRIPTOR_ERROR,       // A Descriptor of *_IMAGE or *_ATTACHMENT type is being updated with an invalid or bad ImageView
-    DRAWSTATE_BUFFERVIEW_DESCRIPTOR_ERROR,      // A Descriptor of *_TEXEL_BUFFER type is being updated with an invalid or bad BufferView
-    DRAWSTATE_BUFFERINFO_DESCRIPTOR_ERROR,      // A Descriptor of *_[UNIFORM|STORAGE]_BUFFER_[DYNAMIC] type is being updated with an invalid or bad BufferView
-    DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW,          // At draw time the dynamic offset combined with buffer offset and range oversteps size of buffer
-    DRAWSTATE_DOUBLE_DESTROY,                   // Destroying an object twice
-    DRAWSTATE_OBJECT_INUSE,                     // Destroying or modifying an object in use by a command buffer
-    DRAWSTATE_QUEUE_FORWARD_PROGRESS,           // Queue cannot guarantee forward progress
-    DRAWSTATE_INVALID_UNIFORM_BUFFER_OFFSET,    // Dynamic Uniform Buffer Offsets violate device limit
-    DRAWSTATE_INVALID_STORAGE_BUFFER_OFFSET,    // Dynamic Storage Buffer Offsets violate device limit
+    DRAWSTATE_SAMPLER_DESCRIPTOR_ERROR, // A Descriptor of *_SAMPLER type is
+                                        // being updated with an invalid or bad
+                                        // Sampler
+    DRAWSTATE_INCONSISTENT_IMMUTABLE_SAMPLER_UPDATE, // Descriptors of
+                                                     // *COMBINED_IMAGE_SAMPLER
+                                                     // type are being updated
+                                                     // where some, but not all,
+                                                     // of the updates use
+                                                     // immutable samplers
+    DRAWSTATE_IMAGEVIEW_DESCRIPTOR_ERROR,  // A Descriptor of *_IMAGE or
+                                           // *_ATTACHMENT type is being updated
+                                           // with an invalid or bad ImageView
+    DRAWSTATE_BUFFERVIEW_DESCRIPTOR_ERROR, // A Descriptor of *_TEXEL_BUFFER
+                                           // type is being updated with an
+                                           // invalid or bad BufferView
+    DRAWSTATE_BUFFERINFO_DESCRIPTOR_ERROR, // A Descriptor of
+                                           // *_[UNIFORM|STORAGE]_BUFFER_[DYNAMIC]
+                                           // type is being updated with an
+                                           // invalid or bad BufferView
+    DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, // At draw time the dynamic offset
+                                       // combined with buffer offset and range
+                                       // oversteps size of buffer
+    DRAWSTATE_DOUBLE_DESTROY,          // Destroying an object twice
+    DRAWSTATE_OBJECT_INUSE, // Destroying or modifying an object in use by a
+                            // command buffer
+    DRAWSTATE_QUEUE_FORWARD_PROGRESS, // Queue cannot guarantee forward progress
+    DRAWSTATE_INVALID_UNIFORM_BUFFER_OFFSET, // Dynamic Uniform Buffer Offsets
+                                             // violate device limit
+    DRAWSTATE_INVALID_STORAGE_BUFFER_OFFSET, // Dynamic Storage Buffer Offsets
+                                             // violate device limit
 } DRAW_STATE_ERROR;
 
 typedef enum _SHADER_CHECKER_ERROR {
@@ -337,6 +357,12 @@ class FENCE_NODE : public BASE_NODE {
     vector<VkCommandBuffer> cmdBuffers;
     bool needsSignaled;
     VkFence priorFence;
+};
+
+class SEMAPHORE_NODE : public BASE_NODE {
+  public:
+    using BASE_NODE::in_use;
+    uint32_t signaled;
 };
 
 class EVENT_NODE : public BASE_NODE {
@@ -609,6 +635,7 @@ typedef struct _GLOBAL_CB_NODE {
     std::set<VkDescriptorSet>    updatedSets;
     vector<VkDescriptorSet>      boundDescriptorSets; // Index is set# that given set is bound to
     vector<VkEvent>              waitedEvents;
+    vector<VkSemaphore> semaphores;
     unordered_map<QueryObject, vector<VkEvent> > waitedEventsBeforeQueryReset;
     unordered_map<QueryObject, bool> queryToStateMap; // 0 is unavailable, 1 is available
     unordered_set<QueryObject>   activeQueries;
