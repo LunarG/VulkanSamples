@@ -41,7 +41,7 @@ Shell::Shell(Game &game)
 #if defined(NDEBUG)
     validate_ = false;
 #else
-    validate_ = false;
+    validate_ = true;
 #endif
 }
 
