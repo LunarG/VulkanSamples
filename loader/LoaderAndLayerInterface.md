@@ -117,7 +117,7 @@ For each value in this key which has DWORD data set to 0, the loader opens the J
     "file_format_version": "1.0.0",
     "ICD": {
         "library_path": "path to ICD library",
-        "api_version": "1.0.2"
+        "api_version": "1.0.3"
     }
   }
 
@@ -190,7 +190,7 @@ The Vulkan loader will open each info file to obtain the name or pathname of an 
     "file_format_version": "1.0.0",
     "ICD": {
         "library_path": "path to ICD library",
-        "api_version": "1.0.2"
+        "api_version": "1.0.3"
     }
 }
 
