@@ -372,6 +372,7 @@ class EVENT_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
     bool needsSignaled;
+    VkPipelineStageFlags stageMask;
 };
 
 class QUEUE_NODE {
@@ -680,6 +681,7 @@ typedef struct _GLOBAL_CB_NODE {
     unordered_set<QueryObject> startedQueries;
     unordered_map<ImageSubresourcePair, IMAGE_CMD_BUF_NODE> imageLayoutMap;
     unordered_map<VkImage, vector<ImageSubresourcePair>> imageSubresourceMap;
+    unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
     vector<DRAW_DATA>            drawData;
     DRAW_DATA                    currentDrawData;
     VkCommandBuffer primaryCommandBuffer;

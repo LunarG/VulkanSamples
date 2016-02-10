@@ -3188,6 +3188,7 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->activeQueries.clear();
         pCB->startedQueries.clear();
         pCB->imageLayoutMap.clear();
+        pCB->eventToStageMap.clear();
         pCB->drawData.clear();
         pCB->currentDrawData.buffers.clear();
         pCB->primaryCommandBuffer = VK_NULL_HANDLE;
@@ -3797,6 +3798,10 @@ void decrementResources(layer_data* my_data, VkCommandBuffer cmdBuffer) {
     }
     for (auto queryStatePair : pCB->queryToStateMap) {
         my_data->queryToStateMap[queryStatePair.first] = queryStatePair.second;
+    }
+    for (auto eventStagePair : pCB->eventToStageMap) {
+        my_data->eventMap[eventStagePair.first].stageMask =
+            eventStagePair.second;
     }
 }
 
@@ -6091,6 +6096,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetEvent(VkCommandBuffer command
         skipCall |= addCmd(dev_data, pCB, CMD_SETEVENT, "vkCmdSetEvent()");
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdSetEvent");
         pCB->events.push_back(event);
+        pCB->eventToStageMap[event] = stageMask;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall)
@@ -6315,7 +6321,7 @@ VkBool32 ValidateBarriers(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
                         DRAWSTATE_INVALID_BARRIER, "DS",
                         "Buffer Barrier 0x%" PRIx64 " has offset %" PRIu64
                         " and size %" PRIu64
-                        " whos sum is greater than total size %" PRIu64 ".",
+                        " whose sum is greater than total size %" PRIu64 ".",
                         reinterpret_cast<const uint64_t &>(mem_barrier->buffer),
                         reinterpret_cast<const uint64_t &>(mem_barrier->offset),
                         reinterpret_cast<const uint64_t &>(mem_barrier->size),
@@ -6337,9 +6343,37 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(
     loader_platform_thread_lock_mutex(&globalLock);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
+        VkPipelineStageFlags stageMask = 0;
         for (uint32_t i = 0; i < eventCount; ++i) {
             pCB->waitedEvents.push_back(pEvents[i]);
             pCB->events.push_back(pEvents[i]);
+            auto event_data = pCB->eventToStageMap.find(pEvents[i]);
+            if (event_data != pCB->eventToStageMap.end()) {
+                stageMask |= event_data->second;
+            } else {
+                auto global_event_data = dev_data->eventMap.find(pEvents[i]);
+                if (global_event_data == dev_data->eventMap.end()) {
+                    skipCall |= log_msg(
+                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT,
+                        reinterpret_cast<const uint64_t &>(pEvents[i]),
+                        __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
+                        "Fence 0x%" PRIx64
+                        " cannot be waited on if it has never been set.",
+                        reinterpret_cast<const uint64_t &>(pEvents[i]));
+                } else {
+                    stageMask |= global_event_data->second.stageMask;
+                }
+            }
+        }
+        if (sourceStageMask != stageMask) {
+            skipCall |= log_msg(
+                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                DRAWSTATE_INVALID_FENCE, "DS",
+                "srcStageMask in vkCmdWaitEvents must be the bitwise OR of the "
+                "stageMask parameters used in calls to vkCmdSetEvent and "
+                "VK_PIPELINE_STAGE_HOST_BIT if used with vkSetEvent.");
         }
         if (pCB->state == CB_RECORDING) {
             skipCall |= addCmd(dev_data, pCB, CMD_WAITEVENTS, "vkCmdWaitEvents()");
@@ -7406,6 +7440,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkSetEvent(VkDevice device, VkEvent event) {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     dev_data->eventMap[event].needsSignaled = false;
+    dev_data->eventMap[event].stageMask = VK_PIPELINE_STAGE_HOST_BIT;
     loader_platform_thread_unlock_mutex(&globalLock);
     VkResult result = dev_data->device_dispatch_table->SetEvent(device, event);
     return result;
