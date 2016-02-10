@@ -4550,7 +4550,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
                                         "support precise occlusion queries.", reinterpret_cast<void*>(commandBuffer));
                 }
             }
-            if (pInfo->renderPass != VK_NULL_HANDLE) {
+            if (pInfo && pInfo->renderPass != VK_NULL_HANDLE) {
                 auto rp_data = dev_data->renderPassMap.find(pInfo->renderPass);
                 if (rp_data != dev_data->renderPassMap.end() && rp_data->second && rp_data->second->pCreateInfo) {
                     if (pInfo->subpass >= rp_data->second->pCreateInfo->subpassCount) {
