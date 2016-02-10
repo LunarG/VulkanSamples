@@ -174,6 +174,10 @@ const std::string fragmentSPIRV_specialized =
         "               OpDecorate %21 DescriptorSet 0\n"
         "               OpDecorate %21 Binding 1\n"
         "               OpDecorate %25 Location 0\n"
+        "               OpDecorate %29 SpecId 5\n"
+        "               OpDecorate %30 SpecId 7\n"
+        "               OpDecorate %31 SpecId 8\n"
+        "               OpDecorate %32 SpecId 9\n"
         "          %2 = OpTypeVoid\n"
         "          %3 = OpTypeFunction %2\n"
         "          %6 = OpTypeBool\n"
@@ -185,10 +189,6 @@ const std::string fragmentSPIRV_specialized =
         "         %15 = OpConstant %10 1\n"
 
         // Set up the spec constants
-        "               OpDecorate %29 SpecId 5\n"
-        "               OpDecorate %30 SpecId 7\n"
-        "               OpDecorate %31 SpecId 8\n"
-        "               OpDecorate %32 SpecId 9\n"
         "         %29 = OpSpecConstantFalse %6\n"
         "         %30 = OpSpecConstant %10 0.0\n"
         "         %31 = OpSpecConstant %10 0.0\n"

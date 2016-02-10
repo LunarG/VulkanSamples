@@ -63,28 +63,47 @@ function(sampleWithSingleFile)
             set (SAMPLE_DESCRIPTION "Vulkan sample: ${SAMPLE_NAME}")
             file(COPY ./android/project_template/ DESTINATION ./android/${SAMPLE_NAME}/)
 
+            # Clear flags.
+            set (OTHER_FLAGS "")
+            set (ASSET_DIR "")
+            set (EXTRA_PERMISSIONS "")
+            set (SHADERC_LINKAGE "")
+
             # Add extra setting for some samples.
+            # External shader usage.
+            set (SAMPLE_WITH_SPIRV drawcube drawsubpasses drawtexturedcube dynamicuniform
+             immutable_sampler initpipeline initshaders multiple_sets multithreadcmdbuf
+             occlusion_query pipeline_cache pipeline_derivative push_constants secondarycmd
+             separate_image_sampler spirv_assembly spirv_specialization template texelbuffer)
+            if (ANDROID_NO_SHADERC)
+                set (OTHER_FLAGS "cppFlags.add(\"-D ANDROID_NO_SHADERC\")\n        ")
+            else()
+                set (SHADERC_LINKAGE "library \"shaderc\"         linkage \"static\"")
+            endif()
+
+            # Include resource files.
             set (SAMPLE_WITH_RESOURCES
              drawtexturedcube immutable_sampler multiple_sets pipeline_cache
              pipeline_derivative secondarycmd separate_image_sampler spirv_assembly
              spirv_specialization template)
-            if (";${SAMPLE_WITH_RESOURCES};" MATCHES ";${SAMPLE_NAME};")
+            if (";${SAMPLE_WITH_RESOURCES};" MATCHES ";${SAMPLE_NAME};" OR
+                ";${SAMPLE_WITH_SPIRV};" MATCHES ";${SAMPLE_NAME};")
                 set (ASSET_DIR "srcDir '../../data/'")
-            else()
-                set (ASSET_DIR "")
             endif()
+
+            # Add external storage access permission.
             set (SAMPLE_WITH_EXTERNALSTORAGEACCESS pipeline_cache)
             if (";${SAMPLE_WITH_EXTERNALSTORAGEACCESS};" MATCHES ";${SAMPLE_NAME};")
                 set (EXTRA_PERMISSIONS "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>")
-            else()
-                set (EXTRA_PERMISSIONS "")
             endif()
+
+            # Add validation layer settings.
             set (SAMPLE_WITH_TOOLS dbgcreatemsgcallback enable_validation_with_callback)
             if (";${SAMPLE_WITH_TOOLS};" MATCHES ";${SAMPLE_NAME};")
-                set (OTHER_FLAGS "cppFlags.add(\"-D USE_DEBUG_EXTENTIONS\")\n        cppFlags.add(\"-I\${validationLayerDir}/include\".toString())")
-            else()
-                set (OTHER_FLAGS "")
+                set (OTHER_FLAGS "${OTHER_FLAGS}cppFlags.add(\"-D USE_DEBUG_EXTENTIONS\")\n        cppFlags.add(\"-I\${validationLayerDir}/include\".toString())")
             endif()
+
+            # Cook template files.
             set (TEMPLATE_FILES
                 android/${SAMPLE_NAME}/src/main/res/values/strings.xml
                 android/${SAMPLE_NAME}/src/main/AndroidManifest.xml
