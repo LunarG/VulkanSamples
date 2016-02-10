@@ -1796,13 +1796,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
 {
     VkResult    result         = VK_ERROR_VALIDATION_FAILED_EXT;
     VkBool32    skipCall       = VK_FALSE;
-    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
-
-    skipCall |= validate_string(my_device_data, "vkCreateInstance()", "VkInstanceCreateInfo->VkApplicationInfo->pApplicationName",
-                                pCreateInfo->pApplicationInfo->pApplicationName);
-
-    skipCall |= validate_string(my_device_data, "vkCreateInstance()", "VkInstanceCreateInfo->VkApplicationInfo->pEngineName",
-                                pCreateInfo->pApplicationInfo->pEngineName);
 
     if (skipCall == VK_FALSE) {
         VkLayerInstanceCreateInfo *chain_info     = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
@@ -1830,6 +1823,17 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
                                    pCreateInfo->ppEnabledExtensionNames);
 
         InitParamChecker(my_data, pAllocator);
+    }
+
+    // Ordinarily we'd check these before calling down the chain, but none of the layer
+    // support is in place until now, if we survive we can report the issue now.
+    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+    if (pCreateInfo->pApplicationInfo) {
+      skipCall |= validate_string(my_device_data, "vkCreateInstance()", "VkInstanceCreateInfo->VkApplicationInfo->pApplicationName",
+                                  pCreateInfo->pApplicationInfo->pApplicationName);
+
+      skipCall |= validate_string(my_device_data, "vkCreateInstance()", "VkInstanceCreateInfo->VkApplicationInfo->pEngineName",
+                                  pCreateInfo->pApplicationInfo->pEngineName);
     }
 
     return result;
