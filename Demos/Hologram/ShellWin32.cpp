@@ -143,6 +143,16 @@ bool ShellWin32::can_present(VkPhysicalDevice phy, uint32_t queue_family)
     return vk::GetPhysicalDeviceWin32PresentationSupportKHR(phy, queue_family);
 }
 
+void ShellWin32::init_debug_callback(VkInstance instance)
+{
+    // TODO
+}
+
+void ShellWin32::cleanup_debug_callback(VkInstance instance)
+{
+    // TODO
+}
+
 VkSurfaceKHR ShellWin32::create_surface(VkInstance instance)
 {
     VkWin32SurfaceCreateInfoKHR surface_info = {};

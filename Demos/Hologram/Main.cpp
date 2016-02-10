@@ -53,7 +53,6 @@ int main(int argc, char **argv)
 
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
 
-#include <android/log.h>
 #include "ShellAndroid.h"
 
 void android_main(android_app *app)

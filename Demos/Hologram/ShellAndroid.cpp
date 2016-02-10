@@ -23,7 +23,6 @@
 #include <cassert>
 #include <dlfcn.h>
 #include <time.h>
-#include <android/log.h>
 
 #include "Helpers.h"
 #include "Game.h"
@@ -132,6 +131,78 @@ PFN_vkGetInstanceProcAddr ShellAndroid::load_vk()
     lib_handle_ = handle;
 
     return reinterpret_cast<PFN_vkGetInstanceProcAddr>(symbol);
+}
+
+
+// Create the function that layers should call when events trigger
+static VKAPI_ATTR VkBool32 VKAPI_CALL DebugReportCallback(VkDebugReportFlagsEXT msgFlags,
+                                    VkDebugReportObjectTypeEXT objType,
+                                    uint64_t srcObject, size_t location,
+                                    int32_t msgCode, const char * pLayerPrefix,
+                                    const char * pMsg, void * pUserData )
+{
+    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
+        __android_log_print(ANDROID_LOG_ERROR,
+                            "Hologram", "ERROR: [%s] Code %i : %s", pLayerPrefix, msgCode, pMsg);
+    } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT_EXT) {
+        __android_log_print(ANDROID_LOG_WARN,
+                            "Hologram", "WARNING: [%s] Code %i : %s", pLayerPrefix, msgCode, pMsg);
+    } else if (msgFlags & VK_DEBUG_REPORT_PERF_WARN_BIT_EXT) {
+        __android_log_print(ANDROID_LOG_WARN,
+                            "Hologram", "PERFORMANCE WARNING: [%s] Code %i : %s",pLayerPrefix, msgCode, pMsg);
+    } else if (msgFlags & VK_DEBUG_REPORT_INFO_BIT_EXT) {
+        __android_log_print(ANDROID_LOG_INFO,
+                            "Hologram", "INFO: [%s] Code %i : %s", pLayerPrefix, msgCode, pMsg);
+    } else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
+        __android_log_print(ANDROID_LOG_VERBOSE,
+                            "Hologram", "DEBUG: [%s] Code %i : %s", pLayerPrefix, msgCode, pMsg);
+    }
+
+    // Returning false tells the layer not to stop when the event occurs, so
+    // they see the same behavior with and without validation layers enabled.
+    return VK_FALSE;
+}
+
+void ShellAndroid::init_debug_callback(VkInstance instance)
+{
+    // Ensure the extension is supported by the platform
+    PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT;
+
+    vkCreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)
+            vk::GetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
+
+    assert(vkCreateDebugReportCallbackEXT);
+
+    // Create the debug callback with desired settings
+    if (vkCreateDebugReportCallbackEXT) {
+
+        VkDebugReportCallbackCreateInfoEXT debugReportCallbackCreateInfo;
+        debugReportCallbackCreateInfo.sType =
+                VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+        debugReportCallbackCreateInfo.pNext = NULL;
+        debugReportCallbackCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT |
+                                              VK_DEBUG_REPORT_WARN_BIT_EXT |
+                                              VK_DEBUG_REPORT_PERF_WARN_BIT_EXT;
+        debugReportCallbackCreateInfo.pfnCallback = DebugReportCallback;
+        debugReportCallbackCreateInfo.pUserData = NULL;
+
+        vkCreateDebugReportCallbackEXT(instance, &debugReportCallbackCreateInfo,
+                                       nullptr, &debugReportCallback_);
+    }
+}
+
+void ShellAndroid::cleanup_debug_callback(VkInstance instance)
+{
+    PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT;
+
+    vkDestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT)
+            vk::GetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
+
+    assert(vkDestroyDebugReportCallbackEXT);
+
+    if (vkDestroyDebugReportCallbackEXT) {
+        vkDestroyDebugReportCallbackEXT(instance, debugReportCallback_, nullptr);
+    }
 }
 
 VkSurfaceKHR ShellAndroid::create_surface(VkInstance instance)

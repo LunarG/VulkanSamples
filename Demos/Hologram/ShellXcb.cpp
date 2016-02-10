@@ -189,6 +189,16 @@ bool ShellXcb::can_present(VkPhysicalDevice phy, uint32_t queue_family)
             queue_family, c_, scr_->root_visual);
 }
 
+void ShellXcb::init_debug_callback(VkInstance instance)
+{
+    // TODO
+}
+
+void ShellXcb::cleanup_debug_callback(VkInstance instance)
+{
+    // TODO
+}
+
 VkSurfaceKHR ShellXcb::create_surface(VkInstance instance)
 {
     VkXcbSurfaceCreateInfoKHR surface_info = {};

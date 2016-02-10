@@ -39,6 +39,9 @@ private:
     PFN_vkGetInstanceProcAddr load_vk();
     bool can_present(VkPhysicalDevice phy, uint32_t queue_family);
 
+    void init_debug_callback(VkInstance instance);
+    void cleanup_debug_callback(VkInstance instance);
+
     void create_window();
     VkSurfaceKHR create_surface(VkInstance instance);
 

@@ -40,6 +40,9 @@ private:
     PFN_vkGetInstanceProcAddr load_vk();
     bool can_present(VkPhysicalDevice phy, uint32_t queue_family) { return true; }
 
+    void init_debug_callback(VkInstance instance);
+    void cleanup_debug_callback(VkInstance instance);
+
     VkSurfaceKHR create_surface(VkInstance instance);
 
     void on_app_cmd(int32_t cmd);
@@ -47,6 +50,8 @@ private:
 
     static inline void on_app_cmd(android_app *app, int32_t cmd);
     static inline int32_t on_input_event(android_app *app, AInputEvent *event);
+
+    VkDebugReportCallbackEXT debugReportCallback_;
 
     android_app &app_;
 

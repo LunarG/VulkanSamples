@@ -27,6 +27,8 @@
 #include <vector>
 #include <stdexcept>
 #include <vulkan/vulkan.h>
+#include <vulkan/vk_ext_debug_report.h>
+#include <android/log.h>
 
 #include "Game.h"
 
@@ -119,6 +121,8 @@ private:
     virtual PFN_vkGetInstanceProcAddr load_vk() = 0;
     virtual bool can_present(VkPhysicalDevice phy, uint32_t queue_family) = 0;
     void init_instance();
+    virtual void init_debug_callback(VkInstance instance) = 0;
+    virtual void cleanup_debug_callback(VkInstance instance) = 0;
     void init_physical_dev();
 
     // called by create_context
