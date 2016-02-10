@@ -76,6 +76,11 @@ enum_type_dict = {}
 #       |->['dyn_array'] = bool indicating if member is a dynamically sized array
 #       '->['array_size'] = For dyn_array, member name used to size array, else int size for static array
 struct_dict = {}
+struct_order_list = [] # struct names in order they're declared
+# Store struct names that require #ifdef guards
+#  dict stores struct and enum definitions that are guarded by ifdef as the key
+#  and the txt of the ifdef is the value
+ifdef_dict = {}
 # typedef_fwd_dict stores mapping from orig_type_name -> new_type_name
 typedef_fwd_dict = {}
 # typedef_rev_dict stores mapping from new_type_name -> orig_type_name
@@ -129,9 +134,17 @@ class HeaderFileParser:
         # TODO : Comment parsing is very fragile but handles 2 known files
         block_comment = False
         prev_count_name = ''
+        ifdef_txt = ''
+        ifdef_active = 0
         exclude_struct_list = ['VkPlatformHandleXcbKHR', 'VkPlatformHandleX11KHR']
         with open(self.header_file) as f:
             for line in f:
+                if True in [ifd_txt in line for ifd_txt in ['#ifdef ', '#ifndef ']]:
+                    ifdef_txt = line.split()[1]
+                    ifdef_active = ifdef_active + 1
+                    continue
+                if ifdef_active != 0 and '#endif' in line:
+                    ifdef_active = ifdef_active - 1
                 if block_comment:
                     if '*/' in line:
                         block_comment = False
@@ -189,6 +202,7 @@ class HeaderFileParser:
                             #print("Found Actual Struct type %s" % base_type)
                             self.struct_dict[base_type] = self.struct_dict['tmp_struct']
                             self.struct_dict.pop('tmp_struct', 0)
+                            struct_order_list.append(base_type)
                             self.types_dict[base_type] = 'struct'
                             self.types_dict.pop('tmp_struct', 0)
                         elif 'tmp_enum' == base_type:
@@ -203,6 +217,8 @@ class HeaderFileParser:
                             self.enum_type_dict.pop('tmp_enum', 0)
                             self.types_dict[base_type] = 'enum'
                             self.types_dict.pop('tmp_enum', 0)
+                        if ifdef_active:
+                            ifdef_dict[base_type] = ifdef_txt
                         self.typedef_fwd_dict[base_type] = targ_type.strip(';')
                         self.typedef_rev_dict[targ_type.strip(';')] = base_type
                         #print("fwd_dict: %s = %s" % (base_type, targ_type))
@@ -259,6 +275,9 @@ class HeaderFileParser:
     #  3a. Name of dynam array must end in 's' char OR
     #  3b. Name of count var minus 'count' must be contained in name of dynamic array
     def _is_dynamic_array(self, full_type, name):
+        exceptions = ['pEnabledFeatures', 'pWaitDstStageMask', 'pSampleMask']
+        if name in exceptions:
+            return False
         if '' != self.last_struct_count_name:
             if 'const' in full_type and '*' in full_type:
                 if name.endswith('s') or self.last_struct_count_name.lower().replace('count', '') in name.lower():
@@ -309,13 +328,13 @@ class HeaderFileParser:
         self.struct_dict[struct_type][num]['type'] = member_type
         if '[' in member_name:
             (member_name, array_size) = member_name.split('[', 1)
-            if 'char' in member_type:
-                self.struct_dict[struct_type][num]['array'] = False
-                self.struct_dict[struct_type][num]['array_size'] = 0
-                self.struct_dict[struct_type][num]['ptr'] = True
-            else:
-                self.struct_dict[struct_type][num]['array'] = True
-                self.struct_dict[struct_type][num]['array_size'] = array_size.strip(']')
+            #if 'char' in member_type:
+            #    self.struct_dict[struct_type][num]['array'] = False
+            #    self.struct_dict[struct_type][num]['array_size'] = 0
+            #    self.struct_dict[struct_type][num]['ptr'] = True
+            #else:
+            self.struct_dict[struct_type][num]['array'] = True
+            self.struct_dict[struct_type][num]['array_size'] = array_size.strip(']')
         elif self._is_dynamic_array(self.struct_dict[struct_type][num]['full_type'], member_name):
             #print("Found dynamic array %s of size %s" % (member_name, self.last_struct_count_name))
             self.struct_dict[struct_type][num]['array'] = True
@@ -431,12 +450,17 @@ class StructWrapperGen:
             self.api_prefix = prefix
         self.header_filename = os.path.join(out_dir, self.api_prefix+"_struct_wrappers.h")
         self.class_filename = os.path.join(out_dir, self.api_prefix+"_struct_wrappers.cpp")
+        self.safe_struct_header_filename = os.path.join(out_dir, self.api_prefix+"_safe_struct.h")
+        self.safe_struct_source_filename = os.path.join(out_dir, self.api_prefix+"_safe_struct.cpp")
         self.string_helper_filename = os.path.join(out_dir, self.api_prefix+"_struct_string_helper.h")
         self.string_helper_no_addr_filename = os.path.join(out_dir, self.api_prefix+"_struct_string_helper_no_addr.h")
         self.string_helper_cpp_filename = os.path.join(out_dir, self.api_prefix+"_struct_string_helper_cpp.h")
         self.string_helper_no_addr_cpp_filename = os.path.join(out_dir, self.api_prefix+"_struct_string_helper_no_addr_cpp.h")
         self.validate_helper_filename = os.path.join(out_dir, self.api_prefix+"_struct_validate_helper.h")
         self.no_addr = False
+        # Safe Struct (ss) header and source files
+        self.ssh = CommonFileGen(self.safe_struct_header_filename)
+        self.sss = CommonFileGen(self.safe_struct_source_filename)
         self.hfg = CommonFileGen(self.header_filename)
         self.cfg = CommonFileGen(self.class_filename)
         self.shg = CommonFileGen(self.string_helper_filename)
@@ -485,6 +509,20 @@ class StructWrapperGen:
         self.cfg.setBody(self._generateClassDefinition())
         self.cfg.setFooter(self._generateFooter())
         self.cfg.generate()
+
+    # Safe Structs are versions of vulkan structs with non-const safe ptrs
+    #  that make shadowing structures and clean-up of shadowed structures very simple
+    def generateSafeStructHeader(self):
+        self.ssh.setCopyright(self._generateCopyright())
+        self.ssh.setHeader(self._generateSafeStructHeader())
+        self.ssh.setBody(self._generateSafeStructDecls())
+        self.ssh.generate()
+
+    def generateSafeStructs(self):
+        self.sss.setCopyright(self._generateCopyright())
+        self.sss.setHeader(self._generateSafeStructSourceHeader())
+        self.sss.setBody(self._generateSafeStructSource())
+        self.sss.generate()
 
     # Generate c-style .h file that contains functions for printing structs
     def generateStringHelper(self):
@@ -1507,6 +1545,135 @@ class StructWrapperGen:
     def _generateFooter(self):
         return "\n//any footer info for class\n"
 
+    def _getSafeStructName(self, struct):
+        return "safe_%s" % (struct)
+
+    # If struct has sType or ptr members, generate safe type
+    def _hasSafeStruct(self, s):
+        exceptions = ['VkPhysicalDeviceFeatures', 'VkPipelineColorBlendStateCreateInfo']
+        if s in exceptions:
+            return False
+        if 'sType' == self.struct_dict[s][0]['name']:
+            return True
+        for m in self.struct_dict[s]:
+            if self.struct_dict[s][m]['ptr']:
+                return True
+        return False
+
+    def _generateSafeStructHeader(self):
+        header = []
+        header.append("//#includes, #defines, globals and such...\n")
+        header.append('#include "vulkan/vulkan.h"')
+        return "".join(header)
+
+    # If given ty is in obj list, or is a struct that contains anything in obj list, return True
+    def _typeHasObject(self, ty, obj):
+        if ty in obj:
+            return True
+        if is_type(ty, 'struct'):
+            for m in self.struct_dict[ty]:
+                if self.struct_dict[ty][m]['type'] in obj:
+                    return True
+        return False
+
+    def _generateSafeStructDecls(self):
+        ss_decls = []
+        for s in struct_order_list:
+            if not self._hasSafeStruct(s):
+                continue
+            if s in ifdef_dict:
+                ss_decls.append('#ifdef %s' % ifdef_dict[s])
+            ss_name = self._getSafeStructName(s)
+            ss_decls.append("\nstruct %s {" % (ss_name))
+            for m in sorted(self.struct_dict[s]):
+                m_type = self.struct_dict[s][m]['type']
+                if is_type(m_type, 'struct') and self._hasSafeStruct(m_type):
+                    m_type = self._getSafeStructName(m_type)
+                if self.struct_dict[s][m]['array_size'] != 0 and not self.struct_dict[s][m]['dyn_array']:
+                    ss_decls.append("    %s %s[%s];" % (m_type, self.struct_dict[s][m]['name'], self.struct_dict[s][m]['array_size']))
+                elif self.struct_dict[s][m]['ptr'] and 'safe_' not in m_type and not self._typeHasObject(m_type, vulkan.object_non_dispatch_list):#m_type in ['char', 'float', 'uint32_t', 'void', 'VkPhysicalDeviceFeatures']: # We'll never overwrite char* so it can remain const
+                    ss_decls.append("    %s %s;" % (self.struct_dict[s][m]['full_type'], self.struct_dict[s][m]['name']))
+                elif self.struct_dict[s][m]['array']:
+                    ss_decls.append("    %s* %s;" % (m_type, self.struct_dict[s][m]['name']))
+                elif self.struct_dict[s][m]['ptr']:
+                    ss_decls.append("    %s* %s;" % (m_type, self.struct_dict[s][m]['name']))
+                else:
+                    ss_decls.append("    %s %s;" % (m_type, self.struct_dict[s][m]['name']))
+            ss_decls.append("    %s(const %s* pInStruct);" % (ss_name, s))
+            ss_decls.append("    %s();" % (ss_name))
+            ss_decls.append("    ~%s();" % (ss_name))
+            ss_decls.append("    void initialize(const %s* pInStruct);" % (s))
+            ss_decls.append("};")
+            if s in ifdef_dict:
+                ss_decls.append('#endif')
+        return "\n".join(ss_decls)
+
+    def _generateSafeStructSourceHeader(self):
+        header = []
+        header.append("//#includes, #defines, globals and such...\n")
+        header.append('#include "vk_safe_struct.h"')
+        return "".join(header)
+
+    def _generateSafeStructSource(self):
+        ss_src = []
+        for s in struct_order_list:
+            if not self._hasSafeStruct(s):
+                continue
+            if s in ifdef_dict:
+                ss_src.append('#ifdef %s' % ifdef_dict[s])
+            ss_name = self._getSafeStructName(s)
+            init_list = '' # list of members in struct constructor initializer
+            init_func_txt = '' # Txt for initialize() function that takes struct ptr and inits members
+            construct_txt = ''
+            destruct_txt = ''
+            for m in self.struct_dict[s]:
+                m_name = self.struct_dict[s][m]['name']
+                m_type = self.struct_dict[s][m]['type']
+                if is_type(m_type, 'struct') and self._hasSafeStruct(m_type):
+                    m_type = self._getSafeStructName(m_type)
+                if self.struct_dict[s][m]['ptr'] and 'safe_' not in m_type and not self._typeHasObject(m_type, vulkan.object_non_dispatch_list):# in ['char', 'float', 'uint32_t', 'void', 'VkPhysicalDeviceFeatures']) or 'pp' == self.struct_dict[s][m]['name'][0:1]:
+                    init_list += '\n\t%s(pInStruct->%s),' % (m_name, m_name)
+                    init_func_txt += '        %s = pInStruct->%s;\n' % (m_name, m_name)
+                elif self.struct_dict[s][m]['array']:
+                    array_element = 'pInStruct->%s[i]' % (m_name)
+                    if is_type(self.struct_dict[s][m]['type'], 'struct') and self._hasSafeStruct(self.struct_dict[s][m]['type']):
+                        array_element = '%s(&pInStruct->%s[i])' % (self._getSafeStructName(self.struct_dict[s][m]['type']), m_name)
+                    construct_txt += '    if (%s && pInStruct->%s) {\n' % (self.struct_dict[s][m]['array_size'], m_name)
+                    construct_txt += '        %s = new %s[%s];\n' % (m_name, m_type, self.struct_dict[s][m]['array_size'])
+                    destruct_txt += '    if (%s)\n' % (m_name)
+                    destruct_txt += '        delete[] %s;\n' % (m_name)
+                    construct_txt += '        for (uint32_t i=0; i<%s; ++i) {\n' % (self.struct_dict[s][m]['array_size'])
+                    if 'safe_' in m_type:
+                        construct_txt += '            %s[i].initialize(&pInStruct->%s[i]);\n' % (m_name, m_name)
+                    else:
+                        construct_txt += '            %s[i] = %s;\n' % (m_name, array_element)
+                    construct_txt += '        }\n'
+                    construct_txt += '    } else {\n'
+                    construct_txt += '        %s = NULL;\n' % (m_name)
+                    construct_txt += '    }\n'
+                elif self.struct_dict[s][m]['ptr']:
+                    construct_txt += '    if (pInStruct->%s)\n' % (m_name)
+                    construct_txt += '        %s = new %s(pInStruct->%s);\n' % (m_name, m_type, m_name)
+                    construct_txt += '    else\n'
+                    construct_txt += '        %s = NULL;\n' % (m_name)
+                    destruct_txt += '    if (%s)\n' % (m_name)
+                    destruct_txt += '        delete %s;\n' % (m_name)
+                elif 'safe_' in m_type: # inline struct, need to pass in reference for constructor
+                    init_list += '\n\t%s(&pInStruct->%s),' % (m_name, m_name)
+                    init_func_txt += '        %s.initialize(&pInStruct->%s);\n' % (m_name, m_name)
+                else:
+                    init_list += '\n\t%s(pInStruct->%s),' % (m_name, m_name)
+                    init_func_txt += '        %s = pInStruct->%s;\n' % (m_name, m_name)
+            if '' != init_list:
+                init_list = init_list[:-1] # hack off final comma
+            ss_src.append("\n%s::%s(const %s* pInStruct) : %s\n{\n%s}" % (ss_name, ss_name, s, init_list, construct_txt))
+            ss_src.append("\n%s::%s() {}" % (ss_name, ss_name))
+            ss_src.append("\n%s::~%s()\n{\n%s}" % (ss_name, ss_name, destruct_txt))
+            ss_src.append("\nvoid %s::initialize(const %s* pInStruct)\n{\n%s%s}" % (ss_name, s, init_func_txt, construct_txt))
+            if s in ifdef_dict:
+                ss_src.append('#endif')
+        return "\n".join(ss_src)
+
 class EnumCodeGen:
     def __init__(self, enum_type_dict=None, enum_val_dict=None, typedef_fwd_dict=None, in_file=None, out_sh_file=None, out_vh_file=None):
         self.et_dict = enum_type_dict
@@ -1938,6 +2105,8 @@ def main(argv=None):
         sw.set_include_headers(["stdio.h", "stdlib.h", input_header])
         sw.generateSizeHelper()
         sw.generateSizeHelperC()
+        sw.generateSafeStructHeader()
+        sw.generateSafeStructs()
     if opts.gen_struct_sizes:
         st = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
         st.set_include_headers(["stdio.h", "stdlib.h", input_header])
