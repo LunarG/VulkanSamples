@@ -17,6 +17,7 @@ To build the Installer:
           !define VERSION_MINOR
           !define VERSION_PATCH
           !define VERSION_BUILDNO
+          !define PUBLISHER
 
     4. Right click on the InstallerRT.nsi file and select "Compile NSIS Script".
        The Windows Vulkan Runtime Installer package file will be created in
@@ -35,6 +36,11 @@ Some notes on the behavior of the Windows Vulkan Runtime Installer:
       can be run in silent mode by using the /S command line option when
       invoking the installer.
 
+   o  If the Vulkan Runtime is already installed on the system,
+      subsequent installs of the same version of the Vulkan Runtime
+      will be installed to the same folder to which it is was
+      previously installed.
+
    o  The Vulkan Runtime Installer uses "counted" installs. If the
       same version of the Vulkan Runtime is installed multiple times
       on a system, the Vulkan Runtime must be uninstalled the same
@@ -45,6 +51,15 @@ Some notes on the behavior of the Windows Vulkan Runtime Installer:
       then co-exist on the system. The Vulkan Runtime Installer does
       not remove prior versions of the Vulkan Runtime when a newer
       version is installed.
+
+   o  The Vulkan Runtime can be uninstalled from Control Panel ->
+      Programs and Features. It can also be uninstalled by running
+      UninstallVulkanRT.exe in the install folder. The uninstall can
+      be run in silent mode by using the /S command line option
+      when invoking the uninstaller. The location of the the
+      UninstallVulkanRT.exe can be found in the registry value
+      HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\
+      VulkanRT<version>\UninstallString
 
    o  The Vulkan Runtime Installer installs the Vulkan loader as
       C:\Windows\System32\vulkan-<version>.dll. It then compares all
