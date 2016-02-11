@@ -92,7 +92,7 @@ include_directories(
 if (WIN32)
     set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -D_CRT_SECURE_NO_WARNINGS")
     set (CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} -D_CRT_SECURE_NO_WARNINGS")
-    
+
     # For VS 2015, which uses compiler version 1900, draw_state.cpp fails with too many objects
     # without either optimizations enabled, or setting the /bigobj compilation option.  Since
     # optimizations are enabled in a release build, this only affects the debug build.  For now,
@@ -148,6 +148,7 @@ add_custom_target(generate_vk_layer_helpers DEPENDS
 run_vk_layer_generate(object_tracker object_tracker.cpp)
 run_vk_layer_xml_generate(Threading thread_check.h)
 run_vk_layer_generate(unique_objects unique_objects.cpp)
+run_vk_layer_xml_generate(ParamChecker param_check.h)
 
 add_library(layer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
 if (WIN32)
@@ -162,9 +163,9 @@ add_vk_layer(draw_state draw_state.cpp vk_layer_debug_marker_table.cpp vk_layer_
 add_vk_layer(device_limits device_limits.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp vk_layer_utils.cpp)
 add_vk_layer(mem_tracker mem_tracker.cpp vk_layer_table.cpp)
 add_vk_layer(image image.cpp vk_layer_table.cpp)
-add_vk_layer(param_checker param_checker.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp)
 add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
 # generated
 add_vk_layer(object_tracker object_tracker.cpp vk_layer_table.cpp)
 add_vk_layer(threading threading.cpp thread_check.h vk_layer_table.cpp)
 add_vk_layer(unique_objects unique_objects.cpp vk_layer_table.cpp vk_safe_struct.cpp)
+add_vk_layer(param_checker param_checker.cpp param_check.h vk_layer_debug_marker_table.cpp vk_layer_table.cpp)

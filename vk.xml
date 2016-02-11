@@ -4418,7 +4418,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <param><type>VkPhysicalDevice</type> <name>physicalDevice</name></param>
             <param><type>uint32_t</type> <name>planeIndex</name></param>
             <param optional="false,true"><type>uint32_t</type>* <name>pDisplayCount</name></param>
-            <param optional="true" len="pPropertyCount"><type>VkDisplayKHR</type>* <name>pDisplays</name></param>
+            <param optional="true" len="pDisplayCount"><type>VkDisplayKHR</type>* <name>pDisplays</name></param>
             <validity>
                 <usage>pname:planeIndex must: be less than the number of display planes supported by the device as determined by calling fname:vkGetPhysicalDeviceDisplayPlanePropertiesKHR</usage>
             </validity>

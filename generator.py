@@ -1,5 +1,7 @@
 #!/usr/bin/python3 -i
 import os,re,sys
+from collections import namedtuple
+from lxml import etree
 
 def write( *args, **kwargs ):
     file = kwargs.pop('file',sys.stdout)
@@ -300,6 +302,80 @@ class ThreadGeneratorOptions(GeneratorOptions):
                  protectFeature = True,
                  protectProto = True,
                  protectProtoStr = True,
+                 apicall = '',
+                 apientry = '',
+                 apientryp = '',
+                 indentFuncProto = True,
+                 indentFuncPointer = False,
+                 alignFuncParam = 0):
+        GeneratorOptions.__init__(self, filename, apiname, profile,
+                                  versions, emitversions, defaultExtensions,
+                                  addExtensions, removeExtensions, sortProcedure)
+        self.prefixText      = prefixText
+        self.genFuncPointers = genFuncPointers
+        self.protectFile     = protectFile
+        self.protectFeature  = protectFeature
+        self.protectProto    = protectProto
+        self.protectProtoStr = protectProtoStr
+        self.apicall         = apicall
+        self.apientry        = apientry
+        self.apientryp       = apientryp
+        self.indentFuncProto = indentFuncProto
+        self.indentFuncPointer = indentFuncPointer
+        self.alignFuncParam  = alignFuncParam
+
+
+# ParamCheckerGeneratorOptions - subclass of GeneratorOptions.
+#
+# Adds options used by ParamCheckerOutputGenerator objects during param checker
+# generation.
+#
+# Additional members
+#   prefixText - list of strings to prefix generated header with
+#     (usually a copyright statement + calling convention macros).
+#   protectFile - True if multiple inclusion protection should be
+#     generated (based on the filename) around the entire header.
+#   protectFeature - True if #ifndef..#endif protection should be
+#     generated around a feature interface in the header file.
+#   genFuncPointers - True if function pointer typedefs should be
+#     generated
+#   protectProto - If conditional protection should be generated
+#     around prototype declarations, set to either '#ifdef'
+#     to require opt-in (#ifdef protectProtoStr) or '#ifndef'
+#     to require opt-out (#ifndef protectProtoStr). Otherwise
+#     set to None.
+#   protectProtoStr - #ifdef/#ifndef symbol to use around prototype
+#     declarations, if protectProto is set
+#   apicall - string to use for the function declaration prefix,
+#     such as APICALL on Windows.
+#   apientry - string to use for the calling convention macro,
+#     in typedefs, such as APIENTRY.
+#   apientryp - string to use for the calling convention macro
+#     in function pointer typedefs, such as APIENTRYP.
+#   indentFuncProto - True if prototype declarations should put each
+#     parameter on a separate line
+#   indentFuncPointer - True if typedefed function pointers should put each
+#     parameter on a separate line
+#   alignFuncParam - if nonzero and parameters are being put on a
+#     separate line, align parameter names at the specified column
+class ParamCheckerGeneratorOptions(GeneratorOptions):
+    """Represents options during C interface generation for headers"""
+    def __init__(self,
+                 filename = None,
+                 apiname = None,
+                 profile = None,
+                 versions = '.*',
+                 emitversions = '.*',
+                 defaultExtensions = None,
+                 addExtensions = None,
+                 removeExtensions = None,
+                 sortProcedure = regSortFeatures,
+                 prefixText = "",
+                 genFuncPointers = True,
+                 protectFile = True,
+                 protectFeature = True,
+                 protectProto = None,
+                 protectProtoStr = None,
                  apicall = '',
                  apientry = '',
                  apientryp = '',
@@ -1259,7 +1335,7 @@ class ValidityOutputGenerator(OutputGenerator):
             write(threadsafety, file=fp, end='')
             write('*' * 80, file=fp)
             write('', file=fp)
-            
+
         # Command Properties - contained within a block, to avoid table numbering
         if commandpropertiesentry is not None:
             write('.Command Properties', file=fp)
@@ -1284,7 +1360,7 @@ class ValidityOutputGenerator(OutputGenerator):
                 write(errorcodes, file=fp)
             write('*' * 80, file=fp)
             write('', file=fp)
-            
+
         fp.close()
 
     #
@@ -1985,37 +2061,37 @@ class ValidityOutputGenerator(OutputGenerator):
             return paramdecl
 
     def makeCommandPropertiesTableEntry(self, cmd, name):
-    
+
         if 'vkCmd' in name:
             # Must be called inside/outside a renderpass appropriately
             cmdbufferlevel = cmd.attrib.get('cmdbufferlevel')
             cmdbufferlevel = (' + \n').join(cmdbufferlevel.title().split(','))
-            
+
             renderpass = cmd.attrib.get('renderpass')
             renderpass = renderpass.capitalize()
-            
+
             queues = cmd.attrib.get('queues')
             queues = (' + \n').join(queues.upper().split(','))
-            
-            return '|' + cmdbufferlevel + '|' + renderpass + '|' + queues    
+
+            return '|' + cmdbufferlevel + '|' + renderpass + '|' + queues
         elif 'vkQueue' in name:
             # Must be called inside/outside a renderpass appropriately
-            
+
             queues = cmd.attrib.get('queues')
             if queues is None:
                 queues = 'Any'
             else:
                 queues = (' + \n').join(queues.upper().split(','))
-            
-            return '|-|-|' + queues   
+
+            return '|-|-|' + queues
 
         return None
-        
+
     def makeSuccessCodes(self, cmd, name):
 
         successcodes = cmd.attrib.get('successcodes')
         if successcodes is not None:
-        
+
             successcodeentry = ''
             successcodes = successcodes.split(',')
             return '* ' + '\n* '.join(successcodes)
@@ -2026,7 +2102,7 @@ class ValidityOutputGenerator(OutputGenerator):
 
         errorcodes = cmd.attrib.get('errorcodes')
         if errorcodes is not None:
-        
+
             errorcodeentry = ''
             errorcodes = errorcodes.split(',')
             return '* ' + '\n* '.join(errorcodes)
@@ -2603,3 +2679,379 @@ class ThreadOutputGenerator(OutputGenerator):
         if (resulttype != None):
             self.appendSection('command', '    return result;')
         self.appendSection('command', '}')
+
+# ParamCheckerOutputGenerator - subclass of OutputGenerator.
+# Generates param checker layer code.
+#
+# ---- methods ----
+# ParamCheckerOutputGenerator(errFile, warnFile, diagFile) - args as for
+#   OutputGenerator. Defines additional internal state.
+# ---- methods overriding base class ----
+# beginFile(genOpts)
+# endFile()
+# beginFeature(interface, emit)
+# endFeature()
+# genType(typeinfo,name)
+# genStruct(typeinfo,name)
+# genGroup(groupinfo,name)
+# genEnum(enuminfo, name)
+# genCmd(cmdinfo)
+class ParamCheckerOutputGenerator(OutputGenerator):
+    """Generate ParamChecker code based on XML element attributes"""
+    # This is an ordered list of sections in the header file.
+    ALL_SECTIONS = ['command']
+    def __init__(self,
+                 errFile = sys.stderr,
+                 warnFile = sys.stderr,
+                 diagFile = sys.stdout):
+        OutputGenerator.__init__(self, errFile, warnFile, diagFile)
+        self.INDENT_SPACES = 4
+        # Commands to ignore
+        self.blacklist = ['vkCreateInstance', 'vkCreateDevice', 'vkGetInstanceProcAddr', 'vkGetDeviceProcAddr',
+                          'vkEnumerateInstanceLayerProperties', 'vkEnumerateInstanceExtensionsProperties',
+                          'vkEnumerateDeviceLayerProperties', 'vkEnumerateDeviceExtensionsProperties',
+                          'vkCreateDebugReportCallbackEXT', 'vkDebugReportMessageEXT']
+        # Internal state - accumulators for different inner block text
+        self.sections = dict([(section, []) for section in self.ALL_SECTIONS])
+        self.stypes = []
+        self.structTypes = dict()
+        self.commands = []
+        # Named tuples to store struct and command data
+        self.StructType = namedtuple('StructType', ['name', 'value'])
+        self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isstaticarray', 'isoptional', 'iscount', 'len', 'cdecl'])
+        self.CommandData = namedtuple('CommandData', ['name', 'params', 'cdecl'])
+    #
+    def incIndent(self, indent):
+        inc = ' ' * self.INDENT_SPACES
+        if indent:
+            return indent + inc
+        return inc
+
+    def decIndent(self, indent):
+        if indent and (len(indent) > self.INDENT_SPACES):
+            return indent[:-self.INDENT_SPACES]
+        return ''
+    #
+    def beginFile(self, genOpts):
+        OutputGenerator.beginFile(self, genOpts)
+        # C-specific
+        #
+        # User-supplied prefix text, if any (list of strings)
+        if (genOpts.prefixText):
+            for s in genOpts.prefixText:
+                write(s, file=self.outFile)
+        #
+        # Multiple inclusion protection & C++ wrappers.
+        if (genOpts.protectFile and self.genOpts.filename):
+            headerSym = re.sub('\.h', '_H', os.path.basename(self.genOpts.filename)).upper()
+            write('#ifndef', headerSym, file=self.outFile)
+            write('#define', headerSym, '1', file=self.outFile)
+            self.newline()
+        #
+        # Headers
+        write('#include "vulkan/vulkan.h"', file=self.outFile)
+        write('#include "param_checker_utils.h"', file=self.outFile)
+        #
+        # Macros
+        self.newline()
+        write('#ifndef UNUSED_PARAMETER', file=self.outFile)
+        write('#define UNUSED_PARAMETER(x) (void)(x)', file=self.outFile)
+        write('#endif // UNUSED_PARAMETER', file=self.outFile)
+    def endFile(self):
+        # C-specific
+        # Finish C++ wrapper and multiple inclusion protection
+        self.newline()
+        if (self.genOpts.protectFile and self.genOpts.filename):
+            self.newline()
+            write('#endif', file=self.outFile)
+        # Finish processing in superclass
+        OutputGenerator.endFile(self)
+    def beginFeature(self, interface, emit):
+        # Start processing in superclass
+        OutputGenerator.beginFeature(self, interface, emit)
+        # C-specific
+        # Accumulate includes, defines, types, enums, function pointer typedefs,
+        # end function prototypes separately for this feature. They're only
+        # printed in endFeature().
+        self.sections = dict([(section, []) for section in self.ALL_SECTIONS])
+        self.stypes = []
+        self.structTypes = dict()
+        self.commands = []
+    def endFeature(self):
+        # C-specific
+        # Actually write the interface to the output file.
+        if (self.emit):
+            self.newline()
+            # If type declarations are needed by other features based on
+            # this one, it may be necessary to suppress the ExtraProtect,
+            # or move it below the 'for section...' loop.
+            if (self.featureExtraProtect != None):
+                write('#ifdef', self.featureExtraProtect, file=self.outFile)
+            # Generate the command text from the captured data
+            self.processCmdData()
+            if (self.sections['command']):
+                if (self.genOpts.protectProto):
+                    write(self.genOpts.protectProto,
+                          self.genOpts.protectProtoStr, file=self.outFile)
+                write('\n'.join(self.sections['command']), end='', file=self.outFile)
+            if (self.featureExtraProtect != None):
+                write('#endif /*', self.featureExtraProtect, '*/', file=self.outFile)
+            else:
+                self.newline()
+        # Finish processing in superclass
+        OutputGenerator.endFeature(self)
+    #
+    # Append a definition to the specified section
+    def appendSection(self, section, text):
+        # self.sections[section].append('SECTION: ' + section + '\n')
+        self.sections[section].append(text)
+    #
+    # Type generation
+    def genType(self, typeinfo, name):
+        OutputGenerator.genType(self, typeinfo, name)
+        typeElem = typeinfo.elem
+        # If the type is a struct type, traverse the imbedded <member> tags
+        # generating a structure. Otherwise, emit the tag text.
+        category = typeElem.get('category')
+        if (category == 'struct' or category == 'union'):
+            self.genStruct(typeinfo, name)
+    #
+    # Struct parameter check generation.
+    # This is a special case of the <type> tag where the contents are
+    # interpreted as a set of <member> tags instead of freeform C
+    # C type declarations. The <member> tags are just like <param>
+    # tags - they are a declaration of a struct or union member.
+    # Only simple member declarations are supported (no nested
+    # structs etc.)
+    def genStruct(self, typeinfo, typeName):
+        OutputGenerator.genStruct(self, typeinfo, typeName)
+        for member in typeinfo.elem.findall('.//member'):
+            # Get the member's type and name
+            t = self.getTypeNameTuple(member)
+            type = t[0]
+            name = t[1]
+            value = ''
+            # Process VkStructureType
+            if type == 'VkStructureType':
+                # Extract the required struct type value from the comments
+                # embedded in the original text defining the 'typeinfo' element
+                rawXml = etree.tostring(typeinfo.elem).decode('ascii')
+                result = re.search('VK_STRUCTURE_TYPE_\w+', rawXml)
+                if result:
+                    value = result.group(0)
+                    # Make sure value is valid
+                    #if value not in self.stypes:
+                    #    print('WARNING: {} is not part of the VkStructureType enumeration [{}]'.format(value, typeName))
+                else:
+                    value = '<ERROR>'
+                # Store the required value
+                self.structTypes[typeName] = self.StructType(name=name, value=value)
+    #
+    # Group (e.g. C "enum" type) generation.
+    # These are concatenated together with other types.
+    def genGroup(self, groupinfo, groupName):
+        OutputGenerator.genGroup(self, groupinfo, groupName)
+        if groupName == 'VkStructureType':
+            groupElem = groupinfo.elem
+            for elem in groupElem.findall('enum'):
+                name = elem.get('name')
+                self.stypes.append(name)
+    #
+    # Command generation
+    def genCmd(self, cmdinfo, name):
+        OutputGenerator.genCmd(self, cmdinfo, name)
+        if name not in self.blacklist:
+            proto = cmdinfo.elem.find('proto')       # Function name and return type
+            params = cmdinfo.elem.findall('param')
+            usages = cmdinfo.elem.findall('validity/usage')
+            # Get list of array lengths
+            lens = set()
+            for param in params:
+                len = self.getLen(param)
+                if len:
+                    lens.add(len)
+            # Get param info
+            paramsInfo = []
+            for param in params:
+                paramInfo = self.getTypeNameTuple(param)
+                # Check for parameter name in lens set
+                iscount = False
+                if paramInfo[1] in lens:
+                    iscount = True
+                paramsInfo.append(self.CommandParam(type=paramInfo[0], name=paramInfo[1],
+                                                    ispointer=self.paramIsPointer(param),
+                                                    isstaticarray=self.paramIsStaticArray(param),
+                                                    isoptional=self.paramIsOptional(param),
+                                                    iscount=iscount,
+                                                    len=self.getLen(param),
+                                                    cdecl=self.makeCParamDecl(param, 0)))
+            self.commands.append(self.CommandData(name=name, params=paramsInfo, cdecl=self.makeCDecls(cmdinfo.elem)[0]))
+    #
+    # Check if the parameter passed in is a pointer
+    def paramIsPointer(self, param):
+        ispointer = False
+        paramtype = param.find('type')
+        if paramtype.tail is not None and '*' in paramtype.tail:
+            ispointer = True
+        return ispointer
+    #
+    # Check if the parameter passed in is a static array
+    def paramIsStaticArray(self, param):
+        isstaticarray = False
+        tail = param.find('name').tail
+        if tail and tail[0] == '[':
+            isstaticarray = True
+        return isstaticarray
+    #
+    # Check if the parameter passed in is optional
+    # Returns a list of Boolean values for comma separated len attributes (len='false,true')
+    def paramIsOptional(self, param):
+        # See if the handle is optional
+        isoptional = False
+        # Simple, if it's optional, return true
+        optString = param.attrib.get('optional')
+        if optString:
+            if optString == 'true':
+                isoptional = True
+            elif ',' in optString:
+                opts = []
+                for opt in optString.split(','):
+                    val = opt.strip()
+                    if val == 'true':
+                        opts.append(True)
+                    elif val == 'false':
+                        opts.append(False)
+                    else:
+                        print('Unrecognized len attribute value',val)
+                isoptional = opts
+        return isoptional
+    #
+    # Retrieve the value of the len tag
+    def getLen(self, param):
+        len = param.attrib.get('len')
+        if len and len != 'null-terminated':
+            return len
+        return None
+    #
+    # Retrieve the type and name for a parameter
+    def getTypeNameTuple(self, param):
+        type = ''
+        name = ''
+        for elem in param:
+            if elem.tag == 'type':
+                type = noneStr(elem.text)
+            elif elem.tag == 'name':
+                name = noneStr(elem.text)
+        return (type, name)
+    #
+    # Find a named parameter in a parameter list
+    def getParamByName(self, params, name):
+        for param in params:
+            if param.name == name:
+                return param
+        return None
+    def getCmdDef(self, cmd):
+        # TODO: Override makeCDecls
+        #
+        # Strip the trailing ';' and split into individual lines
+        lines = cmd.cdecl[:-1].split('\n')
+        # Replace Vulkan prototype
+        lines[0] = 'static VkBool32 param_check_' + cmd.name + '('
+        # Replace the first argument with debug_report_data
+        lines[1] = '    debug_report_data*                          report_data,'
+        return '\n'.join(lines)
+    #
+    # Generate the command text from the captured data
+    def processCmdData(self):
+        indent = self.incIndent(None)
+        for command in self.commands:
+            cmdBody = ''
+            unused = []
+            for param in command.params:
+                #
+                # Check for NULL pointers, ignore the inout count parameters that
+                # will be validated with their associated array
+                if (param.ispointer or param.isstaticarray) and not param.iscount:
+                    #
+                    # Parameters for function argument generation
+                    req = 'VK_TRUE'    # Paramerter can be NULL
+                    cpReq = 'VK_TRUE'  # Count pointer can be NULL
+                    cvReq = 'VK_TRUE'  # Count value can be 0
+                    lenParam = None
+                    #
+                    # Generate required parameter string for the pointer and count values
+                    if param.isoptional:
+                        req = 'VK_FALSE'
+                    if param.len:
+                        # The parameter is an array with an explicit count parameter
+                        # TODO: Better handling for special case counts and counts from struct members
+                        if param.len in ['pAllocateInfo->descriptorSetCount', 'pAllocateInfo->commandBufferCount']:
+                            lenParam = self.CommandParam(name=param.len, iscount=True, ispointer=False, isoptional=False, type=None, len=None, isstaticarray=None, cdecl=None)
+                        elif param.len == 'dataSize/4':
+                            lenParam = self.getParamByName(command.params, 'dataSize')
+                        else:
+                            lenParam = self.getParamByName(command.params, param.len)
+                        if lenParam.ispointer:
+                            # Count parameters that are pointers are inout
+                            if type(lenParam.isoptional) is list:
+                                if lenParam.isoptional[0]:
+                                    cpReq = 'VK_FALSE'
+                                if lenParam.isoptional[1]:
+                                    cvReq = 'VK_FALSE'
+                            else:
+                                if lenParam.isoptional:
+                                    cpReq = 'VK_FALSE'
+                        else:
+                            if lenParam.isoptional:
+                                cvReq = 'VK_FALSE'
+                    #
+                    # If this is a pointer to a struct with an sType field, verify the type
+                    if param.type in self.structTypes:
+                        # Add this command to the file; TODO: pre-determine this
+                        cmdBody += '\n'
+                        #
+                        stype = self.structTypes[param.type]
+                        if lenParam:
+                            # This is an array
+                            if lenParam.ispointer:
+                                cmdBody += indent + 'skipCall |= validate_struct_type_array(report_data, "{}", "{}", "{}", "{}", {}, {}, {}, {}, {}, {});\n'.format(command.name, lenParam.name, param.name, stype.value, lenParam.name, param.name, stype.value, cpReq, cvReq, req)
+                            else:
+                                cmdBody += indent + 'skipCall |= validate_struct_type_array(report_data, "{}", "{}", "{}", "{}", {}, {}, {}, {}, {});\n'.format(command.name, lenParam.name, param.name, stype.value, lenParam.name, param.name, stype.value, cvReq, req)
+                        else:
+                            cmdBody += indent + 'skipCall |= validate_struct_type(report_data, "{}", "{}", "{}", {}, {}, {});\n'.format(command.name, param.name, stype.value, param.name, stype.value, req)
+                    else:
+                        if lenParam:
+                            # Add this command to the file; TODO: pre-determine this
+                            cmdBody += '\n'
+                            #
+                            # This is an array
+                            if lenParam.ispointer:
+                                cmdBody += indent + 'skipCall |= validate_array(report_data, "{}", "{}", "{}", {}, {}, {}, {}, {});\n'.format(command.name, lenParam.name, param.name, lenParam.name, param.name, cpReq, cvReq, req)
+                            else:
+                                cmdBody += indent + 'skipCall |= validate_array(report_data, "{}", "{}", "{}", {}, {}, {}, {});\n'.format(command.name, lenParam.name, param.name, lenParam.name, param.name, cvReq, req)
+                        elif not param.isoptional:
+                            # Add this command to the file; TODO: pre-determine this
+                            cmdBody += '\n'
+                            #
+                            cmdBody += indent + 'skipCall |= validate_required_pointer(report_data, "{}", "{}", {});\n'.format(command.name, param.name, param.name)
+                        else:
+                            unused.append(param.name)
+                elif not param.iscount:
+                    unused.append(param.name)
+            if cmdBody:
+                cmdDef = self.getCmdDef(command) + '\n'
+                cmdDef += '{\n'
+                indDnt = self.incIndent(None)
+                # Ignore the first dispatch handle parameter, which is not
+                # processed by param_check
+                for name in unused[1:]:
+                    cmdDef += indent + 'UNUSED_PARAMETER({});\n'.format(name)
+                if len(unused) > 1:
+                    cmdDef += '\n'
+                cmdDef += indent + 'VkBool32 skipCall = VK_FALSE;\n'
+                cmdDef += cmdBody
+                cmdDef += '\n'
+                cmdDef += indent + 'return skipCall;\n'
+                cmdDef += '}\n'
+                self.appendSection('command', cmdDef)
+
