@@ -27,7 +27,6 @@
 #include <vector>
 #include <stdexcept>
 #include <vulkan/vulkan.h>
-#include <vulkan/vk_ext_debug_report.h>
 #include <android/log.h>
 
 #include "Game.h"

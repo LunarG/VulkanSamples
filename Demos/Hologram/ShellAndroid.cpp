@@ -144,13 +144,13 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugReportCallback(VkDebugReportFlagsEXT 
     if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         __android_log_print(ANDROID_LOG_ERROR,
                             "Hologram", "ERROR: [%s] Code %i : %s", pLayerPrefix, msgCode, pMsg);
-    } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT_EXT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
         __android_log_print(ANDROID_LOG_WARN,
                             "Hologram", "WARNING: [%s] Code %i : %s", pLayerPrefix, msgCode, pMsg);
-    } else if (msgFlags & VK_DEBUG_REPORT_PERF_WARN_BIT_EXT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
         __android_log_print(ANDROID_LOG_WARN,
                             "Hologram", "PERFORMANCE WARNING: [%s] Code %i : %s",pLayerPrefix, msgCode, pMsg);
-    } else if (msgFlags & VK_DEBUG_REPORT_INFO_BIT_EXT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
         __android_log_print(ANDROID_LOG_INFO,
                             "Hologram", "INFO: [%s] Code %i : %s", pLayerPrefix, msgCode, pMsg);
     } else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
@@ -181,8 +181,8 @@ void ShellAndroid::init_debug_callback(VkInstance instance)
                 VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         debugReportCallbackCreateInfo.pNext = NULL;
         debugReportCallbackCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT |
-                                              VK_DEBUG_REPORT_WARN_BIT_EXT |
-                                              VK_DEBUG_REPORT_PERF_WARN_BIT_EXT;
+                                              VK_DEBUG_REPORT_WARNING_BIT_EXT |
+                                              VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
         debugReportCallbackCreateInfo.pfnCallback = DebugReportCallback;
         debugReportCallbackCreateInfo.pUserData = NULL;
 
