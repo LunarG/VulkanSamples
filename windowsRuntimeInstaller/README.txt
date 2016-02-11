@@ -95,3 +95,11 @@ Some notes on the behavior of the Windows Vulkan Runtime Installer:
       If the Uninstaller returns an error code of 10, it will have
       simply exited when the failure was detected and will
       not have attempted to do further uninstall work.
+
+   o The ProductVersion of the installer executable (right click on
+     the executable, Properties, then the Details tab) can be used
+     by other installers/uninstallers to find the path to the
+     uninstaller for the Vulkan Runtime in the Windows registry.
+     This ProductVersion should always be identical to <version> in:
+
+       HKLM\Software\Microsoft\Windows\CurrentVersion\Uininstall\VulkanRT<version>\UinstalString
