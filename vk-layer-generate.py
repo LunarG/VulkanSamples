@@ -1403,6 +1403,7 @@ class ObjectTrackerSubcommand(Subcommand):
                                    'vkGetPhysicalDeviceSurfaceFormatsKHR',
                                    'vkGetPhysicalDeviceSurfacePresentModesKHR',
                                    'vkCreateXcbSurfaceKHR',
+                                   'vkCreateAndroidSurfaceKHR',
                                    'vkGetPhysicalDeviceXcbPresentationSupportKHR'])]
         # TODO: Add cases for Mir, Wayland and Xlib
         else: # android
@@ -1542,10 +1543,11 @@ class UniqueObjectsSubcommand(Subcommand):
                                              'CreateGraphicsPipelines'
                                              ]
         # TODO : This is hacky, need to make this a more general-purpose solution for all layers
-        ifdef_dict = {'CreateXcbSurfaceKHR': 'VK_USE_PLATFORM_XCB_KHR'}
+        ifdef_dict = {'CreateXcbSurfaceKHR': 'VK_USE_PLATFORM_XCB_KHR', 'CreateAndroidSurfaceKHR': 'VK_USE_PLATFORM_ANDROID_KHR'}
         # Give special treatment to create functions that return multiple new objects
         # This dict stores array name and size of array
         custom_create_dict = {'pDescriptorSets' : 'pAllocateInfo->descriptorSetCount'}
+        pre_call_txt += '%s\n' % (self.lineinfo.get())
         if proto.name in explicit_object_tracker_functions:
             funcs.append('%s%s\n'
                      '{\n'
@@ -1679,7 +1681,8 @@ class UniqueObjectsSubcommand(Subcommand):
                                    'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
                                    'vkGetPhysicalDeviceSurfaceFormatsKHR',
                                    'vkGetPhysicalDeviceSurfacePresentModesKHR',
-                                   'vkCreateXcbSurfaceKHR'
+                                   'vkCreateXcbSurfaceKHR',
+                                   'vkCreateAndroidSurfaceKHR'
                                    ])]
         # TODO: Add cases for Mir, Wayland and Xlib
         else: # android

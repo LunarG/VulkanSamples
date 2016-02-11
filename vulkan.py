@@ -1114,6 +1114,18 @@ ext_khr_xcb_surface = Extension(
              Param("xcb_visualid_t", "visual_id")]),
     ],
 )
+ext_khr_android_surface = Extension(
+    name="VK_KHR_android_surface",
+    headers=["vulkan/vulkan.h"],
+    objects=[],
+    protos=[
+        Proto("VkResult", "CreateAndroidSurfaceKHR",
+            [Param("VkInstance", "instance"),
+             Param("const VkAndroidSurfaceCreateInfoKHR*", "pCreateInfo"),
+             Param("const VkAllocationCallbacks*", "pAllocator"),
+             Param("VkSurfaceKHR*", "pSurface")]),
+    ],
+)
 ext_khr_win32_surface = Extension(
     name="VK_KHR_win32_surface",
     headers=["vulkan/vulkan.h"],
@@ -1192,8 +1204,8 @@ if sys.platform == 'win32':
     extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface]
     extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, lunarg_debug_report, lunarg_debug_marker]
 else:
-    extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface]
-    extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, lunarg_debug_report, lunarg_debug_marker]
+    extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_android_surface]
+    extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_android_surface, lunarg_debug_report, lunarg_debug_marker]
 
 object_dispatch_list = [
     "VkInstance",
