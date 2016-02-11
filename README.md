@@ -73,7 +73,7 @@ Next build spirv-tools:
 
 Next build the Vulkan Samples:
   ```
-  PS > cd C:\VulkanSDK\<version>\VkSamples
+  PS > cd C:\VulkanSDK\<version>\Samples
   PS > mkdir build
   PS > cd build
   PS > cmake -G "Visual Studio 12 Win64" ..
