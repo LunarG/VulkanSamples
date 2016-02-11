@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -33,8 +34,7 @@ Create Vulkan command buffer
 #include <assert.h>
 #include <cstdlib>
 
-int sample_main()
-{
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Command Buffer Sample";
@@ -59,7 +59,8 @@ int sample_main()
     cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
     cmd_pool_info.flags = 0;
 
-    res = vkCreateCommandPool(info.device, &cmd_pool_info, NULL, &info.cmd_pool);
+    res =
+        vkCreateCommandPool(info.device, &cmd_pool_info, NULL, &info.cmd_pool);
     assert(res == VK_SUCCESS);
 
     /* Create the command buffer from the command pool */
@@ -75,7 +76,7 @@ int sample_main()
 
     /* VULKAN_KEY_END */
 
-    VkCommandBuffer cmd_bufs[1] = { info.cmd };
+    VkCommandBuffer cmd_bufs[1] = {info.cmd};
     vkFreeCommandBuffers(info.device, info.cmd_pool, 1, cmd_bufs);
     vkDestroyCommandPool(info.device, info.cmd_pool, NULL);
     destroy_window(info);

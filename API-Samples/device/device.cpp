@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -34,8 +35,7 @@ create and destroy a Vulkan physical device
 #include <cstdlib>
 #include <util_init.hpp>
 
-int sample_main()
-{
+int sample_main() {
     struct sample_info info = {};
     init_instance(info, "vulkansamples_device");
 
@@ -45,18 +45,18 @@ int sample_main()
 
     VkDeviceQueueCreateInfo queue_info = {};
 
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count,
+                                             NULL);
     assert(info.queue_count >= 1);
 
     info.queue_props.resize(info.queue_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count,
+                                             info.queue_props.data());
     assert(info.queue_count >= 1);
 
     bool found = false;
-    for (unsigned int i = 0; i < info.queue_count; i++)
-    {
-        if (info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-        {
+    for (unsigned int i = 0; i < info.queue_count; i++) {
+        if (info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             queue_info.queueFamilyIndex = i;
             found = true;
             break;
@@ -65,7 +65,7 @@ int sample_main()
     assert(found);
     assert(info.queue_count >= 1);
 
-    float queue_priorities[1] = { 0.0 };
+    float queue_priorities[1] = {0.0};
     queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queue_info.pNext = NULL;
     queue_info.queueCount = 1;
@@ -83,7 +83,8 @@ int sample_main()
     device_info.pEnabledFeatures = NULL;
 
     VkDevice device;
-    VkResult U_ASSERT_ONLY res = vkCreateDevice(info.gpus[0], &device_info, NULL, &device);
+    VkResult U_ASSERT_ONLY res =
+        vkCreateDevice(info.gpus[0], &device_info, NULL, &device);
     assert(res == VK_SUCCESS);
 
     vkDestroyDevice(device, NULL);
@@ -94,4 +95,3 @@ int sample_main()
 
     return 0;
 }
-

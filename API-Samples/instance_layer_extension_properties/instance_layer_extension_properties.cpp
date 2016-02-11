@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -30,8 +31,7 @@ Get list of global layers and their associated extensions, if any.
 #include <util_init.hpp>
 #include <cstdlib>
 
-int sample_main()
-{
+int sample_main() {
     VkResult res;
     uint32_t instance_layer_count;
     VkLayerProperties *vk_props = NULL;
@@ -59,9 +59,11 @@ int sample_main()
             break;
         }
 
-        vk_props = (VkLayerProperties *) realloc(vk_props, instance_layer_count * sizeof(VkLayerProperties));
+        vk_props = (VkLayerProperties *)realloc(
+            vk_props, instance_layer_count * sizeof(VkLayerProperties));
 
-        res = vkEnumerateInstanceLayerProperties(&instance_layer_count, vk_props);
+        res =
+            vkEnumerateInstanceLayerProperties(&instance_layer_count, vk_props);
     } while (res == VK_INCOMPLETE);
 
     /* VULKAN_KEY_START */
@@ -83,9 +85,7 @@ int sample_main()
 
             do {
                 res = vkEnumerateInstanceExtensionProperties(
-                          layer_name,
-                          &instance_extension_count,
-                          NULL);
+                    layer_name, &instance_extension_count, NULL);
 
                 if (res)
                     break;
@@ -97,9 +97,7 @@ int sample_main()
                 layer_props.extensions.resize(instance_extension_count);
                 instance_extensions = layer_props.extensions.data();
                 res = vkEnumerateInstanceExtensionProperties(
-                          layer_name,
-                          &instance_extension_count,
-                          instance_extensions);
+                    layer_name, &instance_extension_count, instance_extensions);
             } while (res == VK_INCOMPLETE);
         }
 
@@ -113,9 +111,9 @@ int sample_main()
     /* VULKAN_KEY_END */
 
     std::cout << "Instance Layers:" << std::endl;
-    for (std::vector<layer_properties>::iterator it = instance_layer_properties.begin();
-         it != instance_layer_properties.end();
-         it++) {
+    for (std::vector<layer_properties>::iterator it =
+             instance_layer_properties.begin();
+         it != instance_layer_properties.end(); it++) {
         layer_properties *props = &(*it);
         std::cout << props->properties.layerName << std::endl;
         if (props->extensions.size() > 0) {
@@ -123,16 +121,17 @@ int sample_main()
                 if (j > 0) {
                     std::cout << ", ";
                 }
-                std::cout << props->extensions[j].extensionName << " Version " << props->extensions[j].specVersion;
+                std::cout << props->extensions[j].extensionName << " Version "
+                          << props->extensions[j].specVersion;
             }
         } else {
             std::cout << "Layer Extensions: None";
         }
-        std::cout << std::endl << std::endl;
+        std::cout << std::endl
+                  << std::endl;
     }
 
     std::cout << std::endl;
-
 
     return 0;
 }
