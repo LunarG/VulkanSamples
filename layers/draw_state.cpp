@@ -5833,33 +5833,66 @@ VkBool32 ValidateMaskBitsFromLayouts(const layer_data* my_data, VkCommandBuffer 
     return skip_call;
 }
 
-VkBool32 ValidateBarriers(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount, const VkMemoryBarrier* pMemBarriers, uint32_t imageMemBarrierCount, const VkImageMemoryBarrier *pImageMemBarriers)
-{
+VkBool32 ValidateBarriers(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
+                          const VkMemoryBarrier *pMemBarriers,
+                          uint32_t bufferBarrierCount,
+                          const VkBufferMemoryBarrier *pBufferMemBarriers,
+                          uint32_t imageMemBarrierCount,
+                          const VkImageMemoryBarrier *pImageMemBarriers) {
     VkBool32 skip_call = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
     if (pCB->activeRenderPass && memBarrierCount) {
-        for (uint32_t i = 0; i < memBarrierCount; ++i) {
-            auto mem_barrier = &pMemBarriers[i];
-            if (mem_barrier && mem_barrier->sType != VK_STRUCTURE_TYPE_MEMORY_BARRIER) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
-                                     "Image or Buffers Barriers cannot be used during a render pass.");
-            }
-        }
         if (!dev_data->renderPassMap[pCB->activeRenderPass]->hasSelfDependency[pCB->activeSubpass]) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
                                  "Barriers cannot be set during subpass %d with no self dependency specified.", pCB->activeSubpass);
         }
     }
-
     for (uint32_t i = 0; i < imageMemBarrierCount; ++i) {
         auto mem_barrier = &pImageMemBarriers[i];
+        if (pCB->activeRenderPass) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_INVALID_BARRIER, "DS",
+                        "Image Barriers cannot be used during a render pass.");
+        }
         if (mem_barrier && mem_barrier->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
             skip_call |= ValidateMaskBitsFromLayouts(dev_data, cmdBuffer, mem_barrier->srcAccessMask, mem_barrier->oldLayout, "Source");
             skip_call |= ValidateMaskBitsFromLayouts(dev_data, cmdBuffer, mem_barrier->dstAccessMask, mem_barrier->newLayout, "Dest");
         }
     }
-
+    for (uint32_t i = 0; i < bufferBarrierCount; ++i) {
+        auto mem_barrier = &pBufferMemBarriers[i];
+        if (pCB->activeRenderPass) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_INVALID_BARRIER, "DS",
+                        "Buffer Barriers cannot be used during a render pass.");
+        }
+        if (!mem_barrier)
+            continue;
+        auto buffer_data = dev_data->bufferMap.find(mem_barrier->buffer);
+        uint64_t buffer_size = buffer_data->second.create_info
+                                   ? reinterpret_cast<uint64_t &>(
+                                         buffer_data->second.create_info->size)
+                                   : 0;
+        if (buffer_data != dev_data->bufferMap.end() &&
+            mem_barrier->offset + mem_barrier->size > buffer_size) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_INVALID_BARRIER, "DS",
+                        "Buffer Barrier 0x%" PRIx64 " has offset %" PRIu64
+                        " and size %" PRIu64
+                        " whos sum is greater than total size %" PRIu64 ".",
+                        reinterpret_cast<const uint64_t &>(mem_barrier->buffer),
+                        reinterpret_cast<const uint64_t &>(mem_barrier->offset),
+                        reinterpret_cast<const uint64_t &>(mem_barrier->size),
+                        buffer_size);
+        }
+    }
     return skip_call;
 }
 
@@ -5885,7 +5918,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdWaitEvents()");
         }
         skipCall |= TransitionImageLayouts(commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
-        skipCall |= ValidateBarriers(commandBuffer, memoryBarrierCount, pMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
+        skipCall |=
+            ValidateBarriers(commandBuffer, memoryBarrierCount, pMemoryBarriers,
+                             bufferMemoryBarrierCount, pBufferMemoryBarriers,
+                             imageMemoryBarrierCount, pImageMemoryBarriers);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall)
@@ -5909,7 +5945,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(
     if (pCB) {
         skipCall |= addCmd(dev_data, pCB, CMD_PIPELINEBARRIER, "vkCmdPipelineBarrier()");
         skipCall |= TransitionImageLayouts(commandBuffer, imageMemoryBarrierCount, pImageMemoryBarriers);
-        skipCall |= ValidateBarriers(commandBuffer, memoryBarrierCount, pMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
+        skipCall |=
+            ValidateBarriers(commandBuffer, memoryBarrierCount, pMemoryBarriers,
+                             bufferMemoryBarrierCount, pBufferMemoryBarriers,
+                             imageMemoryBarrierCount, pImageMemoryBarriers);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall)
