@@ -38,7 +38,7 @@ if(NOT EXISTS ${GLMINC_PREFIX})
 endif()
 
 get_filename_component(GLSLANG_PREFIX "${GLSLANGDIR}" ABSOLUTE)
-if(NOT EXISTS ${GLSLANG_PREFIX})
+if(NOT EXISTS ${GLSLANG_PREFIX} AND NOT ANDROID)
     message(FATAL_ERROR "Necessary glslang components do not exist: " ${GLSLANG_PREFIX})
 endif()
 

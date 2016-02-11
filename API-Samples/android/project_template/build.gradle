@@ -1,0 +1,117 @@
+apply plugin: 'com.android.model.application'
+
+Properties properties = new Properties()
+properties.load(project.rootProject.file('local.properties').newDataInputStream())
+def ndkDir = properties.getProperty('ndk.dir')
+def vulkanLibDir  = file(project.rootProject.projectDir).absolutePath + "/../../../vulkan"
+def shadercLibPath = file(project.rootProject.projectDir).absolutePath + "/../../../shaderc"
+def vulkanWrapperPath = file(project.rootProject.projectDir).absolutePath + "/../../../vulkan_wrapper"
+def validationLayerDir  = file(project.rootProject.projectDir).absolutePath + "/../../../LoaderAndTools/"
+
+def stlType = "c++_static"
+
+model {
+    repositories {
+        libs(PrebuiltLibraries) {
+            shaderc {
+                headers.srcDir "${shadercLibPath}/include"
+                binaries.withType(StaticLibraryBinary) {
+                    staticLibraryFile = file("${shadercLibPath}/lib/${stlType}/${targetPlatform.getName()}/libshaderc.a")
+                }
+            }
+        }
+        libs(PrebuiltLibraries) {
+            vulkan {
+                headers.srcDir "${vulkanLibDir}/include"
+                binaries.withType(SharedLibraryBinary) {
+                    sharedLibraryFile = file("${vulkanLibDir}/lib/${targetPlatform.getName()}/libvulkan.so")
+                }
+            }
+        }
+    }
+
+    android {
+        compileSdkVersion = 23
+        buildToolsVersion = "23.0.2"
+
+        defaultConfig.with {
+            applicationId = "@PACKAGE_NAME@"
+            minSdkVersion.apiLevel = 22
+            targetSdkVersion.apiLevel = 23
+            versionCode = 1
+            versionName = "0.0.1"
+        }
+
+        compileOptions.with {
+            sourceCompatibility=JavaVersion.VERSION_1_7
+            targetCompatibility=JavaVersion.VERSION_1_7
+        }
+    }
+
+    android.ndk {
+        moduleName = "vulkan_samples"
+        cppFlags.add("-Werror")
+        cppFlags.add("-std=c++11")
+        toolchain = "clang"
+        stl = stlType
+        ldLibs.addAll(["log", "android"])
+        cppFlags.add("-I${file("${ndkDir}/sources/android/native_app_glue")}".toString())
+        cppFlags.add("-I${file("../../utils")}".toString())
+        cppFlags.add("-I${file("../../utils/glm")}".toString())
+        cppFlags.add("-I${file("../../data")}".toString())
+        cppFlags.add("-I${file(vulkanWrapperPath)}".toString())
+        cppFlags.add("-D VK_PROTOTYPES")
+        cppFlags.add("-D VK_USE_PLATFORM_ANDROID_KHR")
+        cppFlags.add("-D VULKAN_SAMPLES_BASE_DIR=\".\"")
+        @OTHER_FLAGS@
+    }
+
+    android.sources {
+        main {
+            jni {
+                dependencies {
+                    project ":nativeactivity" linkage "static"
+                    library "vulkan"          linkage "shared"
+                    @SHADERC_LINKAGE@
+                 }
+                source {
+                    srcDir 'src/main/jni'
+                    srcDir '../../@SAMPLE_NAME@'
+                    srcDir '../../utils'
+                    srcDir '../../ext/'
+                    //srcDir vulkanWrapperPath
+                }
+            }
+            assets {
+                source {
+                    @ASSET_DIR@
+                }
+            }
+        }
+    }
+
+    android.buildTypes {
+        release {
+            ndk.with {
+                debuggable = true
+            }
+            minifyEnabled = false
+            proguardFiles.add(file('proguard-rules.pro'))
+        }
+    }
+
+    android.productFlavors {
+        create ("x86") {
+            ndk.abiFilters.add("x86")
+        }
+        create ("x86_64") {
+            ndk.abiFilters.add("x86_64")
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile project(':nativeactivity')
+}
+ 

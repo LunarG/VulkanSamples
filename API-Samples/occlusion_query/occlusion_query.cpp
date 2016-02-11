@@ -94,7 +94,7 @@ int sample_main()
     info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 #ifdef _WIN32
     info.instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#else
+#elif !defined(__ANDROID__)
     info.instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #endif
     info.device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -149,7 +149,7 @@ int sample_main()
     res = vkAcquireNextImageKHR(info.device, info.swap_chain,
                                       UINT64_MAX,
                                       presentCompleteSemaphore,
-                                      NULL,
+                                      VK_NULL_HANDLE,
                                       &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes

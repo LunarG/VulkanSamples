@@ -86,7 +86,7 @@ int sample_main()
     res = vkAcquireNextImageKHR(info.device, info.swap_chain,
                                       UINT64_MAX,
                                       presentCompleteSemaphore,
-                                      NULL,
+                                      VK_NULL_HANDLE,
                                       &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes

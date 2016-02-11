@@ -54,7 +54,67 @@ endfunction(sampleExtSPIRVShaders)
 function(sampleWithSingleFile)
     foreach(TARG ${S_TARGETS})
         set(SAMPLE_NAME ${TARG})
-        if(UNIX)
+        if(ANDROID)
+            # Generate AndroidStudio project files.
+            MESSAGE("Generating AndroidStudio project:" ${SAMPLE_NAME})
+            # Replace "-" to "_", which is invalid in a package name.
+            STRING(REPLACE "-" "_" PACKAGE_NAME ${SAMPLE_NAME})
+            set (PACKAGE_NAME org.khronos.vulkan.samples.${PACKAGE_NAME})
+            set (SAMPLE_DESCRIPTION "Vulkan sample: ${SAMPLE_NAME}")
+            file(COPY ./android/project_template/ DESTINATION ./android/${SAMPLE_NAME}/)
+
+            # Clear flags.
+            set (OTHER_FLAGS "")
+            set (ASSET_DIR "")
+            set (EXTRA_PERMISSIONS "")
+            set (SHADERC_LINKAGE "")
+
+            # Add extra setting for some samples.
+            # External shader usage.
+            set (SAMPLE_WITH_SPIRV drawcube drawsubpasses drawtexturedcube dynamicuniform
+             immutable_sampler initpipeline initshaders multiple_sets multithreadcmdbuf
+             occlusion_query pipeline_cache pipeline_derivative push_constants secondarycmd
+             separate_image_sampler spirv_assembly spirv_specialization template texelbuffer)
+            if (ANDROID_NO_SHADERC)
+                set (OTHER_FLAGS "cppFlags.add(\"-D ANDROID_NO_SHADERC\")\n        ")
+            else()
+                set (SHADERC_LINKAGE "library \"shaderc\"         linkage \"static\"")
+            endif()
+
+            # Include resource files.
+            set (SAMPLE_WITH_RESOURCES
+             drawtexturedcube immutable_sampler multiple_sets pipeline_cache
+             pipeline_derivative secondarycmd separate_image_sampler spirv_assembly
+             spirv_specialization template)
+            if (";${SAMPLE_WITH_RESOURCES};" MATCHES ";${SAMPLE_NAME};" OR
+                ";${SAMPLE_WITH_SPIRV};" MATCHES ";${SAMPLE_NAME};")
+                set (ASSET_DIR "srcDir '../../data/'")
+            endif()
+
+            # Add external storage access permission.
+            set (SAMPLE_WITH_EXTERNALSTORAGEACCESS pipeline_cache)
+            if (";${SAMPLE_WITH_EXTERNALSTORAGEACCESS};" MATCHES ";${SAMPLE_NAME};")
+                set (EXTRA_PERMISSIONS "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>")
+            endif()
+
+            # Add validation layer settings.
+            set (SAMPLE_WITH_TOOLS dbgcreatemsgcallback enable_validation_with_callback)
+            if (";${SAMPLE_WITH_TOOLS};" MATCHES ";${SAMPLE_NAME};")
+                set (OTHER_FLAGS "${OTHER_FLAGS}cppFlags.add(\"-D USE_DEBUG_EXTENTIONS\")\n        cppFlags.add(\"-I\${validationLayerDir}/include\".toString())")
+            endif()
+
+            # Cook template files.
+            set (TEMPLATE_FILES
+                android/${SAMPLE_NAME}/src/main/res/values/strings.xml
+                android/${SAMPLE_NAME}/src/main/AndroidManifest.xml
+                android/${SAMPLE_NAME}/build.gradle
+                android/${SAMPLE_NAME}/README.md
+            )
+            foreach(TEMPLATE_FILE ${TEMPLATE_FILES})
+                configure_file(${TEMPLATE_FILE} ${TEMPLATE_FILE} @ONLY)
+            endforeach(TEMPLATE_FILE)
+            SET(SETTINGS_GRADLE "${SETTINGS_GRADLE} ,\n':${SAMPLE_NAME}'")
+        elseif(UNIX)
             add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD} ${SPIRV_TOOLS_LIBRARIES})
         else()
@@ -62,6 +122,11 @@ function(sampleWithSingleFile)
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${VULKAN_LOADER} ${WINLIBS} ${SPIRV_TOOLS_LIBRARIES})
         endif()
     endforeach(TARG)
+
+    if(ANDROID)
+        #generate Settings.gradle
+        configure_file(android/settings.gradle.in android/settings.gradle @ONLY)
+    endif()
 endfunction(sampleWithSingleFile)
 
 # function to build a simple single-source-file sample
@@ -119,7 +184,7 @@ endif()
 
 set (LIBGLM_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/libs)
 
-if(NOT WIN32)
+if(NOT WIN32 AND NOT ANDROID)
     include_directories(
         ${XCB_INCLUDE_DIRS}
     )
@@ -246,6 +311,9 @@ endif()
 # START BUILDING SAMPLES HERE
 #
 
+# Generate Android project.
+option(ANDROID OFF)
+
 # simple one file sample targets, no additional files
 set (S_TARGETS instance device enumerate enumerate-adv
     depthbuffer initswapchain inittexture uniformbuffer
@@ -276,4 +344,5 @@ add_subdirectory(utils)
 # set(SAMPLE_GLSL_FRAG_SHADERS glslshader)
 # set(SAMPLE_GLSL_VERT_SHADERS glslshader)
 # sampleExtGLSLShaders()
+
 

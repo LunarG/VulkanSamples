@@ -37,15 +37,28 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #define NOMINMAX              /* Don't let Windows define min() or max() */
 #define APP_NAME_STR_LEN 80
-#else  // _WIN32
+#elif defined(__ANDROID__)
+#include <unistd.h>
+#include <android/log.h>
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "threaded_app", __VA_ARGS__))
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "threaded_app", __VA_ARGS__))
+// Replace printf to logcat output.
+#define printf(...) __android_log_print(ANDROID_LOG_DEBUG, "TAG", __VA_ARGS__);
+#else //__ANDROID__
 #define VK_USE_PLATFORM_XCB_KHR
 #include <unistd.h>
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
-#include <vulkan/vk_ext_debug_report.h>
 
-#include "vulkan/vk_sdk_platform.h"
+#ifndef __ANDROID__
+#define USE_DEBUG_EXTENTIONS (1) // Enable debug report extension other than Android by default.
+#endif
+#ifdef USE_DEBUG_EXTENTIONS
+// Inclucde files from LoaderAndTools.
+#include <vulkan/vk_ext_debug_report.h>
+#include <vulkan/vk_sdk_platform.h>
+#endif
 
 /* Number of descriptor sets needs to be the same at alloc,       */
 /* pipeline layout creation, and descriptor set layout creation   */
@@ -132,6 +145,18 @@ struct sample_info {
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND        window;          // hWnd - window handle
+#elif defined(__ANDROID__)
+    PFN_vkGetPhysicalDeviceSurfaceSupportKHR fpGetPhysicalDeviceSurfaceSupportKHR;
+    PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR fpGetPhysicalDeviceSurfaceCapabilitiesKHR;
+    PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fpGetPhysicalDeviceSurfaceFormatsKHR;
+    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR fpGetPhysicalDeviceSurfacePresentModesKHR;
+    PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
+    PFN_vkDestroySwapchainKHR fpDestroySwapchainKHR;
+    PFN_vkDestroySurfaceKHR fpDestroySurfaceKHR;
+    PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
+    PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
+    PFN_vkQueuePresentKHR fpQueuePresentKHR;
+    PFN_vkCreateAndroidSurfaceKHR fpCreateAndroidSurfaceKHR;
 #else  // _WIN32
     xcb_connection_t *connection;
     xcb_screen_t *screen;
@@ -216,11 +241,12 @@ struct sample_info {
     VkDescriptorPool desc_pool;
     std::vector<VkDescriptorSet> desc_set;
 
+#ifdef USE_DEBUG_EXTENTIONS
     PFN_vkCreateDebugReportCallbackEXT dbgCreateDebugReportCallback;
     PFN_vkDestroyDebugReportCallbackEXT dbgDestroyDebugReportCallback;
     PFN_vkDebugReportMessageEXT dbgBreakCallback;
     std::vector<VkDebugReportCallbackEXT> debug_report_callbacks;
-
+#endif
     uint32_t current_buffer;
     uint32_t queue_count;
 
@@ -244,9 +270,20 @@ void init_glslang();
 void finalize_glslang();
 void wait_seconds(int seconds);
 void print_UUID(uint8_t* pipelineCacheUUID);
+std::string get_file_directory();
 
 typedef unsigned long long timestamp_t;
 timestamp_t get_milliseconds();
 
 // Main entry point of samples
 int sample_main();
+
+#ifdef __ANDROID__
+// Android specific helpers.
+bool Android_process_command();
+ANativeWindow* AndroidGetApplicationWindow();
+bool AndroidLoadFile(const char* filePath, std::vector<uint8_t>* data);
+FILE* AndroidFopen(const char* fname, const char* mode);
+void AndroidGetWindowSize(int32_t *width, int32_t *height);
+bool AndroidLoadFile(const char* filePath, std::string *data);
+#endif
