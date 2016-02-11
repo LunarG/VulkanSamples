@@ -207,6 +207,7 @@ typedef enum _SHADER_CHECKER_ERROR {
     SHADER_CHECKER_UNKNOWN_STAGE,           /* Stage is not supported by analysis */
     SHADER_CHECKER_INCONSISTENT_VI,         /* VI state contains conflicting binding or attrib descriptions */
     SHADER_CHECKER_MISSING_DESCRIPTOR,      /* Shader attempts to use a descriptor binding not declared in the layout */
+    SHADER_CHECKER_BAD_SPECIALIZATION,      /* Specialization map entry points outside specialization data block */
 } SHADER_CHECKER_ERROR;
 
 typedef enum _DRAW_TYPE

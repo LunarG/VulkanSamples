@@ -1349,6 +1349,38 @@ static bool verify_set_layout_compatibility(layer_data* my_data, const SET_NODE*
     return true;
 }
 
+
+// Validate that data for each specialization entry is fully contained within the buffer.
+static VkBool32
+validate_specialization_offsets(layer_data *my_data, VkPipelineShaderStageCreateInfo const *info)
+{
+    VkBool32 pass = VK_TRUE;
+
+    VkSpecializationInfo const *spec = info->pSpecializationInfo;
+
+    if (spec) {
+        for (auto i = 0u; i < spec->mapEntryCount; i++) {
+            if (spec->pMapEntries[i].offset + spec->pMapEntries[i].size > spec->dataSize) {
+                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                    /*dev*/0, __LINE__, SHADER_CHECKER_BAD_SPECIALIZATION, "SC",
+                    "Specialization entry %u (for constant id %u) references memory outside provided "
+                    "specialization data (bytes %u.."
+                    PRINTF_SIZE_T_SPECIFIER "; " PRINTF_SIZE_T_SPECIFIER " bytes provided)",
+                    i, spec->pMapEntries[i].constantID,
+                    spec->pMapEntries[i].offset,
+                    spec->pMapEntries[i].offset + spec->pMapEntries[i].size - 1,
+                    spec->dataSize)) {
+
+                    pass = VK_FALSE;
+                }
+            }
+        }
+    }
+
+    return pass;
+}
+
+
 // Validate that the shaders used by the given pipeline
 //  As a side effect this function also records the sets that are actually used by the pipeline
 static VkBool32
@@ -1378,6 +1410,8 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
                 }
             }
             else {
+                pass = validate_specialization_offsets(my_data, pStage) && pass;
+
                 shader_module *module = my_data->shaderModuleMap[pStage->module];
                 shaders[get_shader_stage_id(pStage->stage)] = module;
 
