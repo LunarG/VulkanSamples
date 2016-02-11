@@ -1482,10 +1482,50 @@ static VkBool32 validate_dynamic_offsets(layer_data* my_data, const GLOBAL_CB_NO
                         (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
                         for (uint32_t j=0; j<pWDS->descriptorCount; ++j) {
                             bufferSize = my_data->bufferMap[pWDS->pBufferInfo[j].buffer].create_info->size;
-                            if ((pCB->dynamicOffsets[dynOffsetIndex] + pWDS->pBufferInfo[j].offset + pWDS->pBufferInfo[j].range) > bufferSize) {
-                                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)set_node->set, __LINE__, DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, "DS",
-                                        "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u has dynamic offset %u. Combined with offet %#" PRIxLEAST64 " and range %#" PRIxLEAST64 " from its update, this oversteps its buffer (%#" PRIxLEAST64 ") which has a size of %#" PRIxLEAST64 ".",
-                                        (uint64_t)set_node->set, i, pCB->dynamicOffsets[dynOffsetIndex], pWDS->pBufferInfo[j].offset, pWDS->pBufferInfo[j].range, (uint64_t)pWDS->pBufferInfo[j].buffer, bufferSize);
+                            if (pWDS->pBufferInfo[j].range == VK_WHOLE_SIZE) {
+                              if ((pCB->dynamicOffsets[dynOffsetIndex] +
+                                   pWDS->pBufferInfo[j].offset) > bufferSize) {
+                                result |= log_msg(
+                                    my_data->report_data,
+                                    VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                                    (uint64_t)set_node->set, __LINE__,
+                                    DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, "DS",
+                                    "VkDescriptorSet (%#" PRIxLEAST64
+                                    ") bound as set #%u has range of "
+                                    "VK_WHOLE_SIZE but dynamic offset %u "
+                                    "combined with offet %#" PRIxLEAST64
+                                    " oversteps its buffer (%#" PRIxLEAST64
+                                    ") which has a size of %#" PRIxLEAST64 ".",
+                                    (uint64_t)set_node->set, i,
+                                    pCB->dynamicOffsets[dynOffsetIndex],
+                                    pWDS->pBufferInfo[j].offset,
+                                    (uint64_t)pWDS->pBufferInfo[j].buffer,
+                                    bufferSize);
+                              }
+                            } else if ((pCB->dynamicOffsets[dynOffsetIndex] +
+                                        pWDS->pBufferInfo[j].offset +
+                                        pWDS->pBufferInfo[j].range) >
+                                       bufferSize) {
+                              result |= log_msg(
+                                  my_data->report_data,
+                                  VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                  VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                                  (uint64_t)set_node->set, __LINE__,
+                                  DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, "DS",
+                                  "VkDescriptorSet (%#" PRIxLEAST64
+                                  ") bound as set #%u has dynamic offset %u. "
+                                  "Combined with offet %#" PRIxLEAST64
+                                  " and range %#" PRIxLEAST64
+                                  " from its update, this oversteps its buffer "
+                                  "(%#" PRIxLEAST64
+                                  ") which has a size of %#" PRIxLEAST64 ".",
+                                  (uint64_t)set_node->set, i,
+                                  pCB->dynamicOffsets[dynOffsetIndex],
+                                  pWDS->pBufferInfo[j].offset,
+                                  pWDS->pBufferInfo[j].range,
+                                  (uint64_t)pWDS->pBufferInfo[j].buffer,
+                                  bufferSize);
                             }
                             dynOffsetIndex++;
                             i += j; // Advance i to end of this set of descriptors (++i at end of for loop will move 1 index past last of these descriptors)
