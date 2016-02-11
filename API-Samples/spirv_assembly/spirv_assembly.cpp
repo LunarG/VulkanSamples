@@ -1,8 +1,9 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
- * Copyright (C) 2015 Google, Inc.
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -35,6 +36,7 @@ Demonsrate how to use SPIR-V shaders with inline assembly.
 #include "cube_data.h"
 #include "libspirv/libspirv.h"
 
+// clang-format off
 // This sample is based on the template, but instead of using inline GLSL and calls to
 // glslang to generate SPIR-V binaries, we use inline assembly and pass it to the
 // SPIRV-Tools assembler.  This is one of many ways to generate SPIR-V binaries,
@@ -182,9 +184,8 @@ const std::string fragmentSPIRV =
         "               OpStore %9 %20\n"
         "               OpReturn\n"
         "               OpFunctionEnd\n";
-
-int sample_main()
-{
+// clang-format on
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "SPIR-V Assembly";
@@ -219,7 +220,9 @@ int sample_main()
     // Convert the vertex assembly into binary format
     spv_binary vertexBinary = {};
     spv_diagnostic vertexDiag = {};
-    spv_result_t vertexResult = spvTextToBinary(spvContext, vertexSPIRV.c_str(), vertexSPIRV.length(), &vertexBinary, &vertexDiag);
+    spv_result_t vertexResult =
+        spvTextToBinary(spvContext, vertexSPIRV.c_str(), vertexSPIRV.length(),
+                        &vertexBinary, &vertexDiag);
     if (vertexDiag) {
         printf("Diagnostic info from vertex shader:\n");
         spvDiagnosticPrint(vertexDiag);
@@ -229,15 +232,18 @@ int sample_main()
     // Convert the fragment assembly into binary format
     spv_binary fragmentBinary = {};
     spv_diagnostic fragmentDiag = {};
-    spv_result_t fragmentResult = spvTextToBinary(spvContext, fragmentSPIRV.c_str(), fragmentSPIRV.length(), &fragmentBinary, &fragmentDiag);
+    spv_result_t fragmentResult =
+        spvTextToBinary(spvContext, fragmentSPIRV.c_str(),
+                        fragmentSPIRV.length(), &fragmentBinary, &fragmentDiag);
     if (fragmentDiag) {
         printf("Diagnostic info from fragment shader:\n");
         spvDiagnosticPrint(fragmentDiag);
     }
     assert(fragmentResult == SPV_SUCCESS);
 
-    info.shaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    info.shaderStages[0].pNext  = NULL;
+    info.shaderStages[0].sType =
+        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    info.shaderStages[0].pNext = NULL;
     info.shaderStages[0].pSpecializationInfo = NULL;
     info.shaderStages[0].flags = 0;
     info.shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -249,11 +255,13 @@ int sample_main()
     // Use wordCount and code pointers from the spv_binary
     moduleCreateInfo.codeSize = vertexBinary->wordCount * sizeof(unsigned int);
     moduleCreateInfo.pCode = vertexBinary->code;
-    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[0].module);
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL,
+                               &info.shaderStages[0].module);
     assert(res == VK_SUCCESS);
 
-    info.shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    info.shaderStages[1].pNext  = NULL;
+    info.shaderStages[1].sType =
+        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    info.shaderStages[1].pNext = NULL;
     info.shaderStages[1].pSpecializationInfo = NULL;
     info.shaderStages[1].flags = 0;
     info.shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -262,9 +270,11 @@ int sample_main()
     moduleCreateInfo.pNext = NULL;
     moduleCreateInfo.flags = 0;
     // Use wordCount and code pointers from the spv_binary
-    moduleCreateInfo.codeSize = fragmentBinary->wordCount * sizeof(unsigned int);
+    moduleCreateInfo.codeSize =
+        fragmentBinary->wordCount * sizeof(unsigned int);
     moduleCreateInfo.pCode = fragmentBinary->code;
-    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[1].module);
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL,
+                               &info.shaderStages[1].module);
     assert(res == VK_SUCCESS);
 
     // Clean up the diagnostics
@@ -295,10 +305,10 @@ int sample_main()
 
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                  info.pipeline);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
-            0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 0, NULL);
+    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+                            info.desc_set.data(), 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
@@ -316,7 +326,8 @@ int sample_main()
 
     VkFence drawFence = {};
     init_fence(info, drawFence);
-    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    VkPipelineStageFlags pipe_stage_flags =
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     VkSubmitInfo submit_info = {};
     init_submit_info(info, submit_info, pipe_stage_flags);
 
@@ -330,8 +341,9 @@ int sample_main()
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
-    } while(res == VK_TIMEOUT);
+        res =
+            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);

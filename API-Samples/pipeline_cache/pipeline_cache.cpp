@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
  * Copyright (C) 2016 Valve Corporation
+ * Copyright (C) 2016 LunarG, Inc.
  * Copyright (C) 2016 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -42,40 +43,39 @@ Create and use a pipeline cache accross runs.
 // pipelines could be created and merged.
 
 const char *vertShaderText =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "layout (std140, binding = 0) uniform buf {\n"
-        "        mat4 mvp;\n"
-        "} ubuf;\n"
-        "layout (location = 0) in vec4 pos;\n"
-        "layout (location = 1) in vec2 inTexCoords;\n"
-        "layout (location = 0) out vec2 texcoord;\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
-        "void main() {\n"
-        "   texcoord = inTexCoords;\n"
-        "   gl_Position = ubuf.mvp * pos;\n"
-        "\n"
-        "   // GL->VK conventions\n"
-        "   gl_Position.y = -gl_Position.y;\n"
-        "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
-        "}\n";
+    "#version 400\n"
+    "#extension GL_ARB_separate_shader_objects : enable\n"
+    "#extension GL_ARB_shading_language_420pack : enable\n"
+    "layout (std140, binding = 0) uniform buf {\n"
+    "        mat4 mvp;\n"
+    "} ubuf;\n"
+    "layout (location = 0) in vec4 pos;\n"
+    "layout (location = 1) in vec2 inTexCoords;\n"
+    "layout (location = 0) out vec2 texcoord;\n"
+    "out gl_PerVertex { \n"
+    "    vec4 gl_Position;\n"
+    "};\n"
+    "void main() {\n"
+    "   texcoord = inTexCoords;\n"
+    "   gl_Position = ubuf.mvp * pos;\n"
+    "\n"
+    "   // GL->VK conventions\n"
+    "   gl_Position.y = -gl_Position.y;\n"
+    "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
+    "}\n";
 
-const char *fragShaderText=
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "layout (binding = 1) uniform sampler2D tex;\n"
-        "layout (location = 0) in vec2 texcoord;\n"
-        "layout (location = 0) out vec4 outColor;\n"
-        "void main() {\n"
-        "   outColor = textureLod(tex, texcoord, 0.0);\n"
-        "}\n";
+const char *fragShaderText =
+    "#version 400\n"
+    "#extension GL_ARB_separate_shader_objects : enable\n"
+    "#extension GL_ARB_shading_language_420pack : enable\n"
+    "layout (binding = 1) uniform sampler2D tex;\n"
+    "layout (location = 0) in vec2 texcoord;\n"
+    "layout (location = 0) out vec4 outColor;\n"
+    "void main() {\n"
+    "   outColor = textureLod(tex, texcoord, 0.0);\n"
+    "}\n";
 
-int sample_main()
-{
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Pipeline Cache";
@@ -112,22 +112,22 @@ int sample_main()
 
     // Check disk for existing cache data
     size_t startCacheSize = 0;
-    void*  startCacheData = nullptr;
+    void *startCacheData = nullptr;
 
-    const char* readFileName = "pipeline_cache_data.bin";
+    const char *readFileName = "pipeline_cache_data.bin";
     FILE *pReadFile = fopen(readFileName, "rb");
 
     if (pReadFile) {
 
         // Determine cache size
-        fseek(pReadFile, 0 , SEEK_END);
+        fseek(pReadFile, 0, SEEK_END);
         startCacheSize = ftell(pReadFile);
         rewind(pReadFile);
 
         // Allocate memory to hold the initial cache data
-        startCacheData = (char*) malloc(sizeof(char) * startCacheSize);
+        startCacheData = (char *)malloc(sizeof(char) * startCacheSize);
         if (startCacheData == nullptr) {
-            fputs("Memory error",stderr);
+            fputs("Memory error", stderr);
             exit(EXIT_FAILURE);
         }
 
@@ -150,6 +150,7 @@ int sample_main()
     }
 
     if (startCacheData != nullptr) {
+        // clang-format off
         //
         // Check for cache validity
         //
@@ -179,18 +180,18 @@ int sample_main()
         //                           as a stream of bytes, with the least significant byte first
         //     16    VK_UUID_SIZE    a pipeline cache ID equal to VkPhysicalDeviceProperties::pipelineCacheUUID
         //
-
+        // clang-format on
         uint32_t headerLength = 0;
         uint32_t cacheHeaderVersion = 0;
         uint32_t vendorID = 0;
         uint32_t deviceID = 0;
-        uint8_t  pipelineCacheUUID[VK_UUID_SIZE] = {};
+        uint8_t pipelineCacheUUID[VK_UUID_SIZE] = {};
 
-        memcpy(&headerLength,       (uint8_t *)startCacheData +  0, 4);
-        memcpy(&cacheHeaderVersion, (uint8_t *)startCacheData +  4, 4);
-        memcpy(&vendorID,           (uint8_t *)startCacheData +  8, 4);
-        memcpy(&deviceID,           (uint8_t *)startCacheData + 12, 4);
-        memcpy(pipelineCacheUUID,   (uint8_t *)startCacheData + 16, VK_UUID_SIZE);
+        memcpy(&headerLength, (uint8_t *)startCacheData + 0, 4);
+        memcpy(&cacheHeaderVersion, (uint8_t *)startCacheData + 4, 4);
+        memcpy(&vendorID, (uint8_t *)startCacheData + 8, 4);
+        memcpy(&deviceID, (uint8_t *)startCacheData + 12, 4);
+        memcpy(pipelineCacheUUID, (uint8_t *)startCacheData + 16, VK_UUID_SIZE);
 
         // Check each field and report bad values before freeing existing cache
         bool badCache = false;
@@ -221,7 +222,8 @@ int sample_main()
             printf("    Driver expects: 0x%.8x\n", info.gpu_props.deviceID);
         }
 
-        if (memcmp(pipelineCacheUUID, info.gpu_props.pipelineCacheUUID, sizeof(pipelineCacheUUID)) != 0) {
+        if (memcmp(pipelineCacheUUID, info.gpu_props.pipelineCacheUUID,
+                   sizeof(pipelineCacheUUID)) != 0) {
             badCache = true;
             printf("  UUID mismatch in %s.\n", readFileName);
             printf("    Cache contains: ");
@@ -254,7 +256,8 @@ int sample_main()
     pipelineCache.initialDataSize = startCacheSize;
     pipelineCache.pInitialData = startCacheData;
     pipelineCache.flags = 0;
-    res = vkCreatePipelineCache(info.device, &pipelineCache, nullptr, &info.pipelineCache);
+    res = vkCreatePipelineCache(info.device, &pipelineCache, nullptr,
+                                &info.pipelineCache);
     assert(res == VK_SUCCESS);
 
     // Free our initialData now that pipeline has been created
@@ -277,8 +280,9 @@ int sample_main()
     rp_begin.pClearValues = clear_values;
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
-            0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 0, NULL);
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+                            info.desc_set.data(), 0, NULL);
     const VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
     init_viewports(info);
@@ -290,7 +294,8 @@ int sample_main()
     assert(res == VK_SUCCESS);
     VkFence drawFence = {};
     init_fence(info, drawFence);
-    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    VkPipelineStageFlags pipe_stage_flags =
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     VkSubmitInfo submit_info = {};
     init_submit_info(info, submit_info, pipe_stage_flags);
     /* Queue the command buffer for execution */
@@ -301,8 +306,9 @@ int sample_main()
     init_present_info(info, present);
     /* Make sure command buffer is finished before presenting */
     do {
-        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
-    } while(res == VK_TIMEOUT);
+        res =
+            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
@@ -311,31 +317,34 @@ int sample_main()
     // End standard draw stuff
 
     if (startCacheData) {
-        // TODO: Create another pipeline, preferably different from the first one
-        //       and merge it here.  Then store the merged one.
+        // TODO: Create another pipeline, preferably different from the first
+        // one and merge it here.  Then store the merged one.
     }
 
-    // Store away the cache that we've populated.  This could conceivably happen earlier,
-    // depends on when the pipeline cache stops being populated internally.
+    // Store away the cache that we've populated.  This could conceivably happen
+    // earlier, depends on when the pipeline cache stops being populated
+    // internally.
     size_t endCacheSize = 0;
-    void*  endCacheData = nullptr;
+    void *endCacheData = nullptr;
 
     // Call with nullptr to get cache size
-    vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize, nullptr);
+    vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize,
+                           nullptr);
 
     // Allocate memory to hold the populated cache data
-    endCacheData = (char*) malloc(sizeof(char) * endCacheSize);
+    endCacheData = (char *)malloc(sizeof(char) * endCacheSize);
     if (!endCacheData) {
         fputs("Memory error", stderr);
         exit(EXIT_FAILURE);
     }
 
     // Call again with pointer to buffer
-    vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize, endCacheData);
+    vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize,
+                           endCacheData);
 
     // Write the file to disk, overwriting whatever was there
-    FILE * pWriteFile;
-    const char* writeFileName = "pipeline_cache_data.bin";
+    FILE *pWriteFile;
+    const char *writeFileName = "pipeline_cache_data.bin";
     pWriteFile = fopen(writeFileName, "wb");
     if (pWriteFile) {
         fwrite(endCacheData, sizeof(char), endCacheSize, pWriteFile);

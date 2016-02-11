@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -35,8 +36,7 @@ Allocate Descriptor Set
 #include <string.h>
 #include <cstdlib>
 
-int sample_main()
-{
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Allocate Descriptor Set Sample";
@@ -61,8 +61,8 @@ int sample_main()
     descriptor_pool.poolSizeCount = 1;
     descriptor_pool.pPoolSizes = type_count;
 
-    res = vkCreateDescriptorPool(info.device,
-        &descriptor_pool, NULL, &info.desc_pool);
+    res = vkCreateDescriptorPool(info.device, &descriptor_pool, NULL,
+                                 &info.desc_pool);
     assert(res == VK_SUCCESS);
 
     VkDescriptorSetAllocateInfo alloc_info[1];
@@ -73,7 +73,8 @@ int sample_main()
     alloc_info[0].pSetLayouts = info.desc_layout.data();
 
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
-    res = vkAllocateDescriptorSets(info.device, alloc_info, info.desc_set.data());
+    res =
+        vkAllocateDescriptorSets(info.device, alloc_info, info.desc_set.data());
     assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[1];
