@@ -36,7 +36,7 @@
 #pragma comment(linker, "/subsystem:console")
 #define WIN32_LEAN_AND_MEAN
 #define VK_USE_PLATFORM_WIN32_KHR
-#define NOMINMAX              /* Don't let Windows define min() or max() */
+#define NOMINMAX /* Don't let Windows define min() or max() */
 #define APP_NAME_STR_LEN 80
 #elif defined(__ANDROID__)
 // Include files for Android
@@ -58,6 +58,8 @@
 #include <vulkan/vk_ext_debug_report.h>
 #include <vulkan/vk_sdk_platform.h>
 #endif
+
+#include "vulkan/vk_sdk_platform.h"
 
 /* Number of descriptor sets needs to be the same at alloc,       */
 /* pipeline layout creation, and descriptor set layout creation   */
@@ -217,8 +219,6 @@ struct sample_info {
     struct {
         VkDescriptorImageInfo image_info;
     } texture_data;
-    VkDeviceMemory stagingMemory;
-    VkImage stagingImage;
 
     struct {
         VkBuffer buf;

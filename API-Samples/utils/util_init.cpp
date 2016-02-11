@@ -255,6 +255,7 @@ VkResult init_instance(struct sample_info &info,
     app_info.pEngineName = app_short_name;
     app_info.engineVersion = 1;
     app_info.apiVersion = VK_API_VERSION;
+
     VkInstanceCreateInfo inst_info = {};
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_info.pNext = NULL;
@@ -370,7 +371,7 @@ void init_queue_family_index(struct sample_info &info) {
         }
     }
     assert(found);
- }
+}
 
 #ifdef USE_DEBUG_EXTENTIONS
 VkResult init_debug_report_callback(struct sample_info &info,
@@ -402,7 +403,7 @@ VkResult init_debug_report_callback(struct sample_info &info,
     create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
     create_info.pNext = NULL;
     create_info.flags =
-        VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+        VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT;
     create_info.pfnCallback = dbgFunc;
     create_info.pUserData = NULL;
 
@@ -727,13 +728,12 @@ void init_depth_buffer(struct sample_info &info) {
     assert(res == VK_SUCCESS);
 }
 
-void init_swapchain_extension(struct sample_info &info)
-{
+void init_swapchain_extension(struct sample_info &info) {
     /* DEPENDS on init_connection() and init_window() */
 
     VkResult U_ASSERT_ONLY res;
 
-    // Construct the surface description:
+// Construct the surface description:
 #ifdef _WIN32
     VkWin32SurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -768,10 +768,10 @@ void init_swapchain_extension(struct sample_info &info)
     assert(res == VK_SUCCESS);
 
     // Iterate over each queue to learn whether it supports presenting:
-    VkBool32* supportsPresent = (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
+    VkBool32 *supportsPresent =
+        (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
     for (uint32_t i = 0; i < info.queue_count; i++) {
-        vkGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i,
-                                             info.surface,
+        vkGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i, info.surface,
                                              &supportsPresent[i]);
     }
 
@@ -788,9 +788,11 @@ void init_swapchain_extension(struct sample_info &info)
     }
     free(supportsPresent);
 
-    // Generate error if could not find a queue that supports both a graphics and present
+    // Generate error if could not find a queue that supports both a graphics
+    // and present
     if (graphicsQueueNodeIndex == UINT32_MAX) {
-        std::cout << "Could not find a queue that supports both graphics and present";
+        std::cout
+            << "Could not find a queue that supports both graphics and present";
         exit(-1);
     }
 
@@ -798,24 +800,20 @@ void init_swapchain_extension(struct sample_info &info)
 
     // Get the list of VkFormats that are supported:
     uint32_t formatCount;
-    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0],
-                                               info.surface,
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface,
                                                &formatCount, NULL);
     assert(res == VK_SUCCESS);
-    VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
-    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0],
-                                               info.surface,
+    VkSurfaceFormatKHR *surfFormats =
+        (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface,
                                                &formatCount, surfFormats);
     assert(res == VK_SUCCESS);
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
     // the surface has no preferred format.  Otherwise, at least one
     // supported format will be returned.
-    if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED)
-    {
+    if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED) {
         info.format = VK_FORMAT_B8G8R8A8_UNORM;
-    }
-    else
-    {
+    } else {
         assert(formatCount >= 1);
         info.format = surfFormats[0].format;
     }
@@ -985,7 +983,6 @@ void init_swap_chain(struct sample_info &info) {
         preTransform = surfCapabilities.currentTransform;
     }
 
-    uint32_t queueFamily = 0;
     VkSwapchainCreateInfoKHR swap_chain = {};
     swap_chain.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swap_chain.pNext = NULL;
@@ -1010,8 +1007,6 @@ void init_swap_chain(struct sample_info &info) {
     swap_chain.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swap_chain.queueFamilyIndexCount = 0;
     swap_chain.pQueueFamilyIndices = NULL;
-    swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-    swap_chain.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     res =
         vkCreateSwapchainKHR(info.device, &swap_chain, NULL, &info.swap_chain);
@@ -1071,10 +1066,7 @@ void init_swap_chain(struct sample_info &info) {
 void init_uniform_buffer(struct sample_info &info) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
-    info.Projection = glm::perspective(glm::radians(45.0f),
-                                       static_cast<float>(info.width)
-                                       / static_cast<float>(info.height),
-                                       0.1f, 100.0f);
+    info.Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
     info.View = glm::lookAt(
         glm::vec3(5, 3, 10), // Camera is at (5,3,10), in World Space
         glm::vec3(0, 0, 0),  // and looks at the origin
@@ -1121,14 +1113,6 @@ void init_uniform_buffer(struct sample_info &info) {
     assert(res == VK_SUCCESS);
 
     memcpy(pData, &info.MVP, sizeof(info.MVP));
-
-    VkMappedMemoryRange memRange;
-    memRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-    memRange.pNext = NULL;
-    memRange.memory = info.uniform_data.mem;
-    memRange.offset = 0;
-    memRange.size = mem_reqs.size;
-    vkFlushMappedMemoryRanges(info.device, 1, &memRange);
 
     vkUnmapMemory(info.device, info.uniform_data.mem);
 
@@ -1294,7 +1278,7 @@ void init_command_pool(struct sample_info &info) {
     cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     cmd_pool_info.pNext = NULL;
     cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
-    cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    cmd_pool_info.flags = 0;
 
     res =
         vkCreateCommandPool(info.device, &cmd_pool_info, NULL, &info.cmd_pool);
@@ -1311,6 +1295,7 @@ void init_command_buffer(struct sample_info &info) {
     cmd.commandPool = info.cmd_pool;
     cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     cmd.commandBufferCount = 1;
+
     res = vkAllocateCommandBuffers(info.device, &cmd, &info.cmd);
     assert(res == VK_SUCCESS);
 }
@@ -1426,14 +1411,6 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData,
 
     memcpy(pData, vertexData, dataSize);
 
-    VkMappedMemoryRange memRange;
-    memRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-    memRange.pNext = NULL;
-    memRange.memory = info.vertex_buffer.mem;
-    memRange.offset = 0;
-    memRange.size = mem_reqs.size;
-    vkFlushMappedMemoryRanges(info.device, 1, &memRange);
-
     vkUnmapMemory(info.device, info.vertex_buffer.mem);
 
     res = vkBindBufferMemory(info.device, info.vertex_buffer.buf,
@@ -1532,6 +1509,9 @@ void init_shaders(struct sample_info &info, const char *vertShaderText,
     if (!(vertShaderText || fragShaderText))
         return;
 
+    init_glslang();
+    VkShaderModuleCreateInfo moduleCreateInfo;
+
     if (vertShaderText) {
         std::vector<unsigned int> vtx_spv;
         info.shaderStages[0].sType =
@@ -1545,7 +1525,6 @@ void init_shaders(struct sample_info &info, const char *vertShaderText,
         retVal = GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vertShaderText, vtx_spv);
         assert(retVal);
 
-        VkShaderModuleCreateInfo moduleCreateInfo;
         moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         moduleCreateInfo.pNext = NULL;
         moduleCreateInfo.flags = 0;
@@ -1570,7 +1549,6 @@ void init_shaders(struct sample_info &info, const char *vertShaderText,
             GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText, frag_spv);
         assert(retVal);
 
-        VkShaderModuleCreateInfo moduleCreateInfo;
         moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         moduleCreateInfo.pNext = NULL;
         moduleCreateInfo.flags = 0;
@@ -1862,34 +1840,6 @@ void init_image(struct sample_info &info, texture_object &texObj,
     res = vkBindImageMemory(info.device, mappableImage, mappableMemory, 0);
     assert(res == VK_SUCCESS);
 
-    set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-
-    res = vkEndCommandBuffer(info.cmd);
-    assert(res == VK_SUCCESS);
-    const VkCommandBuffer cmd_bufs[] = {info.cmd};
-    VkFenceCreateInfo fenceInfo;
-    VkFence cmdFence;
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.pNext = NULL;
-    fenceInfo.flags = 0;
-    vkCreateFence(info.device, &fenceInfo, NULL, &cmdFence);
-
-    VkSubmitInfo submit_info[1] = {};
-    submit_info[0].pNext = NULL;
-    submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info[0].waitSemaphoreCount = 0;
-    submit_info[0].pWaitSemaphores = NULL;
-    submit_info[0].pWaitDstStageMask = NULL;
-    submit_info[0].commandBufferCount = 1;
-    submit_info[0].pCommandBuffers = cmd_bufs;
-    submit_info[0].signalSemaphoreCount = 0;
-    submit_info[0].pSignalSemaphores = NULL;
-
-    /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, cmdFence);
-    assert(res == VK_SUCCESS);
-
     VkImageSubresource subres = {};
     subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     subres.mipLevel = 0;
@@ -1900,15 +1850,6 @@ void init_image(struct sample_info &info, texture_object &texObj,
 
     /* Get the subresource layout so we know what the row pitch is */
     vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &layout);
-
-    /* Make sure command buffer is finished before mapping */
-    do {
-        res =
-            vkWaitForFences(info.device, 1, &cmdFence, VK_TRUE, FENCE_TIMEOUT);
-    } while (res == VK_TIMEOUT);
-    assert(res == VK_SUCCESS);
-
-    vkDestroyFence(info.device, cmdFence, NULL);
 
     res = vkMapMemory(info.device, mappableMemory, 0, mem_reqs.size, 0, &data);
     assert(res == VK_SUCCESS);
@@ -1922,26 +1863,13 @@ void init_image(struct sample_info &info, texture_object &texObj,
 
     vkUnmapMemory(info.device, mappableMemory);
 
-    VkCommandBufferBeginInfo cmd_buf_info = {};
-    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = 0;
-    cmd_buf_info.pInheritanceInfo = NULL;
-
-    res = vkResetCommandBuffer(info.cmd, 0);
-    res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
-    assert(res == VK_SUCCESS);
-
     if (!needStaging) {
         /* If we can use the linear tiled image as a texture, just do it */
         texObj.image = mappableImage;
         texObj.mem = mappableMemory;
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_GENERAL, texObj.imageLayout);
-        /* No staging resources to free later */
-        info.stagingImage = VK_NULL_HANDLE;
-        info.stagingMemory = VK_NULL_HANDLE;
+                         VK_IMAGE_LAYOUT_UNDEFINED, texObj.imageLayout);
     } else {
         /* The mappable image cannot be our texture, so create an optimally
          * tiled image and blit to it */
@@ -1974,7 +1902,7 @@ void init_image(struct sample_info &info, texture_object &texObj,
         /* Since we're going to blit from the mappable image, set its layout to
          * SOURCE_OPTIMAL. Side effect is that this will create info.cmd */
         set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_GENERAL,
+                         VK_IMAGE_LAYOUT_UNDEFINED,
                          VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
         /* Since we're going to blit to the texture image, set its layout to
@@ -2002,10 +1930,39 @@ void init_image(struct sample_info &info, texture_object &texObj,
         copy_region.extent.height = texObj.tex_height;
         copy_region.extent.depth = 1;
 
+        VkCommandBufferBeginInfo cmd_buf_info = {};
+        cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        cmd_buf_info.pNext = NULL;
+        cmd_buf_info.flags = 0;
+        cmd_buf_info.pInheritanceInfo = NULL;
+
+        res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
+        assert(res == VK_SUCCESS);
+
         /* Put the copy command into the command buffer */
         vkCmdCopyImage(info.cmd, mappableImage,
                        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texObj.image,
                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
+
+        res = vkEndCommandBuffer(info.cmd);
+        assert(res == VK_SUCCESS);
+        const VkCommandBuffer cmd_bufs[] = {info.cmd};
+        VkFence nullFence = VK_NULL_HANDLE;
+
+        VkSubmitInfo submit_info[1] = {};
+        submit_info[0].pNext = NULL;
+        submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info[0].waitSemaphoreCount = 0;
+        submit_info[0].pWaitSemaphores = NULL;
+        submit_info[0].pWaitDstStageMask = NULL;
+        submit_info[0].commandBufferCount = 1;
+        submit_info[0].pCommandBuffers = cmd_bufs;
+        submit_info[0].signalSemaphoreCount = 0;
+        submit_info[0].pSignalSemaphores = NULL;
+
+        /* Queue the command buffer for execution */
+        res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
+        assert(res == VK_SUCCESS);
 
         /* Set the layout for the texture image from DESTINATION_OPTIMAL to
          * SHADER_READ_ONLY */
@@ -2014,9 +1971,9 @@ void init_image(struct sample_info &info, texture_object &texObj,
                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                          texObj.imageLayout);
 
-        /* Remember staging resources to free later */
-        info.stagingImage = mappableImage;
-        info.stagingMemory = mappableMemory;
+        /* Release the resources for the staging image */
+        vkFreeMemory(info.device, mappableMemory, NULL);
+        vkDestroyImage(info.device, mappableImage, NULL);
     }
 
     VkImageViewCreateInfo view_info = {};
@@ -2222,11 +2179,5 @@ void destroy_textures(struct sample_info &info) {
         vkDestroyImageView(info.device, info.textures[i].view, NULL);
         vkDestroyImage(info.device, info.textures[i].image, NULL);
         vkFreeMemory(info.device, info.textures[i].mem, NULL);
-    }
-    if (info.stagingImage) {
-        vkDestroyImage(info.device, info.stagingImage, NULL);
-    }
-    if (info.stagingMemory) {
-        vkFreeMemory(info.device, info.stagingMemory, NULL);
     }
 }

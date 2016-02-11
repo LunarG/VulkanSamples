@@ -465,12 +465,12 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
     EShLanguage stage = FindLanguage(shader_type);
-    glslang::TShader* shader = new glslang::TShader(stage);
+    glslang::TShader *shader = new glslang::TShader(stage);
 
     shaderStrings[0] = pshader;
     shader->setStrings(shaderStrings, 1);
 
-    if (! shader->parse(&Resources, 100, false, messages)) {
+    if (!shader->parse(&Resources, 100, false, messages)) {
         puts(shader->getInfoLog());
         puts(shader->getInfoDebugLog());
         return false; // something didn't work
@@ -482,7 +482,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
     // Program-level processing...
     //
 
-    if (! program.link(messages)) {
+    if (!program.link(messages)) {
         puts(shader->getInfoLog());
         puts(shader->getInfoDebugLog());
         return false;
@@ -537,7 +537,6 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
 #endif
     return true;
 }
-
 void wait_seconds(int seconds) {
 #ifdef WIN32
     Sleep(seconds * 1000);

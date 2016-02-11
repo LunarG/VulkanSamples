@@ -60,7 +60,6 @@ struct {
 } vertex_buffer[3];
 
 VkCommandBuffer threadCmdBufs[4];
-VkCommandPool threadCmdPools[3];
 
 static void *per_thread_code(void *arg);
 
@@ -200,10 +199,8 @@ int sample_main() {
 
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = {info.cmd};
-    VkFence clearFence;
-    init_fence(info, clearFence);
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    VkFence nullFence = VK_NULL_HANDLE;
+
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -216,21 +213,21 @@ int sample_main() {
     submit_info[0].pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, clearFence);
+    res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
     assert(!res);
-
-    do {
-        res = vkWaitForFences(info.device, 1, &clearFence, VK_TRUE,
-                              FENCE_TIMEOUT);
-    } while (res == VK_TIMEOUT);
-    assert(res == VK_SUCCESS);
-    vkDestroyFence(info.device, clearFence, NULL);
 
     /* VULKAN_KEY_START */
 
-    /* Use the fourth slot in the command buffer array for the presentation */
-    /* barrier using the command buffer in info                             */
-    threadCmdBufs[3] = info.cmd;
+    VkCommandBufferAllocateInfo cmd = {};
+    cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmd.pNext = NULL;
+    cmd.commandPool = info.cmd_pool;
+    cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmd.commandBufferCount = 4;
+
+    res = vkAllocateCommandBuffers(info.device, &cmd, threadCmdBufs);
+    assert(res == VK_SUCCESS);
+
     sample_platform_thread vk_threads[3];
     for (size_t i = 0; i < 3; i++) {
         sample_platform_thread_create(&vk_threads[i], &per_thread_code,
@@ -267,7 +264,8 @@ int sample_main() {
     res = vkEndCommandBuffer(threadCmdBufs[3]);
     assert(res == VK_SUCCESS);
 
-    pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    VkPipelineStageFlags pipe_stage_flags =
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 0;
@@ -307,17 +305,13 @@ int sample_main() {
     wait_seconds(1);
     /* VULKAN_KEY_END */
 
+    vkFreeCommandBuffers(info.device, info.cmd_pool, 3, threadCmdBufs);
     vkDestroyBuffer(info.device, vertex_buffer[0].buf, NULL);
     vkDestroyBuffer(info.device, vertex_buffer[1].buf, NULL);
     vkDestroyBuffer(info.device, vertex_buffer[2].buf, NULL);
     vkFreeMemory(info.device, vertex_buffer[0].mem, NULL);
     vkFreeMemory(info.device, vertex_buffer[1].mem, NULL);
     vkFreeMemory(info.device, vertex_buffer[2].mem, NULL);
-    for (int i = 0; i < 3; i++) {
-        vkFreeCommandBuffers(info.device, threadCmdPools[i], 1,
-                             &threadCmdBufs[i]);
-        vkDestroyCommandPool(info.device, threadCmdPools[i], NULL);
-    }
     vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);
     vkDestroyFence(info.device, drawFence, NULL);
     destroy_pipeline(info);
@@ -342,22 +336,6 @@ static void *per_thread_code(void *arg) {
     /* triangle                                                             */
     VkResult U_ASSERT_ONLY res;
     size_t threadNum = (size_t)arg;
-    VkCommandPoolCreateInfo poolInfo;
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.pNext = NULL;
-    poolInfo.queueFamilyIndex = info.graphics_queue_family_index;
-    poolInfo.flags = 0;
-    vkCreateCommandPool(info.device, &poolInfo, NULL,
-                        &threadCmdPools[threadNum]);
-
-    VkCommandBufferAllocateInfo cmdBufInfo;
-    cmdBufInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    cmdBufInfo.pNext = NULL;
-    cmdBufInfo.commandBufferCount = 1;
-    cmdBufInfo.commandPool = threadCmdPools[threadNum];
-    cmdBufInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vkAllocateCommandBuffers(info.device, &cmdBufInfo,
-                             &threadCmdBufs[threadNum]);
 
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;

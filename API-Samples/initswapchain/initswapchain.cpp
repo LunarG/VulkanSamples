@@ -92,8 +92,7 @@ int sample_main() {
     createInfo.pNext = NULL;
     createInfo.connection = info.connection;
     createInfo.window = info.window;
-    res = vkCreateXcbSurfaceKHR(info.inst, &createInfo,
-                                NULL, &info.surface);
+    res = vkCreateXcbSurfaceKHR(info.inst, &createInfo, NULL, &info.surface);
 #endif // _WIN32
     assert(res == VK_SUCCESS);
 
