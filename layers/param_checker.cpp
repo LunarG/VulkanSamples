@@ -5421,7 +5421,7 @@ bool PreCmdDraw(
     if (vertexCount == 0) {
         // TODO: Verify against Valid Usage section. I don't see a non-zero vertexCount listed, may need to add that and make
         // this an error or leave as is.
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCmdDraw parameter, uint32_t vertexCount, is 0");
         return false;
     }
@@ -5429,7 +5429,7 @@ bool PreCmdDraw(
     if (instanceCount == 0) {
         // TODO: Verify against Valid Usage section. I don't see a non-zero instanceCount listed, may need to add that and make
         // this an error or leave as is.
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCmdDraw parameter, uint32_t instanceCount, is 0");
         return false;
     }

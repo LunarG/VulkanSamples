@@ -548,7 +548,7 @@ static void loader_add_instance_extensions(
 
     res = fp_get_props(NULL, &count, NULL);
     if (res != VK_SUCCESS) {
-        loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                    "Error getting Instance extension count from %s", lib_name);
         return;
     }
@@ -562,7 +562,7 @@ static void loader_add_instance_extensions(
 
     res = fp_get_props(NULL, &count, ext_props);
     if (res != VK_SUCCESS) {
-        loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                    "Error getting Instance extensions from %s", lib_name);
         return;
     }
@@ -1002,7 +1002,7 @@ loader_find_layer_name_add_list(const struct loader_instance *inst,
         }
     }
     if (!found) {
-        loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                    "Warning, couldn't find layer name %s to activate", name);
     }
 }
@@ -1257,7 +1257,7 @@ static void loader_scanned_icd_add(const struct loader_instance *inst,
     // Used to call: dlopen(filename, RTLD_LAZY);
     handle = loader_platform_open_library(filename);
     if (!handle) {
-        loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                    loader_platform_open_library_error(filename));
         return;
     }
@@ -1274,7 +1274,7 @@ static void loader_scanned_icd_add(const struct loader_instance *inst,
                            "vk_icdGetInstanceProcAddr"));
             return;
         } else {
-            loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
+            loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "Using deprecated ICD interface of "
                        "vkGetInstanceProcAddr instead of "
                        "vk_icdGetInstanceProcAddr");
@@ -1337,7 +1337,7 @@ static void loader_scanned_icd_add(const struct loader_instance *inst,
     new_node->lib_name = (char *)loader_heap_alloc(
         inst, strlen(filename) + 1, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (!new_node->lib_name) {
-        loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                    "Out of memory can't add icd");
         return;
     }
@@ -1354,7 +1354,7 @@ static bool loader_icd_init_entrys(struct loader_icd *icd, VkInstance inst,
         icd->func = (PFN_vk##func)fp_gipa(inst, "vk" #func);                   \
         if (!icd->func && required) {                                          \
             loader_log((struct loader_instance *)inst,                         \
-                       VK_DEBUG_REPORT_WARN_BIT_EXT, 0,                        \
+                       VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,                        \
                        loader_platform_get_proc_address_error("vk" #func));    \
             return false;                                                      \
         }                                                                      \
@@ -1415,13 +1415,13 @@ static void loader_debug_init(void) {
                 g_loader_log_msgs = ~0u;
             } else if (strncmp(env, "warn", len) == 0) {
                 g_loader_debug |= LOADER_WARN_BIT;
-                g_loader_log_msgs |= VK_DEBUG_REPORT_WARN_BIT_EXT;
+                g_loader_log_msgs |= VK_DEBUG_REPORT_WARNING_BIT_EXT;
             } else if (strncmp(env, "info", len) == 0) {
                 g_loader_debug |= LOADER_INFO_BIT;
-                g_loader_log_msgs |= VK_DEBUG_REPORT_INFO_BIT_EXT;
+                g_loader_log_msgs |= VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
             } else if (strncmp(env, "perf", len) == 0) {
                 g_loader_debug |= LOADER_PERF_BIT;
-                g_loader_log_msgs |= VK_DEBUG_REPORT_PERF_WARN_BIT_EXT;
+                g_loader_log_msgs |= VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
             } else if (strncmp(env, "error", len) == 0) {
                 g_loader_debug |= LOADER_ERROR_BIT;
                 g_loader_log_msgs |= VK_DEBUG_REPORT_ERROR_BIT_EXT;
@@ -1663,17 +1663,17 @@ loader_add_layer_properties(const struct loader_instance *inst,
         return;
     }
     char *file_vers = cJSON_PrintUnformatted(item);
-    loader_log(inst, VK_DEBUG_REPORT_INFO_BIT_EXT, 0,
+    loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
                "Found manifest file %s, version %s", filename, file_vers);
     if (strcmp(file_vers, "\"1.0.0\"") != 0)
-        loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                    "Unexpected manifest file version (expected 1.0.0), may "
                    "cause errors");
     loader_tls_heap_free(file_vers);
 
     layer_node = cJSON_GetObjectItem(json, "layer");
     if (layer_node == NULL) {
-        loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
+        loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                    "Can't find \"layer\" object in manifest JSON file, "
                    "skipping this file");
         return;
@@ -1686,7 +1686,7 @@ loader_add_layer_properties(const struct loader_instance *inst,
         var = cJSON_GetObjectItem(node, #var);                                 \
         if (var == NULL) {                                                     \
             layer_node = layer_node->next;                                     \
-            loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,                  \
+            loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,                  \
                        "Didn't find required layer object %s in manifest "     \
                        "JSON file, skipping this layer",                       \
                        #var);                                                  \
@@ -1698,7 +1698,7 @@ loader_add_layer_properties(const struct loader_instance *inst,
         item = cJSON_GetObjectItem(node, #var);                                \
         if (item == NULL) {                                                    \
             layer_node = layer_node->next;                                     \
-            loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,                  \
+            loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,                  \
                        "Didn't find required layer value %s in manifest JSON " \
                        "file, skipping this layer",                            \
                        #var);                                                  \
@@ -2028,15 +2028,16 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
 #if defined(_WIN32)
         loc = loader_get_registry_files(inst, loc);
         if (loc == NULL) {
-			if (!is_layer) {
-				loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-					"Registry lookup failed can't get ICD manifest files, do you have a Vulkan driver installed");
-			}
-			else {
-				//warning only for layers
-				loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
-					"Registry lookup failed can't get layer manifest files");
-			}
+            if (!is_layer) {
+                loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                           "Registry lookup failed can't get ICD manifest "
+                           "files, do you have a Vulkan driver installed");
+            } else {
+                // warning only for layers
+                loader_log(
+                    inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                    "Registry lookup failed can't get layer manifest files");
+            }
             return;
         }
 #endif
@@ -2122,7 +2123,7 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
                 out_files->count++;
             } else if (!list_is_dirs) {
                 loader_log(
-                    inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
+                    inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                     "Skipping manifest file %s, file name must end in .json",
                     name);
             }
@@ -2186,10 +2187,10 @@ void loader_icd_scan(const struct loader_instance *inst,
             return;
         }
         char *file_vers = cJSON_Print(item);
-        loader_log(inst, VK_DEBUG_REPORT_INFO_BIT_EXT, 0,
+        loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
                    "Found manifest file %s, version %s", file_str, file_vers);
         if (strcmp(file_vers, "\"1.0.0\"") != 0)
-            loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
+            loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "Unexpected manifest file version (expected 1.0.0), may "
                        "cause errors");
         loader_tls_heap_free(file_vers);
@@ -2199,7 +2200,7 @@ void loader_icd_scan(const struct loader_instance *inst,
             if (item != NULL) {
                 char *temp = cJSON_Print(item);
                 if (!temp || strlen(temp) == 0) {
-                    loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
+                    loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                                "Can't find \"library_path\" in ICD JSON file "
                                "%s, skipping",
                                file_str);
@@ -2214,7 +2215,7 @@ void loader_icd_scan(const struct loader_instance *inst,
                 strcpy(library_path, &temp[1]);
                 loader_tls_heap_free(temp);
                 if (!library_path || strlen(library_path) == 0) {
-                    loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
+                    loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                                "Can't find \"library_path\" in ICD JSON file "
                                "%s, skipping",
                                file_str);
@@ -2251,13 +2252,13 @@ void loader_icd_scan(const struct loader_instance *inst,
                 }
                 loader_scanned_icd_add(inst, icds, fullpath, vers);
             } else
-                loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
+                loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                            "Can't find \"library_path\" object in ICD JSON "
                            "file %s, skipping",
                            file_str);
         } else
             loader_log(
-                inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,
+                inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                 "Can't find \"ICD\" object in ICD JSON file %s, skipping",
                 file_str);
 
@@ -2937,7 +2938,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
                 &layer_instance_link_info[activated_layers];
             nextGIPA = fpGIPA;
 
-            loader_log(inst, VK_DEBUG_REPORT_INFO_BIT_EXT, 0,
+            loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
                        "Insert instance layer %s (%s)",
                        layer_prop->info.layerName, layer_prop->lib_name);
 
@@ -3212,7 +3213,7 @@ VkResult loader_create_device_chain(VkPhysicalDevice physicalDevice,
             nextGIPA = fpGIPA;
             nextGDPA = fpGDPA;
 
-            loader_log(inst, VK_DEBUG_REPORT_INFO_BIT_EXT, 0,
+            loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
                        "Insert device layer %s (%s)",
                        layer_prop->info.layerName, layer_prop->lib_name);
 

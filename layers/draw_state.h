@@ -29,7 +29,6 @@
  */
 
 #include "vulkan/vk_layer.h"
-#include "vulkan/vk_ext_debug_report.h"
 #include <atomic>
 #include <vector>
 #include <memory>

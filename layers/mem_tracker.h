@@ -30,7 +30,6 @@
 #include <vector>
 #include <unordered_map>
 #include "vulkan/vk_layer.h"
-#include "vulkan/vk_ext_debug_report.h"
 
 #ifdef __cplusplus
 extern "C" {

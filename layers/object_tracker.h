@@ -120,66 +120,6 @@ static uint32_t                         queueCount                    = 0;
 template layer_data *get_my_data_ptr<layer_data>(
         void *data_key, std::unordered_map<void *, layer_data *> &data_map);
 
-static inline const char* string_VkDebugReportObjectTypeEXT(VkDebugReportObjectTypeEXT input_value)
-{
-    switch ((VkDebugReportObjectTypeEXT)input_value)
-    {
-        case VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT";
-        case VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT:
-            return "VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT";
-        default:
-            return "Unhandled VkObjectType";
-    }
-}
 
 //
 // Internal Object Tracker Functions
@@ -493,7 +433,7 @@ extern unordered_map<uint64_t, OBJTRACK_NODE*> VkSurfaceKHRMap;
 
 static void create_physical_device(VkInstance dispatchable_object, VkPhysicalDevice vkObj, VkDebugReportObjectTypeEXT objType)
 {
-    log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), __LINE__, OBJTRACK_NONE, "OBJTRACK",
+    log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), __LINE__, OBJTRACK_NONE, "OBJTRACK",
         "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDebugReportObjectTypeEXT(objType),
         reinterpret_cast<uint64_t>(vkObj));
 
@@ -510,7 +450,7 @@ static void create_physical_device(VkInstance dispatchable_object, VkPhysicalDev
 static void create_surface_khr(VkInstance dispatchable_object, VkSurfaceKHR vkObj, VkDebugReportObjectTypeEXT objType)
 {
     // TODO: Add tracking of surface objects
-    log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT_EXT, objType, (uint64_t)(vkObj), __LINE__, OBJTRACK_NONE, "OBJTRACK",
+    log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, objType, (uint64_t)(vkObj), __LINE__, OBJTRACK_NONE, "OBJTRACK",
         "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDebugReportObjectTypeEXT(objType),
         (uint64_t)(vkObj));
 
@@ -534,7 +474,7 @@ static void destroy_surface_khr(VkInstance dispatchable_object, VkSurfaceKHR obj
         numTotalObjs--;
         assert(numObjs[objIndex] > 0);
         numObjs[objIndex]--;
-        log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT_EXT, pNode->objType, object_handle, __LINE__, OBJTRACK_NONE, "OBJTRACK",
+        log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, pNode->objType, object_handle, __LINE__, OBJTRACK_NONE, "OBJTRACK",
            "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
             string_VkDebugReportObjectTypeEXT(pNode->objType), (uint64_t)(object), numTotalObjs, numObjs[objIndex],
             string_VkDebugReportObjectTypeEXT(pNode->objType));
@@ -549,7 +489,7 @@ static void destroy_surface_khr(VkInstance dispatchable_object, VkSurfaceKHR obj
 
 static void alloc_command_buffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer vkObj, VkDebugReportObjectTypeEXT objType, VkCommandBufferLevel level)
 {
-    log_msg(mdd(device), VK_DEBUG_REPORT_INFO_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), __LINE__, OBJTRACK_NONE, "OBJTRACK",
+    log_msg(mdd(device), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), __LINE__, OBJTRACK_NONE, "OBJTRACK",
         "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDebugReportObjectTypeEXT(objType),
         reinterpret_cast<uint64_t>(vkObj));
 
@@ -585,7 +525,7 @@ static void free_command_buffer(VkDevice device, VkCommandPool commandPool, VkCo
             numTotalObjs--;
             assert(numObjs[objIndex] > 0);
             numObjs[objIndex]--;
-            log_msg(mdd(device), VK_DEBUG_REPORT_INFO_BIT_EXT, pNode->objType, object_handle, __LINE__, OBJTRACK_NONE, "OBJTRACK",
+            log_msg(mdd(device), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, pNode->objType, object_handle, __LINE__, OBJTRACK_NONE, "OBJTRACK",
                "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
                 string_VkDebugReportObjectTypeEXT(pNode->objType), reinterpret_cast<uint64_t>(commandBuffer), numTotalObjs, numObjs[objIndex],
                 string_VkDebugReportObjectTypeEXT(pNode->objType));
@@ -601,7 +541,7 @@ static void free_command_buffer(VkDevice device, VkCommandPool commandPool, VkCo
 
 static void alloc_descriptor_set(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSet vkObj, VkDebugReportObjectTypeEXT objType)
 {
-    log_msg(mdd(device), VK_DEBUG_REPORT_INFO_BIT_EXT, objType, (uint64_t)(vkObj), __LINE__, OBJTRACK_NONE, "OBJTRACK",
+    log_msg(mdd(device), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, objType, (uint64_t)(vkObj), __LINE__, OBJTRACK_NONE, "OBJTRACK",
         "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDebugReportObjectTypeEXT(objType),
         (uint64_t)(vkObj));
 
@@ -632,7 +572,7 @@ static void free_descriptor_set(VkDevice device, VkDescriptorPool descriptorPool
             numTotalObjs--;
             assert(numObjs[objIndex] > 0);
             numObjs[objIndex]--;
-            log_msg(mdd(device), VK_DEBUG_REPORT_INFO_BIT_EXT, pNode->objType, object_handle, __LINE__, OBJTRACK_NONE, "OBJTRACK",
+            log_msg(mdd(device), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, pNode->objType, object_handle, __LINE__, OBJTRACK_NONE, "OBJTRACK",
                "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
                 string_VkDebugReportObjectTypeEXT(pNode->objType), (uint64_t)(descriptorSet), numTotalObjs, numObjs[objIndex],
                 string_VkDebugReportObjectTypeEXT(pNode->objType));
@@ -648,7 +588,7 @@ static void free_descriptor_set(VkDevice device, VkDescriptorPool descriptorPool
 
 static void create_queue(VkDevice dispatchable_object, VkQueue vkObj, VkDebugReportObjectTypeEXT objType)
 {
-    log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), __LINE__, OBJTRACK_NONE, "OBJTRACK",
+    log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), __LINE__, OBJTRACK_NONE, "OBJTRACK",
         "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDebugReportObjectTypeEXT(objType),
         reinterpret_cast<uint64_t>(vkObj));
 
@@ -663,7 +603,7 @@ static void create_queue(VkDevice dispatchable_object, VkQueue vkObj, VkDebugRep
 }
 static void create_swapchain_image_obj(VkDevice dispatchable_object, VkImage vkObj, VkSwapchainKHR swapchain)
 {
-    log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, (uint64_t) vkObj, __LINE__, OBJTRACK_NONE, "OBJTRACK",
+    log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, (uint64_t) vkObj, __LINE__, OBJTRACK_NONE, "OBJTRACK",
         "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, "SwapchainImage",
         (uint64_t)(vkObj));
 

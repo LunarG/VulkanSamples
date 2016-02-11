@@ -51,7 +51,6 @@
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
-#include <vulkan/vk_ext_debug_report.h>
 
 #define DEMO_TEXTURE_COUNT 1
 #define VERTEX_BUFFER_BIND_ID 0
@@ -124,7 +123,7 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         sprintf(message, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode,
                 pMsg);
-    } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT_EXT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
         sprintf(message, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode,
                 pMsg);
     } else {
@@ -1999,7 +1998,7 @@ static void demo_init_vk(struct demo *demo) {
         VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfo.flags =
-            VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT;
+            VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
         dbgCreateInfo.pfnCallback = dbgFunc;
         dbgCreateInfo.pUserData = NULL;
         dbgCreateInfo.pNext = NULL;

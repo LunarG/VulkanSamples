@@ -113,8 +113,8 @@ void VkRenderFramework::InitFramework(
             dbgCreateInfo.sType =
                 VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
             dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT |
-                                  VK_DEBUG_REPORT_WARN_BIT_EXT |
-                                  VK_DEBUG_REPORT_PERF_WARN_BIT_EXT;
+                                  VK_DEBUG_REPORT_WARNING_BIT_EXT |
+                                  VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
             dbgCreateInfo.pfnCallback = dbgFunction;
             dbgCreateInfo.pUserData = userData;
 
@@ -150,7 +150,7 @@ void VkRenderFramework::InitFramework(
             dbgInfo.pfnCallback = dbgFunction;
             dbgInfo.pUserData = userData;
             dbgInfo.flags =
-                VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT;
+                VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
             err = m_CreateDebugReportCallback(this->inst, &dbgInfo, NULL,
                                               &m_devMsgCallback);
             ASSERT_VK_SUCCESS(err);

@@ -39,7 +39,6 @@
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
-#include <vulkan/vk_ext_debug_report.h>
 
 #define ERR(err)                                                               \
     printf("%s:%d: failed with %s\n", __FILE__, __LINE__,                      \
@@ -139,10 +138,10 @@ dbg_callback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         sprintf(message, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode,
                 pMsg);
-    } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT_EXT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
         sprintf(message, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode,
                 pMsg);
-    } else if (msgFlags & VK_DEBUG_REPORT_INFO_BIT_EXT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
         sprintf(message, "INFO: [%s] Code %d : %s", pLayerPrefix, msgCode,
                 pMsg);
     } else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
@@ -681,8 +680,8 @@ static void app_create_instance(struct app_instance *inst) {
     memset(&dbg_info, 0, sizeof(dbg_info));
     dbg_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
     dbg_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT |
-                     VK_DEBUG_REPORT_WARN_BIT_EXT |
-                     VK_DEBUG_REPORT_INFO_BIT_EXT;
+                     VK_DEBUG_REPORT_WARNING_BIT_EXT |
+                     VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
     dbg_info.pfnCallback = dbg_callback;
     inst_info.pNext = &dbg_info;
 

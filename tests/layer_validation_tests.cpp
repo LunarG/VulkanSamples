@@ -33,7 +33,6 @@
  */
 
 #include <vulkan/vulkan.h>
-#include <vulkan/vk_ext_debug_report.h>
 #include "test_common.h"
 #include "vkrenderframework.h"
 #include "vk_layer_config.h"
@@ -126,7 +125,7 @@ class ErrorMonitor {
     ErrorMonitor() {
         test_platform_thread_create_mutex(&m_mutex);
         test_platform_thread_lock_mutex(&m_mutex);
-        m_msgFlags = VK_DEBUG_REPORT_INFO_BIT_EXT;
+        m_msgFlags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
         m_bailout = NULL;
         test_platform_thread_unlock_mutex(&m_mutex);
     }
@@ -193,7 +192,7 @@ myDbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
           uint64_t srcObject, size_t location, int32_t msgCode,
           const char *pLayerPrefix, const char *pMsg, void *pUserData) {
     if (msgFlags &
-        (VK_DEBUG_REPORT_WARN_BIT_EXT | VK_DEBUG_REPORT_PERF_WARN_BIT_EXT |
+        (VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
          VK_DEBUG_REPORT_ERROR_BIT_EXT)) {
         ErrorMonitor *errMonitor = (ErrorMonitor *)pUserData;
         return errMonitor->CheckForDesiredMsg(msgFlags, pMsg);
@@ -669,7 +668,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit) {
 //{
 //    VkResult        err;
 //
-//    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARN_BIT_EXT,
+//    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
 //        "Freeing memory object while it still has references");
 //
 //    ASSERT_NO_FATAL_FAILURE(InitState());
@@ -865,7 +864,7 @@ TEST_F(VkLayerTest, ResetUnsignaledFence) {
 
     // TODO: verify that this matches layer
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_WARN_BIT_EXT,
+        VK_DEBUG_REPORT_WARNING_BIT_EXT,
         "submitted to VkResetFences in UNSIGNALED STATE");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1700,7 +1699,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated) {
     VkResult err;
 
     // TODO: verify that this matches layer
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARN_BIT_EXT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
                                          " bound but it was never updated. ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -2424,7 +2423,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
                             2, &descriptorSet[0], 0, NULL);
     // 1. Disturb bound set0 by re-binding set1 w/ updated pipelineLayout
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_PERF_WARN_BIT_EXT,
+        VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
         " previously bound as set #0 was disturbed ");
     vkCmdBindDescriptorSets(
         m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -2438,7 +2437,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
                             VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0,
                             2, &descriptorSet[0], 0, NULL);
     // 2. Disturb set after last bound set
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERF_WARN_BIT_EXT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                          " newly bound as set #0 so set #1 and "
                                          "any subsequent sets were disturbed ");
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(),
@@ -4612,7 +4611,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw) {
 
     // TODO: verify that this matches layer
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_WARN_BIT_EXT,
+        VK_DEBUG_REPORT_WARNING_BIT_EXT,
         "vkCmdClearAttachments() issued on CB object ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4728,7 +4727,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex) {
     VkResult err;
 
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_PERF_WARN_BIT_EXT,
+        VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
         "but no vertex buffers are attached to this Pipeline State Object");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4998,7 +4997,7 @@ TEST_F(VkLayerTest, InvalidSPIRVVersion) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed) {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERF_WARN_BIT_EXT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                          "not consumed by fragment shader");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5303,7 +5302,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchInBlock) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed) {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERF_WARN_BIT_EXT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                          "location 0 not consumed by VS");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5361,7 +5360,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineAttribLocationMismatch) {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERF_WARN_BIT_EXT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                          "location 0 not consumed by VS");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5777,7 +5776,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed) {
     // TODO: verify that this matches layer
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_WARN_BIT_EXT,
+        VK_DEBUG_REPORT_WARNING_BIT_EXT,
         "FS writes to output location 1 with no matching attachment");
 
     ASSERT_NO_FATAL_FAILURE(InitState());

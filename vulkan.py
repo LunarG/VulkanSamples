@@ -197,7 +197,7 @@ class Extension(object):
 # VK core API
 core = Extension(
     name="VK_CORE",
-    headers=["vulkan/vulkan.h", "vulkan/vk_ext_debug_report.h"],
+    headers=["vulkan/vulkan.h"],
     objects=[
         "VkInstance",
         "VkPhysicalDevice",
@@ -1144,7 +1144,7 @@ ext_khr_win32_surface = Extension(
 )
 lunarg_debug_report = Extension(
     name="VK_EXT_debug_report",
-    headers=["vulkan/vk_ext_debug_report.h"],
+    headers=["vulkan/vulkan.h"],
     objects=[
         "VkDebugReportCallbackEXT",
     ],
@@ -1304,7 +1304,7 @@ def parse_vk_h(filename):
 
     # make them an extension and print
     ext = Extension("VK_CORE",
-            headers=["vulkan/vulkan.h", "vulkan/vk_ext_debug_report.h"],
+            headers=["vulkan/vulkan.h"],
             objects=object_lines,
             protos=protos)
     print("core =", str(ext))

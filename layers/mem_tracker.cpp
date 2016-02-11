@@ -621,7 +621,7 @@ reportMemReferencesAndCleanUp(
     if (cmdBufRefCount > 0 && pMemObjInfo->pCommandBufferBindings.size() > 0) {
         for (list<VkCommandBuffer>::const_iterator it = pMemObjInfo->pCommandBufferBindings.begin(); it != pMemObjInfo->pCommandBufferBindings.end(); ++it) {
             // TODO : CommandBuffer should be source Obj here
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(*it), __LINE__, MEMTRACK_FREED_MEM_REF, "MEM",
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(*it), __LINE__, MEMTRACK_FREED_MEM_REF, "MEM",
                     "Command Buffer %p still has a reference to mem obj %#" PRIxLEAST64, (*it), (uint64_t) pMemObjInfo->mem);
         }
         // Clear the list of hanging references
@@ -630,7 +630,7 @@ reportMemReferencesAndCleanUp(
 
     if (objRefCount > 0 && pMemObjInfo->pObjBindings.size() > 0) {
         for (auto it = pMemObjInfo->pObjBindings.begin(); it != pMemObjInfo->pObjBindings.end(); ++it) {
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, it->type, it->handle, __LINE__, MEMTRACK_FREED_MEM_REF, "MEM",
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, it->type, it->handle, __LINE__, MEMTRACK_FREED_MEM_REF, "MEM",
                     "VK Object %#" PRIxLEAST64 " still has a reference to mem obj %#" PRIxLEAST64, it->handle, (uint64_t) pMemObjInfo->mem);
         }
         // Clear the list of hanging references
@@ -672,7 +672,7 @@ checkCBCompleted(
             VkQueue queue = pCBInfo->lastSubmittedQueue;
             MT_QUEUE_INFO *pQueueInfo = &my_data->queueMap[queue];
             if (pCBInfo->fenceId > pQueueInfo->lastRetiredId) {
-                skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)cb, __LINE__,
+                skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)cb, __LINE__,
                                MEMTRACK_NONE, "MEM", "fence %#" PRIxLEAST64 " for CB %p has not been checked for completion",
                                (uint64_t) pCBInfo->lastSubmittedFence, cb);
                 *complete = VK_FALSE;
@@ -695,7 +695,7 @@ freeMemObjInfo(
     if (pInfo) {
         if (pInfo->allocInfo.allocationSize == 0 && !internal) {
             // TODO: Verify against Valid Use section
-            skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t) mem, __LINE__, MEMTRACK_INVALID_MEM_OBJ, "MEM",
+            skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t) mem, __LINE__, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                             "Attempting to free memory associated with a Persistent Image, %#" PRIxLEAST64 ", "
                             "this should not be explicitly freed\n", (uint64_t) mem);
         } else {
@@ -810,7 +810,7 @@ set_mem_binding(
     // Handle NULL case separately, just clear previous binding & decrement reference
     if (mem == VK_NULL_HANDLE) {
         // TODO: Verify against Valid Use section of spec.
-        skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, type, handle, __LINE__, MEMTRACK_INVALID_MEM_OBJ, "MEM",
+        skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, type, handle, __LINE__, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                        "In %s, attempting to Bind Obj(%#" PRIxLEAST64 ") to NULL", apiName, handle);
     } else {
         MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(my_data, handle, type);
@@ -914,7 +914,7 @@ print_object_map_members(
     const char      *objectStr)
 {
     for (auto const& element : objectName) {
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, objectType, 0, __LINE__, MEMTRACK_NONE, "MEM",
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, objectType, 0, __LINE__, MEMTRACK_NONE, "MEM",
             "    %s Object list contains %s Object %#" PRIxLEAST64 " ", objectStr, objectStr, element.first);
     }
 }
@@ -955,14 +955,14 @@ print_mem_list(
     MT_MEM_OBJ_INFO* pInfo = NULL;
 
     // Early out if info is not requested
-    if (!(my_data->report_data->active_flags & VK_DEBUG_REPORT_INFO_BIT_EXT)) {
+    if (!(my_data->report_data->active_flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)) {
         return;
     }
 
     // Just printing each msg individually for now, may want to package these into single large print
-    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
+    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
             "Details of Memory Object list (of size " PRINTF_SIZE_T_SPECIFIER " elements)", my_data->memObjMap.size());
-    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
+    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
             "=============================");
 
     if (my_data->memObjMap.size() <= 0)
@@ -971,36 +971,36 @@ print_mem_list(
     for (auto ii=my_data->memObjMap.begin(); ii!=my_data->memObjMap.end(); ++ii) {
         pInfo = &(*ii).second;
 
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
             "    ===MemObjInfo at %p===", (void*)pInfo);
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
                 "    Mem object: %#" PRIxLEAST64, (uint64_t)(pInfo->mem));
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
                 "    Ref Count: %u", pInfo->refCount);
         if (0 != pInfo->allocInfo.allocationSize) {
             string pAllocInfoMsg = vk_print_vkmemoryallocateinfo(&pInfo->allocInfo, "MEM(INFO):         ");
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
                     "    Mem Alloc info:\n%s", pAllocInfoMsg.c_str());
         } else {
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
                     "    Mem Alloc info is NULL (alloc done by vkCreateSwapchainKHR())");
         }
 
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
                 "    VK OBJECT Binding list of size " PRINTF_SIZE_T_SPECIFIER " elements:", pInfo->pObjBindings.size());
         if (pInfo->pObjBindings.size() > 0) {
             for (list<MT_OBJ_HANDLE_TYPE>::iterator it = pInfo->pObjBindings.begin(); it != pInfo->pObjBindings.end(); ++it) {
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
                         "       VK OBJECT %" PRIu64, it->handle);
             }
         }
 
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
                 "    VK Command Buffer (CB) binding list of size " PRINTF_SIZE_T_SPECIFIER " elements", pInfo->pCommandBufferBindings.size());
         if (pInfo->pCommandBufferBindings.size() > 0)
         {
             for (list<VkCommandBuffer>::iterator it = pInfo->pCommandBufferBindings.begin(); it != pInfo->pCommandBufferBindings.end(); ++it) {
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
                         "      VK CB %p", (*it));
             }
         }
@@ -1015,13 +1015,13 @@ printCBList(
     MT_CB_INFO* pCBInfo = NULL;
 
     // Early out if info is not requested
-    if (!(my_data->report_data->active_flags & VK_DEBUG_REPORT_INFO_BIT_EXT)) {
+    if (!(my_data->report_data->active_flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)) {
         return;
     }
 
-    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
+    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
         "Details of CB list (of size " PRINTF_SIZE_T_SPECIFIER " elements)", my_data->cbMap.size());
-    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
+    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
         "==================");
 
     if (my_data->cbMap.size() <= 0)
@@ -1030,7 +1030,7 @@ printCBList(
     for (auto ii=my_data->cbMap.begin(); ii!=my_data->cbMap.end(); ++ii) {
         pCBInfo = &(*ii).second;
 
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
                 "    CB Info (%p) has CB %p, fenceId %" PRIx64", and fence %#" PRIxLEAST64,
                 (void*)pCBInfo, (void*)pCBInfo->commandBuffer, pCBInfo->fenceId,
                 (uint64_t) pCBInfo->lastSubmittedFence);
@@ -1038,7 +1038,7 @@ printCBList(
         if (pCBInfo->pMemObjList.size() <= 0)
             continue;
         for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_NONE, "MEM",
                     "      Mem obj %" PRIu64, (uint64_t)(*it));
         }
     }
@@ -1226,9 +1226,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(
     layer_data *my_device_data = get_my_data_ptr(key, layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    log_msg(my_device_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, (uint64_t)device, __LINE__, MEMTRACK_NONE, "MEM",
+    log_msg(my_device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, (uint64_t)device, __LINE__, MEMTRACK_NONE, "MEM",
         "Printing List details prior to vkDestroyDevice()");
-    log_msg(my_device_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, (uint64_t)device, __LINE__, MEMTRACK_NONE, "MEM",
+    log_msg(my_device_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, (uint64_t)device, __LINE__, MEMTRACK_NONE, "MEM",
         "================================================");
     print_mem_list(my_device_data, device);
     printCBList(my_device_data, device);
@@ -1240,7 +1240,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(
             pInfo = &(*ii).second;
             if (pInfo->allocInfo.allocationSize != 0) {
                 // Valid Usage: All child objects created on device must have been destroyed prior to destroying device
-                skipCall |= log_msg(my_device_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t) pInfo->mem, __LINE__, MEMTRACK_MEMORY_LEAK, "MEM",
+                skipCall |= log_msg(my_device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t) pInfo->mem, __LINE__, MEMTRACK_MEMORY_LEAK, "MEM",
                                  "Mem Object %" PRIu64 " has not been freed. You should clean up this memory by calling "
                                  "vkFreeMemory(%" PRIu64 ") prior to vkDestroyDevice().", (uint64_t)(pInfo->mem), (uint64_t)(pInfo->mem));
             }
@@ -1475,7 +1475,7 @@ validateMemRange(
 
     if (size == 0) {
         // TODO: a size of 0 is not listed as an invalid use in the spec, should it be?
-        skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)mem, __LINE__,
+        skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)mem, __LINE__,
             MEMTRACK_INVALID_MAP, "MEM", "VkMapMemory: Attempting to map memory range of size zero");
     }
 
@@ -1530,7 +1530,7 @@ VkBool32 deleteMemRanges(
     if (mem_element != my_data->memObjMap.end()) {
         if (!mem_element->second.memRange.size) {
             // Valid Usage: memory must currently be mapped
-            skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)mem, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
+            skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)mem, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
                                "Unmapping Memory without memory being mapped: mem obj %#" PRIxLEAST64, (uint64_t)mem);
         }
         mem_element->second.memRange.size = 0;
@@ -1964,7 +1964,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(
             // Validate fences in SIGNALED state
             if (!(fence_item->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT)) {
                 // TODO: I don't see a Valid Usage section for ResetFences. This behavior should be documented there.
-                skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, (uint64_t) pFences[i], __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+                skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, (uint64_t) pFences[i], __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                         "Fence %#" PRIxLEAST64 " submitted to VkResetFences in UNSIGNALED STATE", (uint64_t) pFences[i]);
             }
             else {
@@ -1992,14 +1992,14 @@ verifyFenceStatus(
     if (pFenceInfo != my_data->fenceMap.end()) {
         if (pFenceInfo->second.firstTimeFlag != VK_TRUE) {
             if ((pFenceInfo->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT) && pFenceInfo->second.firstTimeFlag != VK_TRUE) {
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, (uint64_t) fence, __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, (uint64_t) fence, __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                     "%s specified fence %#" PRIxLEAST64 " already in SIGNALED state.", apiCall, (uint64_t) fence);
             }
             if (!pFenceInfo->second.queue &&
                 !pFenceInfo->second
                      .swapchain) { // Checking status of unsubmitted fence
                 skipCall |= log_msg(
-                    my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT,
+                    my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
                     VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                     reinterpret_cast<uint64_t &>(fence),
                     __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
@@ -3097,7 +3097,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
 
             if (mismatch) {
                 // TODO: Verify against Valid Usage section of extension
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, (uint64_t) swapchain, __LINE__, MEMTRACK_NONE, "SWAP_CHAIN",
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, (uint64_t) swapchain, __LINE__, MEMTRACK_NONE, "SWAP_CHAIN",
                         "vkGetSwapchainInfoKHR(%" PRIu64 ", VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_KHR) returned mismatching data", (uint64_t)(swapchain));
             }
         }

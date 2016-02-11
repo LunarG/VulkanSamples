@@ -27,7 +27,6 @@
 
 #include "vulkan/vk_layer.h"
 #include <vector>
-#include "vulkan/vk_ext_debug_report.h"
 
 using namespace std;
 

@@ -30,7 +30,6 @@
 #define SWAPCHAIN_H
 
 #include "vulkan/vk_layer.h"
-#include "vulkan/vk_ext_debug_report.h"
 #include "vk_layer_config.h"
 #include "vk_layer_logging.h"
 #include <vector>
@@ -152,12 +151,12 @@ typedef enum _SWAPCHAIN_ERROR
     : VK_FALSE
 #define LOG_PERF_WARNING(objType, type, obj, enm, fmt, ...)             \
     (my_data) ?                                                         \
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, (objType), \
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (objType), \
                 (uint64_t) (obj), __LINE__, (enm), LAYER_NAME, (fmt), __VA_ARGS__) \
     : VK_FALSE
 #define LOG_INFO_WRONG_NEXT(objType, type, obj)                         \
     (my_data) ?                                                         \
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (objType), \
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (objType), \
                 (uint64_t) (obj), 0, SWAPCHAIN_WRONG_NEXT, LAYER_NAME, \
                 "%s() called with non-NULL value for %s->pNext.",       \
                 __FUNCTION__, (obj))                                    \

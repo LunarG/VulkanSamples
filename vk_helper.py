@@ -1479,7 +1479,6 @@ class StructWrapperGen:
     def _generateSizeHelperHeaderC(self):
         header = []
         header.append('#include "vk_struct_size_helper.h"')
-        header.append('#include "vulkan/vk_ext_debug_report.h"')
         header.append('#include <string.h>')
         header.append('#include <assert.h>')
         header.append('\n// Function definitions\n')
@@ -2058,8 +2057,6 @@ def main(argv=None):
     input_header = os.path.basename(opts.input_file)
     if 'vulkan.h' == input_header:
         input_header = "vulkan/vulkan.h"
-    if 'vk_ext_debug_report.h' == input_header:
-        input_header = "vulkan/vk_ext_debug_report.h"
     if 'vk_lunarg_debug_marker.h' == input_header:
         input_header = "vulkan/vk_lunarg_debug_marker.h"
 

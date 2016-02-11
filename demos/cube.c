@@ -42,7 +42,6 @@
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
-#include <vulkan/vk_ext_debug_report.h>
 
 #include <vulkan/vk_sdk_platform.h>
 #include "linmath.h"
@@ -269,7 +268,7 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         sprintf(message, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode,
                 pMsg);
-    } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT_EXT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
         // We know that we're submitting queues without fences, ignore this
         // warning
         if (strstr(pMsg,
@@ -2432,7 +2431,7 @@ static void demo_init_vk(struct demo *demo) {
         dbgCreateInfo.pfnCallback = callback;
         dbgCreateInfo.pUserData = NULL;
         dbgCreateInfo.flags =
-            VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT;
+            VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
         err = demo->CreateDebugReportCallback(demo->inst, &dbgCreateInfo, NULL,
                                               &demo->msg_callback);
         switch (err) {
