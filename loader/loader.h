@@ -59,12 +59,11 @@
 enum layer_type {
     VK_LAYER_TYPE_DEVICE_EXPLICIT = 0x1,
     VK_LAYER_TYPE_INSTANCE_EXPLICIT = 0x2,
-    VK_LAYER_TYPE_GLOBAL_EXPLICIT =
-        0x3, // both instance and device layer, bitwise
+    VK_LAYER_TYPE_GLOBAL_EXPLICIT = 0x3, // instance and device layer, bitwise
     VK_LAYER_TYPE_DEVICE_IMPLICIT = 0x4,
     VK_LAYER_TYPE_INSTANCE_IMPLICIT = 0x8,
-    VK_LAYER_TYPE_GLOBAL_IMPLICIT =
-        0xc, // both instance and device layer, bitwise
+    VK_LAYER_TYPE_GLOBAL_IMPLICIT = 0xc, // instance and device layer, bitwise
+    VK_LAYER_TYPE_META_EXPLICT = 0x10,
 };
 
 typedef enum VkStringErrorFlagBits {
@@ -83,6 +82,13 @@ static const char UTF8_THREE_BYTE_CODE = 0xF0;
 static const char UTF8_THREE_BYTE_MASK = 0xF8;
 static const char UTF8_DATA_BYTE_CODE = 0x80;
 static const char UTF8_DATA_BYTE_MASK = 0xC0;
+
+static const char std_validation_names[9][VK_MAX_EXTENSION_NAME_SIZE] = {
+    "VK_LAYER_LUNARG_threading",     "VK_LAYER_LUNARG_param_checker",
+    "VK_LAYER_LUNARG_device_limits", "VK_LAYER_LUNARG_object_tracker",
+    "VK_LAYER_LUNARG_image",         "VK_LAYER_LUNARG_mem_tracker",
+    "VK_LAYER_LUNARG_draw_state",    "VK_LAYER_LUNARG_swapchain",
+    "VK_LAYER_GOOGLE_unique_objects"};
 
 // form of all dynamic lists/arrays
 // only the list element should be changed
@@ -373,6 +379,7 @@ extern LOADER_PLATFORM_THREAD_ONCE_DEFINITION(once_init);
 extern loader_platform_thread_mutex loader_lock;
 extern loader_platform_thread_mutex loader_json_lock;
 extern const VkLayerInstanceDispatchTable instance_disp;
+extern const char *std_validation_str;
 
 struct loader_msg_callback_map_entry {
     VkDebugReportCallbackEXT icd_obj;
@@ -477,6 +484,15 @@ void loader_destroy_generic_list(const struct loader_instance *inst,
                                  struct loader_generic_list *list);
 void loader_delete_layer_properties(const struct loader_instance *inst,
                                     struct loader_layer_list *layer_list);
+void loader_expand_layer_names(
+    const struct loader_instance *inst, const char *key_name,
+    uint32_t expand_count,
+    const char expand_names[][VK_MAX_EXTENSION_NAME_SIZE],
+    uint32_t *layer_count, char ***ppp_layer_names);
+void loader_unexpand_dev_layer_names(uint32_t layer_count, char **layer_names,
+                                     const VkDeviceCreateInfo *pCreateInfo);
+void loader_unexpand_inst_layer_names(uint32_t layer_count, char **layer_names,
+                                      const VkInstanceCreateInfo *pCreateInfo);
 void loader_add_to_layer_list(const struct loader_instance *inst,
                               struct loader_layer_list *list,
                               uint32_t prop_list_count,

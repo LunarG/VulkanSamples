@@ -91,6 +91,8 @@ uint32_t g_loader_log_msgs = 0;
 loader_platform_thread_mutex loader_lock;
 loader_platform_thread_mutex loader_json_lock;
 
+const char *std_validation_str = "VK_LAYER_LUNARG_standard_validation";
+
 // This table contains the loader's instance dispatch table, which contains
 // default functions if no instance layers are activated.  This contains
 // pointers to "terminator functions".
@@ -1621,6 +1623,178 @@ static void loader_copy_layer_properties(const struct loader_instance *inst,
     }
 }
 
+static bool
+loader_find_layer_name_list(const char *name,
+                            const struct loader_layer_list *layer_list) {
+    if (!layer_list)
+        return false;
+    for (uint32_t j = 0; j < layer_list->count; j++)
+        if (!strcmp(name, layer_list->list[j].info.layerName))
+            return true;
+    return false;
+}
+
+static bool loader_find_layer_name(const char *name, uint32_t layer_count,
+                                   const char **layer_list) {
+    if (!layer_list)
+        return false;
+    for (uint32_t j = 0; j < layer_count; j++)
+        if (!strcmp(name, layer_list[j]))
+            return true;
+    return false;
+}
+
+static bool loader_find_layer_name_array(
+    const char *name, uint32_t layer_count,
+    const char layer_list[][VK_MAX_EXTENSION_NAME_SIZE]) {
+    if (!layer_list)
+        return false;
+    for (uint32_t j = 0; j < layer_count; j++)
+        if (!strcmp(name, layer_list[j]))
+            return true;
+    return false;
+}
+
+/**
+ * Searches through an array of layer names (ppp_layer_names) looking for a
+ * layer key_name.
+ * If not found then simply returns updating nothing.
+ * Otherwise, it uses expand_count, expand_names adding them to layer names.
+ * Any duplicate (pre-existing) exapand_names in layer names are removed.
+ * Expand names are added to the back/end of the list of layer names.
+ * @param inst
+ * @param layer_count
+ * @param ppp_layer_names
+ */
+void loader_expand_layer_names(
+    const struct loader_instance *inst, const char *key_name,
+    uint32_t expand_count,
+    const char expand_names[][VK_MAX_EXTENSION_NAME_SIZE],
+    uint32_t *layer_count, char ***ppp_layer_names) {
+    char **pp_layer_names = *ppp_layer_names;
+    if (!loader_find_layer_name(key_name, *layer_count,
+                                (const char **)pp_layer_names))
+        return; // didn't find the key_name in the list
+
+    loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+               "Found meta layer %s, replacing with actual layer group",
+               key_name);
+    // In place removal of any expand_names found in layer_name (remove
+    // duplicates)
+    // Also remove the key_name
+    uint32_t src_idx, dst_idx, cnt = *layer_count;
+    for (src_idx = 0; src_idx < *layer_count; src_idx++) {
+        if (loader_find_layer_name_array(pp_layer_names[src_idx], expand_count,
+                                         expand_names)) {
+            pp_layer_names[src_idx] = NULL;
+            cnt--;
+        } else if (!strcmp(pp_layer_names[src_idx], key_name)) {
+            pp_layer_names[src_idx] = NULL;
+            cnt--;
+        }
+    }
+    for (dst_idx = 0; dst_idx < cnt; dst_idx++) {
+        if (pp_layer_names[dst_idx] == NULL) {
+            src_idx = dst_idx + 1;
+            while (src_idx < *layer_count && pp_layer_names[src_idx] == NULL)
+                src_idx++;
+            if (src_idx < *layer_count && pp_layer_names[src_idx] != NULL)
+                pp_layer_names[dst_idx] = pp_layer_names[src_idx];
+        }
+    }
+
+    // Add the expand_names to layer_names
+    src_idx = 0;
+    for (dst_idx = cnt; dst_idx < cnt + expand_count; dst_idx++) {
+        pp_layer_names[dst_idx] = (char *)&expand_names[src_idx++][0];
+    }
+    *layer_count = expand_count + cnt;
+    return;
+}
+
+/**
+ * Restores the layer name list and count into the pCreatInfo structure.
+ * If is_device == tru then pCreateInfo is a device structure else an instance
+ * structure.
+ * @param layer_count
+ * @param layer_names
+ * @param pCreateInfo
+ */
+void loader_unexpand_dev_layer_names(uint32_t layer_count, char **layer_names,
+                                     const VkDeviceCreateInfo *pCreateInfo) {
+    uint32_t *p_cnt = (uint32_t *)&pCreateInfo->enabledLayerCount;
+    *p_cnt = layer_count;
+
+    for (uint32_t i = 0; i < layer_count; i++) {
+        char **pp_str = (char **)&pCreateInfo->ppEnabledLayerNames[i];
+        *pp_str = layer_names[i];
+    }
+}
+
+void loader_unexpand_inst_layer_names(uint32_t layer_count, char **layer_names,
+                                      const VkInstanceCreateInfo *pCreateInfo) {
+    uint32_t *p_cnt = (uint32_t *)&pCreateInfo->enabledLayerCount;
+    *p_cnt = layer_count;
+
+    for (uint32_t i = 0; i < layer_count; i++) {
+        char **pp_str = (char **)&pCreateInfo->ppEnabledLayerNames[i];
+        *pp_str = layer_names[i];
+    }
+}
+
+/**
+ * Searches through the existing instance and device layer lists looking for
+ * the set of required layer names. If found then it adds a meta property to the
+ * layer list.
+ * Assumes the required layers are the same for both instance and device lists.
+ * @param inst
+ * @param layer_count  number of layers in layer_names
+ * @param layer_names  array of required layer names
+ * @param layer_instance_list
+ * @param layer_device_list
+ */
+static void loader_add_layer_property_meta(
+    const struct loader_instance *inst, uint32_t layer_count,
+    const char layer_names[][VK_MAX_EXTENSION_NAME_SIZE],
+    struct loader_layer_list *layer_instance_list,
+    struct loader_layer_list *layer_device_list) {
+    uint32_t i, j;
+    bool found;
+    struct loader_layer_list *layer_list;
+
+    if (!layer_count || (layer_count > layer_instance_list->count &&
+                         layer_count > layer_device_list->count))
+        return;
+
+    for (j = 0; j < 2; j++) {
+        if (j == 0)
+            layer_list = layer_instance_list;
+        else
+            layer_list = layer_device_list;
+        found = true;
+        for (i = 0; i < layer_count; i++) {
+            if (loader_find_layer_name_list(layer_names[i], layer_list))
+                continue;
+            found = false;
+            break;
+        }
+
+        struct loader_layer_properties *props;
+        if (found) {
+            props = loader_get_next_layer_property(inst, layer_list);
+            props->type = VK_LAYER_TYPE_META_EXPLICT;
+            strncpy(props->info.description, "LunarG Standard Validation Layer",
+                    sizeof(props->info.description));
+            props->info.implementationVersion = 1;
+            strncpy(props->info.layerName, std_validation_str,
+                    sizeof(props->info.layerName));
+            // TODO what about specVersion? for now insert loader's built
+            // version
+            props->info.specVersion = VK_API_VERSION;
+        }
+    }
+}
+
 /**
  * Given a cJSON struct (json) of the top level JSON object from layer manifest
  * file, add entry to the layer_list.
@@ -2280,7 +2454,7 @@ void loader_layer_scan(const struct loader_instance *inst,
     uint32_t i;
     uint32_t implicit;
 
-    // Get a list of manifest files for layers
+    // Get a list of manifest files for  explicit layers
     loader_get_manifest_files(inst, LAYERS_PATH_ENV, true,
                               DEFAULT_VK_ELAYERS_INFO, &manifest_files[0]);
     // Pass NULL for environment variable override - implicit layers are not
@@ -2335,6 +2509,12 @@ void loader_layer_scan(const struct loader_instance *inst,
 
     if (manifest_files[1].count != 0)
         loader_heap_free(inst, manifest_files[1].filename_list);
+
+    // add a meta layer for validation if the validation layers are all present
+    loader_add_layer_property_meta(
+        inst, sizeof(std_validation_names) / sizeof(std_validation_names[0]),
+        std_validation_names, instance_layers, device_layers);
+
     loader_platform_thread_unlock_mutex(&loader_json_lock);
 }
 
@@ -3784,10 +3964,26 @@ loader_CreateDevice(VkPhysicalDevice physicalDevice,
         }
     }
 
+    /* convert any meta layers to the actual layers makes a copy of layer name*/
+    uint32_t saved_layer_count = pCreateInfo->enabledLayerCount;
+	char **saved_layer_names;
+	saved_layer_names = loader_stack_alloc(sizeof(char*) * pCreateInfo->enabledLayerCount);
+    for (uint32_t i = 0; i < saved_layer_count; i++) {
+        saved_layer_names[i] = (char *)pCreateInfo->ppEnabledLayerNames[i];
+    }
+
+    loader_expand_layer_names(
+        inst, std_validation_str,
+        sizeof(std_validation_names) / sizeof(std_validation_names[0]),
+        std_validation_names, (uint32_t *)&pCreateInfo->enabledLayerCount,
+        (char ***)&pCreateInfo->ppEnabledLayerNames);
+
     /* fetch a list of all layers activated, explicit and implicit */
     res = loader_enable_device_layers(inst, icd, &activated_layer_list,
                                       pCreateInfo, &inst->device_layer_list);
     if (res != VK_SUCCESS) {
+        loader_unexpand_dev_layer_names(saved_layer_count, saved_layer_names,
+                                        pCreateInfo);
         return res;
     }
 
@@ -3795,6 +3991,8 @@ loader_CreateDevice(VkPhysicalDevice physicalDevice,
     res = loader_validate_device_extensions(phys_dev, &activated_layer_list,
                                             pCreateInfo);
     if (res != VK_SUCCESS) {
+        loader_unexpand_dev_layer_names(saved_layer_count, saved_layer_names,
+                                        pCreateInfo);
         loader_destroy_generic_list(
             inst, (struct loader_generic_list *)&activated_layer_list);
         return res;
@@ -3802,6 +4000,8 @@ loader_CreateDevice(VkPhysicalDevice physicalDevice,
 
     dev = loader_add_logical_device(inst, &icd->logical_device_list);
     if (dev == NULL) {
+        loader_unexpand_dev_layer_names(saved_layer_count, saved_layer_names,
+                                        pCreateInfo);
         loader_destroy_generic_list(
             inst, (struct loader_generic_list *)&activated_layer_list);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -3818,6 +4018,8 @@ loader_CreateDevice(VkPhysicalDevice physicalDevice,
     res = loader_enable_device_layers(inst, icd, &dev->activated_layer_list,
                                       pCreateInfo, &inst->device_layer_list);
     if (res != VK_SUCCESS) {
+        loader_unexpand_dev_layer_names(saved_layer_count, saved_layer_names,
+                                        pCreateInfo);
         loader_remove_logical_device(inst, icd, dev);
         return res;
     }
@@ -3825,6 +4027,8 @@ loader_CreateDevice(VkPhysicalDevice physicalDevice,
     res = loader_create_device_chain(physicalDevice, pCreateInfo, pAllocator,
                                      inst, icd, dev);
     if (res != VK_SUCCESS) {
+        loader_unexpand_dev_layer_names(saved_layer_count, saved_layer_names,
+                                        pCreateInfo);
         loader_remove_logical_device(inst, icd, dev);
         return res;
     }
@@ -3841,6 +4045,8 @@ loader_CreateDevice(VkPhysicalDevice physicalDevice,
         &dev->loader_dispatch,
         dev->loader_dispatch.core_dispatch.GetDeviceProcAddr, *pDevice);
 
+    loader_unexpand_dev_layer_names(saved_layer_count, saved_layer_names,
+                                    pCreateInfo);
     return res;
 }
 
