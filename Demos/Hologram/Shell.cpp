@@ -43,6 +43,10 @@ Shell::Shell(Game &game)
 #else
     validate_ = true;
 #endif
+
+    if (validate_) {
+        global_extensions_.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+    }
 }
 
 void Shell::log(LogPriority priority, const char *msg)
