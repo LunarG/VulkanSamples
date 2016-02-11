@@ -34,7 +34,6 @@
 #pragma once
 
 #include "vulkan.h"
-#include "vk_ext_debug_report.h"
 #include "vk_lunarg_debug_marker.h"
 #if defined(__GNUC__) && __GNUC__ >= 4
 #define VK_LAYER_EXPORT __attribute__((visibility("default")))

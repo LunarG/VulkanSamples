@@ -838,7 +838,7 @@ validate_interface_between_stages(layer_data *my_data, VkDevice dev,
         auto b_first = b_at_end ? 0 : b_it->first;
 
         if (b_at_end || ((!a_at_end) && (a_first < b_first))) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
+            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                     "%s writes to output location %d which is not consumed by %s", producer_name, a_first, consumer_name)) {
                 pass = false;
             }
@@ -1005,7 +1005,7 @@ validate_vi_against_vs_inputs(layer_data *my_data, VkDevice dev, VkPipelineVerte
         auto a_first = a_at_end ? 0 : it_a->first;
         auto b_first = b_at_end ? 0 : it_b->first;
         if (!a_at_end && (b_at_end || a_first < b_first)) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
+            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                     "Vertex attribute at location %d not consumed by VS", a_first)) {
                 pass = false;
             }
@@ -1063,7 +1063,7 @@ validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevice dev, shade
 
     while ((outputs.size() > 0 && it != outputs.end()) || attachment < color_formats.size()) {
         if (attachment == color_formats.size() || ( it != outputs.end() && it->first < attachment)) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
+            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                     "FS writes to output location %d with no matching attachment", it->first)) {
                 pass = false;
             }
@@ -1369,7 +1369,7 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
 
             if ((pStage->stage & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
                                   | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)) == 0) {
-                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_UNKNOWN_STAGE, "SC",
+                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_UNKNOWN_STAGE, "SC",
                         "Unknown shader stage %d", pStage->stage)) {
                     pass = VK_FALSE;
                 }
@@ -1559,7 +1559,7 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
             }
         } else {
             if (!pCB->currentDrawData.buffers.empty()) {
-                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,
+                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,
                     "DS", "Vertex buffers are bound to command buffer (%#" PRIxLEAST64 ") but no vertex buffers are attached to this Pipeline State Object (%#" PRIxLEAST64 ").",
                     (uint64_t)pCB->commandBuffer, (uint64_t)pCB->lastBoundPipeline);
             }
@@ -2744,7 +2744,7 @@ static VkBool32 printPipeline(layer_data* my_data, const VkCommandBuffer cb)
         if (!pPipeTrav) {
             // nothing to print
         } else {
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
                     "%s", vk_print_vkgraphicspipelinecreateinfo(&pPipeTrav->graphicsPipelineCI, "{DS}").c_str());
         }
     }
@@ -2761,39 +2761,39 @@ static VkBool32 printDSConfig(layer_data* my_data, const VkCommandBuffer cb)
         SET_NODE* pSet = getSetNode(my_data, pCB->lastBoundDescriptorSet);
         DESCRIPTOR_POOL_NODE* pPool = getPoolNode(my_data, pSet->pool);
         // Print out pool details
-        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
                 "Details for pool %#" PRIxLEAST64 ".", (uint64_t) pPool->pool);
         string poolStr = vk_print_vkdescriptorpoolcreateinfo(&pPool->createInfo, " ");
-        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
                 "%s", poolStr.c_str());
         // Print out set details
         char prefix[10];
         uint32_t index = 0;
-        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
                 "Details for descriptor set %#" PRIxLEAST64 ".", (uint64_t) pSet->set);
         LAYOUT_NODE* pLayout = pSet->pLayout;
         // Print layout details
-        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
                 "Layout #%u, (object %#" PRIxLEAST64 ") for DS %#" PRIxLEAST64 ".", index+1, (uint64_t)(pLayout->layout), (uint64_t)(pSet->set));
         sprintf(prefix, "  [L%u] ", index);
         string DSLstr = vk_print_vkdescriptorsetlayoutcreateinfo(&pLayout->createInfo, prefix).c_str();
-        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
                 "%s", DSLstr.c_str());
         index++;
         GENERIC_HEADER* pUpdate = pSet->pUpdateStructs;
         if (pUpdate) {
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
                     "Update Chain [UC] for descriptor set %#" PRIxLEAST64 ":", (uint64_t) pSet->set);
             sprintf(prefix, "  [UC] ");
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
                     "%s", dynamic_display(pUpdate, prefix).c_str());
             // TODO : If there is a "view" associated with this update, print CI for that view
         } else {
             if (0 != pSet->descriptorCount) {
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
                         "No Update Chain for descriptor set %#" PRIxLEAST64 " which has %u descriptors (vkUpdateDescriptors has not been called)", (uint64_t) pSet->set, pSet->descriptorCount);
             } else {
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
                         "FYI: No descriptors in descriptor set %#" PRIxLEAST64 ".", (uint64_t) pSet->set);
             }
         }
@@ -2805,12 +2805,12 @@ static void printCB(layer_data* my_data, const VkCommandBuffer cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(my_data, cb);
     if (pCB && pCB->cmds.size() > 0) {
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_NONE, "DS",
                 "Cmds in CB %p", (void*)cb);
         vector<CMD_NODE> cmds = pCB->cmds;
         for (auto ii=cmds.begin(); ii!=cmds.end(); ++ii) {
             // TODO : Need to pass cb as srcObj here
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
                 "  CMD#%" PRIu64 ": %s", (*ii).cmdNumber, cmdTypeToString((*ii).type).c_str());
         }
     } else {
@@ -2821,7 +2821,7 @@ static void printCB(layer_data* my_data, const VkCommandBuffer cb)
 static VkBool32 synchAndPrintDSConfig(layer_data* my_data, const VkCommandBuffer cb)
 {
     VkBool32 skipCall = VK_FALSE;
-    if (!(my_data->report_data->active_flags & VK_DEBUG_REPORT_INFO_BIT_EXT)) {
+    if (!(my_data->report_data->active_flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)) {
         return skipCall;
     }
     skipCall |= printDSConfig(my_data, cb);
@@ -4119,7 +4119,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorPool(VkDevice d
     VkResult result = dev_data->device_dispatch_table->CreateDescriptorPool(device, pCreateInfo, pAllocator, pDescriptorPool);
     if (VK_SUCCESS == result) {
         // Insert this pool into Global Pool LL at head
-        if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, (uint64_t) *pDescriptorPool, __LINE__, DRAWSTATE_OUT_OF_MEMORY, "DS",
+        if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, (uint64_t) *pDescriptorPool, __LINE__, DRAWSTATE_OUT_OF_MEMORY, "DS",
                 "Created Descriptor Pool %#" PRIxLEAST64, (uint64_t) *pDescriptorPool))
             return VK_ERROR_VALIDATION_FAILED_EXT;
         DESCRIPTOR_POOL_NODE* pNewNode = new DESCRIPTOR_POOL_NODE(*pDescriptorPool, pCreateInfo);
@@ -4173,11 +4173,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(VkDevice
         DESCRIPTOR_POOL_NODE *pPoolNode = getPoolNode(dev_data, pAllocateInfo->descriptorPool);
         if (pPoolNode) {
             if (pAllocateInfo->descriptorSetCount == 0) {
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, pAllocateInfo->descriptorSetCount, __LINE__, DRAWSTATE_NONE, "DS",
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, pAllocateInfo->descriptorSetCount, __LINE__, DRAWSTATE_NONE, "DS",
                         "AllocateDescriptorSets called with 0 count");
             }
             for (uint32_t i = 0; i < pAllocateInfo->descriptorSetCount; i++) {
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], __LINE__, DRAWSTATE_NONE, "DS",
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], __LINE__, DRAWSTATE_NONE, "DS",
                         "Created Descriptor Set %#" PRIxLEAST64, (uint64_t) pDescriptorSets[i]);
                 // Create new set node and add to head of pool nodes
                 SET_NODE* pNewNode = new SET_NODE;
@@ -4316,7 +4316,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
                         "vkBeginCommandBuffer(): Secondary Command Buffers (%p) must specify a valid renderpass parameter.", (void*)commandBuffer);
                 }
                 if (!pInfo->framebuffer) { // framebuffer may be null for an Secondary CB, but this affects perf
-                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
                         "vkBeginCommandBuffer(): Secondary Command Buffers (%p) may perform better if a valid framebuffer parameter is specified.", (void*)commandBuffer);
                 } else {
                     string errorString = "";
@@ -4674,10 +4674,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                         pCB->lastBoundDescriptorSet = pDescriptorSets[i];
                         pCB->lastBoundPipelineLayout = layout;
                         pCB->boundDescriptorSets[i+firstSet] = pDescriptorSets[i];
-                        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], __LINE__, DRAWSTATE_NONE, "DS",
+                        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], __LINE__, DRAWSTATE_NONE, "DS",
                                 "DS %#" PRIxLEAST64 " bound on pipeline %s", (uint64_t) pDescriptorSets[i], string_VkPipelineBindPoint(pipelineBindPoint));
                         if (!pSet->pUpdateStructs && (pSet->descriptorCount != 0)) {
-                            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
+                            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
                                     "DS %#" PRIxLEAST64 " bound but it was never updated. You may want to either update it or not bind it.", (uint64_t) pDescriptorSets[i]);
                         }
                         // Verify that set being bound is compatible with overlapping setLayout of pipelineLayout
@@ -4727,7 +4727,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                 if (firstSet > 0) { // Check set #s below the first bound set
                     for (uint32_t i=0; i<firstSet; ++i) {
                         if (pCB->boundDescriptorSets[i] && !verify_set_layout_compatibility(dev_data, dev_data->setMap[pCB->boundDescriptorSets[i]], layout, i, errorString)) {
-                            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pCB->boundDescriptorSets[i], __LINE__, DRAWSTATE_NONE, "DS",
+                            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pCB->boundDescriptorSets[i], __LINE__, DRAWSTATE_NONE, "DS",
                                 "DescriptorSetDS %#" PRIxLEAST64 " previously bound as set #%u was disturbed by newly bound pipelineLayout (%#" PRIxLEAST64 ")", (uint64_t) pCB->boundDescriptorSets[i], i, (uint64_t) layout);
                             pCB->boundDescriptorSets[i] = VK_NULL_HANDLE;
                         }
@@ -4736,7 +4736,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                 // Check if newly last bound set invalidates any remaining bound sets
                 if ((pCB->boundDescriptorSets.size()-1) > (lastSetIndex)) {
                     if (oldFinalBoundSet && !verify_set_layout_compatibility(dev_data, dev_data->setMap[oldFinalBoundSet], layout, lastSetIndex, errorString)) {
-                        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) oldFinalBoundSet, __LINE__, DRAWSTATE_NONE, "DS",
+                        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) oldFinalBoundSet, __LINE__, DRAWSTATE_NONE, "DS",
                             "DescriptorSetDS %#" PRIxLEAST64 " previously bound as set #%u is incompatible with set %#" PRIxLEAST64 " newly bound as set #%u so set #%u and any subsequent sets were disturbed by newly bound pipelineLayout (%#" PRIxLEAST64 ")", (uint64_t) oldFinalBoundSet, lastSetIndex, (uint64_t) pCB->boundDescriptorSets[lastSetIndex], lastSetIndex, lastSetIndex+1, (uint64_t) layout);
                         pCB->boundDescriptorSets.resize(lastSetIndex+1);
                     }
@@ -4838,7 +4838,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDraw(VkCommandBuffer commandBuff
         pCB->drawCount[DRAW]++;
         skipCall |= validate_draw_state(dev_data, pCB, VK_FALSE);
         // TODO : Need to pass commandBuffer as srcObj here
-        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
+        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
                 "vkCmdDraw() call #%" PRIu64 ", reporting DS state:", g_drawCount[DRAW]++);
         skipCall |= synchAndPrintDSConfig(dev_data, commandBuffer);
         if (VK_FALSE == skipCall) {
@@ -4862,7 +4862,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexed(VkCommandBuffer comm
         pCB->drawCount[DRAW_INDEXED]++;
         skipCall |= validate_draw_state(dev_data, pCB, VK_TRUE);
         // TODO : Need to pass commandBuffer as srcObj here
-        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
+        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
                 "vkCmdDrawIndexed() call #%" PRIu64 ", reporting DS state:", g_drawCount[DRAW_INDEXED]++);
         skipCall |= synchAndPrintDSConfig(dev_data, commandBuffer);
         if (VK_FALSE == skipCall) {
@@ -4886,7 +4886,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndirect(VkCommandBuffer com
         pCB->drawCount[DRAW_INDIRECT]++;
         skipCall |= validate_draw_state(dev_data, pCB, VK_FALSE);
         // TODO : Need to pass commandBuffer as srcObj here
-        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
+        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
                 "vkCmdDrawIndirect() call #%" PRIu64 ", reporting DS state:", g_drawCount[DRAW_INDIRECT]++);
         skipCall |= synchAndPrintDSConfig(dev_data, commandBuffer);
         if (VK_FALSE == skipCall) {
@@ -4912,7 +4912,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexedIndirect(VkCommandBuf
         skipCall |= validate_draw_state(dev_data, pCB, VK_TRUE);
         loader_platform_thread_lock_mutex(&globalLock);
         // TODO : Need to pass commandBuffer as srcObj here
-        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
+        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
                 "vkCmdDrawIndexedIndirect() call #%" PRIu64 ", reporting DS state:", g_drawCount[DRAW_INDEXED_INDIRECT]++);
         skipCall |= synchAndPrintDSConfig(dev_data, commandBuffer);
         if (VK_FALSE == skipCall) {
@@ -4993,7 +4993,7 @@ VkBool32 VerifySourceImageLayout(VkCommandBuffer cmdBuffer, VkImage srcImage, Vk
     if (srcImageLayout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
         if (srcImageLayout == VK_IMAGE_LAYOUT_GENERAL) {
             // LAYOUT_GENERAL is allowed, but may not be performance optimal, flag as perf warning.
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                  "Layout for input image should be TRANSFER_SRC_OPTIMAL instead of GENERAL.");
         } else {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
@@ -5026,7 +5026,7 @@ VkBool32 VerifyDestImageLayout(VkCommandBuffer cmdBuffer, VkImage destImage, VkI
     if (destImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         if (destImageLayout == VK_IMAGE_LAYOUT_GENERAL) {
             // LAYOUT_GENERAL is allowed, but may not be performance optimal, flag as perf warning.
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                  "Layout for output image should be TRANSFER_DST_OPTIMAL instead of GENERAL.");
         } else {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
@@ -5163,7 +5163,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(
             (pCB->activeRenderPassBeginInfo.renderArea.extent.width  == pRects[0].rect.extent.width) &&
             (pCB->activeRenderPassBeginInfo.renderArea.extent.height == pRects[0].rect.extent.height)) {
             // TODO : commandBuffer should be srcObj
-            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
                     "vkCmdClearAttachments() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
                     " It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.", (uint64_t)(commandBuffer));
         }
@@ -5357,13 +5357,13 @@ VkBool32 ValidateMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, 
     if ((accessMask & required_bit) || (!required_bit && (accessMask & optional_bits))) {
         if (accessMask & !(required_bit | optional_bits)) {
             // TODO: Verify against Valid Use
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
                                  "Additional bits in %s accessMask %d %s are specified when layout is %s.",
                                  type, accessMask, string_VkAccessFlags(accessMask).c_str(), string_VkImageLayout(layout));
         }
     } else {
         if (!required_bit) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
                                  "%s AccessMask %d %s must contain at least one of access bits %d %s when layout is %s, unless the app has previously added a barrier for this transition.",
                                   type, accessMask, string_VkAccessFlags(accessMask).c_str(), optional_bits,
                                   string_VkAccessFlags(optional_bits).c_str(), string_VkImageLayout(layout));
@@ -5374,7 +5374,7 @@ VkBool32 ValidateMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, 
                 ss << optional_bits;
                 opt_bits = "and may have optional bits " + ss.str() + ' ' + string_VkAccessFlags(optional_bits);
             }
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
                                  "%s AccessMask %d %s must have required access bit %d %s %s when layout is %s, unless the app has previously added a barrier for this transition.",
                                   type, accessMask, string_VkAccessFlags(accessMask).c_str(),
                                   required_bit, string_VkAccessFlags(required_bit).c_str(),
@@ -5418,7 +5418,7 @@ VkBool32 ValidateMaskBitsFromLayouts(const layer_data* my_data, VkCommandBuffer 
         case VK_IMAGE_LAYOUT_UNDEFINED: {
             if (accessMask != 0) {
                 // TODO: Verify against Valid Use section spec
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
                                      "Additional bits in %s accessMask %d %s are specified when layout is %s.", type, accessMask, string_VkAccessFlags(accessMask).c_str(),
                                      string_VkImageLayout(layout));
             }
@@ -5683,7 +5683,7 @@ VkBool32 CheckDependencyExists(const layer_data* my_data, VkDevice device, const
             if (FindDependency(subpass, dependent_subpasses[k], subpass_to_node, processed_nodes) ||
                 FindDependency(dependent_subpasses[k], subpass, subpass_to_node, processed_nodes)) {
                 // TODO: Verify against Valid Use section of spec
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
                                      "A dependency between subpasses %d and %d must exist but only an implicit one is specified.",
                                      subpass, dependent_subpasses[k]);
             } else {
@@ -5794,7 +5794,7 @@ VkBool32 ValidateLayouts(const layer_data* my_data, VkDevice device, const VkRen
                 subpass.pInputAttachments[j].layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
                 if (subpass.pInputAttachments[j].layout == VK_IMAGE_LAYOUT_GENERAL) {
                     // TODO: Verify Valid Use in spec. I believe this is allowed (valid) but may not be optimal performance
-                    skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                    skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                     "Layout for input attachment is GENERAL but should be READ_ONLY_OPTIMAL.");
                 } else {
                     skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
@@ -5806,7 +5806,7 @@ VkBool32 ValidateLayouts(const layer_data* my_data, VkDevice device, const VkRen
             if (subpass.pColorAttachments[j].layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
                 if (subpass.pColorAttachments[j].layout == VK_IMAGE_LAYOUT_GENERAL) {
                     // TODO: Verify Valid Use in spec. I believe this is allowed (valid) but may not be optimal performance
-                    skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                    skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                     "Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.");
                 } else {
                     skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
@@ -5819,7 +5819,7 @@ VkBool32 ValidateLayouts(const layer_data* my_data, VkDevice device, const VkRen
             if (subpass.pDepthStencilAttachment->layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
                 if (subpass.pDepthStencilAttachment->layout == VK_IMAGE_LAYOUT_GENERAL) {
                     // TODO: Verify Valid Use in spec. I believe this is allowed (valid) but may not be optimal performance
-                    skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                    skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                     "Layout for depth attachment is GENERAL but should be DEPTH_STENCIL_ATTACHMENT_OPTIMAL.");
                 } else {
                     skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
@@ -6225,7 +6225,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer 
                 }
                 if (pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT) {
                     // Warn that non-simultaneous secondary cmd buffer renders primary non-simultaneous
-                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCommandBuffers[i]), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCommandBuffers[i]), __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
                             "vkCmdExecuteCommands(): Secondary Command Buffer (%#" PRIxLEAST64 ") does not have VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set and will cause primary command buffer (%#" PRIxLEAST64 ") to be treated as if it does not have VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set, even though it does.",
                             (uint64_t)(pCommandBuffers[i]), (uint64_t)(pCB->commandBuffer));
                     pCB->beginInfo.flags &= ~VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;

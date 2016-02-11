@@ -355,7 +355,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, co
         {
             char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, contains unsupported format";
             // TODO: Verify against Valid Use section of spec. Generally if something yield an undefined result, it's invalid
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", str);
+            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", str);
         }
     }
 
@@ -450,7 +450,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
                 std::stringstream ss;
                 ss << "vkCreateRenderPass parameter, VkFormat in pCreateInfo->pAttachments[" << i << "], contains unsupported format";
                 // TODO: Verify against Valid Use section of spec. Generally if something yield an undefined result, it's invalid
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", "%s", ss.str().c_str());
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", "%s", ss.str().c_str());
             }
         }
     }
@@ -463,7 +463,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkImageLayout in pCreateInfo->pAttachments[" << i << "], is unrecognized";
             // TODO: Verify against Valid Use section of spec. Generally if something yield an undefined result, it's invalid
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
         }
     }
 
@@ -474,7 +474,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkAttachmentLoadOp in pCreateInfo->pAttachments[" << i << "], is unrecognized";
             // TODO: Verify against Valid Use section of spec. Generally if something yield an undefined result, it's invalid
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
         }
     }
 
@@ -485,7 +485,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkAttachmentStoreOp in pCreateInfo->pAttachments[" << i << "], is unrecognized";
             // TODO: Verify against Valid Use section of spec. Generally if something yield an undefined result, it's invalid
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
         }
     }
 
@@ -721,7 +721,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(
         {
             char const str[] = "vkCmdCopyImage: number of layers in source subresource is zero";
             // TODO: Verify against Valid Use section of spec
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                                 (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
 
@@ -729,7 +729,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(
         {
             char const str[] = "vkCmdCopyImage: number of layers in destination subresource is zero";
             // TODO: Verify against Valid Use section of spec
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                                 (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
 
@@ -838,7 +838,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(
         {
             char const str[] = "vkCmdCopyImageToBuffer: number of layers in image subresource is zero";
             // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                                 (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
 
@@ -875,7 +875,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(
         {
             char const str[] = "vkCmdCopyBufferToImage: number of layers in image subresource is zero";
             // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                                 (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
 
@@ -945,7 +945,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(
                 {
                     char const str[] = "vkCmdBlitImage: number of layers in source subresource is zero";
                     // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
-                    skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                                         (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
                 }
 
@@ -953,7 +953,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(
                 {
                     char const str[] = "vkCmdBlitImage: number of layers in destination subresource is zero";
                     // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
-                    skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                                         (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
                 }
 
@@ -971,7 +971,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(
                     std::stringstream ss;
                     ss << "vkCmdBlitImage: Image aspects of depth/stencil images should match";
                     // TODO: Verify against Valid Use section of spec, if this case yields undefined results, then it's an error
-                    skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                                        (uint64_t)commandBuffer, __LINE__, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", "%s", ss.str().c_str());
                 }
                 if (vk_format_is_depth_and_stencil(srcFormat)) {
@@ -1081,7 +1081,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResolveImage(
         {
             char const str[] = "vkCmdResolveImage: number of layers in source subresource is zero";
             // TODO: Verify against Valid Use section of spec. Generally if something yield an undefined result, it's invalid/error
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                                 (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
 
@@ -1090,7 +1090,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResolveImage(
             char const str[] = "vkCmdResolveImage: number of layers in destination subresource is zero";
 
             // TODO: Verify against Valid Use section of spec. Generally if something yield an undefined result, it's invalid/error
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                                 (uint64_t)commandBuffer, __LINE__, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
 
