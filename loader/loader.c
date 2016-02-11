@@ -1896,7 +1896,8 @@ loader_add_layer_properties(const struct loader_instance *inst,
                 GET_JSON_OBJECT(ext_item, entrypoints)
                 int entry_count;
                 if (entrypoints == NULL) {
-                    loader_add_to_dev_ext_list(inst, &props->device_extension_list,
+                    loader_add_to_dev_ext_list(inst,
+                                               &props->device_extension_list,
                                                &ext_prop, 0, NULL);
                     continue;
                 }
@@ -2962,8 +2963,8 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
         instance_create_info.pNext = loader_create_info.pNext;
         loader_create_info.pNext = &instance_create_info;
 
-        res = fpCreateInstance(&loader_create_info, pAllocator,
-                               created_instance);
+        res =
+            fpCreateInstance(&loader_create_info, pAllocator, created_instance);
     } else {
         // Couldn't find CreateInstance function!
         res = VK_ERROR_INITIALIZATION_FAILED;
@@ -3066,7 +3067,8 @@ loader_create_device_terminator(VkPhysicalDevice physicalDevice,
      * independent of the actual ICD, just in the same library.
      */
     char **filtered_extension_names = NULL;
-    filtered_extension_names = loader_stack_alloc(pCreateInfo->enabledExtensionCount * sizeof(char *));
+    filtered_extension_names =
+        loader_stack_alloc(pCreateInfo->enabledExtensionCount * sizeof(char *));
     if (!filtered_extension_names) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -3075,14 +3077,16 @@ loader_create_device_terminator(VkPhysicalDevice physicalDevice,
     localCreateInfo.ppEnabledLayerNames = NULL;
 
     localCreateInfo.enabledExtensionCount = 0;
-    localCreateInfo.ppEnabledExtensionNames = (const char * const *) filtered_extension_names;
+    localCreateInfo.ppEnabledExtensionNames =
+        (const char *const *)filtered_extension_names;
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         const char *extension_name = pCreateInfo->ppEnabledExtensionNames[i];
-        VkExtensionProperties *prop = get_extension_property(extension_name,
-                                      &phys_dev->device_extension_cache);
+        VkExtensionProperties *prop = get_extension_property(
+            extension_name, &phys_dev->device_extension_cache);
         if (prop) {
-            filtered_extension_names[localCreateInfo.enabledExtensionCount] = (char *) extension_name;
+            filtered_extension_names[localCreateInfo.enabledExtensionCount] =
+                (char *)extension_name;
             localCreateInfo.enabledExtensionCount++;
         }
     }
@@ -3245,10 +3249,12 @@ VkResult loader_validate_layers(const struct loader_instance *inst,
     struct loader_layer_properties *prop;
 
     for (uint32_t i = 0; i < layer_count; i++) {
-        VkStringErrorFlags result = vk_string_validate(MaxLoaderStringLength, ppEnabledLayerNames[i]);
+        VkStringErrorFlags result =
+            vk_string_validate(MaxLoaderStringLength, ppEnabledLayerNames[i]);
         if (result != VK_STRING_ERROR_NONE) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                "Loader: Device ppEnabledLayerNames contains string that is too long or is badly formed");
+                       "Loader: Device ppEnabledLayerNames contains string "
+                       "that is too long or is badly formed");
             return VK_ERROR_LAYER_NOT_PRESENT;
         }
 
@@ -3270,10 +3276,12 @@ VkResult loader_validate_instance_extensions(
     struct loader_layer_properties *layer_prop;
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        VkStringErrorFlags result = vk_string_validate(MaxLoaderStringLength, pCreateInfo->ppEnabledExtensionNames[i]);
+        VkStringErrorFlags result = vk_string_validate(
+            MaxLoaderStringLength, pCreateInfo->ppEnabledExtensionNames[i]);
         if (result != VK_STRING_ERROR_NONE) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                "Loader: Instance ppEnabledExtensionNames contains string that is too long or is badly formed");
+                       "Loader: Instance ppEnabledExtensionNames contains "
+                       "string that is too long or is badly formed");
             return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
 
@@ -3325,10 +3333,12 @@ VkResult loader_validate_device_extensions(
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
 
-        VkStringErrorFlags result = vk_string_validate(MaxLoaderStringLength, pCreateInfo->ppEnabledExtensionNames[i]);
+        VkStringErrorFlags result = vk_string_validate(
+            MaxLoaderStringLength, pCreateInfo->ppEnabledExtensionNames[i]);
         if (result != VK_STRING_ERROR_NONE) {
-            loader_log(phys_dev->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                "Loader: Device ppEnabledExtensionNames contains string that is too long or is badly formed");
+            loader_log(phys_dev->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                       0, "Loader: Device ppEnabledExtensionNames contains "
+                          "string that is too long or is badly formed");
             return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
 
@@ -3748,8 +3758,7 @@ loader_CreateDevice(VkPhysicalDevice physicalDevice,
 
     /* validate any app enabled layers are available */
     if (pCreateInfo->enabledLayerCount > 0) {
-        res = loader_validate_layers(inst,
-                                     pCreateInfo->enabledLayerCount,
+        res = loader_validate_layers(inst, pCreateInfo->enabledLayerCount,
                                      pCreateInfo->ppEnabledLayerNames,
                                      &inst->device_layer_list);
         if (res != VK_SUCCESS) {
@@ -3931,16 +3940,19 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
 
     /* get layer libraries if needed */
     if (pLayerName && strlen(pLayerName) != 0) {
-        if (vk_string_validate(MaxLoaderStringLength, pLayerName) == VK_STRING_ERROR_NONE) {
+        if (vk_string_validate(MaxLoaderStringLength, pLayerName) ==
+            VK_STRING_ERROR_NONE) {
             loader_layer_scan(NULL, &instance_layers, NULL);
             for (uint32_t i = 0; i < instance_layers.count; i++) {
-                struct loader_layer_properties *props = &instance_layers.list[i];
+                struct loader_layer_properties *props =
+                    &instance_layers.list[i];
                 if (strcmp(props->info.layerName, pLayerName) == 0) {
-                   global_ext_list = &props->instance_extension_list;
+                    global_ext_list = &props->instance_extension_list;
                 }
             }
         } else {
-            assert(VK_FALSE && "vkEnumerateInstanceExtensionProperties:  pLayerName is too long or is badly formed");
+            assert(VK_FALSE && "vkEnumerateInstanceExtensionProperties:  "
+                               "pLayerName is too long or is badly formed");
             return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
     } else {
@@ -4043,16 +4055,17 @@ loader_EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
 
     /* get layer libraries if needed */
     if (pLayerName && strlen(pLayerName) != 0) {
-        if (vk_string_validate(MaxLoaderStringLength, pLayerName) == VK_STRING_ERROR_NONE) {
+        if (vk_string_validate(MaxLoaderStringLength, pLayerName) ==
+            VK_STRING_ERROR_NONE) {
             for (uint32_t i = 0;
-                i < phys_dev->this_instance->device_layer_list.count; i++) {
+                 i < phys_dev->this_instance->device_layer_list.count; i++) {
                 struct loader_layer_properties *props =
                     &phys_dev->this_instance->device_layer_list.list[i];
                 if (strcmp(props->info.layerName, pLayerName) == 0) {
-                   dev_ext_list = &props->device_extension_list;
+                    dev_ext_list = &props->device_extension_list;
                 }
             }
-            count = (dev_ext_list == NULL) ? 0: dev_ext_list->count;
+            count = (dev_ext_list == NULL) ? 0 : dev_ext_list->count;
             if (pProperties == NULL) {
                 *pPropertyCount = count;
                 return VK_SUCCESS;
@@ -4069,8 +4082,9 @@ loader_EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
                 return VK_INCOMPLETE;
             }
         } else {
-            loader_log(phys_dev->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                "vkEnumerateDeviceExtensionProperties:  pLayerName is too long or is badly formed");
+            loader_log(phys_dev->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                       0, "vkEnumerateDeviceExtensionProperties:  pLayerName "
+                          "is too long or is badly formed");
             return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
         return VK_SUCCESS;
@@ -4201,21 +4215,19 @@ loader_EnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice,
     return VK_SUCCESS;
 }
 
-VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8)
-{
+VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8) {
     VkStringErrorFlags result = VK_STRING_ERROR_NONE;
-    int                num_char_bytes;
-    int                i,j;
+    int num_char_bytes;
+    int i, j;
 
-    for (i = 0; i < max_length; i++)
-    {
+    for (i = 0; i < max_length; i++) {
         if (utf8[i] == 0) {
             break;
         } else if ((utf8[i] >= 0x20) && (utf8[i] < 0x7f)) {
             num_char_bytes = 0;
-        } else if ((utf8[i] & UTF8_ONE_BYTE_MASK)   == UTF8_ONE_BYTE_CODE) {
+        } else if ((utf8[i] & UTF8_ONE_BYTE_MASK) == UTF8_ONE_BYTE_CODE) {
             num_char_bytes = 1;
-        } else if ((utf8[i] & UTF8_TWO_BYTE_MASK)   == UTF8_TWO_BYTE_CODE)   {
+        } else if ((utf8[i] & UTF8_TWO_BYTE_MASK) == UTF8_TWO_BYTE_CODE) {
             num_char_bytes = 2;
         } else if ((utf8[i] & UTF8_THREE_BYTE_MASK) == UTF8_THREE_BYTE_CODE) {
             num_char_bytes = 3;
@@ -4236,4 +4248,3 @@ VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8)
     }
     return result;
 }
-
