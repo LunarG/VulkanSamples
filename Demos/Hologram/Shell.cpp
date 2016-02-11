@@ -36,7 +36,7 @@ Shell::Shell(Game &game)
 {
     // require generic WSI extensions
     global_extensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-    //device_extensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    device_extensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
 #if defined(NDEBUG)
     validate_ = false;
