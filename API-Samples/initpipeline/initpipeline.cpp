@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -41,28 +42,28 @@ Create Graphics Pipeline
 /* SPIR-V                                                                 */
 
 static const char *vertShaderText =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "layout (std140, binding = 0) uniform bufferVals {\n"
-        "    mat4 mvp;\n"
-        "} myBufferVals;\n"
-        "layout (location = 0) in vec4 pos;\n"
-        "layout (location = 1) in vec4 inColor;\n"
-        "layout (location = 0) out vec4 outColor;\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
-        "void main() {\n"
-        "   outColor = inColor;\n"
-        "   gl_Position = myBufferVals.mvp * pos;\n"
-        "\n"
-        "   // GL->VK conventions\n"
-        "   gl_Position.y = -gl_Position.y;\n"
-        "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
-        "}\n";
+    "#version 400\n"
+    "#extension GL_ARB_separate_shader_objects : enable\n"
+    "#extension GL_ARB_shading_language_420pack : enable\n"
+    "layout (std140, binding = 0) uniform bufferVals {\n"
+    "    mat4 mvp;\n"
+    "} myBufferVals;\n"
+    "layout (location = 0) in vec4 pos;\n"
+    "layout (location = 1) in vec4 inColor;\n"
+    "layout (location = 0) out vec4 outColor;\n"
+    "out gl_PerVertex { \n"
+    "    vec4 gl_Position;\n"
+    "};\n"
+    "void main() {\n"
+    "   outColor = inColor;\n"
+    "   gl_Position = myBufferVals.mvp * pos;\n"
+    "\n"
+    "   // GL->VK conventions\n"
+    "   gl_Position.y = -gl_Position.y;\n"
+    "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
+    "}\n";
 
-static const char *fragShaderText=
+static const char *fragShaderText =
     "#version 400\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
@@ -72,8 +73,7 @@ static const char *fragShaderText=
     "   outColor = color;\n"
     "}\n";
 
-int sample_main()
-{
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Graphics Pipeline Sample";
@@ -98,7 +98,8 @@ int sample_main()
     init_uniform_buffer(info);
     init_renderpass(info, depthPresent);
     init_framebuffers(info, depthPresent);
-    init_vertex_buffer(info, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
+    init_vertex_buffer(info, g_vb_solid_face_colors_Data,
+                       sizeof(g_vb_solid_face_colors_Data),
                        sizeof(g_vb_solid_face_colors_Data[0]), false);
     init_descriptor_and_pipeline_layouts(info, false);
     init_descriptor_pool(info, false);
@@ -113,11 +114,12 @@ int sample_main()
     pipelineCache.pInitialData = NULL;
     pipelineCache.flags = 0;
 
-    res = vkCreatePipelineCache(info.device, &pipelineCache, NULL, &info.pipelineCache);
+    res = vkCreatePipelineCache(info.device, &pipelineCache, NULL,
+                                &info.pipelineCache);
     assert(res == VK_SUCCESS);
 
-    VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
-    VkPipelineDynamicStateCreateInfo       dynamicState = {};
+    VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
+    VkPipelineDynamicStateCreateInfo dynamicState = {};
     memset(dynamicStateEnables, 0, sizeof dynamicStateEnables);
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamicState.pNext = NULL;
@@ -182,9 +184,11 @@ int sample_main()
     vp.pNext = NULL;
     vp.flags = 0;
     vp.viewportCount = NUM_VIEWPORTS;
-    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] =
+        VK_DYNAMIC_STATE_VIEWPORT;
     vp.scissorCount = NUM_SCISSORS;
-    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] =
+        VK_DYNAMIC_STATE_SCISSOR;
     vp.pScissors = NULL;
     vp.pViewports = NULL;
 
@@ -208,7 +212,7 @@ int sample_main()
     ds.back.writeMask = 0;
     ds.front = ds.back;
 
-    VkPipelineMultisampleStateCreateInfo   ms;
+    VkPipelineMultisampleStateCreateInfo ms;
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pNext = NULL;
     ms.flags = 0;
@@ -221,26 +225,27 @@ int sample_main()
 
     VkGraphicsPipelineCreateInfo pipeline;
     pipeline.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipeline.pNext               = NULL;
-    pipeline.layout              = info.pipeline_layout;
-    pipeline.basePipelineHandle  = VK_NULL_HANDLE;
-    pipeline.basePipelineIndex   = 0;
-    pipeline.flags               = 0;
-    pipeline.pVertexInputState   = &vi;
+    pipeline.pNext = NULL;
+    pipeline.layout = info.pipeline_layout;
+    pipeline.basePipelineHandle = VK_NULL_HANDLE;
+    pipeline.basePipelineIndex = 0;
+    pipeline.flags = 0;
+    pipeline.pVertexInputState = &vi;
     pipeline.pInputAssemblyState = &ia;
-    pipeline.pRasterizationState        = &rs;
-    pipeline.pColorBlendState    = &cb;
-    pipeline.pTessellationState  = NULL;
-    pipeline.pMultisampleState   = &ms;
-    pipeline.pDynamicState       = &dynamicState;
-    pipeline.pViewportState      = &vp;
-    pipeline.pDepthStencilState  = &ds;
-    pipeline.pStages             = info.shaderStages;
-    pipeline.stageCount          = 2;
-    pipeline.renderPass          = info.render_pass;
-    pipeline.subpass             = 0;
+    pipeline.pRasterizationState = &rs;
+    pipeline.pColorBlendState = &cb;
+    pipeline.pTessellationState = NULL;
+    pipeline.pMultisampleState = &ms;
+    pipeline.pDynamicState = &dynamicState;
+    pipeline.pViewportState = &vp;
+    pipeline.pDepthStencilState = &ds;
+    pipeline.pStages = info.shaderStages;
+    pipeline.stageCount = 2;
+    pipeline.renderPass = info.render_pass;
+    pipeline.subpass = 0;
 
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &info.pipeline);
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
+                                    &pipeline, NULL, &info.pipeline);
     assert(res == VK_SUCCESS);
     execute_end_command_buffer(info);
     execute_queue_command_buffer(info);
@@ -264,4 +269,3 @@ int sample_main()
     destroy_instance(info);
     return 0;
 }
-

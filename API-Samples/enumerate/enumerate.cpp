@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -31,15 +32,15 @@ enumerate physical devices
 #include <cstdlib>
 #include <util_init.hpp>
 
-int sample_main()
-{
+int sample_main() {
     struct sample_info info = {};
     init_instance(info, "vulkansamples_enumerate");
 
     /* VULKAN_KEY_START */
 
     uint32_t gpu_count = 1;
-    VkResult U_ASSERT_ONLY res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, NULL);
+    VkResult U_ASSERT_ONLY res =
+        vkEnumeratePhysicalDevices(info.inst, &gpu_count, NULL);
     assert(gpu_count);
     info.gpus.resize(gpu_count);
     res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, info.gpus.data());

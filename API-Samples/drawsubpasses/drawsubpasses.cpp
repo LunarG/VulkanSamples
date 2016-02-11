@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -37,7 +38,6 @@ Render two multi-subpass render passes with different framebuffer attachments
 /* and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for */
 /* the driver.  We do this for clarity rather than using pre-compiled     */
 /* SPIR-V                                                                 */
-
 
 /* This shader renders the cubes in projected space */
 static const char *normalVertShaderText =
@@ -81,7 +81,7 @@ static const char *fullscreenVertShaderText =
     "   gl_Position = verts[gl_VertexIndex];"
     "}\n";
 
-static const char *fragShaderText=
+static const char *fragShaderText =
     "#version 400\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
@@ -92,10 +92,10 @@ static const char *fragShaderText=
     "}\n";
 
 /**
- *  Sample using multiple render passes per framebuffer (different x,y extents) and multiple subpasses per renderpass.
+ *  Sample using multiple render passes per framebuffer (different x,y extents)
+ *  and multiple subpasses per renderpass.
  */
-int sample_main()
-{
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Multi-pass render passes";
@@ -122,8 +122,9 @@ int sample_main()
 
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info, false);
-    init_vertex_buffer(info, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
-                               sizeof(g_vb_solid_face_colors_Data[0]), false);
+    init_vertex_buffer(info, g_vb_solid_face_colors_Data,
+                       sizeof(g_vb_solid_face_colors_Data),
+                       sizeof(g_vb_solid_face_colors_Data[0]), false);
     init_descriptor_pool(info, false);
     init_descriptor_set(info, false);
     init_pipeline_cache(info);
@@ -132,7 +133,8 @@ int sample_main()
 
     /**
      *  First renderpass in this sample.
-     *  Stenciled rendering: subpass 1 draw to stencil buffer, subpass 2 draw to color buffer with stencil test
+     *  Stenciled rendering: subpass 1 draw to stencil buffer, subpass 2 draw to
+     *  color buffer with stencil test
      */
     VkAttachmentDescription attachments[2];
     attachments[0].format = info.format;
@@ -151,8 +153,10 @@ int sample_main()
     attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments[1].initialLayout =
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments[1].finalLayout =
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     attachments[1].flags = 0;
 
     VkAttachmentReference color_reference = {};
@@ -193,8 +197,10 @@ int sample_main()
     dependency.dependencyFlags = 0;
     dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-    dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT|VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-    dependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT|VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+                               VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    dependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+                               VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 
     VkRenderPassCreateInfo rp_info = {};
     rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -211,12 +217,12 @@ int sample_main()
     assert(!res);
 
     /* now that we have the render pass, create framebuffer and pipelines */
-    
+
     info.render_pass = stencil_render_pass;
     init_framebuffers(info, depthPresent);
 
-    VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
-    VkPipelineDynamicStateCreateInfo       dynamicState = {};
+    VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
+    VkPipelineDynamicStateCreateInfo dynamicState = {};
     memset(dynamicStateEnables, 0, sizeof dynamicStateEnables);
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamicState.pNext = NULL;
@@ -276,9 +282,11 @@ int sample_main()
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp.pNext = NULL;
     vp.viewportCount = NUM_VIEWPORTS;
-    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] =
+        VK_DYNAMIC_STATE_VIEWPORT;
     vp.scissorCount = NUM_SCISSORS;
-    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] =
+        VK_DYNAMIC_STATE_SCISSOR;
 
     VkPipelineDepthStencilStateCreateInfo ds;
     ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -289,7 +297,7 @@ int sample_main()
     ds.depthBoundsTestEnable = VK_FALSE;
     ds.minDepthBounds = 0;
     ds.maxDepthBounds = 0;
-    
+
     ds.stencilTestEnable = VK_TRUE;
     ds.back.failOp = VK_STENCIL_OP_REPLACE;
     ds.back.depthFailOp = VK_STENCIL_OP_REPLACE;
@@ -300,7 +308,7 @@ int sample_main()
     ds.back.reference = 0x44;
     ds.front = ds.back;
 
-    VkPipelineMultisampleStateCreateInfo   ms;
+    VkPipelineMultisampleStateCreateInfo ms;
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pNext = NULL;
     ms.pSampleMask = NULL;
@@ -312,40 +320,43 @@ int sample_main()
 
     VkGraphicsPipelineCreateInfo pipeline;
     pipeline.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipeline.pNext               = NULL;
-    pipeline.layout              = info.pipeline_layout;
-    pipeline.basePipelineHandle  = VK_NULL_HANDLE;
-    pipeline.basePipelineIndex   = 0;
-    pipeline.flags               = 0;
-    pipeline.pVertexInputState   = &vi;
+    pipeline.pNext = NULL;
+    pipeline.layout = info.pipeline_layout;
+    pipeline.basePipelineHandle = VK_NULL_HANDLE;
+    pipeline.basePipelineIndex = 0;
+    pipeline.flags = 0;
+    pipeline.pVertexInputState = &vi;
     pipeline.pInputAssemblyState = &ia;
     pipeline.pRasterizationState = &rs;
-    pipeline.pColorBlendState    = &cb;
-    pipeline.pTessellationState  = NULL;
-    pipeline.pMultisampleState   = &ms;
-    pipeline.pDynamicState       = &dynamicState;
-    pipeline.pViewportState      = &vp;
-    pipeline.pDepthStencilState  = &ds;
-    pipeline.pStages             = info.shaderStages;
-    pipeline.stageCount          = 2;
-    pipeline.renderPass          = stencil_render_pass;
-    pipeline.subpass             = 0;
-    
+    pipeline.pColorBlendState = &cb;
+    pipeline.pTessellationState = NULL;
+    pipeline.pMultisampleState = &ms;
+    pipeline.pDynamicState = &dynamicState;
+    pipeline.pViewportState = &vp;
+    pipeline.pDepthStencilState = &ds;
+    pipeline.pStages = info.shaderStages;
+    pipeline.stageCount = 2;
+    pipeline.renderPass = stencil_render_pass;
+    pipeline.subpass = 0;
+
     init_shaders(info, normalVertShaderText, fragShaderText);
 
     /* The first pipeline will render in subpass 0 to fill the stencil */
     pipeline.subpass = 0;
-    
+
     VkPipeline stencil_cube_pipe = VK_NULL_HANDLE;
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &stencil_cube_pipe);
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
+                                    &pipeline, NULL, &stencil_cube_pipe);
     assert(res == VK_SUCCESS);
 
-    /* destroy the shaders used for the above pipelin eand replace them with those for the
+    /* destroy the shaders used for the above pipelin eand replace them with
+       those for the
        fullscreen fill pass */
     destroy_shaders(info);
     init_shaders(info, fullscreenVertShaderText, fragShaderText);
 
-    /* the second pipeline will stencil test but not write, using the same reference */
+    /* the second pipeline will stencil test but not write, using the same
+     * reference */
     ds.back.failOp = VK_STENCIL_OP_KEEP;
     ds.back.depthFailOp = VK_STENCIL_OP_KEEP;
     ds.back.passOp = VK_STENCIL_OP_KEEP;
@@ -355,8 +366,8 @@ int sample_main()
     /* don't test depth, only use stencil test */
     ds.depthTestEnable = VK_FALSE;
 
-    /* the second pipeline will be a fullscreen triangle strip, with vertices generated
-       purely from the vertex shader - no inputs needed */
+    /* the second pipeline will be a fullscreen triangle strip, with vertices
+       generated purely from the vertex shader - no inputs needed */
     ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
     vi.vertexAttributeDescriptionCount = 0;
     vi.vertexBindingDescriptionCount = 0;
@@ -365,7 +376,8 @@ int sample_main()
     pipeline.subpass = 1;
 
     VkPipeline stencil_fullscreen_pipe = VK_NULL_HANDLE;
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &stencil_fullscreen_pipe);
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
+                                    &pipeline, NULL, &stencil_fullscreen_pipe);
     assert(res == VK_SUCCESS);
 
     destroy_shaders(info);
@@ -376,27 +388,24 @@ int sample_main()
     clear_values[0].color.float32[1] = 0.2f;
     clear_values[0].color.float32[2] = 0.2f;
     clear_values[0].color.float32[3] = 0.2f;
-    clear_values[1].depthStencil.depth     = 1.0f;
-    clear_values[1].depthStencil.stencil   = 0;
+    clear_values[1].depthStencil.depth = 1.0f;
+    clear_values[1].depthStencil.stencil = 0;
 
     VkSemaphore presentCompleteSemaphore;
     VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
-    presentCompleteSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    presentCompleteSemaphoreCreateInfo.sType =
+        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     presentCompleteSemaphoreCreateInfo.pNext = NULL;
     presentCompleteSemaphoreCreateInfo.flags = 0;
 
-    res = vkCreateSemaphore(info.device,
-                            &presentCompleteSemaphoreCreateInfo,
-                            NULL,
-                            &presentCompleteSemaphore);
+    res = vkCreateSemaphore(info.device, &presentCompleteSemaphoreCreateInfo,
+                            NULL, &presentCompleteSemaphore);
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
-    res = vkAcquireNextImageKHR(info.device, info.swap_chain,
-                                      UINT64_MAX,
-                                      presentCompleteSemaphore,
-                                      NULL,
-                                      &info.current_buffer);
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
+                                presentCompleteSemaphore, NULL,
+                                &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
     assert(res == VK_SUCCESS);
@@ -413,25 +422,26 @@ int sample_main()
     rp_begin.clearValueCount = 2;
     rp_begin.pClearValues = clear_values;
 
-    /* Begin the first render pass. This will render in the left half of the screen.
-       Subpass 0 will render a cube, stencil writing but outputting no color.
-       Subpass 1 will render a fullscreen pass, stencil testing and outputting color
-                 only where the cube filled in stencil */
+    /* Begin the first render pass. This will render in the left half of the
+       screen. Subpass 0 will render a cube, stencil writing but outputting
+       no color. Subpass 1 will render a fullscreen pass, stencil testing and
+       outputting color only where the cube filled in stencil */
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                  stencil_cube_pipe);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
-            0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 0, NULL);
+                      stencil_cube_pipe);
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+                            info.desc_set.data(), 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
 
     VkViewport viewport;
-    viewport.height = (float) info.height;
-    viewport.width = (float) info.width / 2;
-    viewport.minDepth = (float) 0.0f;
-    viewport.maxDepth = (float) 1.0f;
+    viewport.height = (float)info.height;
+    viewport.width = (float)info.width / 2;
+    viewport.minDepth = (float)0.0f;
+    viewport.maxDepth = (float)1.0f;
     viewport.x = 0;
     viewport.y = 0;
     vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &viewport);
@@ -451,7 +461,7 @@ int sample_main()
 
     /* Bind the fullscreen pass pipeline */
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                 stencil_fullscreen_pipe);
+                      stencil_fullscreen_pipe);
 
     vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &viewport);
     vkCmdSetScissor(info.cmd, 0, NUM_SCISSORS, &scissor);
@@ -474,8 +484,10 @@ int sample_main()
     subpasses[0].pColorAttachments = &color_reference;
 
     /* The dependency between the subpasses now includes the color attachment */
-    dependency.srcAccessMask |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT|VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-    dependency.dstAccessMask |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT|VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+    dependency.srcAccessMask |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                                VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+    dependency.dstAccessMask |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                                VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 
     /* Otherwise, the render pass is identical */
     VkRenderPass blend_render_pass;
@@ -485,10 +497,11 @@ int sample_main()
     pipeline.renderPass = blend_render_pass;
 
     /* We must recreate the framebuffers with this renderpass as the two render
-       passes are not compatible. Store the current framebuffers for later deletion */
+       passes are not compatible. Store the current framebuffers for later
+       deletion */
     VkFramebuffer *stencil_framebuffers = info.framebuffers;
     info.framebuffers = NULL;
-    
+
     info.render_pass = blend_render_pass;
     init_framebuffers(info, depthPresent);
 
@@ -506,7 +519,8 @@ int sample_main()
     /* We don't want to stencil test */
     ds.stencilTestEnable = VK_FALSE;
 
-    /* This time, both pipelines will blend. the first pipeline uses the blend constant
+    /* This time, both pipelines will blend. the first pipeline uses the blend
+     constant
      to determine the blend amount */
     att_state[0].colorWriteMask = 0xf;
     att_state[0].blendEnable = VK_TRUE;
@@ -524,13 +538,15 @@ int sample_main()
 
     init_shaders(info, normalVertShaderText, fragShaderText);
 
-    /* This is the first subpass's pipeline, to blend a cube onto the color image */
+    /* This is the first subpass's pipeline, to blend a cube onto the color
+     * image */
     pipeline.subpass = 0;
 
     VkPipeline blend_cube_pipe = VK_NULL_HANDLE;
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &blend_cube_pipe);
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
+                                    &pipeline, NULL, &blend_cube_pipe);
     assert(res == VK_SUCCESS);
-    
+
     /* Now we will set up the fullscreen pass to render on top. */
     destroy_shaders(info);
     init_shaders(info, fullscreenVertShaderText, fragShaderText);
@@ -539,7 +555,7 @@ int sample_main()
     ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
     vi.vertexAttributeDescriptionCount = 0;
     vi.vertexBindingDescriptionCount = 0;
-    
+
     /* We'll use the alpha output from the shader */
     att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
@@ -550,7 +566,8 @@ int sample_main()
     pipeline.subpass = 1;
 
     VkPipeline blend_fullscreen_pipe = VK_NULL_HANDLE;
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &blend_fullscreen_pipe);
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
+                                    &pipeline, NULL, &blend_fullscreen_pipe);
     assert(res == VK_SUCCESS);
 
     destroy_shaders(info);
@@ -567,25 +584,28 @@ int sample_main()
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                  blend_cube_pipe);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
-            0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 0, NULL);
+                      blend_cube_pipe);
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+                            info.desc_set.data(), 0, NULL);
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
     vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &viewport);
     vkCmdSetScissor(info.cmd, 0, NUM_SCISSORS, &scissor);
-  
+
     /* Draw the cube blending */
     vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);
 
     /* Advance to the next subpass */
     vkCmdNextSubpass(info.cmd, VK_SUBPASS_CONTENTS_INLINE);
-    
-    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                 blend_fullscreen_pipe);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
-            0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 0, NULL);
 
-    /* Adjust the viewport to be a square in the centre, just overlapping the cube */
+    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      blend_fullscreen_pipe);
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+                            info.desc_set.data(), 0, NULL);
+
+    /* Adjust the viewport to be a square in the centre, just overlapping the
+     * cube */
     viewport.x += 25.0f;
     viewport.y += 150.0f;
     viewport.width -= 50.0f;
@@ -593,7 +613,7 @@ int sample_main()
 
     vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &viewport);
     vkCmdSetScissor(info.cmd, 0, NUM_SCISSORS, &scissor);
-    
+
     vkCmdDraw(info.cmd, 4, 1, 0, 0);
 
     /* The second renderpass is complete */
@@ -615,11 +635,12 @@ int sample_main()
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         0, 0, NULL, 0, NULL, 1, &prePresentBarrier);
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, NULL, 0, NULL,
+                         1, &prePresentBarrier);
 
     res = vkEndCommandBuffer(info.cmd);
-    const VkCommandBuffer cmd_bufs[] = { info.cmd };
+    const VkCommandBuffer cmd_bufs[] = {info.cmd};
     VkFenceCreateInfo fenceInfo;
     VkFence drawFence;
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -655,8 +676,9 @@ int sample_main()
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
-    } while(res == VK_TIMEOUT);
+        res =
+            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
@@ -664,16 +686,16 @@ int sample_main()
     wait_seconds(1);
     /* VULKAN_KEY_END */
 
-    for(uint32_t i=0; i < info.swapchainImageCount; i++)
-      vkDestroyFramebuffer(info.device, stencil_framebuffers[i], NULL);
+    for (uint32_t i = 0; i < info.swapchainImageCount; i++)
+        vkDestroyFramebuffer(info.device, stencil_framebuffers[i], NULL);
     free(stencil_framebuffers);
-    
+
     vkDestroyRenderPass(info.device, stencil_render_pass, NULL);
     vkDestroyRenderPass(info.device, blend_render_pass, NULL);
-    
+
     vkDestroyPipeline(info.device, blend_cube_pipe, NULL);
     vkDestroyPipeline(info.device, blend_fullscreen_pipe, NULL);
-    
+
     vkDestroyPipeline(info.device, stencil_cube_pipe, NULL);
     vkDestroyPipeline(info.device, stencil_fullscreen_pipe, NULL);
 

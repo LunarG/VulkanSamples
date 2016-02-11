@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -33,8 +34,7 @@ Initialize Framebuffer
 #include <assert.h>
 #include <cstdlib>
 
-int sample_main()
-{
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Init Framebuffer Sample";
@@ -68,17 +68,19 @@ int sample_main()
     fb_info.renderPass = info.render_pass;
     fb_info.attachmentCount = 2;
     fb_info.pAttachments = attachments;
-    fb_info.width  = info.width;
+    fb_info.width = info.width;
     fb_info.height = info.height;
     fb_info.layers = 1;
 
     uint32_t i;
-    info.framebuffers = (VkFramebuffer *) malloc(info.swapchainImageCount * sizeof(VkFramebuffer));
+    info.framebuffers = (VkFramebuffer *)malloc(info.swapchainImageCount *
+                                                sizeof(VkFramebuffer));
     assert(info.framebuffers);
 
     for (i = 0; i < info.swapchainImageCount; i++) {
         attachments[0] = info.buffers[i].view;
-        res = vkCreateFramebuffer(info.device, &fb_info, NULL, &info.framebuffers[i]);
+        res = vkCreateFramebuffer(info.device, &fb_info, NULL,
+                                  &info.framebuffers[i]);
         assert(res == VK_SUCCESS);
     }
     execute_end_command_buffer(info);

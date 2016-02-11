@@ -1,8 +1,9 @@
 /*
  * Vulkan
  *
- * Copyright (C) 2015 Valve Corporation
- * Copyright (C) 2015 Google Inc.
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
+ * Copyright (C) 2015-2016 Google Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -42,15 +43,13 @@
 //#define STBTT_STATIC
 #include "stb_truetype.h"
 
-
 struct vertex {
     float x, y, u, v;
 };
 
-#define MAX_TEXT_VERTICES   16384
-#define FONT_SIZE_PIXELS    18
-#define FONT_ATLAS_SIZE     512
-
+#define MAX_TEXT_VERTICES 16384
+#define FONT_SIZE_PIXELS 18
+#define FONT_ATLAS_SIZE 512
 
 struct WsiImageData {
     VkImage image;
@@ -66,7 +65,6 @@ struct WsiImageData {
     void Cleanup(VkDevice dev);
 };
 
-
 struct SwapChainData {
     unsigned width, height;
     VkFormat format;
@@ -78,7 +76,6 @@ struct SwapChainData {
 
     void Cleanup(VkDevice dev);
 };
-
 
 struct layer_data {
 
@@ -93,7 +90,7 @@ struct layer_data {
     VkPhysicalDevice gpu;
     VkDevice dev;
 
-    std::unordered_map<VkSwapchainKHR, SwapChainData*>* swapChains;
+    std::unordered_map<VkSwapchainKHR, SwapChainData *> *swapChains;
     VkCommandPool pool;
 
     VkPipelineCache pipelineCache;
@@ -122,22 +119,18 @@ struct layer_data {
 
 static std::unordered_map<void *, layer_data *> layer_data_map;
 
-template layer_data *get_my_data_ptr<layer_data>(
-        void *data_key,
-        std::unordered_map<void *, layer_data *> &data_map);
+template layer_data *
+get_my_data_ptr<layer_data>(void *data_key,
+                            std::unordered_map<void *, layer_data *> &data_map);
 
-
-//static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
-// TODO : This can be much smarter, using separate locks for separate global data
+// static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
+// TODO : This can be much smarter, using separate locks for separate global
+// data
 static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
 
-
-static void
-init_overlay(layer_data *my_data)
-{
-    if (!globalLockInitialized)
-    {
+static void init_overlay(layer_data *my_data) {
+    if (!globalLockInitialized) {
         // TODO/TBD: Need to delete this mutex sometime.  How???  One
         // suggestion is to call this during vkCreateInstance(), and then we
         // can clean it up during vkDestroyInstance().  However, that requires
@@ -148,10 +141,8 @@ init_overlay(layer_data *my_data)
     }
 }
 
-
-static bool
-get_file_contents(char const *filename, std::vector<unsigned char> &vec)
-{
+static bool get_file_contents(char const *filename,
+                              std::vector<unsigned char> &vec) {
     FILE *f = fopen(filename, "rb");
     if (!f) {
 #ifdef OVERLAY_DEBUG
@@ -178,11 +169,10 @@ get_file_contents(char const *filename, std::vector<unsigned char> &vec)
     return true;
 }
 
-
-static bool
-compile_shader(VkDevice device, char const *filename, VkShaderModule *module)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+static bool compile_shader(VkDevice device, char const *filename,
+                           VkShaderModule *module) {
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
     std::vector<unsigned char> bytecode;
     if (!get_file_contents(filename, bytecode)) {
@@ -195,10 +185,11 @@ compile_shader(VkDevice device, char const *filename, VkShaderModule *module)
     smci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     smci.pNext = nullptr;
     smci.codeSize = bytecode.size();
-    smci.pCode = (uint32_t const *) &bytecode[0];
+    smci.pCode = (uint32_t const *)&bytecode[0];
     smci.flags = 0;
 
-    res = my_data->device_dispatch_table->CreateShaderModule(device, &smci, nullptr, module);
+    res = my_data->device_dispatch_table->CreateShaderModule(device, &smci,
+                                                             nullptr, module);
     assert(!res);
 
 #ifdef OVERLAY_DEBUG
@@ -208,17 +199,17 @@ compile_shader(VkDevice device, char const *filename, VkShaderModule *module)
     return true;
 }
 
-
-static uint32_t
-choose_memory_type(VkPhysicalDevice gpu, uint32_t typeBits, VkMemoryPropertyFlagBits properties)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
+static uint32_t choose_memory_type(VkPhysicalDevice gpu, uint32_t typeBits,
+                                   VkMemoryPropertyFlagBits properties) {
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
 
     VkPhysicalDeviceMemoryProperties props;
-    my_data->instance_dispatch_table->GetPhysicalDeviceMemoryProperties(gpu, &props);
+    my_data->instance_dispatch_table->GetPhysicalDeviceMemoryProperties(gpu,
+                                                                        &props);
 
     for (auto i = 0u; i < props.memoryTypeCount; i++) {
-        if ((1<<i) & typeBits) {
+        if ((1 << i) & typeBits) {
             if ((props.memoryTypes[i].propertyFlags & properties) == properties)
                 return i;
         }
@@ -228,12 +219,10 @@ choose_memory_type(VkPhysicalDevice gpu, uint32_t typeBits, VkMemoryPropertyFlag
     return 0;
 }
 
-
-static int
-fill_vertex_buffer(layer_data *data, vertex *vertices, int index)
-{
+static int fill_vertex_buffer(layer_data *data, vertex *vertices, int index) {
     char str[1024];
-    sprintf(str, "Vulkan Overlay Example\nWSI Image Index: %d\nFrame: %d\nCmdBuffers: %d",
+    sprintf(str, "Vulkan Overlay Example\nWSI Image Index: %d\nFrame: "
+                 "%d\nCmdBuffers: %d",
             index, data->frame++, data->cmdBuffersThisFrame);
     float x = 0;
     float y = 16;
@@ -244,17 +233,29 @@ fill_vertex_buffer(layer_data *data, vertex *vertices, int index)
         if (*p == '\n') {
             y += 16;
             x = 0;
-        }
-        else {
+        } else {
             stbtt_aligned_quad q;
-            stbtt_GetBakedQuad(data->glyphs, FONT_ATLAS_SIZE, FONT_ATLAS_SIZE, *p - 32, &x, &y, &q, 1);
+            stbtt_GetBakedQuad(data->glyphs, FONT_ATLAS_SIZE, FONT_ATLAS_SIZE,
+                               *p - 32, &x, &y, &q, 1);
 
-            v[0].x = q.x0; v[0].y = q.y0; v[0].u = q.s0; v[0].v = q.t0;
-            v[1].x = q.x1; v[1].y = q.y0; v[1].u = q.s1; v[1].v = q.t0;
-            v[2].x = q.x0; v[2].y = q.y1; v[2].u = q.s0; v[2].v = q.t1;
+            v[0].x = q.x0;
+            v[0].y = q.y0;
+            v[0].u = q.s0;
+            v[0].v = q.t0;
+            v[1].x = q.x1;
+            v[1].y = q.y0;
+            v[1].u = q.s1;
+            v[1].v = q.t0;
+            v[2].x = q.x0;
+            v[2].y = q.y1;
+            v[2].u = q.s0;
+            v[2].v = q.t1;
 
             v[3] = v[1];
-            v[4].x = q.x1; v[4].y = q.y1; v[4].u = q.s1; v[4].v = q.t1;
+            v[4].x = q.x1;
+            v[4].y = q.y1;
+            v[4].u = q.s1;
+            v[4].v = q.t1;
             v[5] = v[2];
 
             v += 6;
@@ -264,10 +265,8 @@ fill_vertex_buffer(layer_data *data, vertex *vertices, int index)
     return v - vertices;
 }
 
-
-static void
-after_device_create(VkPhysicalDevice gpu, VkDevice device, layer_data *data)
-{
+static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
+                                layer_data *data) {
     VkResult U_ASSERT_ONLY err;
 
     data->gpu = gpu;
@@ -278,19 +277,27 @@ after_device_create(VkPhysicalDevice gpu, VkDevice device, layer_data *data)
     VkLayerDispatchTable *pTable = data->device_dispatch_table;
 
     /* Get our WSI hooks in. */
-    data->pfnCreateSwapchainKHR = (PFN_vkCreateSwapchainKHR)pTable->GetDeviceProcAddr(device, "vkCreateSwapchainKHR");
-    data->pfnGetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)pTable->GetDeviceProcAddr(device, "vkGetSwapchainImagesKHR");
-    data->pfnQueuePresentKHR = (PFN_vkQueuePresentKHR)pTable->GetDeviceProcAddr(device, "vkQueuePresentKHR");
-    data->pfnDestroySwapchainKHR = (PFN_vkDestroySwapchainKHR)pTable->GetDeviceProcAddr(device, "vkDestroySwapchainKHR");
-    data->swapChains = new std::unordered_map<VkSwapchainKHR, SwapChainData*>;
+    data->pfnCreateSwapchainKHR =
+        (PFN_vkCreateSwapchainKHR)pTable->GetDeviceProcAddr(
+            device, "vkCreateSwapchainKHR");
+    data->pfnGetSwapchainImagesKHR =
+        (PFN_vkGetSwapchainImagesKHR)pTable->GetDeviceProcAddr(
+            device, "vkGetSwapchainImagesKHR");
+    data->pfnQueuePresentKHR = (PFN_vkQueuePresentKHR)pTable->GetDeviceProcAddr(
+        device, "vkQueuePresentKHR");
+    data->pfnDestroySwapchainKHR =
+        (PFN_vkDestroySwapchainKHR)pTable->GetDeviceProcAddr(
+            device, "vkDestroySwapchainKHR");
+    data->swapChains = new std::unordered_map<VkSwapchainKHR, SwapChainData *>;
 
     /* Command pool */
     VkCommandPoolCreateInfo cpci;
     cpci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     cpci.pNext = nullptr;
-    cpci.queueFamilyIndex = 0;  /* TODO: this needs to be the proper index for the graphics queue
-                                 * we intend to do our overlay rendering on
-                                 */
+    cpci.queueFamilyIndex =
+        0; /* TODO: this needs to be the proper index for the graphics queue
+            * we intend to do our overlay rendering on
+            */
     cpci.flags = 0;
     err = pTable->CreateCommandPool(device, &cpci, nullptr, &data->pool);
     assert(!err);
@@ -298,9 +305,12 @@ after_device_create(VkPhysicalDevice gpu, VkDevice device, layer_data *data)
     /* Create the objects we need */
 
     /* Compile the shaders */
-    compile_shader(device, VULKAN_SAMPLES_BASE_DIR "/Layer-Samples/data/overlay-vert.spv", &data->vsShaderModule);
-    compile_shader(device, VULKAN_SAMPLES_BASE_DIR "/Layer-Samples/data/overlay-frag.spv", &data->fsShaderModule);
-
+    compile_shader(device, VULKAN_SAMPLES_BASE_DIR
+                   "/Layer-Samples/data/overlay-vert.spv",
+                   &data->vsShaderModule);
+    compile_shader(device, VULKAN_SAMPLES_BASE_DIR
+                   "/Layer-Samples/data/overlay-frag.spv",
+                   &data->fsShaderModule);
 
     /* Upload the font bitmap */
     VkImageCreateInfo ici;
@@ -321,17 +331,21 @@ after_device_create(VkPhysicalDevice gpu, VkDevice device, layer_data *data)
     assert(!err);
 
     VkMemoryRequirements mem_reqs;
-    pTable->GetImageMemoryRequirements(device, data->fontGlyphsImage, &mem_reqs);
+    pTable->GetImageMemoryRequirements(device, data->fontGlyphsImage,
+                                       &mem_reqs);
 
     VkMemoryAllocateInfo mem_alloc;
     memset(&mem_alloc, 0, sizeof(mem_alloc));
     mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     mem_alloc.allocationSize = mem_reqs.size;
-    mem_alloc.memoryTypeIndex = choose_memory_type(gpu, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    mem_alloc.memoryTypeIndex = choose_memory_type(
+        gpu, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
-    err = pTable->AllocateMemory(device, &mem_alloc, nullptr, &data->fontGlyphsMemory);
+    err = pTable->AllocateMemory(device, &mem_alloc, nullptr,
+                                 &data->fontGlyphsMemory);
     assert(!err);
-    err = pTable->BindImageMemory(device, data->fontGlyphsImage, data->fontGlyphsMemory, 0);
+    err = pTable->BindImageMemory(device, data->fontGlyphsImage,
+                                  data->fontGlyphsMemory, 0);
     assert(!err);
 
     VkImageSubresource subres;
@@ -341,7 +355,8 @@ after_device_create(VkPhysicalDevice gpu, VkDevice device, layer_data *data)
     VkSubresourceLayout layout;
     void *bits;
 
-    pTable->GetImageSubresourceLayout(device, data->fontGlyphsImage, &subres, &layout);
+    pTable->GetImageSubresourceLayout(device, data->fontGlyphsImage, &subres,
+                                      &layout);
 
     /* ensure we can directly upload into this layout */
     assert(!layout.offset);
@@ -353,8 +368,11 @@ after_device_create(VkPhysicalDevice gpu, VkDevice device, layer_data *data)
 
     /* Load the font glyphs directly into the mapped buffer */
     std::vector<unsigned char> fontData;
-    get_file_contents(VULKAN_SAMPLES_BASE_DIR "/Layer-Samples/data/FreeSans.ttf", fontData);
-    stbtt_BakeFontBitmap(&fontData[0], 0, FONT_SIZE_PIXELS, (unsigned char *)bits, FONT_ATLAS_SIZE, FONT_ATLAS_SIZE, 32, 96, data->glyphs);
+    get_file_contents(
+        VULKAN_SAMPLES_BASE_DIR "/Layer-Samples/data/FreeSans.ttf", fontData);
+    stbtt_BakeFontBitmap(&fontData[0], 0, FONT_SIZE_PIXELS,
+                         (unsigned char *)bits, FONT_ATLAS_SIZE,
+                         FONT_ATLAS_SIZE, 32, 96, data->glyphs);
 
     pTable->UnmapMemory(device, data->fontGlyphsMemory);
 
@@ -375,7 +393,8 @@ after_device_create(VkPhysicalDevice gpu, VkDevice device, layer_data *data)
     ivci.image = data->fontGlyphsImage;
     ivci.flags = 0;
 
-    err = pTable->CreateImageView(device, &ivci, nullptr, &data->fontGlyphsImageView);
+    err = pTable->CreateImageView(device, &ivci, nullptr,
+                                  &data->fontGlyphsImageView);
     assert(!err);
 
     /* transition from undefined layout to shader readonly so we can use it.
@@ -415,15 +434,16 @@ after_device_create(VkPhysicalDevice gpu, VkDevice device, layer_data *data)
     imb.subresourceRange.layerCount = 1;
 
     pTable->CmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            0 /* dependency flags */,
-            0, nullptr, /* memory barriers */
-            0, nullptr, /* buffer memory barriers */
-            1, &imb);   /* image memory barriers */
+                               VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                               0 /* dependency flags */, 0,
+                               nullptr,    /* memory barriers */
+                               0, nullptr, /* buffer memory barriers */
+                               1, &imb);   /* image memory barriers */
 
     pTable->EndCommandBuffer(cmd);
     data->fontUploadCmdBuffer = cmd;
-    data->fontUploadComplete = false;   /* we will schedule this at first present on this device */
+    data->fontUploadComplete =
+        false; /* we will schedule this at first present on this device */
 
 #ifdef OVERLAY_DEBUG
     printf("Font upload done.\n");
@@ -465,7 +485,8 @@ after_device_create(VkPhysicalDevice gpu, VkDevice device, layer_data *data)
     dslci.bindingCount = 1;
     dslci.pBindings = dslb;
 
-    err = pTable->CreateDescriptorSetLayout(device, &dslci, nullptr, &data->dsl);
+    err =
+        pTable->CreateDescriptorSetLayout(device, &dslci, nullptr, &data->dsl);
     assert(!err);
 
     VkPipelineLayoutCreateInfo plci;
@@ -488,7 +509,8 @@ after_device_create(VkPhysicalDevice gpu, VkDevice device, layer_data *data)
     dpci.poolSizeCount = 1;
     dpci.pPoolSizes = dtc;
 
-    err = pTable->CreateDescriptorPool(device, &dpci, nullptr, &data->desc_pool);
+    err =
+        pTable->CreateDescriptorPool(device, &dpci, nullptr, &data->desc_pool);
     assert(!err);
 
     VkDescriptorSetAllocateInfo dsai;
@@ -503,7 +525,8 @@ after_device_create(VkPhysicalDevice gpu, VkDevice device, layer_data *data)
     VkDescriptorImageInfo descs[1];
     descs[0].sampler = data->sampler;
     descs[0].imageView = data->fontGlyphsImageView;
-    descs[0].imageLayout = VK_IMAGE_LAYOUT_GENERAL;     // TODO: cube does this, is it correct?
+    descs[0].imageLayout =
+        VK_IMAGE_LAYOUT_GENERAL; // TODO: cube does this, is it correct?
 
     VkWriteDescriptorSet writes[1];
     memset(&writes, 0, sizeof(writes));
@@ -517,15 +540,19 @@ after_device_create(VkPhysicalDevice gpu, VkDevice device, layer_data *data)
     pTable->UpdateDescriptorSets(device, 1, writes, 0, nullptr);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
-        const VkAllocationCallbacks *pAllocator, VkDevice* pDevice)
-{
-    VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *pCreateInfo,
+               const VkAllocationCallbacks *pAllocator, VkDevice *pDevice) {
+    VkLayerDeviceCreateInfo *chain_info =
+        get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
     assert(chain_info->u.pLayerInfo);
-    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
-    PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
-    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice) fpGetInstanceProcAddr(NULL, "vkCreateDevice");
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
+        chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr =
+        chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
+    PFN_vkCreateDevice fpCreateDevice =
+        (PFN_vkCreateDevice)fpGetInstanceProcAddr(NULL, "vkCreateDevice");
     if (fpCreateDevice == NULL) {
         return VK_ERROR_INITIALIZATION_FAILED;
     }
@@ -538,18 +565,20 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
         return result;
     }
 
-    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+    layer_data *my_device_data =
+        get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
 
     // Setup device dispatch table
     my_device_data->device_dispatch_table = new VkLayerDispatchTable;
-    layer_init_device_dispatch_table(*pDevice, my_device_data->device_dispatch_table, fpGetDeviceProcAddr);
+    layer_init_device_dispatch_table(
+        *pDevice, my_device_data->device_dispatch_table, fpGetDeviceProcAddr);
 
     after_device_create(gpu, *pDevice, my_device_data);
     return result;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator)
-{
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
     dispatch_key key = get_dispatch_key(device);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     my_data->Cleanup();
@@ -559,16 +588,18 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
     layer_data_map.erase(key);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
-    const VkInstanceCreateInfo*                 pCreateInfo,
-    const VkAllocationCallbacks                *pAllocator,
-    VkInstance*                                 pInstance)
-{
-    VkLayerInstanceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
+                 const VkAllocationCallbacks *pAllocator,
+                 VkInstance *pInstance) {
+    VkLayerInstanceCreateInfo *chain_info =
+        get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
     assert(chain_info->u.pLayerInfo);
-    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
-    PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) fpGetInstanceProcAddr(NULL, "vkCreateInstance");
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
+        chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkCreateInstance fpCreateInstance =
+        (PFN_vkCreateInstance)fpGetInstanceProcAddr(NULL, "vkCreateInstance");
     if (fpCreateInstance == NULL) {
         return VK_ERROR_INITIALIZATION_FAILED;
     }
@@ -580,16 +611,19 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     if (result != VK_SUCCESS)
         return result;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     my_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
-    layer_init_instance_dispatch_table(*pInstance, my_data->instance_dispatch_table, fpGetInstanceProcAddr);
+    layer_init_instance_dispatch_table(
+        *pInstance, my_data->instance_dispatch_table, fpGetInstanceProcAddr);
 
     init_overlay(my_data);
     return result;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks *pAllocator)
-{
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyInstance(VkInstance instance,
+                  const VkAllocationCallbacks *pAllocator) {
     dispatch_key key = get_dispatch_key(instance);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
@@ -598,27 +632,28 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
     layer_data_map.erase(key);
 }
 
-
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
-    VkDevice                                 device,
-    const VkSwapchainCreateInfoKHR*          pCreateInfo,
-    const VkAllocationCallbacks*             pAllocator,
-    VkSwapchainKHR*                          pSwapChain)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkCreateSwapchainKHR(VkDevice device,
+                     const VkSwapchainCreateInfoKHR *pCreateInfo,
+                     const VkAllocationCallbacks *pAllocator,
+                     VkSwapchainKHR *pSwapChain) {
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
-    VkResult result = my_data->pfnCreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapChain);
+    VkResult result = my_data->pfnCreateSwapchainKHR(device, pCreateInfo,
+                                                     pAllocator, pSwapChain);
 
     if (result == VK_SUCCESS) {
-        auto & data = (*my_data->swapChains)[*pSwapChain];
+        auto &data = (*my_data->swapChains)[*pSwapChain];
         data = new SwapChainData;
         data->width = pCreateInfo->imageExtent.width;
         data->height = pCreateInfo->imageExtent.height;
         data->format = pCreateInfo->imageFormat;
 
 #ifdef OVERLAY_DEBUG
-        printf("Creating resources for scribbling on swapchain format %u width %u height %u\n",
-                data->format, data->width, data->height);
+        printf("Creating resources for scribbling on swapchain format %u width "
+               "%u height %u\n",
+               data->format, data->width, data->height);
 #endif
 
         /* Create a renderpass for drawing into this swapchain */
@@ -631,7 +666,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
         ad.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         ad.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         /* TODO: deal with the image possibly being in a different
-         * layout - we need to care about general, VK_IMAGE_LAYOUT_PRESENT_SOURCE_WSI,
+         * layout - we need to care about general,
+         * VK_IMAGE_LAYOUT_PRESENT_SOURCE_WSI,
          * etc etc
          */
         ad.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -691,7 +727,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
 
         VkPipelineInputAssemblyStateCreateInfo piasci;
         memset(&piasci, 0, sizeof(piasci));
-        piasci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        piasci.sType =
+            VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         piasci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
         VkViewport viewport;
@@ -716,7 +753,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
 
         VkPipelineRasterizationStateCreateInfo prsci;
         memset(&prsci, 0, sizeof(prsci));
-        prsci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        prsci.sType =
+            VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         prsci.polygonMode = VK_POLYGON_MODE_FILL;
         prsci.cullMode = VK_CULL_MODE_NONE;
 
@@ -727,13 +765,16 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
 
         VkPipelineDepthStencilStateCreateInfo pdssci;
         memset(&pdssci, 0, sizeof(pdssci));
-        pdssci.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        pdssci.sType =
+            VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         pdssci.minDepthBounds = 0.0f;
         pdssci.maxDepthBounds = 1.0f;
 
         VkPipelineColorBlendAttachmentState pcbas;
         memset(&pcbas, 0, sizeof(pcbas));
-        pcbas.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        pcbas.colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+            VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
         VkPipelineColorBlendStateCreateInfo pcbsci;
         memset(&pcbsci, 0, sizeof(pcbsci));
@@ -746,20 +787,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
         pcbsci.blendConstants[3] = 1.0f;
 
         VkVertexInputBindingDescription bindings[] = {
-            { 0, sizeof(vertex), VK_VERTEX_INPUT_RATE_VERTEX },
+            {0, sizeof(vertex), VK_VERTEX_INPUT_RATE_VERTEX},
         };
 
         VkVertexInputAttributeDescription attribs[] = {
-            { 0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex, x) },
-            { 1, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex, u) },
+            {0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex, x)},
+            {1, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex, u)},
         };
 
         VkPipelineVertexInputStateCreateInfo pvisci;
         memset(&pvisci, 0, sizeof(pvisci));
-        pvisci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        pvisci.vertexBindingDescriptionCount = sizeof(bindings) / sizeof(*bindings);
+        pvisci.sType =
+            VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        pvisci.vertexBindingDescriptionCount =
+            sizeof(bindings) / sizeof(*bindings);
         pvisci.pVertexBindingDescriptions = &bindings[0];
-        pvisci.vertexAttributeDescriptionCount = sizeof(attribs) / sizeof(*attribs);
+        pvisci.vertexAttributeDescriptionCount =
+            sizeof(attribs) / sizeof(*attribs);
         pvisci.pVertexAttributeDescriptions = &attribs[0];
 
         VkGraphicsPipelineCreateInfo gpci;
@@ -784,26 +828,27 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
         gpci.basePipelineHandle = VK_NULL_HANDLE;
         gpci.basePipelineIndex = 0;
 
-        pTable->CreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &gpci, nullptr, &data->pipeline);
+        pTable->CreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &gpci,
+                                        nullptr, &data->pipeline);
     }
 
     return result;
 }
 
-
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
-    VkDevice device,
-    VkSwapchainKHR swapChain,
-    uint32_t *pCount,
-    VkImage *pImages)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapChain,
+                        uint32_t *pCount, VkImage *pImages) {
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
-    VkResult result = my_data->pfnGetSwapchainImagesKHR(device, swapChain, pCount, pImages);
+    VkResult result =
+        my_data->pfnGetSwapchainImagesKHR(device, swapChain, pCount, pImages);
     VkResult U_ASSERT_ONLY err;
 
-    /* GetSwapChainImagesWSI may be called without an images buffer, in which case it
-     * just returns the count to the caller. We're only interested in acting on the
+    /* GetSwapChainImagesWSI may be called without an images buffer, in which
+     * case it
+     * just returns the count to the caller. We're only interested in acting on
+     * the
      * /actual/ fetch of the images.
      */
     if (pImages) {
@@ -857,7 +902,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
             VkCommandBuffer cmd;
             pTable->AllocateCommandBuffers(device, &cbai, &cmd);
 
-
             /* Create vertex buffer */
             VkBufferCreateInfo bci;
             memset(&bci, 0, sizeof(bci));
@@ -877,7 +921,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
             memset(&mem_alloc, 0, sizeof(mem_alloc));
             mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
             mem_alloc.allocationSize = mem_reqs.size;
-            mem_alloc.memoryTypeIndex = choose_memory_type(my_data->gpu, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            mem_alloc.memoryTypeIndex =
+                choose_memory_type(my_data->gpu, mem_reqs.memoryTypeBits,
+                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
             VkDeviceMemory mem;
             err = pTable->AllocateMemory(device, &mem_alloc, nullptr, &mem);
@@ -902,25 +948,20 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     return result;
 }
 
-
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(
-    VkQueue                                     queue,
-    uint32_t                                    submitCount,
-    const VkSubmitInfo*                         pSubmits,
-    VkFence                                     fence)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
+              VkFence fence) {
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
 
-    my_data->cmdBuffersThisFrame += submitCount;    // XXX WRONG
+    my_data->cmdBuffersThisFrame += submitCount; // XXX WRONG
 
     return pTable->QueueSubmit(queue, submitCount, pSubmits, fence);
 }
 
-
-static void
-before_present(VkQueue queue, layer_data *my_data, SwapChainData *swapChain, unsigned imageIndex)
-{
+static void before_present(VkQueue queue, layer_data *my_data,
+                           SwapChainData *swapChain, unsigned imageIndex) {
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
 
     if (!my_data->fontUploadComplete) {
@@ -946,8 +987,9 @@ before_present(VkQueue queue, layer_data *my_data, SwapChainData *swapChain, uns
     vertex *vertices = nullptr;
 
     /* guaranteed not in flight due to WSI surface being available */
-    VkResult U_ASSERT_ONLY err = pTable->MapMemory(my_data->dev, id->vertexBufferMemory, 0,
-            id->vertexBufferSize, 0, (void **) &vertices);
+    VkResult U_ASSERT_ONLY err =
+        pTable->MapMemory(my_data->dev, id->vertexBufferMemory, 0,
+                          id->vertexBufferSize, 0, (void **)&vertices);
     assert(!err);
 
     /* write vertices for string in here */
@@ -978,12 +1020,14 @@ before_present(VkQueue queue, layer_data *my_data, SwapChainData *swapChain, uns
     pTable->BeginCommandBuffer(id->cmd, &cbbi);
     pTable->CmdBeginRenderPass(id->cmd, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
 
-    pTable->CmdBindPipeline(id->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, swapChain->pipeline);
-    pTable->CmdBindDescriptorSets(id->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, my_data->pl,
-            0, 1, &my_data->desc_set, 0, nullptr);
+    pTable->CmdBindPipeline(id->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            swapChain->pipeline);
+    pTable->CmdBindDescriptorSets(id->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                  my_data->pl, 0, 1, &my_data->desc_set, 0,
+                                  nullptr);
 
-    VkDeviceSize offsets[] = { 0 };
-    VkBuffer buffers[] = { id->vertexBuffer };
+    VkDeviceSize offsets[] = {0};
+    VkBuffer buffers[] = {id->vertexBuffer};
 
     pTable->CmdBindVertexBuffers(id->cmd, 0, 1, buffers, offsets);
 
@@ -992,10 +1036,11 @@ before_present(VkQueue queue, layer_data *my_data, SwapChainData *swapChain, uns
     pTable->CmdEndRenderPass(id->cmd);
     pTable->EndCommandBuffer(id->cmd);
 
-    /* Schedule this command buffer for execution. TODO: Do we need to protect ourselves
-     * from an app that didn't wait for the presentation image to be idle before mangling it?
-     * If the app is well-behaved, our command buffer is guaranteed to have been retired
-     * before the app tries to present it again.
+    /* Schedule this command buffer for execution. TODO: Do we need to protect
+     * ourselves from an app that didn't wait for the presentation image to
+     * be idle before mangling it? If the app is well-behaved, our command
+     * buffer is guaranteed to have been retired before the app tries to
+     * present it again.
      */
     VkFence null_fence = VK_NULL_HANDLE;
     VkSubmitInfo si;
@@ -1011,42 +1056,40 @@ before_present(VkQueue queue, layer_data *my_data, SwapChainData *swapChain, uns
     my_data->cmdBuffersThisFrame = 0;
 }
 
-
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo) {
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
 
     for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
 
         auto data = my_data->swapChains->find(pPresentInfo->pSwapchains[i]);
         assert(data != my_data->swapChains->end());
 
-        before_present(queue, my_data, data->second, pPresentInfo->pImageIndices[i]);
-
+        before_present(queue, my_data, data->second,
+                       pPresentInfo->pImageIndices[i]);
     }
 
     VkResult result = my_data->pfnQueuePresentKHR(queue, pPresentInfo);
     return result;
 }
 
-
-void WsiImageData::Cleanup(VkDevice dev)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
+void WsiImageData::Cleanup(VkDevice dev) {
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
 
     // XXX: needs device data
-//    pTable->FreeCommandBuffers(dev, cmd, nullptr);
+    //    pTable->FreeCommandBuffers(dev, cmd, nullptr);
     pTable->DestroyFramebuffer(dev, framebuffer, nullptr);
     pTable->DestroyImageView(dev, view, nullptr);
     pTable->DestroyBuffer(dev, vertexBuffer, nullptr);
     pTable->FreeMemory(dev, vertexBufferMemory, nullptr);
 }
 
-
-void SwapChainData::Cleanup(VkDevice dev)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
+void SwapChainData::Cleanup(VkDevice dev) {
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
 
     for (uint32_t i = 0; i < presentableImages.size(); i++) {
@@ -1060,9 +1103,7 @@ void SwapChainData::Cleanup(VkDevice dev)
     pTable->DestroyRenderPass(dev, render_pass, nullptr);
 }
 
-
-void layer_data::Cleanup()
-{
+void layer_data::Cleanup() {
     VkLayerDispatchTable *pTable = this->device_dispatch_table;
 
     pTable->DestroySampler(dev, sampler, nullptr);
@@ -1080,13 +1121,11 @@ void layer_data::Cleanup()
     pTable->DestroyShaderModule(dev, fsShaderModule, nullptr);
 }
 
-
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
-    VkDevice                                 device,
-    VkSwapchainKHR                           swapchain,
-    const VkAllocationCallbacks*             pAllocator)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain,
+                      const VkAllocationCallbacks *pAllocator) {
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
     /* Clean up our resources associated with this swapchain */
     auto it = my_data->swapChains->find(swapchain);
@@ -1099,12 +1138,11 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
     my_data->pfnDestroySwapchainKHR(device, swapchain, pAllocator);
 }
 
-
-VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice dev, const char* funcName)
-{
-#define ADD_HOOK(fn)    \
-    if (!strncmp(#fn, funcName, sizeof(#fn))) \
-        return (PFN_vkVoidFunction) fn
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+vkGetDeviceProcAddr(VkDevice dev, const char *funcName) {
+#define ADD_HOOK(fn)                                                           \
+    if (!strncmp(#fn, funcName, sizeof(#fn)))                                  \
+    return (PFN_vkVoidFunction)fn
 
     ADD_HOOK(vkGetDeviceProcAddr);
     ADD_HOOK(vkDestroyDevice);
@@ -1120,18 +1158,18 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
 
     layer_data *dev_data;
     dev_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
-    VkLayerDispatchTable* pTable = dev_data->device_dispatch_table;
+    VkLayerDispatchTable *pTable = dev_data->device_dispatch_table;
 
     if (pTable->GetDeviceProcAddr == NULL)
         return NULL;
     return pTable->GetDeviceProcAddr(dev, funcName);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
-{
-#define ADD_HOOK(fn)    \
-    if (!strncmp(#fn, funcName, sizeof(#fn))) \
-        return (PFN_vkVoidFunction) fn
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+vkGetInstanceProcAddr(VkInstance instance, const char *funcName) {
+#define ADD_HOOK(fn)                                                           \
+    if (!strncmp(#fn, funcName, sizeof(#fn)))                                  \
+    return (PFN_vkVoidFunction)fn
 
     ADD_HOOK(vkCreateInstance);
     ADD_HOOK(vkCreateDevice);
@@ -1143,7 +1181,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
 
     layer_data *instance_data;
     instance_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    VkLayerInstanceDispatchTable* pTable = instance_data->instance_dispatch_table;
+    VkLayerInstanceDispatchTable *pTable =
+        instance_data->instance_dispatch_table;
 
     if (pTable->GetInstanceProcAddr == NULL)
         return NULL;

@@ -1,8 +1,9 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
- * Copyright (C) 2015 Google, Inc.
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
+ * Copyright (C) 2015-2016 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -39,61 +40,59 @@ Use push constants in a simple shader, validate the correct value was read.
 // values are read, the shader draws green.  If incorrect, shader draws red.
 
 const char *vertShaderText =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "layout (std140, set = 0, binding = 0) uniform buf {\n"
-        "    mat4 mvp;\n"
-        "} ubuf;\n"
-        "layout (location = 0) in vec4 pos;\n"
-        "layout (location = 1) in vec2 inTexCoords;\n"
-        "layout (location = 0) out vec2 outTexCoords;\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
-        "void main() {\n"
-        "   gl_Position = ubuf.mvp * pos;\n"
-        "   outTexCoords = inTexCoords;\n"
-        "   // GL->VK conventions\n"
-        "   gl_Position.y = -gl_Position.y;\n"
-        "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
-        "}\n";
+    "#version 400\n"
+    "#extension GL_ARB_separate_shader_objects : enable\n"
+    "#extension GL_ARB_shading_language_420pack : enable\n"
+    "layout (std140, set = 0, binding = 0) uniform buf {\n"
+    "    mat4 mvp;\n"
+    "} ubuf;\n"
+    "layout (location = 0) in vec4 pos;\n"
+    "layout (location = 1) in vec2 inTexCoords;\n"
+    "layout (location = 0) out vec2 outTexCoords;\n"
+    "out gl_PerVertex { \n"
+    "    vec4 gl_Position;\n"
+    "};\n"
+    "void main() {\n"
+    "   gl_Position = ubuf.mvp * pos;\n"
+    "   outTexCoords = inTexCoords;\n"
+    "   // GL->VK conventions\n"
+    "   gl_Position.y = -gl_Position.y;\n"
+    "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
+    "}\n";
 
-const char *fragShaderText=
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "layout(push_constant) uniform pushBlock {\n"
-        "    int iFoo;\n"
-        "    float fBar;\n"
-        "} pushConstantsBlock;\n"
-        "layout (location = 0) in vec2 inTexCoords;\n"
-        "layout (location = 0) out vec4 outColor;\n"
-        "void main() {\n"
+const char *fragShaderText =
+    "#version 400\n"
+    "#extension GL_ARB_separate_shader_objects : enable\n"
+    "#extension GL_ARB_shading_language_420pack : enable\n"
+    "layout(push_constant) uniform pushBlock {\n"
+    "    int iFoo;\n"
+    "    float fBar;\n"
+    "} pushConstantsBlock;\n"
+    "layout (location = 0) in vec2 inTexCoords;\n"
+    "layout (location = 0) out vec4 outColor;\n"
+    "void main() {\n"
 
-        "    vec4 green = vec4(0.0, 1.0, 0.0, 1.0);\n"
-        "    vec4 red   = vec4(1.0, 0.0, 0.0, 1.0);\n"
+    "    vec4 green = vec4(0.0, 1.0, 0.0, 1.0);\n"
+    "    vec4 red   = vec4(1.0, 0.0, 0.0, 1.0);\n"
 
-        // Start with passing color
-        "    vec4 resColor = green;\n"
+    // Start with passing color
+    "    vec4 resColor = green;\n"
 
-        // See if we've read in the correct push constants
-        "    if (pushConstantsBlock.iFoo != 2)\n"
-        "        resColor = red;\n"
-        "    if (pushConstantsBlock.fBar != 1.0f)\n"
-        "        resColor = red;\n"
+    // See if we've read in the correct push constants
+    "    if (pushConstantsBlock.iFoo != 2)\n"
+    "        resColor = red;\n"
+    "    if (pushConstantsBlock.fBar != 1.0f)\n"
+    "        resColor = red;\n"
 
-        // Create a border to see the cube more easily
-        "   if (inTexCoords.x < 0.01 || inTexCoords.x > 0.99)\n"
-        "       resColor *= vec4(0.1, 0.1, 0.1, 1.0);\n"
-        "   if (inTexCoords.y < 0.01 || inTexCoords.y > 0.99)\n"
-        "       resColor *= vec4(0.1, 0.1, 0.1, 1.0);\n"
-        "   outColor = resColor;\n"
-        "}\n";
+    // Create a border to see the cube more easily
+    "   if (inTexCoords.x < 0.01 || inTexCoords.x > 0.99)\n"
+    "       resColor *= vec4(0.1, 0.1, 0.1, 1.0);\n"
+    "   if (inTexCoords.y < 0.01 || inTexCoords.y > 0.99)\n"
+    "       resColor *= vec4(0.1, 0.1, 0.1, 1.0);\n"
+    "   outColor = resColor;\n"
+    "}\n";
 
-
-int sample_main()
-{
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Simple Push Constants";
@@ -136,13 +135,15 @@ int sample_main()
     resource_binding[0].pImmutableSamplers = NULL;
 
     VkDescriptorSetLayoutCreateInfo resource_layout_info[1] = {};
-    resource_layout_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    resource_layout_info[0].sType =
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     resource_layout_info[0].pNext = NULL;
     resource_layout_info[0].bindingCount = resource_count;
     resource_layout_info[0].pBindings = resource_binding;
 
     VkDescriptorSetLayout descriptor_layouts[1] = {};
-    res = vkCreateDescriptorSetLayout(info.device, resource_layout_info, NULL, &descriptor_layouts[0]);
+    res = vkCreateDescriptorSetLayout(info.device, resource_layout_info, NULL,
+                                      &descriptor_layouts[0]);
     assert(res == VK_SUCCESS);
 
     /* VULKAN_KEY_START */
@@ -158,13 +159,16 @@ int sample_main()
 
     // Create pipeline layout with multiple descriptor sets
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo[1] = {};
-    pipelineLayoutCreateInfo[0].sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutCreateInfo[0].pNext                  = NULL;
-    pipelineLayoutCreateInfo[0].pushConstantRangeCount = push_constant_range_count;
-    pipelineLayoutCreateInfo[0].pPushConstantRanges    = push_constant_ranges;
-    pipelineLayoutCreateInfo[0].setLayoutCount         = descriptor_set_count;
-    pipelineLayoutCreateInfo[0].pSetLayouts            = descriptor_layouts;
-    res = vkCreatePipelineLayout(info.device, pipelineLayoutCreateInfo, NULL, &info.pipeline_layout);
+    pipelineLayoutCreateInfo[0].sType =
+        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutCreateInfo[0].pNext = NULL;
+    pipelineLayoutCreateInfo[0].pushConstantRangeCount =
+        push_constant_range_count;
+    pipelineLayoutCreateInfo[0].pPushConstantRanges = push_constant_ranges;
+    pipelineLayoutCreateInfo[0].setLayoutCount = descriptor_set_count;
+    pipelineLayoutCreateInfo[0].pSetLayouts = descriptor_layouts;
+    res = vkCreatePipelineLayout(info.device, pipelineLayoutCreateInfo, NULL,
+                                 &info.pipeline_layout);
     assert(res == VK_SUCCESS);
 
     // Create a single pool to contain data for our descriptor set
@@ -178,7 +182,8 @@ int sample_main()
     pool_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool_info[0].pNext = NULL;
     pool_info[0].maxSets = descriptor_set_count;
-    pool_info[0].poolSizeCount = sizeof(type_count) / sizeof(VkDescriptorPoolSize);
+    pool_info[0].poolSizeCount =
+        sizeof(type_count) / sizeof(VkDescriptorPoolSize);
     pool_info[0].pPoolSizes = type_count;
 
     VkDescriptorPool descriptor_pool[1] = {};
@@ -197,7 +202,8 @@ int sample_main()
     res = vkAllocateDescriptorSets(info.device, alloc_info, descriptor_sets);
     assert(res == VK_SUCCESS);
 
-    // Using empty brace initializer on the next line triggers a bug in older versions of gcc, so memset instead
+    // Using empty brace initializer on the next line triggers a bug in older
+    // versions of gcc, so memset instead
     VkWriteDescriptorSet descriptor_writes[resource_count];
     memset(descriptor_writes, 0, sizeof(descriptor_writes));
 
@@ -208,25 +214,28 @@ int sample_main()
     descriptor_writes[0].dstSet = descriptor_sets[0];
     descriptor_writes[0].descriptorCount = 1;
     descriptor_writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptor_writes[0].pBufferInfo = &info.uniform_data.buffer_info; // populated by init_uniform_buffer()
+    descriptor_writes[0].pBufferInfo =
+        &info.uniform_data.buffer_info; // populated by init_uniform_buffer()
     descriptor_writes[0].dstArrayElement = 0;
     descriptor_writes[0].dstBinding = 0;
 
-    vkUpdateDescriptorSets(info.device, resource_count, descriptor_writes, 0, NULL);
+    vkUpdateDescriptorSets(info.device, resource_count, descriptor_writes, 0,
+                           NULL);
 
     // Create our push constant data, which matches shader expectations
     unsigned pushConstants[2] = {};
-    pushConstants[0] = (unsigned) 2;
-    pushConstants[1] = (unsigned) 0x3F800000;
+    pushConstants[0] = (unsigned)2;
+    pushConstants[1] = (unsigned)0x3F800000;
 
     // Ensure we have enough room for push constant data
     if (sizeof(pushConstants) > info.gpu_props.limits.maxPushConstantsSize)
         assert(0 && "Too many push constants");
 
-    vkCmdPushConstants(info.cmd, info.pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pushConstants), pushConstants);
+    vkCmdPushConstants(info.cmd, info.pipeline_layout,
+                       VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pushConstants),
+                       pushConstants);
 
     /* VULKAN_KEY_END */
-
 
     init_pipeline_cache(info);
     init_pipeline(info, depthPresent);
@@ -242,10 +251,10 @@ int sample_main()
 
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                  info.pipeline);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
-            0, NUM_DESCRIPTOR_SETS, descriptor_sets, 0, NULL);
+    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+                            descriptor_sets, 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
@@ -263,7 +272,8 @@ int sample_main()
 
     VkFence drawFence = {};
     init_fence(info, drawFence);
-    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    VkPipelineStageFlags pipe_stage_flags =
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     VkSubmitInfo submit_info = {};
     init_submit_info(info, submit_info, pipe_stage_flags);
 
@@ -277,8 +287,9 @@ int sample_main()
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
-    } while(res == VK_TIMEOUT);
+        res =
+            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
@@ -295,8 +306,8 @@ int sample_main()
     destroy_framebuffers(info);
     destroy_shaders(info);
     destroy_renderpass(info);
-    //instead of destroy_descriptor_and_pipeline_layouts(info);
-    for(int i = 0; i < descriptor_set_count; i++)
+    // instead of destroy_descriptor_and_pipeline_layouts(info);
+    for (int i = 0; i < descriptor_set_count; i++)
         vkDestroyDescriptorSetLayout(info.device, descriptor_layouts[i], NULL);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout, NULL);
     destroy_uniform_buffer(info);

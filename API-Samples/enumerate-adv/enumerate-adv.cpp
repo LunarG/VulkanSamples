@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -33,8 +34,7 @@ enumerate physical devices
 #include <iostream>
 #include <util_init.hpp>
 
-int sample_main()
-{
+int sample_main() {
     struct sample_info info = {};
     init_instance(info, "vulkansamples_enumerate");
 
@@ -42,52 +42,55 @@ int sample_main()
 
     // Query the count.
     uint32_t gpu_count = 0;
-    VkResult U_ASSERT_ONLY res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, NULL);
+    VkResult U_ASSERT_ONLY res =
+        vkEnumeratePhysicalDevices(info.inst, &gpu_count, NULL);
     assert(!res && gpu_count > 0);
 
     // Query the gpu info.
-    VkPhysicalDevice* gpu = new VkPhysicalDevice[gpu_count];
+    VkPhysicalDevice *gpu = new VkPhysicalDevice[gpu_count];
     res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, gpu);
     assert(res == VK_SUCCESS);
 
-    for(uint32_t i = 0; i < gpu_count; ++i)
-    {
+    for (uint32_t i = 0; i < gpu_count; ++i) {
         VkPhysicalDeviceProperties properties;
         vkGetPhysicalDeviceProperties(gpu[i], &properties);
 
         std::cout << "apiVersion: ";
         std::cout << ((properties.apiVersion >> 22) & 0xfff) << '.'; // Major.
         std::cout << ((properties.apiVersion >> 12) & 0x3ff) << '.'; // Minor.
-        std::cout << (properties.apiVersion & 0xfff); // Patch.
+        std::cout << (properties.apiVersion & 0xfff);                // Patch.
         std::cout << '\n';
 
         std::cout << "driverVersion: " << properties.driverVersion << '\n';
 
-        std::cout << std::showbase << std::internal << std::setfill('0') << std::hex;
-        std::cout << "vendorId: " << std::setw(6) << properties.vendorID << '\n';
-        std::cout << "deviceId: " << std::setw(6) << properties.deviceID << '\n';
-        std::cout << std::noshowbase << std::right << std::setfill(' ') << std::dec;
+        std::cout << std::showbase << std::internal << std::setfill('0')
+                  << std::hex;
+        std::cout << "vendorId: " << std::setw(6) << properties.vendorID
+                  << '\n';
+        std::cout << "deviceId: " << std::setw(6) << properties.deviceID
+                  << '\n';
+        std::cout << std::noshowbase << std::right << std::setfill(' ')
+                  << std::dec;
 
         std::cout << "deviceType: ";
-        switch(properties.deviceType)
-        {
-            case VK_PHYSICAL_DEVICE_TYPE_OTHER:
-                std::cout << "VK_PHYSICAL_DEVICE_TYPE_OTHER";
-                break;
-            case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-                std::cout << "VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU";
-                break;
-            case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-                std::cout << "VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU";
-                break;
-            case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-                std::cout << "VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU";
-                break;
-            case VK_PHYSICAL_DEVICE_TYPE_CPU:
-                std::cout << "VK_PHYSICAL_DEVICE_TYPE_CPU";
-                break;
-            default:
-                break;
+        switch (properties.deviceType) {
+        case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+            std::cout << "VK_PHYSICAL_DEVICE_TYPE_OTHER";
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+            std::cout << "VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU";
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+            std::cout << "VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU";
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+            std::cout << "VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU";
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_CPU:
+            std::cout << "VK_PHYSICAL_DEVICE_TYPE_CPU";
+            break;
+        default:
+            break;
         }
         std::cout << '\n';
 
@@ -101,7 +104,7 @@ int sample_main()
         std::cout << '\n';
     }
 
-    delete [] gpu;
+    delete[] gpu;
 
     /* VULKAN_KEY_END */
 

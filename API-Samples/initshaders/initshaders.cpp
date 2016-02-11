@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -34,8 +35,7 @@ Initialize Vertex and Fragment Shaders
 #include <string.h>
 #include <cstdlib>
 
-int sample_main()
-{
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Initialize Shaders Sample";
@@ -54,40 +54,41 @@ int sample_main()
 
     /* VULKAN_KEY_START */
     static const char *vertShaderText =
-            "#version 400\n"
-            "#extension GL_ARB_separate_shader_objects : enable\n"
-            "#extension GL_ARB_shading_language_420pack : enable\n"
-            "layout (std140, binding = 0) uniform bufferVals {\n"
-            "    mat4 mvp;\n"
-            "} myBufferVals;\n"
-            "layout (location = 0) in vec4 pos;\n"
-            "layout (location = 1) in vec4 inColor;\n"
-            "layout (location = 0) out vec4 outColor;\n"
-            "out gl_PerVertex { \n"
-            "    vec4 gl_Position;\n"
-            "};\n"
-            "void main() {\n"
-            "   outColor = inColor;\n"
-            "   gl_Position = myBufferVals.mvp * pos;\n"
-            "\n"
-            "   // GL->VK conventions\n"
-            "   gl_Position.y = -gl_Position.y;\n"
-            "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
-            "}\n";
+        "#version 400\n"
+        "#extension GL_ARB_separate_shader_objects : enable\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "layout (std140, binding = 0) uniform bufferVals {\n"
+        "    mat4 mvp;\n"
+        "} myBufferVals;\n"
+        "layout (location = 0) in vec4 pos;\n"
+        "layout (location = 1) in vec4 inColor;\n"
+        "layout (location = 0) out vec4 outColor;\n"
+        "out gl_PerVertex { \n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main() {\n"
+        "   outColor = inColor;\n"
+        "   gl_Position = myBufferVals.mvp * pos;\n"
+        "\n"
+        "   // GL->VK conventions\n"
+        "   gl_Position.y = -gl_Position.y;\n"
+        "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
+        "}\n";
 
     static const char *fragShaderText =
-            "#version 400\n"
-            "#extension GL_ARB_separate_shader_objects : enable\n"
-            "#extension GL_ARB_shading_language_420pack : enable\n"
-            "layout (location = 0) in vec4 color;\n"
-            "layout (location = 0) out vec4 outColor;\n"
-            "void main() {\n"
-            "   outColor = color;\n"
-            "}\n";
+        "#version 400\n"
+        "#extension GL_ARB_separate_shader_objects : enable\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "layout (location = 0) in vec4 color;\n"
+        "layout (location = 0) out vec4 outColor;\n"
+        "void main() {\n"
+        "   outColor = color;\n"
+        "}\n";
 
     std::vector<unsigned int> vtx_spv;
-    info.shaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    info.shaderStages[0].pNext  = NULL;
+    info.shaderStages[0].sType =
+        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    info.shaderStages[0].pNext = NULL;
     info.shaderStages[0].pSpecializationInfo = NULL;
     info.shaderStages[0].flags = 0;
     info.shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -103,12 +104,14 @@ int sample_main()
     moduleCreateInfo.flags = 0;
     moduleCreateInfo.codeSize = vtx_spv.size() * sizeof(unsigned int);
     moduleCreateInfo.pCode = vtx_spv.data();
-    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[0].module);
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL,
+                               &info.shaderStages[0].module);
     assert(res == VK_SUCCESS);
 
     std::vector<unsigned int> frag_spv;
-    info.shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    info.shaderStages[1].pNext  = NULL;
+    info.shaderStages[1].sType =
+        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    info.shaderStages[1].pNext = NULL;
     info.shaderStages[1].pSpecializationInfo = NULL;
     info.shaderStages[1].flags = 0;
     info.shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -122,7 +125,8 @@ int sample_main()
     moduleCreateInfo.flags = 0;
     moduleCreateInfo.codeSize = frag_spv.size() * sizeof(unsigned int);
     moduleCreateInfo.pCode = frag_spv.data();
-    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[1].module);
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL,
+                               &info.shaderStages[1].module);
     assert(res == VK_SUCCESS);
 
     finalize_glslang();

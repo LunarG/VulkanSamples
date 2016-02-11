@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -39,28 +40,28 @@ Draw several cubes using primary and secondary command buffers
 /* SPIR-V                                                                 */
 
 const char *vertShaderText =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "layout (std140, binding = 0) uniform buf {\n"
-        "        mat4 mvp;\n"
-        "} ubuf;\n"
-        "layout (location = 0) in vec4 pos;\n"
-        "layout (location = 1) in vec2 inTexCoords;\n"
-        "layout (location = 0) out vec2 texcoord;\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
-        "void main() {\n"
-        "   texcoord = inTexCoords;\n"
-        "   gl_Position = ubuf.mvp * pos;\n"
-        "\n"
-        "   // GL->VK conventions\n"
-        "   gl_Position.y = -gl_Position.y;\n"
-        "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
-        "}\n";
+    "#version 400\n"
+    "#extension GL_ARB_separate_shader_objects : enable\n"
+    "#extension GL_ARB_shading_language_420pack : enable\n"
+    "layout (std140, binding = 0) uniform buf {\n"
+    "        mat4 mvp;\n"
+    "} ubuf;\n"
+    "layout (location = 0) in vec4 pos;\n"
+    "layout (location = 1) in vec2 inTexCoords;\n"
+    "layout (location = 0) out vec2 texcoord;\n"
+    "out gl_PerVertex { \n"
+    "    vec4 gl_Position;\n"
+    "};\n"
+    "void main() {\n"
+    "   texcoord = inTexCoords;\n"
+    "   gl_Position = ubuf.mvp * pos;\n"
+    "\n"
+    "   // GL->VK conventions\n"
+    "   gl_Position.y = -gl_Position.y;\n"
+    "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
+    "}\n";
 
-const char *fragShaderText=
+const char *fragShaderText =
     "#version 400\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
@@ -71,8 +72,7 @@ const char *fragShaderText=
     "   outColor = textureLod(tex, texcoord, 0.0);\n"
     "}\n";
 
-int sample_main()
-{
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Secondary command buffers";
@@ -106,15 +106,16 @@ int sample_main()
 
     // we have to set up a couple of things by hand, but this
     // isn't any different to other examples
-    
+
     // get two different textures
     init_texture(info, "green.ppm");
     VkDescriptorImageInfo greenTex = info.texture_data.image_info;
 
     init_texture(info, "lunarg.ppm");
     VkDescriptorImageInfo lunargTex = info.texture_data.image_info;
-    
-    // create two identical descriptor sets, each with a different texture but identical UBOa
+
+    // create two identical descriptor sets, each with a different texture but
+    // identical UBOa
     VkDescriptorPoolSize pool_size[2];
     pool_size[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     pool_size[0].descriptorCount = 2;
@@ -129,10 +130,12 @@ int sample_main()
     descriptor_pool.poolSizeCount = 2;
     descriptor_pool.pPoolSizes = pool_size;
 
-    res = vkCreateDescriptorPool(info.device, &descriptor_pool, NULL, &info.desc_pool);
+    res = vkCreateDescriptorPool(info.device, &descriptor_pool, NULL,
+                                 &info.desc_pool);
     assert(res == VK_SUCCESS);
-    
-    VkDescriptorSetLayout layouts[] = { info.desc_layout[0], info.desc_layout[0] };
+
+    VkDescriptorSetLayout layouts[] = {info.desc_layout[0],
+                                       info.desc_layout[0]};
 
     VkDescriptorSetAllocateInfo alloc_info[1];
     alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -142,7 +145,8 @@ int sample_main()
     alloc_info[0].pSetLayouts = layouts;
 
     info.desc_set.resize(2);
-    res = vkAllocateDescriptorSets(info.device, alloc_info, info.desc_set.data());
+    res =
+        vkAllocateDescriptorSets(info.device, alloc_info, info.desc_set.data());
     assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[2];
@@ -175,7 +179,7 @@ int sample_main()
     /* VULKAN_KEY_START */
 
     // create four secondary command buffers, for each quadrant of the screen
-    
+
     VkCommandBufferAllocateInfo cmdalloc = {};
     cmdalloc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     cmdalloc.pNext = NULL;
@@ -193,54 +197,54 @@ int sample_main()
     clear_values[0].color.float32[1] = 0.2f;
     clear_values[0].color.float32[2] = 0.2f;
     clear_values[0].color.float32[3] = 0.2f;
-    clear_values[1].depthStencil.depth     = 1.0f;
-    clear_values[1].depthStencil.stencil   = 0;
+    clear_values[1].depthStencil.depth = 1.0f;
+    clear_values[1].depthStencil.stencil = 0;
 
     VkSemaphore presentCompleteSemaphore;
     VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
-    presentCompleteSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    presentCompleteSemaphoreCreateInfo.sType =
+        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     presentCompleteSemaphoreCreateInfo.pNext = NULL;
     presentCompleteSemaphoreCreateInfo.flags = 0;
 
-    res = vkCreateSemaphore(info.device,
-                            &presentCompleteSemaphoreCreateInfo,
-                            NULL,
-                            &presentCompleteSemaphore);
+    res = vkCreateSemaphore(info.device, &presentCompleteSemaphoreCreateInfo,
+                            NULL, &presentCompleteSemaphore);
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
-    res = vkAcquireNextImageKHR(info.device, info.swap_chain,
-                                      UINT64_MAX,
-                                      presentCompleteSemaphore,
-                                      NULL,
-                                      &info.current_buffer);
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
+                                presentCompleteSemaphore, NULL,
+                                &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
     assert(res == VK_SUCCESS);
-    
+
     const VkDeviceSize offsets[1] = {0};
 
     VkViewport viewport;
     viewport.height = 200.0f;
     viewport.width = 200.0f;
-    viewport.minDepth = (float) 0.0f;
-    viewport.maxDepth = (float) 1.0f;
+    viewport.minDepth = (float)0.0f;
+    viewport.maxDepth = (float)1.0f;
     viewport.x = 0;
     viewport.y = 0;
-    
+
     VkRect2D scissor;
     scissor.extent.width = info.width;
     scissor.extent.height = info.height;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
 
-    // now we record four separate command buffers, one for each quadrant of the screen
+    // now we record four separate command buffers, one for each quadrant of the
+    // screen
     VkCommandBufferInheritanceInfo cmd_buf_inheritance_info = {};
-    cmd_buf_inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+    cmd_buf_inheritance_info.sType =
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
     cmd_buf_inheritance_info.pNext = NULL;
     cmd_buf_inheritance_info.renderPass = info.render_pass;
     cmd_buf_inheritance_info.subpass = 0;
-    cmd_buf_inheritance_info.framebuffer = info.framebuffers[info.current_buffer];
+    cmd_buf_inheritance_info.framebuffer =
+        info.framebuffers[info.current_buffer];
     cmd_buf_inheritance_info.occlusionQueryEnable = VK_FALSE;
     cmd_buf_inheritance_info.queryFlags = 0;
     cmd_buf_inheritance_info.pipelineStatistics = 0;
@@ -248,31 +252,34 @@ int sample_main()
     VkCommandBufferBeginInfo secondary_begin = {};
     secondary_begin.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     secondary_begin.pNext = NULL;
-    secondary_begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT|VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+    secondary_begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT |
+                            VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
     secondary_begin.pInheritanceInfo = &cmd_buf_inheritance_info;
 
-    for(int i=0; i < 4; i++)
-    {
+    for (int i = 0; i < 4; i++) {
         vkBeginCommandBuffer(secondary_cmds[i], &secondary_begin);
-        
-        vkCmdBindPipeline(secondary_cmds[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                      info.pipeline);
-        vkCmdBindDescriptorSets(secondary_cmds[i], VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
-                0, 1, &info.desc_set[i==0 || i==3], 0, NULL);
 
-        vkCmdBindVertexBuffers(secondary_cmds[i], 0, 1, &info.vertex_buffer.buf, offsets);
-        
-        viewport.x = 25.0f + 250.0f*(i%2);
-        viewport.y = 25.0f + 250.0f*(i/2);
+        vkCmdBindPipeline(secondary_cmds[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          info.pipeline);
+        vkCmdBindDescriptorSets(secondary_cmds[i],
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                info.pipeline_layout, 0, 1,
+                                &info.desc_set[i == 0 || i == 3], 0, NULL);
+
+        vkCmdBindVertexBuffers(secondary_cmds[i], 0, 1, &info.vertex_buffer.buf,
+                               offsets);
+
+        viewport.x = 25.0f + 250.0f * (i % 2);
+        viewport.y = 25.0f + 250.0f * (i / 2);
         vkCmdSetViewport(secondary_cmds[i], 0, NUM_VIEWPORTS, &viewport);
 
         vkCmdSetScissor(secondary_cmds[i], 0, NUM_SCISSORS, &scissor);
 
         vkCmdDraw(secondary_cmds[i], 12 * 3, 1, 0, 0);
-        
+
         vkEndCommandBuffer(secondary_cmds[i]);
     }
-    
+
     VkRenderPassBeginInfo rp_begin;
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     rp_begin.pNext = NULL;
@@ -285,12 +292,14 @@ int sample_main()
     rp_begin.clearValueCount = 2;
     rp_begin.pClearValues = clear_values;
 
-    // specifying VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS means this render pass may
+    // specifying VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS means this
+    // render pass may
     // ONLY call vkCmdExecuteCommands
-    vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    vkCmdBeginRenderPass(info.cmd, &rp_begin,
+                         VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
     vkCmdExecuteCommands(info.cmd, 4, secondary_cmds);
-    
+
     vkCmdEndRenderPass(info.cmd);
 
     VkImageMemoryBarrier prePresentBarrier = {};
@@ -308,20 +317,20 @@ int sample_main()
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         0, 0, NULL, 0, NULL, 1, &prePresentBarrier);
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, NULL, 0, NULL,
+                         1, &prePresentBarrier);
 
     res = vkEndCommandBuffer(info.cmd);
     assert(res == VK_SUCCESS);
 
-    const VkCommandBuffer cmd_bufs[] = { info.cmd };
+    const VkCommandBuffer cmd_bufs[] = {info.cmd};
     VkFenceCreateInfo fenceInfo;
     VkFence drawFence;
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.pNext = NULL;
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
-
 
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
@@ -351,7 +360,8 @@ int sample_main()
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+        res =
+            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
 
     assert(res == VK_SUCCESS);
@@ -359,7 +369,7 @@ int sample_main()
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);
-    
+
     vkFreeCommandBuffers(info.device, info.cmd_pool, 4, secondary_cmds);
 
     /* VULKAN_KEY_END */

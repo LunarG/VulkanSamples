@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -35,8 +36,7 @@ Create Vertex Buffer
 #include <cstdlib>
 #include "cube_data.h"
 
-int sample_main()
-{
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
     struct sample_info info = {};
@@ -85,7 +85,8 @@ int sample_main()
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(info.device, info.vertex_buffer.buf, &mem_reqs);
+    vkGetBufferMemoryRequirements(info.device, info.vertex_buffer.buf,
+                                  &mem_reqs);
 
     VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -93,29 +94,31 @@ int sample_main()
     alloc_info.memoryTypeIndex = 0;
 
     alloc_info.allocationSize = mem_reqs.size;
-    pass = memory_type_from_properties(info,
-                                      mem_reqs.memoryTypeBits,
-                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-                                      &alloc_info.memoryTypeIndex);
+    pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                       &alloc_info.memoryTypeIndex);
     assert(pass);
 
-    res = vkAllocateMemory(info.device, &alloc_info, NULL, &(info.vertex_buffer.mem));
+    res = vkAllocateMemory(info.device, &alloc_info, NULL,
+                           &(info.vertex_buffer.mem));
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
-    res = vkMapMemory(info.device, info.vertex_buffer.mem, 0, mem_reqs.size, 0, (void **) &pData);
+    res = vkMapMemory(info.device, info.vertex_buffer.mem, 0, mem_reqs.size, 0,
+                      (void **)&pData);
     assert(res == VK_SUCCESS);
 
-    memcpy(pData, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data));
+    memcpy(pData, g_vb_solid_face_colors_Data,
+           sizeof(g_vb_solid_face_colors_Data));
 
     vkUnmapMemory(info.device, info.vertex_buffer.mem);
 
-    res = vkBindBufferMemory(info.device,
-            info.vertex_buffer.buf,
-            info.vertex_buffer.mem, 0);
+    res = vkBindBufferMemory(info.device, info.vertex_buffer.buf,
+                             info.vertex_buffer.mem, 0);
     assert(res == VK_SUCCESS);
 
-    /* We won't use these here, but we will need this info when creating the pipeline */
+    /* We won't use these here, but we will need this info when creating the
+     * pipeline */
     info.vi_binding.binding = 0;
     info.vi_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
     info.vi_binding.stride = sizeof(g_vb_solid_face_colors_Data[0]);
@@ -137,8 +140,8 @@ int sample_main()
     clear_values[0].color.float32[1] = 0.2f;
     clear_values[0].color.float32[2] = 0.2f;
     clear_values[0].color.float32[3] = 0.2f;
-    clear_values[1].depthStencil.depth     = 1.0f;
-    clear_values[1].depthStencil.stencil   = 0;
+    clear_values[1].depthStencil.depth = 1.0f;
+    clear_values[1].depthStencil.stencil = 0;
 
     VkRenderPassBeginInfo rp_begin = {};
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -154,8 +157,7 @@ int sample_main()
 
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindVertexBuffers(info.cmd,
-                           0,                       /* Start Binding */
+    vkCmdBindVertexBuffers(info.cmd, 0,             /* Start Binding */
                            1,                       /* Binding Count */
                            &info.vertex_buffer.buf, /* pBuffers */
                            offsets);                /* pOffsets */

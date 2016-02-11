@@ -1,8 +1,9 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
- * Copyright (C) 2015 Google, Inc.
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
+ * Copyright (C) 2015-2016 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -45,18 +46,16 @@ samples utility functions
 
 using namespace std;
 
-int main(int argc, char **argv) {
-    return sample_main();
-}
+int main(int argc, char **argv) { return sample_main(); }
 
-void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch)
-{
+void extract_version(uint32_t version, uint32_t &major, uint32_t &minor,
+                     uint32_t &patch) {
     major = version >> 22;
     minor = (version >> 12) & 0x3ff;
     patch = version & 0xfff;
 }
 
-string get_file_name(const string& s) {
+string get_file_name(const string &s) {
 
     char sep = '/';
 
@@ -64,26 +63,23 @@ string get_file_name(const string& s) {
     sep = '\\';
 #endif
 
-    //cout << "in get_file_name\n";
+    // cout << "in get_file_name\n";
     size_t i = s.rfind(sep, s.length());
     if (i != string::npos) {
-        return(s.substr(i+1, s.length() - i));
+        return (s.substr(i + 1, s.length() - i));
     }
 
-    return("");
+    return ("");
 }
 
-
-std::string get_base_data_dir()
-{
+std::string get_base_data_dir() {
     return std::string(VULKAN_SAMPLES_BASE_DIR) + "/API-Samples/data/";
 }
 
-std::string get_data_dir( std::string filename )
-{
+std::string get_data_dir(std::string filename) {
     std::string basedir = get_base_data_dir();
     // get the base filename
-    std::string fname = get_file_name( filename );
+    std::string fname = get_file_name(filename);
 
     // get the prefix of the base filename, i.e. the part before the dash
     stringstream stream(fname);
@@ -93,31 +89,29 @@ std::string get_data_dir( std::string filename )
     return ddir;
 }
 
-
-bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex)
-{
-     // Search memtypes to find first index with those properties
-     for (uint32_t i = 0; i < 32; i++) {
-         if ((typeBits & 1) == 1) {
-             // Type is available, does it match user properties?
-             if ((info.memory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
-                 *typeIndex = i;
-                 return true;
-             }
-         }
-         typeBits >>= 1;
-     }
-     // No memory types matched, return failure
-     return false;
+bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits,
+                                 VkFlags requirements_mask,
+                                 uint32_t *typeIndex) {
+    // Search memtypes to find first index with those properties
+    for (uint32_t i = 0; i < 32; i++) {
+        if ((typeBits & 1) == 1) {
+            // Type is available, does it match user properties?
+            if ((info.memory_properties.memoryTypes[i].propertyFlags &
+                 requirements_mask) == requirements_mask) {
+                *typeIndex = i;
+                return true;
+            }
+        }
+        typeBits >>= 1;
+    }
+    // No memory types matched, return failure
+    return false;
 }
 
-void set_image_layout(
-        struct sample_info &info,
-        VkImage image,
-        VkImageAspectFlags aspectMask,
-        VkImageLayout old_image_layout,
-        VkImageLayout new_image_layout)
-{
+void set_image_layout(struct sample_info &info, VkImage image,
+                      VkImageAspectFlags aspectMask,
+                      VkImageLayout old_image_layout,
+                      VkImageLayout new_image_layout) {
     /* DEPENDS on info.cmd and info.queue initialized */
 
     assert(info.cmd != VK_NULL_HANDLE);
@@ -137,7 +131,8 @@ void set_image_layout(
     image_memory_barrier.subresourceRange.layerCount = 1;
 
     if (old_image_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-        image_memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        image_memory_barrier.srcAccessMask =
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     }
 
     if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
@@ -147,26 +142,30 @@ void set_image_layout(
 
     if (new_image_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
         /* Make sure any Copy or CPU writes to image are flushed */
-        image_memory_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+        image_memory_barrier.srcAccessMask =
+            VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
         image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     }
 
     if (new_image_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-        image_memory_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+        image_memory_barrier.dstAccessMask =
+            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
     }
 
     if (new_image_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-        image_memory_barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+        image_memory_barrier.dstAccessMask =
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
     }
 
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-    vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
+    vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, 0, 0, NULL, 0, NULL,
+                         1, &image_memory_barrier);
 }
 
-bool read_ppm(char const*const filename, int& width, int& height, uint64_t rowPitch, unsigned char* dataPtr)
-{
+bool read_ppm(char const *const filename, int &width, int &height,
+              uint64_t rowPitch, unsigned char *dataPtr) {
     // PPM format expected from http://netpbm.sourceforge.net/doc/ppm.html
     //  1. magic number
     //  2. whitespace
@@ -183,9 +182,10 @@ bool read_ppm(char const*const filename, int& width, int& height, uint64_t rowPi
     // If dataPtr is nullptr, only width and height are returned
 
     // Read in values from the PPM file as characters to check for comments
-    char magicStr[3] = {}, heightStr[6] = {}, widthStr[6] = {}, formatStr[6] = {};
+    char magicStr[3] = {}, heightStr[6] = {}, widthStr[6] = {},
+         formatStr[6] = {};
 
-    FILE *fPtr = fopen(filename,"rb");
+    FILE *fPtr = fopen(filename, "rb");
     if (!fPtr) {
         printf("Bad filename in read_ppm: %s\n", filename);
         return false;
@@ -195,7 +195,8 @@ bool read_ppm(char const*const filename, int& width, int& height, uint64_t rowPi
     fscanf(fPtr, "%s %s %s %s ", magicStr, widthStr, heightStr, formatStr);
 
     // Kick out if comments present
-    if (magicStr[0]  == '#' || widthStr[0] == '#' || heightStr[0]  == '#' || formatStr[0] == '#') {
+    if (magicStr[0] == '#' || widthStr[0] == '#' || heightStr[0] == '#' ||
+        formatStr[0] == '#') {
         printf("Unhandled comment in PPM file\n");
         return false;
     }
@@ -226,11 +227,9 @@ bool read_ppm(char const*const filename, int& width, int& height, uint64_t rowPi
     }
 
     // Now read the data
-    for(int y = 0; y < height; y++)
-    {
-        unsigned char* rowPtr = dataPtr;
-        for(int x = 0; x < width; x++)
-        {
+    for (int y = 0; y < height; y++) {
+        unsigned char *rowPtr = dataPtr;
+        for (int x = 0; x < width; x++) {
             fread(rowPtr, 3, 1, fPtr);
             rowPtr[3] = 255; /* Alpha of 1 */
             rowPtr += 4;
@@ -242,8 +241,7 @@ bool read_ppm(char const*const filename, int& width, int& height, uint64_t rowPi
     return true;
 }
 
-void init_resources(TBuiltInResource &Resources)
-{
+void init_resources(TBuiltInResource &Resources) {
     Resources.maxLights = 32;
     Resources.maxClipPlanes = 6;
     Resources.maxTextureUnits = 32;
@@ -336,11 +334,9 @@ void init_resources(TBuiltInResource &Resources)
     Resources.limits.generalSamplerIndexing = 1;
     Resources.limits.generalVariableIndexing = 1;
     Resources.limits.generalConstantMatrixVectorIndexing = 1;
-
 }
 
-EShLanguage FindLanguage(const VkShaderStageFlagBits shader_type)
-{
+EShLanguage FindLanguage(const VkShaderStageFlagBits shader_type) {
     switch (shader_type) {
     case VK_SHADER_STAGE_VERTEX_BIT:
         return EShLangVertex;
@@ -365,25 +361,17 @@ EShLanguage FindLanguage(const VkShaderStageFlagBits shader_type)
     }
 }
 
-void init_glslang()
-{
-    glslang::InitializeProcess();
-}
+void init_glslang() { glslang::InitializeProcess(); }
 
-void finalize_glslang()
-{
-    glslang::FinalizeProcess();
-}
+void finalize_glslang() { glslang::FinalizeProcess(); }
 
 //
 // Compile a given string containing GLSL into SPV for use by VK
 // Return value of false means an error was encountered.
 //
-bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
-               const char *pshader,
-               std::vector<unsigned int> &spirv)
-{
-    glslang::TProgram& program = *new glslang::TProgram;
+bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
+               std::vector<unsigned int> &spirv) {
+    glslang::TProgram &program = *new glslang::TProgram;
     const char *shaderStrings[1];
     TBuiltInResource Resources;
     init_resources(Resources);
@@ -392,12 +380,12 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
     EShLanguage stage = FindLanguage(shader_type);
-    glslang::TShader* shader = new glslang::TShader(stage);
+    glslang::TShader *shader = new glslang::TShader(stage);
 
     shaderStrings[0] = pshader;
     shader->setStrings(shaderStrings, 1);
 
-    if (! shader->parse(&Resources, 100, false, messages)) {
+    if (!shader->parse(&Resources, 100, false, messages)) {
         puts(shader->getInfoLog());
         puts(shader->getInfoDebugLog());
         return false; // something didn't work
@@ -409,7 +397,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
     // Program-level processing...
     //
 
-    if (! program.link(messages)) {
+    if (!program.link(messages)) {
         puts(shader->getInfoLog());
         puts(shader->getInfoDebugLog());
         return false;
@@ -419,8 +407,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
 
     return true;
 }
-void wait_seconds(int seconds)
-{
+void wait_seconds(int seconds) {
 #ifdef WIN32
     Sleep(seconds * 1000);
 #else
@@ -428,8 +415,7 @@ void wait_seconds(int seconds)
 #endif
 }
 
-timestamp_t get_milliseconds()
-{
+timestamp_t get_milliseconds() {
 #ifdef WIN32
     LARGE_INTEGER frequency;
     BOOL useQPC = QueryPerformanceFrequency(&frequency);
@@ -442,18 +428,15 @@ timestamp_t get_milliseconds()
     }
 #else
     struct timeval now;
-    gettimeofday (&now, NULL);
-    return  (now.tv_usec / 1000) + (timestamp_t)now.tv_sec;
+    gettimeofday(&now, NULL);
+    return (now.tv_usec / 1000) + (timestamp_t)now.tv_sec;
 #endif
 }
 
-void print_UUID(uint8_t* pipelineCacheUUID)
-{
-    for(int j = 0; j < VK_UUID_SIZE; ++j)
-    {
+void print_UUID(uint8_t *pipelineCacheUUID) {
+    for (int j = 0; j < VK_UUID_SIZE; ++j) {
         std::cout << std::setw(2) << (uint32_t)pipelineCacheUUID[j];
-        if(j == 3 || j == 5 || j == 7 || j == 9)
-        {
+        if (j == 3 || j == 5 || j == 7 || j == 9) {
             std::cout << '-';
         }
     }

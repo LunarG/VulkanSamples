@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -31,8 +32,7 @@ extension are available to enable at CreateInstance time.
 #include <util_init.hpp>
 #include <cstdlib>
 
-int sample_main()
-{
+int sample_main() {
     VkResult res;
     VkExtensionProperties *vk_props = NULL;
     uint32_t instance_extension_count;
@@ -54,7 +54,8 @@ int sample_main()
      */
 
     do {
-        res = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, NULL);
+        res = vkEnumerateInstanceExtensionProperties(
+            NULL, &instance_extension_count, NULL);
         if (res)
             break;
 
@@ -62,9 +63,11 @@ int sample_main()
             break;
         }
 
-        vk_props = (VkExtensionProperties *) realloc(vk_props, instance_extension_count * sizeof(VkExtensionProperties));
+        vk_props = (VkExtensionProperties *)realloc(
+            vk_props, instance_extension_count * sizeof(VkExtensionProperties));
 
-        res = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, vk_props);
+        res = vkEnumerateInstanceExtensionProperties(
+            NULL, &instance_extension_count, vk_props);
     } while (res == VK_INCOMPLETE);
 
     std::cout << "Instance Extensions:" << std::endl;
@@ -72,7 +75,8 @@ int sample_main()
         VkExtensionProperties *props = &vk_props[i];
         std::cout << props->extensionName << ":" << std::endl;
         std::cout << "\tVersion: " << props->specVersion << std::endl;
-        std::cout << std::endl << std::endl;
+        std::cout << std::endl
+                  << std::endl;
     }
 
     std::cout << std::endl;

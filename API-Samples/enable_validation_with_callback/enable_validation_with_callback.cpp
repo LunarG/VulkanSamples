@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -32,16 +33,10 @@ Show how to enable validation layers and provide callback
 #include <cstdlib>
 #include <util_init.hpp>
 
-VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(
-    VkDebugReportFlagsEXT               msgFlags,
-    VkDebugReportObjectTypeEXT          objType,
-    uint64_t                            srcObject,
-    size_t                              location,
-    int32_t                             msgCode,
-    const char*                         pLayerPrefix,
-    const char*                         pMsg,
-    void*                               pUserData)
-{
+VKAPI_ATTR VkBool32 VKAPI_CALL
+dbgFunc(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType,
+        uint64_t srcObject, size_t location, int32_t msgCode,
+        const char *pLayerPrefix, const char *pMsg, void *pUserData) {
     std::ostringstream message;
 
     if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
@@ -73,8 +68,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(
     return false;
 }
 
-int sample_main()
-{
+int sample_main() {
     struct sample_info info = {};
     init_global_layer_properties(info);
 
@@ -92,7 +86,8 @@ int sample_main()
     info.instance_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
     info.instance_layer_names.push_back("VK_LAYER_LUNARG_param_checker");
 
-    if (!demo_check_layers(info.instance_layer_properties, info.instance_layer_names)) {
+    if (!demo_check_layers(info.instance_layer_properties,
+                           info.instance_layer_names)) {
         exit(1);
     }
 
@@ -114,7 +109,9 @@ int sample_main()
     inst_info.flags = 0;
     inst_info.pApplicationInfo = &app_info;
     inst_info.enabledLayerCount = info.instance_layer_names.size();
-    inst_info.ppEnabledLayerNames = info.instance_layer_names.size() ? info.instance_layer_names.data() : NULL;
+    inst_info.ppEnabledLayerNames = info.instance_layer_names.size()
+                                        ? info.instance_layer_names.data()
+                                        : NULL;
     inst_info.enabledExtensionCount = info.instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
 
@@ -140,24 +137,25 @@ int sample_main()
     info.device_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
     info.device_layer_names.push_back("VK_LAYER_LUNARG_param_checker");
 
-    if (!demo_check_layers(info.device_layer_properties, info.device_layer_names)) {
+    if (!demo_check_layers(info.device_layer_properties,
+                           info.device_layer_names)) {
         exit(1);
     }
-    float queue_priorities[1] = { 0.0 };
+    float queue_priorities[1] = {0.0};
     VkDeviceQueueCreateInfo queue_info = {};
 
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count,
+                                             NULL);
     assert(info.queue_count >= 1);
 
     info.queue_props.resize(info.queue_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count,
+                                             info.queue_props.data());
     assert(info.queue_count >= 1);
 
     bool found = false;
-    for (unsigned int i = 0; i < info.queue_count; i++)
-    {
-        if (info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-        {
+    for (unsigned int i = 0; i < info.queue_count; i++) {
+        if (info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             queue_info.queueFamilyIndex = i;
             found = true;
             break;
@@ -178,10 +176,11 @@ int sample_main()
     device_info.pQueueCreateInfos = &queue_info;
     device_info.enabledLayerCount = info.device_layer_names.size();
     device_info.ppEnabledLayerNames =
-            device_info.enabledLayerCount ? info.device_layer_names.data(): NULL;
+        device_info.enabledLayerCount ? info.device_layer_names.data() : NULL;
     device_info.enabledExtensionCount = info.device_extension_names.size();
     device_info.ppEnabledExtensionNames =
-            device_info.enabledExtensionCount ? info.device_extension_names.data() : NULL;
+        device_info.enabledExtensionCount ? info.device_extension_names.data()
+                                          : NULL;
     device_info.pEnabledFeatures = NULL;
 
     res = vkCreateDevice(info.gpus[0], &device_info, NULL, &info.device);
@@ -189,38 +188,44 @@ int sample_main()
 
     VkDebugReportCallbackEXT debug_report_callback;
 
-    info.dbgCreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT) vkGetInstanceProcAddr(info.inst, "vkCreateDebugReportCallbackEXT");
+    info.dbgCreateDebugReportCallback =
+        (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(
+            info.inst, "vkCreateDebugReportCallbackEXT");
     if (!info.dbgCreateDebugReportCallback) {
-        std::cout << "GetInstanceProcAddr: Unable to find vkCreateDebugReportCallbackEXT function." << std::endl;
+        std::cout << "GetInstanceProcAddr: Unable to find "
+                     "vkCreateDebugReportCallbackEXT function." << std::endl;
         exit(1);
     }
 
-    info.dbgDestroyDebugReportCallback = (PFN_vkDestroyDebugReportCallbackEXT) vkGetInstanceProcAddr(info.inst, "vkDestroyDebugReportCallbackEXT");
+    info.dbgDestroyDebugReportCallback =
+        (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(
+            info.inst, "vkDestroyDebugReportCallbackEXT");
     if (!info.dbgDestroyDebugReportCallback) {
-        std::cout << "GetInstanceProcAddr: Unable to find vkDestroyDebugReportCallbackEXT function." << std::endl;
+        std::cout << "GetInstanceProcAddr: Unable to find "
+                     "vkDestroyDebugReportCallbackEXT function." << std::endl;
         exit(1);
     }
 
     VkDebugReportCallbackCreateInfoEXT create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
     create_info.pNext = NULL;
-    create_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT;
+    create_info.flags =
+        VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT;
     create_info.pfnCallback = dbgFunc;
     create_info.pUserData = NULL;
-    res = info.dbgCreateDebugReportCallback(
-                info.inst,
-                &create_info,
-                NULL,
-                &debug_report_callback);
+    res = info.dbgCreateDebugReportCallback(info.inst, &create_info, NULL,
+                                            &debug_report_callback);
     switch (res) {
     case VK_SUCCESS:
         break;
     case VK_ERROR_OUT_OF_HOST_MEMORY:
-        std::cout << "dbgCreateDebugReportCallback: out of host memory\n" << std::endl;
+        std::cout << "dbgCreateDebugReportCallback: out of host memory\n"
+                  << std::endl;
         exit(1);
         break;
     default:
-        std::cout << "dbgCreateDebugReportCallback: unknown failure\n" << std::endl;
+        std::cout << "dbgCreateDebugReportCallback: unknown failure\n"
+                  << std::endl;
         exit(1);
         break;
     }
@@ -232,7 +237,8 @@ int sample_main()
     cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
     cmd_pool_info.flags = 0;
 
-    res = vkCreateCommandPool(info.device, &cmd_pool_info, NULL, &info.cmd_pool);
+    res =
+        vkCreateCommandPool(info.device, &cmd_pool_info, NULL, &info.cmd_pool);
     assert(res == VK_SUCCESS);
 
     /*
@@ -252,4 +258,3 @@ int sample_main()
 
     return 0;
 }
-
