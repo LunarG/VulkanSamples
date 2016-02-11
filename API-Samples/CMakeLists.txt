@@ -100,7 +100,7 @@ else()
     endif()
 endif()
 
-find_library(VULKAN_LOADER NAMES vulkan-1 vulkan
+find_library(VULKAN_LOADER NAMES vulkan
              HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader"
                    "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader/Release"
                    "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader/Debug"
