@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -35,8 +36,7 @@ create and destroy Vulkan instance
 
 #define APP_SHORT_NAME "vulkansamples_instance"
 
-int sample_main()
-{
+int sample_main() {
 
     /* VULKAN_KEY_START */
 
@@ -79,4 +79,3 @@ int sample_main()
 
     return 0;
 }
-

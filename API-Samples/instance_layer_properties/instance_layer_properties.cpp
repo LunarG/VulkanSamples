@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -31,8 +32,7 @@ layers are available to enable at CreateInstance time.
 #include <util_init.hpp>
 #include <cstdlib>
 
-int sample_main()
-{
+int sample_main() {
     VkResult res;
     struct sample_info info;
     uint32_t instance_layer_count;
@@ -61,9 +61,11 @@ int sample_main()
             break;
         }
 
-        vk_props = (VkLayerProperties *) realloc(vk_props, instance_layer_count * sizeof(VkLayerProperties));
+        vk_props = (VkLayerProperties *)realloc(
+            vk_props, instance_layer_count * sizeof(VkLayerProperties));
 
-        res = vkEnumerateInstanceLayerProperties(&instance_layer_count, vk_props);
+        res =
+            vkEnumerateInstanceLayerProperties(&instance_layer_count, vk_props);
     } while (res == VK_INCOMPLETE);
 
     std::cout << "Instance Layers:" << std::endl;
@@ -73,9 +75,12 @@ int sample_main()
         std::cout << props->layerName << ":" << std::endl;
         extract_version(props->specVersion, major, minor, patch);
         std::cout << "\tVersion: " << props->implementationVersion << std::endl;
-        std::cout << "\tAPI Version: " << "(" << major << "." << minor << "." << patch << ")"<< std::endl;
+        std::cout << "\tAPI Version: "
+                  << "(" << major << "." << minor << "." << patch << ")"
+                  << std::endl;
         std::cout << "\tDescription: " << props->description << std::endl;
-        std::cout << std::endl << std::endl;
+        std::cout << std::endl
+                  << std::endl;
     }
 
     std::cout << std::endl;
@@ -86,4 +91,3 @@ int sample_main()
 
     return 0;
 }
-

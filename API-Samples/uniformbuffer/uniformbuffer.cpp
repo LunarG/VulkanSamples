@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -34,8 +35,7 @@ Create Uniform Buffer
 #include <string.h>
 #include <cstdlib>
 
-int sample_main()
-{
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
     struct sample_info info = {};
@@ -49,11 +49,11 @@ int sample_main()
     init_window_size(info, 50, 50);
 
     info.Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
-    info.View       = glm::lookAt(
-                          glm::vec3(0,3,10), // Camera is at (0,3,10), in World Space
-                          glm::vec3(0,0,0), // and looks at the origin
-                          glm::vec3(0,-1,0)  // Head is up (set to 0,-1,0 to look upside-down)
-                          );
+    info.View = glm::lookAt(
+        glm::vec3(0, 3, 10), // Camera is at (0,3,10), in World Space
+        glm::vec3(0, 0, 0),  // and looks at the origin
+        glm::vec3(0, -1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
+        );
     info.Model = glm::mat4(1.0f);
     info.MVP = info.Projection * info.View * info.Model;
 
@@ -71,7 +71,8 @@ int sample_main()
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(info.device, info.uniform_data.buf, &mem_reqs);
+    vkGetBufferMemoryRequirements(info.device, info.uniform_data.buf,
+                                  &mem_reqs);
 
     VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -79,26 +80,26 @@ int sample_main()
     alloc_info.memoryTypeIndex = 0;
 
     alloc_info.allocationSize = mem_reqs.size;
-    pass = memory_type_from_properties(info,
-                                      mem_reqs.memoryTypeBits,
-                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-                                      &alloc_info.memoryTypeIndex);
+    pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                       &alloc_info.memoryTypeIndex);
     assert(pass);
 
-    res = vkAllocateMemory(info.device, &alloc_info, NULL, &(info.uniform_data.mem));
+    res = vkAllocateMemory(info.device, &alloc_info, NULL,
+                           &(info.uniform_data.mem));
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
-    res = vkMapMemory(info.device, info.uniform_data.mem, 0, mem_reqs.size, 0, (void **) &pData);
+    res = vkMapMemory(info.device, info.uniform_data.mem, 0, mem_reqs.size, 0,
+                      (void **)&pData);
     assert(res == VK_SUCCESS);
 
     memcpy(pData, &info.MVP, sizeof(info.MVP));
 
     vkUnmapMemory(info.device, info.uniform_data.mem);
 
-    res = vkBindBufferMemory(info.device,
-            info.uniform_data.buf,
-            info.uniform_data.mem, 0);
+    res = vkBindBufferMemory(info.device, info.uniform_data.buf,
+                             info.uniform_data.mem, 0);
     assert(res == VK_SUCCESS);
 
     info.uniform_data.buffer_info.buffer = info.uniform_data.buf;

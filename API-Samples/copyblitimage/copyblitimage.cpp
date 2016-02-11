@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -27,17 +28,17 @@ VULKAN_SAMPLE_SHORT_DESCRIPTION
 Copy/blit image
 */
 
-/* Create a checkerboard image, and blit a small area of it to the presentation image  */
-/* We should see bigger sqaures.  Then copy part of the checkboard to the presentation */
-/* image - we should see small squares                                                 */
+/* Create a checkerboard image, and blit a small area of it to the
+ * presentation image. We should see bigger sqaures.  Then copy part of
+ * the checkboard to the presentation image - we should see small squares
+ */
 
 #include <util_init.hpp>
 #include <assert.h>
 #include <string.h>
 #include <cstdlib>
 
-int sample_main()
-{
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Copy/Blit Image";
@@ -68,31 +69,31 @@ int sample_main()
     /* VULKAN_KEY_START */
 
     VkFormatProperties formatProps;
-    vkGetPhysicalDeviceFormatProperties(info.gpus[0], info.format, &formatProps);
-    assert((formatProps.linearTilingFeatures & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) && "Format cannot be used as transfer source");
+    vkGetPhysicalDeviceFormatProperties(info.gpus[0], info.format,
+                                        &formatProps);
+    assert(
+        (formatProps.linearTilingFeatures & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) &&
+        "Format cannot be used as transfer source");
 
     VkSemaphore presentCompleteSemaphore;
     VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
-    presentCompleteSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    presentCompleteSemaphoreCreateInfo.sType =
+        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     presentCompleteSemaphoreCreateInfo.pNext = NULL;
     presentCompleteSemaphoreCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    res = vkCreateSemaphore(info.device,
-                            &presentCompleteSemaphoreCreateInfo, NULL,
-                            &presentCompleteSemaphore);
+    res = vkCreateSemaphore(info.device, &presentCompleteSemaphoreCreateInfo,
+                            NULL, &presentCompleteSemaphore);
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
-    res = vkAcquireNextImageKHR(info.device, info.swap_chain,
-                                      UINT64_MAX,
-                                      presentCompleteSemaphore,
-                                      VK_NULL_HANDLE,
-                                      &info.current_buffer);
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
+                                presentCompleteSemaphore, NULL,
+                                &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
     assert(res == VK_SUCCESS);
 
-    
     // Create an image, map it, and write some values to the image
 
     image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -118,28 +119,28 @@ int sample_main()
     memAllocInfo.pNext = NULL;
 
     vkGetImageMemoryRequirements(info.device, bltSrcImage, &memReq);
-    bool pass = memory_type_from_properties(info,
-                                      memReq.memoryTypeBits,
-                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-                                      &memAllocInfo.memoryTypeIndex);
+    bool pass = memory_type_from_properties(info, memReq.memoryTypeBits,
+                                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                            &memAllocInfo.memoryTypeIndex);
     assert(pass);
     memAllocInfo.allocationSize = memReq.size;
     res = vkAllocateMemory(info.device, &memAllocInfo, NULL, &dmem);
     res = vkBindImageMemory(info.device, bltSrcImage, dmem, 0);
-    res = vkMapMemory(info.device, dmem, 0,memReq.size, 0, (void **)&pImgMem);
+    res = vkMapMemory(info.device, dmem, 0, memReq.size, 0, (void **)&pImgMem);
     // Checkerboard of 8x8 pixel squares
     for (int row = 0; row < info.height; row++) {
-       for (int col = 0; col < info.width; col++) {
-          unsigned char rgb = (((row & 0x8) == 0) ^ ((col & 0x8) == 0)) * 255;
-          pImgMem[0] = rgb;
-          pImgMem[1] = rgb;
-          pImgMem[2] = rgb;
-          pImgMem[3] = 255;
-          pImgMem += 4;
-       }
+        for (int col = 0; col < info.width; col++) {
+            unsigned char rgb = (((row & 0x8) == 0) ^ ((col & 0x8) == 0)) * 255;
+            pImgMem[0] = rgb;
+            pImgMem[1] = rgb;
+            pImgMem[2] = rgb;
+            pImgMem[3] = 255;
+            pImgMem += 4;
+        }
     }
 
-    // Flush the mapped memory and then unmap it  Assume it isn't coherent since we didn't really confirm
+    // Flush the mapped memory and then unmap it  Assume it isn't coherent since
+    // we didn't really confirm
     VkMappedMemoryRange memRange;
     memRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     memRange.pNext = NULL;
@@ -149,7 +150,9 @@ int sample_main()
     res = vkFlushMappedMemoryRanges(info.device, 1, &memRange);
 
     vkUnmapMemory(info.device, dmem);
-    set_image_layout(info, bltSrcImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    set_image_layout(info, bltSrcImage, VK_IMAGE_ASPECT_COLOR_BIT,
+                     VK_IMAGE_LAYOUT_UNDEFINED,
+                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
     bltDstImage = info.buffers[info.current_buffer].image;
     // init_swap_chain will create the images as color attachment optimal
@@ -181,8 +184,9 @@ int sample_main()
     region.dstOffsets[1].y = info.height;
     region.dstOffsets[1].z = 1;
 
-    vkCmdBlitImage(info.cmd, bltSrcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, bltDstImage,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_LINEAR);
+    vkCmdBlitImage(info.cmd, bltSrcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                   bltDstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                   &region, VK_FILTER_LINEAR);
 
     // Do a image copy to part of the dst image - checks should stay small
     VkImageCopy cregion;
@@ -204,8 +208,9 @@ int sample_main()
     cregion.extent.height = 128;
     cregion.extent.depth = 1;
 
-    vkCmdCopyImage(info.cmd, bltSrcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, bltDstImage,
-      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &cregion);
+    vkCmdCopyImage(info.cmd, bltSrcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                   bltDstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                   &cregion);
 
     VkImageMemoryBarrier prePresentBarrier = {};
     prePresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -222,11 +227,12 @@ int sample_main()
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                         0, 0, NULL, 0, NULL, 1, &prePresentBarrier);
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0,
+                         NULL, 1, &prePresentBarrier);
 
     res = vkEndCommandBuffer(info.cmd);
-    const VkCommandBuffer cmd_bufs[] = { info.cmd };
+    const VkCommandBuffer cmd_bufs[] = {info.cmd};
     VkFenceCreateInfo fenceInfo;
     VkFence drawFence;
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -234,7 +240,8 @@ int sample_main()
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
-    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    VkPipelineStageFlags pipe_stage_flags =
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -267,8 +274,9 @@ int sample_main()
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
-    } while(res == VK_TIMEOUT);
+        res =
+            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);

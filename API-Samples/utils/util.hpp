@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -35,16 +36,9 @@
 #pragma comment(linker, "/subsystem:console")
 #define WIN32_LEAN_AND_MEAN
 #define VK_USE_PLATFORM_WIN32_KHR
-#define NOMINMAX              /* Don't let Windows define min() or max() */
+#define NOMINMAX /* Don't let Windows define min() or max() */
 #define APP_NAME_STR_LEN 80
-#elif defined(__ANDROID__)
-#include <unistd.h>
-#include <android/log.h>
-#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "threaded_app", __VA_ARGS__))
-#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "threaded_app", __VA_ARGS__))
-// Replace printf to logcat output.
-#define printf(...) __android_log_print(ANDROID_LOG_DEBUG, "TAG", __VA_ARGS__);
-#else //__ANDROID__
+#else // _WIN32
 #define VK_USE_PLATFORM_XCB_KHR
 #include <unistd.h>
 #endif // _WIN32
@@ -77,23 +71,25 @@
 /* Amount of time, in nanoseconds, to wait for a command buffer to complete */
 #define FENCE_TIMEOUT 100000000
 
-#define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                         \
-{                                                                        \
-    info.fp##entrypoint = (PFN_vk##entrypoint) vkGetInstanceProcAddr(inst, "vk"#entrypoint); \
-    if (info.fp##entrypoint == NULL) {                                   \
-        std::cout << "vkGetDeviceProcAddr failed to find vk"#entrypoint; \
-        exit(-1);                                                        \
-    }                                                                    \
-}
+#define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                               \
+    {                                                                          \
+        info.fp##entrypoint =                                                  \
+            (PFN_vk##entrypoint)vkGetInstanceProcAddr(inst, "vk" #entrypoint); \
+        if (info.fp##entrypoint == NULL) {                                     \
+            std::cout << "vkGetDeviceProcAddr failed to find vk" #entrypoint;  \
+            exit(-1);                                                          \
+        }                                                                      \
+    }
 
-#define GET_DEVICE_PROC_ADDR(dev, entrypoint)                           \
-{                                                                       \
-    info.fp##entrypoint = (PFN_vk##entrypoint) vkGetDeviceProcAddr(dev, "vk"#entrypoint);   \
-    if (info.fp##entrypoint == NULL) {                                   \
-        std::cout << "vkGetDeviceProcAddr failed to find vk"#entrypoint; \
-        exit(-1);                                                        \
-    }                                                                    \
-}
+#define GET_DEVICE_PROC_ADDR(dev, entrypoint)                                  \
+    {                                                                          \
+        info.fp##entrypoint =                                                  \
+            (PFN_vk##entrypoint)vkGetDeviceProcAddr(dev, "vk" #entrypoint);    \
+        if (info.fp##entrypoint == NULL) {                                     \
+            std::cout << "vkGetDeviceProcAddr failed to find vk" #entrypoint;  \
+            exit(-1);                                                          \
+        }                                                                      \
+    }
 
 #if defined(NDEBUG) && defined(__GNUC__)
 #define U_ASSERT_ONLY __attribute__((unused))
@@ -102,7 +98,7 @@
 #endif
 
 std::string get_base_data_dir();
-std::string get_data_dir( std::string filename );
+std::string get_data_dir(std::string filename);
 
 /*
  * structure to track all objects related to a texture.
@@ -119,7 +115,8 @@ struct texture_object {
 };
 
 /*
- * Keep each of our swap chain buffers' image, command buffer and view in one spot
+ * Keep each of our swap chain buffers' image, command buffer and view in one
+ * spot
  */
 typedef struct _swap_chain_buffers {
     VkImage image;
@@ -144,25 +141,13 @@ struct sample_info {
 #define APP_NAME_STR_LEN 80
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
-    HWND        window;          // hWnd - window handle
-#elif defined(__ANDROID__)
-    PFN_vkGetPhysicalDeviceSurfaceSupportKHR fpGetPhysicalDeviceSurfaceSupportKHR;
-    PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR fpGetPhysicalDeviceSurfaceCapabilitiesKHR;
-    PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fpGetPhysicalDeviceSurfaceFormatsKHR;
-    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR fpGetPhysicalDeviceSurfacePresentModesKHR;
-    PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
-    PFN_vkDestroySwapchainKHR fpDestroySwapchainKHR;
-    PFN_vkDestroySurfaceKHR fpDestroySurfaceKHR;
-    PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
-    PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
-    PFN_vkQueuePresentKHR fpQueuePresentKHR;
-    PFN_vkCreateAndroidSurfaceKHR fpCreateAndroidSurfaceKHR;
-#else  // _WIN32
+    HWND window;                 // hWnd - window handle
+#else                            // _WIN32
     xcb_connection_t *connection;
     xcb_screen_t *screen;
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
-#endif // _WIN32
+#endif                           // _WIN32
     VkSurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;
@@ -229,7 +214,7 @@ struct sample_info {
     glm::mat4 Model;
     glm::mat4 MVP;
 
-    VkCommandBuffer cmd;  // Buffer for initialization commands
+    VkCommandBuffer cmd; // Buffer for initialization commands
     VkPipelineLayout pipeline_layout;
     std::vector<VkDescriptorSetLayout> desc_layout;
     VkPipelineCache pipelineCache;
@@ -254,23 +239,25 @@ struct sample_info {
     VkRect2D scissor;
 };
 
-bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex);
+bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits,
+                                 VkFlags requirements_mask,
+                                 uint32_t *typeIndex);
 
-void set_image_layout(
-        struct sample_info &demo,
-        VkImage image,
-        VkImageAspectFlags aspectMask,
-        VkImageLayout old_image_layout,
-        VkImageLayout new_image_layout);
+void set_image_layout(struct sample_info &demo, VkImage image,
+                      VkImageAspectFlags aspectMask,
+                      VkImageLayout old_image_layout,
+                      VkImageLayout new_image_layout);
 
-bool read_ppm(char const*const filename, int& width, int& height, uint64_t rowPitch, unsigned char *dataPtr);
-void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch);
-bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spirv);
+bool read_ppm(char const *const filename, int &width, int &height,
+              uint64_t rowPitch, unsigned char *dataPtr);
+void extract_version(uint32_t version, uint32_t &major, uint32_t &minor,
+                     uint32_t &patch);
+bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
+               std::vector<unsigned int> &spirv);
 void init_glslang();
 void finalize_glslang();
 void wait_seconds(int seconds);
-void print_UUID(uint8_t* pipelineCacheUUID);
-std::string get_file_directory();
+void print_UUID(uint8_t *pipelineCacheUUID);
 
 typedef unsigned long long timestamp_t;
 timestamp_t get_milliseconds();

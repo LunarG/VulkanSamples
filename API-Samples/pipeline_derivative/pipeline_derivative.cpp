@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
  * Copyright (C) 2016 Valve Corporation
+ * Copyright (C) 2016 LunarG, Inc.
  * Copyright (C) 2016 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -49,28 +50,28 @@ can be updated then.
 /* SPIR-V                                                                 */
 
 const char *vertShaderText =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "layout (std140, binding = 0) uniform buf {\n"
-        "        mat4 mvp;\n"
-        "} ubuf;\n"
-        "layout (location = 0) in vec4 pos;\n"
-        "layout (location = 1) in vec2 inTexCoords;\n"
-        "layout (location = 0) out vec2 texcoord;\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
-        "void main() {\n"
-        "   texcoord = inTexCoords;\n"
-        "   gl_Position = ubuf.mvp * pos;\n"
-        "\n"
-        "   // GL->VK conventions\n"
-        "   gl_Position.y = -gl_Position.y;\n"
-        "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
-        "}\n";
+    "#version 400\n"
+    "#extension GL_ARB_separate_shader_objects : enable\n"
+    "#extension GL_ARB_shading_language_420pack : enable\n"
+    "layout (std140, binding = 0) uniform buf {\n"
+    "        mat4 mvp;\n"
+    "} ubuf;\n"
+    "layout (location = 0) in vec4 pos;\n"
+    "layout (location = 1) in vec2 inTexCoords;\n"
+    "layout (location = 0) out vec2 texcoord;\n"
+    "out gl_PerVertex { \n"
+    "    vec4 gl_Position;\n"
+    "};\n"
+    "void main() {\n"
+    "   texcoord = inTexCoords;\n"
+    "   gl_Position = ubuf.mvp * pos;\n"
+    "\n"
+    "   // GL->VK conventions\n"
+    "   gl_Position.y = -gl_Position.y;\n"
+    "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
+    "}\n";
 
-const char *fragShaderText=
+const char *fragShaderText =
     "#version 400\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
@@ -81,8 +82,7 @@ const char *fragShaderText=
     "   outColor = textureLod(tex, texcoord, 0.0);\n"
     "}\n";
 
-int sample_main()
-{
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Pipeline Derivative";
@@ -196,9 +196,11 @@ int sample_main()
     vp.pNext = NULL;
     vp.flags = 0;
     vp.viewportCount = NUM_VIEWPORTS;
-    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] =
+        VK_DYNAMIC_STATE_VIEWPORT;
     vp.scissorCount = NUM_SCISSORS;
-    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] =
+        VK_DYNAMIC_STATE_SCISSOR;
     vp.pScissors = NULL;
     vp.pViewports = NULL;
 
@@ -223,7 +225,7 @@ int sample_main()
     ds.stencilTestEnable = VK_FALSE;
     ds.front = ds.back;
 
-    VkPipelineMultisampleStateCreateInfo   ms;
+    VkPipelineMultisampleStateCreateInfo ms;
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pNext = NULL;
     ms.flags = 0;
@@ -236,55 +238,59 @@ int sample_main()
 
     VkGraphicsPipelineCreateInfo pipeline;
     pipeline.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipeline.pNext               = NULL;
-    pipeline.layout              = info.pipeline_layout;
-    pipeline.basePipelineHandle  = VK_NULL_HANDLE;
-    pipeline.basePipelineIndex   = 0;
+    pipeline.pNext = NULL;
+    pipeline.layout = info.pipeline_layout;
+    pipeline.basePipelineHandle = VK_NULL_HANDLE;
+    pipeline.basePipelineIndex = 0;
 
     // Specify that we will be creating a derivative of this pipeline.
-    pipeline.flags               = VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT;
+    pipeline.flags = VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT;
 
-    pipeline.pVertexInputState   = include_vi?&vi:NULL;
+    pipeline.pVertexInputState = include_vi ? &vi : NULL;
     pipeline.pInputAssemblyState = &ia;
     pipeline.pRasterizationState = &rs;
-    pipeline.pColorBlendState    = &cb;
-    pipeline.pTessellationState  = NULL;
-    pipeline.pMultisampleState   = &ms;
-    pipeline.pDynamicState       = &dynamicState;
-    pipeline.pViewportState      = &vp;
-    pipeline.pDepthStencilState  = &ds;
-    pipeline.pStages             = info.shaderStages;
-    pipeline.stageCount          = 2;
-    pipeline.renderPass          = info.render_pass;
-    pipeline.subpass             = 0;
+    pipeline.pColorBlendState = &cb;
+    pipeline.pTessellationState = NULL;
+    pipeline.pMultisampleState = &ms;
+    pipeline.pDynamicState = &dynamicState;
+    pipeline.pViewportState = &vp;
+    pipeline.pDepthStencilState = &ds;
+    pipeline.pStages = info.shaderStages;
+    pipeline.stageCount = 2;
+    pipeline.renderPass = info.render_pass;
+    pipeline.subpass = 0;
 
     // Create the base pipeline without storing it in the info struct
     // NOTE:  If desired, we can add timing info around pipeline creation to
     //        demonstrate any perf benefits to derivation.
     VkPipeline basePipeline;
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &basePipeline);
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
+                                    &pipeline, NULL, &basePipeline);
     assert(res == VK_SUCCESS);
 
     // Now create the derivative pipeline, using a different fragment shader
     // This shader will shade the cube faces with interpolated colors
-    // NOTE:  If this step is too heavyweight to show any benefit of derivation, then
+    // NOTE:  If this step is too heavyweight to show any benefit of derivation,
+    // then
     //        create a pipeline that differs in some other, simpler way.
-    const char *fragShaderText2 =
-        "#version 450\n"
-        "layout (location = 0) in vec2 texcoord;\n"
-        "layout (location = 0) out vec4 outColor;\n"
-        "void main() {\n"
-        "   outColor = vec4(texcoord.x, texcoord.y, 1.0 - texcoord.x - texcoord.y, 1.0f);\n"
-        "}\n";
+    const char *fragShaderText2 = "#version 450\n"
+                                  "layout (location = 0) in vec2 texcoord;\n"
+                                  "layout (location = 0) out vec4 outColor;\n"
+                                  "void main() {\n"
+                                  "   outColor = vec4(texcoord.x, texcoord.y, "
+                                  "1.0 - texcoord.x - texcoord.y, 1.0f);\n"
+                                  "}\n";
 
     // Convert GLSL to SPIR-V
     init_glslang();
     std::vector<unsigned int> fragSpv;
-    bool U_ASSERT_ONLY retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText2, fragSpv);
+    bool U_ASSERT_ONLY retVal =
+        GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText2, fragSpv);
     assert(retVal);
     finalize_glslang();
 
-    // Replace the module entry of info.shaderStages to change the fragment shader
+    // Replace the module entry of info.shaderStages to change the fragment
+    // shader
     vkDestroyShaderModule(info.device, info.shaderStages[1].module, NULL);
     VkShaderModuleCreateInfo moduleCreateInfo = {};
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -292,7 +298,8 @@ int sample_main()
     moduleCreateInfo.flags = 0;
     moduleCreateInfo.codeSize = fragSpv.size() * sizeof(unsigned int);
     moduleCreateInfo.pCode = fragSpv.data();
-    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[1].module);
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL,
+                               &info.shaderStages[1].module);
     assert(res == VK_SUCCESS);
 
     // Modify pipeline info to reflect derivation
@@ -300,8 +307,10 @@ int sample_main()
     pipeline.basePipelineHandle = basePipeline;
     pipeline.basePipelineIndex = -1;
 
-    // And create the derived pipeline, assigning to info.pipeline for use by later helpers
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &info.pipeline);
+    // And create the derived pipeline, assigning to info.pipeline for use by
+    // later helpers
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
+                                    &pipeline, NULL, &info.pipeline);
     assert(res == VK_SUCCESS);
 
     /* VULKAN_KEY_END */
@@ -318,10 +327,10 @@ int sample_main()
 
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                  info.pipeline);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
-            0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 0, NULL);
+    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+                            info.desc_set.data(), 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
@@ -339,7 +348,8 @@ int sample_main()
 
     VkFence drawFence = {};
     init_fence(info, drawFence);
-    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    VkPipelineStageFlags pipe_stage_flags =
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     VkSubmitInfo submit_info = {};
     init_submit_info(info, submit_info, pipe_stage_flags);
 
@@ -353,8 +363,9 @@ int sample_main()
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
-    } while(res == VK_TIMEOUT);
+        res =
+            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);

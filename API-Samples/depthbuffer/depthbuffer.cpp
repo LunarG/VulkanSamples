@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -33,8 +34,7 @@ create Vulkan depth buffer
 #include <assert.h>
 #include <cstdlib>
 
-int sample_main()
-{
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
 
@@ -70,9 +70,11 @@ int sample_main()
     const VkFormat depth_format = VK_FORMAT_D16_UNORM;
     VkFormatProperties props;
     vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
-    if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+    if (props.linearTilingFeatures &
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         image_info.tiling = VK_IMAGE_TILING_LINEAR;
-    } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+    } else if (props.optimalTilingFeatures &
+               VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     } else {
         /* Try other depth formats? */
@@ -126,19 +128,16 @@ int sample_main()
     info.depth.format = depth_format;
 
     /* Create image */
-    res = vkCreateImage(info.device, &image_info, NULL,
-                        &info.depth.image);
+    res = vkCreateImage(info.device, &image_info, NULL, &info.depth.image);
     assert(res == VK_SUCCESS);
 
-    vkGetImageMemoryRequirements(info.device,
-                                 info.depth.image, &mem_reqs);
+    vkGetImageMemoryRequirements(info.device, info.depth.image, &mem_reqs);
 
     mem_alloc.allocationSize = mem_reqs.size;
     /* Use the memory properties to determine the type of memory required */
-    pass = memory_type_from_properties(info,
-                                      mem_reqs.memoryTypeBits,
-                                      0, /* No Requirements */
-                                      &mem_alloc.memoryTypeIndex);
+    pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
+                                       0, /* No Requirements */
+                                       &mem_alloc.memoryTypeIndex);
     assert(pass);
 
     /* Allocate memory */
@@ -146,15 +145,13 @@ int sample_main()
     assert(res == VK_SUCCESS);
 
     /* Bind memory */
-    res = vkBindImageMemory(info.device, info.depth.image,
-                            info.depth.mem, 0);
+    res = vkBindImageMemory(info.device, info.depth.image, info.depth.mem, 0);
     assert(res == VK_SUCCESS);
 
     /* Set the image layout to depth stencil optimal */
-    set_image_layout(info, info.depth.image,
-                          VK_IMAGE_ASPECT_DEPTH_BIT,
-                          VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    set_image_layout(info, info.depth.image, VK_IMAGE_ASPECT_DEPTH_BIT,
+                     VK_IMAGE_LAYOUT_UNDEFINED,
+                     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
     /* Create image view */
     view_info.image = info.depth.image;
@@ -177,5 +174,4 @@ int sample_main()
     destroy_instance(info);
 
     return 0;
-
 }

@@ -1,7 +1,8 @@
 /*
- * Vulkan Samples Kit
+ * Vulkan Samples
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015-2016 Valve Corporation
+ * Copyright (C) 2015-2016 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -43,50 +44,49 @@ Use multiple descriptor sets to draw a textured cube.
 /* SPIR-V                                                                 */
 
 const char *vertShaderText =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        // Note, set = 0 here
-        "layout (std140, set = 0, binding = 0) uniform bufferVals {\n"
-        "    mat4 mvp;\n"
-        "} myBufferVals;\n"
-        // And set = 1 here
-        "layout (set = 1, binding = 0) uniform sampler2D surface;\n"
-        "layout (location = 0) in vec4 pos;\n"
-        "layout (location = 1) in vec2 inTexCoords;\n"
-        "layout (location = 0) out vec4 outColor;\n"
-        "layout (location = 1) out vec2 outTexCoords;\n"
-        "out gl_PerVertex { \n"
-        "    vec4 gl_Position;\n"
-        "};\n"
-        "void main() {\n"
-        "   outColor = texture(surface, vec2(0.0));\n"
-        "   outTexCoords = inTexCoords;\n"
-        "   gl_Position = myBufferVals.mvp * pos;\n"
-        "   // GL->VK conventions\n"
-        "   gl_Position.y = -gl_Position.y;\n"
-        "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
-        "}\n";
+    "#version 400\n"
+    "#extension GL_ARB_separate_shader_objects : enable\n"
+    "#extension GL_ARB_shading_language_420pack : enable\n"
+    // Note, set = 0 here
+    "layout (std140, set = 0, binding = 0) uniform bufferVals {\n"
+    "    mat4 mvp;\n"
+    "} myBufferVals;\n"
+    // And set = 1 here
+    "layout (set = 1, binding = 0) uniform sampler2D surface;\n"
+    "layout (location = 0) in vec4 pos;\n"
+    "layout (location = 1) in vec2 inTexCoords;\n"
+    "layout (location = 0) out vec4 outColor;\n"
+    "layout (location = 1) out vec2 outTexCoords;\n"
+    "out gl_PerVertex { \n"
+    "    vec4 gl_Position;\n"
+    "};\n"
+    "void main() {\n"
+    "   outColor = texture(surface, vec2(0.0));\n"
+    "   outTexCoords = inTexCoords;\n"
+    "   gl_Position = myBufferVals.mvp * pos;\n"
+    "   // GL->VK conventions\n"
+    "   gl_Position.y = -gl_Position.y;\n"
+    "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
+    "}\n";
 
-const char *fragShaderText=
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "layout (location = 0) in vec4 inColor;\n"
-        "layout (location = 1) in vec2 inTexCoords;\n"
-        "layout (location = 0) out vec4 outColor;\n"
-        "void main() {\n"
-        "    vec4 resColor = inColor;\n"
-        // Create a border to see the cube more easily
-        "   if (inTexCoords.x < 0.01 || inTexCoords.x > 0.99)\n"
-        "       resColor *= vec4(0.1, 0.1, 0.1, 1.0);\n"
-        "   if (inTexCoords.y < 0.01 || inTexCoords.y > 0.99)\n"
-        "       resColor *= vec4(0.1, 0.1, 0.1, 1.0);\n"
-        "   outColor = resColor;\n"
-        "}\n";
+const char *fragShaderText =
+    "#version 400\n"
+    "#extension GL_ARB_separate_shader_objects : enable\n"
+    "#extension GL_ARB_shading_language_420pack : enable\n"
+    "layout (location = 0) in vec4 inColor;\n"
+    "layout (location = 1) in vec2 inTexCoords;\n"
+    "layout (location = 0) out vec4 outColor;\n"
+    "void main() {\n"
+    "    vec4 resColor = inColor;\n"
+    // Create a border to see the cube more easily
+    "   if (inTexCoords.x < 0.01 || inTexCoords.x > 0.99)\n"
+    "       resColor *= vec4(0.1, 0.1, 0.1, 1.0);\n"
+    "   if (inTexCoords.y < 0.01 || inTexCoords.y > 0.99)\n"
+    "       resColor *= vec4(0.1, 0.1, 0.1, 1.0);\n"
+    "   outColor = resColor;\n"
+    "}\n";
 
-int sample_main()
-{
+int sample_main() {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Multiple Descriptor Sets";
@@ -107,8 +107,9 @@ int sample_main()
     init_device_queue(info);
     init_swap_chain(info);
     init_depth_buffer(info);
-    // Sample from a green texture to easily see that we've pulled correct texel value
-    const char* textureName = "green.ppm";
+    // Sample from a green texture to easily see that we've pulled correct texel
+    // value
+    const char *textureName = "green.ppm";
     init_texture(info, textureName);
     init_uniform_buffer(info);
     init_renderpass(info, true);
@@ -130,7 +131,8 @@ int sample_main()
     uniform_binding[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     uniform_binding[0].pImmutableSamplers = NULL;
     VkDescriptorSetLayoutCreateInfo uniform_layout_info[1] = {};
-    uniform_layout_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    uniform_layout_info[0].sType =
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     uniform_layout_info[0].pNext = NULL;
     uniform_layout_info[0].bindingCount = 1;
     uniform_layout_info[0].pBindings = uniform_binding;
@@ -138,12 +140,14 @@ int sample_main()
     // Create second layout containing combined sampler/image data
     VkDescriptorSetLayoutBinding sampler2D_binding[1] = {};
     sampler2D_binding[0].binding = 0;
-    sampler2D_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    sampler2D_binding[0].descriptorType =
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     sampler2D_binding[0].descriptorCount = 1;
     sampler2D_binding[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     sampler2D_binding[0].pImmutableSamplers = NULL;
     VkDescriptorSetLayoutCreateInfo sampler2D_layout_info[1] = {};
-    sampler2D_layout_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    sampler2D_layout_info[0].sType =
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     sampler2D_layout_info[0].pNext = NULL;
     sampler2D_layout_info[0].bindingCount = 1;
     sampler2D_layout_info[0].pBindings = sampler2D_binding;
@@ -152,20 +156,24 @@ int sample_main()
     static const unsigned uniform_set_index = 0;
     static const unsigned sampler_set_index = 1;
     VkDescriptorSetLayout descriptor_layouts[descriptor_set_count] = {};
-    res = vkCreateDescriptorSetLayout(info.device, uniform_layout_info, NULL, &descriptor_layouts[uniform_set_index]);
+    res = vkCreateDescriptorSetLayout(info.device, uniform_layout_info, NULL,
+                                      &descriptor_layouts[uniform_set_index]);
     assert(res == VK_SUCCESS);
-    res = vkCreateDescriptorSetLayout(info.device, sampler2D_layout_info, NULL, &descriptor_layouts[sampler_set_index]);
+    res = vkCreateDescriptorSetLayout(info.device, sampler2D_layout_info, NULL,
+                                      &descriptor_layouts[sampler_set_index]);
     assert(res == VK_SUCCESS);
 
     // Create pipeline layout with multiple descriptor sets
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo[1] = {};
-    pipelineLayoutCreateInfo[0].sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutCreateInfo[0].pNext                  = NULL;
+    pipelineLayoutCreateInfo[0].sType =
+        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutCreateInfo[0].pNext = NULL;
     pipelineLayoutCreateInfo[0].pushConstantRangeCount = 0;
-    pipelineLayoutCreateInfo[0].pPushConstantRanges    = NULL;
-    pipelineLayoutCreateInfo[0].setLayoutCount         = descriptor_set_count;
-    pipelineLayoutCreateInfo[0].pSetLayouts            = descriptor_layouts;
-    res = vkCreatePipelineLayout(info.device, pipelineLayoutCreateInfo, NULL, &info.pipeline_layout);
+    pipelineLayoutCreateInfo[0].pPushConstantRanges = NULL;
+    pipelineLayoutCreateInfo[0].setLayoutCount = descriptor_set_count;
+    pipelineLayoutCreateInfo[0].pSetLayouts = descriptor_layouts;
+    res = vkCreatePipelineLayout(info.device, pipelineLayoutCreateInfo, NULL,
+                                 &info.pipeline_layout);
     assert(res == VK_SUCCESS);
 
     // Create a single pool to contain data for our two descriptor sets
@@ -179,7 +187,8 @@ int sample_main()
     pool_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool_info[0].pNext = NULL;
     pool_info[0].maxSets = descriptor_set_count;
-    pool_info[0].poolSizeCount = sizeof(type_count) / sizeof(VkDescriptorPoolSize);
+    pool_info[0].poolSizeCount =
+        sizeof(type_count) / sizeof(VkDescriptorPoolSize);
     pool_info[0].pPoolSizes = type_count;
 
     VkDescriptorPool descriptor_pool[1] = {};
@@ -198,7 +207,8 @@ int sample_main()
     res = vkAllocateDescriptorSets(info.device, alloc_info, descriptor_sets);
     assert(res == VK_SUCCESS);
 
-    // Using empty brace initializer on the next line triggers a bug in older versions of gcc, so memset instead
+    // Using empty brace initializer on the next line triggers a bug in older
+    // versions of gcc, so memset instead
     VkWriteDescriptorSet descriptor_writes[2];
     memset(descriptor_writes, 0, sizeof(descriptor_writes));
 
@@ -209,7 +219,8 @@ int sample_main()
     descriptor_writes[0].dstSet = descriptor_sets[uniform_set_index];
     descriptor_writes[0].descriptorCount = 1;
     descriptor_writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptor_writes[0].pBufferInfo = &info.uniform_data.buffer_info; // populated by init_uniform_buffer()
+    descriptor_writes[0].pBufferInfo =
+        &info.uniform_data.buffer_info; // populated by init_uniform_buffer()
     descriptor_writes[0].dstArrayElement = 0;
     descriptor_writes[0].dstBinding = 0;
 
@@ -219,16 +230,17 @@ int sample_main()
     descriptor_writes[1].pNext = NULL;
     descriptor_writes[1].dstSet = descriptor_sets[sampler_set_index];
     descriptor_writes[1].descriptorCount = 1;
-    descriptor_writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptor_writes[1].pImageInfo = &info.texture_data.image_info; // populated by init_texture()
+    descriptor_writes[1].descriptorType =
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptor_writes[1].pImageInfo =
+        &info.texture_data.image_info; // populated by init_texture()
     descriptor_writes[1].dstArrayElement = 0;
     descriptor_writes[1].dstBinding = 0;
 
-    vkUpdateDescriptorSets(info.device, descriptor_set_count, descriptor_writes, 0, NULL);
+    vkUpdateDescriptorSets(info.device, descriptor_set_count, descriptor_writes,
+                           0, NULL);
 
     /* VULKAN_KEY_END */
-
-
 
     // Call remaining boilerplate utils
     init_pipeline_cache(info);
@@ -240,27 +252,24 @@ int sample_main()
     clear_values[0].color.float32[1] = 0.2f;
     clear_values[0].color.float32[2] = 0.2f;
     clear_values[0].color.float32[3] = 0.2f;
-    clear_values[1].depthStencil.depth     = 1.0f;
-    clear_values[1].depthStencil.stencil   = 0;
+    clear_values[1].depthStencil.depth = 1.0f;
+    clear_values[1].depthStencil.stencil = 0;
 
     VkSemaphore presentCompleteSemaphore;
     VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
-    presentCompleteSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    presentCompleteSemaphoreCreateInfo.sType =
+        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     presentCompleteSemaphoreCreateInfo.pNext = NULL;
     presentCompleteSemaphoreCreateInfo.flags = 0;
 
-    res = vkCreateSemaphore(info.device,
-                            &presentCompleteSemaphoreCreateInfo,
-                            NULL,
-                            &presentCompleteSemaphore);
+    res = vkCreateSemaphore(info.device, &presentCompleteSemaphoreCreateInfo,
+                            NULL, &presentCompleteSemaphore);
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
-    res = vkAcquireNextImageKHR(info.device, info.swap_chain,
-                                      UINT64_MAX,
-                                      presentCompleteSemaphore,
-                                      VK_NULL_HANDLE,
-                                      &info.current_buffer);
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
+                                presentCompleteSemaphore, NULL,
+                                &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
     assert(res == VK_SUCCESS);
@@ -279,10 +288,10 @@ int sample_main()
 
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                  info.pipeline);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
-            0, descriptor_set_count, descriptor_sets, 0, NULL);
+    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline);
+    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            info.pipeline_layout, 0, descriptor_set_count,
+                            descriptor_sets, 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
@@ -298,7 +307,7 @@ int sample_main()
     res = vkEndCommandBuffer(info.cmd);
     assert(res == VK_SUCCESS);
 
-    const VkCommandBuffer cmd_bufs[] = { info.cmd };
+    const VkCommandBuffer cmd_bufs[] = {info.cmd};
     VkFenceCreateInfo fenceInfo;
     VkFence drawFence;
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -306,7 +315,8 @@ int sample_main()
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
-    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    VkPipelineStageFlags pipe_stage_flags =
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -336,8 +346,9 @@ int sample_main()
 
     /* Make sure command buffer is finished before presenting */
     do {
-        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
-    } while(res == VK_TIMEOUT);
+        res =
+            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = vkQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
@@ -358,8 +369,8 @@ int sample_main()
     destroy_shaders(info);
     destroy_renderpass(info);
 
-    //instead of destroy_descriptor_and_pipeline_layouts(info);
-    for(int i = 0; i < descriptor_set_count; i++)
+    // instead of destroy_descriptor_and_pipeline_layouts(info);
+    for (int i = 0; i < descriptor_set_count; i++)
         vkDestroyDescriptorSetLayout(info.device, descriptor_layouts[i], NULL);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout, NULL);
 
