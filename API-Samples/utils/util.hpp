@@ -44,7 +44,6 @@
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
-#include <vulkan/vk_ext_debug_report.h>
 
 #include "vulkan/vk_sdk_platform.h"
 
