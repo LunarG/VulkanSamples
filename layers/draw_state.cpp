@@ -3089,7 +3089,7 @@ static const VkLayerProperties ds_global_layers[] = {
         "VK_LAYER_LUNARG_draw_state",
         VK_API_VERSION,
         1,
-        "Validation layer: draw_state",
+        "LunarG Validation Layer",
     }
 };
 
@@ -3114,7 +3114,7 @@ static const VkLayerProperties ds_device_layers[] = {
         "VK_LAYER_LUNARG_draw_state",
         VK_API_VERSION,
         1,
-        "Validation layer: draw_state",
+        "LunarG Validation Layer",
     }
 };
 

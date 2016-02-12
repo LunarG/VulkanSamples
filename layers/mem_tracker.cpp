@@ -1288,7 +1288,7 @@ static const VkLayerProperties mtGlobalLayers[] = {
         "VK_LAYER_LUNARG_mem_tracker",
         VK_API_VERSION,
         1,
-        "Validation layer: mem_tracker",
+        "LunarG Validation Layer",
     }
 };
 
