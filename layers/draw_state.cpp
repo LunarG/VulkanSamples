@@ -82,6 +82,7 @@ struct devExts {
     VkBool32 debug_marker_enabled;
     VkBool32 wsi_enabled;
     unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE*> swapchainMap;
+    unordered_map<VkImage, VkSwapchainKHR> imageToSwapchainMap;
 };
 
 // fwd decls
@@ -6345,9 +6346,84 @@ VkBool32 ValidateBarriers(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
                         DRAWSTATE_INVALID_BARRIER, "DS",
                         "Image Barriers cannot be used during a render pass.");
         }
-        if (mem_barrier && mem_barrier->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
+        if (mem_barrier) {
             skip_call |= ValidateMaskBitsFromLayouts(dev_data, cmdBuffer, mem_barrier->srcAccessMask, mem_barrier->oldLayout, "Source");
             skip_call |= ValidateMaskBitsFromLayouts(dev_data, cmdBuffer, mem_barrier->dstAccessMask, mem_barrier->newLayout, "Dest");
+            if (mem_barrier->newLayout == VK_IMAGE_LAYOUT_UNDEFINED ||
+                mem_barrier->newLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) {
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_INVALID_BARRIER, "DS",
+                        "Image Layout cannot be transitioned to UNDEFINED or "
+                        "PREINITIALIZED.");
+            }
+            auto image_data = dev_data->imageMap.find(mem_barrier->image);
+            VkFormat format;
+            uint32_t arrayLayers, mipLevels;
+            bool imageFound = false;
+            if (image_data != dev_data->imageMap.end()) {
+                format = image_data->second->format;
+                arrayLayers = image_data->second->arrayLayers;
+                mipLevels = image_data->second->mipLevels;
+                imageFound = true;
+            } else if (dev_data->device_extensions.wsi_enabled) {
+                auto imageswap_data =
+                    dev_data->device_extensions.imageToSwapchainMap.find(
+                        mem_barrier->image);
+                if (imageswap_data !=
+                    dev_data->device_extensions.imageToSwapchainMap.end()) {
+                    auto swapchain_data =
+                        dev_data->device_extensions.swapchainMap.find(
+                            imageswap_data->second);
+                    if (swapchain_data !=
+                        dev_data->device_extensions.swapchainMap.end()) {
+                        format = swapchain_data->second->createInfo.imageFormat;
+                        arrayLayers =
+                            swapchain_data->second->createInfo.imageArrayLayers;
+                        mipLevels = 1;
+                        imageFound = true;
+                    }
+                }
+            }
+            if (imageFound) {
+                if (vk_format_is_depth_and_stencil(format) &&
+                    (!(mem_barrier->subresourceRange.aspectMask &
+                       VK_IMAGE_ASPECT_DEPTH_BIT) ||
+                     !(mem_barrier->subresourceRange.aspectMask &
+                       VK_IMAGE_ASPECT_STENCIL_BIT))) {
+                    log_msg(dev_data->report_data,
+                            VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                            (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            DRAWSTATE_INVALID_BARRIER, "DS",
+                            "Image is a depth and stencil format and thus must "
+                            "have both VK_IMAGE_ASPECT_DEPTH_BIT and "
+                            "VK_IMAGE_ASPECT_STENCIL_BIT set.");
+                }
+                if ((mem_barrier->subresourceRange.baseArrayLayer +
+                     mem_barrier->subresourceRange.layerCount) > arrayLayers) {
+                    log_msg(
+                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_INVALID_BARRIER, "DS",
+                        "Subresource must have the sum of the "
+                        "baseArrayLayer (%d) and layerCount (%d) be less "
+                        "than or equal to the total number of layers (%d).",
+                        mem_barrier->subresourceRange.baseArrayLayer,
+                        mem_barrier->subresourceRange.layerCount, arrayLayers);
+                }
+                if ((mem_barrier->subresourceRange.baseMipLevel +
+                     mem_barrier->subresourceRange.levelCount) > mipLevels) {
+                    log_msg(
+                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_INVALID_BARRIER, "DS",
+                        "Subresource must have the sum of the baseMipLevel "
+                        "(%d) and levelCount (%d) be less than or equal to "
+                        "the total number of levels (%d).",
+                        mem_barrier->subresourceRange.baseMipLevel,
+                        mem_barrier->subresourceRange.levelCount, mipLevels);
+                }
+            }
         }
     }
     for (uint32_t i = 0; i < bufferBarrierCount; ++i) {
@@ -7634,6 +7710,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
             dev_data->imageSubresourceMap[pSwapchainImages[i]].push_back(
                 subpair);
             dev_data->imageLayoutMap[subpair] = image_node;
+            dev_data->device_extensions
+                .imageToSwapchainMap[pSwapchainImages[i]] = swapchain;
         }
         loader_platform_thread_unlock_mutex(&globalLock);
     }
