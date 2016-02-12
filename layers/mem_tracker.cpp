@@ -1775,8 +1775,10 @@ VkBool32 validate_memory_range(layer_data *my_data, const unordered_map<VkDevice
     if (!memory.count(new_range.memory)) return false;
     const vector<MEMORY_RANGE>& ranges = memory.at(new_range.memory);
     for (auto range : ranges) {
-        if ((range.end & ~(my_data->properties.limits.bufferImageGranularity - 1)) < new_range.start) continue;
-        if (range.start > (new_range.end & ~(my_data->properties.limits.bufferImageGranularity - 1))) continue;
+        if ((range.end & ~(my_data->properties.limits.bufferImageGranularity - 1)) <
+            (new_range.start & ~(my_data->properties.limits.bufferImageGranularity - 1))) continue;
+        if ((range.start & ~(my_data->properties.limits.bufferImageGranularity - 1)) >
+            (new_range.end & ~(my_data->properties.limits.bufferImageGranularity - 1))) continue;
         skip_call |= print_memory_range_error(my_data, new_range.handle, range.handle, object_type);
     }
     return skip_call;
