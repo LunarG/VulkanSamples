@@ -219,6 +219,8 @@ struct sample_info {
     struct {
         VkDescriptorImageInfo image_info;
     } texture_data;
+    VkDeviceMemory stagingMemory;
+    VkImage stagingImage;
 
     struct {
         VkBuffer buf;
