@@ -386,6 +386,9 @@ struct loader_msg_callback_map_entry {
     VkDebugReportCallbackEXT loader_obj;
 };
 
+void loader_log(const struct loader_instance *inst, VkFlags msg_type,
+                       int32_t msg_code, const char *format, ...);
+
 bool compare_vk_extension_properties(const VkExtensionProperties *op1,
                                      const VkExtensionProperties *op2);
 
