@@ -1450,7 +1450,10 @@ class UniqueObjectsSubcommand(Subcommand):
                 local_prefix = ''
                 name = '%s%s' % (prefix, name)
                 if ptr_type:
-                    pre_code += '%sif (%s) {\n' % (indent, name)
+                    if first_level_param and name in param_type:
+                        pre_code += '%sif (%s) {\n' % (indent, name)
+                    else: # shadow ptr will have been initialized at this point so check it vs. source ptr
+                        pre_code += '%sif (local_%s) {\n' % (indent, name)
                     indent += '    '
                 if array != '':
                     idx = 'idx%s' % str(array_index)
@@ -1487,7 +1490,10 @@ class UniqueObjectsSubcommand(Subcommand):
                 if (array_index > 0) or array != '': # TODO : This is not ideal, really want to know if we're anywhere under an array
                     if first_level_param:
                         pre_code += '%s%s* local_%s = NULL;\n' % (indent, struct_uses[obj], name)
-                    pre_code += '%sif (%s%s) {\n' %(indent, prefix, name)
+                    if array != '' and not first_level_param: # ptrs under structs will have been initialized so use local_*
+                        pre_code += '%sif (local_%s%s) {\n' %(indent, prefix, name)
+                    else:
+                        pre_code += '%sif (%s%s) {\n' %(indent, prefix, name)
                     indent += '    '
                     if array != '':
                         idx = 'idx%s' % str(array_index)

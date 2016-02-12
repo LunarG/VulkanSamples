@@ -1367,7 +1367,7 @@ class StructWrapperGen:
         for s in sorted(self.struct_dict):
             if (typedef_fwd_dict[s] in exclude_struct_list):
                 continue
-            skip_list = [] # Used when struct elements need to be skipped b/c size already accounted for
+            skip_list = [] # Used when struct elements need to be skipped because size already accounted for
             sh_funcs.append('size_t %s(const %s* pStruct)\n{' % (self._get_size_helper_func_name(s), typedef_fwd_dict[s]))
             indent = '    '
             sh_funcs.append('%ssize_t structSize = 0;' % (indent))
@@ -1628,6 +1628,43 @@ class StructWrapperGen:
             init_func_txt = '' # Txt for initialize() function that takes struct ptr and inits members
             construct_txt = ''
             destruct_txt = ''
+            # VkWriteDescriptorSet is special case because pointers may be non-null but ignored
+            # TODO : This is ugly, figure out better way to do this
+            custom_construct_txt = {'VkWriteDescriptorSet' :
+                                    '    switch (descriptorType) {\n'
+                                    '        case VK_DESCRIPTOR_TYPE_SAMPLER:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:\n'
+                                    '        if (descriptorCount && pInStruct->pImageInfo) {\n'
+                                    '            pImageInfo = new VkDescriptorImageInfo[descriptorCount];\n'
+                                    '            for (uint32_t i=0; i<descriptorCount; ++i) {\n'
+                                    '                pImageInfo[i] = pInStruct->pImageInfo[i];\n'
+                                    '            }\n'
+                                    '        }\n'
+                                    '        break;\n'
+                                    '        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:\n'
+                                    '        if (descriptorCount && pInStruct->pBufferInfo) {\n'
+                                    '            pBufferInfo = new VkDescriptorBufferInfo[descriptorCount];\n'
+                                    '            for (uint32_t i=0; i<descriptorCount; ++i) {\n'
+                                    '                pBufferInfo[i] = pInStruct->pBufferInfo[i];\n'
+                                    '            }\n'
+                                    '        }\n'
+                                    '        break;\n'
+                                    '        case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:\n'
+                                    '        case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:\n'
+                                    '        if (descriptorCount && pInStruct->pTexelBufferView) {\n'
+                                    '            pTexelBufferView = new VkBufferView[descriptorCount];\n'
+                                    '            for (uint32_t i=0; i<descriptorCount; ++i) {\n'
+                                    '                pTexelBufferView[i] = pInStruct->pTexelBufferView[i];\n'
+                                    '            }\n'
+                                    '        }\n'
+                                    '        break;\n'
+                                    '    }\n'}
             for m in self.struct_dict[s]:
                 m_name = self.struct_dict[s][m]['name']
                 m_type = self.struct_dict[s][m]['type']
@@ -1635,8 +1672,11 @@ class StructWrapperGen:
                     m_type = self._getSafeStructName(m_type)
                 if self.struct_dict[s][m]['ptr'] and 'safe_' not in m_type and not self._typeHasObject(m_type, vulkan.object_non_dispatch_list):# in ['char', 'float', 'uint32_t', 'void', 'VkPhysicalDeviceFeatures']) or 'pp' == self.struct_dict[s][m]['name'][0:1]:
                     init_list += '\n\t%s(pInStruct->%s),' % (m_name, m_name)
-                    init_func_txt += '        %s = pInStruct->%s;\n' % (m_name, m_name)
+                    init_func_txt += '    %s = pInStruct->%s;\n' % (m_name, m_name)
                 elif self.struct_dict[s][m]['array']:
+                    # Init array ptr to NULL
+                    init_list += '\n\t%s(NULL),' % (m_name)
+                    init_func_txt += '    %s = NULL;\n' % (m_name)
                     array_element = 'pInStruct->%s[i]' % (m_name)
                     if is_type(self.struct_dict[s][m]['type'], 'struct') and self._hasSafeStruct(self.struct_dict[s][m]['type']):
                         array_element = '%s(&pInStruct->%s[i])' % (self._getSafeStructName(self.struct_dict[s][m]['type']), m_name)
@@ -1650,8 +1690,6 @@ class StructWrapperGen:
                     else:
                         construct_txt += '            %s[i] = %s;\n' % (m_name, array_element)
                     construct_txt += '        }\n'
-                    construct_txt += '    } else {\n'
-                    construct_txt += '        %s = NULL;\n' % (m_name)
                     construct_txt += '    }\n'
                 elif self.struct_dict[s][m]['ptr']:
                     construct_txt += '    if (pInStruct->%s)\n' % (m_name)
@@ -1665,9 +1703,11 @@ class StructWrapperGen:
                     init_func_txt += '        %s.initialize(&pInStruct->%s);\n' % (m_name, m_name)
                 else:
                     init_list += '\n\t%s(pInStruct->%s),' % (m_name, m_name)
-                    init_func_txt += '        %s = pInStruct->%s;\n' % (m_name, m_name)
+                    init_func_txt += '    %s = pInStruct->%s;\n' % (m_name, m_name)
             if '' != init_list:
                 init_list = init_list[:-1] # hack off final comma
+            if s in custom_construct_txt:
+                construct_txt = custom_construct_txt[s]
             ss_src.append("\n%s::%s(const %s* pInStruct) : %s\n{\n%s}" % (ss_name, ss_name, s, init_list, construct_txt))
             ss_src.append("\n%s::%s() {}" % (ss_name, ss_name))
             ss_src.append("\n%s::~%s()\n{\n%s}" % (ss_name, ss_name, destruct_txt))
