@@ -41,11 +41,11 @@ dbgFunc(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType,
 
     if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         message << "ERROR: ";
-    } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT_EXT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
         message << "WARNING: ";
-    } else if (msgFlags & VK_DEBUG_REPORT_PERF_WARN_BIT_EXT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
         message << "PERFORMANCE WARNING: ";
-    } else if (msgFlags & VK_DEBUG_REPORT_INFO_BIT_EXT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
         message << "INFO: ";
     } else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
         message << "DEBUG: ";
@@ -210,7 +210,7 @@ int sample_main() {
     create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
     create_info.pNext = NULL;
     create_info.flags =
-        VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT;
+        VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
     create_info.pfnCallback = dbgFunc;
     create_info.pUserData = NULL;
     res = info.dbgCreateDebugReportCallback(info.inst, &create_info, NULL,
