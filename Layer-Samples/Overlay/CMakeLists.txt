@@ -36,6 +36,7 @@ if (EXISTS "${SDK_SOURCE}")
             HINTS "${SDK_SOURCE}/build/layers"
                   "${SDK_SOURCE}/build/layers/Release"
                   "${SDK_SOURCE}/build/layers/Debug"
+                  "${CMAKE_SOURCE_DIR}/../bin"
             )
 
     add_library(VKLayerOverlay SHARED overlay.cpp
