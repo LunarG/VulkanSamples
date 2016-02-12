@@ -61,7 +61,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionPrope
 
 static const VkLayerProperties swapchain_global_layers[] = {
     {
-        "swapchain",
+        "VK_LAYER_LUNARG_swapchain",
         VK_API_VERSION,
         1,
         "Validation layer: swapchain",
