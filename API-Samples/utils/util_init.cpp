@@ -403,7 +403,7 @@ VkResult init_debug_report_callback(struct sample_info &info,
     create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
     create_info.pNext = NULL;
     create_info.flags =
-        VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT;
+        VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
     create_info.pfnCallback = dbgFunc;
     create_info.pUserData = NULL;
 
