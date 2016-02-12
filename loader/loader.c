@@ -219,7 +219,7 @@ void loader_tls_heap_free(void *pMemory) {
     loader_heap_free(tls_instance, pMemory);
 }
 
-static void loader_log(const struct loader_instance *inst, VkFlags msg_type,
+void loader_log(const struct loader_instance *inst, VkFlags msg_type,
                        int32_t msg_code, const char *format, ...) {
     char msg[512];
     va_list ap;
