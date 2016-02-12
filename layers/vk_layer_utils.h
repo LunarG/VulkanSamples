@@ -93,8 +93,7 @@ typedef enum VkStringErrorFlagBits {
 } VkStringErrorFlagBits;
 typedef VkFlags VkStringErrorFlags;
 
-static inline bool vk_format_is_undef(VkFormat format)
-{
+static inline bool vk_format_is_undef(VkFormat format) {
     return (format == VK_FORMAT_UNDEFINED);
 }
 
@@ -103,8 +102,7 @@ bool vk_format_is_depth_and_stencil(VkFormat format);
 bool vk_format_is_depth_only(VkFormat format);
 bool vk_format_is_stencil_only(VkFormat format);
 
-static inline bool vk_format_is_color(VkFormat format)
-{
+static inline bool vk_format_is_color(VkFormat format) {
     return !(vk_format_is_undef(format) || vk_format_is_depth_or_stencil(format));
 }
 
@@ -121,8 +119,7 @@ VkFormatCompatibilityClass vk_format_get_compatibility_class(VkFormat format);
 VkDeviceSize               vk_safe_modulo(VkDeviceSize dividend, VkDeviceSize divisor);
 VkStringErrorFlags         vk_string_validate(const int max_length, const char *char_array);
 
-static inline int u_ffs(int val)
-{
+static inline int u_ffs(int val) {
 #ifdef WIN32
     unsigned long bit_pos = 0;
     if (_BitScanForward(&bit_pos, val) != 0) {

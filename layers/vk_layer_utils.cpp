@@ -40,6 +40,7 @@ typedef struct _VULKAN_FORMAT_INFO {
 
 // Set up data structure with number of bytes and number of channels
 // for each Vulkan format.
+// clang-format off
 static const VULKAN_FORMAT_INFO vk_format_table[VK_FORMAT_RANGE_SIZE] = {
     { 0,  0, VK_FORMAT_COMPATIBILITY_CLASS_NONE_BIT },          //    [VK_FORMAT_UNDEFINED]
     { 1,  2, VK_FORMAT_COMPATIBILITY_CLASS_8_BIT },             //    [VK_FORMAT_R4G4_UNORM_PACK8]
@@ -51,7 +52,7 @@ static const VULKAN_FORMAT_INFO vk_format_table[VK_FORMAT_RANGE_SIZE] = {
     { 2,  4, VK_FORMAT_COMPATIBILITY_CLASS_16_BIT },            //    [VK_FORMAT_B5G5R5A1_UNORM_PACK16]
     { 2,  4, VK_FORMAT_COMPATIBILITY_CLASS_16_BIT },            //    [VK_FORMAT_A1R5G5B5_UNORM_PACK16]
     { 1,  1, VK_FORMAT_COMPATIBILITY_CLASS_8_BIT },             //    [VK_FORMAT_R8_UNORM]
-    { 1,  1, VK_FORMAT_COMPATIBILITY_CLASS_8_BIT },              //    [VK_FORMAT_R8_SNORM]
+    { 1,  1, VK_FORMAT_COMPATIBILITY_CLASS_8_BIT },             //    [VK_FORMAT_R8_SNORM]
     { 1,  1, VK_FORMAT_COMPATIBILITY_CLASS_8_BIT },             //    [VK_FORMAT_R8_USCALED]
     { 1,  1, VK_FORMAT_COMPATIBILITY_CLASS_8_BIT },             //    [VK_FORMAT_R8_SSCALED]
     { 1,  1, VK_FORMAT_COMPATIBILITY_CLASS_8_BIT },             //    [VK_FORMAT_R8_UINT]
@@ -193,7 +194,7 @@ static const VULKAN_FORMAT_INFO vk_format_table[VK_FORMAT_RANGE_SIZE] = {
     {  8, 4, VK_FORMAT_COMPATIBILITY_CLASS_ETC2_RGBA_BIT },     //    [VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK]
     {  8, 4, VK_FORMAT_COMPATIBILITY_CLASS_ETC2_RGBA_BIT },     //    [VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK]
     {  8, 4, VK_FORMAT_COMPATIBILITY_CLASS_ETC2_EAC_RGBA_BIT }, //    [VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK]
-    {  8, 4, VK_FORMAT_COMPATIBILITY_CLASS_ETC2_EAC_RGBA_BIT }, // [VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK]
+    {  8, 4, VK_FORMAT_COMPATIBILITY_CLASS_ETC2_EAC_RGBA_BIT }, //    [VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK]
     {  8, 1, VK_FORMAT_COMPATIBILITY_CLASS_EAC_R_BIT },         //    [VK_FORMAT_EAC_R11_UNORM_BLOCK]
     {  8, 1, VK_FORMAT_COMPATIBILITY_CLASS_EAC_R_BIT },         //    [VK_FORMAT_EAC_R11_SNORM_BLOCK]
     { 16, 2, VK_FORMAT_COMPATIBILITY_CLASS_EAC_RG_BIT },        //    [VK_FORMAT_EAC_R11G11_UNORM_BLOCK]
@@ -227,18 +228,17 @@ static const VULKAN_FORMAT_INFO vk_format_table[VK_FORMAT_RANGE_SIZE] = {
     { 16, 4, VK_FORMAT_COMPATIBILITY_CLASS_ASTC_12X12_BIT },    //    [VK_FORMAT_ASTC_12x12_UNORM_BLOCK]
     { 16, 4, VK_FORMAT_COMPATIBILITY_CLASS_ASTC_12X12_BIT },    //    [VK_FORMAT_ASTC_12x12_SRGB_BLOCK]
 };
+// clang-format on
 
 // Return true if format is a depth or stencil format
-bool vk_format_is_depth_or_stencil(VkFormat format)
-{
+bool vk_format_is_depth_or_stencil(VkFormat format) {
     return (vk_format_is_depth_and_stencil(format) ||
             vk_format_is_depth_only(format)        ||
             vk_format_is_stencil_only(format));
 }
 
 // Return true if format contains depth and stencil information
-bool vk_format_is_depth_and_stencil(VkFormat format)
-{
+bool vk_format_is_depth_and_stencil(VkFormat format) {
     bool is_ds = false;
 
     switch (format) {
@@ -254,14 +254,12 @@ bool vk_format_is_depth_and_stencil(VkFormat format)
 }
 
 // Return true if format is a stencil-only format
-bool vk_format_is_stencil_only(VkFormat format)
-{
+bool vk_format_is_stencil_only(VkFormat format) {
     return (format == VK_FORMAT_S8_UINT);
 }
 
 // Return true if format is a depth-only format
-bool vk_format_is_depth_only(VkFormat format)
-{
+bool vk_format_is_depth_only(VkFormat format) {
     bool is_depth = false;
 
     switch (format) {
@@ -278,8 +276,7 @@ bool vk_format_is_depth_only(VkFormat format)
 }
 
 // Return true if format is of time UNORM
-bool vk_format_is_norm(VkFormat format)
-{
+bool vk_format_is_norm(VkFormat format) {
     bool is_norm = false;
 
     switch (format) {
@@ -355,14 +352,12 @@ bool vk_format_is_norm(VkFormat format)
 
 
 // Return true if format is an integer format
-bool vk_format_is_int(VkFormat format)
-{
+bool vk_format_is_int(VkFormat format) {
     return (vk_format_is_sint(format) || vk_format_is_uint(format));
 }
 
 // Return true if format is an unsigned integer format
-bool vk_format_is_uint(VkFormat format)
-{
+bool vk_format_is_uint(VkFormat format) {
     bool is_uint = false;
 
     switch (format) {
@@ -397,8 +392,7 @@ bool vk_format_is_uint(VkFormat format)
 }
 
 // Return true if format is a signed integer format
-bool vk_format_is_sint(VkFormat format)
-{
+bool vk_format_is_sint(VkFormat format) {
     bool is_sint = false;
 
     switch (format) {
@@ -433,8 +427,7 @@ bool vk_format_is_sint(VkFormat format)
 }
 
 // Return true if format is a floating-point format
-bool vk_format_is_float(VkFormat format)
-{
+bool vk_format_is_float(VkFormat format) {
     bool is_float = false;
 
     switch (format) {
@@ -464,8 +457,7 @@ bool vk_format_is_float(VkFormat format)
 }
 
 // Return true if format is in the SRGB colorspace
-bool vk_format_is_srgb(VkFormat format)
-{
+bool vk_format_is_srgb(VkFormat format) {
     bool is_srgb = false;
 
     switch (format) {
@@ -507,8 +499,7 @@ bool vk_format_is_srgb(VkFormat format)
 }
 
 // Return true if format is compressed
-bool vk_format_is_compressed(VkFormat format)
-{
+bool vk_format_is_compressed(VkFormat format) {
     switch (format) {
     case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
     case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
@@ -569,26 +560,22 @@ bool vk_format_is_compressed(VkFormat format)
 }
 
 // Return format class of the specified format
-VkFormatCompatibilityClass vk_format_get_compatibility_class(VkFormat format)
-{
+VkFormatCompatibilityClass vk_format_get_compatibility_class(VkFormat format) {
     return vk_format_table[format].format_class;
 }
 
 // Return size, in bytes, of a pixel of the specified format
-size_t vk_format_get_size(VkFormat format)
-{
+size_t vk_format_get_size(VkFormat format) {
     return vk_format_table[format].size;
 }
 
 // Return the number of channels for a given format
-unsigned int vk_format_get_channel_count(VkFormat format)
-{
+unsigned int vk_format_get_channel_count(VkFormat format) {
     return vk_format_table[format].channel_count;
 }
 
 // Perform a zero-tolerant modulo operation
-VkDeviceSize vk_safe_modulo(VkDeviceSize dividend, VkDeviceSize divisor)
-{
+VkDeviceSize vk_safe_modulo(VkDeviceSize dividend, VkDeviceSize divisor) {
     VkDeviceSize result = 0;
     if (divisor != 0) {
         result = dividend % divisor;
@@ -606,15 +593,13 @@ static const char UTF8_THREE_BYTE_MASK = 0xF8;
 static const char UTF8_DATA_BYTE_CODE  = 0x80;
 static const char UTF8_DATA_BYTE_MASK  = 0xC0;
 
-VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8)
-{
+VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8) {
     VkStringErrorFlags result = VK_STRING_ERROR_NONE;
     int                code;
     int                num_char_bytes;
     int                i,j;
 
-    for (i = 0; i < max_length; i++)
-    {
+    for (i = 0; i < max_length; i++) {
         if (utf8[i] == 0) {
             break;
         } else if ((utf8[i] > 0x20) && (utf8[i] < 0x7f)) {
