@@ -383,6 +383,9 @@ def recreate_structs():
 # TODO: Fix construction of struct name
 def get_struct_name_from_struct_type(struct_type):
     # Note: All struct types are now camel-case
+    # Debug Report has an inconsistency - so need special case.
+    if ("VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT" == struct_type):
+        return "VkDebugReportCallbackCreateInfoEXT"
     caps_struct_name = struct_type.replace("_STRUCTURE_TYPE", "")
     char_idx = 0
     struct_name = ''
