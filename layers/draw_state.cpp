@@ -3656,7 +3656,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionPropert
         uint32_t*                                   pCount,
         VkExtensionProperties*                      pProperties)
 {
-    // DrawState does not have any physical device extensions
     if (pLayerName == NULL) {
         dispatch_key key = get_dispatch_key(physicalDevice);
         layer_data *my_data = get_my_data_ptr(key, layer_data_map);

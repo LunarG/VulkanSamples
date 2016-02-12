@@ -163,6 +163,21 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionPrope
     return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
+                                     const char *pLayerName, uint32_t *pCount,
+                                     VkExtensionProperties *pProperties) {
+    if (pLayerName == NULL) {
+        dispatch_key key = get_dispatch_key(physicalDevice);
+        layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+        return my_data->instance_dispatch_table
+            ->EnumerateDeviceExtensionProperties(physicalDevice, NULL, pCount,
+                                                 pProperties);
+    } else {
+        return util_GetExtensionProperties(0, nullptr, pCount, pProperties);
+    }
+}
+
 static const VkLayerProperties dl_global_layers[] = {
     {
         "VK_LAYER_LUNARG_device_limits",
@@ -179,6 +194,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerPropertie
     return util_GetLayerProperties(ARRAY_SIZE(dl_global_layers),
                                    dl_global_layers,
                                    pCount, pProperties);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
+    VkPhysicalDevice physicalDevice, uint32_t *pCount,
+    VkLayerProperties *pProperties) {
+    return util_GetLayerProperties(ARRAY_SIZE(dl_global_layers),
+                                   dl_global_layers, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkInstance* pInstance)
@@ -812,8 +834,12 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
         return (PFN_vkVoidFunction) vkGetPhysicalDeviceSparseImageFormatProperties;
     if (!strcmp(funcName, "vkEnumerateInstanceLayerProperties"))
         return (PFN_vkVoidFunction) vkEnumerateInstanceLayerProperties;
+    if (!strcmp(funcName, "vkEnumerateDeviceLayerProperties"))
+        return (PFN_vkVoidFunction)vkEnumerateDeviceLayerProperties;
     if (!strcmp(funcName, "vkEnumerateInstanceExtensionProperties"))
         return (PFN_vkVoidFunction) vkEnumerateInstanceExtensionProperties;
+    if (!strcmp(funcName, "vkEnumerateInstanceDeviceProperties"))
+        return (PFN_vkVoidFunction)vkEnumerateDeviceExtensionProperties;
 
     if (!instance) return NULL;
 
