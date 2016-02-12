@@ -392,23 +392,40 @@ Section
     Delete ConfigLayersAndVulkanDLL.ps1
 
     # Possibly install MSVC 2013 redistributables
-    ReadRegDword $1 HKLM "SOFTWARE\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
-    IntCmp $1 1 RedistributablesInstalled InstallRedistributables InstallRedistributables
-    InstallRedistributables:
-       SetOutPath "$TEMP"
-        # If running on a 64-bit OS machine, we need to install the 64-bit Visual Studio re-distributable
-        ${If} ${RunningX64}
+    ${If} ${RunningX64}
+    
+        # If running on a 64-bit OS machine, we need the 64-bit Visual Studio re-distributable.  Install it if it's not already present.
+        ReadRegDword $1 HKLM "SOFTWARE\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
+        ClearErrors
+        IntCmp $1 1 RedistributablesInstalled6464 InstallRedistributables6464 InstallRedistributables6464
+        InstallRedistributables6464:
+           SetOutPath "$TEMP"
 
            File vcredist_x64.exe
-           ExecWait '"$TEMP\vcredist_x64.exe"  /passive /norestart'
+           ExecWait '"$TEMP\vcredist_x64.exe"  /quiet /norestart'
 
-        # Otherwise, we're running on a 32-bit OS machine, we need to install the 32-bit Visual Studio re-distributable
-        ${Else}
+        RedistributablesInstalled6464:
+        
+        # We also need the 32-bit Visual Studio re-distributable.  Install it as well if it's not present
+        ReadRegDword $1 HKLM "SOFTWARE\WOW6432Node\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
+        ClearErrors
+        IntCmp $1 1 RedistributablesInstalled InstallRedistributables InstallRedistributables
 
-           File vcredist_x86.exe
-           ExecWait '"$TEMP\vcredist_x86.exe"  /passive /norestart'
+    ${Else}
+    
+        # Otherwise, we're running on a 32-bit OS machine, we need to install the 32-bit Visual Studio re-distributable if it's not present.
+        ReadRegDword $1 HKLM "SOFTWARE\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
+        ClearErrors
+        IntCmp $1 1 RedistributablesInstalled InstallRedistributables InstallRedistributables
 
-        ${Endif}
+    ${Endif}
+    
+    InstallRedistributables:
+       SetOutPath "$TEMP"
+
+       File vcredist_x86.exe
+       ExecWait '"$TEMP\vcredist_x86.exe"  /quiet /norestart'
+    
     RedistributablesInstalled:
 
     Call CheckForError
