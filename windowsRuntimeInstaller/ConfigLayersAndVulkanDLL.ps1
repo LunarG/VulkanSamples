@@ -47,6 +47,8 @@ Param(
 )
 
 $vulkandll = "vulkan-"+$majorabi+".dll"
+$windrive  = $env:SYSTEMDRIVE
+$winfolder = $env:SYSTEMROOT
 
 # The name of the versioned vulkan dll file is one of the following:
 #
@@ -195,11 +197,11 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
 # We only care about SYSWOW64 if we're targeting a 64-bit OS
 if ($ossize -eq 64) {
     # Update the SYSWOW64 Vulkan DLLS/EXEs
-    UpdateVulkanSysFolder c:\WINDOWS\SYSWOW64 0
+    UpdateVulkanSysFolder $winfolder\SYSWOW64 0
 }
 
 # Update the SYSTEM32 Vulkan DLLS/EXEs
-UpdateVulkanSysFolder c:\WINDOWS\SYSTEM32 1
+UpdateVulkanSysFolder $winfolder\SYSTEM32 1
 
 # Create an array of vulkan sdk install dirs
 
@@ -230,6 +232,7 @@ Get-ChildItem -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Curr
 # need to be cleaned up manually.
 
 $VulkanSdkDirs+="C:\VulkanSDK\0.9.3"
+$VulkanSdkDirs+="$windrive\VulkanSDK\0.9.3"
 
 # Remove layer registry entries associated with all installed Vulkan SDKs.
 # Note that we remove only those entries created by Vulkan SDKs. If other
