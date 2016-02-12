@@ -3610,7 +3610,7 @@ TEST_F(VkLayerTest, ClearDepthStencilImageWithinRenderPass) {
     BeginCommandBuffer();
 
     VkClearDepthStencilValue clear_value = {0};
-    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    VkMemoryPropertyFlags reqs = 0;
     VkImageCreateInfo image_create_info = vk_testing::Image::create_info();
     image_create_info.imageType = VK_IMAGE_TYPE_2D;
     image_create_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
