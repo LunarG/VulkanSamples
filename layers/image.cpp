@@ -263,7 +263,7 @@ static const VkLayerProperties pc_global_layers[] = {
         "VK_LAYER_LUNARG_image",
         VK_API_VERSION,
         1,
-        "Validation layer: image",
+        "LunarG Validation Layer",
     }
 };
 

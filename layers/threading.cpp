@@ -204,7 +204,7 @@ static const VkLayerProperties globalLayerProps[] = {
         "Threading",
         VK_API_VERSION, // specVersion
         VK_MAKE_VERSION(0, 1, 0), // implVersion
-        "layer: Threading",
+        "Google Validation Layer",
     }
 };
 
@@ -219,9 +219,10 @@ static const VkLayerProperties deviceLayerProps[] = {
         "Threading",
         VK_API_VERSION,
         VK_MAKE_VERSION(0, 1, 0),
-        "layer: Threading",
+        "Google Validation Layer",
     }
 };
+
 VK_LAYER_EXPORT VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties* pProperties)
 {
     return util_GetLayerProperties(ARRAY_SIZE(deviceLayerProps), deviceLayerProps, pCount, pProperties);
