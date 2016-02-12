@@ -2632,8 +2632,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
             my_data->descriptorSetMap[pDescriptorWrites[i].dstSet]
                 .images.push_back(pDescriptorWrites[i].pImageInfo->imageView);
         } else if (pDescriptorWrites[i].descriptorType ==
-                       VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER ||
-                   pDescriptorWrites[i].descriptorType ==
                        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
                    pDescriptorWrites[i].descriptorType ==
                        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
