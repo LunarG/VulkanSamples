@@ -121,11 +121,14 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
 
     /* convert any meta layers to the actual layers makes a copy of layer name*/
     uint32_t saved_layer_count = pCreateInfo->enabledLayerCount;
-	char **saved_layer_names;
-	saved_layer_names = loader_stack_alloc(sizeof(char*) * pCreateInfo->enabledLayerCount);
+    char **saved_layer_names;
+    char **saved_layer_ptr;
+    saved_layer_names =
+        loader_stack_alloc(sizeof(char *) * pCreateInfo->enabledLayerCount);
     for (uint32_t i = 0; i < saved_layer_count; i++) {
         saved_layer_names[i] = (char *)pCreateInfo->ppEnabledLayerNames[i];
     }
+    saved_layer_ptr = (char **)pCreateInfo->ppEnabledLayerNames;
 
     loader_expand_layer_names(
         ptr_instance, std_validation_str,
@@ -144,7 +147,8 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
         ptr_instance, &ptr_instance->ext_list,
         &ptr_instance->instance_layer_list, pCreateInfo);
     if (res != VK_SUCCESS) {
-        loader_unexpand_inst_layer_names(saved_layer_count, saved_layer_names,
+        loader_unexpand_inst_layer_names(ptr_instance, saved_layer_count,
+                                         saved_layer_names, saved_layer_ptr,
                                          pCreateInfo);
         loader_delete_layer_properties(ptr_instance,
                                        &ptr_instance->device_layer_list);
@@ -164,7 +168,8 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
         loader_heap_alloc(ptr_instance, sizeof(VkLayerInstanceDispatchTable),
                           VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (ptr_instance->disp == NULL) {
-        loader_unexpand_inst_layer_names(saved_layer_count, saved_layer_names,
+        loader_unexpand_inst_layer_names(ptr_instance, saved_layer_count,
+                                         saved_layer_names, saved_layer_ptr,
                                          pCreateInfo);
         loader_delete_layer_properties(ptr_instance,
                                        &ptr_instance->device_layer_list);
@@ -187,7 +192,8 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
     res = loader_enable_instance_layers(ptr_instance, pCreateInfo,
                                         &ptr_instance->instance_layer_list);
     if (res != VK_SUCCESS) {
-        loader_unexpand_inst_layer_names(saved_layer_count, saved_layer_names,
+        loader_unexpand_inst_layer_names(ptr_instance, saved_layer_count,
+                                         saved_layer_names, saved_layer_ptr,
                                          pCreateInfo);
         loader_delete_layer_properties(ptr_instance,
                                        &ptr_instance->device_layer_list);
@@ -228,7 +234,8 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
 
     /* Remove temporary debug_report callback */
     util_DestroyDebugReportCallback(ptr_instance, instance_callback, NULL);
-    loader_unexpand_inst_layer_names(saved_layer_count, saved_layer_names,
+    loader_unexpand_inst_layer_names(ptr_instance, saved_layer_count,
+                                     saved_layer_names, saved_layer_ptr,
                                      pCreateInfo);
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
