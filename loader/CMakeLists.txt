@@ -34,14 +34,18 @@ set(LOADER_SRCS
 
 if (WIN32)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
+	# build dev_ext_trampoline with release flags to allow tail-call optimization
+	# cmake and MSVC doesn't make this easy to do
+    set_source_files_properties(${LOADER_SRCS} PROPERTIES COMPILE_FLAGS ${CMAKE_C_FLAGS_DEBUG})
+	set(CMAKE_C_FLAGS_DEBUG "")
+	set_source_files_properties(dev_ext_trampoline.c PROPERTIES COMPILE_FLAGS ${CMAKE_C_FLAGS_RELEASE})
 
     add_library(vulkan-${MAJOR} SHARED ${LOADER_SRCS} dirent_on_windows.c ${CMAKE_CURRENT_BINARY_DIR}/vulkan-${MAJOR}.def)
     set_target_properties(vulkan-${MAJOR} PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_BINARY_DIR}/vulkan-${MAJOR}.def")
     add_library(VKstatic.${MAJOR} STATIC ${LOADER_SRCS} dirent_on_windows.c)
     set_target_properties(VKstatic.${MAJOR} PROPERTIES OUTPUT_NAME VKstatic.${MAJOR})
     target_link_libraries(vulkan-${MAJOR} shlwapi)
-endif()
-if (NOT WIN32)
+else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith")
 
     add_library(vulkan SHARED ${LOADER_SRCS})
