@@ -193,10 +193,16 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
     layer_data_map.erase(key);
 }
 
+static const VkExtensionProperties threading_extensions[] = {
+    {
+        VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+        VK_EXT_DEBUG_REPORT_SPEC_VERSION
+    }
+};
 
 VK_LAYER_EXPORT VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)
 {
-    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+    return util_GetExtensionProperties(ARRAY_SIZE(threading_extensions), threading_extensions, pCount, pProperties);
 }
 
 static const VkLayerProperties globalLayerProps[] = {
@@ -222,6 +228,28 @@ static const VkLayerProperties deviceLayerProps[] = {
         "Google Validation Layer",
     }
 };
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
+        VkPhysicalDevice physicalDevice,
+        const char *pLayerName,
+        uint32_t *pCount,
+        VkExtensionProperties* pProperties)
+{
+    if (pLayerName == NULL) {
+        dispatch_key key = get_dispatch_key(physicalDevice);
+        layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+        return my_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
+                                                    physicalDevice,
+                                                    NULL,
+                                                    pCount,
+                                                    pProperties);
+    } else {
+        // Threading layer does not have any device extensions
+        return util_GetExtensionProperties(0,
+                                           nullptr,
+                                           pCount, pProperties);
+    }
+}
 
 VK_LAYER_EXPORT VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties* pProperties)
 {
@@ -252,6 +280,8 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name)
         return (PFN_vkVoidFunction) vkEnumerateInstanceExtensionProperties;
     if (!strcmp(name, "EnumerateInstanceLayerProperties"))
         return (PFN_vkVoidFunction) vkEnumerateInstanceLayerProperties;
+    if (!strcmp(name, "EnumerateDeviceExtensionProperties"))
+        return (PFN_vkVoidFunction) vkEnumerateDeviceExtensionProperties;
     if (!strcmp(name, "EnumerateDeviceLayerProperties"))
         return (PFN_vkVoidFunction) vkEnumerateDeviceLayerProperties;
     if (!strcmp(name, "CreateDevice"))
