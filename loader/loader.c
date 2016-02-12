@@ -1982,6 +1982,13 @@ loader_add_layer_properties(const struct loader_instance *inst,
                 sizeof(props->info.description));
         props->info.description[sizeof(props->info.description) - 1] = '\0';
         if (is_implicit) {
+            if (!disable_environment || !disable_environment->child) {
+                loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                       "Didn't find required layer child value disable_environment"
+                       "in manifest JSON file, skipping this layer");
+                layer_node = layer_node->next;
+                continue;
+            }
             strncpy(props->disable_env_var.name,
                     disable_environment->child->string,
                     sizeof(props->disable_env_var.name));
