@@ -206,37 +206,43 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0) {
 
-            my_data->instanceMap[instance].androidSurfaceExtensionEnabled = true;
+            my_data->instanceMap[instance].androidSurfaceExtensionEnabled =
+                true;
+        }
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 #ifdef VK_USE_PLATFORM_MIR_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0) {
 
             my_data->instanceMap[instance].mirSurfaceExtensionEnabled = true;
+        }
 #endif // VK_USE_PLATFORM_MIR_KHR
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0) {
 
-            my_data->instanceMap[instance].waylandSurfaceExtensionEnabled = true;
+            my_data->instanceMap[instance].waylandSurfaceExtensionEnabled =
+		true;
+        }
 #endif // VK_USE_PLATFORM_WAYLAND_KHR
 #ifdef VK_USE_PLATFORM_WIN32_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0) {
 
             my_data->instanceMap[instance].win32SurfaceExtensionEnabled = true;
+        }
 #endif // VK_USE_PLATFORM_WIN32_KHR
 #ifdef VK_USE_PLATFORM_XCB_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0) {
 
             my_data->instanceMap[instance].xcbSurfaceExtensionEnabled = true;
+        }
 #endif // VK_USE_PLATFORM_XCB_KHR
 #ifdef VK_USE_PLATFORM_XLIB_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
 
             my_data->instanceMap[instance].xlibSurfaceExtensionEnabled = true;
-#endif // VK_USE_PLATFORM_XLIB_KHR
         }
+#endif // VK_USE_PLATFORM_XLIB_KHR
     }
 }
-
 
 #include "vk_dispatch_table_helper.h"
 static void initSwapchain(layer_data *my_data, const VkAllocationCallbacks *pAllocator)
