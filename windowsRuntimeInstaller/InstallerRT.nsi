@@ -54,6 +54,7 @@
 
 # This is used for the error message if a problem occurs during install.
 !define errorMessage1 "Installation of ${PRODUCTNAME} failed!$\r$\n"
+!define errorMessage1un "Uninstall of ${PRODUCTNAME} failed!$\r$\n"
 !define errorMessage2 "Uninstalling any installed items and exiting.$\r$\n"
 
 # Set the icon
@@ -673,7 +674,7 @@ FunctionEnd
 Function un.CheckForError
     ${If} ${Errors}
         # IHV's using this install may want no message box.
-        MessageBox MB_OK|MB_ICONSTOP "${errorMessage1}${errorMessage2}Errorcode: $1$\r$\n" /SD IDOK
+        MessageBox MB_OK|MB_ICONSTOP "${errorMessage1un}${errorMessage2}Errorcode: $1$\r$\n" /SD IDOK
 
         # Set an error message to output
         SetErrorLevel $1
