@@ -44,8 +44,8 @@ endif()
 
 add_definitions(-DVULKAN_SAMPLES_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
-if(EXISTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools")
-    include_directories("${CMAKE_SOURCE_DIR}/../LoaderAndTools/include")
+if(EXISTS "${CMAKE_SOURCE_DIR}/../LoaderAndValidationLayers")
+    include_directories("${CMAKE_SOURCE_DIR}/../LoaderAndValidationLayers/include")
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/API-Samples/utils)
