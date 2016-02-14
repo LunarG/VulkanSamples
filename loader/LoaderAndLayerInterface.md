@@ -32,7 +32,7 @@ to an ICD entry point.
 Architectural overview of layers and loader
 -------------------------------------------
 
-Vulkan is layered architecture. Layers can hook (intercept) Vulkan commands to
+Vulkan is a layered architecture. Layers can hook (intercept) Vulkan commands to
 achieve various functionality that a Vulkan driver (aka ICD) or loader doesn’t
 support. Functionality such as Vulkan API tracing and debugging, API usage
 validation, and other tools such as framebuffer overlays are all natural
@@ -43,10 +43,9 @@ Not only is Vulkan a layered architecture but it also supports multiple GPUs
 and their drivers. Vulkan commands called by an application may wind up calling
 into a diverse set of modules: loader, layers, and ICDs. The loader is critical
 to managing the proper dispatching of Vulkan commands to the appropriate set of
-layers and ICDs. The loader inserts layers into a call chain so they can
-intercept Vulkan commands prior to the proper ICD being called. To achieve
-proper dispatching of Vulkan command to layers and ICDs the loader uses the
-Vulkan object model.
+layers and ICDs. The Vulkan object model allows the loader to insert layers
+into a call chain so the layers can process Vulkan commands prior to the
+ICD being called.
 
 Vulkan uses an object model to control the scope of a particular action /
 operation.  The object to be acted on is always the first parameter of a Vulkan
@@ -54,12 +53,15 @@ call and is a dispatchable object (see Vulkan specification section 2.2 Object
 Model).  Under the covers, the dispatchable object handle is a pointer to a
 structure that contains a pointer to a dispatch table maintained by the loader.
 This dispatch table contains pointers to the Vulkan functions appropriate to
-that object. I.e. a VkInstance object’s dispatch table will point to Vulkan
+that object. There are two types of dispatch tables the loader maintains,
+Instance and Device. I.e. a VkInstance object’s dispatch table will point to Vulkan
 functions such as vkEnumeratePhysicalDevices, vkDestroyInstance,
-vkCreateInstance, etc.
+vkCreateInstance, etc. Instance functions take a VkInstance or VkPhysicalDevice as
+their first argument.
 
 Device objects have a separate dispatch table containing the appropriate
-function pointers.
+function pointers. The device dispatch table is used for all functions that
+take a VkDevice, VkQueue or VkCommandBuffer as their first argument.
 
 These instance and device dispatch tables are constructed when the application
 calls vkCreateInstance and vkCreateDevice. At that time the application and/or
@@ -322,7 +324,7 @@ then the loader will open the following text information files, with the
 specified contents:
 
 | Text File Name | Text File Contents |
-|-------------------------------------|
+|----------------|--------------------|
 |vk\_vendora.json  | "ICD": { "library\_path": "C:\\\\VENDORA\\\\vk\_vendora.dll", "api_version": "1.0.3" } |
 | vendorb\_vk.json |  "ICD": { "library\_path": "vendorb\_vk.dll", "api_version": "1.0.3" } |
 |vendorc\_icd.json  | "ICD": { "library\_path": "vedorc\_icd.dll", "api_version": "1.0.3" }|
@@ -471,7 +473,10 @@ NOTE: this environment variable will be ignored for suid programs.
 
 #### Android
 
-TODO: Fill out this section
+The Android loader lives in the system library folder. The location cannot be
+changed. The loader will load the driver/ICD via hw_get_module with the ID
+of "vulkan". Due to security policies in Android none of this can be modified
+under normal use.
 
 
 ICD interface requirements
@@ -598,13 +603,17 @@ advertised by entities (eg layers) different from the ICD in question.
 properties are obtained from the layer libraries and layer JSON files.
 - If an ICD library wants to implement a layer it can do so by having the
 appropriate layer JSON manifest file refer to the ICD library file.
-- The loader will not call ICD for vkEnumerate\*ExtensionProperties(pLayerName
-!= NULL).
+- The loader will not call the ICD for
+  vkEnumerate\*ExtensionProperties(pLayerName != NULL).
 - The ICD may or may not implement a dispatch table.
 
 #### Android
 
-TODO: Fill out this section
+The Android loader uses the same protocol for initializing the dispatch
+table as described above. The only difference is that the Android
+loader queries layer and extension information directly from the
+respective libraries and does not use the json manifest files used
+by the Windows and Linux loaders.
 
 Vulkan layer interface with the loader
 --------------------------------------
@@ -947,7 +956,13 @@ NOTE: these environment variables will be ignored for suid programs.
 
 #### Android
 
-TODO: Fill out this section
+The recommended way to enable layers is for applications
+to programatically enable them. The layers are provided by the application
+and must live in the application's library folder. The application
+enables the layers at vkCreateInstance and vkCreateDevice as any Vulkan
+application would.
+An application enabled for debug has more options. It can enumerate and enable
+layers located in /data/local/vulkan/debug.
 
 Layer interface requirements
 ------------------------------------------------------
@@ -974,7 +989,7 @@ in both the intance and device chains are called global layers.
 Normally, when a layer intercepts a given Vulkan command, it will call down the
 instance or device chain as needed. The loader and all layer libraries that
 participate in a call chain cooperate to ensure the correct sequencing of calls
-from one entity to the next. This group effort for call cahin sequencing is
+from one entity to the next. This group effort for call chain sequencing is
 hereinafter referred to as disitributed dispatch. In distributed dispatch,
 since each layer is responsible for properly calling the next entity in the
 device or instance chain, a dispatch mechanism is required for all Vulkan
@@ -998,20 +1013,20 @@ the above lists may be extended in the future.
 For the layer libraries that have been discovered by the loader, their
 intercepting entry points that will participate in a device or instance call
 chain need to be available to the loader or whatever layer is before them in
-the chain.  Layers having the following requirements in this area.
+the chain.  Layers have the following requirements in this area.
 - A layer intercepting instance level Vulkan commands (aka an instance level
-layer)  must implement a vkGetInstanceProcAddr type of function.
+layer) must implement a vkGetInstanceProcAddr type of function.
 - This vkGetInstanceProcAddr type function must be exported by the layer
 library. The name of this function is specified in various ways: 1) the layer
 manifest JSON file in the "functions", "vkGetInstanceProcAddr" node
 (Linux/Windows); 2) it is named "vkGetInstanceProcAddr"; 3) it is
-"<layerName>GetInstanceProcAddr (Android).
+"<layerName>GetInstanceProcAddr" (Android).
 - A layer intercepting device level Vulkan commands (aka a device level layer)
 must implement a vkGetDeviceProcAddr type of function.
 - This vkGetDeviceProcAddr type function must be exported by the layer library.
 The name of this function is specified in various ways: 1) the layer manifest
 JSON file in the "functions", "vkGetDeviceProcAddr" node (Linux/Windows); 2) it
-is named "vkGetDeviceProcAddr"; 3) it is "<layerName>GetDeviceProcAddr
+is named "vkGetDeviceProcAddr"; 3) it is "<layerName>GetDeviceProcAddr"
 (Android).
 - A layer's vkGetInstanceProcAddr function (irregardless of it's name) must
 return the local entry points for all instance level Vulkan commands it
@@ -1073,7 +1088,7 @@ function.
 the "pNext" field in the VkInstanceCreateInfo and VkDeviceCreateInfo structures
 for vkCreateInstance  and VkCreateDevice respectively.
 - The head node in this linked list is of type VkLayerInstanceCreateInfo for
-instance  and VkLayerDeviceCreateInfo for device. See file
+instance and VkLayerDeviceCreateInfo for device. See file
 include/vulkan/vk_layer.h for details.
 - A VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO is used by the loader for the
 "sType" field in VkLayerInstanceCreateInfo.
