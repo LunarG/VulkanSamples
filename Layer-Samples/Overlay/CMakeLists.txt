@@ -23,8 +23,8 @@ add_custom_command(OUTPUT ${SHADER_DIR}/${SFILE}-frag.spv
 message(STATUS "Shader dir: ${SHADER_DIR}")
 message(STATUS "Cxxflags: ${CMAKE_CXX_FLAGS}")
 
-if(EXISTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools")
-    set(SDK_SOURCE "${CMAKE_SOURCE_DIR}/../LoaderAndTools")
+if(EXISTS "${CMAKE_SOURCE_DIR}/../LoaderAndValidationLayers")
+    set(SDK_SOURCE "${CMAKE_SOURCE_DIR}/../LoaderAndValidationLayers")
 else()
     set(SDK_SOURCE "${CMAKE_SOURCE_DIR}/../source")
 endif()
