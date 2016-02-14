@@ -35,7 +35,6 @@
 
 #include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
-#include "vk_struct_string_helper_cpp.h"
 #if defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 #endif
