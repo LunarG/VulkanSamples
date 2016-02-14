@@ -1783,7 +1783,10 @@ static void loader_add_layer_property_meta(
     bool found;
     struct loader_layer_list *layer_list;
 
-    if (!layer_count || (layer_count > layer_instance_list->count &&
+    if (0 == layer_count ||
+        NULL == layer_instance_list ||
+        NULL == layer_device_list ||
+        (layer_count > layer_instance_list->count &&
                          layer_count > layer_device_list->count))
         return;
 
