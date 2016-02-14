@@ -17,7 +17,7 @@
   - Windows dependencies include:
     - Vulkan SDK required components
     - cmake
-  - Note that if you have a LoaderAndTools (LoaderAndValidationLayers) repository,
+  - Note that if you have a LoaderAndValidationLayers repository,
     and/or a glslang repository that are file system peers to VulkanSamplesKit,
     cmake will look in those repositories for headers and libraries before
     looking in SDK or system locations.  Build directories in those repositories

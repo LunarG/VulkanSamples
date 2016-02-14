@@ -101,9 +101,9 @@ else()
 endif()
 
 find_library(VULKAN_LOADER NAMES vulkan-1 vulkan
-             HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader"
-                   "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader/Release"
-                   "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader/Debug"
+             HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndValidationLayers/${BUILDTGT_DIR}/loader"
+                   "${CMAKE_SOURCE_DIR}/../LoaderAndValidationLayers/${BUILDTGT_DIR}/loader/Release"
+                   "${CMAKE_SOURCE_DIR}/../LoaderAndValidationLayers/${BUILDTGT_DIR}/loader/Debug"
                    "${PROJECT_SOURCE_DIR}/../${BINDATA_DIR}" )
 
 find_program(GLSLANG_VALIDATOR NAMES glslangValidator
@@ -211,7 +211,7 @@ if (WIN32)
     find_library(SPIRV_DLIB NAMES SPIRV
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
     find_library(LOADER_DLIB NAMES vulkan-1
-                 HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/${BUILDTGT_DIR}/loader/Debug"
+                 HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndValidationLayers/${BUILDTGT_DIR}/loader/Debug"
                        "${PROJECT_SOURCE_DIR}/../Source/${LIBSOURCE_DIR}" )
     find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Tools
                  HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH} )
