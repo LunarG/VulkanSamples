@@ -77,7 +77,7 @@ first layer’s vkCreateInstance which will call the next finally terminating in
 the loader again where this function calls every ICD’s vkCreateInstance and
 saves the results. This allows every enabled layer for this chain to set up
 what it needs based on the VkInstanceCreateInfo structure from the application.
-![Instance call chain](/images/instance_call_chain.png)
+![Instance call chain](instance_call_chain.png)
 
 This also highlights some of the complexity the loader must manage when using
 instance chains. As shown here, the loader must aggregate information from
@@ -88,7 +88,7 @@ Device chains are created at vkCreateDevice and are generally simpler because
 they deal with only a single device and the ICD can always be the terminator of
 the chain. The below diagram also illustrates how layers (either device or
 instance) can skip intercepting any given Vulkan entry point.
-![Chain skipping layers](/images/chain_skipping_layers.png)
+![Chain skipping layers](chain_skipping_layers.png)
 
 Application interface to loader
 -------------------------------
@@ -244,7 +244,7 @@ vkGetDeviceProcAddr will only work with the specific VkDevice it was created
 for, using it with another device has undefined results. For extensions,
 Get\*ProcAddr will often be the only way to access extension API features.
 
-![Get*ProcAddr efficiency](/images/get_proc_addr.png)
+![Get*ProcAddr efficiency](get_proc_addr.png)
 
 
 Vulkan Installable Client Driver interface with the loader
