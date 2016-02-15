@@ -423,11 +423,11 @@ There are no rules about the name of the ICD shared library files. For example,
 if the "/usr/share/vulkan/icd.d" directory contain the following files, with
 the specified contents:
 
-| Text File Name  | Text File Contents |
-|--------------------------------------|
-|vk\_vendora.json | "ICD": { "library\_path": "vendora.so", "api_version": "1.0.3" } |
+| Text File Name    | Text File Contents     |
+|-------------------|------------------------|
+| vk\_vendora.json | "ICD": { "library\_path": "vendora.so", "api_version": "1.0.3" } |
 | vendorb\_vk.json | "ICD": { "library\_path": "vendorb\_vulkan\_icd.so", "api_version": "1.0.3" } |
-| vendorc\_icd.json | "ICD": { "library\_path": "/usr/lib/VENDORC/icd.so", "api_version": "1.0.1" }|
+| vendorc\_icd.json | "ICD": { "library\_path": "/usr/lib/VENDORC/icd.so", "api_version": "1.0.3" } |
 
 then the loader will open the three files mentioned in the "Text File Contents"
 column, and then try to load and use the three shared libraries indicated by
@@ -741,7 +741,7 @@ For example:
         "vkGetInstanceProcAddr": "OverlayLayer_GetInstanceProcAddr",
         "vkGetDeviceProcAddr": "OverlayLayer_GetDeviceProcAddr"
     },
-    instance_extensions": [
+    "instance_extensions": [
         {
             "name": "VK_debug_report_EXT",
             "spec_version": "1"
@@ -902,7 +902,7 @@ For example:
         "vkGetInstanceProcAddr": "OverlayLayer_GetInstanceProcAddr",
         "vkGetDeviceProcAddr": "OverlayLayer_GetDeviceProcAddr"
     },
-    instance_extensions": [
+    "instance_extensions": [
         {
             "name": "VK_debug_report_EXT",
             "spec_version": "1"
