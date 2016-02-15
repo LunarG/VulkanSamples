@@ -424,7 +424,7 @@ if the "/usr/share/vulkan/icd.d" directory contain the following files, with
 the specified contents:
 
 | Text File Name  | Text File Contents |
-|-----------------|--------------------|
+|--------------------------------------|
 |vk\_vendora.json | "ICD": { "library\_path": "vendora.so", "api_version": "1.0.3" } |
 | vendorb\_vk.json | "ICD": { "library\_path": "vendorb\_vulkan\_icd.so", "api_version": "1.0.3" } |
 | vendorc\_icd.json | "ICD": { "library\_path": "/usr/lib/VENDORC/icd.so", "api_version": "1.0.1" }|
@@ -521,6 +521,8 @@ Linux and Windows:
   application. In other words, the ICD library exported Vulkan symbols must not
   clash with the loader's exported Vulkan symbols.
 
+- Beware of interposing by dynamic OS library loaders if the offical Vulkan names
+are used. On Linux, if offical names are used, the ICD library must be linked with -Bsymbolic.
 2) Deprecated
 
 - vkGetInstanceProcAddr exported in the ICD library and returns valid function
@@ -1120,9 +1122,34 @@ the VkInstanceCreateInfo/VkDeviceCreateInfo structure.
 Get*ProcAddr function once for each Vulkan command needed in your dispatch
 table
 
-Example code for CreateInstance:
-Example code for CreateDevice
+TODO: Example code for CreateInstance.
+
+TODO: Example code for CreateDevice.
+
 #### Special Considerations
-Wrapping versus maps.
-create dispatchable objects
+A layer may want to associate it's own private data with one or more Vulkan objects.
+Two common methods to do this are hash maps  and object wrapping. The loader
+supports layers wrapping any Vulkan object including dispatchable objects.
+Layers which wrap objects should ensure they always unwrap objects before
+passing them down the chain. This implies the layer must intercept every Vulkan
+command which uses the object in question. Layers above the object wrapping
+layer will see the wrapped object.
+
+Alternatively, a layer may want to use a hash map to associate data with a given object.
+The key to the map could be the object. Alternatively, for dispatchable objects
+at a given level (eg device or instance) the may layer may want data associated with the all command for the VkDevice or VkInstance. Since there are multiple
+dispatchable objects for a given VkInstance or VkDevice, the VkDevice or
+VkInstance object is not a great map key. Instead the layer should use the
+dispatch table pointer withbin the VkDevice or VkInstance since that will be
+unique for a given VkInstance or VkDevice.
+
+Layers which create dispatchable objects take special care. Remember that loader
+trampoline code normally fills in the dispatch table pointer in the newly
+created object. Thus, the layer must fill in the dispatch table pointer if the
+loader trampoline will not do so.  Common cases a layer may create a dispatchable
+object without loader trampoline code is as follows:
+- object wrapping layers that wrap dispatchable objects
+- layers which add extensions that create dispatchable objects
+- layers which insert extra Vulkan commands in the stream of commands they
+intercept from the application
 
