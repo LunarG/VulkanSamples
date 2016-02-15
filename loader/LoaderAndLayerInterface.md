@@ -1145,19 +1145,19 @@ TODO: Example code for CreateInstance.
 TODO: Example code for CreateDevice.
 
 #### Special Considerations
-
-A layer may want to associate its own private data with one or more Vulkan
-objects.  Two common methods to do this are hash maps and object wrapping. The
-loader supports layers wrapping any Vulkan object including dispatchable
-objects.  Layers which wrap objects should ensure they always unwrap objects
-before passing them down the chain. This implies the layer must intercept every
-Vulkan command which uses the object in question. Layers above the object
-wrapping layer will see the wrapped object.
+A layer may want to associate it's own private data with one or more Vulkan
+objects.
+Two common methods to do this are hash maps  and object wrapping. The loader
+supports layers wrapping any Vulkan object including dispatchable objects.
+Layers which wrap objects should ensure they always unwrap objects before
+passing them down the chain. This implies the layer must intercept every Vulkan
+command which uses the object in question. Layers above the object wrapping
+layer will see the wrapped object.
 
 Alternatively, a layer may want to use a hash map to associate data with a
-given object.  The key to the map could be the object. Alternatively, for
-dispatchable objects at a given level (e.g. device or instance) the layer may
-want to associated data with all commands for the VkDevice or VkInstance. Since
+given object. The key to the map could be the object. Alternatively, for
+dispatchable objects at a given level (eg device or instance) the layer may
+want data associated with the VkDevice or VkInstance objects. Since
 there are multiple dispatchable objects for a given VkInstance or VkDevice, the
 VkDevice or VkInstance object is not a great map key. Instead the layer should
 use the dispatch table pointer within the VkDevice or VkInstance since that
@@ -1166,8 +1166,8 @@ will be unique for a given VkInstance or VkDevice.
 Layers which create dispatchable objects take special care. Remember that loader
 trampoline code normally fills in the dispatch table pointer in the newly
 created object. Thus, the layer must fill in the dispatch table pointer if the
-loader trampoline will not do so.  Common cases a layer may create a dispatchable
-object without loader trampoline code is as follows:
+loader trampoline will not do so.  Common cases where a layer may create a
+dispatchable object without loader trampoline code is as follows:
 - object wrapping layers that wrap dispatchable objects
 - layers which add extensions that create dispatchable objects
 - layers which insert extra Vulkan commands in the stream of commands they
