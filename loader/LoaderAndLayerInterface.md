@@ -1140,9 +1140,116 @@ the VkInstanceCreateInfo/VkDeviceCreateInfo structure.
 Get*ProcAddr function once for each Vulkan command needed in your dispatch
 table
 
-TODO: Example code for CreateInstance.
+#### Example code for CreateInstance
 
-TODO: Example code for CreateDevice.
+```cpp
+VkResult vkCreateInstance(
+        const VkInstanceCreateInfo *pCreateInfo,
+        const VkAllocationCallbacks *pAllocator,
+        VkInstance *pInstance)
+{
+   VkLayerInstanceCreateInfo *chain_info =
+        get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
+        chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkCreateInstance fpCreateInstance =
+        (PFN_vkCreateInstance)fpGetInstanceProcAddr(NULL, "vkCreateInstance");
+    if (fpCreateInstance == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Advance the link info for the next element of the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    // Continue call down the chain
+    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
+    if (result != VK_SUCCESS)
+        return result;
+
+    // Allocate new structure to store peristent data
+    layer_data *my_data = new layer_data;
+
+    // Associate this instance with the newly allocated data
+    // layer will store any persistent state it needs for
+    // this instance in the my_data structure
+    layer_data_map[get_dispatch_key(*pInstance)] = my_data;
+
+    // Create layer's dispatch table using GetInstanceProcAddr of
+    // next layer in the chain.
+    my_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
+    layer_init_instance_dispatch_table(
+        *pInstance, my_data->instance_dispatch_table, fpGetInstanceProcAddr);
+
+    // Keep track of any extensions that were enabled for this
+    // instance. In this case check for VK_EXT_debug_report
+    my_data->report_data = debug_report_create_instance(
+        my_data->instance_dispatch_table, *pInstance,
+        pCreateInfo->enabledExtensionCount,
+        pCreateInfo->ppEnabledExtensionNames);
+
+    // Other layer initialization
+    ...
+
+    return VK_SUCCESS;
+}
+```
+
+#### Example code for CreateDevice
+
+```cpp
+VkResult 
+vkCreateDevice(
+        VkPhysicalDevice gpu,
+        const VkDeviceCreateInfo *pCreateInfo,
+        const VkAllocationCallbacks *pAllocator,
+        VkDevice *pDevice)
+{
+    VkLayerDeviceCreateInfo *chain_info =
+        get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
+        chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr =
+        chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
+    PFN_vkCreateDevice fpCreateDevice =
+        (PFN_vkCreateDevice)fpGetInstanceProcAddr(NULL, "vkCreateDevice");
+    if (fpCreateDevice == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    VkResult result = fpCreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    // Allocate new structure to store peristent data
+    layer_data *my_data = new layer_data;
+
+    // Associate this instance with the newly allocated data
+    // layer will store any persistent state it needs for
+    // this instance in the my_data structure
+    layer_data_map[get_dispatch_key(*pDevice)] = my_data;
+
+    my_device_data->device_dispatch_table = new VkLayerDispatchTable;
+    layer_init_device_dispatch_table(
+        *pDevice, my_device_data->device_dispatch_table, fpGetDeviceProcAddr);
+
+    // Keep track of any extensions that were enabled for this
+    // instance. In this case check for VK_EXT_debug_report
+    my_data->report_data = debug_report_create_instance(
+        my_instance_data->report_data, *pDevice);
+
+    // Other layer initialization
+    ...
+
+    return VK_SUCCESS;
+}
+```
 
 #### Special Considerations
 A layer may want to associate it's own private data with one or more Vulkan
