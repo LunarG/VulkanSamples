@@ -23,7 +23,7 @@
 ;
 ; The following is required on Windows, for exporting symbols from the DLL
 
-LIBRARY VkLayer_basic
+LIBRARY VkLayer_overlay
 EXPORTS
 vkGetInstanceProcAddr
 vkGetDeviceProcAddr

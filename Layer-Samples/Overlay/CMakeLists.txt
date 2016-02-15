@@ -39,26 +39,26 @@ if (EXISTS "${SDK_SOURCE}")
                   "${CMAKE_SOURCE_DIR}/../bin"
             )
 
-    add_library(VKLayerOverlay SHARED overlay.cpp
+    add_library(VKLayer_overlay SHARED overlay.cpp
             ${SDK_SOURCE}/layers/vk_layer_table.cpp
             ${SHADER_DIR}/overlay-vert.spv
             ${SHADER_DIR}/overlay-frag.spv
             overlay.json)
 
     if (WIN32)
-        set_target_properties(VKLayerOverlay PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/VkLayer_overlay.def")
+        set_target_properties(VKLayer_overlay PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/VkLayer_overlay.def")
         add_custom_command(OUTPUT overlay.json
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/windows/overlay.json $<CONFIGURATION>/overlay.json
             VERBATIM)
     else()
-        set_target_properties(VKLayerOverlay PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic")
+        set_target_properties(VKLayer_overlay PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic")
         add_custom_command(OUTPUT overlay.json
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/linux/overlay.json overlay.json
             VERBATIM)
     endif()
 
-    target_link_libraries(VKLayerOverlay ${LAYERUTILS_DLIB})
-    set_target_properties(VKLayerOverlay PROPERTIES CXX_FLAGS "-Wno-unused-function")
+    target_link_libraries(VKLayer_overlay ${LAYERUTILS_DLIB})
+    set_target_properties(VKLayer_overlay PROPERTIES CXX_FLAGS "-Wno-unused-function")
 
     include_directories(
             "${SDK_SOURCE}/build/layers"
