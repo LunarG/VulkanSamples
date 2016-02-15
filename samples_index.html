@@ -59,7 +59,7 @@
          
       <br></br>
       <p style="font-size:18px;">
-      The following samples samples and layers hosted on the LunarG <a href="https://github.com/LunarG/VulkanSamples" style="color:yellow">VulkanSamples</a> GitHub repository.
+      The following samples and layers are hosted on the LunarG <a href="https://github.com/LunarG/VulkanSamples" style="color:yellow">VulkanSamples</a> GitHub repository.
       Many of these samples will be included as binaries in the LunarG Vulkan SDK.  In order to obtain the LunarG Vulkan SDK, please visit our 
       <a href="https://vulkan.lunarg.com/signin" style="color:yellow">LunarXChange</a> host.
       <br></br>
@@ -74,7 +74,7 @@
       <ul>
          <li><a href="#HelloVulkan" style="color:cyan">LunarG Hello Vulkan Samples</a></li>
          <li><a href="#AdditionalVulkan" style="color:cyan">LunarG Additional Vulkan Samples</a></li>
-         <li><a href="#CommunityVulkan" style="color:cyan">Community Samples, Demos, and Layers</a></li>
+         <li><a href="#DemosLayers" style="color:cyan">Other Demos and Layers</a></li>
          <li><a href="#Thanks" style="color:cyan">Special Thanks</a></li>
       </ul>
       </td>
@@ -118,7 +118,7 @@
         <tr>
           <td style="font-size:18px;text-align:center;">3</td>
           <td style="font-size:18px;text-align:left;">device</td>
-          <td style="font-size:18px;text-align:left;">Create and destroy a Vulkan physical device</td>
+          <td style="font-size:18px;text-align:left;">Create and destroy a Vulkan device</td>
           <td style="font-size:16px;text-align:center;">
               vkCreateDevice,<br>
               vkDestroyDevice
@@ -281,9 +281,18 @@
       <p style="font-size:18px;">These are additional LunarG created samples which build upon the above ones to provide
       more coverage beyond basic rendering.
       <br></br>
-      <b>NOTE:</b>Sample Tables are sortable by column.</p>
-      <br>
-      <br>
+
+      <h3>Community Sample Submission Policy</h3>
+      <p>
+      LunarG is interested in sharing your samples with the SDK.  If you are interested in providing
+      a sample for the Vulkan SDK, refer to the README-controb.md file found with the Vulkan Sample
+      source.  All contributed samples must be released under a BSD-style license.
+      </p>
+      <br></br>
+      
+      <b>NOTE:</b>Items are sortable by column.</p>
+      <br></br>
+
       <table class="sortable" width="100%" cellspacing="20">
         <tr>
           <th style="width:20%;font-size:20px;text-align:left;">Sample Name</th>
@@ -332,7 +341,7 @@
                     <img class="center"  width="60" height="60" src="samples_images/drawtexturedcube.png">
                 </a>
           </td>
-          <td style="font-size:16px;text-align:center;">Draw a Textured 3D Cube in Vulkan.</td>
+          <td style="font-size:16px;text-align:center;">Draw a textured 3D cube in Vulkan.</td>
           <td style="font-size:16px;text-align:center;">Simple texturing</td>
           <td style="font-size:16px;text-align:center;">1.0.3</td>
           <td style="font-size:16px;text-align:center;">Textured-Cube-2</td>
@@ -344,7 +353,7 @@
                     <img class="center" width="60" height="60" src="samples_images/dynamicuniform.png">
                 </a>
           </td>
-          <td style="font-size:16px;text-align:center;">Draw 2 Cubes using a Dynamic Uniform Buffer.</td>
+          <td style="font-size:16px;text-align:center;">Draw 2 cubes using a Dynamic Uniform Buffer.</td>
           <td style="font-size:16px;text-align:center;">VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC</td>
           <td style="font-size:16px;text-align:center;">1.0.3</td>
           <td style="font-size:16px;text-align:center;">Vulkan-Extended</td>
@@ -372,7 +381,7 @@
                     <img class="center"  width="60" height="60" src="samples_images/immutable_sampler.png">
                 </a>
           </td>
-          <td style="font-size:16px;text-align:center;">Use an Immutable Sampler to texture a Cube.</td>
+          <td style="font-size:16px;text-align:center;">Use an Immutable Sampler to texture a cube.</td>
           <td style="font-size:16px;text-align:center;">VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER<br>VkDescriptorSetLayoutBinding.pImmutableSamplers</td>
           <td style="font-size:16px;text-align:center;">1.0.3</td>
           <td style="font-size:16px;text-align:center;">Vulkan-Extended</td>
@@ -440,15 +449,7 @@
                     <img class="center" width="60" height="60" src="samples_images/occlusionquery.png">
                 </a>
           </td>
-          <td style="font-size:16px;text-align:center;">Use occlusion query to determine if drawing renders any samples.
-This could be used to quickly determine if more expensive rendering should be
-done. Use vkCreateQueryPool, vkCmdResetQueryPool, and vkDestroyQueryPool to
-manage a pool. Use vkCmdBeginQuery and vkCmdEndQuery to enclose rendering.
-Use vkCmdCopyQueryPoolResults or vkGetQueryPoolResults to read query results.
-This example does one query with no rendering to give a zero result and a second
-query with rendering to give a non-zero result.  Note that exact counts are not
-guaranteed unless vkGetPhysicalDeviceFeatures sets occlusionQueryPrecise and the
-VK_QUERY_CONTROL_PRECISE_BIT is set for vkCmdBeginQuery.</td>
+          <td style="font-size:16px;text-align:center;">Use occlusion query to determine if drawing renders any samples. This could be used to quickly determine if more expensive rendering should be done.</td>
           <td style="font-size:16px;text-align:center;">vkCmdBeginQuery<br>vkCmdCopyQueryPoolResults<br>vkCmdEndQuery<br>vkCreateQueryPool<br>vkDestroyQueryPool<br>vkGetQueryPoolResults</td>
           <td style="font-size:16px;text-align:center;">1.0.3</td>
           <td style="font-size:16px;text-align:center;">Vulkan-Extended</td>
@@ -520,14 +521,7 @@ VK_QUERY_CONTROL_PRECISE_BIT is set for vkCmdBeginQuery.</td>
                     <img class="center" width="60" height="60" src="samples_images/spirv_specialization.png">
                 </a>
           </td>
-          <td style="font-size:16px;text-align:center;">This sample creates a mini-ubershader that changes its behavior
-based on specialization constants provided at pipeline creation.
-If no constants are specialized, the shaders will render the
-LunarG cube.  If only the boolean is specified, it will render
-a black cube.  If both boolean and color values are specified,
-it will render the specified color (blue).
-
-The SPIR-V path is included as an alternative to using a front end.</td>
+          <td style="font-size:16px;text-align:center;">This sample creates a mini-ubershader that changes its behavior based on specialization constants provided at pipeline creation.</td>
           <td style="font-size:16px;text-align:center;">SPIR-V</td>
           <td style="font-size:16px;text-align:center;">1.0.3</td>
           <td style="font-size:16px;text-align:center;">Vulkan-Extended</td>
@@ -562,26 +556,12 @@ The SPIR-V path is included as an alternative to using a front end.</td>
       <hr>
       <br></br>
         
-      <a name="CommunityVulkan"></a>
-      <h1>Community Samples, Demos, and Layers</h1>
+      <a name="DemosLayers"></a>
+      <h1>Other Demos and Layers</h1>
       <br></br>
       <p>
-      The following are Vulkan Samples and Demos provided by the community that are selected to be included in the LunarG Vulkan
-      SDK.
+      The following are additional Vulkan Demos and Layers included in the LunarG Vulkan SDK.
       </p>
-      <br></br>
-      <br></br>
-      <h2>Samples</h2>
-      <br></br>
-      <table class="sortable" width="100%">
-        <tr>
-          <th style="width:15%;font-size:20px;text-align:left;">Name</th>
-          <th style="width:10%;font-size:20px;text-align:center;">Image</th>
-          <th style="width:20%;font-size:20px;text-align:center;">Contributor</th>
-          <th style="width:35%;font-size:20px;text-align:center;">Description</th>
-          <th style="width:10%;font-size:20px;text-align:center;">Vulkan Version</th>
-        </tr>
-      </table>
       <br></br>
       <br></br>
       <h2>Demos</h2>
@@ -619,26 +599,17 @@ The SPIR-V path is included as an alternative to using a front end.</td>
           <th style="width:10%;font-size:20px;text-align:center;">Vulkan Version</th>
         </tr>
         <tr>
-          <td style="font-size:18px;text-align:left;">overlay_fps</td>
+          <td style="font-size:18px;text-align:left;">overlay</td>
           <td style="font-size:18px;text-align:center;">
                 <a href="samples_images/overlay.png">
                     <img class="center" width="60" height="60" src="samples_images/overlay.png">
                 </a>
           </td>
           <td style="font-size:18px;text-align:center;">Google</td>
-          <td style="font-size:18px;text-align:center;">A layer which overlays the current FPS on the current application.</td>
+          <td style="font-size:18px;text-align:center;">Overlays text on the current application.</td>
           <td style="font-size:18px;text-align:center;">1.0.3</td>
         </tr>
       </table>
-
-      <br></br>
-      <br></br>
-      <h3>Community Sample Submission Policy</h3>
-      <p>
-      LunarG is interested in sharing your samples with the SDK.  If you are interested in providing
-      a sample for the Vulkan SDK, refer to the README-controb.md file found with the Vulkan Sample
-      source.  All contributed samples must be released under a BSD-style license.
-      </p>
 
       <br></br>
       <br></br>
