@@ -765,7 +765,7 @@ For example:
             "spec_version": "3"
          }
     ],
-    device_extensions": [
+    "device_extensions": [
         {
             "name": "VK_LUNARG_DEBUG_MARKER",
             "spec_version": "1",
@@ -926,7 +926,7 @@ For example:
             "spec_version": "3"
          }
     ],
-    device_extensions": [
+    "device_extensions": [
         {
             "name": "VK_LUNARG_DEBUG_MARKER",
             "spec_version": "1",
