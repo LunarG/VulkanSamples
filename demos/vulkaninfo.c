@@ -1213,7 +1213,8 @@ bool SetStdOutToNewConsole() {
         return false;
 
     // allocate a console for this app
-    AllocConsole();
+    if (!AllocConsole())
+        return false;
 
     // redirect unbuffered STDOUT to the console
     HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -1224,23 +1225,22 @@ bool SetStdOutToNewConsole() {
 
     // make the console window bigger
     CONSOLE_SCREEN_BUFFER_INFO csbi;
-    SMALL_RECT r;
     COORD bufferSize;
-    if (!GetConsoleScreenBufferInfo(consoleHandle, &csbi))
-        return false;
-    bufferSize.X = csbi.dwSize.X + 30;
-    bufferSize.Y = 20000;
-    if (!SetConsoleScreenBufferSize(consoleHandle, bufferSize))
-        return false;
+    if (GetConsoleScreenBufferInfo(consoleHandle, &csbi))
+    {
+        bufferSize.X = csbi.dwSize.X + 30;
+        bufferSize.Y = 20000;
+        SetConsoleScreenBufferSize(consoleHandle, bufferSize);
+    }
+
+    SMALL_RECT r;
     r.Left = r.Top = 0;
     r.Right = csbi.dwSize.X - 1 + 30;
     r.Bottom = 50;
-    if (!SetConsoleWindowInfo(consoleHandle, true, &r))
-        return false;
+    SetConsoleWindowInfo(consoleHandle, true, &r);
 
     // change the console window title
-    if (!SetConsoleTitle(TEXT(APP_SHORT_NAME)))
-        return false;
+    SetConsoleTitle(TEXT(APP_SHORT_NAME));
 
     return true;
 }
