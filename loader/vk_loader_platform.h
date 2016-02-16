@@ -107,13 +107,16 @@
 #define DEFAULT_VK_ELAYERS_INFO                                                \
     LOCAL_ELAYERS_INFO                                                         \
     "/" SYSCONFDIR VULKAN_ELAYERCONF_DIR ":"                                   \
-    "/usr/" DATADIR VULKAN_ELAYERCONF_DIR ":"
+    "/usr/" DATADIR VULKAN_ELAYERCONF_DIR
 #define DEFAULT_VK_ILAYERS_INFO                                                \
     LOCAL_ILAYERS_INFO                                                         \
     "/" SYSCONFDIR VULKAN_ILAYERCONF_DIR ":"                                   \
     "/usr/" DATADIR VULKAN_ILAYERCONF_DIR
 #define DEFAULT_VK_LAYERS_PATH ""
 #define LAYERS_PATH_ENV "VK_LAYER_PATH"
+#define HOME_VK_DRIVERS_INFO "/.local/share" VULKAN_ICDCONF_DIR
+#define HOME_VK_ELAYERS_INFO "/.local/share" VULKAN_ELAYERCONF_DIR
+#define HOME_VK_ILAYERS_INFO "/.local/share" VULKAN_ILAYERCONF_DIR
 
 // C99:
 #define PRINTF_SIZE_T_SPECIFIER "%zu"

@@ -2162,12 +2162,14 @@ loader_add_layer_properties(const struct loader_instance *inst,
 /**
  * Find the Vulkan library manifest files.
  *
- * This function scans the location or env_override directories/files
+ * This function scans the "location" or "env_override" directories/files
  * for a list of JSON manifest files.  If env_override is non-NULL
  * and has a valid value. Then the location is ignored.  Otherwise
  * location is used to look for manifest files. The location
  * is interpreted as  Registry path on Windows and a directory path(s)
- * on Linux.
+ * on Linux. "home_location" is an additional directory in the users home
+ * directory to look at. It is exapanded into the dir path $HOME/home_location.
+ * This "home_location" is only used on Linux.
  *
  * \returns
  * A string list of manifest files to be opened in out_files param.
@@ -2185,6 +2187,7 @@ loader_add_layer_properties(const struct loader_instance *inst,
 static void loader_get_manifest_files(const struct loader_instance *inst,
                                       const char *env_override, bool is_layer,
                                       const char *location,
+                                      const char *home_location,
                                       struct loader_manifest_files *out_files) {
     char *override = NULL;
     char *loc;
@@ -2208,7 +2211,12 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
 #endif
     }
 
+#if !defined(_WIN32)
+    if (location == NULL && home_location == NULL) {
+#else
+    home_location = NULL;
     if (location == NULL) {
+#endif
         loader_log(
             inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
             "Can't get manifest files with NULL location, env_override=%s",
@@ -2265,6 +2273,37 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
     file = loc;
     while (*file) {
         next_file = loader_get_next_path(file);
+#if !defined(_WIN32)
+        if (home_location != NULL && (next_file == NULL || *next_file == '\0')) {
+            char *home = secure_getenv("HOME");
+            if (home != NULL) {
+                size_t len;
+                char *home_loc = loader_stack_alloc(strlen(home) + 2 +
+                                                    strlen(home_location));
+                if (home_loc == NULL) {
+                    loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                           "Out of memory can't get manifest files");
+                    return;
+                }
+                strcpy(home_loc, home);
+                // Add directory separator if needed
+                if (home_location[0] != DIRECTORY_SYMBOL) {
+                    len = strlen(home_loc);
+                    home_loc[len] = DIRECTORY_SYMBOL;
+                    home_loc[len+1] = '\0';
+                }
+                strcat(home_loc, home_location);
+                file = home_loc;
+                next_file = loader_get_next_path(file);
+                home_location = NULL;
+
+                loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
+                       "Searching the following paths for manifest files: %s\n",
+                           home_loc);
+                list_is_dirs = true;
+            }
+        }
+#endif
         if (list_is_dirs) {
             sysdir = opendir(file);
             name = NULL;
@@ -2373,7 +2412,8 @@ void loader_icd_scan(const struct loader_instance *inst,
     loader_scanned_icd_init(inst, icds);
     // Get a list of manifest files for ICDs
     loader_get_manifest_files(inst, "VK_ICD_FILENAMES", false,
-                              DEFAULT_VK_DRIVERS_INFO, &manifest_files);
+                              DEFAULT_VK_DRIVERS_INFO, HOME_VK_DRIVERS_INFO,
+                              &manifest_files);
     if (manifest_files.count == 0)
         return;
     loader_platform_thread_lock_mutex(&loader_json_lock);
@@ -2487,11 +2527,12 @@ void loader_layer_scan(const struct loader_instance *inst,
 
     // Get a list of manifest files for  explicit layers
     loader_get_manifest_files(inst, LAYERS_PATH_ENV, true,
-                              DEFAULT_VK_ELAYERS_INFO, &manifest_files[0]);
+                              DEFAULT_VK_ELAYERS_INFO, HOME_VK_ELAYERS_INFO,
+                              &manifest_files[0]);
     // Pass NULL for environment variable override - implicit layers are not
     // overridden by LAYERS_PATH_ENV
     loader_get_manifest_files(inst, NULL, true, DEFAULT_VK_ILAYERS_INFO,
-                              &manifest_files[1]);
+                              HOME_VK_ILAYERS_INFO, &manifest_files[1]);
     if (manifest_files[0].count == 0 && manifest_files[1].count == 0)
         return;
 
