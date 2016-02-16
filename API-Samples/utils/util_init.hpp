@@ -98,6 +98,7 @@ void init_render_pass_begin_info(struct sample_info &info,
 void init_window_size(struct sample_info &info, int32_t default_width,
                       int32_t default_height);
 
+#ifdef USE_DEBUG_EXTENTIONS
 VkResult init_debug_report_callback(struct sample_info &info,
                                     PFN_vkDebugReportCallbackEXT dbgFunc);
 void destroy_debug_report_callback(struct sample_info &info);

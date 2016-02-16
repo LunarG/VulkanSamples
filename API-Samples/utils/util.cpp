@@ -35,8 +35,9 @@ samples utility functions
 #include <iomanip>
 #include <iostream>
 #include "util.hpp"
+
 #ifdef __ANDROID__
-// Android specific stuff.
+// Android specific include files.
 #include <unordered_map>
 
 // Header files.
@@ -62,7 +63,9 @@ static android_app* Android_application = nullptr;
 
 using namespace std;
 
+#ifndef __ANDROID__
 int main(int argc, char **argv) { return sample_main(); }
+#endif
 
 void extract_version(uint32_t version, uint32_t &major, uint32_t &minor,
                      uint32_t &patch) {
@@ -89,9 +92,10 @@ string get_file_name(const string &s) {
 }
 
 std::string get_base_data_dir() {
-    return std::string(VULKAN_SAMPLES_BASE_DIR) + "/API-Samples/data/";
-#else
+#ifdef __ANDROID__
     return "";
+#else
+    return std::string(VULKAN_SAMPLES_BASE_DIR) + "/API-Samples/data/";
 #endif
 }
 
@@ -204,7 +208,11 @@ bool read_ppm(char const *const filename, int &width, int &height,
     char magicStr[3] = {}, heightStr[6] = {}, widthStr[6] = {},
          formatStr[6] = {};
 
-    FILE *fPtr = fopen(filename, "rb");
+#ifndef __ANDROID__
+    FILE *fPtr = fopen(filename,"rb");
+#else
+    FILE *fPtr = AndroidFopen(filename,"rb");
+#endif
     if (!fPtr) {
         printf("Bad filename in read_ppm: %s\n", filename);
         return false;
@@ -260,6 +268,7 @@ bool read_ppm(char const *const filename, int &width, int &height,
     return true;
 }
 
+#ifndef __ANDROID__
 void init_resources(TBuiltInResource &Resources) {
     Resources.maxLights = 32;
     Resources.maxClipPlanes = 6;
@@ -381,9 +390,18 @@ EShLanguage FindLanguage(const VkShaderStageFlagBits shader_type) {
 }
 #endif
 
-void init_glslang() { glslang::InitializeProcess(); }
+void init_glslang() {
+#ifndef __ANDROID__
+    glslang::InitializeProcess();
+#endif
+}
 
-void finalize_glslang() { glslang::FinalizeProcess(); }
+void finalize_glslang()
+{
+#ifndef __ANDROID__
+    glslang::FinalizeProcess();
+#endif
+}
 
 #ifdef __ANDROID__
 #ifndef ANDROID_NO_SHADERC
@@ -433,9 +451,12 @@ shaderc_shader_kind MapShadercType(VkShaderStageFlagBits vkShader) {
 // Compile a given string containing GLSL into SPV for use by VK
 // Return value of false means an error was encountered.
 //
-bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
-               std::vector<unsigned int> &spirv) {
-    glslang::TProgram &program = *new glslang::TProgram;
+bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
+               const char *pshader,
+               std::vector<unsigned int> &spirv)
+{
+#ifndef __ANDROID__
+    glslang::TProgram& program = *new glslang::TProgram;
     const char *shaderStrings[1];
     TBuiltInResource Resources;
     init_resources(Resources);
@@ -444,12 +465,12 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
     EShLanguage stage = FindLanguage(shader_type);
-    glslang::TShader *shader = new glslang::TShader(stage);
+    glslang::TShader* shader = new glslang::TShader(stage);
 
     shaderStrings[0] = pshader;
     shader->setStrings(shaderStrings, 1);
 
-    if (!shader->parse(&Resources, 100, false, messages)) {
+    if (! shader->parse(&Resources, 100, false, messages)) {
         puts(shader->getInfoLog());
         puts(shader->getInfoDebugLog());
         return false; // something didn't work
@@ -461,7 +482,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
     // Program-level processing...
     //
 
-    if (!program.link(messages)) {
+    if (! program.link(messages)) {
         puts(shader->getInfoLog());
         puts(shader->getInfoDebugLog());
         return false;
@@ -516,6 +537,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
 #endif
     return true;
 }
+
 void wait_seconds(int seconds) {
 #ifdef WIN32
     Sleep(seconds * 1000);

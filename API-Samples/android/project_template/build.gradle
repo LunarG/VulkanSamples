@@ -103,15 +103,15 @@ model {
     android.productFlavors {
         // for detailed abiFilter descriptions, refer to "Supported ABIs" @
         // https://developer.android.com/ndk/guides/abis.html#sa
-        create("arm") {
-            ndk.abiFilters.add("armeabi")
-        }
-        create("armv7") {
-            ndk.abiFilters.add("armeabi-v7a")
-        }
-        create("armv8") {
-            ndk.abiFilters.add("arm64-v8a")
-        }
+        //create("arm") {
+        //    ndk.abiFilters.add("armeabi")
+        //}
+        //create("armv7") {
+        //    ndk.abiFilters.add("armeabi-v7a")
+        //}
+        //create("armv8") {
+        //    ndk.abiFilters.add("arm64-v8a")
+        //}
         create("x86") {
             ndk.abiFilters.add("x86")
         }

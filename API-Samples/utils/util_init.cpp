@@ -225,7 +225,9 @@ VkBool32 demo_check_layers(const std::vector<layer_properties> &layer_props,
 
 void init_instance_extension_names(struct sample_info &info) {
     info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-#ifdef _WIN32
+#ifdef __ANDROID__
+    // Do nothing on Android.
+#elif defined(_WIN32)
     info.instance_extension_names.push_back(
         VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #else
@@ -248,7 +250,7 @@ VkResult init_instance(struct sample_info &info,
     inst_info.pNext = NULL;
     inst_info.flags = 0;
     inst_info.pApplicationInfo = &app_info;
-    // Temporarily extension parameters on Android.
+    // Disable extension parameters on Android.
 #ifndef __ANDROID__
     inst_info.enabledLayerCount = info.instance_layer_names.size();
     inst_info.ppEnabledLayerNames = info.instance_layer_names.size()
@@ -256,7 +258,7 @@ VkResult init_instance(struct sample_info &info,
                                         : NULL;
     inst_info.enabledExtensionCount = info.instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
-#endif
+#endif // !__ANDROID__
     VkResult res = vkCreateInstance(&inst_info, NULL, &info.inst);
     assert(res == VK_SUCCESS);
 
@@ -283,7 +285,7 @@ VkResult init_device(struct sample_info &info) {
     device_info.pNext = NULL;
     device_info.queueCreateInfoCount = 1;
     device_info.pQueueCreateInfos = &queue_info;
-    // Temporarily extension parameters on Android.
+    // Temporarily disable extension parameters on Android.
 #ifndef __ANDROID__
     device_info.enabledLayerCount = info.device_layer_names.size();
     device_info.ppEnabledLayerNames =
@@ -292,6 +294,7 @@ VkResult init_device(struct sample_info &info) {
     device_info.ppEnabledExtensionNames =
         device_info.enabledExtensionCount ? info.device_extension_names.data()
                                           : NULL;
+#endif
     device_info.pEnabledFeatures = NULL;
 
     res = vkCreateDevice(info.gpus[0], &device_info, NULL, &info.device);
@@ -359,6 +362,7 @@ void init_queue_family_index(struct sample_info &info) {
     assert(found);
  }
 
+#ifdef USE_DEBUG_EXTENTIONS
 VkResult init_debug_report_callback(struct sample_info &info,
                                     PFN_vkDebugReportCallbackEXT dbgFunc) {
     VkResult res;
@@ -424,7 +428,9 @@ void destroy_debug_report_callback(struct sample_info &info) {
 #endif
 
 void init_connection(struct sample_info &info) {
-#ifndef _WIN32
+#ifdef __ANDROID__
+    // Do nothing on Android.
+#elif defined(_WIN32)
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
@@ -592,10 +598,11 @@ void destroy_window(struct sample_info &info) {
 
 void init_window_size(struct sample_info &info, int32_t default_width,
                       int32_t default_height) {
+#ifdef __ANDROID__
+    AndroidGetWindowSize(&info.width, &info.height);
+#else
     info.width = default_width;
     info.height = default_height;
-#else
-    AndroidGetWindowSize(&info.width, &info.height);
 #endif
 }
 
@@ -710,34 +717,51 @@ void init_depth_buffer(struct sample_info &info) {
     assert(res == VK_SUCCESS);
 }
 
-void init_swapchain_extension(struct sample_info &info) {
+void init_swapchain_extension(struct sample_info &info)
+{
     /* DEPENDS on init_connection() and init_window() */
 
     VkResult U_ASSERT_ONLY res;
 
-// Construct the surface description:
+    // Construct the surface description:
 #ifdef _WIN32
     VkWin32SurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
     createInfo.hinstance = info.connection;
     createInfo.hwnd = info.window;
-    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo, NULL, &info.surface);
-#else  // _WIN32
+    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo,
+                                  NULL, &info.surface);
+#elif defined(__ANDROID__)
+    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceSupportKHR);
+    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceCapabilitiesKHR);
+    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceFormatsKHR);
+    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfacePresentModesKHR);
+    GET_INSTANCE_PROC_ADDR(info.inst, DestroySurfaceKHR);
+    GET_INSTANCE_PROC_ADDR(info.inst, CreateAndroidSurfaceKHR);
+
+    VkAndroidSurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = nullptr;
+    createInfo.flags = 0;
+    createInfo.window = AndroidGetApplicationWindow();
+    res = info.fpCreateAndroidSurfaceKHR(info.inst, &createInfo, nullptr, &info.surface);
+#else  // !__ANDROID__ && !_WIN32
     VkXcbSurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
     createInfo.connection = info.connection;
     createInfo.window = info.window;
-    res = vkCreateXcbSurfaceKHR(info.inst, &createInfo, NULL, &info.surface);
-#endif // _WIN32
+    res = vkCreateXcbSurfaceKHR(info.inst, &createInfo,
+                                NULL, &info.surface);
+#endif // __ANDROID__  && _WIN32
     assert(res == VK_SUCCESS);
 
     // Iterate over each queue to learn whether it supports presenting:
-    VkBool32 *supportsPresent =
-        (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
+    VkBool32* supportsPresent = (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
     for (uint32_t i = 0; i < info.queue_count; i++) {
-        vkGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i, info.surface,
+        vkGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i,
+                                             info.surface,
                                              &supportsPresent[i]);
     }
 
@@ -754,11 +778,9 @@ void init_swapchain_extension(struct sample_info &info) {
     }
     free(supportsPresent);
 
-    // Generate error if could not find a queue that supports both a graphics
-    // and present
+    // Generate error if could not find a queue that supports both a graphics and present
     if (graphicsQueueNodeIndex == UINT32_MAX) {
-        std::cout
-            << "Could not find a queue that supports both graphics and present";
+        std::cout << "Could not find a queue that supports both graphics and present";
         exit(-1);
     }
 
@@ -766,20 +788,24 @@ void init_swapchain_extension(struct sample_info &info) {
 
     // Get the list of VkFormats that are supported:
     uint32_t formatCount;
-    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface,
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0],
+                                               info.surface,
                                                &formatCount, NULL);
     assert(res == VK_SUCCESS);
-    VkSurfaceFormatKHR *surfFormats =
-        (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
-    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface,
+    VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0],
+                                               info.surface,
                                                &formatCount, surfFormats);
     assert(res == VK_SUCCESS);
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
     // the surface has no preferred format.  Otherwise, at least one
     // supported format will be returned.
-    if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED) {
+    if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED)
+    {
         info.format = VK_FORMAT_B8G8R8A8_UNORM;
-    } else {
+    }
+    else
+    {
         assert(formatCount >= 1);
         info.format = surfFormats[0].format;
     }
@@ -801,7 +827,7 @@ void init_presentable_image(struct sample_info &info) {
 
     // Get the index of the next available swapchain image:
     res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
-                                info.presentCompleteSemaphore, NULL,
+                                info.presentCompleteSemaphore, VK_NULL_HANDLE,
                                 &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
@@ -965,6 +991,9 @@ void init_swap_chain(struct sample_info &info) {
     swap_chain.oldSwapchain = VK_NULL_HANDLE;
 #ifndef __ANDROID__
     swap_chain.clipped = true;
+#else
+    swap_chain.clipped = false;
+#endif
     swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
     swap_chain.imageUsage =
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -1032,7 +1061,10 @@ void init_swap_chain(struct sample_info &info) {
 void init_uniform_buffer(struct sample_info &info) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
-    info.Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
+    info.Projection = glm::perspective(glm::radians(45.0f),
+                                       static_cast<float>(info.width)
+                                       / static_cast<float>(info.height),
+                                       0.1f, 100.0f);
     info.View = glm::lookAt(
         glm::vec3(5, 3, 10), // Camera is at (5,3,10), in World Space
         glm::vec3(0, 0, 0),  // and looks at the origin
@@ -2017,6 +2049,10 @@ void init_texture(struct sample_info &info, const char *textureName) {
 }
 
 void init_viewports(struct sample_info &info) {
+#ifdef __ANDROID__
+    // Disable dynamic viewport on Android. Some drive has an issue with the dynamic viewport
+    // feature.
+#else
     info.viewport.height = (float)info.height;
     info.viewport.width = (float)info.width;
     info.viewport.minDepth = (float)0.0f;
@@ -2024,19 +2060,19 @@ void init_viewports(struct sample_info &info) {
     info.viewport.x = 0;
     info.viewport.y = 0;
     vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &info.viewport);
-#else
-    // Temporary disabling dynamic viewport on Android.
 #endif
 }
 
 void init_scissors(struct sample_info &info) {
+#ifdef __ANDROID__
+    // Disable dynamic viewport on Android. Some drive has an issue with the dynamic scissors
+    // feature.
+#else
     info.scissor.extent.width = info.width;
     info.scissor.extent.height = info.height;
     info.scissor.offset.x = 0;
     info.scissor.offset.y = 0;
     vkCmdSetScissor(info.cmd, 0, NUM_SCISSORS, &info.scissor);
-#else
-    // Temporary disabling dynamic scissors on Android.
 #endif
 }
 

@@ -70,14 +70,30 @@ int sample_main() {
     createInfo.pNext = NULL;
     createInfo.hinstance = info.connection;
     createInfo.hwnd = info.window;
-    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo, NULL, &info.surface);
-#else  // _WIN32
+    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo,
+                                  NULL, &info.surface);
+#elif defined(__ANDROID__)
+    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceSupportKHR);
+    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceCapabilitiesKHR);
+    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceFormatsKHR);
+    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfacePresentModesKHR);
+    GET_INSTANCE_PROC_ADDR(info.inst, DestroySurfaceKHR);
+    GET_INSTANCE_PROC_ADDR(info.inst, CreateAndroidSurfaceKHR);
+
+    VkAndroidSurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = nullptr;
+    createInfo.flags = 0;
+    createInfo.window = AndroidGetApplicationWindow();
+    res = info.fpCreateAndroidSurfaceKHR(info.inst, &createInfo, nullptr, &info.surface);
+#else  // !__ANDROID__ && !_WIN32
     VkXcbSurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
     createInfo.connection = info.connection;
     createInfo.window = info.window;
-    res = vkCreateXcbSurfaceKHR(info.inst, &createInfo, NULL, &info.surface);
+    res = vkCreateXcbSurfaceKHR(info.inst, &createInfo,
+                                NULL, &info.surface);
 #endif // _WIN32
     assert(res == VK_SUCCESS);
 
