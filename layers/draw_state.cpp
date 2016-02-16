@@ -7254,7 +7254,7 @@ bool validateSecondaryCommandBufferState(layer_data *dev_data,
                   ". Pipeline statistics is being queried so the command "
                   "buffer must have all bits set on the queryPool.",
                   reinterpret_cast<void *>(pCB->commandBuffer),
-                  reinterpret_cast<uint64_t>(queryPoolData->first));
+                  reinterpret_cast<const uint64_t&>(queryPoolData->first));
             }
             }
             activeTypes.insert(queryPoolData->second.createInfo.queryType);
@@ -7273,7 +7273,7 @@ bool validateSecondaryCommandBufferState(layer_data *dev_data,
                     "of type %d but a query of that type has been started on "
                     "secondary Cmd Buffer %p.",
                     reinterpret_cast<void *>(pCB->commandBuffer),
-                    reinterpret_cast<uint64_t>(queryPoolData->first),
+                    reinterpret_cast<const uint64_t&>(queryPoolData->first),
                     queryPoolData->second.createInfo.queryType,
                     reinterpret_cast<void *>(pSubCB->commandBuffer));
         }
