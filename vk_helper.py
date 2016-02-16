@@ -1664,6 +1664,8 @@ class StructWrapperGen:
                                     '            }\n'
                                     '        }\n'
                                     '        break;\n'
+                                    '        default:\n'
+                                    '        break;\n'
                                     '    }\n'}
             for m in self.struct_dict[s]:
                 m_name = self.struct_dict[s][m]['name']
