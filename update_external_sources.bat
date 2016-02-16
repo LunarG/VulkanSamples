@@ -251,7 +251,9 @@ echo LUNARGLASS_REVISION_R32=%LUNARGLASS_REVISION_R32%
 echo Creating and/or updating glslang, LunarGLASS, spirv-tools in %BASE_DIR%
 
 if %sync-glslang% equ 1 (
-   rd /S /Q %GLSLANG_DIR%
+   if exist %GLSLANG_DIR% (
+      rd /S /Q %GLSLANG_DIR%
+   )
    if not exist %GLSLANG_DIR% (
       call:create_glslang
    )
@@ -261,7 +263,9 @@ if %sync-glslang% equ 1 (
 )
 
 if %sync-LunarGLASS% equ 1 (
-   rd /S /Q %LUNARGLASS_DIR%
+   if exist %LUNARGLASS_DIR% (
+      rd /S /Q %LUNARGLASS_DIR%
+   )
    if not exist %LUNARGLASS_DIR% (
       call:create_LunarGLASS
    )
@@ -271,7 +275,9 @@ if %sync-LunarGLASS% equ 1 (
 )
 
 if %sync-spirv-tools% equ 1 (
-   rd /S /Q %SPIRV_TOOLS_DIR%
+   if exist %SPIRV_TOOLS_DIR% (
+      rd /S /Q %SPIRV_TOOLS_DIR%
+   )
    if %errorlevel% neq 0 (goto:error)
    if not exist %SPIRV_TOOLS_DIR% (
       call:create_spirv-tools
@@ -319,7 +325,7 @@ REM // ======== Functions ======== //
    echo Creating local glslang repository %GLSLANG_DIR%)
    mkdir %GLSLANG_DIR%
    cd %GLSLANG_DIR%
-   git clone git@gitlab.khronos.org:GLSL/glslang.git .
+   git clone https://github.com/KhronosGroup/glslang.git .
    git checkout %GLSLANG_REVISION%
    if not exist %GLSLANG_DIR%\SPIRV (
       echo glslang source download failed!
@@ -398,7 +404,7 @@ goto:eof
    echo Creating local spirv-tools repository %SPIRV_TOOLS_DIR%)
    mkdir %SPIRV_TOOLS_DIR%
    cd %SPIRV_TOOLS_DIR%
-   git clone git@gitlab.khronos.org:spirv/spirv-tools.git .
+   git clone https://github.com/KhronosGroup/SPIRV-Tools.git .
    git checkout %SPIRV_TOOLS_REVISION%
    if not exist %SPIRV_TOOLS_DIR%\source (
       echo spirv-tools source download failed!
@@ -420,8 +426,12 @@ goto:eof
    cd  %GLSLANG_DIR%
 
    REM Cleanup any old directories lying around.
-   rmdir /s /q build32
-   rmdir /s /q build
+   if exist build32 (
+      rmdir /s /q build32
+   )
+   if exist build (
+      rmdir /s /q build
+   )
    
    echo Making 32-bit glslang
    echo *************************
@@ -489,8 +499,12 @@ goto:eof
    cd %LLVM_DIR%
 
    REM Cleanup any old directories lying around.
-   rmdir /s /q build32
-   rmdir /s /q build
+   if exist build32 (
+      rmdir /s /q build32
+   )
+   if exist build (
+      rmdir /s /q build
+   )
    
    echo Making 32-bit LLVM
    echo *************************
@@ -559,8 +573,12 @@ goto:eof
    cd %LUNARGLASS_DIR%
 
    REM Cleanup any old directories lying around.
-   rmdir /s /q build32
-   rmdir /s /q build
+   if exist build32 (
+      rmdir /s /q build32
+   )
+   if exist build (
+      rmdir /s /q build
+   )
    
    echo Making 32-bit LunarGLASS
    echo *************************
@@ -637,8 +655,12 @@ goto:eof
    cd  %SPIRV_TOOLS_DIR%
 
    REM Cleanup any old directories lying around.
-   rmdir /s /q build32
-   rmdir /s /q build
+   if exist build32 (
+      rmdir /s /q build32
+   )
+   if exist build (
+      rmdir /s /q build
+   )
 
    echo Making 32-bit spirv-tools
    echo *************************

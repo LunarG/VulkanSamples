@@ -21,7 +21,7 @@ function create_glslang () {
    echo "Creating local glslang repository ($BASEDIR/glslang)."
    mkdir -p $BASEDIR/glslang
    cd $BASEDIR/glslang
-   git clone git@gitlab.khronos.org:GLSL/glslang.git .
+   git clone https://github.com/KhronosGroup/glslang.git .
    git checkout $GLSLANG_REVISION
 }
 
@@ -72,7 +72,7 @@ function create_spirv-tools () {
    echo "Creating local spirv-tools repository ($BASEDIR/spirv-tools)."
    mkdir -p $BASEDIR/spirv-tools
    cd $BASEDIR/spirv-tools
-   git clone git@gitlab.khronos.org:spirv/spirv-tools.git .
+   git clone https://github.com/KhronosGroup/SPIRV-Tools.git .
    git checkout $SPIRV_TOOLS_REVISION
 }
 

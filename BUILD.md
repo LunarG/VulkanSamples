@@ -4,8 +4,8 @@ Support for Android is TBD.
 
 ## Git the Bits
 
-Make sure you have access to the Khronos GitLab repository at gitlab.khronos.org.  Once you do, the
-preferred work flow is to clone the repo, create a branch, push branch to gitlab and then
+You should have access to the Khronos GitHub repository at https://github.com/KhronosGroup/. The
+preferred work flow is to clone the repo, create a branch, push branch to GitHub and then
 issue a merge request to integrate that work back into the repo.
 
 Note: If you are doing ICD (driver) development, please make sure to look at documentation in the [ICD Loader](loader/README.md) and the [Sample Driver](icd).
@@ -241,10 +241,10 @@ xdpyinfo | grep DRI
 
 To create your local git repository:
 ```
-mkdir YOUR_DEV_DIRECTORY  # it's called GL-Next on Github, but the name doesn't matter
+mkdir YOUR_DEV_DIRECTORY  # it's called Vulkan-LoaderAndValidationLayers on Github, but the name doesn't matter
 cd YOUR_DEV_DIRECTORY
-git clone -o khronos git@gitlab.khronos.org:vulkan/LoaderAndTools.git .
-# Or substitute the URL from your forked repo for git@gitlab.khronos.org:vulkan/LoaderAndTools.git above.
+git clone -o khronos https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers .
+# Or substitute the URL from your forked repo for https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers above.
 ```
 
 ## Linux Build
@@ -254,18 +254,17 @@ The standard build process builds the icd, the icd loader and all the tests.
 
 Example debug build:
 ```
-cd YOUR_DEV_DIRECTORY  # cd to the root of the vk git repository
-export KHRONOS_ACCOUNT_NAME= <subversion login name for svn checkout of BIL>
-./update_external_sources.sh  # fetches and builds glslang, llvm, LunarGLASS, and BIL
+cd YOUR_DEV_DIRECTORY  # cd to the root of the Vulkan-LoaderAndValidationLayers git repository
+./update_external_sources.sh  # Fetches and builds glslang, llvm, LunarGLASS, and spirv-tools
 cmake -H. -Bdbuild -DCMAKE_BUILD_TYPE=Debug
 cd dbuild
 make
 ```
 
-To run VK programs you must tell the icd loader where to find the libraries.
+To run Vulkan programs you must tell the icd loader where to find the libraries.
 This is described in a specification in the Khronos documentation Git
 repository.  See the file:
-https://gitlab.khronos.org/vulkan/vulkan/blob/master/ecosystem/LinuxICDs.txt
+https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/blob/sdk-1.0.3/loader/LoaderAndLayerInterface.md#vulkan-installable-client-driver-interface-with-the-loader
 
 This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
@@ -273,7 +272,7 @@ packaged, and how developers can point to ICDs and layers within their builds.
 
 ## Validation Test
 
-The test executibles can be found in the dbuild/tests directory. The tests use the Google
+The test executables can be found in the dbuild/tests directory. The tests use the Google
 gtest infrastructure. Tests available so far:
 - vk_layer_validation_tests: Test Vulkan layers.
 
@@ -322,21 +321,19 @@ Cygwin is used in order to obtain a local copy of the Git repository, and to run
 
 Example debug x64 build (e.g. in a "Developer Command Prompt for VS2013" window):
 ```
-cd LoaderAndTools  # cd to the root of the Vulkan git repository
+cd YOUR_DEV_DIRECTORY  # cd to the root of the Vulkan-LoaderAndValidationLayers git repository
 update_external_sources.bat --all
-mkdir build
-cd build
-cmake -G "Visual Studio 12 Win64" ..
+build_windows_targets.bat 
 ```
 
 At this point, you can use Windows Explorer to launch Visual Studio by double-clicking on the "VULKAN.sln" file in the \build folder.  Once Visual Studio comes up, you can select "Debug" or "Release" from a drop-down list.  You can start a build with either the menu (Build->Build Solution), or a keyboard shortcut (Ctrl+Shift+B).  As part of the build process, Python scripts will create additional Visual Studio files and projects, along with additional source files.  All of these auto-generated files are under the "build" folder.
 
-VK programs must be able to find and use the VK.dll libary. Make sure it is either installed in the C:\Windows\System32 folder, or the PATH enviroment variable includes the folder that it is located in.
+Vulkan programs must be able to find and use the vulkan-1.dll libary. Make sure it is either installed in the C:\Windows\System32 folder, or the PATH environment variable includes the folder that it is located in.
 
-To run VK programs you must tell the icd loader where to find the libraries.
+To run Vulkan programs you must tell the icd loader where to find the libraries.
 This is described in a specification in the Khronos documentation Git
 repository.  See the file:
-https://gitlab.khronos.org/vulkan/vulkan/blob/master/ecosystem/WindowsICDs.txt
+https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/blob/sdk-1.0.3/loader/LoaderAndLayerInterface.md#vulkan-installable-client-driver-interface-with-the-loader
 
 This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
