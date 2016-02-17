@@ -178,9 +178,9 @@ typedef enum _DRAW_STATE_ERROR {
                                            // type is being updated with an
                                            // invalid or bad BufferView
     DRAWSTATE_BUFFERINFO_DESCRIPTOR_ERROR, // A Descriptor of
-                                           // *_[UNIFORM|STORAGE]_BUFFER_[DYNAMIC]
-                                           // type is being updated with an
-                                           // invalid or bad BufferView
+    // *_[UNIFORM|STORAGE]_BUFFER_[DYNAMIC]
+    // type is being updated with an
+    // invalid or bad BufferView
     DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, // At draw time the dynamic offset
                                        // combined with buffer offset and range
                                        // oversteps size of buffer
@@ -200,6 +200,7 @@ typedef enum _DRAW_STATE_ERROR {
                                  // must be a valid VkLogicOp value
     DRAWSTATE_INVALID_QUEUE_INDEX,           // Specified queue index exceeds number
                                              // of queried queue families
+    DRAWSTATE_PUSH_CONSTANTS_ERROR, // Push constants exceed maxPushConstantSize
 } DRAW_STATE_ERROR;
 
 typedef enum _SHADER_CHECKER_ERROR {
@@ -482,8 +483,7 @@ typedef struct _DESCRIPTOR_POOL_NODE {
 } DESCRIPTOR_POOL_NODE;
 
 // Cmd Buffer Tracking
-typedef enum _CMD_TYPE
-{
+typedef enum _CMD_TYPE {
     CMD_BINDPIPELINE,
     CMD_BINDPIPELINEDELTA,
     CMD_SETVIEWPORTSTATE,
@@ -525,6 +525,7 @@ typedef enum _CMD_TYPE
     CMD_RESETQUERYPOOL,
     CMD_COPYQUERYPOOLRESULTS,
     CMD_WRITETIMESTAMP,
+    CMD_PUSHCONSTANTS,
     CMD_INITATOMICCOUNTERS,
     CMD_LOADATOMICCOUNTERS,
     CMD_SAVEATOMICCOUNTERS,

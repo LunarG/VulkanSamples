@@ -4910,16 +4910,52 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(VkDev
     return result;
 }
 
+static bool validatePushConstantSize(const layer_data *dev_data,
+                                     const uint32_t offset, const uint32_t size,
+                                     const char *caller_name) {
+    bool skipCall = false;
+    if ((offset + size) >
+        dev_data->physDevProperties.properties.limits.maxPushConstantsSize) {
+        skipCall = log_msg(
+            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+            (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+            DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS",
+            "%s call has push constants with offset %u and size %u that "
+            "exceeds this device's maxPushConstantSize of %u.",
+            caller_name, offset, size,
+            dev_data->physDevProperties.properties.limits.maxPushConstantsSize);
+    }
+    return skipCall;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkPipelineLayout* pPipelineLayout)
 {
+    bool skipCall = false;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    uint32_t i = 0;
+    for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
+        skipCall |= validatePushConstantSize(
+            dev_data, pCreateInfo->pPushConstantRanges[i].offset,
+            pCreateInfo->pPushConstantRanges[i].size,
+            "vkCreatePipelineLayout()");
+        if ((pCreateInfo->pPushConstantRanges[i].size == 0) ||
+            ((pCreateInfo->pPushConstantRanges[i].size & 0x3) != 0)) {
+            skipCall |= log_msg(
+                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS",
+                "vkCreatePipelineLayout() call has push constant index %u with "
+                "size %u. Size must be greater than zero and a multiple of 4.",
+                i, pCreateInfo->pPushConstantRanges[i].size);
+        }
+        // TODO : Add warning if ranges overlap
+    }
     VkResult result = dev_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         // TODOSC : Merge capture of the setLayouts per pipeline
         PIPELINE_LAYOUT_NODE& plNode = dev_data->pipelineLayoutMap[*pPipelineLayout];
         plNode.descriptorSetLayouts.resize(pCreateInfo->setLayoutCount);
-        uint32_t i = 0;
         for (i=0; i<pCreateInfo->setLayoutCount; ++i) {
             plNode.descriptorSetLayouts[i] = pCreateInfo->pSetLayouts[i];
         }
@@ -6743,6 +6779,36 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(VkCommandBu
                            firstQuery, queryCount, dstBuffer, dstOffset, stride, flags);
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkCmdPushConstants(VkCommandBuffer commandBuffer, VkPipelineLayout layout,
+                   VkShaderStageFlags stageFlags, uint32_t offset,
+                   uint32_t size, const void *pValues) {
+    bool skipCall = false;
+    layer_data *dev_data =
+        get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
+    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
+    if (pCB) {
+        if (pCB->state == CB_RECORDING) {
+            skipCall |= addCmd(dev_data, pCB, CMD_PUSHCONSTANTS,
+                               "vkCmdPushConstants()");
+        } else {
+            skipCall |= report_error_no_cb_begin(dev_data, commandBuffer,
+                                                 "vkCmdPushConstants()");
+        }
+    }
+    if ((offset + size) >
+        dev_data->physDevProperties.properties.limits.maxPushConstantsSize) {
+        skipCall |= validatePushConstantSize(dev_data, offset, size,
+                                             "vkCmdPushConstants()");
+    }
+    // TODO : Add warning if push constant update doesn't align with range
+    loader_platform_thread_unlock_mutex(&globalLock);
+    if (!skipCall)
+        dev_data->device_dispatch_table->CmdPushConstants(
+            commandBuffer, layout, stageFlags, offset, size, pValues);
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t slot)
 {
     VkBool32 skipCall = VK_FALSE;
@@ -8100,6 +8166,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkCmdEndQuery;
     if (!strcmp(funcName, "vkCmdResetQueryPool"))
         return (PFN_vkVoidFunction) vkCmdResetQueryPool;
+    if (!strcmp(funcName, "vkCmdPushConstants"))
+        return (PFN_vkVoidFunction)vkCmdPushConstants;
     if (!strcmp(funcName, "vkCmdWriteTimestamp"))
         return (PFN_vkVoidFunction) vkCmdWriteTimestamp;
     if (!strcmp(funcName, "vkCreateFramebuffer"))

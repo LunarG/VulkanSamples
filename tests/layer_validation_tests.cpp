@@ -2039,6 +2039,81 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
+TEST_F(VkLayerTest, InvalidPushConstants) {
+    // Hit push constant error cases:
+    // 1. Create PipelineLayout where push constant overstep maxPushConstantSize
+    // 2. Incorrectly set push constant size to 0
+    // 3. Incorrectly set push constant size to non-multiple of 4
+    // 4. Attempt push constant update that exceeds maxPushConstantSize
+    VkResult err;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreatePipelineLayout() call has push constants with offset ");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkPushConstantRange pc_range = {};
+    pc_range.size = 0xFFFFFFFFu;
+    pc_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pushConstantRangeCount = 1;
+    pipeline_layout_ci.pPushConstantRanges = &pc_range;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
+                                 &pipeline_layout);
+
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Error received was not 'vkCreatePipelineLayout() call has "
+                  "push constants with offset 0...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    // Now cause errors due to size 0 and non-4 byte aligned size
+    pc_range.size = 0;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreatePipelineLayout() call has push constant index 0 with size 0");
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
+                                 &pipeline_layout);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Error received was not 'vkCreatePipelineLayout() call has "
+                  "push constant index 0 with size 0...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    pc_range.size = 1;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreatePipelineLayout() call has push constant index 0 with size 1");
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
+                                 &pipeline_layout);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Error received was not 'vkCreatePipelineLayout() call has "
+                  "push constant index 0 with size 0...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    // Cause error due to bad size in vkCmdPushConstants() call
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCmdPushConstants() call has push constants with offset ");
+    pipeline_layout_ci.pushConstantRangeCount = 0;
+    pipeline_layout_ci.pPushConstantRanges = NULL;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
+                                 &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+    BeginCommandBuffer();
+    vkCmdPushConstants(m_commandBuffer->GetBufferHandle(), pipeline_layout,
+                       VK_SHADER_STAGE_VERTEX_BIT, 0, 0xFFFFFFFFu, NULL);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Error received was not 'vkCmdPushConstants() call has push "
+                  "constants with offset 0...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+}
+
 TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     // Test various desriptorSet errors with bad binding combinations
     VkResult err;
