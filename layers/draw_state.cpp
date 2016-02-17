@@ -635,6 +635,10 @@ get_locations_consumed_by_type(shader_module const *src, unsigned type, bool str
 }
 
 
+typedef std::pair<unsigned, unsigned> location_t;
+typedef std::pair<unsigned, unsigned> descriptor_slot_t;
+
+
 struct interface_var {
     uint32_t id;
     uint32_t type_id;
@@ -646,8 +650,7 @@ struct interface_var {
 static void
 collect_interface_block_members(layer_data *my_data, VkDevice dev,
                                 shader_module const *src,
-                                std::map<uint32_t, interface_var> &out,
-                                std::map<uint32_t, interface_var> &builtins_out,
+                                std::map<location_t, interface_var> &out,
                                 std::unordered_map<unsigned, unsigned> const &blocks,
                                 bool is_array_of_verts,
                                 uint32_t id,
@@ -681,7 +684,21 @@ collect_interface_block_members(layer_data *my_data, VkDevice dev,
         }
     }
 
-    /* Walk all the OpMemberDecorate for type's result id. */
+    std::unordered_map<unsigned, unsigned> member_components;
+
+    /* Walk all the OpMemberDecorate for type's result id -- first pass, collect components. */
+    for (auto insn : *src) {
+        if (insn.opcode() == spv::OpMemberDecorate && insn.word(1) == type.word(1)) {
+            unsigned member_index = insn.word(2);
+
+            if (insn.word(3) == spv::DecorationComponent) {
+                unsigned component = insn.word(4);
+                member_components[member_index] = component;
+            }
+        }
+    }
+
+    /* Second pass -- produce the output, from Location decorations */
     for (auto insn : *src) {
         if (insn.opcode() == spv::OpMemberDecorate && insn.word(1) == type.word(1)) {
             unsigned member_index = insn.word(2);
@@ -690,22 +707,17 @@ collect_interface_block_members(layer_data *my_data, VkDevice dev,
             if (insn.word(3) == spv::DecorationLocation) {
                 unsigned location = insn.word(4);
                 unsigned num_locations = get_locations_consumed_by_type(src, member_type_id, false);
+                auto component_it = member_components.find(member_index);
+                unsigned component = component_it == member_components.end() ? 0 : component_it->second;
+
                 for (unsigned int offset = 0; offset < num_locations; offset++) {
                     interface_var v;
                     v.id = id;
                     /* TODO: member index in interface_var too? */
                     v.type_id = member_type_id;
                     v.offset = offset;
-                    out[location + offset] = v;
+                    out[std::make_pair(location + offset, component)] = v;
                 }
-            }
-            else if (insn.word(3) == spv::DecorationBuiltIn) {
-                unsigned builtin = insn.word(4);
-                interface_var v;
-                v.id = id;
-                v.type_id = member_type_id;
-                v.offset = 0;
-                builtins_out[builtin] = v;
             }
         }
     }
@@ -716,12 +728,12 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
                               shader_module const *src,
                               spirv_inst_iter entrypoint,
                               spv::StorageClass sinterface,
-                              std::map<uint32_t, interface_var> &out,
-                              std::map<uint32_t, interface_var> &builtins_out,
+                              std::map<location_t, interface_var> &out,
                               bool is_array_of_verts)
 {
     std::unordered_map<unsigned, unsigned> var_locations;
     std::unordered_map<unsigned, unsigned> var_builtins;
+    std::unordered_map<unsigned, unsigned> var_components;
     std::unordered_map<unsigned, unsigned> blocks;
 
     for (auto insn : *src) {
@@ -736,6 +748,10 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
 
             if (insn.word(2) == spv::DecorationBuiltIn) {
                 var_builtins[insn.word(1)] = insn.word(3);
+            }
+
+            if (insn.word(2) == spv::DecorationComponent) {
+                var_components[insn.word(1)] = insn.word(3);
             }
 
             if (insn.word(2) == spv::DecorationBlock) {
@@ -768,6 +784,7 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
 
             int location = value_or_default(var_locations, id, -1);
             int builtin = value_or_default(var_builtins, id, -1);
+            unsigned component = value_or_default(var_components, id, 0);    /* unspecified is OK, is 0 */
 
             /* All variables and interface block members in the Input or Output storage classes
              * must be decorated with either a builtin or an explicit location.
@@ -787,23 +804,12 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
                     v.id = id;
                     v.type_id = type;
                     v.offset = offset;
-                    out[location + offset] = v;
+                    out[std::make_pair(location + offset, component)] = v;
                 }
             }
-            else if (builtin != -1) {
-                /* A builtin interface variable */
-                /* Note that since builtin interface variables do not consume numbered
-                 * locations, there is no larger-than-vec4 consideration as above
-                 */
-                interface_var v;
-                v.id = id;
-                v.type_id = type;
-                v.offset = 0;
-                builtins_out[builtin] = v;
-            }
-            else {
+            else if (builtin == -1) {
                 /* An interface block instance */
-                collect_interface_block_members(my_data, dev, src, out, builtins_out,
+                collect_interface_block_members(my_data, dev, src, out,
                                                 blocks, is_array_of_verts, id, type);
             }
         }
@@ -814,7 +820,7 @@ static void
 collect_interface_by_descriptor_slot(layer_data *my_data, VkDevice dev,
                               shader_module const *src, spv::StorageClass sinterface,
                               std::unordered_set<uint32_t> const &accessible_ids,
-                              std::map<std::pair<unsigned, unsigned>, interface_var> &out)
+                              std::map<descriptor_slot_t, interface_var> &out)
 {
 
     std::unordered_map<unsigned, unsigned> var_sets;
@@ -869,17 +875,13 @@ validate_interface_between_stages(layer_data *my_data, VkDevice dev,
                                   shader_module const *consumer, spirv_inst_iter consumer_entrypoint, char const *consumer_name,
                                   bool consumer_arrayed_input)
 {
-    std::map<uint32_t, interface_var> outputs;
-    std::map<uint32_t, interface_var> inputs;
-
-    std::map<uint32_t, interface_var> builtin_outputs;
-    std::map<uint32_t, interface_var> builtin_inputs;
+    std::map<location_t, interface_var> outputs;
+    std::map<location_t, interface_var> inputs;
 
     bool pass = true;
 
-    collect_interface_by_location(my_data, dev, producer, producer_entrypoint, spv::StorageClassOutput, outputs, builtin_outputs, false);
-    collect_interface_by_location(my_data, dev, consumer, consumer_entrypoint, spv::StorageClassInput, inputs, builtin_inputs,
-            consumer_arrayed_input);
+    collect_interface_by_location(my_data, dev, producer, producer_entrypoint, spv::StorageClassOutput, outputs, false);
+    collect_interface_by_location(my_data, dev, consumer, consumer_entrypoint, spv::StorageClassInput, inputs, consumer_arrayed_input);
 
     auto a_it = outputs.begin();
     auto b_it = inputs.begin();
@@ -888,19 +890,19 @@ validate_interface_between_stages(layer_data *my_data, VkDevice dev,
     while ((outputs.size() > 0 && a_it != outputs.end()) || ( inputs.size() && b_it != inputs.end())) {
         bool a_at_end = outputs.size() == 0 || a_it == outputs.end();
         bool b_at_end = inputs.size() == 0  || b_it == inputs.end();
-        auto a_first = a_at_end ? 0 : a_it->first;
-        auto b_first = b_at_end ? 0 : b_it->first;
+        auto a_first = a_at_end ? std::make_pair(0u, 0u) : a_it->first;
+        auto b_first = b_at_end ? std::make_pair(0u, 0u) : b_it->first;
 
         if (b_at_end || ((!a_at_end) && (a_first < b_first))) {
             if (log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
-                    "%s writes to output location %d which is not consumed by %s", producer_name, a_first, consumer_name)) {
+                    "%s writes to output location %u.%u which is not consumed by %s", producer_name, a_first.first, a_first.second, consumer_name)) {
                 pass = false;
             }
             a_it++;
         }
         else if (a_at_end || a_first > b_first) {
             if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
-                    "%s consumes input location %d which is not written by %s", consumer_name, b_first, producer_name)) {
+                    "%s consumes input location %u.%u which is not written by %s", consumer_name, b_first.first, b_first.second, producer_name)) {
                 pass = false;
             }
             b_it++;
@@ -916,7 +918,7 @@ validate_interface_between_stages(layer_data *my_data, VkDevice dev,
                 describe_type(consumer_type, consumer, b_it->second.type_id);
 
                 if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
-                        "Type mismatch on location %d: '%s' vs '%s'", a_it->first, producer_type, consumer_type)) {
+                        "Type mismatch on location %u.%u: '%s' vs '%s'", a_first.first, a_first.second, producer_type, consumer_type)) {
                 pass = false;
                 }
             }
@@ -1034,14 +1036,10 @@ validate_vi_consistency(layer_data *my_data, VkDevice dev, VkPipelineVertexInput
 static bool
 validate_vi_against_vs_inputs(layer_data *my_data, VkDevice dev, VkPipelineVertexInputStateCreateInfo const *vi, shader_module const *vs, spirv_inst_iter entrypoint)
 {
-    std::map<uint32_t, interface_var> inputs;
-    /* we collect builtin inputs, but they will never appear in the VI state --
-     * the vs builtin inputs are generated in the pipeline, not sourced from buffers (VertexID, etc)
-     */
-    std::map<uint32_t, interface_var> builtin_inputs;
+    std::map<location_t, interface_var> inputs;
     bool pass = true;
 
-    collect_interface_by_location(my_data, dev, vs, entrypoint, spv::StorageClassInput, inputs, builtin_inputs, false);
+    collect_interface_by_location(my_data, dev, vs, entrypoint, spv::StorageClassInput, inputs, false);
 
     /* Build index by location */
     std::map<uint32_t, VkVertexInputAttributeDescription const *> attribs;
@@ -1057,7 +1055,7 @@ validate_vi_against_vs_inputs(layer_data *my_data, VkDevice dev, VkPipelineVerte
         bool a_at_end = attribs.size() == 0 || it_a == attribs.end();
         bool b_at_end = inputs.size() == 0  || it_b == inputs.end();
         auto a_first = a_at_end ? 0 : it_a->first;
-        auto b_first = b_at_end ? 0 : it_b->first;
+        auto b_first = b_at_end ? 0 : it_b->first.first;
         if (!a_at_end && (b_at_end || a_first < b_first)) {
             if (log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                     "Vertex attribute at location %d not consumed by VS", a_first)) {
@@ -1100,13 +1098,12 @@ static bool
 validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevice dev, shader_module const *fs, spirv_inst_iter entrypoint, RENDER_PASS_NODE const *rp, uint32_t subpass)
 {
     const std::vector<VkFormat> &color_formats = rp->subpassColorFormats[subpass];
-    std::map<uint32_t, interface_var> outputs;
-    std::map<uint32_t, interface_var> builtin_outputs;
+    std::map<location_t, interface_var> outputs;
     bool pass = true;
 
     /* TODO: dual source blend index (spv::DecIndex, zero if not provided) */
 
-    collect_interface_by_location(my_data, dev, fs, entrypoint, spv::StorageClassOutput, outputs, builtin_outputs, false);
+    collect_interface_by_location(my_data, dev, fs, entrypoint, spv::StorageClassOutput, outputs, false);
 
     auto it = outputs.begin();
     uint32_t attachment = 0;
@@ -1116,14 +1113,14 @@ validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevice dev, shade
      */
 
     while ((outputs.size() > 0 && it != outputs.end()) || attachment < color_formats.size()) {
-        if (attachment == color_formats.size() || ( it != outputs.end() && it->first < attachment)) {
+        if (attachment == color_formats.size() || ( it != outputs.end() && it->first.first < attachment)) {
             if (log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
-                    "FS writes to output location %d with no matching attachment", it->first)) {
+                    "FS writes to output location %d with no matching attachment", it->first.first)) {
                 pass = false;
             }
             it++;
         }
-        else if (it == outputs.end() || it->first > attachment) {
+        else if (it == outputs.end() || it->first.first > attachment) {
             if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
                     "Attachment %d not written by FS", attachment)) {
                 pass = false;
@@ -1295,7 +1292,7 @@ shader_stage_attribs[] = {
 static bool
 has_descriptor_binding(layer_data* my_data,
                        vector<VkDescriptorSetLayout>* pipelineLayout,
-                       std::pair<unsigned, unsigned> slot)
+                       descriptor_slot_t slot)
 {
     if (!pipelineLayout)
         return false;
@@ -1603,7 +1600,7 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
                 mark_accessible_ids(module, entrypoints[stage_id], accessible_ids);
 
                 /* validate descriptor set layout against what the entrypoint actually uses */
-                std::map<std::pair<unsigned, unsigned>, interface_var> descriptor_uses;
+                std::map<descriptor_slot_t, interface_var> descriptor_uses;
                 collect_interface_by_descriptor_slot(my_data, dev, module, spv::StorageClassUniform,
                         accessible_ids,
                         descriptor_uses);
