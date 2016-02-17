@@ -259,7 +259,9 @@ using namespace std;
 #define DEFAULT_VK_ILAYERS_INFO "SOFTWARE\\Khronos\\Vulkan\\ImplicitLayers"
 #define DEFAULT_VK_LAYERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
 #define LAYERS_PATH_ENV "VK_LAYER_PATH"
-
+#define HOME_VK_DRIVERS_INFO ""
+#define HOME_VK_ELAYERS_INFO ""
+#define HOME_VK_ILAYERS_INFO ""
 #define PRINTF_SIZE_T_SPECIFIER "%Iu"
 
 // File IO
