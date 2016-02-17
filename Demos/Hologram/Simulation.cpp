@@ -72,13 +72,13 @@ private:
     int cur_;
 };
 
-class HolographicColorPicker {
+class ColorPicker {
 public:
-    HolographicColorPicker(unsigned int rng_seed) :
+    ColorPicker(unsigned int rng_seed) :
         rng_(rng_seed),
-        red_(0.0f, 0.1f),
-        green_(0.7f, 0.8f),
-        blue_(0.8f, 1.0f)
+        red_(0.0f, 1.0f),
+        green_(0.0f, 1.0f),
+        blue_(0.0f, 1.0f)
     {
     }
 
@@ -289,7 +289,7 @@ Simulation::Simulation(int object_count)
     : random_dev_()
 {
     MeshPicker mesh;
-    HolographicColorPicker color(random_dev_());
+    ColorPicker color(random_dev_());
 
     objects_.reserve(object_count);
     for (int i = 0; i < object_count; i++) {
