@@ -2464,7 +2464,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUpdateDescriptorSets(
     for (uint32_t i = 0; i < descriptorWriteCount; ++i) {
         if (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
             my_data->descriptorSetMap[pDescriptorWrites[i].dstSet].images.push_back(pDescriptorWrites[i].pImageInfo->imageView);
-        } else if (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_TEXEL_BUFFER ) {
+        } else if (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER ) {
             // TODO: Handle texel buffer writes
         } else if (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
                    pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
