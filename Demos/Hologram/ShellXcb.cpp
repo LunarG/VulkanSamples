@@ -89,7 +89,7 @@ xcb_atom_t intern_atom(xcb_connection_t *c, xcb_intern_atom_cookie_t cookie)
 
 ShellXcb::ShellXcb(Game &game) : Shell(game)
 {
-    global_extensions_.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+    instance_extensions_.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 
     init_connection();
     init_vk();

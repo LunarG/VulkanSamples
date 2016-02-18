@@ -35,7 +35,7 @@ Shell::Shell(Game &game)
       game_tick_(1.0f / settings_.ticks_per_second), game_time_(game_tick_)
 {
     // require generic WSI extensions
-    global_extensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+    instance_extensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     device_extensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 }
 
@@ -60,9 +60,9 @@ void Shell::cleanup_vk()
     vk::DestroyInstance(ctx_.instance, nullptr);
 }
 
-void Shell::assert_all_global_extensions() const
+void Shell::assert_all_instance_extensions() const
 {
-    // enumerate global extensions
+    // enumerate instance extensions
     std::vector<VkExtensionProperties> exts;
     vk::enumerate(nullptr, exts);
 
@@ -70,11 +70,11 @@ void Shell::assert_all_global_extensions() const
     for (const auto &ext : exts)
         ext_names.insert(ext.extensionName);
 
-    // all listed global extensions are required
-    for (const auto &name : global_extensions_) {
+    // all listed instance extensions are required
+    for (const auto &name : instance_extensions_) {
         if (ext_names.find(name) == ext_names.end()) {
             std::stringstream ss;
-            ss << "global extension " << name << " is missing";
+            ss << "instance extension " << name << " is missing";
             throw std::runtime_error(ss.str());
         }
     }
@@ -101,7 +101,7 @@ bool Shell::has_all_device_extensions(VkPhysicalDevice phy) const
 
 void Shell::init_instance()
 {
-    assert_all_global_extensions();
+    assert_all_instance_extensions();
 
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -112,8 +112,8 @@ void Shell::init_instance()
     VkInstanceCreateInfo instance_info = {};
     instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instance_info.pApplicationInfo = &app_info;
-    instance_info.enabledExtensionCount = (uint32_t)global_extensions_.size();
-    instance_info.ppEnabledExtensionNames = global_extensions_.data();
+    instance_info.enabledExtensionCount = static_cast<uint32_t>(instance_extensions_.size());
+    instance_info.ppEnabledExtensionNames = instance_extensions_.data();
 
     vk::assert_success(vk::CreateInstance(&instance_info, nullptr, &ctx_.instance));
 }
