@@ -227,9 +227,8 @@ void Shell::create_dev()
     dev_info.enabledExtensionCount = (uint32_t)device_extensions_.size();
     dev_info.ppEnabledExtensionNames = device_extensions_.data();
 
-    // enable all features
-    VkPhysicalDeviceFeatures features;
-    vk::GetPhysicalDeviceFeatures(ctx_.physical_dev, &features);
+    // disable all features
+    VkPhysicalDeviceFeatures features = {};
     dev_info.pEnabledFeatures = &features;
 
     vk::assert_success(vk::CreateDevice(ctx_.physical_dev, &dev_info, nullptr, &ctx_.dev));
