@@ -73,7 +73,7 @@ private:
 
 ShellAndroid::ShellAndroid(android_app &app, Game &game) : Shell(game), app_(app)
 {
-    global_extensions_.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+    instance_extensions_.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 
     app_dummy();
     app_.userData = this;

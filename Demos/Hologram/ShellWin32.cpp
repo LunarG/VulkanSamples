@@ -63,7 +63,7 @@ private:
 
 ShellWin32::ShellWin32(Game &game) : Shell(game), hwnd_(nullptr)
 {
-    global_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    instance_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     init_vk();
 }
 
