@@ -206,6 +206,11 @@ extern PFN_vkCreateWin32SurfaceKHR CreateWin32SurfaceKHR;
 extern PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR GetPhysicalDeviceWin32PresentationSupportKHR;
 #endif
 
+// VK_EXT_debug_report
+extern PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallbackEXT;
+extern PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT;
+extern PFN_vkDebugReportMessageEXT DebugReportMessageEXT;
+
 void init_dispatch_table_top(PFN_vkGetInstanceProcAddr get_instance_proc_addr);
 void init_dispatch_table_middle(VkInstance instance, bool include_bottom);
 void init_dispatch_table_bottom(VkInstance instance, VkDevice dev);
