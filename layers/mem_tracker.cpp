@@ -77,6 +77,7 @@ struct layer_data {
     // Images and Buffers are 2 objects that can have memory bound to them so they get special treatment
     unordered_map<uint64_t,            MT_OBJ_BINDING_INFO>      imageMap;
     unordered_map<uint64_t,            MT_OBJ_BINDING_INFO>      bufferMap;
+    unordered_map<VkBufferView, VkBufferViewCreateInfo> bufferViewMap;
 
     layer_data() :
         report_data(nullptr),
@@ -2162,9 +2163,25 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBufferView(
         validate_buffer_usage_flags(my_data, device, pCreateInfo->buffer,
                     VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT,
                     VK_FALSE, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
+        my_data->bufferViewMap[*pView] = *pCreateInfo;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyBufferView(VkDevice device, VkBufferView bufferView,
+                    const VkAllocationCallbacks *pAllocator) {
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    my_data->device_dispatch_table->DestroyBufferView(device, bufferView,
+                                                      pAllocator);
+    loader_platform_thread_lock_mutex(&globalLock);
+    auto item = my_data->bufferViewMap.find(bufferView);
+    if (item != my_data->bufferViewMap.end()) {
+        my_data->bufferViewMap.erase(item);
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(
@@ -2465,16 +2482,34 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUpdateDescriptorSets(
     const VkCopyDescriptorSet*                  pDescriptorCopies)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    uint32_t j = 0;
     for (uint32_t i = 0; i < descriptorWriteCount; ++i) {
         if (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
-            my_data->descriptorSetMap[pDescriptorWrites[i].dstSet].images.push_back(pDescriptorWrites[i].pImageInfo->imageView);
+            for (j = 0; j < pDescriptorWrites[i].descriptorCount; ++j) {
+                my_data->descriptorSetMap[pDescriptorWrites[i].dstSet]
+                    .images.push_back(
+                        pDescriptorWrites[i].pImageInfo[j].imageView);
+            }
         } else if (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER ) {
-            // TODO: Handle texel buffer writes
+            for (j = 0; j < pDescriptorWrites[i].descriptorCount; ++j) {
+                my_data->descriptorSetMap[pDescriptorWrites[i].dstSet]
+                    .buffers.push_back(
+                        my_data
+                            ->bufferViewMap[pDescriptorWrites[i]
+                                                .pTexelBufferView[j]]
+                            .buffer);
+            }
         } else if (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
                    pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
-            my_data->descriptorSetMap[pDescriptorWrites[i].dstSet].buffers.push_back(pDescriptorWrites[i].pBufferInfo->buffer);
+            for (j = 0; j < pDescriptorWrites[i].descriptorCount; ++j) {
+                my_data->descriptorSetMap[pDescriptorWrites[i].dstSet]
+                    .buffers.push_back(
+                        pDescriptorWrites[i].pBufferInfo[j].buffer);
+            }
         }
     }
+    // TODO : Need to handle descriptor copies. Will wait on this until merge w/
+    // draw_state
     my_data->device_dispatch_table->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
 }
 
@@ -3419,6 +3454,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkDestroyFence;
     if (!strcmp(funcName, "vkDestroyBuffer"))
         return (PFN_vkVoidFunction) vkDestroyBuffer;
+    if (!strcmp(funcName, "vkDestroyBufferView"))
+        return (PFN_vkVoidFunction)vkDestroyBufferView;
     if (!strcmp(funcName, "vkDestroyImage"))
         return (PFN_vkVoidFunction) vkDestroyImage;
     if (!strcmp(funcName, "vkBindBufferMemory"))
