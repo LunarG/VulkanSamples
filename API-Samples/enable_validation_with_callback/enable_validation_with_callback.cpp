@@ -79,12 +79,15 @@ int sample_main() {
      * though order doesn't really matter for these validation
      * layers.
      */
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_threading");
+    info.instance_layer_names.push_back("VK_LAYER_GOOGLE_threading");
+    info.instance_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
     info.instance_layer_names.push_back("VK_LAYER_LUNARG_draw_state");
     info.instance_layer_names.push_back("VK_LAYER_LUNARG_image");
     info.instance_layer_names.push_back("VK_LAYER_LUNARG_mem_tracker");
     info.instance_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
     info.instance_layer_names.push_back("VK_LAYER_LUNARG_param_checker");
+    info.instance_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
+    info.instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
 
     if (!demo_check_layers(info.instance_layer_properties,
                            info.instance_layer_names)) {
@@ -130,12 +133,15 @@ int sample_main() {
      * Instance layers and Device layers are independent so
      * must enable validation layers for both to see everything.
      */
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_threading");
+    info.device_layer_names.push_back("VK_LAYER_GOOGLE_threading");
+    info.device_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
     info.device_layer_names.push_back("VK_LAYER_LUNARG_draw_state");
     info.device_layer_names.push_back("VK_LAYER_LUNARG_image");
     info.device_layer_names.push_back("VK_LAYER_LUNARG_mem_tracker");
     info.device_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
     info.device_layer_names.push_back("VK_LAYER_LUNARG_param_checker");
+    info.device_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
+    info.device_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
 
     if (!demo_check_layers(info.device_layer_properties,
                            info.device_layer_names)) {
