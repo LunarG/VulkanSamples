@@ -13,7 +13,7 @@ apply plugin: 'com.android.model.application'
 def samplesDir = "../../.."
 def hologramDir = "${samplesDir}/Demos/Hologram"
 def glmDir = "${samplesDir}/API-Samples/utils"
-def vulkanDir = "${samplesDir}/../vulkan/src"
+def vulkanDir = "${samplesDir}/../Vulkan-Docs/src"
 
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
