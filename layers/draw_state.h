@@ -581,9 +581,8 @@ struct ImageSubresourcePair {
 };
 
 bool operator==(const ImageSubresourcePair &img1, const ImageSubresourcePair &img2) {
-    return (img1.image == img2.image &&
-            img1.hasSubresource == img2.hasSubresource &&
-            img1.subresource.aspectMask == img2.subresource.aspectMask &&
+    if (img1.image != img2.image || img1.hasSubresource != img2.hasSubresource) return false;
+    return !img1.hasSubresource || (img1.subresource.aspectMask == img2.subresource.aspectMask &&
             img1.subresource.mipLevel == img2.subresource.mipLevel &&
             img1.subresource.arrayLayer == img2.subresource.arrayLayer);
 }
@@ -593,16 +592,12 @@ template <> struct hash<ImageSubresourcePair> {
     size_t operator()(ImageSubresourcePair img) const throw() {
         size_t hashVal =
             hash<uint64_t>()(reinterpret_cast<uint64_t &>(img.image));
-        hashVal ^=
-            hash<uint32_t>()(reinterpret_cast<uint32_t &>(img.hasSubresource)) +
-            0x9e3779b9 + (hashVal << 6) + (hashVal >> 2);
-        hashVal ^= hash<uint32_t>()(reinterpret_cast<uint32_t &>(
-                       img.subresource.aspectMask)) +
-                   0x9e3779b9 + (hashVal << 6) + (hashVal >> 2);
-        hashVal ^= hash<uint32_t>()(img.subresource.mipLevel) + 0x9e3779b9 +
-                   (hashVal << 6) + (hashVal >> 2);
-        hashVal ^= hash<uint32_t>()(img.subresource.arrayLayer) + 0x9e3779b9 +
-                   (hashVal << 6) + (hashVal >> 2);
+        hashVal ^= hash<bool>()(img.hasSubresource);
+        if (img.hasSubresource) {
+            hashVal ^= hash<uint32_t>()(reinterpret_cast<uint32_t &>(img.subresource.aspectMask));
+            hashVal ^= hash<uint32_t>()(img.subresource.mipLevel);
+            hashVal ^= hash<uint32_t>()(img.subresource.arrayLayer);
+        }
         return hashVal;
     }
 };
