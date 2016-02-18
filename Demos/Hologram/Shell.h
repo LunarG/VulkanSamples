@@ -101,11 +101,11 @@ protected:
     Game &game_;
     const Game::Settings &settings_;
 
-    std::vector<const char *> global_extensions_;
+    std::vector<const char *> instance_extensions_;
     std::vector<const char *> device_extensions_;
 
 private:
-    void assert_all_global_extensions() const;
+    void assert_all_instance_extensions() const;
     bool has_all_device_extensions(VkPhysicalDevice phy) const;
 
     // called by init_vk
