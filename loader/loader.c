@@ -2273,37 +2273,6 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
     file = loc;
     while (*file) {
         next_file = loader_get_next_path(file);
-#if !defined(_WIN32)
-        if (home_location != NULL && (next_file == NULL || *next_file == '\0')) {
-            char *home = secure_getenv("HOME");
-            if (home != NULL) {
-                size_t len;
-                char *home_loc = loader_stack_alloc(strlen(home) + 2 +
-                                                    strlen(home_location));
-                if (home_loc == NULL) {
-                    loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                           "Out of memory can't get manifest files");
-                    return;
-                }
-                strcpy(home_loc, home);
-                // Add directory separator if needed
-                if (home_location[0] != DIRECTORY_SYMBOL) {
-                    len = strlen(home_loc);
-                    home_loc[len] = DIRECTORY_SYMBOL;
-                    home_loc[len+1] = '\0';
-                }
-                strcat(home_loc, home_location);
-                file = home_loc;
-                next_file = loader_get_next_path(file);
-                home_location = NULL;
-
-                loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
-                       "Searching the following paths for manifest files: %s\n",
-                           home_loc);
-                list_is_dirs = true;
-            }
-        }
-#endif
         if (list_is_dirs) {
             sysdir = opendir(file);
             name = NULL;
@@ -2386,6 +2355,38 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
         if (sysdir)
             closedir(sysdir);
         file = next_file;
+#if !defined(_WIN32)
+        if (home_location != NULL && (next_file == NULL || *next_file == '\0')
+                && override == NULL) {
+            char *home = secure_getenv("HOME");
+            if (home != NULL) {
+                size_t len;
+                char *home_loc = loader_stack_alloc(strlen(home) + 2 +
+                                                    strlen(home_location));
+                if (home_loc == NULL) {
+                    loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                           "Out of memory can't get manifest files");
+                    return;
+                }
+                strcpy(home_loc, home);
+                // Add directory separator if needed
+                if (home_location[0] != DIRECTORY_SYMBOL) {
+                    len = strlen(home_loc);
+                    home_loc[len] = DIRECTORY_SYMBOL;
+                    home_loc[len+1] = '\0';
+                }
+                strcat(home_loc, home_location);
+                file = home_loc;
+                next_file = loader_get_next_path(file);
+                home_location = NULL;
+
+                loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
+                       "Searching the following paths for manifest files: %s\n",
+                           home_loc);
+                list_is_dirs = true;
+            }
+        }
+#endif
     }
     return;
 }
