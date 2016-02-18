@@ -3717,7 +3717,10 @@ VkBool32 ValidateCmdBufImageLayouts(VkCommandBuffer cmdBuffer) {
                 "Cannot submit cmd buffer using deleted image %" PRIu64 ".",
                 reinterpret_cast<const uint64_t &>(cb_image_data.first));
         } else {
-            if (imageLayout != cb_image_data.second.initialLayout) {
+            if (cb_image_data.second.initialLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
+                // TODO: Set memory invalid which is in mem_tracker currently
+            }
+            else if (imageLayout != cb_image_data.second.initialLayout) {
                 skip_call |= log_msg(
                     dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                     VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__,
