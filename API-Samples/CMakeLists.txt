@@ -52,6 +52,21 @@ endfunction(sampleExtSPIRVShaders)
 # function to build a simple single-source-file sample
 #   - assumes S_TARGETS set to list of build targets
 function(sampleWithSingleFile)
+    # Projectwide settings.
+    # Product flavor (ABI).
+    # mips & mips64 does not work with -finline_functions flag.
+    set (SUPPORTED_ABI armeabi-v7a arm64-v8a x86 x86_64)
+    if (";${SUPPORTED_ABI};" MATCHES ";${ANDROID_ABI};")
+        set (FLAVOR "${ANDROID_ABI}")
+        set (ABI_FILTER "ndk.abiFilters.add(\"${ANDROID_ABI}\")")
+    else()
+        set (FLAVOR "all")
+        foreach(ABI ${SUPPORTED_ABI})
+            set (ABI_FILTER
+              "${ABI_FILTER}\n            ndk.abiFilters.add(\"${ABI}\")")
+        endforeach(ABI)
+    endif()
+
     foreach(TARG ${S_TARGETS})
         set(SAMPLE_NAME ${TARG})
         if(ANDROID)
