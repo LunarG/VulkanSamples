@@ -39,12 +39,10 @@
 #define NOMINMAX              /* Don't let Windows define min() or max() */
 #define APP_NAME_STR_LEN 80
 #elif defined(__ANDROID__)
+// Include files for Android
 #include <unistd.h>
 #include <android/log.h>
-#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "threaded_app", __VA_ARGS__))
-#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "threaded_app", __VA_ARGS__))
-// Replace printf to logcat output.
-#define printf(...) __android_log_print(ANDROID_LOG_DEBUG, "TAG", __VA_ARGS__);
+#include "vulkan_wrapper.h" // Include Vulkan_wrapper and dynamically load symbols.
 #else //__ANDROID__
 #define VK_USE_PLATFORM_XCB_KHR
 #include <unistd.h>
@@ -287,7 +285,12 @@ timestamp_t get_milliseconds();
 int sample_main();
 
 #ifdef __ANDROID__
-// Android specific helpers.
+// Android specific definitions & helpers.
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "threaded_app", __VA_ARGS__))
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "threaded_app", __VA_ARGS__))
+// Replace printf to logcat output.
+#define printf(...) __android_log_print(ANDROID_LOG_DEBUG, "TAG", __VA_ARGS__);
+
 bool Android_process_command();
 ANativeWindow* AndroidGetApplicationWindow();
 FILE* AndroidFopen(const char* fname, const char* mode);

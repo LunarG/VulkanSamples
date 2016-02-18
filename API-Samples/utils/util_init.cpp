@@ -74,6 +74,16 @@ VkResult init_global_layer_properties(struct sample_info &info) {
     uint32_t instance_layer_count;
     VkLayerProperties *vk_props = NULL;
     VkResult res;
+#ifdef __ANDROID__
+    // This place is the first place for samples to use Vulkan APIs.
+    // Here, we are going to open Vulkan.so on the device and retrieve function pointers using
+    // vulkan_wrapper helper.
+    if (!InitVulkan()) {
+        LOGE("Failied initializing Vulkan APIs!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+    LOGI("Loaded Vulkan APIs.");
+#endif
 
     /*
      * It's possible, though very rare, that the number of

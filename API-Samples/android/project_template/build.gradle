@@ -3,10 +3,10 @@ apply plugin: 'com.android.model.application'
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
 def ndkDir = properties.getProperty('ndk.dir')
-def vulkanLibDir  = file(project.rootProject.projectDir).absolutePath + "/../../../vulkan"
 def shadercLibPath = file(project.rootProject.projectDir).absolutePath + "/../../../shaderc"
-def vulkanWrapperPath = file(project.rootProject.projectDir).absolutePath + "/../../../vulkan_wrapper"
 def validationLayerDir  = file(project.rootProject.projectDir).absolutePath + "/../../../LoaderAndTools/"
+def vulkanLibDir  = file(project.rootProject.projectDir).absolutePath + "/../../../vulkan"
+def vulkanWrapperPath = file(project.rootProject.projectDir).absolutePath + "/vulkan_wrapper"
 
 def stlType = "c++_static"
 
@@ -17,14 +17,6 @@ model {
                 headers.srcDir "${shadercLibPath}/include"
                 binaries.withType(StaticLibraryBinary) {
                     staticLibraryFile = file("${shadercLibPath}/lib/${stlType}/${targetPlatform.getName()}/libshaderc.a")
-                }
-            }
-        }
-        libs(PrebuiltLibraries) {
-            vulkan {
-                headers.srcDir "${vulkanLibDir}/include"
-                binaries.withType(SharedLibraryBinary) {
-                    sharedLibraryFile = file("${vulkanLibDir}/lib/${targetPlatform.getName()}/libvulkan.so")
                 }
             }
         }
@@ -56,11 +48,11 @@ model {
         stl = stlType
         ldLibs.addAll(["log", "android"])
         cppFlags.add("-I${file("${ndkDir}/sources/android/native_app_glue")}".toString())
+        cppFlags.add("-I${file("../../data")}".toString())
         cppFlags.add("-I${file("../../utils")}".toString())
         cppFlags.add("-I${file("../../utils/glm")}".toString())
-        cppFlags.add("-I${file("../../data")}".toString())
         cppFlags.add("-I${file(vulkanWrapperPath)}".toString())
-        cppFlags.add("-D VK_PROTOTYPES")
+        cppFlags.add("-I${file("${vulkanLibDir}/include")}".toString())
         cppFlags.add("-D VK_USE_PLATFORM_ANDROID_KHR")
         cppFlags.add("-D VULKAN_SAMPLES_BASE_DIR=\".\"")
         @OTHER_FLAGS@
@@ -71,15 +63,14 @@ model {
             jni {
                 dependencies {
                     project ":nativeactivity" linkage "static"
-                    library "vulkan"          linkage "shared"
                     @SHADERC_LINKAGE@
                  }
                 source {
                     srcDir 'src/main/jni'
                     srcDir '../../@SAMPLE_NAME@'
-                    srcDir '../../utils'
                     srcDir '../../ext/'
-                    //srcDir vulkanWrapperPath
+                    srcDir '../../utils'
+                    srcDir vulkanWrapperPath
                 }
             }
             assets {
@@ -103,23 +94,23 @@ model {
     android.productFlavors {
         // for detailed abiFilter descriptions, refer to "Supported ABIs" @
         // https://developer.android.com/ndk/guides/abis.html#sa
-        //create("arm") {
-        //    ndk.abiFilters.add("armeabi")
-        //}
-        //create("armv7") {
-        //    ndk.abiFilters.add("armeabi-v7a")
-        //}
-        //create("armv8") {
-        //    ndk.abiFilters.add("arm64-v8a")
-        //}
-        create("x86") {
-            ndk.abiFilters.add("x86")
+//        create("arm") {
+//            ndk.abiFilters.add("armeabi")
+//        }
+//        create("armv7") {
+//            ndk.abiFilters.add("armeabi-v7a")
+//        }
+        create("armv8") {
+            ndk.abiFilters.add("arm64-v8a")
         }
-        create("x86-64") {
-            ndk.abiFilters.add("x86_64")
-        }
+//        create("x86") {
+//            ndk.abiFilters.add("x86")
+//        }
+//        create("x86-64") {
+//            ndk.abiFilters.add("x86_64")
+//        }
         // To include all cpu architectures, leaves abiFilters empty
-        // create("all")
+//        create("all")
     }
 }
 
