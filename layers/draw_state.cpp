@@ -6172,7 +6172,10 @@ VkBool32 TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCo
                               {mem_barrier->oldLayout, mem_barrier->newLayout});
                     continue;
                 }
-                if (node.layout != mem_barrier->oldLayout) {
+                if (mem_barrier->oldLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
+                    // TODO: Set memory invalid which is in mem_tracker currently
+                }
+                else if (node.layout != mem_barrier->oldLayout) {
                     skip |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                         (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
