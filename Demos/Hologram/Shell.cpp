@@ -275,6 +275,12 @@ void Shell::create_swapchain()
 {
     ctx_.surface = create_surface(ctx_.instance);
 
+    VkBool32 supported;
+    vk::assert_success(vk::GetPhysicalDeviceSurfaceSupportKHR(ctx_.physical_dev,
+                ctx_.present_queue_family, ctx_.surface, &supported));
+    // this should be guaranteed by the platform-specific can_present call
+    assert(supported);
+
     std::vector<VkSurfaceFormatKHR> formats;
     vk::get(ctx_.physical_dev, ctx_.surface, formats);
     ctx_.format = formats[0];
