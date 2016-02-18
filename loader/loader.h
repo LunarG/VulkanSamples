@@ -84,7 +84,7 @@ static const char UTF8_DATA_BYTE_CODE = 0x80;
 static const char UTF8_DATA_BYTE_MASK = 0xC0;
 
 static const char std_validation_names[9][VK_MAX_EXTENSION_NAME_SIZE] = {
-    "VK_LAYER_LUNARG_threading",     "VK_LAYER_LUNARG_param_checker",
+    "VK_LAYER_GOOGLE_threading",     "VK_LAYER_LUNARG_param_checker",
     "VK_LAYER_LUNARG_device_limits", "VK_LAYER_LUNARG_object_tracker",
     "VK_LAYER_LUNARG_image",         "VK_LAYER_LUNARG_mem_tracker",
     "VK_LAYER_LUNARG_draw_state",    "VK_LAYER_LUNARG_swapchain",
