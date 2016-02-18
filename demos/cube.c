@@ -1923,9 +1923,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         demo_run(&demo);
         break;
     case WM_SIZE:
-        demo.width = lParam & 0xffff;
-        demo.height = lParam & 0xffff0000 >> 16;
-        demo_resize(&demo);
+        // Resize the application to the new window size, except when
+        // it was minimized. Vulkan doesn't support images or swapchains
+        // with width=0 and height=0.
+        if (wParam != SIZE_MINIMIZED) {
+            demo.width = lParam & 0xffff;
+            demo.height = lParam & 0xffff0000 >> 16;
+            demo_resize(&demo);
+        }
         break;
     default:
         break;
