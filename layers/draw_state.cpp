@@ -1873,6 +1873,39 @@ static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice de
 {
     VkBool32 skipCall = VK_FALSE;
 
+    if (pPipeline->graphicsPipelineCI.pColorBlendState != NULL) {
+        if (!my_data->physDevProperties.features.independentBlend) {
+            VkPipelineColorBlendAttachmentState *pAttachments = pPipeline->pAttachments;
+            for (uint i = 1 ; i < pPipeline->attachmentCount ; i++) {
+                if ((pAttachments[0].blendEnable != pAttachments[i].blendEnable) ||
+                    (pAttachments[0].srcColorBlendFactor != pAttachments[i].srcColorBlendFactor) ||
+                    (pAttachments[0].dstColorBlendFactor != pAttachments[i].dstColorBlendFactor) ||
+                    (pAttachments[0].colorBlendOp != pAttachments[i].colorBlendOp) ||
+                    (pAttachments[0].srcAlphaBlendFactor != pAttachments[i].srcAlphaBlendFactor) ||
+                    (pAttachments[0].dstAlphaBlendFactor != pAttachments[i].dstAlphaBlendFactor) ||
+                    (pAttachments[0].alphaBlendOp != pAttachments[i].alphaBlendOp) ||
+                    (pAttachments[0].colorWriteMask != pAttachments[i].colorWriteMask)) {
+                    skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                        (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INDEPENDENT_BLEND, "DS",
+                                        "Invalid Pipeline CreateInfo: If independent blend feature not enabled, all elements of pAttachments must be identical");
+                }
+            }
+        }
+        if (!my_data->physDevProperties.features.logicOp &&
+            (pPipeline->graphicsPipelineCI.pColorBlendState->logicOpEnable != VK_FALSE)) {
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_DISABLED_LOGIC_OP, "DS",
+                                "Invalid Pipeline CreateInfo: If logic operations feature not enabled, logicOpEnable must be VK_FALSE");
+        }
+        if ((pPipeline->graphicsPipelineCI.pColorBlendState->logicOpEnable == VK_TRUE) &&
+            (pPipeline->graphicsPipelineCI.pColorBlendState->logicOp < VK_LOGIC_OP_CLEAR) ||
+            (pPipeline->graphicsPipelineCI.pColorBlendState->logicOp > VK_LOGIC_OP_SET)) {
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_LOGIC_OP, "DS",
+                                "Invalid Pipeline CreateInfo: If logicOpEnable is VK_TRUE, logicOp must be a valid VkLogicOp value");
+        }
+    }
+
     if (!validate_pipeline_shaders(my_data, device, pPipeline)) {
         skipCall = VK_TRUE;
     }

@@ -193,6 +193,12 @@ typedef enum _DRAW_STATE_ERROR {
                                              // violate device limit
     DRAWSTATE_INVALID_STORAGE_BUFFER_OFFSET, // Dynamic Storage Buffer Offsets
                                              // violate device limit
+    DRAWSTATE_INDEPENDENT_BLEND, // If independent blending is not enabled, all
+                                 // elements of pAttachmentsMustBeIdentical
+    DRAWSTATE_DISABLED_LOGIC_OP, // If logic operations is not enabled, logicOpEnable
+                                 // must be VK_FALSE
+    DRAWSTATE_INVALID_LOGIC_OP,  // If logicOpEnable is VK_TRUE, logicOp must
+                                 // must be a valid VkLogicOp value
 } DRAW_STATE_ERROR;
 
 typedef enum _SHADER_CHECKER_ERROR {
