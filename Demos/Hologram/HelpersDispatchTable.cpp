@@ -181,6 +181,9 @@ PFN_vkCreateAndroidSurfaceKHR CreateAndroidSurfaceKHR;
 PFN_vkCreateWin32SurfaceKHR CreateWin32SurfaceKHR;
 PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR GetPhysicalDeviceWin32PresentationSupportKHR;
 #endif
+PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallbackEXT;
+PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT;
+PFN_vkDebugReportMessageEXT DebugReportMessageEXT;
 
 void init_dispatch_table_top(PFN_vkGetInstanceProcAddr get_instance_proc_addr)
 {
@@ -252,6 +255,9 @@ void init_dispatch_table_middle(VkInstance instance, bool include_bottom)
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     GetPhysicalDeviceWin32PresentationSupportKHR = reinterpret_cast<PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR>(GetInstanceProcAddr(instance, "vkGetPhysicalDeviceWin32PresentationSupportKHR"));
 #endif
+    CreateDebugReportCallbackEXT = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(GetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT"));
+    DestroyDebugReportCallbackEXT = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(GetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT"));
+    DebugReportMessageEXT = reinterpret_cast<PFN_vkDebugReportMessageEXT>(GetInstanceProcAddr(instance, "vkDebugReportMessageEXT"));
 
     if (!include_bottom)
         return;

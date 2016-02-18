@@ -236,7 +236,7 @@ vk_core = Extension(name='VK_core', version=0, guard=None, commands=[
     Command(name='CmdExecuteCommands', dispatch='VkCommandBuffer'),
 ])
 
-vk_khr_surface = Extension(name='VK_KHR_surface', version=24, guard=None, commands=[
+vk_khr_surface = Extension(name='VK_KHR_surface', version=25, guard=None, commands=[
     Command(name='DestroySurfaceKHR', dispatch='VkInstance'),
     Command(name='GetPhysicalDeviceSurfaceSupportKHR', dispatch='VkPhysicalDevice'),
     Command(name='GetPhysicalDeviceSurfaceCapabilitiesKHR', dispatch='VkPhysicalDevice'),
@@ -286,13 +286,19 @@ vk_khr_mir_surface = Extension(name='VK_KHR_mir_surface', version=4, guard='VK_U
     Command(name='GetPhysicalDeviceMirPresentationSupportKHR', dispatch='VkPhysicalDevice'),
 ])
 
-vk_khr_android_surface = Extension(name='VK_KHR_android_surface', version=5, guard='VK_USE_PLATFORM_ANDROID_KHR', commands=[
+vk_khr_android_surface = Extension(name='VK_KHR_android_surface', version=6, guard='VK_USE_PLATFORM_ANDROID_KHR', commands=[
     Command(name='CreateAndroidSurfaceKHR', dispatch='VkInstance'),
 ])
 
 vk_khr_win32_surface = Extension(name='VK_KHR_win32_surface', version=5, guard='VK_USE_PLATFORM_WIN32_KHR', commands=[
     Command(name='CreateWin32SurfaceKHR', dispatch='VkInstance'),
     Command(name='GetPhysicalDeviceWin32PresentationSupportKHR', dispatch='VkPhysicalDevice'),
+])
+
+vk_ext_debug_report = Extension(name='VK_EXT_debug_report', version=1, guard=None, commands=[
+    Command(name='CreateDebugReportCallbackEXT', dispatch='VkInstance'),
+    Command(name='DestroyDebugReportCallbackEXT', dispatch='VkInstance'),
+    Command(name='DebugReportMessageEXT', dispatch='VkInstance'),
 ])
 
 extensions = [
@@ -307,6 +313,7 @@ extensions = [
     vk_khr_mir_surface,
     vk_khr_android_surface,
     vk_khr_win32_surface,
+    vk_ext_debug_report,
 ]
 
 def generate_header(guard):
