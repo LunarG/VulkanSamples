@@ -40,7 +40,24 @@ Shell::Shell(Game &game)
 
     // require "standard" validation layers
     if (settings_.validate) {
-        device_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
+        instance_layers_.push_back("VK_LAYER_GOOGLE_threading");
+        instance_layers_.push_back("VK_LAYER_LUNARG_param_checker");
+        instance_layers_.push_back("VK_LAYER_LUNARG_device_limits");
+        instance_layers_.push_back("VK_LAYER_LUNARG_object_tracker");
+        instance_layers_.push_back("VK_LAYER_LUNARG_image");
+        instance_layers_.push_back("VK_LAYER_LUNARG_mem_tracker");
+        instance_layers_.push_back("VK_LAYER_LUNARG_draw_state");
+        instance_layers_.push_back("VK_LAYER_LUNARG_swapchain");
+        instance_layers_.push_back("VK_LAYER_GOOGLE_unique_objects");
+        device_layers_.push_back("VK_LAYER_GOOGLE_threading");
+        device_layers_.push_back("VK_LAYER_LUNARG_param_checker");
+        device_layers_.push_back("VK_LAYER_LUNARG_device_limits");
+        device_layers_.push_back("VK_LAYER_LUNARG_object_tracker");
+        device_layers_.push_back("VK_LAYER_LUNARG_image");
+        device_layers_.push_back("VK_LAYER_LUNARG_mem_tracker");
+        device_layers_.push_back("VK_LAYER_LUNARG_draw_state");
+        device_layers_.push_back("VK_LAYER_LUNARG_swapchain");
+        device_layers_.push_back("VK_LAYER_GOOGLE_unique_objects");
 
         instance_extensions_.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
     }
