@@ -89,7 +89,7 @@ ShellAndroid::~ShellAndroid()
     dlclose(lib_handle_);
 }
 
-void ShellAndroid::log(LogPriority priority, const char *msg)
+void ShellAndroid::log(LogPriority priority, const char *msg) const
 {
     int prio;
 
