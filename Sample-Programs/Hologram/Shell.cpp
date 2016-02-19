@@ -127,6 +127,12 @@ void Shell::assert_all_instance_extensions() const
     for (const auto &ext : exts)
         ext_names.insert(ext.extensionName);
 
+    for (auto &layer : instance_layers_) {
+        vk::enumerate(layer, exts);
+        for (const auto &ext : exts)
+            ext_names.insert(ext.extensionName);
+    }
+
     // all listed instance extensions are required
     for (const auto &name : instance_extensions_) {
         if (ext_names.find(name) == ext_names.end()) {
@@ -165,6 +171,12 @@ bool Shell::has_all_device_extensions(VkPhysicalDevice phy) const
     std::set<std::string> ext_names;
     for (const auto &ext : exts)
         ext_names.insert(ext.extensionName);
+
+    for (auto &layer : device_layers_) {
+        vk::enumerate(phy, layer, exts);
+        for (const auto &ext : exts)
+            ext_names.insert(ext.extensionName);
+    }
 
     // all listed device extensions are required
     for (const auto &name : device_extensions_) {
