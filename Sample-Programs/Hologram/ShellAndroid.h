@@ -31,7 +31,7 @@ public:
     ShellAndroid(android_app &app, Game &game);
     ~ShellAndroid();
 
-    void log(LogPriority priority, const char *msg);
+    void log(LogPriority priority, const char *msg) const;
 
     void run();
     void quit();

@@ -78,7 +78,7 @@ public:
         LOG_WARN,
         LOG_ERR,
     };
-    virtual void log(LogPriority priority, const char *msg);
+    virtual void log(LogPriority priority, const char *msg) const;
 
     virtual void run() = 0;
     virtual void quit() = 0;
