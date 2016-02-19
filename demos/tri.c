@@ -1728,47 +1728,71 @@ static void demo_init_vk(struct demo *demo) {
     uint32_t instance_extension_count = 0;
     uint32_t instance_layer_count = 0;
     uint32_t device_validation_layer_count = 0;
+    char **instance_validation_layers = NULL;
     demo->enabled_extension_count = 0;
     demo->enabled_layer_count = 0;
 
-    char *instance_validation_layers[] = {
-        "VK_LAYER_LUNARG_mem_tracker",
-        "VK_LAYER_GOOGLE_unique_objects",
+    char *instance_validation_layers_alt1[] = {
+        "VK_LAYER_LUNARG_standard_validation"
     };
 
-    demo->device_validation_layers[0] = "VK_LAYER_LUNARG_mem_tracker";
-    demo->device_validation_layers[1] = "VK_LAYER_GOOGLE_unique_objects";
-    device_validation_layer_count = 2;
+    char *instance_validation_layers_alt2[] = {
+        "VK_LAYER_GOOGLE_threading",     "VK_LAYER_LUNARG_param_checker",
+        "VK_LAYER_LUNARG_device_limits", "VK_LAYER_LUNARG_object_tracker",
+        "VK_LAYER_LUNARG_image",         "VK_LAYER_LUNARG_mem_tracker",
+        "VK_LAYER_LUNARG_draw_state",    "VK_LAYER_LUNARG_swapchain",
+        "VK_LAYER_GOOGLE_unique_objects"
+    };
 
     /* Look for validation layers */
     VkBool32 validation_found = 0;
-    err = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
-    assert(!err);
+    if (demo->validate) {
 
-    if (instance_layer_count > 0) {
-        VkLayerProperties *instance_layers =
-            malloc(sizeof(VkLayerProperties) * instance_layer_count);
-        err = vkEnumerateInstanceLayerProperties(&instance_layer_count,
-                                                 instance_layers);
+        err = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
         assert(!err);
 
-        if (demo->validate) {
+        instance_validation_layers = instance_validation_layers_alt1;
+        if (instance_layer_count > 0) {
+            VkLayerProperties *instance_layers =
+                    malloc(sizeof (VkLayerProperties) * instance_layer_count);
+            err = vkEnumerateInstanceLayerProperties(&instance_layer_count,
+                    instance_layers);
+            assert(!err);
+
+
             validation_found = demo_check_layers(
-                ARRAY_SIZE(instance_validation_layers),
-                instance_validation_layers, instance_layer_count,
-                instance_layers);
-            demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers);
+                    ARRAY_SIZE(instance_validation_layers_alt1),
+                    instance_validation_layers, instance_layer_count,
+                    instance_layers);
+            if (validation_found) {
+                demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers_alt1);
+                demo->device_validation_layers[0] = "VK_LAYER_LUNARG_standard_validation";
+                device_validation_layer_count = 1;
+            } else {
+                // use alternative set of validation layers
+                instance_validation_layers = instance_validation_layers_alt2;
+                demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers_alt2);
+                validation_found = demo_check_layers(
+                    ARRAY_SIZE(instance_validation_layers_alt2),
+                    instance_validation_layers, instance_layer_count,
+                    instance_layers);
+                device_validation_layer_count =
+                        ARRAY_SIZE(instance_validation_layers_alt2);
+                for (uint32_t i = 0; i < device_validation_layer_count; i++) {
+                    demo->device_validation_layers[i] =
+                            instance_validation_layers[i];
+                }
+            }
+            free(instance_layers);
         }
 
-        free(instance_layers);
-    }
-
-    if (demo->validate && !validation_found) {
-        ERR_EXIT("vkEnumerateInstanceLayerProperties failed to find"
-                 "required validation layer.\n\n"
-                 "Please look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
+        if (!validation_found) {
+            ERR_EXIT("vkEnumerateInstanceLayerProperties failed to find"
+                    "required validation layer.\n\n"
+                    "Please look at the Getting Started guide for additional "
+                    "information.\n",
+                    "vkCreateInstance Failure");
+        }
     }
 
     /* Look for instance extensions */
@@ -1913,40 +1937,41 @@ static void demo_init_vk(struct demo *demo) {
     }
 
     /* Look for validation layers */
-    validation_found = 0;
-    demo->enabled_layer_count = 0;
-    uint32_t device_layer_count = 0;
-    err =
-        vkEnumerateDeviceLayerProperties(demo->gpu, &device_layer_count, NULL);
-    assert(!err);
-
-    if (device_layer_count > 0) {
-        VkLayerProperties *device_layers =
-            malloc(sizeof(VkLayerProperties) * device_layer_count);
-        err = vkEnumerateDeviceLayerProperties(demo->gpu, &device_layer_count,
-                                               device_layers);
+    if (demo->validate) {
+        validation_found = 0;
+        demo->enabled_layer_count = 0;
+        uint32_t device_layer_count = 0;
+        err =
+                vkEnumerateDeviceLayerProperties(demo->gpu, &device_layer_count, NULL);
         assert(!err);
 
-        if (demo->validate) {
+        if (device_layer_count > 0) {
+            VkLayerProperties *device_layers =
+                    malloc(sizeof (VkLayerProperties) * device_layer_count);
+            err = vkEnumerateDeviceLayerProperties(demo->gpu, &device_layer_count,
+                    device_layers);
+            assert(!err);
+
+
             validation_found = demo_check_layers(device_validation_layer_count,
-                                                 demo->device_validation_layers,
-                                                 device_layer_count,
-                                                 device_layers);
+                    demo->device_validation_layers,
+                    device_layer_count,
+                    device_layers);
             demo->enabled_layer_count = device_validation_layer_count;
+
+            free(device_layers);
         }
 
-        free(device_layers);
+        if (!validation_found) {
+            ERR_EXIT("vkEnumerateDeviceLayerProperties failed to find "
+                    "a required validation layer.\n\n"
+                    "Please look at the Getting Started guide for additional "
+                    "information.\n",
+                    "vkCreateDevice Failure");
+        }
     }
 
-    if (demo->validate && !validation_found) {
-        ERR_EXIT("vkEnumerateDeviceLayerProperties failed to find "
-                 "a required validation layer.\n\n"
-                 "Please look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateDevice Failure");
-    }
-
-    /* Loog for device extensions */
+    /* Look for device extensions */
     uint32_t device_extension_count = 0;
     VkBool32 swapchainExtFound = 0;
     demo->enabled_extension_count = 0;
@@ -2228,6 +2253,8 @@ static void demo_init(struct demo *demo, const int argc, const char *argv[])
 
     if (strncmp(pCmdLine, "--use_staging", strlen("--use_staging")) == 0)
         demo->use_staging_buffer = true;
+    else if (strncmp(pCmdLine, "--validate", strlen("--validate")) == 0)
+        demo->use_staging_buffer = true;
     else if (strlen(pCmdLine) != 0) {
         fprintf(stderr, "Do not recognize argument \"%s\".\n", pCmdLine);
         argv_error = true;
@@ -2236,10 +2263,12 @@ static void demo_init(struct demo *demo, const int argc, const char *argv[])
     for (int i = 0; i < argc; i++) {
         if (strncmp(argv[i], "--use_staging", strlen("--use_staging")) == 0)
             demo->use_staging_buffer = true;
+        if (strncmp(argv[i], "--validate", strlen("--validate")) == 0)
+            demo->validate = true;
     }
 #endif // _WIN32
     if (argv_error) {
-        fprintf(stderr, "Usage:\n  %s [--use_staging]\n", APP_SHORT_NAME);
+        fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate]\n", APP_SHORT_NAME);
         fflush(stderr);
         exit(1);
     }
