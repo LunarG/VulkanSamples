@@ -1783,11 +1783,10 @@ static void loader_add_layer_property_meta(
     bool found;
     struct loader_layer_list *layer_list;
 
-    if (0 == layer_count ||
-        NULL == layer_instance_list ||
-        NULL == layer_device_list ||
-        (layer_count > layer_instance_list->count &&
-                         layer_count > layer_device_list->count))
+    if (0 == layer_count || (!layer_instance_list && !layer_device_list))
+        return;
+    if ((layer_instance_list && (layer_count > layer_instance_list->count)) &&
+        (layer_device_list && (layer_count > layer_device_list->count)))
         return;
 
     for (j = 0; j < 2; j++) {
@@ -1796,6 +1795,8 @@ static void loader_add_layer_property_meta(
         else
             layer_list = layer_device_list;
         found = true;
+        if (layer_list == NULL)
+            continue;
         for (i = 0; i < layer_count; i++) {
             if (loader_find_layer_name_list(layer_names[i], layer_list))
                 continue;
