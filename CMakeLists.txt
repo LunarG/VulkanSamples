@@ -19,21 +19,30 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
     add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
     set(DisplayServer Android)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    add_definitions(-DVK_USE_PLATFORM_XCB_KHR)
+    #   TODO: Basic support is present for Xlib but is untested.
+    #         Wayland/Mir support is stubbed in but unimplemented and untested.
+    option(BUILD_WSI_XCB_SUPPORT "Build XCB WSI support" ON)
+    option(BUILD_WSI_XLIB_SUPPORT "Build Xlib WSI support" OFF)
+    option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" OFF)
+    option(BUILD_WSI_MIR_SUPPORT "Build Mir WSI support" OFF)
+
     set(DisplayServer Xcb)
 
-#   TODO: Basic support is present for Xlib but is untested.
-#         Wayland/Mir support is stubbed in but unimplemented and untested.
+    if (BUILD_WSI_XCB_SUPPORT)
+        add_definitions(-DVK_USE_PLATFORM_XCB_KHR)
+    endif()
 
-#   add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)
-#   set(DisplayServer Xlib)
+    if (BUILD_WSI_XLIB_SUPPORT)
+        add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)
+    endif()
 
-#   add_definitions(-DVK_USE_PLATFORM_MIR_KHR)
-#   set(DisplayServer Mir)
+    if (BUILD_WSI_WAYLAND_SUPPORT)
+        add_definitions(-DVK_USE_PLATFORM_WAYLAND_KHR)
+    endif()
 
-#   add_definitions(-DVK_USEPLATFORM_WAYLAND_KHR)
-#   set(DisplayServer Wayland)
-
+    if (BUILD_WSI_MIR_SUPPORT)
+        add_definitions(-DVK_USE_PLATFORM_MIR_KHR)
+    endif()
 else()
     message(FATAL_ERROR "Unsupported Platform!")
 endif()
