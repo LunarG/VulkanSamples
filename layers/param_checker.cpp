@@ -4857,6 +4857,18 @@ bool PreCreateSampler(
         "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeW, is an unrecognized enumerator");
         return false;
     }
+    if(pCreateInfo->anisotropyEnable > VK_TRUE)
+    {
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+        "vkCreateSampler parameter, VkBool32 pCreateInfo->anisotropyEnable, is an unrecognized boolean");
+        return false;
+    }
+    if(pCreateInfo->compareEnable > VK_TRUE)
+    {
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+        "vkCreateSampler parameter, VkBool32 pCreateInfo->compareEnable, is an unrecognized boolean");
+        return false;
+    }
     if(pCreateInfo->compareEnable)
     {
         if(pCreateInfo->compareOp < VK_COMPARE_OP_BEGIN_RANGE ||
@@ -4872,6 +4884,12 @@ bool PreCreateSampler(
     {
         log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
         "vkCreateSampler parameter, VkBorderColor pCreateInfo->borderColor, is an unrecognized enumerator");
+        return false;
+    }
+    if(pCreateInfo->unnormalizedCoordinates > VK_TRUE)
+    {
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+        "vkCreateSampler parameter, VkBool32 pCreateInfo->unnormalizedCoordinates, is an unrecognized boolean");
         return false;
     }
     }
