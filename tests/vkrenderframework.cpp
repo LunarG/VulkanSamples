@@ -162,8 +162,7 @@ void VkRenderFramework::InitFramework(
 }
 
 void VkRenderFramework::ShutdownFramework() {
-    if (m_commandBuffer)
-        delete m_commandBuffer;
+    delete m_commandBuffer;
     if (m_commandPool)
         vkDestroyCommandPool(device(), m_commandPool, NULL);
     if (m_framebuffer)

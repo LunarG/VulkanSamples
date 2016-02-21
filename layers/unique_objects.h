@@ -448,8 +448,7 @@ VkResult explicit_CreateComputePipelines(VkDevice device, VkPipelineCache pipeli
     }
 // CODEGEN : file /usr/local/google/home/tobine/vulkan_work/LoaderAndTools/vk-layer-generate.py line #1671
     VkResult result = get_dispatch_table(unique_objects_device_table_map, device)->CreateComputePipelines(device, pipelineCache, createInfoCount, (const VkComputePipelineCreateInfo*)local_pCreateInfos, pAllocator, pPipelines);
-    if (local_pCreateInfos)
-        delete[] local_pCreateInfos;
+    delete[] local_pCreateInfos;
     if (VK_SUCCESS == result) {
         VkUniqueObject* pUO = NULL;
         for (uint32_t i=0; i<createInfoCount; ++i) {
@@ -493,8 +492,7 @@ VkResult explicit_CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipel
     }
 // CODEGEN : file /usr/local/google/home/tobine/vulkan_work/LoaderAndTools/vk-layer-generate.py line #1671
     VkResult result = get_dispatch_table(unique_objects_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, createInfoCount, (const VkGraphicsPipelineCreateInfo*)local_pCreateInfos, pAllocator, pPipelines);
-    if (local_pCreateInfos)
-        delete[] local_pCreateInfos;
+    delete[] local_pCreateInfos;
     if (VK_SUCCESS == result) {
         VkUniqueObject* pUO = NULL;
         for (uint32_t i=0; i<createInfoCount; ++i) {

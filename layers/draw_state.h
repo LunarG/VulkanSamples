@@ -468,9 +468,7 @@ typedef struct _DESCRIPTOR_POOL_NODE {
         }
     }
     ~_DESCRIPTOR_POOL_NODE() {
-        if (createInfo.pPoolSizes) {
-            delete[] createInfo.pPoolSizes;
-        }
+        delete[] createInfo.pPoolSizes;
         // TODO : pSets are currently freed in deletePools function which uses freeShadowUpdateTree function
         //  need to migrate that struct to smart ptrs for auto-cleanup
     }
@@ -701,7 +699,6 @@ typedef struct _SWAPCHAIN_NODE {
     }
     ~_SWAPCHAIN_NODE()
     {
-        if (pQueueFamilyIndices)
-            delete pQueueFamilyIndices;
+        delete pQueueFamilyIndices;
     }
 } SWAPCHAIN_NODE;

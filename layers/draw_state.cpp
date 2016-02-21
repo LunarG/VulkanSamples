@@ -2076,15 +2076,9 @@ static void deletePipelines(layer_data* my_data)
         if ((*ii).second->graphicsPipelineCI.stageCount != 0) {
             delete[] (*ii).second->graphicsPipelineCI.pStages;
         }
-        if ((*ii).second->pVertexBindingDescriptions) {
-            delete[] (*ii).second->pVertexBindingDescriptions;
-        }
-        if ((*ii).second->pVertexAttributeDescriptions) {
-            delete[] (*ii).second->pVertexAttributeDescriptions;
-        }
-        if ((*ii).second->pAttachments) {
-            delete[] (*ii).second->pAttachments;
-        }
+        delete[] (*ii).second->pVertexBindingDescriptions;
+        delete[] (*ii).second->pVertexAttributeDescriptions;
+        delete[] (*ii).second->pAttachments;
         if ((*ii).second->dynStateCI.dynamicStateCount != 0) {
             delete[] (*ii).second->dynStateCI.pDynamicStates;
         }
@@ -2953,9 +2947,7 @@ static void deletePools(layer_data* my_data)
             // Freeing layouts handled in deleteLayouts() function
             // Free Update shadow struct tree
             freeShadowUpdateTree(pFreeSet);
-            if (pFreeSet->ppDescriptors) {
-                delete[] pFreeSet->ppDescriptors;
-            }
+            delete[] pFreeSet->ppDescriptors;
             delete pFreeSet;
         }
         delete (*ii).second;
@@ -2973,8 +2965,7 @@ static void deleteLayouts(layer_data* my_data)
         LAYOUT_NODE* pLayout = (*ii).second;
         if (pLayout->createInfo.pBindings) {
             for (uint32_t i=0; i<pLayout->createInfo.bindingCount; i++) {
-                if (pLayout->createInfo.pBindings[i].pImmutableSamplers)
-                    delete[] pLayout->createInfo.pBindings[i].pImmutableSamplers;
+                delete[] pLayout->createInfo.pBindings[i].pImmutableSamplers;
             }
             delete[] pLayout->createInfo.pBindings;
         }
@@ -4785,10 +4776,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateComputePipelines(
         loader_platform_thread_unlock_mutex(&globalLock);
     } else {
         for (i=0; i<count; i++) {
-            if (pPipeNode[i]) {
-                // Clean up any locally allocated data structures
-                delete pPipeNode[i];
-            }
+            // Clean up any locally allocated data structures
+            delete pPipeNode[i];
         }
         loader_platform_thread_unlock_mutex(&globalLock);
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -6910,9 +6899,7 @@ static void deleteRenderPasses(layer_data* my_data)
         return;
     for (auto ii=my_data->renderPassMap.begin(); ii!=my_data->renderPassMap.end(); ++ii) {
         const VkRenderPassCreateInfo* pRenderPassInfo = (*ii).second->pCreateInfo;
-        if (pRenderPassInfo->pAttachments) {
-            delete[] pRenderPassInfo->pAttachments;
-        }
+        delete[] pRenderPassInfo->pAttachments;
         if (pRenderPassInfo->pSubpasses) {
             for (uint32_t i=0; i<pRenderPassInfo->subpassCount; ++i) {
                 // Attachements are all allocated in a block, so just need to
@@ -6929,9 +6916,7 @@ static void deleteRenderPasses(layer_data* my_data)
             }
             delete[] pRenderPassInfo->pSubpasses;
         }
-        if (pRenderPassInfo->pDependencies) {
-            delete[] pRenderPassInfo->pDependencies;
-        }
+        delete[] pRenderPassInfo->pDependencies;
         delete pRenderPassInfo;
         delete (*ii).second;
     }
