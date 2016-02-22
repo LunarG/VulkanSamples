@@ -637,7 +637,7 @@ vkCreateWaylandSurfaceKHR(VkInstance instance,
 
 /*
  * This is the instance chain terminator function
- * for CreateXlibSurfaceKHR
+ * for CreateWaylandSurfaceKHR
  */
 VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWaylandSurfaceKHR(
     VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
