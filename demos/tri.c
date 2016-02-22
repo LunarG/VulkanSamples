@@ -249,6 +249,7 @@ struct demo {
     PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallback;
     PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallback;
     VkDebugReportCallbackEXT msg_callback;
+    PFN_vkDebugReportMessageEXT DebugReportMessage;
 
     float depthStencil;
     float depthIncrement;
@@ -2030,11 +2031,27 @@ static void demo_init_vk(struct demo *demo) {
         demo->CreateDebugReportCallback =
             (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(
                 demo->inst, "vkCreateDebugReportCallbackEXT");
+        demo->DestroyDebugReportCallback =
+            (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(
+                demo->inst, "vkDestroyDebugReportCallbackEXT");
         if (!demo->CreateDebugReportCallback) {
             ERR_EXIT(
                 "GetProcAddr: Unable to find vkCreateDebugReportCallbackEXT\n",
                 "vkGetProcAddr Failure");
         }
+        if (!demo->DestroyDebugReportCallback) {
+            ERR_EXIT(
+                "GetProcAddr: Unable to find vkDestroyDebugReportCallbackEXT\n",
+                "vkGetProcAddr Failure");
+        }
+        demo->DebugReportMessage =
+            (PFN_vkDebugReportMessageEXT)vkGetInstanceProcAddr(
+                demo->inst, "vkDebugReportMessageEXT");
+        if (!demo->DebugReportMessage) {
+            ERR_EXIT("GetProcAddr: Unable to find vkDebugReportMessageEXT\n",
+                     "vkGetProcAddr Failure");
+        }
+
         VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfo.flags =
@@ -2341,6 +2358,9 @@ static void demo_cleanup(struct demo *demo) {
     free(demo->buffers);
 
     vkDestroyDevice(demo->device, NULL);
+    if (demo->validate) {
+        demo->DestroyDebugReportCallback(demo->inst, demo->msg_callback, NULL);
+    }
     vkDestroySurfaceKHR(demo->inst, demo->surface, NULL);
     vkDestroyInstance(demo->inst, &demo->allocator);
 
