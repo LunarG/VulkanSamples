@@ -314,7 +314,9 @@ static void demo_flush_init_cmd(struct demo *demo) {
 static void demo_set_image_layout(struct demo *demo, VkImage image,
                                   VkImageAspectFlags aspectMask,
                                   VkImageLayout old_image_layout,
-                                  VkImageLayout new_image_layout) {
+                                  VkImageLayout new_image_layout,
+                                  VkAccessFlagBits srcAccessMask) {
+
     VkResult U_ASSERT_ONLY err;
 
     if (demo->setup_cmd == VK_NULL_HANDLE) {
@@ -352,7 +354,7 @@ static void demo_set_image_layout(struct demo *demo, VkImage image,
     VkImageMemoryBarrier image_memory_barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .pNext = NULL,
-        .srcAccessMask = 0,
+        .srcAccessMask = srcAccessMask,
         .dstAccessMask = 0,
         .oldLayout = old_image_layout,
         .newLayout = new_image_layout,
@@ -515,7 +517,8 @@ static void demo_draw(struct demo *demo) {
     demo_set_image_layout(demo, demo->buffers[demo->current_buffer].image,
                           VK_IMAGE_ASPECT_COLOR_BIT,
                           VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                          0);
     demo_flush_init_cmd(demo);
 
     // Wait for the present complete semaphore to be signaled to ensure
@@ -705,7 +708,8 @@ static void demo_prepare_buffers(struct demo *demo) {
         // to that state
         demo_set_image_layout(
             demo, demo->buffers[i].image, VK_IMAGE_ASPECT_COLOR_BIT,
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            0);
 
         color_attachment_view.image = demo->buffers[i].image;
 
@@ -787,7 +791,8 @@ static void demo_prepare_depth(struct demo *demo) {
 
     demo_set_image_layout(demo, demo->depth.image, VK_IMAGE_ASPECT_DEPTH_BIT,
                           VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                          0);
 
     /* create image view */
     view.image = demo->depth.image;
@@ -820,6 +825,7 @@ demo_prepare_texture_image(struct demo *demo, const uint32_t *tex_colors,
         .tiling = tiling,
         .usage = usage,
         .flags = 0,
+        .initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED
     };
     VkMemoryAllocateInfo mem_alloc = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -878,7 +884,8 @@ demo_prepare_texture_image(struct demo *demo, const uint32_t *tex_colors,
 
     tex_obj->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     demo_set_image_layout(demo, tex_obj->image, VK_IMAGE_ASPECT_COLOR_BIT,
-                          VK_IMAGE_LAYOUT_UNDEFINED, tex_obj->imageLayout);
+                          VK_IMAGE_LAYOUT_PREINITIALIZED, tex_obj->imageLayout,
+                          VK_ACCESS_HOST_WRITE_BIT);
     /* setting the image layout does not reference the actual memory so no need
      * to add a mem ref */
 }
@@ -930,12 +937,14 @@ static void demo_prepare_textures(struct demo *demo) {
             demo_set_image_layout(demo, staging_texture.image,
                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                   staging_texture.imageLayout,
-                                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+                                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                  0);
 
             demo_set_image_layout(demo, demo->textures[i].image,
                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                   demo->textures[i].imageLayout,
-                                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+                                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                  0);
 
             VkImageCopy copy_region = {
                 .srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
@@ -953,7 +962,8 @@ static void demo_prepare_textures(struct demo *demo) {
             demo_set_image_layout(demo, demo->textures[i].image,
                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                  demo->textures[i].imageLayout);
+                                  demo->textures[i].imageLayout,
+                                  0);
 
             demo_flush_init_cmd(demo);
 
