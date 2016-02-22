@@ -304,9 +304,6 @@ validateQueueFlags(
         if ((queueInfo != NULL) && (queueInfo[pQueueInfo->queueNodeIndex].queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) == 0) {
             log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT, reinterpret_cast<uint64_t>(queue), __LINE__, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
                 "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_SPARSE_BINDING_BIT not set", function);
-        } else {
-            log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT, reinterpret_cast<uint64_t>(queue), __LINE__, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
-                "Attempting %s on a possibly non-memory-management capable queue -- VK_QUEUE_SPARSE_BINDING_BIT not known", function);
         }
     }
 }
