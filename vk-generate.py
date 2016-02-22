@@ -27,6 +27,7 @@
 # Author: Chia-I Wu <olv@lunarg.com>
 # Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
 # Author: Jon Ashburn <jon@lunarg.com>
+# Author: Gwan-gyeong Mun <kk.moon@samsung.com>
 
 import sys
 
@@ -241,18 +242,26 @@ class WinDefFileSubcommand(Subcommand):
         return "\n".join(body)
 
 def main():
+    wsi = {
+            "Win32",
+            "Android",
+            "Xcb",
+            "Xlib",
+            "Wayland",
+            "Mir"
+    }
     subcommands = {
             "dispatch-table-ops": DispatchTableOpsSubcommand,
             "win-def-file": WinDefFileSubcommand,
     }
 
-    if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
-        print("Usage: %s <subcommand> [options]" % sys.argv[0])
+    if len(sys.argv) < 3 or sys.argv[1] not in wsi or sys.argv[2] not in subcommands:
+        print("Usage: %s <wsi> <subcommand> [options]" % sys.argv[0])
         print
         print("Available sucommands are: %s" % " ".join(subcommands))
         exit(1)
 
-    subcmd = subcommands[sys.argv[1]](sys.argv[2:])
+    subcmd = subcommands[sys.argv[2]](sys.argv[3:])
     subcmd.run()
 
 if __name__ == "__main__":
