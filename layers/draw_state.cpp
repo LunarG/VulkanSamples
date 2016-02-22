@@ -6335,19 +6335,31 @@ VkBool32 ValidateBarriers(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
                                    ? reinterpret_cast<uint64_t &>(
                                          buffer_data->second.create_info->size)
                                    : 0;
-        if (buffer_data != dev_data->bufferMap.end() &&
-            mem_barrier->offset + mem_barrier->size > buffer_size) {
-            skip_call |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                        (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        DRAWSTATE_INVALID_BARRIER, "DS",
-                        "Buffer Barrier 0x%" PRIx64 " has offset %" PRIu64
-                        " and size %" PRIu64
-                        " whose sum is greater than total size %" PRIu64 ".",
-                        reinterpret_cast<const uint64_t &>(mem_barrier->buffer),
-                        reinterpret_cast<const uint64_t &>(mem_barrier->offset),
-                        reinterpret_cast<const uint64_t &>(mem_barrier->size),
-                        buffer_size);
+        if (buffer_data != dev_data->bufferMap.end()) {
+            if (mem_barrier->offset >= buffer_size) {
+                skip_call |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                            (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            DRAWSTATE_INVALID_BARRIER, "DS",
+                            "Buffer Barrier 0x%" PRIx64 " has offset %" PRIu64
+                            " whose sum is not less than total size %" PRIu64 ".",
+                            reinterpret_cast<const uint64_t &>(mem_barrier->buffer),
+                            reinterpret_cast<const uint64_t &>(mem_barrier->offset),
+                            buffer_size);
+            } else if (mem_barrier->size != VK_WHOLE_SIZE &&
+                      (mem_barrier->offset + mem_barrier->size > buffer_size)) {
+                skip_call |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                            (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            DRAWSTATE_INVALID_BARRIER, "DS",
+                            "Buffer Barrier 0x%" PRIx64 " has offset %" PRIu64
+                            " and size %" PRIu64
+                            " whose sum is greater than total size %" PRIu64 ".",
+                            reinterpret_cast<const uint64_t &>(mem_barrier->buffer),
+                            reinterpret_cast<const uint64_t &>(mem_barrier->offset),
+                            reinterpret_cast<const uint64_t &>(mem_barrier->size),
+                            buffer_size);
+            }
         }
     }
     return skip_call;
