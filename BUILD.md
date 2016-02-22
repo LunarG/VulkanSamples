@@ -1,261 +1,43 @@
 # Build Instructions
-This project fully supports Linux and Windows today.
-Support for Android is TBD.
+These instructions are for Linux and Windows.
 
 ## Git the Bits
 
-You should have access to the Khronos GitHub repository at https://github.com/KhronosGroup/. The
-preferred work flow is to clone the repo, create a branch, push branch to GitHub and then
-issue a merge request to integrate that work back into the repo.
+The public repository for Vulkan-LoaderAndValidationLayers is hosted at https://github.com/KhronosGroup/.
 
-Note: If you are doing ICD (driver) development, please make sure to look at documentation in the [ICD Loader](loader/README.md) and the [Sample Driver](icd).
+If you intend to contribute, the
+preferred work flow is to fork the repo, create a branch in your forked repo, do the work, and create a pull request
+on GitHub to integrate that work back into the repo.
 
-## Linux System Requirements
-Ubuntu 14.04.3 LTS, 14.10, 15.04 and 15.10 have been used with the sample driver.
-
-These packages are used for building and running the samples.
-```
-sudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev qt5-default libpciaccess-dev libpthread-stubs0-dev libudev-dev bison graphviz libpng-dev
-sudo apt-get build-dep mesa
-```
-
-The sample driver uses DRI3 for its window system interface.
-That requires extra configuration of Ubuntu systems.
-
-### Ubuntu 14.04.3 LTS support of DRI 3
-
-Ubuntu 14.04.3 LTS does not ship a xserver-xorg-video-intel package with supported DRI 3 on intel graphics.
-The xserver-xorg-video-intel package can be built from source with DRI 3 enabled.
-Use the following commands to enable DRI3 on ubuntu 14.04.3 LTS.
-
-- Install packages used to build:
-```
-sudo apt-get update
-sudo apt-get dist-upgrade
-sudo apt-get install devscripts
-sudo apt-get build-dep xserver-xorg-video-intel-lts-vivid
-```
-
-- Get the source code for xserver-xorg-video-intel-lts-vivid
-```
-mkdir xserver-xorg-video-intel-lts-vivid_source
-cd xserver-xorg-video-intel-lts-vivid_source
-apt-get source xserver-xorg-video-intel-lts-vivid
-cd xserver-xorg-video-intel-lts-vivid-2.99.917
-debian/rules patch
-quilt new 'enable-DRI3'
-quilt edit configure.ac
-```
-
-- Use the editor to make these changes.
-```
---- a/configure.ac
-+++ b/configure.ac
-@@ -340,9 +340,9 @@
- 	      [DRI2=yes])
- AC_ARG_ENABLE(dri3,
- 	      AS_HELP_STRING([--enable-dri3],
--			     [Enable DRI3 support [[default=no]]]),
-+			     [Enable DRI3 support [[default=yes]]]),
- 	      [DRI3=$enableval],
--	      [DRI3=no])
-+	      [DRI3=yes])
- AC_ARG_ENABLE(xvmc, AS_HELP_STRING([--disable-xvmc],
-                                   [Disable XvMC support [[default=yes]]]),
-```
-- Build and install xserver-xorg-video-intel-lts-vivid
-```
-quilt refresh
-debian/rules clean
-debuild -us -uc
-sudo dpkg -i ../xserver-xorg-video-intel-lts-vivid_2.99.917-1~exp1ubuntu2.2~trusty1_amd64.deb
-```
-- Prevent updates from replacing this version of the package.
-```
-sudo bash -c 'echo xserver-xorg-video-intel-lts-vivid hold | dpkg --set-selections'
-```
-- save your work then restart the X server with the next command.
-```
-sudo service lightdm restart
-```
-- After logging in again, check for success with this command and look for DRI3.
-```
-xdpyinfo | grep DRI
-```
-
-### Ubuntu 14.10 support of DRI 3
-
-Warning: Recent versions of 14.10 have **REMOVED** DRI 3.
-Version: 2:2.99.914-1~exp1ubuntu4.1 is known to work.
-To see status of this package:
-```
-dpkg -s xserver-xorg-video-intel
-```
-
-Note:
-Version 2:2.99.914-1~exp1ubuntu4.2 does not work anymore.
-To install the working driver from launchpadlibrarian.net:
-- Remove the current driver:
-```
-sudo apt-get purge xserver-xorg-video-intel
-```
-- Download the old driver:
-```
-wget http://launchpadlibrarian.net/189418339/xserver-xorg-video-intel_2.99.914-1%7Eexp1ubuntu4.1_amd64.deb
-```
-- Install the driver:
-```
-sudo dpkg -i xserver-xorg-video-intel_2.99.914-1~exp1ubuntu4.1_amd64.deb
-```
-- Pin the package to prevent updates
-```
-sudo bash -c "echo $'Package: xserver-xorg-video-intel\nPin: version 2:2.99.914-1~exp1ubuntu4.1\nPin-Priority: 1001' > /etc/apt/preferences.d/xserver-xorg-video-intel"
-```
-
-- Either restart Ubuntu or just X11.
-
-
-### Ubuntu 15.04 support of DRI 3
-
-Ubuntu 15.04 has never shipped a xserver-xorg-video-intel package with supported DRI 3 on intel graphics.
-The xserver-xorg-video-intel package can be built from source with DRI 3 enabled.
-Use the following commands to enable DRI3 on ubuntu 15.04.
-
-- Install packages used to build:
-```
-sudo apt-get update
-sudo apt-get dist-upgrade
-sudo apt-get install devscripts
-sudo apt-get build-dep xserver-xorg-video-intel
-```
-
-- Get the source code for xserver-xorg-video-intel
-```
-mkdir xserver-xorg-video-intel_source
-cd xserver-xorg-video-intel_source
-apt-get source xserver-xorg-video-intel
-cd xserver-xorg-video-intel-2.99.917
-debian/rules patch
-quilt new 'enable-DRI3'
-quilt edit configure.ac
-```
-
-- Use the editor to make these changes.
-```
---- a/configure.ac
-+++ b/configure.ac
-@@ -340,9 +340,9 @@
- 	      [DRI2=yes])
- AC_ARG_ENABLE(dri3,
- 	      AS_HELP_STRING([--enable-dri3],
--			     [Enable DRI3 support [[default=no]]]),
-+			     [Enable DRI3 support [[default=yes]]]),
- 	      [DRI3=$enableval],
--	      [DRI3=no])
-+	      [DRI3=yes])
- AC_ARG_ENABLE(xvmc, AS_HELP_STRING([--disable-xvmc],
-                                   [Disable XvMC support [[default=yes]]]),
-```
-- Build and install xserver-xorg-video-intel
-```
-quilt refresh
-debian/rules clean
-debuild -us -uc
-sudo dpkg -i ../xserver-xorg-video-intel_2.99.917-1~exp1ubuntu2.2_amd64.deb
-```
-- Prevent updates from replacing this version of the package.
-```
-sudo bash -c 'echo xserver-xorg-video-intel hold | dpkg --set-selections'
-```
-- save your work then restart the X server with the next command.
-```
-sudo service lightdm restart
-```
-- After logging in again, check for success with this command and look for DRI3.
-```
-xdpyinfo | grep DRI
-```
-### Ubuntu 15.10 support of DRI 3
-
-Ubuntu 15.10 has never shipped a xserver-xorg-video-intel package with supported DRI 3 on intel graphics.
-The xserver-xorg-video-intel package can be built from source with DRI 3 enabled.
-Use the following commands to enable DRI3 on ubuntu 15.10.
-
-- Install packages used to build:
-```
-sudo apt-get update
-sudo apt-get dist-upgrade
-sudo apt-get install devscripts
-sudo apt-get build-dep xserver-xorg-video-intel
-```
-
-- Get the source code for xserver-xorg-video-intel
-```
-mkdir xserver-xorg-video-intel_source
-cd xserver-xorg-video-intel_source
-apt-get source xserver-xorg-video-intel
-cd xserver-xorg-video-intel-2.99.917+git20150808
-debian/rules patch
-quilt new 'enable-DRI3'
-quilt edit configure.ac
-```
-
-- Use the editor to make these changes.
-```
-Index: xserver-xorg-video-intel-2.99.917+git20150808/configure.ac
-===================================================================
---- xserver-xorg-video-intel-2.99.917+git20150808.orig/configure.ac
-+++ xserver-xorg-video-intel-2.99.917+git20150808/configure.ac
-@@ -356,7 +356,7 @@ AC_ARG_WITH(default-dri,
-            AS_HELP_STRING([--with-default-dri],
-                           [Select the default maximum DRI level [default 2]]),
-              [DRI_DEFAULT=$withval],
--             [DRI_DEFAULT=2])
-+             [DRI_DEFAULT=3])
- if test "x$DRI_DEFAULT" = "x0"; then
-        AC_DEFINE(DEFAULT_DRI_LEVEL, 0,[Default DRI level])
- else
-```
-- Build and install xserver-xorg-video-intel
-```
-quilt refresh
-debian/rules clean
-debuild -us -uc
-sudo dpkg -i ../xserver-xorg-video-intel_2.99.917+git20150808-0ubuntu4_amd64.deb
-```
-- Prevent updates from replacing this version of the package.
-```
-sudo bash -c 'echo xserver-xorg-video-intel hold | dpkg --set-selections'
-```
-- save your work then restart the X server with the next command.
-```
-sudo service lightdm restart
-```
-- After logging in again, check for success with this command and look for DRI3.
-```
-xdpyinfo | grep DRI
-```
-
+Note: The sample Vulkan driver for Linux (ICD) has been moved to the VulkanTools repo at https://github.com/LunarG/VulkanTools.
+Further instructions regarding the ICD are available there.
 
 ## Clone the repository
 
 To create your local git repository:
 ```
-mkdir YOUR_DEV_DIRECTORY  # it's called Vulkan-LoaderAndValidationLayers on Github, but the name doesn't matter
-cd YOUR_DEV_DIRECTORY
-git clone -o khronos https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers .
+git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers 
 # Or substitute the URL from your forked repo for https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers above.
 ```
 
 ## Linux Build
 
-The sample driver uses cmake and should work with the usual cmake options and utilities.
-The standard build process builds the icd, the icd loader and all the tests.
+The build process uses cmake and should work with the usual cmake options and utilities.
+The build generates the loader, layers, and tests.
+
+This repo has been built and tested on Ubuntu 14.04.3 LTS, 14.10, 15.04 and 15.10.
+It should be straightforward to use it on other Linux distros.
+
+These packages should be installed 
+```
+ssudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev qt5-default libpciaccess-dev libpthread-stubs0-dev libudev-dev bison graphviz libpng-dev libxcb1-dev
+sudo apt-get build-dep mesa
+```
 
 Example debug build:
 ```
 cd YOUR_DEV_DIRECTORY  # cd to the root of the Vulkan-LoaderAndValidationLayers git repository
-./update_external_sources.sh  # Fetches and builds glslang, llvm, LunarGLASS, and spirv-tools
+./update_external_sources.sh  # Fetches and builds glslang and spirv-tools
 cmake -H. -Bdbuild -DCMAKE_BUILD_TYPE=Debug
 cd dbuild
 make
@@ -269,6 +51,11 @@ https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/blob/sdk-1.0.3/
 This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
 
+For example, you may wish to point to your just-built loader and layers with:
+```
+export LD_LIBRARY_PATH=<path to your build root>/dbuild/loader
+export VK_LAYER_PATH=<path to your build root>/dbuild/layers
+```
 
 ## Validation Test
 
