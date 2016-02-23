@@ -136,12 +136,18 @@ void set_image_layout(struct sample_info &info, VkImage image,
     }
 
     if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        /* Make sure anything that was copying from this image has completed */
-        image_memory_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    }
+
+    if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
+        image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    }
+
+    if (old_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     }
 
     if (new_image_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-        /* Make sure any Copy or CPU writes to image are flushed */
         image_memory_barrier.srcAccessMask =
             VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
         image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -149,12 +155,12 @@ void set_image_layout(struct sample_info &info, VkImage image,
 
     if (new_image_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
         image_memory_barrier.dstAccessMask =
-            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     }
 
     if (new_image_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
         image_memory_barrier.dstAccessMask =
-            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     }
 
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
