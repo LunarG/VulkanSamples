@@ -99,15 +99,15 @@ debug_report_data *mdd(void* object)
 static void InitParamChecker(layer_data *data, const VkAllocationCallbacks *pAllocator)
 {
     VkDebugReportCallbackEXT callback;
-    uint32_t report_flags = getLayerOptionFlags("ParamCheckerReportFlags", 0);
+    uint32_t report_flags = getLayerOptionFlags("lunarg_param_checker.report_flags", 0);
 
     uint32_t debug_action = 0;
-    getLayerOptionEnum("ParamCheckerDebugAction", (uint32_t *) &debug_action);
+    getLayerOptionEnum("lunarg_param_checker.debug_action", (uint32_t *) &debug_action);
     if(debug_action & VK_DBG_LAYER_ACTION_LOG_MSG)
     {
         FILE *log_output = NULL;
-        const char* option_str = getLayerOption("ParamCheckerLogFilename");
-        log_output = getLayerLogOutput(option_str, "ParamChecker");
+        const char* option_str = getLayerOption("lunarg_param_checker.log_filename");
+        log_output = getLayerLogOutput(option_str, "lunarg_param_checker");
         VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
         memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
@@ -215,7 +215,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionPropert
         uint32_t*                                   pCount,
         VkExtensionProperties*                      pProperties)
 {
-    /* ParamChecker does not have any physical device extensions */
+    /* param_checker does not have any physical device extensions */
     if (pLayerName == NULL) {
         return get_dispatch_table(pc_instance_table_map, physicalDevice)->EnumerateDeviceExtensionProperties(
                                     physicalDevice,
@@ -233,7 +233,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
         VkLayerProperties*                          pProperties)
 {
 
-    /* ParamChecker's physical device layers are the same as global */
+    /* param_checker's physical device layers are the same as global */
     return util_GetLayerProperties(ARRAY_SIZE(pc_global_layers), pc_global_layers,
                                    pCount, pProperties);
 }

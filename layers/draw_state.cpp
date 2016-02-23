@@ -137,7 +137,7 @@ struct layer_data {
     {};
 };
 
-// Code imported from ShaderChecker
+// Code imported from shader_checker
 static void
 build_def_index(shader_module *);
 
@@ -3409,14 +3409,14 @@ static void init_draw_state(layer_data *my_data, const VkAllocationCallbacks *pA
     FILE *log_output = NULL;
     const char *option_str;
     VkDebugReportCallbackEXT callback;
-    // initialize DrawState options
-    report_flags = getLayerOptionFlags("DrawStateReportFlags", 0);
-    getLayerOptionEnum("DrawStateDebugAction", (uint32_t *) &debug_action);
+    // initialize draw_state options
+    report_flags = getLayerOptionFlags("lunarg_draw_state.report_flags", 0);
+    getLayerOptionEnum("lunarg_draw_state.debug_action", (uint32_t *) &debug_action);
 
     if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG)
     {
-        option_str = getLayerOption("DrawStateLogFilename");
-        log_output = getLayerLogOutput(option_str, "DrawState");
+        option_str = getLayerOption("lunarg_draw_state.log_filename");
+        log_output = getLayerLogOutput(option_str, "lunarg_draw_state");
         VkDebugReportCallbackCreateInfoEXT dbgInfo;
         memset(&dbgInfo, 0, sizeof(dbgInfo));
         dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
@@ -3696,7 +3696,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
 {
-    /* DrawState physical device layers are the same as global */
+    /* draw_state physical device layers are the same as global */
     return util_GetLayerProperties(ARRAY_SIZE(ds_device_layers), ds_device_layers,
                                    pCount, pProperties);
 }
@@ -6851,7 +6851,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
     VkResult result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        // TODOSC : Merge in tracking of renderpass from ShaderChecker
+        // TODOSC : Merge in tracking of renderpass from shader_checker
         // Shadow create info and store in map
         VkRenderPassCreateInfo* localRPCI = new VkRenderPassCreateInfo(*pCreateInfo);
         if (pCreateInfo->pAttachments) {

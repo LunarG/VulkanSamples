@@ -53,14 +53,14 @@ static void initThreading(layer_data *my_data, const VkAllocationCallbacks *pAll
     FILE *log_output = NULL;
     const char *strOpt;
     VkDebugReportCallbackEXT callback;
-    // initialize Threading options
-    report_flags = getLayerOptionFlags("ThreadingReportFlags", 0);
-    getLayerOptionEnum("ThreadingDebugAction", (uint32_t *) &debug_action);
+    // initialize threading options
+    report_flags = getLayerOptionFlags("google_threading.report_flags", 0);
+    getLayerOptionEnum("google_threading.debug_action", (uint32_t *) &debug_action);
 
     if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG)
     {
-        strOpt = getLayerOption("ThreadingLogFilename");
-        log_output = getLayerLogOutput(strOpt, "Threading");
+        strOpt = getLayerOption("google_threading.log_filename");
+        log_output = getLayerLogOutput(strOpt, "google_threading");
         VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
         memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;

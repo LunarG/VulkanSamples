@@ -107,14 +107,14 @@ static void init_device_limits(layer_data *my_data, const VkAllocationCallbacks 
     FILE *log_output = NULL;
     const char *option_str;
     VkDebugReportCallbackEXT callback;
-    // initialize DeviceLimits options
-    report_flags = getLayerOptionFlags("DeviceLimitsReportFlags", 0);
-    getLayerOptionEnum("DeviceLimitsDebugAction", (uint32_t *) &debug_action);
+    // initialize device_limits options
+    report_flags = getLayerOptionFlags("lunarg_device_limits.report_flags", 0);
+    getLayerOptionEnum("lunarg_device_limits.debug_action", (uint32_t *) &debug_action);
 
     if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG)
     {
-        option_str = getLayerOption("DeviceLimitsLogFilename");
-        log_output = getLayerLogOutput(option_str, "DeviceLimits");
+        option_str = getLayerOption("lunarg_device_limits.log_filename");
+        log_output = getLayerLogOutput(option_str, "lunarg_device_limits");
         VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
         memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;

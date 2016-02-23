@@ -353,14 +353,14 @@ initObjectTracker(
     uint32_t debug_action = 0;
     FILE *log_output = NULL;
     const char *option_str;
-    // initialize ObjectTracker options
-    report_flags = getLayerOptionFlags("ObjectTrackerReportFlags", 0);
-    getLayerOptionEnum("ObjectTrackerDebugAction", (uint32_t *) &debug_action);
+    // initialize object_tracker options
+    report_flags = getLayerOptionFlags("lunarg_object_tracker.report_flags", 0);
+    getLayerOptionEnum("lunarg_object_tracker.debug_action", (uint32_t *) &debug_action);
 
     if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG)
     {
-        option_str = getLayerOption("ObjectTrackerLogFilename");
-        log_output = getLayerLogOutput(option_str, "ObjectTracker");
+        option_str = getLayerOption("lunarg_object_tracker.log_filename");
+        log_output = getLayerLogOutput(option_str, "lunarg_object_tracker");
         VkDebugReportCallbackCreateInfoEXT dbgInfo;
         memset(&dbgInfo, 0, sizeof(dbgInfo));
         dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;

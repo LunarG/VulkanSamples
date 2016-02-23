@@ -77,15 +77,15 @@ static unordered_map<void*, layer_data*> layer_data_map;
 static void InitImage(layer_data *data, const VkAllocationCallbacks *pAllocator)
 {
     VkDebugReportCallbackEXT callback;
-    uint32_t report_flags = getLayerOptionFlags("ImageReportFlags", 0);
+    uint32_t report_flags = getLayerOptionFlags("lunarg_image.report_flags", 0);
 
     uint32_t debug_action = 0;
-    getLayerOptionEnum("ImageDebugAction", (uint32_t *) &debug_action);
+    getLayerOptionEnum("lunarg_image.debug_action", (uint32_t *) &debug_action);
     if(debug_action & VK_DBG_LAYER_ACTION_LOG_MSG)
     {
         FILE *log_output = NULL;
-        const char* option_str = getLayerOption("ImageLogFilename");
-        log_output = getLayerLogOutput(option_str, "Image");
+        const char* option_str = getLayerOption("lunarg_image.log_filename");
+        log_output = getLayerLogOutput(option_str, "lunarg_image");
         VkDebugReportCallbackCreateInfoEXT dbgInfo;
         memset(&dbgInfo, 0, sizeof(dbgInfo));
         dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;

@@ -62,7 +62,7 @@ struct layer_data {
     uint64_t                           currentFenceId;
     VkPhysicalDeviceProperties         properties;
     unordered_map<VkDeviceMemory, vector<MEMORY_RANGE>>          bufferRanges, imageRanges;
-    // Maps for tracking key structs related to MemTracker state
+    // Maps for tracking key structs related to mem_tracker state
     unordered_map<VkCommandBuffer,     MT_CB_INFO>               cbMap;
     unordered_map<VkCommandPool,       MT_CMD_POOL_INFO>         commandPoolMap;
     unordered_map<VkDeviceMemory,      MT_MEM_OBJ_INFO>          memObjMap;
@@ -258,7 +258,7 @@ add_object_create_info(
         }
         // Swap Chain is very unique, use my_data->imageMap, but copy in
         // SwapChainCreatInfo's usage flags and set the mem value to a unique key. These is used by
-        // vkCreateImageView and internal MemTracker routines to distinguish swap chain images
+        // vkCreateImageView and internal mem_tracker routines to distinguish swap chain images
         case VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT:
         {
             auto pCI = &my_data->imageMap[handle];
@@ -1056,14 +1056,14 @@ init_mem_tracker(
     FILE *log_output = NULL;
     const char *option_str;
     VkDebugReportCallbackEXT callback;
-    // initialize MemTracker options
-    report_flags = getLayerOptionFlags("MemTrackerReportFlags", 0);
-    getLayerOptionEnum("MemTrackerDebugAction", (uint32_t *) &debug_action);
+    // initialize mem_tracker options
+    report_flags = getLayerOptionFlags("lunarg_mem_tracker.report_flags", 0);
+    getLayerOptionEnum("lunarg_mem_tracker.debug_action", (uint32_t *) &debug_action);
 
     if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG)
     {
-        option_str = getLayerOption("MemTrackerLogFilename");
-        log_output = getLayerLogOutput(option_str, "MemTracker");
+        option_str = getLayerOption("lunarg_mem_tracker.log_filename");
+        log_output = getLayerLogOutput(option_str, "lunarg_mem_tracker");
         VkDebugReportCallbackCreateInfoEXT dbgInfo;
         memset(&dbgInfo, 0, sizeof(dbgInfo));
         dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
