@@ -573,16 +573,18 @@ clear_cmd_buf_and_mem_references(
     VkBool32 skipCall = VK_FALSE;
     MT_CB_INFO* pCBInfo = get_cmd_buf_info(my_data, cb);
 
-    if (pCBInfo && (pCBInfo->pMemObjList.size() > 0)) {
-        list<VkDeviceMemory> mem_obj_list = pCBInfo->pMemObjList;
-        for (list<VkDeviceMemory>::iterator it=mem_obj_list.begin(); it!=mem_obj_list.end(); ++it) {
-            MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(my_data, *it);
-            if (pInfo) {
-                pInfo->pCommandBufferBindings.remove(cb);
-                pInfo->refCount--;
+    if (pCBInfo) {
+        if (pCBInfo->pMemObjList.size() > 0) {
+            list<VkDeviceMemory> mem_obj_list = pCBInfo->pMemObjList;
+            for (list<VkDeviceMemory>::iterator it=mem_obj_list.begin(); it!=mem_obj_list.end(); ++it) {
+                MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(my_data, *it);
+                if (pInfo) {
+                    pInfo->pCommandBufferBindings.remove(cb);
+                    pInfo->refCount--;
+                }
             }
+            pCBInfo->pMemObjList.clear();
         }
-        pCBInfo->pMemObjList.clear();
         pCBInfo->activeDescriptorSets.clear();
         pCBInfo->validate_functions.clear();
     }
