@@ -1066,7 +1066,8 @@ void init_swap_chain(struct sample_info &info) {
 void init_uniform_buffer(struct sample_info &info) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
-    info.Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
+    info.Projection = glm::perspective(glm::radians(45.0f), static_cast<float>(info.width) /
+            static_cast<float>(info.height), 0.1f, 100.0f);
     info.View = glm::lookAt(
         glm::vec3(5, 3, 10), // Camera is at (5,3,10), in World Space
         glm::vec3(0, 0, 0),  // and looks at the origin
