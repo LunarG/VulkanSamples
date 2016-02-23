@@ -2497,7 +2497,7 @@ bool markStoreImagesAndBuffersAsWritten(
             if (iv_data == my_data->imageViewMap.end()) continue;
             VkImage image = iv_data->second.image;
             VkDeviceMemory mem;
-            skip_call |= get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
+            skip_call |= get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
             std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, mem, true, image); return VK_FALSE; };
             cb_data->second.validate_functions.push_back(function);
         }
