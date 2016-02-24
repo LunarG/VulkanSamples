@@ -69,7 +69,7 @@ layers/device_limits.cpp (name=VK_LAYER_LUNARG_device_limits) - This layer is in
 
 3. Create a vk_layer_settings.txt file in the same directory to specify how your layers should behave.
 
-    Model it after the following example:  [*vk_layer_settings.txt*](layers/vk_layer_settings.txt)
+    Model it after the following example:  [*vk_layer_settings.txt*](vk_layer_settings.txt)
 
 4. Specify which Layers to activate by using
 vkCreateDevice and/or vkCreateInstance or environment variables.
