@@ -100,21 +100,17 @@ else()
     endif()
 endif()
 
-find_library(VULKAN_LOADER NAMES vulkan-1 vulkan
-             HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndValidationLayers/${BUILDTGT_DIR}/loader"
-                   "${CMAKE_SOURCE_DIR}/../LoaderAndValidationLayers/${BUILDTGT_DIR}/loader/Release"
-                   "${CMAKE_SOURCE_DIR}/../LoaderAndValidationLayers/${BUILDTGT_DIR}/loader/Debug"
-                   "${PROJECT_SOURCE_DIR}/../${BINDATA_DIR}" )
-
 find_program(GLSLANG_VALIDATOR NAMES glslangValidator
              HINTS "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/install/bin"
                    "${PROJECT_SOURCE_DIR}/../${BINDATA_DIR}" )
 
 if(WIN32)
     set (MOVE_CMD "move")
+    set (VULKAN_LOADER "vulkan-${MAJOR}")
 else()
     set (MOVE_CMD "mv")
     set (PTHREAD "pthread")
+    set (VULKAN_LOADER "vulkan")
 endif()
 
 set (LIBGLM_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/libs)
@@ -210,9 +206,6 @@ if (WIN32)
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
     find_library(SPIRV_DLIB NAMES SPIRV
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(LOADER_DLIB NAMES vulkan-1
-                 HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndValidationLayers/${BUILDTGT_DIR}/loader/Debug"
-                       "${PROJECT_SOURCE_DIR}/../Source/${LIBSOURCE_DIR}" )
     find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Tools
                  HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH} )
 
@@ -228,14 +221,11 @@ if (WIN32)
     set_target_properties(SPIRV PROPERTIES
                          IMPORTED_LOCATION       "${SPIRV_LIB}"
                          IMPORTED_LOCATION_DEBUG "${SPIRV_DLIB}")
-    set_target_properties(Loader PROPERTIES
-                         IMPORTED_LOCATION       "${VULKAN_LOADER}"
-                         IMPORTED_LOCATION_DEBUG "${LOADER_DLIB}")
     set_target_properties(SPIRV-Tools PROPERTIES
                          IMPORTED_LOCATION       "${SPIRV_TOOLS_LIB}"
                          IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_DLIB}")
 
-    set (GLSLANG_LIBRARIES glslang OGLCompiler OSDependent SPIRV Loader)
+    set (GLSLANG_LIBRARIES glslang OGLCompiler OSDependent SPIRV)
     set (SPIRV_TOOLS_LIBRARIES SPIRV-Tools)
 else ()
     set (GLSLANG_LIBRARIES ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${SPIRV_LIB})
