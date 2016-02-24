@@ -10,7 +10,7 @@ project (VULKAN_SAMPLES)
 # The MAJOR number of the version we're building, used in naming
 # vulkan-<major>.dll (and other files).
 set(MAJOR "1")
-
+find_package(PythonInterp 3 REQUIRED)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN)
@@ -122,9 +122,6 @@ endif()
 if(BUILD_VKJSON)
     add_subdirectory(libs/vkjson)
 endif()
-
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
-cmake_policy(VERSION 2.8)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
