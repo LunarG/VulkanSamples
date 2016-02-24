@@ -179,5 +179,5 @@ else()
 endif()
 
 add_subdirectory(API-Samples)
-add_subdirectory(Demos/Hologram)
+add_subdirectory(Sample-Programs/Hologram)
 add_subdirectory(Layer-Samples/Overlay)
