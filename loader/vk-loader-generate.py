@@ -453,6 +453,16 @@ class LoaderGetProcAddrSubcommand(Subcommand):
         return "\n".join(body)
 
 def main():
+
+    wsi = {
+            "Win32",
+            "Android",
+            "Xcb",
+            "Xlib",
+            "Wayland",
+            "Mir"
+    }
+
     subcommands = {
             "dev-ext-trampoline": DevExtTrampolineSubcommand,
             "loader-entrypoints": LoaderEntrypointsSubcommand,
@@ -461,13 +471,14 @@ def main():
             "loader-get-proc-addr": LoaderGetProcAddrSubcommand,
     }
 
-    if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
-        print("Usage: %s <subcommand> [options]" % sys.argv[0])
+    if len(sys.argv) < 3 or sys.argv[1] not in wsi or sys.argv[2] not in subcommands:
+        print("Usage: %s <wsi> <subcommand> [options]" % sys.argv[0])
         print
-        print("Available sucommands are: %s" % " ".join(subcommands))
+        print("Available wsi (displayservers) are: %s" % " ".join(wsi))
+        print("Available subcommands are: %s" % " ".join(subcommands))
         exit(1)
 
-    subcmd = subcommands[sys.argv[1]](sys.argv[2:])
+    subcmd = subcommands[sys.argv[2]](sys.argv[3:])
     subcmd.run()
 
 if __name__ == "__main__":
