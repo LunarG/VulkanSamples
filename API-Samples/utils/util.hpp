@@ -277,6 +277,7 @@ void init_glslang();
 void finalize_glslang();
 void wait_seconds(int seconds);
 void print_UUID(uint8_t *pipelineCacheUUID);
+std::string get_file_directory();
 
 typedef unsigned long long timestamp_t;
 timestamp_t get_milliseconds();

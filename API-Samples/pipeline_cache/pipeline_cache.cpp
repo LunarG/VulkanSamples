@@ -114,8 +114,9 @@ int sample_main() {
     size_t startCacheSize = 0;
     void *startCacheData = nullptr;
 
-    const char *readFileName = "pipeline_cache_data.bin";
-    FILE *pReadFile = fopen(readFileName, "rb");
+    std::string directoryName = get_file_directory();
+    std::string readFileName = directoryName + "pipeline_cache_data.bin";
+    FILE *pReadFile = fopen(readFileName.c_str(), "rb");
 
     if (pReadFile) {
 
@@ -332,8 +333,8 @@ int sample_main() {
 
     // Write the file to disk, overwriting whatever was there
     FILE *pWriteFile;
-    const char *writeFileName = "pipeline_cache_data.bin";
-    pWriteFile = fopen(writeFileName, "wb");
+    std::string writeFileName = directoryName + "pipeline_cache_data.bin";
+    pWriteFile = fopen(writeFileName.c_str(), "wb");
     if (pWriteFile) {
         fwrite(endCacheData, sizeof(char), endCacheSize, pWriteFile);
         fclose(pWriteFile);
