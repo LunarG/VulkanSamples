@@ -39,7 +39,6 @@
 #define NOMINMAX /* Don't let Windows define min() or max() */
 #define APP_NAME_STR_LEN 80
 #else // _WIN32
-#define VK_USE_PLATFORM_XCB_KHR
 #include <unistd.h>
 #endif // _WIN32
 
