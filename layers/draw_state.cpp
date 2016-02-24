@@ -1698,6 +1698,7 @@ static VkBool32 validate_dynamic_offsets(layer_data* my_data, const GLOBAL_CB_NO
     VkDeviceSize bufferSize = 0;
     for (auto set_node : activeSetNodes) {
         for (uint32_t i = 0; i < set_node->descriptorCount; ++i) {
+            // TODO: Add validation for descriptors dynamically skipped in shader
             if (set_node->ppDescriptors[i] != NULL) {
                 switch (set_node->ppDescriptors[i]->sType) {
                 case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
