@@ -380,6 +380,10 @@ in the following Linux directories:
 
 /usr/share/vulkan/icd.d
 /etc/vulkan/icd.d
+$HOME/.local/share/vulkan/icd.d
+
+Where $HOME is the current home directory of the application's user id; this
+path will be ignored for suid programs.
 
 These directories will contain text information files (a.k.a. "manifest
 files"), that use a JSON format.
@@ -453,7 +457,7 @@ other words, only the ICDs listed in "VK\_ICD\_FILENAMES" will be used.
 The "VK\_ICD\_FILENAMES" environment variable is a colon-separated list of ICD
 manifest files, containing the following:
 
-- A filename (e.g. "libvkicd.json") in the "/usr/share/vulkan/icd.d" or "/etc/vulkan/icd.d" system directories
+- A filename (e.g. "libvkicd.json") in the "/usr/share/vulkan/icd.d", "/etc/vulkan/icd.d" "$HOME/.local/share/vulkan/icd.d" directories
 
 - A full pathname (e.g. "/my\_build/my\_icd.json")
 
@@ -824,6 +828,11 @@ The Vulkan loader will scan the files in the following Linux directories:
 /usr/share/vulkan/implicit\_layer.d
 /etc/vulkan/explicit\_layer.d
 /etc/vulkan/implicit\_layer.d
+$HOME/.local/share/vulkan/explicit\_layer.d
+$HOME/.local/share/vulkan/implicit\_layer.d
+
+Where $HOME is the current home directory of the application's user id; this
+path will be ignored for suid programs.
 
 Explicit layers are those which are enabled by an application (e.g. with the
 vkCreateInstance function), or by an environment variable (as mentioned
