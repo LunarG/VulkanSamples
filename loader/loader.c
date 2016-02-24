@@ -1857,7 +1857,7 @@ loader_add_layer_properties(const struct loader_instance *inst,
     char *temp;
     char *name, *type, *library_path, *api_version;
     char *implementation_version, *description;
-    cJSON *disable_environment;
+    cJSON *disable_environment = NULL;
     int i, j;
     VkExtensionProperties ext_prop;
     item = cJSON_GetObjectItem(json, "file_format_version");
@@ -2651,15 +2651,15 @@ static void loader_init_dispatch_dev_ext_entry(struct loader_instance *inst,
     } else {
         for (uint32_t i = 0; i < inst->total_icd_count; i++) {
             struct loader_icd *icd = &inst->icds[i];
-            struct loader_device *dev = icd->logical_device_list;
-            while (dev) {
+            struct loader_device *ldev = icd->logical_device_list;
+            while (ldev) {
                 gdpa_value =
-                    dev->loader_dispatch.core_dispatch.GetDeviceProcAddr(
-                        dev->device, funcName);
+                    ldev->loader_dispatch.core_dispatch.GetDeviceProcAddr(
+                        ldev->device, funcName);
                 if (gdpa_value != NULL)
-                    dev->loader_dispatch.ext_dispatch.DevExt[idx] =
+                    ldev->loader_dispatch.ext_dispatch.DevExt[idx] =
                         (PFN_vkDevExt)gdpa_value;
-                dev = dev->next;
+                ldev = ldev->next;
             }
         }
     }
@@ -3709,13 +3709,13 @@ loader_CreateInstance(const VkInstanceCreateInfo *pCreateInfo,
                 icd->this_icd_lib->EnumerateInstanceExtensionProperties,
                 icd->this_icd_lib->lib_name, &icd_exts);
 
-            for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+            for (uint32_t j = 0; j < pCreateInfo->enabledExtensionCount; j++) {
                 prop = get_extension_property(
-                    pCreateInfo->ppEnabledExtensionNames[i], &icd_exts);
+                    pCreateInfo->ppEnabledExtensionNames[j], &icd_exts);
                 if (prop) {
                     filtered_extension_names[icd_create_info
                                                  .enabledExtensionCount] =
-                        (char *)pCreateInfo->ppEnabledExtensionNames[i];
+                        (char *)pCreateInfo->ppEnabledExtensionNames[j];
                     icd_create_info.enabledExtensionCount++;
                 }
             }
@@ -4524,7 +4524,7 @@ loader_EnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice,
 
 VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8) {
     VkStringErrorFlags result = VK_STRING_ERROR_NONE;
-    int num_char_bytes;
+    int num_char_bytes = 0;
     int i, j;
 
     for (i = 0; i < max_length; i++) {

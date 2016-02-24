@@ -343,7 +343,7 @@ static const char *parse_string(cJSON *item, const char *str) {
                     *--ptr2 = ((uc | 0x80) & 0xBF);
                     uc >>= 6;
                 case 1:
-                    *--ptr2 = (uc | firstByteMark[len]);
+                    *--ptr2 = ((unsigned char)uc | firstByteMark[len]);
                 }
                 ptr2 += len;
                 break;
@@ -521,7 +521,6 @@ char *cJSON_PrintBuffered(cJSON *item, int prebuffer, int fmt) {
     p.length = prebuffer;
     p.offset = 0;
     return print_value(item, 0, fmt, &p);
-    return p.buffer;
 }
 
 /* Parser core - when encountering text, process appropriately. */
