@@ -242,7 +242,7 @@ VkResult init_instance(struct sample_info &info,
     app_info.applicationVersion = 1;
     app_info.pEngineName = app_short_name;
     app_info.engineVersion = 1;
-    app_info.apiVersion = VK_API_VERSION;
+    app_info.apiVersion = VK_MAKE_VERSION(1, 0, 0);
 
     VkInstanceCreateInfo inst_info = {};
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
