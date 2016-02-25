@@ -253,15 +253,15 @@ static void initSwapchain(layer_data *my_data, const VkAllocationCallbacks *pAll
     const char *option_str;
     VkDebugReportCallbackEXT callback;
 
-    // Initialize Swapchain options:
-    report_flags = getLayerOptionFlags("SwapchainReportFlags", 0);
-    getLayerOptionEnum("SwapchainDebugAction", (uint32_t *) &debug_action);
+    // Initialize swapchain options:
+    report_flags = getLayerOptionFlags("lunarg_swapchain.report_flags", 0);
+    getLayerOptionEnum("lunarg_swapchain.debug_action", (uint32_t *) &debug_action);
 
     if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG)
     {
         // Turn on logging, since it was requested:
-        option_str = getLayerOption("SwapchainLogFilename");
-        log_output = getLayerLogOutput(option_str, "Swapchain");
+        option_str = getLayerOption("lunarg_swapchain.log_filename");
+        log_output = getLayerLogOutput(option_str, "lunarg_swapchain");
         VkDebugReportCallbackCreateInfoEXT dbgInfo;
         memset(&dbgInfo, 0, sizeof(dbgInfo));
         dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;

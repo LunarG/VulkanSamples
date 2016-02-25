@@ -380,6 +380,10 @@ in the following Linux directories:
 
 /usr/share/vulkan/icd.d
 /etc/vulkan/icd.d
+$HOME/.local/share/vulkan/icd.d
+
+Where $HOME is the current home directory of the application's user id; this
+path will be ignored for suid programs.
 
 These directories will contain text information files (a.k.a. "manifest
 files"), that use a JSON format.
@@ -453,7 +457,7 @@ other words, only the ICDs listed in "VK\_ICD\_FILENAMES" will be used.
 The "VK\_ICD\_FILENAMES" environment variable is a colon-separated list of ICD
 manifest files, containing the following:
 
-- A filename (e.g. "libvkicd.json") in the "/usr/share/vulkan/icd.d" or "/etc/vulkan/icd.d" system directories
+- A filename (e.g. "libvkicd.json") in the "/usr/share/vulkan/icd.d", "/etc/vulkan/icd.d" "$HOME/.local/share/vulkan/icd.d" directories
 
 - A full pathname (e.g. "/my\_build/my\_icd.json")
 
@@ -765,7 +769,7 @@ For example:
             "spec_version": "3"
          }
     ],
-    device_extensions": [
+    "device_extensions": [
         {
             "name": "VK_LUNARG_DEBUG_MARKER",
             "spec_version": "1",
@@ -824,6 +828,11 @@ The Vulkan loader will scan the files in the following Linux directories:
 /usr/share/vulkan/implicit\_layer.d
 /etc/vulkan/explicit\_layer.d
 /etc/vulkan/implicit\_layer.d
+$HOME/.local/share/vulkan/explicit\_layer.d
+$HOME/.local/share/vulkan/implicit\_layer.d
+
+Where $HOME is the current home directory of the application's user id; this
+path will be ignored for suid programs.
 
 Explicit layers are those which are enabled by an application (e.g. with the
 vkCreateInstance function), or by an environment variable (as mentioned
@@ -926,7 +935,7 @@ For example:
             "spec_version": "3"
          }
     ],
-    device_extensions": [
+    "device_extensions": [
         {
             "name": "VK_LUNARG_DEBUG_MARKER",
             "spec_version": "1",
@@ -1140,24 +1149,131 @@ the VkInstanceCreateInfo/VkDeviceCreateInfo structure.
 Get*ProcAddr function once for each Vulkan command needed in your dispatch
 table
 
-TODO: Example code for CreateInstance.
+#### Example code for CreateInstance
 
-TODO: Example code for CreateDevice.
+```cpp
+VkResult vkCreateInstance(
+        const VkInstanceCreateInfo *pCreateInfo,
+        const VkAllocationCallbacks *pAllocator,
+        VkInstance *pInstance)
+{
+   VkLayerInstanceCreateInfo *chain_info =
+        get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
+        chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkCreateInstance fpCreateInstance =
+        (PFN_vkCreateInstance)fpGetInstanceProcAddr(NULL, "vkCreateInstance");
+    if (fpCreateInstance == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Advance the link info for the next element of the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    // Continue call down the chain
+    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
+    if (result != VK_SUCCESS)
+        return result;
+
+    // Allocate new structure to store peristent data
+    layer_data *my_data = new layer_data;
+
+    // Associate this instance with the newly allocated data
+    // layer will store any persistent state it needs for
+    // this instance in the my_data structure
+    layer_data_map[get_dispatch_key(*pInstance)] = my_data;
+
+    // Create layer's dispatch table using GetInstanceProcAddr of
+    // next layer in the chain.
+    my_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
+    layer_init_instance_dispatch_table(
+        *pInstance, my_data->instance_dispatch_table, fpGetInstanceProcAddr);
+
+    // Keep track of any extensions that were enabled for this
+    // instance. In this case check for VK_EXT_debug_report
+    my_data->report_data = debug_report_create_instance(
+        my_data->instance_dispatch_table, *pInstance,
+        pCreateInfo->enabledExtensionCount,
+        pCreateInfo->ppEnabledExtensionNames);
+
+    // Other layer initialization
+    ...
+
+    return VK_SUCCESS;
+}
+```
+
+#### Example code for CreateDevice
+
+```cpp
+VkResult 
+vkCreateDevice(
+        VkPhysicalDevice gpu,
+        const VkDeviceCreateInfo *pCreateInfo,
+        const VkAllocationCallbacks *pAllocator,
+        VkDevice *pDevice)
+{
+    VkLayerDeviceCreateInfo *chain_info =
+        get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
+        chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr =
+        chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
+    PFN_vkCreateDevice fpCreateDevice =
+        (PFN_vkCreateDevice)fpGetInstanceProcAddr(NULL, "vkCreateDevice");
+    if (fpCreateDevice == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    VkResult result = fpCreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    // Allocate new structure to store peristent data
+    layer_data *my_data = new layer_data;
+
+    // Associate this instance with the newly allocated data
+    // layer will store any persistent state it needs for
+    // this instance in the my_data structure
+    layer_data_map[get_dispatch_key(*pDevice)] = my_data;
+
+    my_device_data->device_dispatch_table = new VkLayerDispatchTable;
+    layer_init_device_dispatch_table(
+        *pDevice, my_device_data->device_dispatch_table, fpGetDeviceProcAddr);
+
+    // Keep track of any extensions that were enabled for this
+    // instance. In this case check for VK_EXT_debug_report
+    my_data->report_data = debug_report_create_instance(
+        my_instance_data->report_data, *pDevice);
+
+    // Other layer initialization
+    ...
+
+    return VK_SUCCESS;
+}
+```
 
 #### Special Considerations
-
-A layer may want to associate its own private data with one or more Vulkan
-objects.  Two common methods to do this are hash maps and object wrapping. The
-loader supports layers wrapping any Vulkan object including dispatchable
-objects.  Layers which wrap objects should ensure they always unwrap objects
-before passing them down the chain. This implies the layer must intercept every
-Vulkan command which uses the object in question. Layers above the object
-wrapping layer will see the wrapped object.
+A layer may want to associate it's own private data with one or more Vulkan
+objects.
+Two common methods to do this are hash maps  and object wrapping. The loader
+supports layers wrapping any Vulkan object including dispatchable objects.
+Layers which wrap objects should ensure they always unwrap objects before
+passing them down the chain. This implies the layer must intercept every Vulkan
+command which uses the object in question. Layers above the object wrapping
+layer will see the wrapped object.
 
 Alternatively, a layer may want to use a hash map to associate data with a
-given object.  The key to the map could be the object. Alternatively, for
-dispatchable objects at a given level (e.g. device or instance) the layer may
-want to associated data with all commands for the VkDevice or VkInstance. Since
+given object. The key to the map could be the object. Alternatively, for
+dispatchable objects at a given level (eg device or instance) the layer may
+want data associated with the VkDevice or VkInstance objects. Since
 there are multiple dispatchable objects for a given VkInstance or VkDevice, the
 VkDevice or VkInstance object is not a great map key. Instead the layer should
 use the dispatch table pointer within the VkDevice or VkInstance since that
@@ -1166,8 +1282,8 @@ will be unique for a given VkInstance or VkDevice.
 Layers which create dispatchable objects take special care. Remember that loader
 trampoline code normally fills in the dispatch table pointer in the newly
 created object. Thus, the layer must fill in the dispatch table pointer if the
-loader trampoline will not do so.  Common cases a layer may create a dispatchable
-object without loader trampoline code is as follows:
+loader trampoline will not do so.  Common cases where a layer may create a
+dispatchable object without loader trampoline code is as follows:
 - object wrapping layers that wrap dispatchable objects
 - layers which add extensions that create dispatchable objects
 - layers which insert extra Vulkan commands in the stream of commands they

@@ -48,11 +48,17 @@
 
 #define snprintf _snprintf
 
-bool consoleCreated = false;
+// Returns nonzero if the console is used only for this process. Will return
+// zero if another process (such as cmd.exe) is also attached.
+static int ConsoleIsExclusive(void) {
+    DWORD pids[2];
+    DWORD num_pids = GetConsoleProcessList(pids, ARRAYSIZE(pids));
+    return num_pids <= 1;
+}
 
 #define WAIT_FOR_CONSOLE_DESTROY                                               \
     do {                                                                       \
-        if (consoleCreated)                                                    \
+        if (ConsoleIsExclusive())                                                    \
             Sleep(INFINITE);                                                   \
     } while (0)
 #else
@@ -1133,6 +1139,32 @@ static void app_gpu_dump(const struct app_gpu *gpu) {
     app_dev_dump(&gpu->dev);
 }
 
+#ifdef _WIN32
+// Enlarges the console window to have a large scrollback size.
+static void ConsoleEnlarge() {
+    HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    // make the console window bigger
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    COORD bufferSize;
+    if (GetConsoleScreenBufferInfo(consoleHandle, &csbi))
+    {
+        bufferSize.X = csbi.dwSize.X + 30;
+        bufferSize.Y = 20000;
+        SetConsoleScreenBufferSize(consoleHandle, bufferSize);
+    }
+
+    SMALL_RECT r;
+    r.Left = r.Top = 0;
+    r.Right = csbi.dwSize.X - 1 + 30;
+    r.Bottom = 50;
+    SetConsoleWindowInfo(consoleHandle, true, &r);
+
+    // change the console window title
+    SetConsoleTitle(TEXT(APP_SHORT_NAME));
+}
+#endif
+
 int main(int argc, char **argv) {
     unsigned int major, minor, patch;
     struct app_gpu gpus[MAX_GPUS];
@@ -1140,6 +1172,11 @@ int main(int argc, char **argv) {
     uint32_t gpu_count, i;
     VkResult err;
     struct app_instance inst;
+
+#ifdef _WIN32
+    if (ConsoleIsExclusive())
+        ConsoleEnlarge();
+#endif
 
     major = VK_API_VERSION >> 22;
     minor = (VK_API_VERSION >> 12) & 0x3ff;
@@ -1200,58 +1237,11 @@ int main(int argc, char **argv) {
 
     app_destroy_instance(&inst);
 
+    fflush(stdout);
+#ifdef _WIN32
+    if (ConsoleIsExclusive())
+        Sleep(INFINITE);
+#endif
+
     return 0;
 }
-
-#ifdef _WIN32
-
-// Create a console window with a large scrollback size to which to send stdout.
-// Returns true if console window was successfully created, false otherwise.
-bool SetStdOutToNewConsole() {
-    // don't do anything if we already have a console
-    if (GetStdHandle(STD_OUTPUT_HANDLE))
-        return false;
-
-    // allocate a console for this app
-    if (!AllocConsole())
-        return false;
-
-    // redirect unbuffered STDOUT to the console
-    HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-    int fileDescriptor = _open_osfhandle((intptr_t)consoleHandle, _O_TEXT);
-    FILE *fp = _fdopen(fileDescriptor, "w");
-    *stdout = *fp;
-    setvbuf(stdout, NULL, _IONBF, 0);
-
-    // make the console window bigger
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    COORD bufferSize;
-    if (GetConsoleScreenBufferInfo(consoleHandle, &csbi))
-    {
-        bufferSize.X = csbi.dwSize.X + 30;
-        bufferSize.Y = 20000;
-        SetConsoleScreenBufferSize(consoleHandle, bufferSize);
-    }
-
-    SMALL_RECT r;
-    r.Left = r.Top = 0;
-    r.Right = csbi.dwSize.X - 1 + 30;
-    r.Bottom = 50;
-    SetConsoleWindowInfo(consoleHandle, true, &r);
-
-    // change the console window title
-    SetConsoleTitle(TEXT(APP_SHORT_NAME));
-
-    return true;
-}
-
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine,
-                   int nCmdShow) {
-    char *argv = pCmdLine;
-    consoleCreated = SetStdOutToNewConsole();
-    main(1, &argv);
-    fflush(stdout);
-    if (consoleCreated)
-        Sleep(INFINITE);
-}
-#endif

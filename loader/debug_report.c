@@ -192,7 +192,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDebugReportCallback(
     VkDebugReportCallbackEXT *icd_info;
     const struct loader_icd *icd;
     struct loader_instance *inst = (struct loader_instance *)instance;
-    VkResult res;
+    VkResult res = VK_SUCCESS;
     uint32_t storage_idx;
 
     icd_info = calloc(sizeof(VkDebugReportCallbackEXT), inst->total_icd_count);

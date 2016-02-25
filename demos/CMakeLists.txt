@@ -87,11 +87,7 @@ if(WIN32)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES")
 endif()
 
-if(UNIX)
-    add_executable(vulkaninfo vulkaninfo.c)
-else()
-    add_executable(vulkaninfo WIN32 vulkaninfo.c)
-endif()
+add_executable(vulkaninfo vulkaninfo.c)
 target_link_libraries(vulkaninfo ${LIBRARIES})
 
 if(UNIX)
