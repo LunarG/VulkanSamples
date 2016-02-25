@@ -155,7 +155,7 @@ class VkRenderFramework : public VkTestFramework {
         this->app_info.applicationVersion = 1;
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
-        this->app_info.apiVersion = VK_API_VERSION;
+        this->app_info.apiVersion = VK_MAKE_VERSION(1, 0, 0);
 
         InitFramework();
     }
