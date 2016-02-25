@@ -5798,10 +5798,6 @@ TEST_F(VkLayerTest, CreatePipelineAttribMatrixType) {
     }
 }
 
-/*
- * Would work, but not supported by glslang! This is similar to the matrix case
-above.
- *
 TEST_F(VkLayerTest, CreatePipelineAttribArrayType)
 {
     m_errorMonitor->SetDesiredFailureMsg(~0u, "");
@@ -5865,7 +5861,6 @@ m_errorMonitor->GetFailureMsg();
         m_errorMonitor->DumpFailureMsgs();
     }
 }
-*/
 
 TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict) {
     m_errorMonitor->SetDesiredFailureMsg(
