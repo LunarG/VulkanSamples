@@ -1893,32 +1893,58 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
     loader_platform_thread_lock_mutex(&globalLock);
 
     for (uint32_t i = 0; i < bindInfoCount; i++) {
+        const VkBindSparseInfo *bindInfo = &pBindInfo[i];
         // Track objects tied to memory
-        for (uint32_t j = 0; j < pBindInfo[i].bufferBindCount; j++) {
-            for (uint32_t k = 0; k < pBindInfo[i].pBufferBinds[j].bindCount; k++) {
+        for (uint32_t j = 0; j < bindInfo->bufferBindCount; j++) {
+            for (uint32_t k = 0; k < bindInfo->pBufferBinds[j].bindCount; k++) {
                 if (set_sparse_mem_binding(my_data, queue,
-                            pBindInfo[i].pBufferBinds[j].pBinds[k].memory,
-                            (uint64_t) pBindInfo[i].pBufferBinds[j].buffer,
+                            bindInfo->pBufferBinds[j].pBinds[k].memory,
+                            (uint64_t) bindInfo->pBufferBinds[j].buffer,
                             VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkQueueBindSparse"))
                     skipCall = VK_TRUE;
             }
         }
-        for (uint32_t j = 0; j < pBindInfo[i].imageOpaqueBindCount; j++) {
-            for (uint32_t k = 0; k < pBindInfo[i].pImageOpaqueBinds[j].bindCount; k++) {
+        for (uint32_t j = 0; j < bindInfo->imageOpaqueBindCount; j++) {
+            for (uint32_t k = 0; k < bindInfo->pImageOpaqueBinds[j].bindCount; k++) {
                 if (set_sparse_mem_binding(my_data, queue,
-                            pBindInfo[i].pImageOpaqueBinds[j].pBinds[k].memory,
-                            (uint64_t) pBindInfo[i].pImageOpaqueBinds[j].image,
+                            bindInfo->pImageOpaqueBinds[j].pBinds[k].memory,
+                            (uint64_t) bindInfo->pImageOpaqueBinds[j].image,
                             VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkQueueBindSparse"))
                     skipCall = VK_TRUE;
             }
         }
-        for (uint32_t j = 0; j < pBindInfo[i].imageBindCount; j++) {
-            for (uint32_t k = 0; k < pBindInfo[i].pImageBinds[j].bindCount; k++) {
+        for (uint32_t j = 0; j < bindInfo->imageBindCount; j++) {
+            for (uint32_t k = 0; k < bindInfo->pImageBinds[j].bindCount; k++) {
                 if (set_sparse_mem_binding(my_data, queue,
-                            pBindInfo[i].pImageBinds[j].pBinds[k].memory,
-                            (uint64_t) pBindInfo[i].pImageBinds[j].image,
+                            bindInfo->pImageBinds[j].pBinds[k].memory,
+                            (uint64_t) bindInfo->pImageBinds[j].image,
                             VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkQueueBindSparse"))
                     skipCall = VK_TRUE;
+            }
+        }
+        // Validate semaphore state
+        for (uint32_t i = 0; i < bindInfo->waitSemaphoreCount; i++) {
+            VkSemaphore sem = bindInfo->pWaitSemaphores[i];
+
+            if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {
+                if (my_data->semaphoreMap[sem] != MEMTRACK_SEMAPHORE_STATE_SIGNALLED) {
+                    skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, (uint64_t) sem,
+                            __LINE__, MEMTRACK_NONE, "SEMAPHORE",
+                            "vkQueueBindSparse: Semaphore must be in signaled state before passing to pWaitSemaphores");
+                }
+                my_data->semaphoreMap[sem] = MEMTRACK_SEMAPHORE_STATE_WAIT;
+            }
+        }
+        for (uint32_t i = 0; i < bindInfo->signalSemaphoreCount; i++) {
+            VkSemaphore sem = bindInfo->pSignalSemaphores[i];
+
+            if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {
+                if (my_data->semaphoreMap[sem] != MEMTRACK_SEMAPHORE_STATE_UNSET) {
+                    skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, (uint64_t) sem,
+                            __LINE__, MEMTRACK_NONE, "SEMAPHORE",
+                            "vkQueueBindSparse: Semaphore must not be currently signaled or in a wait state");
+                }
+                my_data->semaphoreMap[sem] = MEMTRACK_SEMAPHORE_STATE_SIGNALLED;
             }
         }
     }
@@ -1928,6 +1954,21 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
     if (VK_FALSE == skipCall) {
         result = my_data->device_dispatch_table->QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
     }
+
+    // Update semaphore state
+    loader_platform_thread_lock_mutex(&globalLock);
+    for (uint32_t bind_info_idx = 0; bind_info_idx < bindInfoCount; bind_info_idx++) {
+        const VkBindSparseInfo *bindInfo = &pBindInfo[bind_info_idx];
+        for (uint32_t i = 0; i < bindInfo->waitSemaphoreCount; i++) {
+            VkSemaphore sem = bindInfo->pWaitSemaphores[i];
+
+            if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {
+                my_data->semaphoreMap[sem] = MEMTRACK_SEMAPHORE_STATE_UNSET;
+            }
+        }
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+
     return result;
 }
 
