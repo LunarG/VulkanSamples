@@ -4604,10 +4604,34 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyRenderPass(VkDevice device, 
     // TODO : Clean up any internal data structures using this obj.
 }
 
+VkBool32 validate_queue_family_indices(layer_data* dev_data, const char *function_name, const uint32_t count, const uint32_t* indices) {
+    VkBool32 skipCall = VK_FALSE;
+    for (auto i = 0; i < count; i++) {
+        if (indices[i] >= dev_data->physDevProperties.queue_family_properties.size()) {
+            skipCall |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                    DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
+                    "%s has QueueFamilyIndex greater than the number of QueueFamilies ("
+                    PRINTF_SIZE_T_SPECIFIER ") for this device.",
+                    function_name,
+                    dev_data->physDevProperties.queue_family_properties.size());
+        }
+    }
+    return skipCall;
+}
+
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBuffer(VkDevice device, const VkBufferCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkBuffer* pBuffer)
 {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
+    bool skipCall = validate_queue_family_indices(dev_data, "vkCreateBuffer",
+        pCreateInfo->queueFamilyIndexCount, pCreateInfo->pQueueFamilyIndices);
+    if (!skipCall) {
+        result = dev_data->device_dispatch_table->CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
+    }
+
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         // TODO : This doesn't create deep copy of pQueueFamilyIndices so need to fix that if/when we want that data to be valid
@@ -4632,8 +4656,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBufferView(VkDevice devic
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImage* pImage)
 {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
+    bool skipCall = validate_queue_family_indices(dev_data, "vkCreateImage",
+        pCreateInfo->queueFamilyIndexCount, pCreateInfo->pQueueFamilyIndices);
+    if (!skipCall) {
+        result = dev_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
+    }
+
     if (VK_SUCCESS == result) {
         IMAGE_NODE image_node;
         image_node.layout = pCreateInfo->initialLayout;
@@ -4641,7 +4671,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, co
         loader_platform_thread_lock_mutex(&globalLock);
         dev_data->imageMap[*pImage] = unique_ptr<VkImageCreateInfo>(new VkImageCreateInfo(*pCreateInfo));
         ImageSubresourcePair subpair = {*pImage, false, VkImageSubresource()};
-        dev_data->imageSubresourceMap[*pImage].push_back(subpair); 
+        dev_data->imageSubresourceMap[*pImage].push_back(subpair);
         dev_data->imageLayoutMap[subpair] = image_node;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
@@ -6339,6 +6369,23 @@ VkBool32 ValidateBarriers(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
     }
     for (uint32_t i = 0; i < imageMemBarrierCount; ++i) {
         auto mem_barrier = &pImageMemBarriers[i];
+
+        // Validate image barrier queue family indices
+        if ((mem_barrier->srcQueueFamilyIndex >=
+             dev_data->physDevProperties.queue_family_properties.size()) ||
+            (mem_barrier->dstQueueFamilyIndex >=
+             dev_data->physDevProperties.queue_family_properties.size())) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                    DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
+                    "Image Barrier 0x%" PRIx64 " has QueueFamilyIndex greater "
+                    "than the number of QueueFamilies (" PRINTF_SIZE_T_SPECIFIER
+                    ") for this device.",
+                    reinterpret_cast<const uint64_t &>(mem_barrier->image),
+                    dev_data->physDevProperties.queue_family_properties.size());
+        }
+
         if (pCB->activeRenderPass) {
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -6437,6 +6484,23 @@ VkBool32 ValidateBarriers(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
         }
         if (!mem_barrier)
             continue;
+
+        // Validate buffer barrier queue family indices
+        if ((mem_barrier->srcQueueFamilyIndex >=
+             dev_data->physDevProperties.queue_family_properties.size()) ||
+            (mem_barrier->dstQueueFamilyIndex >=
+             dev_data->physDevProperties.queue_family_properties.size())) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                    DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
+                    "Buffer Barrier 0x%" PRIx64 " has QueueFamilyIndex greater "
+                    "than the number of QueueFamilies (" PRINTF_SIZE_T_SPECIFIER
+                    ") for this device.",
+                    reinterpret_cast<const uint64_t &>(mem_barrier->buffer),
+                    dev_data->physDevProperties.queue_family_properties.size());
+        }
+
         auto buffer_data = dev_data->bufferMap.find(mem_barrier->buffer);
         uint64_t buffer_size = buffer_data->second.create_info
                                    ? reinterpret_cast<uint64_t &>(

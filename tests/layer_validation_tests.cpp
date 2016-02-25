@@ -3720,6 +3720,33 @@ TEST_F(VkLayerTest, IdxBufferAlignmentError) {
     vkDestroyBuffer(m_device->device(), ib, NULL);
 }
 
+TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
+    // Create an out-of-range queueFamilyIndex
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreateBuffer has QueueFamilyIndex greater than");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    VkBufferCreateInfo buffCI = {};
+    buffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffCI.size = 1024;
+    buffCI.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    buffCI.queueFamilyIndexCount = 1;
+    // Introduce failure by specifying invalid queue_family_index
+    uint32_t qfi = 777;
+    buffCI.pQueueFamilyIndices = &qfi;
+
+    VkBuffer ib;
+    vkCreateBuffer(m_device->device(), &buffCI, NULL, &ib);
+
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive Error 'vkCreateBuffer() has "
+        "QueueFamilyIndex greater than...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+}
+
 TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB) {
     // Attempt vkCmdExecuteCommands w/ a primary cmd buffer (should only be
     // secondary)

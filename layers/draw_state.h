@@ -199,6 +199,8 @@ typedef enum _DRAW_STATE_ERROR {
                                  // must be VK_FALSE
     DRAWSTATE_INVALID_LOGIC_OP,  // If logicOpEnable is VK_TRUE, logicOp must
                                  // must be a valid VkLogicOp value
+    DRAWSTATE_INVALID_QUEUE_INDEX,           // Specified queue index exceeds number
+                                             // of queried queue families
 } DRAW_STATE_ERROR;
 
 typedef enum _SHADER_CHECKER_ERROR {
