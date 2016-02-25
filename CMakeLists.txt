@@ -11,6 +11,7 @@ project (VULKAN)
 # vulkan-<major>.dll (and other files).
 set(MAJOR "1")
 
+find_package(PythonInterp 3 REQUIRED)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN)
