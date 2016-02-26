@@ -449,6 +449,7 @@ storage_class_name(unsigned sc)
     case spv::StorageClassGeneric: return "generic";
     case spv::StorageClassAtomicCounter: return "atomic counter";
     case spv::StorageClassImage: return "image";
+    case spv::StorageClassPushConstant: return "push constant";
     default: return "unknown";
     }
 }
