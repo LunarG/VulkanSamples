@@ -1003,6 +1003,14 @@ get_fundamental_type(shader_module const *src, unsigned type)
     }
 }
 
+
+static uint32_t get_shader_stage_id(VkShaderStageFlagBits stage)
+{
+    uint32_t bit_pos = u_ffs(stage);
+    return bit_pos-1;
+}
+
+
 static bool
 validate_vi_consistency(layer_data *my_data, VkDevice dev, VkPipelineVertexInputStateCreateInfo const *vi)
 {
@@ -1300,12 +1308,6 @@ has_descriptor_binding(layer_data* my_data,
                    ->bindingToIndexMap;
 
     return (bindingMap.find(slot.second) != bindingMap.end());
-}
-
-static uint32_t get_shader_stage_id(VkShaderStageFlagBits stage)
-{
-    uint32_t bit_pos = u_ffs(stage);
-    return bit_pos-1;
 }
 
 // Block of code at start here for managing/tracking Pipeline state that this layer cares about
