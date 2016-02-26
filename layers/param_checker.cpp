@@ -5790,6 +5790,25 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(
     return result;
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool,
+                     uint32_t commandBufferCount,
+                     const VkCommandBuffer *pCommandBuffers) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkFreeCommandBuffers(
+        my_data->report_data, commandPool, commandBufferCount, pCommandBuffers);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->FreeCommandBuffers(device, commandPool, commandBufferCount,
+                                 pCommandBuffers);
+    }
+}
+
 bool PreBeginCommandBuffer(
     VkCommandBuffer commandBuffer,
     const VkCommandBufferBeginInfo* pBeginInfo)
@@ -7680,6 +7699,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkCmdSetStencilReference;
     if (!strcmp(funcName, "vkAllocateCommandBuffers"))
         return (PFN_vkVoidFunction) vkAllocateCommandBuffers;
+    if (!strcmp(funcName, "vkFreeCommandBuffers"))
+        return (PFN_vkVoidFunction)vkFreeCommandBuffers;
     if (!strcmp(funcName, "vkBeginCommandBuffer"))
         return (PFN_vkVoidFunction) vkBeginCommandBuffer;
     if (!strcmp(funcName, "vkEndCommandBuffer"))
