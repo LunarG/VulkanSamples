@@ -1291,6 +1291,93 @@ shader_stage_attribs[] = {
     { "fragment shader", false },
 };
 
+static bool validate_push_constant_block_against_pipeline(
+    layer_data* my_data, VkDevice dev,
+    std::vector<VkPushConstantRange> const* pushConstantRanges,
+    shader_module const* src, spirv_inst_iter type,
+    VkShaderStageFlagBits stage) {
+  bool pass = true;
+
+  /* strip off ptrs etc */
+  type = get_struct_type(src, type, false);
+  assert(type != src->end());
+
+  /* validate directly off the offsets. this isn't quite correct for arrays
+   * and matrices, but is a good first step. TODO: arrays, matrices, weird
+   * sizes */
+  for (auto insn : *src) {
+    if (insn.opcode() == spv::OpMemberDecorate &&
+        insn.word(1) == type.word(1)) {
+      unsigned member_index = insn.word(2);
+
+      if (insn.word(3) == spv::DecorationOffset) {
+        unsigned offset = insn.word(4);
+        auto size = 4; /* bytes; TODO: calculate this based on the type */
+
+        bool found_range = false;
+        for (auto const& range : *pushConstantRanges) {
+          if (range.offset <= offset &&
+              range.offset + range.size >= offset + size) {
+            found_range = true;
+
+            if ((range.stageFlags & stage) == 0) {
+              if (log_msg(
+                      my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                      VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                      /* dev */ 0, __LINE__,
+                      SHADER_CHECKER_PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE,
+                      "SC",
+                      "Push constant range covering variable starting at "
+                      "offset %u not accessible from %s stage",
+                      offset,
+                      shader_stage_attribs[get_shader_stage_id(stage)].name)) {
+                pass = false;
+              }
+            }
+
+            break;
+          }
+        }
+
+        if (!found_range) {
+          if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                      VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                      /* dev */ 0, __LINE__,
+                      SHADER_CHECKER_PUSH_CONSTANT_OUT_OF_RANGE, "SC",
+                      "Push constant range covering variable starting at "
+                      "offset %u not declared in layout",
+                      offset)) {
+            pass = false;
+          }
+        }
+      }
+    }
+  }
+
+  return pass;
+}
+
+static bool validate_push_constant_usage(
+    layer_data* my_data, VkDevice dev,
+    std::vector<VkPushConstantRange> const* pushConstantRanges,
+    shader_module const* src, std::unordered_set<uint32_t> accessible_ids,
+    VkShaderStageFlagBits stage) {
+  bool pass = true;
+
+  for (auto id : accessible_ids) {
+    auto def_insn = src->get_def(id);
+    if (def_insn.opcode() == spv::OpVariable &&
+        def_insn.word(3) == spv::StorageClassPushConstant) {
+      pass = validate_push_constant_block_against_pipeline(
+                 my_data, dev, pushConstantRanges, src,
+                 src->get_def(def_insn.word(1)), stage) &&
+             pass;
+    }
+  }
+
+  return pass;
+}
+
 // For given pipelineLayout verify that the setLayout at slot.first
 //  has the requested binding at slot.second
 static bool
@@ -1624,6 +1711,14 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
                         }
                     }
                 }
+
+                /* validate push constant usage */
+                pass = validate_push_constant_usage(
+                           my_data, dev,
+                           &my_data->pipelineLayoutMap[pCreateInfo->layout]
+                                .pushConstantRanges,
+                           module, accessible_ids, pStage->stage) &&
+                       pass;
             }
         }
     }
