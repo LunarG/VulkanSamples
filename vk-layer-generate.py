@@ -1443,7 +1443,7 @@ class ObjectTrackerSubcommand(Subcommand):
                                    'vkGetPhysicalDeviceSurfacePresentModesKHR',
                                    'vkCreateWaylandSurfaceKHR',
                                    'vkGetPhysicalDeviceWaylandPresentationSupportKHR'])]
-        else: #Mir
+        elif self.wsi == 'Mir':
             instance_extensions=[('msg_callback_get_proc_addr', []),
                                   ('wsi_enabled',
                                   ['vkGetPhysicalDeviceSurfaceSupportKHR',
@@ -1452,6 +1452,10 @@ class ObjectTrackerSubcommand(Subcommand):
                                    'vkGetPhysicalDeviceSurfacePresentModesKHR',
                                    'vkCreateMirSurfaceKHR',
                                    'vkGetPhysicalDeviceMirPresentationSupportKHR'])]
+        else:
+            print('Error: Undefined DisplayServer')
+            instance_extensions=[]
+
         body = [self.generate_maps(),
                 self.generate_procs(),
                 self.generate_destroy_instance(),

@@ -7,9 +7,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 		set(ENV{VULKAN_WSI} "Xlib")
 	elseif (BUILD_WSI_WAYLAND_SUPPORT)
 		set(ENV{VULKAN_WSI} "Wayland")
-	else()
-		# Mir WSI Case
+	elseif (BUILD_WSI_MIR_SUPPORT)
 		set(ENV{VULKAN_WSI} "Mir")
+    else()
+        message(FATAL_ERROR "Undefined DisplayServer Type")
 	endif()
 endif()
 

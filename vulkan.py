@@ -1280,9 +1280,13 @@ else :
     elif sys.argv[1] == 'Wayland':
         extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_wayland_surface]
         extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_wayland_surface, lunarg_debug_report, lunarg_debug_marker]
-    else: #Mir
+    elif sys.argv[1] == 'Mir':
         extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_mir_surface]
         extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_mir_surface, lunarg_debug_report, lunarg_debug_marker]
+    else:
+        print('Error: Undefined DisplayServer')
+        extensions = []
+        extensions_all = []
 
 object_dispatch_list = [
     "VkInstance",
