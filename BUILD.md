@@ -1,18 +1,15 @@
 # Build Instructions
 These instructions are for Linux and Windows.
 
-## Git the Bits
+It is strongly suggested that you first install a Vulkan-capable driver, obtained from your graphics hardware vendor.
 
-The public repository for Vulkan-LoaderAndValidationLayers is hosted at https://github.com/KhronosGroup/.
-
-If you intend to contribute, the
-preferred work flow is to fork the repo, create a branch in your forked repo, do the work, and create a pull request
-on GitHub to integrate that work back into the repo.
-
-Note: The sample Vulkan driver for Linux (ICD) has been moved to the VulkanTools repo at https://github.com/LunarG/VulkanTools.
+Note: The sample Vulkan Intel driver for Linux (ICD) has been moved to the
+[VulkanTools repo](https://github.com/LunarG/VulkanTools).
 Further instructions regarding the ICD are available there.
 
-## Clone the repository
+## Git the Bits
+
+If you intend to contribute, the preferred work flow is to fork the repo, create a branch in your forked repo, do the work, and create a pull request on GitHub to integrate that work back into the repo.
 
 To create your local git repository:
 ```
@@ -30,8 +27,7 @@ It should be straightforward to use it on other Linux distros.
 
 These packages should be installed 
 ```
-ssudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev qt5-default libpciaccess-dev libpthread-stubs0-dev libudev-dev bison graphviz libpng-dev libxcb1-dev
-sudo apt-get build-dep mesa
+sudo apt-get install git cmake build-essential bison libxcb1-dev
 ```
 
 Example debug build:
@@ -44,9 +40,7 @@ make
 ```
 
 To run Vulkan programs you must tell the icd loader where to find the libraries.
-This is described in a specification in the Khronos documentation Git
-repository.  See the file:
-https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/blob/sdk-1.0.3/loader/LoaderAndLayerInterface.md#vulkan-installable-client-driver-interface-with-the-loader
+This is described in a [specification](https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/blob/sdk-1.0.3/loader/LoaderAndLayerInterface.md#vulkan-installable-client-driver-interface-with-the-loader).
 
 This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
@@ -68,10 +62,9 @@ There are also a few shell and Python scripts that run test collections (eg,
 
 ## Linux Demos
 
-The demos executables can be found in the dbuild/demos directory. The demos use DRI 3
-to render directly onto window surfaces.
+The demos executables can be found in the dbuild/demos directory.
 - vulkaninfo: report GPU properties
-- tri: a textured triangle
+- tri: a textured triangle (which is animated to demonstrate Z-clipping)
 - cube: a textured spinning cube
 
 ## Windows System Requirements
@@ -118,9 +111,7 @@ At this point, you can use Windows Explorer to launch Visual Studio by double-cl
 Vulkan programs must be able to find and use the vulkan-1.dll libary. Make sure it is either installed in the C:\Windows\System32 folder, or the PATH environment variable includes the folder that it is located in.
 
 To run Vulkan programs you must tell the icd loader where to find the libraries.
-This is described in a specification in the Khronos documentation Git
-repository.  See the file:
-https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/blob/sdk-1.0.3/loader/LoaderAndLayerInterface.md#vulkan-installable-client-driver-interface-with-the-loader
+This is described in a [specification](https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/blob/sdk-1.0.3/loader/LoaderAndLayerInterface.md#vulkan-installable-client-driver-interface-with-the-loader).
 
 This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
