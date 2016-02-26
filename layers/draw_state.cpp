@@ -642,6 +642,28 @@ struct interface_var {
 };
 
 
+static spirv_inst_iter
+get_struct_type(shader_module const *src, spirv_inst_iter def, bool is_array_of_verts)
+{
+    while (true) {
+
+        if (def.opcode() == spv::OpTypePointer) {
+            def = src->get_def(def.word(3));
+        }
+        else if (def.opcode() == spv::OpTypeArray && is_array_of_verts) {
+            def = src->get_def(def.word(2));
+            is_array_of_verts = false;
+        }
+        else if (def.opcode() == spv::OpTypeStruct) {
+            return def;
+        }
+        else {
+            return src->end();
+        }
+    }
+}
+
+
 static void
 collect_interface_block_members(layer_data *my_data, VkDevice dev,
                                 shader_module const *src,
@@ -652,31 +674,10 @@ collect_interface_block_members(layer_data *my_data, VkDevice dev,
                                 uint32_t type_id)
 {
     /* Walk down the type_id presented, trying to determine whether it's actually an interface block. */
-    auto type = src->get_def(type_id);
-
-    while (true) {
-
-        if (type.opcode() == spv::OpTypePointer) {
-            type = src->get_def(type.word(3));
-        }
-        else if (type.opcode() == spv::OpTypeArray && is_array_of_verts) {
-            type = src->get_def(type.word(2));
-            is_array_of_verts = false;
-        }
-        else if (type.opcode() == spv::OpTypeStruct) {
-            if (blocks.find(type.word(1)) == blocks.end()) {
-                /* This isn't an interface block. */
-                return;
-            }
-            else {
-                /* We have found the correct type. Walk its members. */
-                break;
-            }
-        }
-        else {
-            /* not an interface block */
-            return;
-        }
+    auto type = get_struct_type(src, src->get_def(type_id), is_array_of_verts);
+    if (type == src->end() || blocks.find(type.word(1)) == blocks.end()) {
+        /* this isn't an interface block. */
+        return;
     }
 
     std::unordered_map<unsigned, unsigned> member_components;
