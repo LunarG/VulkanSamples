@@ -185,7 +185,7 @@ static VKAPI_ATTR void VKAPI_CALL debug_report_DebugReportMessage(
  * for CreateDebugReportCallback
  */
 
-VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDebugReportCallback(
+VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDebugReportCallback(
     VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
     const VkAllocationCallbacks *pAllocator,
     VkDebugReportCallbackEXT *pCallback) {
@@ -239,9 +239,9 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDebugReportCallback(
  * for DestroyDebugReportCallback
  */
 VKAPI_ATTR void VKAPI_CALL
-loader_DestroyDebugReportCallback(VkInstance instance,
-                                  VkDebugReportCallbackEXT callback,
-                                  const VkAllocationCallbacks *pAllocator) {
+terminator_DestroyDebugReportCallback(VkInstance instance,
+                                      VkDebugReportCallbackEXT callback,
+                                      const VkAllocationCallbacks *pAllocator) {
     uint32_t storage_idx;
     VkDebugReportCallbackEXT *icd_info;
     const struct loader_icd *icd;
@@ -263,10 +263,10 @@ loader_DestroyDebugReportCallback(VkInstance instance,
  * for DebugReportMessage
  */
 VKAPI_ATTR void VKAPI_CALL
-loader_DebugReportMessage(VkInstance instance, VkDebugReportFlagsEXT flags,
-                          VkDebugReportObjectTypeEXT objType, uint64_t object,
-                          size_t location, int32_t msgCode,
-                          const char *pLayerPrefix, const char *pMsg) {
+terminator_DebugReportMessage(VkInstance instance, VkDebugReportFlagsEXT flags,
+                              VkDebugReportObjectTypeEXT objType,
+                              uint64_t object, size_t location, int32_t msgCode,
+                              const char *pLayerPrefix, const char *pMsg) {
     const struct loader_icd *icd;
 
     struct loader_instance *inst = (struct loader_instance *)instance;
