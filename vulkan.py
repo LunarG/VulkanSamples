@@ -1254,7 +1254,7 @@ lunarg_debug_marker = Extension(
 
 import sys
 
-if len(sys.argv) < 2:
+if len(sys.argv) > 3:
     if sys.platform.startswith('win32'):
         extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface]
         extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, lunarg_debug_report, lunarg_debug_marker]
