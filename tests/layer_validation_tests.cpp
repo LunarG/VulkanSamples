@@ -6131,6 +6131,57 @@ TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided) {
     }
 }
 
+TEST_F(VkLayerTest, CreatePipelinePushConstantsNotInLayout) {
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "not declared in layout");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    char const *vsSource =
+        "#version 450\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(push_constant, std430) uniform foo { float x; } consts;\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   gl_Position = vec4(consts.x);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 450\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) out vec4 x;\n"
+        "void main(){\n"
+        "   x = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    /* set up CB 0; type is UNORM by default */
+    pipe.AddColorAttachment();
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    /* should have generated an error -- no push constant ranges provided! */
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive Error 'not declared in pipeline layout'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+}
+
 #endif // SHADER_CHECKER_TESTS
 
 #if DEVICE_LIMITS_TESTS
