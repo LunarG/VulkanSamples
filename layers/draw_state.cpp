@@ -812,7 +812,7 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
 
 static void
 collect_interface_by_descriptor_slot(layer_data *my_data, VkDevice dev,
-                              shader_module const *src, spv::StorageClass sinterface,
+                              shader_module const *src,
                               std::unordered_set<uint32_t> const &accessible_ids,
                               std::map<descriptor_slot_t, interface_var> &out)
 {
@@ -851,7 +851,7 @@ collect_interface_by_descriptor_slot(layer_data *my_data, VkDevice dev,
                 log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__,
                         SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
                         "var %d (type %d) in %s interface in descriptor slot (%u,%u) conflicts with existing definition",
-                        insn.word(2), insn.word(1), storage_class_name(sinterface),
+                        insn.word(2), insn.word(1), storage_class_name(insn.word(3)),
                         existing_it->first.first, existing_it->first.second);
             }
 
@@ -1595,7 +1595,7 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
 
                 /* validate descriptor set layout against what the entrypoint actually uses */
                 std::map<descriptor_slot_t, interface_var> descriptor_uses;
-                collect_interface_by_descriptor_slot(my_data, dev, module, spv::StorageClassUniform,
+                collect_interface_by_descriptor_slot(my_data, dev, module,
                         accessible_ids,
                         descriptor_uses);
 
