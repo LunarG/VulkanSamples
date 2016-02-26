@@ -314,6 +314,8 @@ typedef struct _SAMPLER_NODE {
 typedef struct _IMAGE_NODE {
     VkImageLayout layout;
     VkFormat      format;
+    uint32_t      mipLevels;
+    uint32_t      arrayLayers;
 } IMAGE_NODE;
 
 typedef struct _IMAGE_CMD_BUF_NODE {

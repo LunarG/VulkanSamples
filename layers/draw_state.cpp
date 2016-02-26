@@ -4744,6 +4744,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, co
         IMAGE_NODE image_node;
         image_node.layout = pCreateInfo->initialLayout;
         image_node.format = pCreateInfo->format;
+        image_node.mipLevels = pCreateInfo->mipLevels;
+        image_node.arrayLayers = pCreateInfo->arrayLayers;
         loader_platform_thread_lock_mutex(&globalLock);
         dev_data->imageMap[*pImage] = unique_ptr<VkImageCreateInfo>(new VkImageCreateInfo(*pCreateInfo));
         ImageSubresourcePair subpair = {*pImage, false, VkImageSubresource()};
@@ -4754,13 +4756,40 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, co
     return result;
 }
 
+static void ResolveRemainingLevelsLayers(layer_data* dev_data,
+                                         VkImageSubresourceRange* range,
+                                         VkImage image) {
+  /* expects globalLock to be held by caller */
+
+  auto image_node_it = dev_data->imageMap.find(image);
+  if (image_node_it != dev_data->imageMap.end()) {
+    /* If the caller used the special values VK_REMAINING_MIP_LEVELS and
+     * VK_REMAINING_ARRAY_LAYERS, resolve them now in our internal state to
+     * the actual values.
+     */
+    if (range->levelCount == VK_REMAINING_MIP_LEVELS) {
+      range->levelCount =
+          image_node_it->second->mipLevels - range->baseMipLevel;
+    }
+
+    if (range->layerCount == VK_REMAINING_ARRAY_LAYERS) {
+      range->layerCount =
+          image_node_it->second->arrayLayers - range->baseArrayLayer;
+    }
+  }
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImageView* pView)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pAllocator, pView);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        dev_data->imageViewMap[*pView] = unique_ptr<VkImageViewCreateInfo>(new VkImageViewCreateInfo(*pCreateInfo));
+        auto image_view = unique_ptr<VkImageViewCreateInfo>(
+            new VkImageViewCreateInfo(*pCreateInfo));
+        ResolveRemainingLevelsLayers(dev_data, &image_view->subresourceRange,
+                                     pCreateInfo->image);
+        dev_data->imageViewMap[*pView] = std::move(image_view);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -7952,6 +7981,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
             image_node.layout = VK_IMAGE_LAYOUT_UNDEFINED;
             auto swapchain_node = dev_data->device_extensions.swapchainMap[swapchain];
             image_node.format = swapchain_node->createInfo.imageFormat;
+            image_node.mipLevels = 1;
+            image_node.arrayLayers =
+                swapchain_node->createInfo.imageArrayLayers;
             swapchain_node->images.push_back(pSwapchainImages[i]);
             ImageSubresourcePair subpair = {pSwapchainImages[i], false,
                                             VkImageSubresource()};
