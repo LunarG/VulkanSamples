@@ -11,9 +11,9 @@ buildscript {
 apply plugin: 'com.android.model.application'
 
 def samplesDir = "../../.."
-def hologramDir = "${samplesDir}/Demos/Hologram"
+def hologramDir = "${samplesDir}/Sample-Programs/Hologram"
 def glmDir = "${samplesDir}/API-Samples/utils"
-def vulkanDir = "${samplesDir}/../Vulkan-Docs/src"
+def vulkanDir = "${samplesDir}/include"
 
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
