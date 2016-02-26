@@ -125,7 +125,7 @@ PFN_vkGetInstanceProcAddr ShellWin32::load_vk()
 
     if (!mod || !get_proc) {
         std::stringstream ss;
-        ss << "failed to load or invalid " VULKAN_LOADER;
+        ss << "failed to load " << filename;
 
         if (mod)
             FreeLibrary(mod);

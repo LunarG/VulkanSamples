@@ -42,7 +42,6 @@ set(sources
     )
 
 set(definitions
-    PRIVATE -DVULKAN_LOADER="${VULKAN_LOADER}"
     PRIVATE -DVK_NO_PROTOTYPES
     PRIVATE -DGLM_FORCE_RADIANS)
 
@@ -51,6 +50,11 @@ set(includes
     PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 set(libraries PRIVATE ${CMAKE_THREAD_LIBS_INIT})
+
+if(TARGET vulkan)
+    get_property(vulkan_location TARGET vulkan PROPERTY LOCATION)
+    list(APPEND definitions PRIVATE -DUNINSTALLED_LOADER="${vulkan_location}")
+endif()
 
 if(WIN32)
     list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_WIN32_KHR)
