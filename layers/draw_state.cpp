@@ -1877,7 +1877,7 @@ static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice de
     if (pPipeline->graphicsPipelineCI.pColorBlendState != NULL) {
         if (!my_data->physDevProperties.features.independentBlend) {
             VkPipelineColorBlendAttachmentState *pAttachments = pPipeline->pAttachments;
-            for (uint i = 1 ; i < pPipeline->attachmentCount ; i++) {
+            for (uint32_t i = 1 ; i < pPipeline->attachmentCount ; i++) {
                 if ((pAttachments[0].blendEnable != pAttachments[i].blendEnable) ||
                     (pAttachments[0].srcColorBlendFactor != pAttachments[i].srcColorBlendFactor) ||
                     (pAttachments[0].dstColorBlendFactor != pAttachments[i].dstColorBlendFactor) ||
