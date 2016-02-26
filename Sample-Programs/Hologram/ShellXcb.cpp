@@ -159,12 +159,17 @@ void ShellXcb::create_window()
 
 PFN_vkGetInstanceProcAddr ShellXcb::load_vk()
 {
+    const char filename[] = "libvulkan.so";
     void *handle, *symbol;
 
-#ifndef VULKAN_LOADER
-#define VULKAN_LOADER "libvulkan.so"
+#ifdef UNINSTALLED_LOADER
+    handle = dlopen(UNINSTALLED_LOADER, RTLD_LAZY);
+    if (!handle)
+        handle = dlopen(filename, RTLD_LAZY);
+#else
+    handle = dlopen(filename, RTLD_LAZY);
 #endif
-    handle = dlopen(VULKAN_LOADER, RTLD_LAZY);
+
     if (handle)
         symbol = dlsym(handle, "vkGetInstanceProcAddr");
 
