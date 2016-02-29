@@ -311,17 +311,23 @@ typedef struct _SAMPLER_NODE {
     _SAMPLER_NODE(const VkSampler* ps, const VkSamplerCreateInfo* pci) : sampler(*ps), createInfo(*pci) {};
 } SAMPLER_NODE;
 
-typedef struct _IMAGE_NODE {
+class IMAGE_NODE : public BASE_NODE {
+  public:
+    VkImageCreateInfo createInfo;
+    VkDeviceMemory mem;
+    VkDeviceSize memOffset;
+    VkDeviceSize memSize;
+};
+
+typedef struct _IMAGE_LAYOUT_NODE {
     VkImageLayout layout;
     VkFormat      format;
-    uint32_t      mipLevels;
-    uint32_t      arrayLayers;
-} IMAGE_NODE;
+} IMAGE_LAYOUT_NODE;
 
-typedef struct _IMAGE_CMD_BUF_NODE {
+typedef struct _IMAGE_CMD_BUF_LAYOUT_NODE {
     VkImageLayout initialLayout;
     VkImageLayout layout;
-} IMAGE_CMD_BUF_NODE;
+} IMAGE_CMD_BUF_LAYOUT_NODE;
 
 class BUFFER_NODE : public BASE_NODE {
   public:
@@ -329,9 +335,17 @@ class BUFFER_NODE : public BASE_NODE {
     unique_ptr<VkBufferCreateInfo> create_info;
 };
 
+// Store the DAG.
+struct DAGNode {
+    uint32_t pass;
+    std::vector<uint32_t> prev;
+    std::vector<uint32_t> next;
+};
+
 struct RENDER_PASS_NODE {
     VkRenderPassCreateInfo const* pCreateInfo;
     std::vector<bool> hasSelfDependency;
+    std::vector<DAGNode> subpassToNode;
     vector<std::vector<VkFormat>> subpassColorFormats;
 
     RENDER_PASS_NODE(VkRenderPassCreateInfo const *pCreateInfo) : pCreateInfo(pCreateInfo)
@@ -697,7 +711,8 @@ typedef struct _GLOBAL_CB_NODE {
     unordered_map<QueryObject, bool> queryToStateMap; // 0 is unavailable, 1 is available
     unordered_set<QueryObject>   activeQueries;
     unordered_set<QueryObject> startedQueries;
-    unordered_map<ImageSubresourcePair, IMAGE_CMD_BUF_NODE> imageLayoutMap;
+    unordered_map<ImageSubresourcePair, IMAGE_CMD_BUF_LAYOUT_NODE>
+        imageLayoutMap;
     unordered_map<VkImage, vector<ImageSubresourcePair>> imageSubresourceMap;
     unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
     vector<DRAW_DATA>            drawData;

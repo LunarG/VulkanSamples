@@ -98,7 +98,7 @@ struct layer_data {
     // Layer specific data
     unordered_map<VkSampler,             unique_ptr<SAMPLER_NODE>>           sampleMap;
     unordered_map<VkImageView,           unique_ptr<VkImageViewCreateInfo>>  imageViewMap;
-    unordered_map<VkImage,               unique_ptr<VkImageCreateInfo>>      imageMap;
+    unordered_map<VkImage, IMAGE_NODE> imageMap;
     unordered_map<VkBufferView,          unique_ptr<VkBufferViewCreateInfo>> bufferViewMap;
     unordered_map<VkBuffer,              BUFFER_NODE>                        bufferMap;
     unordered_map<VkPipeline,            PIPELINE_NODE*>                     pipelineMap;
@@ -117,7 +117,7 @@ struct layer_data {
     unordered_map<void*,                 GLOBAL_CB_NODE*>                    commandBufferMap;
     unordered_map<VkFramebuffer, FRAMEBUFFER_NODE> frameBufferMap;
     unordered_map<VkImage, vector<ImageSubresourcePair>> imageSubresourceMap;
-    unordered_map<ImageSubresourcePair, IMAGE_NODE> imageLayoutMap;
+    unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> imageLayoutMap;
     unordered_map<VkRenderPass,          RENDER_PASS_NODE*>                  renderPassMap;
     unordered_map<VkShaderModule,        shader_module*>                     shaderModuleMap;
     // Current render pass
@@ -2541,7 +2541,7 @@ static VkBool32 validateSampler(const layer_data* my_data, const VkSampler* pSam
 
 // find layout(s) on the cmd buf level
 bool FindLayout(const GLOBAL_CB_NODE *pCB, VkImage image,
-                VkImageSubresource range, IMAGE_CMD_BUF_NODE &node) {
+                VkImageSubresource range, IMAGE_CMD_BUF_LAYOUT_NODE &node) {
     ImageSubresourcePair imgpair = {image, true, range};
     auto imgsubIt = pCB->imageLayoutMap.find(imgpair);
     if (imgsubIt == pCB->imageLayoutMap.end()) {
@@ -2585,7 +2585,7 @@ bool FindLayouts(const layer_data *my_data, VkImage image,
     // TODO: Make this robust for >1 aspect mask. Now it will just say ignore
     // potential errors in this case.
     if (sub_data->second.size() >=
-        (imgIt->second->arrayLayers * imgIt->second->mipLevels + 1)) {
+        (imgIt->second.createInfo.arrayLayers * imgIt->second.createInfo.mipLevels + 1)) {
         ignoreGlobal = true;
     }
     for (auto imgsubpair : sub_data->second) {
@@ -2629,7 +2629,7 @@ void SetLayout(layer_data *my_data, VkImage image, VkImageSubresource range,
 
 // Set the layout on the cmdbuf level
 void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, ImageSubresourcePair imgpair,
-               const IMAGE_CMD_BUF_NODE &node) {
+               const IMAGE_CMD_BUF_LAYOUT_NODE &node) {
     pCB->imageLayoutMap[imgpair] = node;
     // TODO (mlentine): Maybe make vector a set?
     auto subresource =
@@ -2650,20 +2650,20 @@ void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, ImageSubresourcePair imgpair,
     } else {
         // TODO (mlentine): Could be expensive and might need to be removed.
         assert(imgpair.hasSubresource);
-        IMAGE_CMD_BUF_NODE node;
+        IMAGE_CMD_BUF_LAYOUT_NODE node;
         FindLayout(pCB, image, imgpair.subresource, node);
         SetLayout(pCB, image, imgpair, {node.initialLayout, layout});
     }
 }
 
 void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image,
-               const IMAGE_CMD_BUF_NODE &node) {
+               const IMAGE_CMD_BUF_LAYOUT_NODE &node) {
     ImageSubresourcePair imgpair = {image, false, VkImageSubresource()};
     SetLayout(pCB, image, imgpair, node);
 }
 
 void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, VkImageSubresource range,
-               const IMAGE_CMD_BUF_NODE &node) {
+               const IMAGE_CMD_BUF_LAYOUT_NODE &node) {
     ImageSubresourcePair imgpair = {image, true, range};
     SetLayout(pCB, image, imgpair, node);
 }
@@ -2714,7 +2714,7 @@ static VkBool32 validateImageView(const layer_data* my_data, const VkImageView* 
         VkFormat format = VK_FORMAT_MAX_ENUM;
         auto imgIt = my_data->imageMap.find(image);
         if (imgIt != my_data->imageMap.end()) {
-            format = (*imgIt).second->format;
+            format = (*imgIt).second.createInfo.format;
         }
         else {
             // Also need to check the swapchains.
@@ -4875,13 +4875,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, co
     }
 
     if (VK_SUCCESS == result) {
-        IMAGE_NODE image_node;
+        IMAGE_LAYOUT_NODE image_node;
         image_node.layout = pCreateInfo->initialLayout;
         image_node.format = pCreateInfo->format;
-        image_node.mipLevels = pCreateInfo->mipLevels;
-        image_node.arrayLayers = pCreateInfo->arrayLayers;
         loader_platform_thread_lock_mutex(&globalLock);
-        dev_data->imageMap[*pImage] = unique_ptr<VkImageCreateInfo>(new VkImageCreateInfo(*pCreateInfo));
+        dev_data->imageMap[*pImage].createInfo = *pCreateInfo;
         ImageSubresourcePair subpair = {*pImage, false, VkImageSubresource()};
         dev_data->imageSubresourceMap[*pImage].push_back(subpair);
         dev_data->imageLayoutMap[subpair] = image_node;
@@ -4903,12 +4901,12 @@ static void ResolveRemainingLevelsLayers(layer_data* dev_data,
      */
     if (range->levelCount == VK_REMAINING_MIP_LEVELS) {
       range->levelCount =
-          image_node_it->second->mipLevels - range->baseMipLevel;
+          image_node_it->second.createInfo.mipLevels - range->baseMipLevel;
     }
 
     if (range->layerCount == VK_REMAINING_ARRAY_LAYERS) {
       range->layerCount =
-          image_node_it->second->arrayLayers - range->baseArrayLayer;
+          image_node_it->second.createInfo.arrayLayers - range->baseArrayLayer;
     }
   }
 }
@@ -6146,7 +6144,7 @@ VkBool32 VerifySourceImageLayout(VkCommandBuffer cmdBuffer, VkImage srcImage, Vk
     for (uint32_t i = 0; i < subLayers.layerCount; ++i) {
         uint32_t layer = i + subLayers.baseArrayLayer;
         VkImageSubresource sub = {subLayers.aspectMask, subLayers.mipLevel, layer};
-        IMAGE_CMD_BUF_NODE node;
+        IMAGE_CMD_BUF_LAYOUT_NODE node;
         if (!FindLayout(pCB, srcImage, sub, node)) {
             SetLayout(pCB, srcImage, sub, {srcImageLayout, srcImageLayout});
             continue;
@@ -6189,7 +6187,7 @@ VkBool32 VerifyDestImageLayout(VkCommandBuffer cmdBuffer, VkImage destImage, VkI
     for (uint32_t i = 0; i < subLayers.layerCount; ++i) {
         uint32_t layer = i + subLayers.baseArrayLayer;
         VkImageSubresource sub = {subLayers.aspectMask, subLayers.mipLevel, layer};
-        IMAGE_CMD_BUF_NODE node;
+        IMAGE_CMD_BUF_LAYOUT_NODE node;
         if (!FindLayout(pCB, destImage, sub, node)) {
             SetLayout(pCB, destImage, sub, {destImageLayout, destImageLayout});
             continue;
@@ -6520,7 +6518,7 @@ VkBool32 TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCo
                     mem_barrier->subresourceRange.baseArrayLayer + k;
                 VkImageSubresource sub = {
                     mem_barrier->subresourceRange.aspectMask, level, layer};
-                IMAGE_CMD_BUF_NODE node;
+                IMAGE_CMD_BUF_LAYOUT_NODE node;
                 if (!FindLayout(pCB, mem_barrier->image, sub, node)) {
                     SetLayout(pCB, mem_barrier->image, sub,
                               {mem_barrier->oldLayout, mem_barrier->newLayout});
@@ -6678,7 +6676,7 @@ VkBool32 ValidateBarriers(const char* funcName,
         if (image_data != dev_data->imageMap.end()) {
             uint32_t src_q_f_index = mem_barrier->srcQueueFamilyIndex;
             uint32_t dst_q_f_index = mem_barrier->dstQueueFamilyIndex;
-            if (image_data->second->sharingMode == VK_SHARING_MODE_CONCURRENT) {
+            if (image_data->second.createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) {
                 // srcQueueFamilyIndex and dstQueueFamilyIndex must both
                 // be VK_QUEUE_FAMILY_IGNORED
                 if ((src_q_f_index != VK_QUEUE_FAMILY_IGNORED) ||
@@ -6746,9 +6744,9 @@ VkBool32 ValidateBarriers(const char* funcName,
             uint32_t arrayLayers, mipLevels;
             bool imageFound = false;
             if (image_data != dev_data->imageMap.end()) {
-                format = image_data->second->format;
-                arrayLayers = image_data->second->arrayLayers;
-                mipLevels = image_data->second->mipLevels;
+                format = image_data->second.createInfo.format;
+                arrayLayers = image_data->second.createInfo.arrayLayers;
+                mipLevels = image_data->second.createInfo.mipLevels;
                 imageFound = true;
             } else if (dev_data->device_extensions.wsi_enabled) {
                 auto imageswap_data =
@@ -7140,13 +7138,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(VkDevice devi
     return result;
 }
 
-// Store the DAG.
-struct DAGNode {
-    uint32_t pass;
-    std::vector<uint32_t> prev;
-    std::vector<uint32_t> next;
-};
-
 VkBool32 FindDependency(const int index, const int dependent, const std::vector<DAGNode>& subpass_to_node, std::unordered_set<uint32_t>& processed_nodes) {
     // If we have already checked this node we have not found a dependency path so return false.
     if (processed_nodes.count(index))
@@ -7165,7 +7156,10 @@ VkBool32 FindDependency(const int index, const int dependent, const std::vector<
     return VK_FALSE;
 }
 
-VkBool32 CheckDependencyExists(const layer_data* my_data, VkDevice device, const int subpass, const std::vector<uint32_t>& dependent_subpasses, const std::vector<DAGNode>& subpass_to_node, VkBool32& skip_call) {
+VkBool32 CheckDependencyExists(const layer_data *my_data, const int subpass,
+                               const std::vector<uint32_t> &dependent_subpasses,
+                               const std::vector<DAGNode> &subpass_to_node,
+                               VkBool32 &skip_call) {
     VkBool32 result = VK_TRUE;
     // Loop through all subpasses that share the same attachment and make sure a dependency exists
     for (uint32_t k = 0; k < dependent_subpasses.size(); ++k) {
@@ -7195,7 +7189,11 @@ VkBool32 CheckDependencyExists(const layer_data* my_data, VkDevice device, const
     return result;
 }
 
-VkBool32 CheckPreserved(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const int index, const uint32_t attachment, const std::vector<DAGNode>& subpass_to_node, int depth, VkBool32& skip_call) {
+VkBool32 CheckPreserved(const layer_data *my_data,
+                        const VkRenderPassCreateInfo *pCreateInfo,
+                        const int index, const uint32_t attachment,
+                        const std::vector<DAGNode> &subpass_to_node, int depth,
+                        VkBool32 &skip_call) {
     const DAGNode& node = subpass_to_node[index];
     // If this node writes to the attachment return true as next nodes need to preserve the attachment.
     const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[index];
@@ -7211,7 +7209,8 @@ VkBool32 CheckPreserved(const layer_data* my_data, VkDevice device, const VkRend
     VkBool32 result = VK_FALSE;
     // Loop through previous nodes and see if any of them write to the attachment.
     for (auto elem : node.prev) {
-        result |= CheckPreserved(my_data, device, pCreateInfo, elem, attachment, subpass_to_node, depth + 1, skip_call);
+        result |= CheckPreserved(my_data, pCreateInfo, elem, attachment,
+                                 subpass_to_node, depth + 1, skip_call);
     }
     // If the attachment was written to by a previous node than this node needs to preserve it.
     if (result && depth > 0) {
@@ -7231,21 +7230,102 @@ VkBool32 CheckPreserved(const layer_data* my_data, VkDevice device, const VkRend
     return result;
 }
 
-VkBool32 ValidateDependencies(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const std::vector<DAGNode>& subpass_to_node) {
+template <class T>
+bool isRangeOverlapping(T offset1, T size1, T offset2, T size2) {
+    return (((offset1 + size1) > offset2) &&
+            ((offset1 + size1) < (offset2 + size2))) ||
+           ((offset1 > offset2) && (offset1 < (offset2 + size2)));
+}
+
+bool isRegionOverlapping(VkImageSubresourceRange range1,
+                         VkImageSubresourceRange range2) {
+    return (isRangeOverlapping(range1.baseMipLevel, range1.levelCount,
+                               range2.baseMipLevel, range2.levelCount) &&
+            isRangeOverlapping(range1.baseArrayLayer, range1.layerCount,
+                               range2.baseArrayLayer, range2.layerCount));
+}
+
+VkBool32 ValidateDependencies(const layer_data *my_data,
+                              const VkRenderPassBeginInfo *pRenderPassBegin,
+                              const std::vector<DAGNode> &subpass_to_node) {
     VkBool32 skip_call = VK_FALSE;
+    const VkFramebufferCreateInfo *pFramebufferInfo =
+        &my_data->frameBufferMap.at(pRenderPassBegin->framebuffer).createInfo;
+    const VkRenderPassCreateInfo *pCreateInfo =
+        my_data->renderPassMap.at(pRenderPassBegin->renderPass)->pCreateInfo;
     std::vector<std::vector<uint32_t>> output_attachment_to_subpass(pCreateInfo->attachmentCount);
     std::vector<std::vector<uint32_t>> input_attachment_to_subpass(pCreateInfo->attachmentCount);
+    std::vector<std::vector<uint32_t>> overlapping_attachments(
+        pCreateInfo->attachmentCount);
+    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
+        for (uint32_t j = i + 1; j < pCreateInfo->attachmentCount; ++j) {
+            VkImageView viewi = pFramebufferInfo->pAttachments[i];
+            VkImageView viewj = pFramebufferInfo->pAttachments[j];
+            if (viewi == viewj) {
+                overlapping_attachments[i].push_back(j);
+                overlapping_attachments[j].push_back(i);
+                continue;
+            }
+            auto view_data_i = my_data->imageViewMap.find(viewi);
+            auto view_data_j = my_data->imageViewMap.find(viewj);
+            if (view_data_i == my_data->imageViewMap.end() ||
+                view_data_j == my_data->imageViewMap.end()) {
+                continue;
+            }
+            if (view_data_i->second->image == view_data_j->second->image &&
+                isRegionOverlapping(view_data_i->second->subresourceRange,
+                                    view_data_j->second->subresourceRange)) {
+                overlapping_attachments[i].push_back(j);
+                overlapping_attachments[j].push_back(i);
+                continue;
+            }
+            auto image_data_i =
+                my_data->imageMap.find(view_data_i->second->image);
+            auto image_data_j =
+                my_data->imageMap.find(view_data_j->second->image);
+            if (image_data_i == my_data->imageMap.end() ||
+                image_data_j == my_data->imageMap.end()) {
+                continue;
+            }
+            if (image_data_i->second.mem == image_data_j->second.mem &&
+                isRangeOverlapping(image_data_i->second.memOffset,
+                                   image_data_i->second.memSize,
+                                   image_data_j->second.memOffset,
+                                   image_data_j->second.memSize)) {
+                overlapping_attachments[i].push_back(j);
+                overlapping_attachments[j].push_back(i);
+            }
+        }
+    }
     // Find for each attachment the subpasses that use them.
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[i];
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
-            input_attachment_to_subpass[subpass.pInputAttachments[j].attachment].push_back(i);
+            uint32_t attachment = subpass.pInputAttachments[j].attachment;
+            input_attachment_to_subpass[attachment].push_back(i);
+            for (auto overlapping_attachment :
+                 overlapping_attachments[attachment]) {
+                input_attachment_to_subpass[attachment].push_back(
+                    overlapping_attachment);
+            }
         }
         for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
-            output_attachment_to_subpass[subpass.pColorAttachments[j].attachment].push_back(i);
+            uint32_t attachment = subpass.pColorAttachments[j].attachment;
+            output_attachment_to_subpass[attachment].push_back(i);
+            for (auto overlapping_attachment :
+                 overlapping_attachments[attachment]) {
+                output_attachment_to_subpass[attachment].push_back(
+                    overlapping_attachment);
+            }
         }
         if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
-            output_attachment_to_subpass[subpass.pDepthStencilAttachment->attachment].push_back(i);
+            uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
+            output_attachment_to_subpass[attachment].push_back(i);
+            for (auto overlapping_attachment :
+                 overlapping_attachments[attachment]) {
+                output_attachment_to_subpass[attachment].push_back(
+                    overlapping_attachment);
+            }
         }
     }
     // If there is a dependency needed make sure one exists
@@ -7254,25 +7334,37 @@ VkBool32 ValidateDependencies(const layer_data* my_data, VkDevice device, const 
         // If the attachment is an input then all subpasses that output must have a dependency relationship
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
             const uint32_t& attachment = subpass.pInputAttachments[j].attachment;
-            CheckDependencyExists(my_data, device, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
+            CheckDependencyExists(my_data, i,
+                                  output_attachment_to_subpass[attachment],
+                                  subpass_to_node, skip_call);
         }
         // If the attachment is an output then all subpasses that use the attachment must have a dependency relationship
         for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
             const uint32_t& attachment = subpass.pColorAttachments[j].attachment;
-            CheckDependencyExists(my_data, device, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
-            CheckDependencyExists(my_data, device, i, input_attachment_to_subpass[attachment], subpass_to_node, skip_call);
+            CheckDependencyExists(my_data, i,
+                                  output_attachment_to_subpass[attachment],
+                                  subpass_to_node, skip_call);
+            CheckDependencyExists(my_data, i,
+                                  input_attachment_to_subpass[attachment],
+                                  subpass_to_node, skip_call);
         }
         if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
             const uint32_t& attachment = subpass.pDepthStencilAttachment->attachment;
-            CheckDependencyExists(my_data, device, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
-            CheckDependencyExists(my_data, device, i, input_attachment_to_subpass[attachment], subpass_to_node, skip_call);
+            CheckDependencyExists(my_data, i,
+                                  output_attachment_to_subpass[attachment],
+                                  subpass_to_node, skip_call);
+            CheckDependencyExists(my_data, i,
+                                  input_attachment_to_subpass[attachment],
+                                  subpass_to_node, skip_call);
         }
     }
     // Loop through implicit dependencies, if this pass reads make sure the attachment is preserved for all passes after it was written.
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[i];
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
-            CheckPreserved(my_data, device, pCreateInfo, i, subpass.pInputAttachments[j].attachment, subpass_to_node, 0, skip_call);
+            CheckPreserved(my_data, pCreateInfo, i,
+                           subpass.pInputAttachments[j].attachment,
+                           subpass_to_node, 0, skip_call);
         }
     }
     return skip_call;
@@ -7389,8 +7481,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
     std::vector<bool> has_self_dependency(pCreateInfo->subpassCount);
     std::vector<DAGNode> subpass_to_node(pCreateInfo->subpassCount);
     skip_call |= CreatePassDAG(dev_data, device, pCreateInfo, subpass_to_node, has_self_dependency);
-    // Validate using DAG
-    skip_call |= ValidateDependencies(dev_data, device, pCreateInfo, subpass_to_node);
+    // Validate
     skip_call |= ValidateLayouts(dev_data, device, pCreateInfo);
     if (VK_FALSE != skip_call) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -7452,6 +7543,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
         }
         dev_data->renderPassMap[*pRenderPass] = new RENDER_PASS_NODE(localRPCI);
         dev_data->renderPassMap[*pRenderPass]->hasSelfDependency = has_self_dependency;
+        dev_data->renderPassMap[*pRenderPass]->subpassToNode = subpass_to_node;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -7506,10 +7598,10 @@ VkBool32 VerifyFramebufferAndRenderPassLayouts(VkCommandBuffer cmdBuffer, const 
         const VkImageView &image_view = framebufferInfo.pAttachments[i];
         auto image_data = dev_data->imageViewMap.find(image_view);
         assert(image_data != dev_data->imageViewMap.end());
-        const VkImage &image = image_data->second->image;
-        const VkImageSubresourceRange &subRange =
+        const VkImage& image = image_data->second->image;
+        const VkImageSubresourceRange& subRange =
             image_data->second->subresourceRange;
-        IMAGE_CMD_BUF_NODE newNode = {
+        IMAGE_CMD_BUF_LAYOUT_NODE newNode = {
             pRenderPassInfo->pAttachments[i].initialLayout,
             pRenderPassInfo->pAttachments[i].initialLayout};
         // TODO: Do not iterate over every possibility - consolidate where
@@ -7519,7 +7611,7 @@ VkBool32 VerifyFramebufferAndRenderPassLayouts(VkCommandBuffer cmdBuffer, const 
             for (uint32_t k = 0; k < subRange.layerCount; k++) {
                 uint32_t layer = subRange.baseArrayLayer + k;
                 VkImageSubresource sub = {subRange.aspectMask, level, layer};
-                IMAGE_CMD_BUF_NODE node;
+                IMAGE_CMD_BUF_LAYOUT_NODE node;
                 if (!FindLayout(pCB, image, sub, node)) {
                     SetLayout(pCB, image, sub, newNode);
                     continue;
@@ -7618,6 +7710,13 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(VkCommandBuffer 
     if (pCB) {
         if (pRenderPassBegin && pRenderPassBegin->renderPass) {
             skipCall |= VerifyFramebufferAndRenderPassLayouts(commandBuffer, pRenderPassBegin);
+            auto render_pass_data =
+                dev_data->renderPassMap.find(pRenderPassBegin->renderPass);
+            if (render_pass_data != dev_data->renderPassMap.end()) {
+                skipCall |= ValidateDependencies(
+                    dev_data, pRenderPassBegin,
+                    render_pass_data->second->subpassToNode);
+            }
             skipCall |= insideRenderPass(dev_data, pCB, "vkCmdBeginRenderPass");
             skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdBeginRenderPass");
             skipCall |= addCmd(dev_data, pCB, CMD_BEGINRENDERPASS, "vkCmdBeginRenderPass()");
@@ -8040,8 +8139,14 @@ VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->BindImageMemory(device, image, mem, memOffset);
+    VkMemoryRequirements memRequirements;
+    dev_data->device_dispatch_table->GetImageMemoryRequirements(
+        device, image, &memRequirements);
     loader_platform_thread_lock_mutex(&globalLock);
     dev_data->memImageMap[mem] = image;
+    dev_data->imageMap[image].mem = mem;
+    dev_data->imageMap[image].memOffset = memOffset;
+    dev_data->imageMap[image].memSize = memRequirements.size;
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -8191,19 +8296,19 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
         if (!pCount) return result;
         loader_platform_thread_lock_mutex(&globalLock);
         for (uint32_t i = 0; i < *pCount; ++i) {
-            IMAGE_NODE image_node;
-            image_node.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+            IMAGE_LAYOUT_NODE image_layout_node;
+            image_layout_node.layout = VK_IMAGE_LAYOUT_UNDEFINED;
             auto swapchain_node = dev_data->device_extensions.swapchainMap[swapchain];
-            image_node.format = swapchain_node->createInfo.imageFormat;
-            image_node.mipLevels = 1;
-            image_node.arrayLayers =
+            image_layout_node.format = swapchain_node->createInfo.imageFormat;
+            dev_data->imageMap[pSwapchainImages[i]].createInfo.mipLevels = 1;
+            dev_data->imageMap[pSwapchainImages[i]].createInfo.arrayLayers =
                 swapchain_node->createInfo.imageArrayLayers;
             swapchain_node->images.push_back(pSwapchainImages[i]);
             ImageSubresourcePair subpair = {pSwapchainImages[i], false,
                                             VkImageSubresource()};
             dev_data->imageSubresourceMap[pSwapchainImages[i]].push_back(
                 subpair);
-            dev_data->imageLayoutMap[subpair] = image_node;
+            dev_data->imageLayoutMap[subpair] = image_layout_node;
             dev_data->device_extensions
                 .imageToSwapchainMap[pSwapchainImages[i]] = swapchain;
         }
