@@ -4010,175 +4010,116 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumerateDeviceExtensionProperties(
     VkPhysicalDevice physicalDevice, const char *pLayerName,
     uint32_t *pPropertyCount, VkExtensionProperties *pProperties) {
     struct loader_physical_device *phys_dev;
-    uint32_t copy_size;
 
-    uint32_t count;
-    struct loader_device_extension_list *dev_ext_list = NULL;
     struct loader_layer_list implicit_layer_list;
 
-    // TODO fix this aliases physical devices
-    phys_dev = loader_get_physical_device(physicalDevice);
+    assert(pLayerName == NULL || strlen(pLayerName) == 0);
 
-    /* get layer libraries if needed */
-    if (pLayerName && strlen(pLayerName) != 0) {
-        if (vk_string_validate(MaxLoaderStringLength, pLayerName) ==
-            VK_STRING_ERROR_NONE) {
-            for (uint32_t i = 0;
-                 i < phys_dev->this_instance->device_layer_list.count; i++) {
-                struct loader_layer_properties *props =
-                    &phys_dev->this_instance->device_layer_list.list[i];
-                if (strcmp(props->info.layerName, pLayerName) == 0) {
-                    dev_ext_list = &props->device_extension_list;
-                }
-            }
-            count = (dev_ext_list == NULL) ? 0 : dev_ext_list->count;
-            if (pProperties == NULL) {
-                *pPropertyCount = count;
-                return VK_SUCCESS;
-            }
+    /* Any layer or trampoline wrapping should be removed at this point in time
+     * can just cast to the expected type for VkPhysicalDevice. */
+    phys_dev = (struct loader_physical_device *) physicalDevice;
 
-            copy_size = *pPropertyCount < count ? *pPropertyCount : count;
-            for (uint32_t i = 0; i < copy_size; i++) {
-                memcpy(&pProperties[i], &dev_ext_list->list[i].props,
-                       sizeof(VkExtensionProperties));
-            }
-            *pPropertyCount = copy_size;
+    /* this case is during the call down the instance chain with pLayerName
+     * == NULL*/
+    struct loader_icd *icd = phys_dev->this_icd;
+    uint32_t icd_ext_count = *pPropertyCount;
+    VkResult res;
 
-            if (copy_size < count) {
-                return VK_INCOMPLETE;
-            }
-        } else {
-            loader_log(phys_dev->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                       0, "vkEnumerateDeviceExtensionProperties:  pLayerName "
-                          "is too long or is badly formed");
-            return VK_ERROR_EXTENSION_NOT_PRESENT;
-        }
-        return VK_SUCCESS;
-    } else {
-        /* this case is during the call down the instance chain with pLayerName
-         * == NULL*/
-        struct loader_icd *icd = phys_dev->this_icd;
-        uint32_t icd_ext_count = *pPropertyCount;
-        VkResult res;
-
-        /* get device extensions */
-        res = icd->EnumerateDeviceExtensionProperties(
+    /* get device extensions */
+    res = icd->EnumerateDeviceExtensionProperties(
             phys_dev->phys_dev, NULL, &icd_ext_count, pProperties);
-        if (res != VK_SUCCESS)
-            return res;
+    if (res != VK_SUCCESS)
+        return res;
 
-        loader_init_layer_list(phys_dev->this_instance, &implicit_layer_list);
+    loader_init_layer_list(phys_dev->this_instance, &implicit_layer_list);
 
-        loader_add_layer_implicit(
+    loader_add_layer_implicit(
             phys_dev->this_instance, VK_LAYER_TYPE_INSTANCE_IMPLICIT,
             &implicit_layer_list,
             &phys_dev->this_instance->instance_layer_list);
-        /* we need to determine which implicit layers are active,
-         * and then add their extensions. This can't be cached as
-         * it depends on results of environment variables (which can change).
-         */
-        if (pProperties != NULL) {
-            /* initialize dev_extension list within the physicalDevice object */
-            res = loader_init_device_extensions(
+    /* we need to determine which implicit layers are active,
+     * and then add their extensions. This can't be cached as
+     * it depends on results of environment variables (which can change).
+     */
+    if (pProperties != NULL) {
+        /* initialize dev_extension list within the physicalDevice object */
+        res = loader_init_device_extensions(
                 phys_dev->this_instance, phys_dev, icd_ext_count, pProperties,
                 &phys_dev->device_extension_cache);
-            if (res != VK_SUCCESS)
-                return res;
+        if (res != VK_SUCCESS)
+            return res;
 
-            /* we need to determine which implicit layers are active,
-             * and then add their extensions. This can't be cached as
-             * it depends on results of environment variables (which can
-             * change).
-             */
-            struct loader_extension_list all_exts = {0};
-            loader_add_to_ext_list(phys_dev->this_instance, &all_exts,
-                                   phys_dev->device_extension_cache.count,
-                                   phys_dev->device_extension_cache.list);
+        /* we need to determine which implicit layers are active,
+         * and then add their extensions. This can't be cached as
+         * it depends on results of environment variables (which can
+         * change).
+         */
+        struct loader_extension_list all_exts = {0};
+        loader_add_to_ext_list(phys_dev->this_instance, &all_exts,
+                phys_dev->device_extension_cache.count,
+                phys_dev->device_extension_cache.list);
 
-            loader_init_layer_list(phys_dev->this_instance,
-                                   &implicit_layer_list);
+        loader_init_layer_list(phys_dev->this_instance,
+                &implicit_layer_list);
 
-            loader_add_layer_implicit(
+        loader_add_layer_implicit(
                 phys_dev->this_instance, VK_LAYER_TYPE_INSTANCE_IMPLICIT,
                 &implicit_layer_list,
                 &phys_dev->this_instance->instance_layer_list);
 
-            for (uint32_t i = 0; i < implicit_layer_list.count; i++) {
-                for (
-                    uint32_t j = 0;
+        for (uint32_t i = 0; i < implicit_layer_list.count; i++) {
+            for (uint32_t j = 0;
                     j < implicit_layer_list.list[i].device_extension_list.count;
                     j++) {
-                    loader_add_to_ext_list(phys_dev->this_instance, &all_exts,
-                                           1,
-                                           &implicit_layer_list.list[i]
-                                                .device_extension_list.list[j]
-                                                .props);
-                }
+                loader_add_to_ext_list(phys_dev->this_instance, &all_exts,
+                        1,
+                        &implicit_layer_list.list[i]
+                        .device_extension_list.list[j]
+                        .props);
             }
-            uint32_t capacity = *pPropertyCount;
-            VkExtensionProperties *props = pProperties;
-
-            for (uint32_t i = 0; i < all_exts.count && i < capacity; i++) {
-                props[i] = all_exts.list[i];
-            }
-            /* wasn't enough space for the extensions, we did partial copy now
-             * return VK_INCOMPLETE */
-            if (capacity < all_exts.count) {
-                res = VK_INCOMPLETE;
-            } else {
-                *pPropertyCount = all_exts.count;
-            }
-            loader_destroy_generic_list(
-                phys_dev->this_instance,
-                (struct loader_generic_list *)&all_exts);
-        } else {
-            /* just return the count; need to add in the count of implicit layer
-             * extensions
-             * don't worry about duplicates being added in the count */
-            *pPropertyCount = icd_ext_count;
-
-            for (uint32_t i = 0; i < implicit_layer_list.count; i++) {
-                *pPropertyCount +=
-                    implicit_layer_list.list[i].device_extension_list.count;
-            }
-            res = VK_SUCCESS;
         }
+        uint32_t capacity = *pPropertyCount;
+        VkExtensionProperties *props = pProperties;
 
+        for (uint32_t i = 0; i < all_exts.count && i < capacity; i++) {
+            props[i] = all_exts.list[i];
+        }
+        /* wasn't enough space for the extensions, we did partial copy now
+         * return VK_INCOMPLETE */
+        if (capacity < all_exts.count) {
+            res = VK_INCOMPLETE;
+        } else {
+            *pPropertyCount = all_exts.count;
+        }
         loader_destroy_generic_list(
-            phys_dev->this_instance,
-            (struct loader_generic_list *)&implicit_layer_list);
-        return res;
+                phys_dev->this_instance,
+                (struct loader_generic_list *) &all_exts);
+    } else {
+        /* just return the count; need to add in the count of implicit layer
+         * extensions
+         * don't worry about duplicates being added in the count */
+        *pPropertyCount = icd_ext_count;
+
+        for (uint32_t i = 0; i < implicit_layer_list.count; i++) {
+            *pPropertyCount +=
+                    implicit_layer_list.list[i].device_extension_list.count;
+        }
+        res = VK_SUCCESS;
     }
+
+    loader_destroy_generic_list(
+            phys_dev->this_instance,
+            (struct loader_generic_list *) &implicit_layer_list);
+    return res;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
 terminator_EnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice,
                                           uint32_t *pPropertyCount,
                                           VkLayerProperties *pProperties) {
-    uint32_t copy_size;
-    struct loader_physical_device *phys_dev;
-    // TODO fix this, aliases physical devices
-    phys_dev = loader_get_physical_device(physicalDevice);
-    uint32_t count = phys_dev->this_instance->device_layer_list.count;
 
-    if (pProperties == NULL) {
-        *pPropertyCount = count;
-        return VK_SUCCESS;
-    }
-
-    copy_size = (*pPropertyCount < count) ? *pPropertyCount : count;
-    for (uint32_t i = 0; i < copy_size; i++) {
-        memcpy(&pProperties[i],
-               &(phys_dev->this_instance->device_layer_list.list[i].info),
-               sizeof(VkLayerProperties));
-    }
-    *pPropertyCount = copy_size;
-
-    if (copy_size < count) {
-        return VK_INCOMPLETE;
-    }
-
-    return VK_SUCCESS;
+    // should never get here this call isn't dispatched down the chain
+    return VK_ERROR_INITIALIZATION_FAILED;
 }
 
 VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8) {

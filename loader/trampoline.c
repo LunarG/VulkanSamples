@@ -717,7 +717,7 @@ vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
                                      const char *pLayerName,
                                      uint32_t *pPropertyCount,
                                      VkExtensionProperties *pProperties) {
-    VkResult res;
+    VkResult res = VK_SUCCESS;
 
     loader_platform_thread_lock_mutex(&loader_lock);
 
@@ -732,8 +732,48 @@ vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
         res = disp->EnumerateDeviceExtensionProperties(
             physicalDevice, NULL, pPropertyCount, pProperties);
     } else {
-        res = terminator_EnumerateDeviceExtensionProperties(
-            physicalDevice, pLayerName, pPropertyCount, pProperties);
+        struct loader_physical_device *phys_dev;
+        uint32_t count;
+        uint32_t copy_size;
+        // TODO fix this aliases physical devices
+        phys_dev = loader_get_physical_device(physicalDevice);
+        if (vk_string_validate(MaxLoaderStringLength, pLayerName) ==
+                    VK_STRING_ERROR_NONE) {
+
+            struct loader_device_extension_list *dev_ext_list = NULL;
+            for (uint32_t i = 0;
+                    i < phys_dev->this_instance->device_layer_list.count; i++) {
+                struct loader_layer_properties *props =
+                        &phys_dev->this_instance->device_layer_list.list[i];
+                if (strcmp(props->info.layerName, pLayerName) == 0) {
+                    dev_ext_list = &props->device_extension_list;
+                }
+            }
+            count = (dev_ext_list == NULL) ? 0 : dev_ext_list->count;
+            if (pProperties == NULL) {
+                *pPropertyCount = count;
+                loader_platform_thread_unlock_mutex(&loader_lock);
+                return VK_SUCCESS;
+            }
+
+            copy_size = *pPropertyCount < count ? *pPropertyCount : count;
+            for (uint32_t i = 0; i < copy_size; i++) {
+                memcpy(&pProperties[i], &dev_ext_list->list[i].props,
+                        sizeof (VkExtensionProperties));
+            }
+            *pPropertyCount = copy_size;
+
+            if (copy_size < count) {
+                loader_platform_thread_unlock_mutex(&loader_lock);
+                return VK_INCOMPLETE;
+            }
+        } else {
+            loader_log(phys_dev->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    0, "vkEnumerateDeviceExtensionProperties:  pLayerName "
+                    "is too long or is badly formed");
+            loader_platform_thread_unlock_mutex(&loader_lock); 
+            return VK_ERROR_EXTENSION_NOT_PRESENT;
+        }
     }
 
     loader_platform_thread_unlock_mutex(&loader_lock);
@@ -744,16 +784,39 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice,
                                  uint32_t *pPropertyCount,
                                  VkLayerProperties *pProperties) {
-    VkResult res;
+    uint32_t copy_size;
+    struct loader_physical_device *phys_dev;
 
     loader_platform_thread_lock_mutex(&loader_lock);
 
     /* Don't dispatch this call down the instance chain, want all device layers
        enumerated and instance chain may not contain all device layers */
-    res = terminator_EnumerateDeviceLayerProperties(
-        physicalDevice, pPropertyCount, pProperties);
+
+    // TODO fix this, aliases physical devices
+    phys_dev = loader_get_physical_device(physicalDevice);
+    uint32_t count = phys_dev->this_instance->device_layer_list.count;
+
+    if (pProperties == NULL) {
+        *pPropertyCount = count;
+        loader_platform_thread_unlock_mutex(&loader_lock);
+        return VK_SUCCESS;
+    }
+
+    copy_size = (*pPropertyCount < count) ? *pPropertyCount : count;
+    for (uint32_t i = 0; i < copy_size; i++) {
+        memcpy(&pProperties[i],
+               &(phys_dev->this_instance->device_layer_list.list[i].info),
+               sizeof(VkLayerProperties));
+    }
+    *pPropertyCount = copy_size;
+
+    if (copy_size < count) {
+        loader_platform_thread_unlock_mutex(&loader_lock);
+        return VK_INCOMPLETE;
+    }
+
     loader_platform_thread_unlock_mutex(&loader_lock);
-    return res;
+    return VK_SUCCESS;
 }
 
 LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL
