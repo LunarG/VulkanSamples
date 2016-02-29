@@ -1,19 +1,5 @@
 cmake_minimum_required (VERSION 2.8.11)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	if (BUILD_WSI_XCB_SUPPORT)
-		set(ENV{VULKAN_WSI} "Xcb")
-	elseif (BUILD_WSI_XLIB_SUPPORT)
-		set(ENV{VULKAN_WSI} "Xlib")
-	elseif (BUILD_WSI_WAYLAND_SUPPORT)
-		set(ENV{VULKAN_WSI} "Wayland")
-	elseif (BUILD_WSI_MIR_SUPPORT)
-		set(ENV{VULKAN_WSI} "Mir")
-    else()
-        message(FATAL_ERROR "Undefined DisplayServer Type")
-	endif()
-endif()
-
 macro(run_vk_helper subcmd)
 	add_custom_command(OUTPUT ${ARGN}
 		COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk_helper.py --${subcmd} ${PROJECT_SOURCE_DIR}/include/vulkan/vulkan.h --abs_out_dir ${CMAKE_CURRENT_BINARY_DIR}
