@@ -2,6 +2,12 @@
 
 # Validation Layer Details
 
+## VK_LAYER_LUNARG_standard_validation
+
+### VK_LAYER_LUNARG_standard_validation Overview
+
+This is a meta-layer managed by the loader. Specifying this layer name will cause the loader to load the all of the standard validation layers in the following optimal order: VK_LAYER_GOOGLE_threading, VK_LAYER_LUNARG_param_checker, VK_LAYER_LUNARG_device_limits, VK_LAYER_LUNA    RG_object_tracker, VK_LAYER_LUNARG_image, VK_LAYER_LUNARG_mem_tracker, VK_LAYER_LUNARG_draw_state, VK_LAYER_LUNARG_swapchain, and VK_LAYER_GOOGLE_unique_objects. Other layers can be specified and the loader will remove duplicates. See the following individual layer descriptions for layer details.
+
 ## VK_LAYER_LUNARG_draw_state
 
 ### VK_LAYER_LUNARG_draw_state Overview
@@ -399,7 +405,7 @@ Note: The following platform-specific functions are not mentioned above, because
 - vkGetPhysicalDeviceWin32PresentationSupportKHR
 - vkCreateXcbSurfaceKHR
 - vkGetPhysicalDeviceXcbPresentationSupportKHR
-- vkCreateXlibSurfaceKHR 
+- vkCreateXlibSurfaceKHR
 - vkGetPhysicalDeviceXlibPresentationSupportKHR
 
 ### VK_LAYER_LUNARG_Swapchain Pending Work
@@ -408,6 +414,13 @@ Additional checks to be added to VK_LAYER_LUNARG_swapchain
  1. Check that the queue used for presenting was checked/valid during vkGetPhysicalDeviceSurfaceSupportKHR.
  2. One issue that has already come up is correct UsageFlags for WSI SwapChains and SurfaceProperties.
  3. Tons of other stuff including semaphore and synchronization validation.
+
+## VK_LAYER_GOOGLE_unique_objects
+
+### VK_LAYER_GOOGLE_unique_objects Overview
+
+The unique_objects is not a validation layer but a helper layer that assists with validation. The Vulkan specification allows objects that have non-unique handles. This makes tracking object lifetimes difficult in that it is unclear which object is being referenced upon deletion. The unique_objects layer addresses this by wrapping all objects with a unique object representation allowing proper object lifetime tracking. This layer does no validation on its own and may not be required for the proper operation of all layers or all platforms. One sign that it is needed is the appearance of many errors from the object_tracker layer indicating the use of previously destroyed objects. For optimal effectiveness this layer should be loaded last (to reside in the layer chain closest to the display driver and farthest from the application).
+
 
 ## General Pending Work
 A place to capture general validation work to be done. This includes new checks that don't clearly fit into the above layers.
