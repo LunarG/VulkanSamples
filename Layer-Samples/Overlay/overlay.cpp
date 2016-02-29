@@ -410,6 +410,14 @@ static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
     err = pTable->AllocateCommandBuffers(device, &cbai, &cmd);
     assert(!err);
 
+    /* We have just created a dispatchable object, but the dispatch table has
+     * not been placed in the object yet.
+     * When a "normal" application creates a command buffer,
+     * the dispatch table is installed by the top-level binding (trampoline.c).
+     * But here, we have to do it ourselves. */
+
+    *((const void **)cmd) = *(void **)device;
+
     VkCommandBufferBeginInfo cbbi;
     cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cbbi.pNext = nullptr;
@@ -588,10 +596,9 @@ vkDestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
     layer_data_map.erase(key);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
-vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
-                 const VkAllocationCallbacks *pAllocator,
-                 VkInstance *pInstance) {
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
+    const VkInstanceCreateInfo *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator, VkInstance *pInstance) {
     VkLayerInstanceCreateInfo *chain_info =
         get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
@@ -621,9 +628,8 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
     return result;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
-vkDestroyInstance(VkInstance instance,
-                  const VkAllocationCallbacks *pAllocator) {
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
+    VkInstance instance, const VkAllocationCallbacks *pAllocator) {
     dispatch_key key = get_dispatch_key(instance);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
@@ -632,11 +638,9 @@ vkDestroyInstance(VkInstance instance,
     layer_data_map.erase(key);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
-vkCreateSwapchainKHR(VkDevice device,
-                     const VkSwapchainCreateInfoKHR *pCreateInfo,
-                     const VkAllocationCallbacks *pAllocator,
-                     VkSwapchainKHR *pSwapChain) {
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
+    VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapChain) {
     layer_data *my_data =
         get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
@@ -901,6 +905,15 @@ vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapChain,
 
             VkCommandBuffer cmd;
             pTable->AllocateCommandBuffers(device, &cbai, &cmd);
+
+            /* We have just created a dispatchable object, but the dispatch
+             * table has not been placed in the object yet.
+             * When a "normal" application creates a command buffer,
+             * the dispatch table is installed by the top-level binding
+             * (trampoline.c).
+             * But here, we have to do it ourselves. */
+
+            *((const void **)cmd) = *(void **)device;
 
             /* Create vertex buffer */
             VkBufferCreateInfo bci;
