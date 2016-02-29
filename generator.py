@@ -2861,9 +2861,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
     def genCmd(self, cmdinfo, name):
         OutputGenerator.genCmd(self, cmdinfo, name)
         if name not in self.blacklist:
-            proto = cmdinfo.elem.find('proto')       # Function name and return type
             params = cmdinfo.elem.findall('param')
-            usages = cmdinfo.elem.findall('validity/usage')
             # Get list of array lengths
             lens = set()
             for param in params:
@@ -2961,7 +2959,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         lines[1] = '    debug_report_data*                          report_data,'
         return '\n'.join(lines)
     #
-    # Generate the command text from the captured data
+    # Generate the command param check code from the captured data
     def processCmdData(self):
         indent = self.incIndent(None)
         for command in self.commands:
@@ -2974,6 +2972,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 if (param.ispointer or param.isstaticarray) and not param.iscount:
                     #
                     # Parameters for function argument generation
+                    checkExpr = ''     # Code to check the current parameter
                     req = 'VK_TRUE'    # Paramerter can be NULL
                     cpReq = 'VK_TRUE'  # Count pointer can be NULL
                     cvReq = 'VK_TRUE'  # Count value can be 0
@@ -3007,41 +3006,42 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     #
                     # If this is a pointer to a struct with an sType field, verify the type
                     if param.type in self.structTypes:
-                        # Add this command to the file; TODO: pre-determine this
-                        cmdBody += '\n'
-                        #
                         stype = self.structTypes[param.type]
                         if lenParam:
                             # This is an array
                             if lenParam.ispointer:
-                                cmdBody += indent + 'skipCall |= validate_struct_type_array(report_data, "{}", "{}", "{}", "{}", {}, {}, {}, {}, {}, {});\n'.format(command.name, lenParam.name, param.name, stype.value, lenParam.name, param.name, stype.value, cpReq, cvReq, req)
+                                # When the length parameter is a pointer, there is an extra Boolean parameter in the function call to indicate if it is required
+                                checkExpr = 'skipCall |= validate_struct_type_array(report_data, "{}", "{}", "{}", "{}", {}, {}, {}, {}, {}, {});\n'.format(command.name, lenParam.name, param.name, stype.value, lenParam.name, param.name, stype.value, cpReq, cvReq, req)
                             else:
-                                cmdBody += indent + 'skipCall |= validate_struct_type_array(report_data, "{}", "{}", "{}", "{}", {}, {}, {}, {}, {});\n'.format(command.name, lenParam.name, param.name, stype.value, lenParam.name, param.name, stype.value, cvReq, req)
+                                checkExpr = 'skipCall |= validate_struct_type_array(report_data, "{}", "{}", "{}", "{}", {}, {}, {}, {}, {});\n'.format(command.name, lenParam.name, param.name, stype.value, lenParam.name, param.name, stype.value, cvReq, req)
                         else:
-                            cmdBody += indent + 'skipCall |= validate_struct_type(report_data, "{}", "{}", "{}", {}, {}, {});\n'.format(command.name, param.name, stype.value, param.name, stype.value, req)
+                            checkExpr = 'skipCall |= validate_struct_type(report_data, "{}", "{}", "{}", {}, {}, {});\n'.format(command.name, param.name, stype.value, param.name, stype.value, req)
                     else:
                         if lenParam:
-                            # Add this command to the file; TODO: pre-determine this
-                            cmdBody += '\n'
-                            #
                             # This is an array
                             if lenParam.ispointer:
-                                cmdBody += indent + 'skipCall |= validate_array(report_data, "{}", "{}", "{}", {}, {}, {}, {}, {});\n'.format(command.name, lenParam.name, param.name, lenParam.name, param.name, cpReq, cvReq, req)
+                                # When the length parameter is a pointer, there is an extra Boolean parameter in the function call to indicate if it is required
+                                checkExpr = 'skipCall |= validate_array(report_data, "{}", "{}", "{}", {}, {}, {}, {}, {});\n'.format(command.name, lenParam.name, param.name, lenParam.name, param.name, cpReq, cvReq, req)
                             else:
-                                cmdBody += indent + 'skipCall |= validate_array(report_data, "{}", "{}", "{}", {}, {}, {}, {});\n'.format(command.name, lenParam.name, param.name, lenParam.name, param.name, cvReq, req)
+                                checkExpr = 'skipCall |= validate_array(report_data, "{}", "{}", "{}", {}, {}, {}, {});\n'.format(command.name, lenParam.name, param.name, lenParam.name, param.name, cvReq, req)
                         elif not param.isoptional:
-                            # Add this command to the file; TODO: pre-determine this
-                            cmdBody += '\n'
-                            #
-                            cmdBody += indent + 'skipCall |= validate_required_pointer(report_data, "{}", "{}", {});\n'.format(command.name, param.name, param.name)
+                            checkExpr = indent + 'skipCall |= validate_required_pointer(report_data, "{}", "{}", {});\n'.format(command.name, param.name, param.name)
                         else:
                             unused.append(param.name)
+                    # Append the parameter check to the function body for the current command
+                    if checkExpr:
+                        cmdBody += '\n'
+                        if lenParam and ('->' in lenParam.name):
+                            # Add checks to ensure the validation call does not dereference a NULL pointer to obtain the count
+                            cmdBody += self.genCheckedLengthCall(indent, lenParam.name, checkExpr)
+                        else:
+                            cmdBody += indent + checkExpr
                 elif not param.iscount:
                     unused.append(param.name)
             if cmdBody:
                 cmdDef = self.getCmdDef(command) + '\n'
                 cmdDef += '{\n'
-                indDnt = self.incIndent(None)
+                indent = self.incIndent(None)
                 # Ignore the first dispatch handle parameter, which is not
                 # processed by param_check
                 for name in unused[1:]:
@@ -3054,4 +3054,27 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 cmdDef += indent + 'return skipCall;\n'
                 cmdDef += '}\n'
                 self.appendSection('command', cmdDef)
+    #
+    # Generate the code to check for a NULL dereference before calling the
+    # validation function
+    def genCheckedLengthCall(self, indent, name, expr):
+        count = name.count('->')
+        if count:
+            checkedExpr = ''
+            localIndent = indent
+            elements = name.split('->')
+            # Open the if expression blocks
+            for i in range(0, count):
+                checkedExpr += localIndent + 'if ({} != NULL) {{\n'.format('->'.join(elements[0:i+1]))
+                localIndent = self.incIndent(localIndent)
+            # Add the validation expression
+            checkedExpr += localIndent + expr
+            # Close the if blocks
+            for i in range(0, count):
+                localIndent = self.decIndent(localIndent)
+                checkedExpr += localIndent + '}\n'
+            return checkedExpr
+        # No if statements were required
+        return indent + expr
+            
 
