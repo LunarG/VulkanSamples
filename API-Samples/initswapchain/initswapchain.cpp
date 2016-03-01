@@ -276,6 +276,7 @@ int sample_main() {
                                 &info.buffers[i].view);
         assert(res == VK_SUCCESS);
     }
+    free(swapchainImages);
     execute_end_command_buffer(info);
     execute_queue_command_buffer(info);
     /* VULKAN_KEY_END */

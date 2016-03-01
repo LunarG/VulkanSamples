@@ -987,6 +987,7 @@ void init_swap_chain(struct sample_info &info) {
         info.buffers.push_back(sc_buffer);
         assert(res == VK_SUCCESS);
     }
+    free(swapchainImages);
     info.current_buffer = 0;
 
     if (NULL != presentModes) {
