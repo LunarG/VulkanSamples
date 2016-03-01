@@ -417,6 +417,15 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, co
                         string_VkSampleCountFlagBits(pCreateInfo->samples), ImageFormatProperties.sampleCounts);
     }
 
+    if (pCreateInfo->initialLayout != VK_IMAGE_LAYOUT_UNDEFINED ||
+        pCreateInfo->initialLayout != VK_IMAGE_LAYOUT_PREINITIALIZED)
+    {
+        skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                            (uint64_t)pImage, __LINE__, IMAGE_INVALID_LAYOUT, "Image",
+                            "vkCreateImage parameter, pCreateInfo->initialLayout, must be VK_IMAGE_LAYOUT_UNDEFINED or "
+                            "VK_IMAGE_LAYOUT_PREINITIALIZED");
+    }
+
     if (VK_FALSE == skipCall) {
         result = device_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
     }
