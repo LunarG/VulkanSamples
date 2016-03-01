@@ -612,7 +612,6 @@ void init_depth_buffer(struct sample_info &info) {
     image_info.mipLevels = 1;
     image_info.arrayLayers = 1;
     image_info.samples = NUM_SAMPLES;
-    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     image_info.queueFamilyIndexCount = 0;
     image_info.pQueueFamilyIndices = NULL;
