@@ -7342,8 +7342,8 @@ bool validateSubpassCompatibility(layer_data* dev_data, VkCommandBuffer primaryB
         }
         skip_call |= validateAttachmentCompatibility(dev_data, primaryBuffer, primaryPass, primary_input_attach, secondaryBuffer, secondaryPass, secondary_input_attach, is_multi);
     }
-    maxInputAttachmentCount = std::max(primary_desc.colorAttachmentCount, secondary_desc.colorAttachmentCount);
-    for (uint32_t i = 0; i < maxInputAttachmentCount; ++i) {
+    uint32_t maxColorAttachmentCount = std::max(primary_desc.colorAttachmentCount, secondary_desc.colorAttachmentCount);
+    for (uint32_t i = 0; i < maxColorAttachmentCount; ++i) {
         uint32_t primary_color_attach = VK_ATTACHMENT_UNUSED, secondary_color_attach = VK_ATTACHMENT_UNUSED;
         if (i < primary_desc.colorAttachmentCount) {
             primary_color_attach = primary_desc.pColorAttachments[i].attachment;
