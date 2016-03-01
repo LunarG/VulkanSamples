@@ -43,7 +43,7 @@ samples utility functions
 // Header files.
 #include <android_native_app_glue.h>
 #ifndef ANDROID_NO_SHADERC
-#include "shaderc.hpp"
+#include "shaderc/shaderc.hpp"
 #else
 bool AndroidFillShaderMap(const char *current_path,
                           std::unordered_map<std::string, std::string> *map_shaders);
@@ -519,7 +519,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
 #else
     // On Android, use shaderc instead.
     shaderc::Compiler compiler;
-    shaderc::SpvModule module =
+    shaderc::SpvCompilationResult module =
         compiler.CompileGlslToSpv(pshader, strlen(pshader),
                                   MapShadercType(shader_type),
                                   "shader");
@@ -530,9 +530,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
              module.GetErrorMessage().c_str());
         return false;
     }
-    assert(module.GetLength());
-    spirv.resize(module.GetLength() >> 2);
-    memcpy(spirv.data(), module.GetData(), module.GetLength());
+    spirv.assign(module.cbegin(), module.cend());
 #endif
 #endif
     return true;

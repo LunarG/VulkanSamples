@@ -3,9 +3,8 @@ apply plugin: 'com.android.model.application'
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
 def ndkDir = properties.getProperty('ndk.dir')
-def shadercLibPath = file(project.rootProject.projectDir).absolutePath + "/../../../shaderc"
+def shadercLibPath = file(ndkDir).absolutePath + "/sources/third_party/shaderc"
 def validationLayerDir  = file(project.rootProject.projectDir).absolutePath + "/../../../LoaderAndTools/"
-def vulkanLibDir  = file(project.rootProject.projectDir).absolutePath + "/../../../vulkan"
 def vulkanWrapperPath = file(project.rootProject.projectDir).absolutePath + "/vulkan_wrapper"
 
 def stlType = "c++_static"
@@ -16,20 +15,20 @@ model {
             shaderc {
                 headers.srcDir "${shadercLibPath}/include"
                 binaries.withType(StaticLibraryBinary) {
-                    staticLibraryFile = file("${shadercLibPath}/lib/${stlType}/${targetPlatform.getName()}/libshaderc.a")
+                    staticLibraryFile = file("${shadercLibPath}/libs/${stlType}/${targetPlatform.getName()}/libshaderc.a")
                 }
             }
         }
     }
 
     android {
-        compileSdkVersion = 23
+        compileSdkVersion = "android-N"
         buildToolsVersion = "23.0.2"
 
         defaultConfig.with {
             applicationId = "@PACKAGE_NAME@"
             minSdkVersion.apiLevel = 22
-            targetSdkVersion.apiLevel = 23
+            targetSdkVersion.apiLevel = 24
             versionCode = 1
             versionName = "0.0.1"
         }
@@ -52,9 +51,7 @@ model {
         cppFlags.add("-I${file("../../utils")}".toString())
         cppFlags.add("-I${file("../../utils/glm")}".toString())
         cppFlags.add("-I${file(vulkanWrapperPath)}".toString())
-        cppFlags.add("-I${file("${vulkanLibDir}/include")}".toString())
         cppFlags.add("-D VK_USE_PLATFORM_ANDROID_KHR")
-        cppFlags.add("-D VULKAN_SAMPLES_BASE_DIR=\".\"")
         @OTHER_FLAGS@
     }
 
