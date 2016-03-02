@@ -701,7 +701,8 @@ typedef struct _SWAPCHAIN_NODE {
         createInfo(*pCreateInfo),
         pQueueFamilyIndices(NULL)
     {
-        if (pCreateInfo->queueFamilyIndexCount) {
+        if (pCreateInfo->queueFamilyIndexCount &&
+            pCreateInfo->imageSharingMode == VK_SHARING_MODE_CONCURRENT) {
             pQueueFamilyIndices = new uint32_t[pCreateInfo->queueFamilyIndexCount];
             memcpy(pQueueFamilyIndices, pCreateInfo->pQueueFamilyIndices, pCreateInfo->queueFamilyIndexCount*sizeof(uint32_t));
             createInfo.pQueueFamilyIndices = pQueueFamilyIndices;
