@@ -68,6 +68,7 @@ static size_t loader_platform_combine_path(char *dest, size_t len, ...);
 struct loader_phys_dev_per_icd {
     uint32_t count;
     VkPhysicalDevice *phys_devs;
+    struct loader_icd *this_icd;
 };
 
 enum loader_debug {
@@ -1086,23 +1087,6 @@ void loader_get_icd_loader_instance_extensions(
     // Traverse loader's extensions, adding non-duplicate extensions to the list
     wsi_add_instance_extensions(inst, inst_exts);
     debug_report_add_instance_extensions(inst, inst_exts);
-}
-
-struct loader_physical_device *
-loader_get_physical_device(const VkPhysicalDevice physdev) {
-    uint32_t i;
-    for (struct loader_instance *inst = loader.instances; inst;
-         inst = inst->next) {
-        for (i = 0; i < inst->total_gpu_count; i++) {
-            // TODO this aliases physDevices within instances, need for this
-            // function to go away
-            if (inst->phys_devs[i].disp ==
-                loader_get_instance_dispatch(physdev)) {
-                return &inst->phys_devs[i];
-            }
-        }
-    }
-    return NULL;
 }
 
 struct loader_icd *loader_get_icd_and_device(const VkDevice device,
@@ -3300,10 +3284,10 @@ loader_enable_device_layers(const struct loader_instance *inst,
     return err;
 }
 
-VkResult loader_create_device_chain(VkPhysicalDevice physicalDevice,
+VkResult loader_create_device_chain(const struct loader_physical_device *pd,
                                     const VkDeviceCreateInfo *pCreateInfo,
                                     const VkAllocationCallbacks *pAllocator,
-                                    struct loader_instance *inst,
+                                    const struct loader_instance *inst,
                                     struct loader_icd *icd,
                                     struct loader_device *dev) {
     uint32_t activated_layers = 0;
@@ -3417,7 +3401,7 @@ VkResult loader_create_device_chain(VkPhysicalDevice physicalDevice,
     PFN_vkCreateDevice fpCreateDevice =
         (PFN_vkCreateDevice)nextGIPA((VkInstance)inst, "vkCreateDevice");
     if (fpCreateDevice) {
-        res = fpCreateDevice(physicalDevice, &loader_create_info, pAllocator,
+        res = fpCreateDevice(pd->phys_dev, &loader_create_info, pAllocator,
                              &dev->device);
     } else {
         // Couldn't find CreateDevice function!
@@ -3516,6 +3500,7 @@ VkResult loader_validate_instance_extensions(
 VkResult loader_validate_device_extensions(
     struct loader_physical_device *phys_dev,
     const struct loader_layer_list *activated_device_layers,
+    const struct loader_extension_list *icd_exts,
     const VkDeviceCreateInfo *pCreateInfo) {
     VkExtensionProperties *extension_prop;
     struct loader_layer_properties *layer_prop;
@@ -3525,15 +3510,15 @@ VkResult loader_validate_device_extensions(
         VkStringErrorFlags result = vk_string_validate(
             MaxLoaderStringLength, pCreateInfo->ppEnabledExtensionNames[i]);
         if (result != VK_STRING_ERROR_NONE) {
-            loader_log(phys_dev->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                       0, "Loader: Device ppEnabledExtensionNames contains "
-                          "string that is too long or is badly formed");
+            loader_log(phys_dev->this_icd->this_instance,
+                       VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                       "Loader: Device ppEnabledExtensionNames contains "
+                       "string that is too long or is badly formed");
             return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
 
         const char *extension_name = pCreateInfo->ppEnabledExtensionNames[i];
-        extension_prop = get_extension_property(
-            extension_name, &phys_dev->device_extension_cache);
+        extension_prop = get_extension_property(extension_name, icd_exts);
 
         if (extension_prop) {
             continue;
@@ -3558,80 +3543,6 @@ VkResult loader_validate_device_extensions(
             return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
     }
-    return VK_SUCCESS;
-}
-
-VkResult
-loader_init_physical_device_info(struct loader_instance *ptr_instance) {
-    struct loader_icd *icd;
-    uint32_t i, j, idx, count = 0;
-    VkResult res;
-    struct loader_phys_dev_per_icd *phys_devs;
-
-    ptr_instance->total_gpu_count = 0;
-    phys_devs = (struct loader_phys_dev_per_icd *)loader_stack_alloc(
-        sizeof(struct loader_phys_dev_per_icd) * ptr_instance->total_icd_count);
-    if (!phys_devs)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    icd = ptr_instance->icds;
-    for (i = 0; i < ptr_instance->total_icd_count; i++) {
-        assert(icd);
-        res = icd->EnumeratePhysicalDevices(icd->instance, &phys_devs[i].count,
-                                            NULL);
-        if (res != VK_SUCCESS)
-            return res;
-        count += phys_devs[i].count;
-        icd = icd->next;
-    }
-
-    ptr_instance->phys_devs =
-        (struct loader_physical_device *)loader_heap_alloc(
-            ptr_instance, count * sizeof(struct loader_physical_device),
-            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    if (!ptr_instance->phys_devs)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    icd = ptr_instance->icds;
-
-    struct loader_physical_device *inst_phys_devs = ptr_instance->phys_devs;
-    idx = 0;
-    for (i = 0; i < ptr_instance->total_icd_count; i++) {
-        assert(icd);
-
-        phys_devs[i].phys_devs = (VkPhysicalDevice *)loader_stack_alloc(
-            phys_devs[i].count * sizeof(VkPhysicalDevice));
-        if (!phys_devs[i].phys_devs) {
-            loader_heap_free(ptr_instance, ptr_instance->phys_devs);
-            ptr_instance->phys_devs = NULL;
-            return VK_ERROR_OUT_OF_HOST_MEMORY;
-        }
-        res = icd->EnumeratePhysicalDevices(
-            icd->instance, &(phys_devs[i].count), phys_devs[i].phys_devs);
-        if ((res == VK_SUCCESS)) {
-            ptr_instance->total_gpu_count += phys_devs[i].count;
-            for (j = 0; j < phys_devs[i].count; j++) {
-
-                // initialize the loader's physicalDevice object
-                loader_set_dispatch((void *)&inst_phys_devs[idx],
-                                    ptr_instance->disp);
-                inst_phys_devs[idx].this_instance = ptr_instance;
-                inst_phys_devs[idx].this_icd = icd;
-                inst_phys_devs[idx].phys_dev = phys_devs[i].phys_devs[j];
-                memset(&inst_phys_devs[idx].device_extension_cache, 0,
-                       sizeof(struct loader_extension_list));
-
-                idx++;
-            }
-        } else {
-            loader_heap_free(ptr_instance, ptr_instance->phys_devs);
-            ptr_instance->phys_devs = NULL;
-            return res;
-        }
-
-        icd = icd->next;
-    }
-
     return VK_SUCCESS;
 }
 
@@ -3790,12 +3701,8 @@ terminator_DestroyInstance(VkInstance instance,
     loader_scanned_icd_clear(ptr_instance, &ptr_instance->icd_libs);
     loader_destroy_generic_list(
         ptr_instance, (struct loader_generic_list *)&ptr_instance->ext_list);
-    for (uint32_t i = 0; i < ptr_instance->total_gpu_count; i++)
-        loader_destroy_generic_list(
-            ptr_instance,
-            (struct loader_generic_list *)&ptr_instance->phys_devs[i]
-                .device_extension_cache);
-    loader_heap_free(ptr_instance, ptr_instance->phys_devs);
+    if (ptr_instance->phys_devs_term)
+        loader_heap_free(ptr_instance, ptr_instance->phys_devs_term);
     loader_free_dev_ext_table(ptr_instance);
 }
 
@@ -3805,7 +3712,7 @@ terminator_CreateDevice(VkPhysicalDevice physicalDevice,
                         const VkAllocationCallbacks *pAllocator,
                         VkDevice *pDevice) {
     struct loader_physical_device *phys_dev;
-    phys_dev = loader_get_physical_device(physicalDevice);
+    phys_dev = (struct loader_physical_device *)physicalDevice;
 
     VkLayerDeviceCreateInfo *chain_info =
         (VkLayerDeviceCreateInfo *)pCreateInfo->pNext;
@@ -3852,10 +3759,27 @@ terminator_CreateDevice(VkPhysicalDevice physicalDevice,
     localCreateInfo.ppEnabledExtensionNames =
         (const char *const *)filtered_extension_names;
 
+    /* Get the physical device (ICD) extensions  */
+    struct loader_extension_list icd_exts;
+    VkResult res;
+    if (!loader_init_generic_list(phys_dev->this_icd->this_instance,
+                                  (struct loader_generic_list *)&icd_exts,
+                                  sizeof(VkExtensionProperties))) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+
+    res = loader_add_device_extensions(
+        phys_dev->this_icd->this_instance, phys_dev->this_icd,
+        phys_dev->phys_dev, phys_dev->this_icd->this_icd_lib->lib_name,
+        &icd_exts);
+    if (res != VK_SUCCESS) {
+        return res;
+    }
+
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         const char *extension_name = pCreateInfo->ppEnabledExtensionNames[i];
-        VkExtensionProperties *prop = get_extension_property(
-            extension_name, &phys_dev->device_extension_cache);
+        VkExtensionProperties *prop =
+            get_extension_property(extension_name, &icd_exts);
         if (prop) {
             filtered_extension_names[localCreateInfo.enabledExtensionCount] =
                 (char *)extension_name;
@@ -3868,8 +3792,8 @@ terminator_CreateDevice(VkPhysicalDevice physicalDevice,
     // this_icd->CreateDevice?
     //    VkResult res = fpCreateDevice(phys_dev->phys_dev, &localCreateInfo,
     //    pAllocator, &localDevice);
-    VkResult res = phys_dev->this_icd->CreateDevice(
-        phys_dev->phys_dev, &localCreateInfo, pAllocator, &localDevice);
+    res = phys_dev->this_icd->CreateDevice(phys_dev->phys_dev, &localCreateInfo,
+                                           pAllocator, &localDevice);
 
     if (res != VK_SUCCESS) {
         return res;
@@ -3888,31 +3812,87 @@ terminator_EnumeratePhysicalDevices(VkInstance instance,
                                     uint32_t *pPhysicalDeviceCount,
                                     VkPhysicalDevice *pPhysicalDevices) {
     uint32_t i;
-    uint32_t copy_count = 0;
-    struct loader_instance *ptr_instance = (struct loader_instance *)instance;
+    struct loader_instance *inst = (struct loader_instance *)instance;
     VkResult res = VK_SUCCESS;
 
-    if (ptr_instance->total_gpu_count == 0) {
-        res = loader_init_physical_device_info(ptr_instance);
+    struct loader_icd *icd;
+    struct loader_phys_dev_per_icd *phys_devs;
+
+    inst->total_gpu_count = 0;
+    phys_devs = (struct loader_phys_dev_per_icd *)loader_stack_alloc(
+        sizeof(struct loader_phys_dev_per_icd) * inst->total_icd_count);
+    if (!phys_devs)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    icd = inst->icds;
+    for (i = 0; i < inst->total_icd_count; i++) {
+        assert(icd);
+        res = icd->EnumeratePhysicalDevices(icd->instance, &phys_devs[i].count,
+                                            NULL);
+        if (res != VK_SUCCESS)
+            return res;
+        icd = icd->next;
     }
 
-    *pPhysicalDeviceCount = ptr_instance->total_gpu_count;
+    icd = inst->icds;
+    for (i = 0; i < inst->total_icd_count; i++) {
+        assert(icd);
+        phys_devs[i].phys_devs = (VkPhysicalDevice *)loader_stack_alloc(
+            phys_devs[i].count * sizeof(VkPhysicalDevice));
+        if (!phys_devs[i].phys_devs) {
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
+        res = icd->EnumeratePhysicalDevices(
+            icd->instance, &(phys_devs[i].count), phys_devs[i].phys_devs);
+        if ((res == VK_SUCCESS)) {
+            inst->total_gpu_count += phys_devs[i].count;
+        } else {
+            return res;
+        }
+        phys_devs[i].this_icd = icd;
+        icd = icd->next;
+    }
+
+    *pPhysicalDeviceCount = inst->total_gpu_count;
     if (!pPhysicalDevices) {
         return res;
     }
 
-    copy_count = (ptr_instance->total_gpu_count < *pPhysicalDeviceCount)
-                     ? ptr_instance->total_gpu_count
+    /* Initialize the output pPhysicalDevices  with wrapped loader terminator
+     * physicalDevice objects; save this list of wrapped objects in instance
+     * struct for later cleanup and use by trampoline code */
+    uint32_t j, idx = 0;
+    uint32_t copy_count = 0;
+
+    copy_count = (inst->total_gpu_count < *pPhysicalDeviceCount)
+                     ? inst->total_gpu_count
                      : *pPhysicalDeviceCount;
-    for (i = 0; i < copy_count; i++) {
-        pPhysicalDevices[i] = (VkPhysicalDevice)&ptr_instance->phys_devs[i];
+
+    // phys_devs_term is used to pass the "this_icd" info to trampoline code
+    if (inst->phys_devs_term)
+        loader_heap_free(inst, inst->phys_devs_term);
+    inst->phys_devs_term = loader_heap_alloc(
+        inst, sizeof(struct loader_physical_device) * copy_count,
+        VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    if (!inst->phys_devs_term)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    for (i = 0; idx < copy_count && i < inst->total_icd_count; i++) {
+        for (j = 0; j < phys_devs[i].count && idx < copy_count; j++) {
+            loader_set_dispatch((void *)&inst->phys_devs_term[idx], inst->disp);
+            inst->phys_devs_term[idx].this_icd = phys_devs[i].this_icd;
+            inst->phys_devs_term[idx].phys_dev = phys_devs[i].phys_devs[j];
+            pPhysicalDevices[idx] =
+                (VkPhysicalDevice)&inst->phys_devs_term[idx];
+            idx++;
+        }
     }
     *pPhysicalDeviceCount = copy_count;
 
-    if (copy_count < ptr_instance->total_gpu_count) {
+    if (copy_count < inst->total_gpu_count) {
+        inst->total_gpu_count = copy_count;
         return VK_INCOMPLETE;
     }
-
     return res;
 }
 
@@ -4017,7 +3997,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumerateDeviceExtensionProperties(
 
     /* Any layer or trampoline wrapping should be removed at this point in time
      * can just cast to the expected type for VkPhysicalDevice. */
-    phys_dev = (struct loader_physical_device *) physicalDevice;
+    phys_dev = (struct loader_physical_device *)physicalDevice;
 
     /* this case is during the call down the instance chain with pLayerName
      * == NULL*/
@@ -4026,26 +4006,26 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumerateDeviceExtensionProperties(
     VkResult res;
 
     /* get device extensions */
-    res = icd->EnumerateDeviceExtensionProperties(
-            phys_dev->phys_dev, NULL, &icd_ext_count, pProperties);
+    res = icd->EnumerateDeviceExtensionProperties(phys_dev->phys_dev, NULL,
+                                                  &icd_ext_count, pProperties);
     if (res != VK_SUCCESS)
         return res;
 
-    loader_init_layer_list(phys_dev->this_instance, &implicit_layer_list);
+    loader_init_layer_list(icd->this_instance, &implicit_layer_list);
 
     loader_add_layer_implicit(
-            phys_dev->this_instance, VK_LAYER_TYPE_INSTANCE_IMPLICIT,
-            &implicit_layer_list,
-            &phys_dev->this_instance->instance_layer_list);
+        icd->this_instance, VK_LAYER_TYPE_INSTANCE_IMPLICIT,
+        &implicit_layer_list, &icd->this_instance->instance_layer_list);
     /* we need to determine which implicit layers are active,
      * and then add their extensions. This can't be cached as
      * it depends on results of environment variables (which can change).
      */
     if (pProperties != NULL) {
+        struct loader_extension_list icd_exts;
         /* initialize dev_extension list within the physicalDevice object */
-        res = loader_init_device_extensions(
-                phys_dev->this_instance, phys_dev, icd_ext_count, pProperties,
-                &phys_dev->device_extension_cache);
+        res = loader_init_device_extensions(icd->this_instance, phys_dev,
+                                            icd_ext_count, pProperties,
+                                            &icd_exts);
         if (res != VK_SUCCESS)
             return res;
 
@@ -4055,27 +4035,23 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumerateDeviceExtensionProperties(
          * change).
          */
         struct loader_extension_list all_exts = {0};
-        loader_add_to_ext_list(phys_dev->this_instance, &all_exts,
-                phys_dev->device_extension_cache.count,
-                phys_dev->device_extension_cache.list);
+        loader_add_to_ext_list(icd->this_instance, &all_exts, icd_exts.count,
+                               icd_exts.list);
 
-        loader_init_layer_list(phys_dev->this_instance,
-                &implicit_layer_list);
+        loader_init_layer_list(icd->this_instance, &implicit_layer_list);
 
         loader_add_layer_implicit(
-                phys_dev->this_instance, VK_LAYER_TYPE_INSTANCE_IMPLICIT,
-                &implicit_layer_list,
-                &phys_dev->this_instance->instance_layer_list);
+            icd->this_instance, VK_LAYER_TYPE_INSTANCE_IMPLICIT,
+            &implicit_layer_list, &icd->this_instance->instance_layer_list);
 
         for (uint32_t i = 0; i < implicit_layer_list.count; i++) {
             for (uint32_t j = 0;
-                    j < implicit_layer_list.list[i].device_extension_list.count;
-                    j++) {
-                loader_add_to_ext_list(phys_dev->this_instance, &all_exts,
-                        1,
-                        &implicit_layer_list.list[i]
-                        .device_extension_list.list[j]
-                        .props);
+                 j < implicit_layer_list.list[i].device_extension_list.count;
+                 j++) {
+                loader_add_to_ext_list(icd->this_instance, &all_exts, 1,
+                                       &implicit_layer_list.list[i]
+                                            .device_extension_list.list[j]
+                                            .props);
             }
         }
         uint32_t capacity = *pPropertyCount;
@@ -4091,9 +4067,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumerateDeviceExtensionProperties(
         } else {
             *pPropertyCount = all_exts.count;
         }
-        loader_destroy_generic_list(
-                phys_dev->this_instance,
-                (struct loader_generic_list *) &all_exts);
+        loader_destroy_generic_list(icd->this_instance,
+                                    (struct loader_generic_list *)&all_exts);
     } else {
         /* just return the count; need to add in the count of implicit layer
          * extensions
@@ -4102,14 +4077,13 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumerateDeviceExtensionProperties(
 
         for (uint32_t i = 0; i < implicit_layer_list.count; i++) {
             *pPropertyCount +=
-                    implicit_layer_list.list[i].device_extension_list.count;
+                implicit_layer_list.list[i].device_extension_list.count;
         }
         res = VK_SUCCESS;
     }
 
     loader_destroy_generic_list(
-            phys_dev->this_instance,
-            (struct loader_generic_list *) &implicit_layer_list);
+        icd->this_instance, (struct loader_generic_list *)&implicit_layer_list);
     return res;
 }
 

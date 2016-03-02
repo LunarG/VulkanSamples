@@ -222,9 +222,11 @@ vkGetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice,
                                      VkSurfaceKHR surface,
                                      VkBool32 *pSupported) {
     const VkLayerInstanceDispatchTable *disp;
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
     disp = loader_get_instance_dispatch(physicalDevice);
     VkResult res = disp->GetPhysicalDeviceSurfaceSupportKHR(
-        physicalDevice, queueFamilyIndex, surface, pSupported);
+        unwrapped_phys_dev, queueFamilyIndex, surface, pSupported);
     return res;
 }
 
@@ -260,10 +262,13 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
     VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
     VkSurfaceCapabilitiesKHR *pSurfaceCapabilities) {
+
     const VkLayerInstanceDispatchTable *disp;
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
     disp = loader_get_instance_dispatch(physicalDevice);
     VkResult res = disp->GetPhysicalDeviceSurfaceCapabilitiesKHR(
-        physicalDevice, surface, pSurfaceCapabilities);
+        unwrapped_phys_dev, surface, pSurfaceCapabilities);
     return res;
 }
 
@@ -298,10 +303,12 @@ vkGetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice,
                                      VkSurfaceKHR surface,
                                      uint32_t *pSurfaceFormatCount,
                                      VkSurfaceFormatKHR *pSurfaceFormats) {
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
     const VkLayerInstanceDispatchTable *disp;
     disp = loader_get_instance_dispatch(physicalDevice);
     VkResult res = disp->GetPhysicalDeviceSurfaceFormatsKHR(
-        physicalDevice, surface, pSurfaceFormatCount, pSurfaceFormats);
+        unwrapped_phys_dev, surface, pSurfaceFormatCount, pSurfaceFormats);
     return res;
 }
 
@@ -336,10 +343,12 @@ vkGetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice,
                                           VkSurfaceKHR surface,
                                           uint32_t *pPresentModeCount,
                                           VkPresentModeKHR *pPresentModes) {
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
     const VkLayerInstanceDispatchTable *disp;
     disp = loader_get_instance_dispatch(physicalDevice);
     VkResult res = disp->GetPhysicalDeviceSurfacePresentModesKHR(
-        physicalDevice, surface, pPresentModeCount, pPresentModes);
+        unwrapped_phys_dev, surface, pPresentModeCount, pPresentModes);
     return res;
 }
 
@@ -497,10 +506,12 @@ terminator_CreateWin32SurfaceKHR(VkInstance instance,
 LOADER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL
 vkGetPhysicalDeviceWin32PresentationSupportKHR(VkPhysicalDevice physicalDevice,
                                                uint32_t queueFamilyIndex) {
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
     const VkLayerInstanceDispatchTable *disp;
     disp = loader_get_instance_dispatch(physicalDevice);
     VkBool32 res = disp->GetPhysicalDeviceWin32PresentationSupportKHR(
-        physicalDevice, queueFamilyIndex);
+        unwrapped_phys_dev, queueFamilyIndex);
     return res;
 }
 
@@ -583,10 +594,12 @@ LOADER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL
 vkGetPhysicalDeviceMirPresentationSupportKHR(VkPhysicalDevice physicalDevice,
                                              uint32_t queueFamilyIndex,
                                              MirConnection *connection) {
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
     const VkLayerInstanceDispatchTable *disp;
     disp = loader_get_instance_dispatch(physicalDevice);
     VkBool32 res = disp->GetPhysicalDeviceMirPresentationSupportKHR(
-        physicalDevice, queueFamilyIndex, connection);
+        unwrapped_phys_dev, queueFamilyIndex, connection);
     return res;
 }
 
@@ -668,10 +681,12 @@ LOADER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL
 vkGetPhysicalDeviceWaylandPresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
     struct wl_display *display) {
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
     const VkLayerInstanceDispatchTable *disp;
     disp = loader_get_instance_dispatch(physicalDevice);
     VkBool32 res = disp->GetPhysicalDeviceWaylandPresentationSupportKHR(
-        physicalDevice, queueFamilyIndex, display);
+        unwrapped_phys_dev, queueFamilyIndex, display);
     return res;
 }
 
@@ -756,10 +771,12 @@ vkGetPhysicalDeviceXcbPresentationSupportKHR(VkPhysicalDevice physicalDevice,
                                              uint32_t queueFamilyIndex,
                                              xcb_connection_t *connection,
                                              xcb_visualid_t visual_id) {
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
     const VkLayerInstanceDispatchTable *disp;
     disp = loader_get_instance_dispatch(physicalDevice);
     VkBool32 res = disp->GetPhysicalDeviceXcbPresentationSupportKHR(
-        physicalDevice, queueFamilyIndex, connection, visual_id);
+        unwrapped_phys_dev, queueFamilyIndex, connection, visual_id);
     return res;
 }
 
@@ -843,10 +860,12 @@ LOADER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL
 vkGetPhysicalDeviceXlibPresentationSupportKHR(VkPhysicalDevice physicalDevice,
                                               uint32_t queueFamilyIndex,
                                               Display *dpy, VisualID visualID) {
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
     const VkLayerInstanceDispatchTable *disp;
     disp = loader_get_instance_dispatch(physicalDevice);
     VkBool32 res = disp->GetPhysicalDeviceXlibPresentationSupportKHR(
-        physicalDevice, queueFamilyIndex, dpy, visualID);
+        unwrapped_phys_dev, queueFamilyIndex, dpy, visualID);
     return res;
 }
 
