@@ -623,6 +623,11 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
         dst_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
         break;
 
+    case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        src_mask = 0;
+        dst_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        break;
+
     default:
         src_mask = all_cache_outputs;
         dst_mask = all_cache_inputs;
