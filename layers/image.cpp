@@ -665,7 +665,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(
     VkBool32 skipCall = VK_FALSE;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
 
-    if (imageLayout != VK_IMAGE_LAYOUT_GENERAL ||
+    if (imageLayout != VK_IMAGE_LAYOUT_GENERAL &&
         imageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
     {
         skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
