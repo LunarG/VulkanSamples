@@ -4314,6 +4314,32 @@ bool PreCreateGraphicsPipelines(
         "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->sType, is an invalid enumerator");
         return false;
     }
+
+    if(pCreateInfos->flags | VK_PIPELINE_CREATE_DERIVATIVE_BIT)
+    {
+        if(pCreateInfos->basePipelineIndex != -1)
+        {
+            if(pCreateInfos->basePipelineHandle != VK_NULL_HANDLE)
+            {
+                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+                "vkCreateGraphicsPipelines parameter, pCreateInfos->basePipelineHandle, must be VK_NULL_HANDLE if pCreateInfos->flags "
+                "contains the VK_PIPELINE_CREATE_DERIVATIVE_BIT flag and pCreateInfos->basePipelineIndex is not -1");
+                return false;
+            }
+        }
+
+        if(pCreateInfos->basePipelineHandle != VK_NULL_HANDLE)
+        {
+            if(pCreateInfos->basePipelineIndex != -1)
+            {
+                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+                "vkCreateGraphicsPipelines parameter, pCreateInfos->basePipelineIndex, must be -1 if pCreateInfos->flags "
+                "contains the VK_PIPELINE_CREATE_DERIVATIVE_BIT flag and pCreateInfos->basePipelineHandle is not VK_NULL_HANDLE");
+                return false;
+            }
+        }
+    }
+
     if(pCreateInfos->pStages != nullptr)
     {
     if(pCreateInfos->pStages->sType != VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
