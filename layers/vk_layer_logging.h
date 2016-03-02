@@ -121,7 +121,7 @@ static inline void layer_debug_report_destroy_instance(debug_report_data *debug_
         pTravNext = pTrav->pNext;
 
         debug_report_log_msg(
-                    debug_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                    debug_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                     VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT, (uint64_t) pTrav->msgCallback,
                     0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT,
                     "DebugReport",

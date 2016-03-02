@@ -6217,7 +6217,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(
             (pCB->activeRenderPassBeginInfo.renderArea.extent.width  == pRects[0].rect.extent.width) &&
             (pCB->activeRenderPassBeginInfo.renderArea.extent.height == pRects[0].rect.extent.height)) {
             // TODO : commandBuffer should be srcObj
-            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
+            // There are times where app needs to use ClearAttachments (generally when reusing a buffer inside of a render pass)
+            // Can we make this warning more specific? I'd like to avoid triggering this test if we can tell it's a use that must call CmdClearAttachments
+            // Otherwise this seems more like a performance warning.
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
                     "vkCmdClearAttachments() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
                     " It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.", (uint64_t)(commandBuffer));
         }
@@ -6437,7 +6440,7 @@ VkBool32 ValidateMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, 
         }
     } else {
         if (!required_bit) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
                                  "%s AccessMask %d %s must contain at least one of access bits %d %s when layout is %s, unless the app has previously added a barrier for this transition.",
                                   type, accessMask, string_VkAccessFlags(accessMask).c_str(), optional_bits,
                                   string_VkAccessFlags(optional_bits).c_str(), string_VkImageLayout(layout));
@@ -6448,7 +6451,7 @@ VkBool32 ValidateMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, 
                 ss << optional_bits;
                 opt_bits = "and may have optional bits " + ss.str() + ' ' + string_VkAccessFlags(optional_bits);
             }
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
                                  "%s AccessMask %d %s must have required access bit %d %s %s when layout is %s, unless the app has previously added a barrier for this transition.",
                                   type, accessMask, string_VkAccessFlags(accessMask).c_str(),
                                   required_bit, string_VkAccessFlags(required_bit).c_str(),
@@ -7029,7 +7032,7 @@ VkBool32 CheckDependencyExists(const layer_data* my_data, VkDevice device, const
             if (FindDependency(subpass, dependent_subpasses[k], subpass_to_node, processed_nodes) ||
                 FindDependency(dependent_subpasses[k], subpass, subpass_to_node, processed_nodes)) {
                 // TODO: Verify against Valid Use section of spec
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
                                      "A dependency between subpasses %d and %d must exist but only an implicit one is specified.",
                                      subpass, dependent_subpasses[k]);
             } else {
@@ -7136,7 +7139,7 @@ VkBool32 ValidateLayouts(const layer_data* my_data, VkDevice device, const VkRen
                 subpass.pInputAttachments[j].layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
                 if (subpass.pInputAttachments[j].layout == VK_IMAGE_LAYOUT_GENERAL) {
                     // TODO: Verify Valid Use in spec. I believe this is allowed (valid) but may not be optimal performance
-                    skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                    skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                     "Layout for input attachment is GENERAL but should be READ_ONLY_OPTIMAL.");
                 } else {
                     skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
@@ -7148,7 +7151,7 @@ VkBool32 ValidateLayouts(const layer_data* my_data, VkDevice device, const VkRen
             if (subpass.pColorAttachments[j].layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
                 if (subpass.pColorAttachments[j].layout == VK_IMAGE_LAYOUT_GENERAL) {
                     // TODO: Verify Valid Use in spec. I believe this is allowed (valid) but may not be optimal performance
-                    skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                    skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                     "Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.");
                 } else {
                     skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
@@ -7161,7 +7164,7 @@ VkBool32 ValidateLayouts(const layer_data* my_data, VkDevice device, const VkRen
             if (subpass.pDepthStencilAttachment->layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
                 if (subpass.pDepthStencilAttachment->layout == VK_IMAGE_LAYOUT_GENERAL) {
                     // TODO: Verify Valid Use in spec. I believe this is allowed (valid) but may not be optimal performance
-                    skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                    skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                     "Layout for depth attachment is GENERAL but should be DEPTH_STENCIL_ATTACHMENT_OPTIMAL.");
                 } else {
                     skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",

@@ -4713,7 +4713,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw) {
 
     // TODO: verify that this matches layer
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_WARNING_BIT_EXT,
+        VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
         "vkCmdClearAttachments() issued on CB object ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());

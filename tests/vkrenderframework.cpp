@@ -606,25 +606,36 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
             src_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         else
             src_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        dst_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
+        dst_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
         break;
 
     case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
         if (m_descriptorImageInfo.imageLayout ==
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
             src_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        else if (m_descriptorImageInfo.imageLayout ==
+             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+            src_mask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
         else
             src_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        dst_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
+        dst_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
         break;
 
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-        src_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        if (m_descriptorImageInfo.imageLayout ==
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+            src_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        else
+            src_mask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
         dst_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
         break;
 
     case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-        src_mask = 0;
+        if (m_descriptorImageInfo.imageLayout ==
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+            src_mask = VK_ACCESS_TRANSFER_READ_BIT;
+        else
+            src_mask = 0;
         dst_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         break;
 
@@ -755,12 +766,14 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image) {
     copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copy_region.srcSubresource.baseArrayLayer = 0;
     copy_region.srcSubresource.mipLevel = 0;
+    copy_region.srcSubresource.layerCount = 1;
     copy_region.srcOffset.x = 0;
     copy_region.srcOffset.y = 0;
     copy_region.srcOffset.z = 0;
     copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copy_region.dstSubresource.baseArrayLayer = 0;
     copy_region.dstSubresource.mipLevel = 0;
+    copy_region.dstSubresource.layerCount = 1;
     copy_region.dstOffset.x = 0;
     copy_region.dstOffset.y = 0;
     copy_region.dstOffset.z = 0;
