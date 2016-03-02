@@ -418,7 +418,11 @@ void VkDeviceObj::get_device_queue() {
 VkDescriptorSetObj::VkDescriptorSetObj(VkDeviceObj *device)
     : m_device(device), m_nextSlot(0) {}
 
-VkDescriptorSetObj::~VkDescriptorSetObj() { delete m_set; }
+VkDescriptorSetObj::~VkDescriptorSetObj() {
+    if (m_set) {
+        delete m_set;
+    }
+}
 
 int VkDescriptorSetObj::AppendDummy() {
     /* request a descriptor but do not update it */
@@ -476,13 +480,16 @@ VkDescriptorSet VkDescriptorSetObj::GetDescriptorSetHandle() const {
 
 void VkDescriptorSetObj::CreateVKDescriptorSet(
     VkCommandBufferObj *commandBuffer) {
-    // create VkDescriptorPool
-    VkDescriptorPoolCreateInfo pool = {};
-    pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool.poolSizeCount = m_type_counts.size();
-    pool.maxSets = 1;
-    pool.pPoolSizes = m_type_counts.data();
-    init(*m_device, pool);
+
+    if ( m_type_counts.size()) {
+        // create VkDescriptorPool
+        VkDescriptorPoolCreateInfo pool = {};
+        pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        pool.poolSizeCount = m_type_counts.size();
+        pool.maxSets = 1;
+        pool.pPoolSizes = m_type_counts.data();
+        init(*m_device, pool);
+    }
 
     // create VkDescriptorSetLayout
     vector<VkDescriptorSetLayoutBinding> bindings;
@@ -513,20 +520,22 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(
 
     m_pipeline_layout.init(*m_device, pipeline_layout, layouts);
 
-    // create VkDescriptorSet
-    m_set = alloc_sets(*m_device, m_layout);
+    if (m_type_counts.size()) {
+        // create VkDescriptorSet
+        m_set = alloc_sets(*m_device, m_layout);
 
-    // build the update array
-    size_t imageSamplerCount = 0;
-    for (std::vector<VkWriteDescriptorSet>::iterator it = m_writes.begin();
-         it != m_writes.end(); it++) {
-        it->dstSet = m_set->handle();
-        if (it->descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-            it->pImageInfo = &m_imageSamplerDescriptors[imageSamplerCount++];
+        // build the update array
+        size_t imageSamplerCount = 0;
+        for (std::vector<VkWriteDescriptorSet>::iterator it = m_writes.begin();
+             it != m_writes.end(); it++) {
+            it->dstSet = m_set->handle();
+            if (it->descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+                it->pImageInfo = &m_imageSamplerDescriptors[imageSamplerCount++];
+        }
+
+        // do the updates
+        m_device->update_descriptor_sets(m_writes);
     }
-
-    // do the updates
-    m_device->update_descriptor_sets(m_writes);
 }
 
 VkImageObj::VkImageObj(VkDeviceObj *dev) {

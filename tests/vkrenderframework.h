@@ -380,6 +380,7 @@ class VkDescriptorSetObj : public vk_testing::DescriptorPool {
 
     VkDescriptorSet GetDescriptorSetHandle() const;
     VkPipelineLayout GetPipelineLayout() const;
+    int GetTypeCounts() {return m_type_counts.size();}
 
   protected:
     VkDeviceObj *m_device;
@@ -391,7 +392,7 @@ class VkDescriptorSetObj : public vk_testing::DescriptorPool {
 
     vk_testing::DescriptorSetLayout m_layout;
     vk_testing::PipelineLayout m_pipeline_layout;
-    vk_testing::DescriptorSet *m_set;
+    vk_testing::DescriptorSet *m_set = NULL;
 };
 
 class VkShaderObj : public vk_testing::ShaderModule {
