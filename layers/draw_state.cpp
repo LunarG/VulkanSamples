@@ -6523,10 +6523,12 @@ VkBool32 ValidateBarriers(const char* funcName,
             continue;
 
         // Validate buffer barrier queue family indices
-        if ((mem_barrier->srcQueueFamilyIndex >=
-             dev_data->physDevProperties.queue_family_properties.size()) ||
-            (mem_barrier->dstQueueFamilyIndex >=
-             dev_data->physDevProperties.queue_family_properties.size())) {
+        if ((mem_barrier->srcQueueFamilyIndex != VK_QUEUE_FAMILY_IGNORED &&
+             mem_barrier->srcQueueFamilyIndex >=
+                 dev_data->physDevProperties.queue_family_properties.size()) ||
+            (mem_barrier->dstQueueFamilyIndex != VK_QUEUE_FAMILY_IGNORED &&
+             mem_barrier->dstQueueFamilyIndex >=
+                 dev_data->physDevProperties.queue_family_properties.size())) {
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                     (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
