@@ -672,19 +672,8 @@ bool VkImageObj::IsCompatible(VkFlags usage, VkFlags features) {
 void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage,
                       VkImageTiling requested_tiling,
                       VkMemoryPropertyFlags reqs) {
-    uint32_t mipCount;
     VkFormatProperties image_fmt;
     VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
-
-    mipCount = 0;
-
-    uint32_t _w = w;
-    uint32_t _h = h;
-    while ((_w > 0) || (_h > 0)) {
-        _w >>= 1;
-        _h >>= 1;
-        mipCount++;
-    }
 
     vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), fmt,
                                         &image_fmt);
@@ -707,21 +696,12 @@ void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage,
             << "Error: Cannot find requested tiling configuration";
     }
 
-    VkImageFormatProperties imageFormatProperties;
-    vkGetPhysicalDeviceImageFormatProperties(m_device->phy().handle(), fmt,
-                                             VK_IMAGE_TYPE_2D, tiling, usage,
-                                             0, // VkImageCreateFlags
-                                             &imageFormatProperties);
-    if (imageFormatProperties.maxMipLevels < mipCount) {
-        mipCount = imageFormatProperties.maxMipLevels;
-    }
-
     VkImageCreateInfo imageCreateInfo = vk_testing::Image::create_info();
     imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
     imageCreateInfo.format = fmt;
     imageCreateInfo.extent.width = w;
     imageCreateInfo.extent.height = h;
-    imageCreateInfo.mipLevels = mipCount;
+    imageCreateInfo.mipLevels = 1;
     imageCreateInfo.tiling = tiling;
     imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
