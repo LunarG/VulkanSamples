@@ -1622,6 +1622,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUnmapMemory(
 VkBool32
 validateMemoryIsMapped(
     layer_data                *my_data,
+    const char                *funcName,
     uint32_t                   memRangeCount,
     const VkMappedMemoryRange *pMemRanges)
 {
@@ -1629,10 +1630,33 @@ validateMemoryIsMapped(
     for (uint32_t i = 0; i < memRangeCount; ++i) {
         auto mem_element = my_data->memObjMap.find(pMemRanges[i].memory);
         if (mem_element != my_data->memObjMap.end()) {
-            if (mem_element->second.memRange.offset > pMemRanges[i].offset ||
-                (mem_element->second.memRange.offset + mem_element->second.memRange.size) < (pMemRanges[i].offset + pMemRanges[i].size)) {
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)pMemRanges[i].memory,
-                                    __LINE__, MEMTRACK_INVALID_MAP, "MEM", "Memory must be mapped before it can be flushed or invalidated.");
+            if (mem_element->second.memRange.offset > pMemRanges[i].offset) {
+                skipCall |= log_msg(
+                    my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                    (uint64_t)pMemRanges[i].memory, __LINE__,
+                    MEMTRACK_INVALID_MAP, "MEM",
+                    "%s: Flush/Invalidate offset (" PRINTF_SIZE_T_SPECIFIER
+                    ") is less than Memory Object's offset "
+                    "(" PRINTF_SIZE_T_SPECIFIER ").",
+                    funcName, pMemRanges[i].offset,
+                    mem_element->second.memRange.offset);
+            }
+            if ((mem_element->second.memRange.size != VK_WHOLE_SIZE) &&
+                ((mem_element->second.memRange.offset +
+                  mem_element->second.memRange.size) <
+                 (pMemRanges[i].offset + pMemRanges[i].size))) {
+                skipCall |= log_msg(
+                    my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                    (uint64_t)pMemRanges[i].memory, __LINE__,
+                    MEMTRACK_INVALID_MAP, "MEM",
+                    "%s: Flush/Invalidate upper-bound (" PRINTF_SIZE_T_SPECIFIER
+                    ") exceeds the Memory Object's upper-bound "
+                    "(" PRINTF_SIZE_T_SPECIFIER ").",
+                    funcName, pMemRanges[i].offset + pMemRanges[i].size,
+                    mem_element->second.memRange.offset +
+                        mem_element->second.memRange.size);
             }
         }
     }
@@ -1683,7 +1707,7 @@ VK_LAYER_EXPORT VkResult VKAPI_CALL vkFlushMappedMemoryRanges(
 
     loader_platform_thread_lock_mutex(&globalLock);
     skipCall  |= validateAndCopyNoncoherentMemoryToDriver(my_data, memRangeCount, pMemRanges);
-    skipCall  |= validateMemoryIsMapped(my_data, memRangeCount, pMemRanges);
+    skipCall  |= validateMemoryIsMapped(my_data, "vkFlushMappedMemoryRanges", memRangeCount, pMemRanges);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall ) {
         result = my_data->device_dispatch_table->FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
@@ -1701,7 +1725,7 @@ VK_LAYER_EXPORT VkResult VKAPI_CALL vkInvalidateMappedMemoryRanges(
     layer_data *my_data   = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
     loader_platform_thread_lock_mutex(&globalLock);
-    skipCall |= validateMemoryIsMapped(my_data, memRangeCount, pMemRanges);
+    skipCall |= validateMemoryIsMapped(my_data, "vkInvalidateMappedMemoryRanges", memRangeCount, pMemRanges);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         result = my_data->device_dispatch_table->InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
