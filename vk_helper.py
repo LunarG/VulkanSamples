@@ -2122,8 +2122,6 @@ def main(argv=None):
     input_header = os.path.basename(opts.input_file)
     if 'vulkan.h' == input_header:
         input_header = "vulkan/vulkan.h"
-    if 'vk_lunarg_debug_marker.h' == input_header:
-        input_header = "vulkan/vk_lunarg_debug_marker.h"
 
     prefix = os.path.basename(opts.input_file).strip(".h")
     if prefix == "vulkan":

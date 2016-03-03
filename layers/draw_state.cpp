@@ -60,9 +60,7 @@
 #include "vk_struct_size_helper.h"
 #include "draw_state.h"
 #include "vk_layer_config.h"
-#include "vulkan/vk_debug_marker_layer.h"
 #include "vk_layer_table.h"
-#include "vk_layer_debug_marker_table.h"
 #include "vk_layer_data.h"
 #include "vk_layer_logging.h"
 #include "vk_layer_extension_utils.h"
@@ -79,7 +77,6 @@ struct CMD_POOL_INFO {
 };
 
 struct devExts {
-    VkBool32 debug_marker_enabled;
     VkBool32 wsi_enabled;
     unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE*> swapchainMap;
     unordered_map<VkImage, VkSwapchainKHR> imageToSwapchainMap;
@@ -337,10 +334,6 @@ static string cmdTypeToString(CMD_TYPE cmd)
             return "CMD_BEGINRENDERPASS";
         case CMD_ENDRENDERPASS:
             return "CMD_ENDRENDERPASS";
-        case CMD_DBGMARKERBEGIN:
-            return "CMD_DBGMARKERBEGIN";
-        case CMD_DBGMARKEREND:
-            return "CMD_DBGMARKEREND";
         default:
             return "UNKNOWN";
     }
@@ -3551,7 +3544,6 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     // TBD: Need any locking, in case this function is called at the same time
     // by more than one thread?
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_extensions.debug_marker_enabled = false;
     dev_data->device_extensions.wsi_enabled = false;
 
 
@@ -3567,12 +3559,6 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
             dev_data->device_extensions.wsi_enabled = true;
-        }
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], DEBUG_MARKER_EXTENSION_NAME) == 0) {
-            /* Found a matching extension name, mark it enabled and init dispatch table*/
-            dev_data->device_extensions.debug_marker_enabled = true;
-            initDebugMarkerTable(device);
-
         }
     }
 }
@@ -3647,7 +3633,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
     loader_platform_thread_unlock_mutex(&globalLock);
 
     dev_data->device_dispatch_table->DestroyDevice(device, pAllocator);
-    tableDebugMarkerMap.erase(key);
     delete dev_data->device_dispatch_table;
     layer_data_map.erase(key);
 }
@@ -3685,12 +3670,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerPropertie
                                    pCount, pProperties);
 }
 
-static const VkExtensionProperties ds_device_extensions[] = {
-    {
-        DEBUG_MARKER_EXTENSION_NAME,
-        1,
-    }
-};
 
 static const VkLayerProperties ds_device_layers[] = {
     {
@@ -3716,9 +3695,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionPropert
                                                     pCount,
                                                     pProperties);
     } else {
-        return util_GetExtensionProperties(ARRAY_SIZE(ds_device_extensions),
-                                           ds_device_extensions,
-                                           pCount, pProperties);
+        return util_GetExtensionProperties(0, NULL, pCount, pProperties);
     }
 }
 
@@ -7938,41 +7915,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(
     my_data->instance_dispatch_table->DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDbgMarkerBegin(VkCommandBuffer commandBuffer, const char* pMarker)
-{
-    VkBool32 skipCall = VK_FALSE;
-    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    loader_platform_thread_lock_mutex(&globalLock);
-    GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
-    if (!dev_data->device_extensions.debug_marker_enabled) {
-        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__, DRAWSTATE_INVALID_EXTENSION, "DS",
-                "Attempt to use CmdDbgMarkerBegin but extension disabled!");
-        return;
-    } else if (pCB) {
-        skipCall |= addCmd(dev_data, pCB, CMD_DBGMARKERBEGIN, "vkCmdDbgMarkerBegin()");
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    if (VK_FALSE == skipCall)
-        debug_marker_dispatch_table(commandBuffer)->CmdDbgMarkerBegin(commandBuffer, pMarker);
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDbgMarkerEnd(VkCommandBuffer commandBuffer)
-{
-    VkBool32 skipCall = VK_FALSE;
-    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    loader_platform_thread_lock_mutex(&globalLock);
-    GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
-    if (!dev_data->device_extensions.debug_marker_enabled) {
-        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, __LINE__, DRAWSTATE_INVALID_EXTENSION, "DS",
-                "Attempt to use CmdDbgMarkerEnd but extension disabled!");
-        return;
-    } else if (pCB) {
-        skipCall |= addCmd(dev_data, pCB, CMD_DBGMARKEREND, "vkCmdDbgMarkerEnd()");
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    if (VK_FALSE == skipCall)
-        debug_marker_dispatch_table(commandBuffer)->CmdDbgMarkerEnd(commandBuffer);
-}
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice dev, const char* funcName)
 {
@@ -8208,13 +8150,6 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
     }
 
     VkLayerDispatchTable* pTable = dev_data->device_dispatch_table;
-    if (dev_data->device_extensions.debug_marker_enabled)
-    {
-        if (!strcmp(funcName, "vkCmdDbgMarkerBegin"))
-            return (PFN_vkVoidFunction) vkCmdDbgMarkerBegin;
-        if (!strcmp(funcName, "vkCmdDbgMarkerEnd"))
-            return (PFN_vkVoidFunction) vkCmdDbgMarkerEnd;
-    }
     {
         if (pTable->GetDeviceProcAddr == NULL)
             return NULL;
