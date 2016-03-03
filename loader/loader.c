@@ -2677,6 +2677,43 @@ static bool loader_check_icds_for_address(struct loader_instance *inst,
     return false;
 }
 
+static bool loader_check_layer_list_for_address(const struct loader_layer_list *const layers,
+                                                const char *funcName){
+    // Iterate over the layers.
+    for (uint32_t layer = 0; layer < layers->count; ++layer)
+    {
+        // Iterate over the extensions.
+        const struct loader_device_extension_list *const extensions = &(layers->list[layer].device_extension_list);
+        for(uint32_t extension = 0; extension < extensions->count; ++extension)
+        {
+            // Iterate over the entry points.
+            const struct loader_dev_ext_props *const property = &(extensions->list[extension]);
+            for(uint32_t entry = 0; entry < property->entrypoint_count; ++entry)
+            {
+                if(strcmp(property->entrypoints[entry], funcName) == 0)
+                {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+static bool loader_check_layers_for_address(const struct loader_instance *const inst,
+                                            const char *funcName){
+    if(loader_check_layer_list_for_address(&inst->instance_layer_list, funcName)) {
+        return true;
+    }
+
+    if(loader_check_layer_list_for_address(&inst->device_layer_list, funcName)) {
+        return true;
+    }
+
+    return false;
+}
+
 static void loader_free_dev_ext_table(struct loader_instance *inst) {
     for (uint32_t i = 0; i < MAX_NUM_DEV_EXTS; i++) {
         loader_heap_free(inst, inst->disp_hash[i].func_name);
@@ -2808,8 +2845,8 @@ void *loader_dev_ext_gpa(struct loader_instance *inst, const char *funcName) {
         return loader_get_dev_ext_trampoline(idx);
 
     // Check if funcName is supported in either ICDs or a layer library
-    if (!loader_check_icds_for_address(inst, funcName)) {
-        // TODO Add check in layer libraries for support of address
+    if (!loader_check_icds_for_address(inst, funcName) &&
+        !loader_check_layers_for_address(inst, funcName)) {
         // if support found in layers continue on
         return NULL;
     }
