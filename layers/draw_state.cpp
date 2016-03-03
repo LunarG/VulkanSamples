@@ -449,6 +449,7 @@ storage_class_name(unsigned sc)
     case spv::StorageClassGeneric: return "generic";
     case spv::StorageClassAtomicCounter: return "atomic counter";
     case spv::StorageClassImage: return "image";
+    case spv::StorageClassPushConstant: return "push constant";
     default: return "unknown";
     }
 }
@@ -641,6 +642,28 @@ struct interface_var {
 };
 
 
+static spirv_inst_iter
+get_struct_type(shader_module const *src, spirv_inst_iter def, bool is_array_of_verts)
+{
+    while (true) {
+
+        if (def.opcode() == spv::OpTypePointer) {
+            def = src->get_def(def.word(3));
+        }
+        else if (def.opcode() == spv::OpTypeArray && is_array_of_verts) {
+            def = src->get_def(def.word(2));
+            is_array_of_verts = false;
+        }
+        else if (def.opcode() == spv::OpTypeStruct) {
+            return def;
+        }
+        else {
+            return src->end();
+        }
+    }
+}
+
+
 static void
 collect_interface_block_members(layer_data *my_data, VkDevice dev,
                                 shader_module const *src,
@@ -651,31 +674,10 @@ collect_interface_block_members(layer_data *my_data, VkDevice dev,
                                 uint32_t type_id)
 {
     /* Walk down the type_id presented, trying to determine whether it's actually an interface block. */
-    auto type = src->get_def(type_id);
-
-    while (true) {
-
-        if (type.opcode() == spv::OpTypePointer) {
-            type = src->get_def(type.word(3));
-        }
-        else if (type.opcode() == spv::OpTypeArray && is_array_of_verts) {
-            type = src->get_def(type.word(2));
-            is_array_of_verts = false;
-        }
-        else if (type.opcode() == spv::OpTypeStruct) {
-            if (blocks.find(type.word(1)) == blocks.end()) {
-                /* This isn't an interface block. */
-                return;
-            }
-            else {
-                /* We have found the correct type. Walk its members. */
-                break;
-            }
-        }
-        else {
-            /* not an interface block */
-            return;
-        }
+    auto type = get_struct_type(src, src->get_def(type_id), is_array_of_verts);
+    if (type == src->end() || blocks.find(type.word(1)) == blocks.end()) {
+        /* this isn't an interface block. */
+        return;
     }
 
     std::unordered_map<unsigned, unsigned> member_components;
@@ -812,7 +814,7 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
 
 static void
 collect_interface_by_descriptor_slot(layer_data *my_data, VkDevice dev,
-                              shader_module const *src, spv::StorageClass sinterface,
+                              shader_module const *src,
                               std::unordered_set<uint32_t> const &accessible_ids,
                               std::map<descriptor_slot_t, interface_var> &out)
 {
@@ -851,7 +853,7 @@ collect_interface_by_descriptor_slot(layer_data *my_data, VkDevice dev,
                 log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/0, __LINE__,
                         SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
                         "var %d (type %d) in %s interface in descriptor slot (%u,%u) conflicts with existing definition",
-                        insn.word(2), insn.word(1), storage_class_name(sinterface),
+                        insn.word(2), insn.word(1), storage_class_name(insn.word(3)),
                         existing_it->first.first, existing_it->first.second);
             }
 
@@ -1000,6 +1002,14 @@ get_fundamental_type(shader_module const *src, unsigned type)
             return FORMAT_TYPE_UNDEFINED;
     }
 }
+
+
+static uint32_t get_shader_stage_id(VkShaderStageFlagBits stage)
+{
+    uint32_t bit_pos = u_ffs(stage);
+    return bit_pos-1;
+}
+
 
 static bool
 validate_vi_consistency(layer_data *my_data, VkDevice dev, VkPipelineVertexInputStateCreateInfo const *vi)
@@ -1281,6 +1291,93 @@ shader_stage_attribs[] = {
     { "fragment shader", false },
 };
 
+static bool validate_push_constant_block_against_pipeline(
+    layer_data* my_data, VkDevice dev,
+    std::vector<VkPushConstantRange> const* pushConstantRanges,
+    shader_module const* src, spirv_inst_iter type,
+    VkShaderStageFlagBits stage) {
+  bool pass = true;
+
+  /* strip off ptrs etc */
+  type = get_struct_type(src, type, false);
+  assert(type != src->end());
+
+  /* validate directly off the offsets. this isn't quite correct for arrays
+   * and matrices, but is a good first step. TODO: arrays, matrices, weird
+   * sizes */
+  for (auto insn : *src) {
+    if (insn.opcode() == spv::OpMemberDecorate &&
+        insn.word(1) == type.word(1)) {
+      unsigned member_index = insn.word(2);
+
+      if (insn.word(3) == spv::DecorationOffset) {
+        unsigned offset = insn.word(4);
+        auto size = 4; /* bytes; TODO: calculate this based on the type */
+
+        bool found_range = false;
+        for (auto const& range : *pushConstantRanges) {
+          if (range.offset <= offset &&
+              range.offset + range.size >= offset + size) {
+            found_range = true;
+
+            if ((range.stageFlags & stage) == 0) {
+              if (log_msg(
+                      my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                      VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                      /* dev */ 0, __LINE__,
+                      SHADER_CHECKER_PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE,
+                      "SC",
+                      "Push constant range covering variable starting at "
+                      "offset %u not accessible from %s stage",
+                      offset,
+                      shader_stage_attribs[get_shader_stage_id(stage)].name)) {
+                pass = false;
+              }
+            }
+
+            break;
+          }
+        }
+
+        if (!found_range) {
+          if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                      VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                      /* dev */ 0, __LINE__,
+                      SHADER_CHECKER_PUSH_CONSTANT_OUT_OF_RANGE, "SC",
+                      "Push constant range covering variable starting at "
+                      "offset %u not declared in layout",
+                      offset)) {
+            pass = false;
+          }
+        }
+      }
+    }
+  }
+
+  return pass;
+}
+
+static bool validate_push_constant_usage(
+    layer_data* my_data, VkDevice dev,
+    std::vector<VkPushConstantRange> const* pushConstantRanges,
+    shader_module const* src, std::unordered_set<uint32_t> accessible_ids,
+    VkShaderStageFlagBits stage) {
+  bool pass = true;
+
+  for (auto id : accessible_ids) {
+    auto def_insn = src->get_def(id);
+    if (def_insn.opcode() == spv::OpVariable &&
+        def_insn.word(3) == spv::StorageClassPushConstant) {
+      pass = validate_push_constant_block_against_pipeline(
+                 my_data, dev, pushConstantRanges, src,
+                 src->get_def(def_insn.word(1)), stage) &&
+             pass;
+    }
+  }
+
+  return pass;
+}
+
 // For given pipelineLayout verify that the setLayout at slot.first
 //  has the requested binding at slot.second
 static bool
@@ -1298,12 +1395,6 @@ has_descriptor_binding(layer_data* my_data,
                    ->bindingToIndexMap;
 
     return (bindingMap.find(slot.second) != bindingMap.end());
-}
-
-static uint32_t get_shader_stage_id(VkShaderStageFlagBits stage)
-{
-    uint32_t bit_pos = u_ffs(stage);
-    return bit_pos-1;
 }
 
 // Block of code at start here for managing/tracking Pipeline state that this layer cares about
@@ -1595,7 +1686,7 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
 
                 /* validate descriptor set layout against what the entrypoint actually uses */
                 std::map<descriptor_slot_t, interface_var> descriptor_uses;
-                collect_interface_by_descriptor_slot(my_data, dev, module, spv::StorageClassUniform,
+                collect_interface_by_descriptor_slot(my_data, dev, module,
                         accessible_ids,
                         descriptor_uses);
 
@@ -1620,6 +1711,14 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
                         }
                     }
                 }
+
+                /* validate push constant usage */
+                pass = validate_push_constant_usage(
+                           my_data, dev,
+                           &my_data->pipelineLayoutMap[pCreateInfo->layout]
+                                .pushConstantRanges,
+                           module, accessible_ids, pStage->stage) &&
+                       pass;
             }
         }
     }
@@ -4910,16 +5009,52 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(VkDev
     return result;
 }
 
+static bool validatePushConstantSize(const layer_data *dev_data,
+                                     const uint32_t offset, const uint32_t size,
+                                     const char *caller_name) {
+    bool skipCall = false;
+    if ((offset + size) >
+        dev_data->physDevProperties.properties.limits.maxPushConstantsSize) {
+        skipCall = log_msg(
+            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+            (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+            DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS",
+            "%s call has push constants with offset %u and size %u that "
+            "exceeds this device's maxPushConstantSize of %u.",
+            caller_name, offset, size,
+            dev_data->physDevProperties.properties.limits.maxPushConstantsSize);
+    }
+    return skipCall;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkPipelineLayout* pPipelineLayout)
 {
+    bool skipCall = false;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    uint32_t i = 0;
+    for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
+        skipCall |= validatePushConstantSize(
+            dev_data, pCreateInfo->pPushConstantRanges[i].offset,
+            pCreateInfo->pPushConstantRanges[i].size,
+            "vkCreatePipelineLayout()");
+        if ((pCreateInfo->pPushConstantRanges[i].size == 0) ||
+            ((pCreateInfo->pPushConstantRanges[i].size & 0x3) != 0)) {
+            skipCall |= log_msg(
+                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS",
+                "vkCreatePipelineLayout() call has push constant index %u with "
+                "size %u. Size must be greater than zero and a multiple of 4.",
+                i, pCreateInfo->pPushConstantRanges[i].size);
+        }
+        // TODO : Add warning if ranges overlap
+    }
     VkResult result = dev_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         // TODOSC : Merge capture of the setLayouts per pipeline
         PIPELINE_LAYOUT_NODE& plNode = dev_data->pipelineLayoutMap[*pPipelineLayout];
         plNode.descriptorSetLayouts.resize(pCreateInfo->setLayoutCount);
-        uint32_t i = 0;
         for (i=0; i<pCreateInfo->setLayoutCount; ++i) {
             plNode.descriptorSetLayouts[i] = pCreateInfo->pSetLayouts[i];
         }
@@ -6743,6 +6878,36 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(VkCommandBu
                            firstQuery, queryCount, dstBuffer, dstOffset, stride, flags);
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkCmdPushConstants(VkCommandBuffer commandBuffer, VkPipelineLayout layout,
+                   VkShaderStageFlags stageFlags, uint32_t offset,
+                   uint32_t size, const void *pValues) {
+    bool skipCall = false;
+    layer_data *dev_data =
+        get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
+    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
+    if (pCB) {
+        if (pCB->state == CB_RECORDING) {
+            skipCall |= addCmd(dev_data, pCB, CMD_PUSHCONSTANTS,
+                               "vkCmdPushConstants()");
+        } else {
+            skipCall |= report_error_no_cb_begin(dev_data, commandBuffer,
+                                                 "vkCmdPushConstants()");
+        }
+    }
+    if ((offset + size) >
+        dev_data->physDevProperties.properties.limits.maxPushConstantsSize) {
+        skipCall |= validatePushConstantSize(dev_data, offset, size,
+                                             "vkCmdPushConstants()");
+    }
+    // TODO : Add warning if push constant update doesn't align with range
+    loader_platform_thread_unlock_mutex(&globalLock);
+    if (!skipCall)
+        dev_data->device_dispatch_table->CmdPushConstants(
+            commandBuffer, layout, stageFlags, offset, size, pValues);
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t slot)
 {
     VkBool32 skipCall = VK_FALSE;
@@ -8100,6 +8265,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkCmdEndQuery;
     if (!strcmp(funcName, "vkCmdResetQueryPool"))
         return (PFN_vkVoidFunction) vkCmdResetQueryPool;
+    if (!strcmp(funcName, "vkCmdPushConstants"))
+        return (PFN_vkVoidFunction)vkCmdPushConstants;
     if (!strcmp(funcName, "vkCmdWriteTimestamp"))
         return (PFN_vkVoidFunction) vkCmdWriteTimestamp;
     if (!strcmp(funcName, "vkCreateFramebuffer"))

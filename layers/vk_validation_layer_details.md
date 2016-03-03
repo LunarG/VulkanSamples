@@ -87,6 +87,7 @@ The VK_LAYER_LUNARG_draw_state layer tracks state leading into Draw cmds. This i
 | Enabled Logic Operations  | If logic operations is not enabled, logicOpEnable must be VK_FALSE | DISABLED_LOGIC_OP | vkCreateGraphicsPipelines | TODO | Create test |
 | Valid Logic Operations  | If logicOpEnable is VK_TRUE, logicOp must be a valid VkLogicOp value | INVALID_LOGIC_OP | vkCreateGraphicsPipelines | TODO | Create test |
 | QueueFamilyIndex is Valid | Validates that QueueFamilyIndices are less an the number of QueueFamilies | INVALID_QUEUE_INDEX | vkCmdWaitEvents vkCmdPipelineBarrier vkCreateBuffer vkCreateImage | TODO | Create test |
+| Push Constants | Validate that the size of push constant ranges and updates does not exceed maxPushConstantSize | PUSH_CONSTANTS_ERROR | vkCreatePipelineLayout vkCmdPushConstants | TODO | Create test |
 | NA | Enum used for informational messages | NONE | | NA | None |
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | NA | None |
 | NA | Enum used when VK_LAYER_LUNARG_draw_state attempts to allocate memory for its own internal use and is unable to. | OUT_OF_MEMORY | | NA | None |
@@ -139,6 +140,12 @@ depends on the pair of pipeline stages involved.
 | Shader Specialization | Error if specialization entry data is not fully contained within the specialization data block. | BAD_SPECIALIZATION | vkCreateGraphicsPipelines vkCreateComputePipelines | TBD | NA |
 | Missing Descriptor | Flags error if shader attempts to use a descriptor binding not declared in the layout | MISSING_DESCRIPTOR | vkCreateGraphicsPipelines | CreatePipelineUniformBlockNotProvided | NA |
 | Missing Entrypoint | Flags error if specified entrypoint is not present in the shader module | MISSING_ENTRYPOINT | vkCreateGraphicsPipelines | TBD | NA |
+| Push constant out of range | Flags error if a member of a push constant block
+is not contained within a push constant range specified in the pipeline layout | PUSH_CONSTANT_OUT_OF_RANGE | vkCreateGraphicsPipelines | CreatePipelinePushContantsNotInLayout | NA |
+| Push constant not accessible from stage | Flags error if the push constant
+range containing a push constant block member is not accessible from the current
+shader stage. | PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE |
+vkCreateGraphicsPipelines | TBD | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 
 ### VK_LAYER_LUNARG_ShaderChecker Pending Work
