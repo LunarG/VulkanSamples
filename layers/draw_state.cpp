@@ -1961,9 +1961,43 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
 }
 
 // Verify that create state for a pipeline is valid
-static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice device, PIPELINE_NODE* pPipeline)
+static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice device, std::vector<PIPELINE_NODE *> pPipelines, int pipelineIndex)
 {
     VkBool32 skipCall = VK_FALSE;
+
+    PIPELINE_NODE *pPipeline = pPipelines[pipelineIndex];
+
+    // If create derivative bit is set, check that we've specified a base
+    // pipeline correctly, and that the base pipeline was created to allow
+    // derivatives.
+    if (pPipeline->graphicsPipelineCI.flags & VK_PIPELINE_CREATE_DERIVATIVE_BIT) {
+        PIPELINE_NODE *pBasePipeline = nullptr;
+        if (!((pPipeline->graphicsPipelineCI.basePipelineHandle != VK_NULL_HANDLE) ^
+            (pPipeline->graphicsPipelineCI.basePipelineIndex != -1))) {
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+                                "Invalid Pipeline CreateInfo: exactly one of base pipeline index and handle must be specified");
+        }
+        else if (pPipeline->graphicsPipelineCI.basePipelineIndex != -1) {
+            if (pPipeline->graphicsPipelineCI.basePipelineIndex >= pipelineIndex) {
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+                                    "Invalid Pipeline CreateInfo: base pipeline must occur earlier in array than derivative pipeline.");
+            }
+            else {
+                pBasePipeline = pPipelines[pPipeline->graphicsPipelineCI.basePipelineIndex];
+            }
+        }
+        else if (pPipeline->graphicsPipelineCI.basePipelineHandle != VK_NULL_HANDLE) {
+            pBasePipeline = getPipeline(my_data, pPipeline->graphicsPipelineCI.basePipelineHandle);
+        }
+
+        if (pBasePipeline && !(pBasePipeline->graphicsPipelineCI.flags & VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT)) {
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+                                "Invalid Pipeline CreateInfo: base pipeline does not allow derivatives.");
+        }
+    }
 
     if (pPipeline->graphicsPipelineCI.pColorBlendState != NULL) {
         if (!my_data->physDevProperties.features.independentBlend) {
@@ -4890,7 +4924,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(
 
     for (i=0; i<count; i++) {
         pPipeNode[i] = initGraphicsPipeline(dev_data, &pCreateInfos[i], NULL);
-        skipCall |= verifyPipelineCreateState(dev_data, device, pPipeNode[i]);
+        skipCall |= verifyPipelineCreateState(dev_data, device, pPipeNode, i);
     }
 
     if (VK_FALSE == skipCall) {
