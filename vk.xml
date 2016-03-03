@@ -1174,7 +1174,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkPipelineInputAssemblyStateCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_IINPUT_ASSEMBLY_STATE_CREATE_INFO -->
+            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO -->
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineInputAssemblyStateCreateFlags</type>    <name>flags</name></member>      <!-- Reserved -->
             <member><type>VkPrimitiveTopology</type>    <name>topology</name></member>

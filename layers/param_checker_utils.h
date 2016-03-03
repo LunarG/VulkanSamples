@@ -70,7 +70,11 @@ VkBool32 validate_required_pointer(
  * Validate pointer to array count and pointer to array.
  *
  * Verify that required count and array parameters are not NULL.  If count
- * is not NULL and its value is not optional, verify that it is not 0.
+ * is not NULL and its value is not optional, verify that it is not 0.  If the
+ * array parameter is optional and it is NULL, no verification is perforemd.
+ * If the array parameter is not optional and it is NULL, verify that the count
+ * is 0.  The array parameter will normally be optional for this case (where
+ * count is a pointer), allowing the caller to retrieve the available count.
  *
  * @param report_data debug_report_data object for routing validation messages.
  * @param apiName Name of API call being validated.
@@ -117,7 +121,10 @@ VkBool32 validate_array(
 /**
  * Validate array count and pointer to array.
  *
- * Verify that required count and array parameters are not 0 or NULL.
+ * Verify that required count parameters are not NULL.  If the array parameter
+ * is NULL, verify that count is 0.  If the array parameter is optional and it
+ * is NULL, no verification is perforemd.  If the array parameter is not
+ *  optional and it is NULL, verify that the count is 0.
  *
  * @param report_data debug_report_data object for routing validation messages.
  * @param apiName Name of API call being validated.
@@ -147,7 +154,7 @@ VkBool32 validate_array(
         skipCall |= log_msg(
             report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
             (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-            "PARAMCHECK", "%s: parameter %s must be greater than 0",
+            "PARAMCHECK", "%s: value of %s must be greater than 0",
             apiName, countName);
     }
 
