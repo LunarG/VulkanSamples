@@ -2032,6 +2032,23 @@ static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice de
         }
     }
 
+    // Ensure the subpass index is valid. If not, then validate_pipeline_shaders
+    // produces nonsense errors that confuse users. Other layers should already
+    // emit errors for renderpass being invalid.
+    auto rp_data =
+        my_data->renderPassMap.find(pPipeline->graphicsPipelineCI.renderPass);
+    if (rp_data != my_data->renderPassMap.end() &&
+        pPipeline->graphicsPipelineCI.subpass >=
+            rp_data->second->pCreateInfo->subpassCount) {
+      skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                          (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                          DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+                          "Invalid Pipeline CreateInfo State: Subpass index %u "
+                          "is out of range for this renderpass (0..%u)",
+                          pPipeline->graphicsPipelineCI.subpass,
+                          rp_data->second->pCreateInfo->subpassCount - 1);
+    }
+
     if (!validate_pipeline_shaders(my_data, device, pPipeline)) {
         skipCall = VK_TRUE;
     }
