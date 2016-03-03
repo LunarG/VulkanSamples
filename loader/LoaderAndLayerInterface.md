@@ -220,12 +220,9 @@ Vulkan implementation components (including loader, implicit layers, and ICDs)
 are enumerated. If pLayerName is equal to a discovered layer module name then
 any extensions from that layer (which may be implicit or explicit) are
 enumerated. Duplicate extensions (e.g. an implicit layer and ICD might report
-support for the same extension) are eliminated by the loader. Extensions must
+support for the same extension) are eliminated by the loader. For duplicates, the
+ICD version is reported and the layer version is culled. Extensions must
 be enabled (in vkCreateInstance or vkCreateDevice) before they can be used.
-
-[jjuliano] In previous paragraph, which survives, and which is duplicated?
-  E.g., if a layer and an ICD both expose the same extension, is the layer's
-  version culled, or is the ICD's version culled?
 
 Extension command entry points should be queried via vkGetInstanceProcAddr or
 vkGetDeviceProcAddr. vkGetDeviceProcAddr can only be used to query for device
@@ -537,8 +534,6 @@ Linux and Windows:
 
 2) Deprecated
 
-[jjuliano] Is it time to remove the deprecated method?
-
 - vkGetInstanceProcAddr exported in the ICD library and returns valid function
   pointers for all the Vulkan API entry points.
 
@@ -622,10 +617,6 @@ properties are obtained from the layer libraries and layer JSON files.
 appropriate layer JSON manifest file refer to the ICD library file.
 - The loader will not call the ICD for
   vkEnumerate\*ExtensionProperties(pLayerName != NULL).
-- The ICD may or may not implement a dispatch table.
-
-[jjuliano] what is the value of pointing out the optional presence of a
-  dispatch table?
 
 #### Android
 
@@ -1268,7 +1259,23 @@ supports layers wrapping any Vulkan object including dispatchable objects.
 Layers which wrap objects should ensure they always unwrap objects before
 passing them down the chain. This implies the layer must intercept every Vulkan
 command which uses the object in question. Layers above the object wrapping
-layer will see the wrapped object.
+layer will see the wrapped object. Layers which wrap dispatchable objects must
+ensure that the first field in the wrapping structure is a pointer to a dispatch table
+as defined in vk_layer.h. Specifically, an instance wrapped dispatchable object
+could be as follows:
+```
+struct my_wrapped_instance_obj_ {
+    VkLayerInstanceDispatchTable *disp;
+    // whatever data layer wants to add to this object
+};
+```
+A device wrapped dispatchable object could be as follows:
+```
+struct my_wrapped_instance_obj_ {
+    VkLayerDispatchTable *disp;
+    // whatever data layer wants to add to this object
+};
+```
 
 Alternatively, a layer may want to use a hash map to associate data with a
 given object. The key to the map could be the object. Alternatively, for
@@ -1282,10 +1289,15 @@ will be unique for a given VkInstance or VkDevice.
 Layers which create dispatchable objects take special care. Remember that loader
 trampoline code normally fills in the dispatch table pointer in the newly
 created object. Thus, the layer must fill in the dispatch table pointer if the
-loader trampoline will not do so.  Common cases where a layer may create a
+loader trampoline will not do so.  Common cases where a layer (or ICD) may create a
 dispatchable object without loader trampoline code is as follows:
 - object wrapping layers that wrap dispatchable objects
 - layers which add extensions that create dispatchable objects
 - layers which insert extra Vulkan commands in the stream of commands they
 intercept from the application
+- ICDs which add extensions that create dispatchable objects
+
+To fill in the dispatch table pointer in newly created dispatchable object,
+the layer should copy the dispatch pointer, which is always the first entry in the structure, from an existing parent object of the same level (instance versus
+device). For example, if there is a newly created VkCommandBuffer object, then the dispatch pointer from the VkDevice object, which is the parent of the VkCommandBuffer object, should be copied into the newly created object.
 
