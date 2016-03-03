@@ -1,0 +1,11 @@
+URL: https://github.com/LunarG/VulkanSamples/commit/84dad7f790d8ab8909d37253225a63bd7399aa8e
+Version: 1.0
+License: MIT
+License File: LICENSE
+
+Description:
+The LunarGSamples folder include Vulkan samples developed by LunarG and Google.
+
+Local Modifications:
+Added Android specific porting in sample, helper files and cmake generation of
+Android Studio project.
