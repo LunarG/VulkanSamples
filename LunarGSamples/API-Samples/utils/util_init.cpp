@@ -1397,6 +1397,15 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData,
                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &alloc_info.memoryTypeIndex);
+    // Workaround for some driver issue on Android.
+    bool cached = false;
+    if (!pass) {
+        pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
+                                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                           VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+                                           &alloc_info.memoryTypeIndex);
+        cached = true;
+    }
     assert(pass);
 
     res = vkAllocateMemory(info.device, &alloc_info, NULL,
@@ -1412,6 +1421,15 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData,
 
     memcpy(pData, vertexData, dataSize);
 
+    if (cached) {
+        VkMappedMemoryRange memRange;
+        memRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+        memRange.pNext = NULL;
+        memRange.memory = info.vertex_buffer.mem;
+        memRange.offset = 0;
+        memRange.size = mem_reqs.size;
+        vkFlushMappedMemoryRanges(info.device, 1, &memRange);
+    }
     vkUnmapMemory(info.device, info.vertex_buffer.mem);
 
     res = vkBindBufferMemory(info.device, info.vertex_buffer.buf,

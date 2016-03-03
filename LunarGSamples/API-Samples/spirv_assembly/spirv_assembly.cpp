@@ -34,8 +34,11 @@ Demonsrate how to use SPIR-V shaders with inline assembly.
 #include <string.h>
 #include <cstdlib>
 #include "cube_data.h"
+#ifndef __ANDROID__
 #include "libspirv/libspirv.h"
-
+#else
+#include "libspirv.h"
+#endif
 // clang-format off
 // This sample is based on the template, but instead of using inline GLSL and calls to
 // glslang to generate SPIR-V binaries, we use inline assembly and pass it to the
@@ -230,7 +233,7 @@ int sample_main() {
     assert(vertexResult == SPV_SUCCESS);
 
     // Convert the fragment assembly into binary format
-    spv_binary frause_SPIRV_asmgmentBinary = {};
+    spv_binary fragmentBinary = {};
     spv_diagnostic fragmentDiag = {};
     spv_result_t fragmentResult =
         spvTextToBinary(spvContext, fragmentSPIRV.c_str(),
