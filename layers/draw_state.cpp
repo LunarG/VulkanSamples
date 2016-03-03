@@ -2103,13 +2103,9 @@ static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice de
 // Init the pipeline mapping info based on pipeline create info LL tree
 //  Threading note : Calls to this function should wrapped in mutex
 // TODO : this should really just be in the constructor for PIPELINE_NODE
-static PIPELINE_NODE* initGraphicsPipeline(layer_data* dev_data, const VkGraphicsPipelineCreateInfo* pCreateInfo, PIPELINE_NODE* pBasePipeline)
+static PIPELINE_NODE* initGraphicsPipeline(layer_data* dev_data, const VkGraphicsPipelineCreateInfo* pCreateInfo)
 {
     PIPELINE_NODE* pPipeline = new PIPELINE_NODE;
-
-    if (pBasePipeline) {
-        *pPipeline = *pBasePipeline;
-    }
 
     // First init create info
     memcpy(&pPipeline->graphicsPipelineCI, pCreateInfo, sizeof(VkGraphicsPipelineCreateInfo));
@@ -4923,7 +4919,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(
     loader_platform_thread_lock_mutex(&globalLock);
 
     for (i=0; i<count; i++) {
-        pPipeNode[i] = initGraphicsPipeline(dev_data, &pCreateInfos[i], NULL);
+        pPipeNode[i] = initGraphicsPipeline(dev_data, &pCreateInfos[i]);
         skipCall |= verifyPipelineCreateState(dev_data, device, pPipeNode, i);
     }
 
