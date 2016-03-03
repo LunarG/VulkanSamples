@@ -198,6 +198,7 @@ DETAILS TABLE PENDING
 | Verify Correct Image Filter| Verifies that specified filter is valid | INVALID_FILTER | vkCmdBlitImage | TBD | NA |
 | Verify Correct Image Settings | Verifies that values are valid for a given resource or subresource | INVALID_IMAGE_RESOURCE | vkCmdPipelineBarrier | TBD | NA |
 | Verify Image Format Limits | Verifies that image creation parameters are with the device format limits | INVALID_FORMAT_LIMITS_VIOLATION | vkCreateImage | TBD | NA |
+| Verify Layout | Verifies the layouts are valid for this image operation | INVALID_LAYOUT | vkCreateImage vkCmdClearColorImage | TBD | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 
 ### VK_LAYER_LUNARG_image Pending Work
