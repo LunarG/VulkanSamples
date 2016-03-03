@@ -1797,49 +1797,59 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     const VkAllocationCallbacks* pAllocator,
     VkInstance* pInstance)
 {
-    VkResult    result         = VK_ERROR_VALIDATION_FAILED_EXT;
-    VkBool32    skipCall       = VK_FALSE;
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
 
-    if (skipCall == VK_FALSE) {
-        VkLayerInstanceCreateInfo *chain_info     = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
-        assert(chain_info->u.pLayerInfo);
-        PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
-        PFN_vkCreateInstance fpCreateInstance = (PFN_vkCreateInstance) fpGetInstanceProcAddr(NULL, "vkCreateInstance");
-        if (fpCreateInstance == NULL) {
-            return VK_ERROR_INITIALIZATION_FAILED;
-        }
-
-        // Advance the link info for the next element on the chain
-        chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
-
-        result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
-        if (result != VK_SUCCESS)
-            return result;
-
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
-        VkLayerInstanceDispatchTable *pTable = initInstanceTable(*pInstance, fpGetInstanceProcAddr, pc_instance_table_map);
-
-        my_data->report_data = debug_report_create_instance(
-                                   pTable,
-                                   *pInstance,
-                                   pCreateInfo->enabledExtensionCount,
-                                   pCreateInfo->ppEnabledExtensionNames);
-
-        InitParamChecker(my_data, pAllocator);
+    VkLayerInstanceCreateInfo *chain_info =
+        get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+    assert(chain_info->u.pLayerInfo);
+    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
+        chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
+    PFN_vkCreateInstance fpCreateInstance =
+        (PFN_vkCreateInstance)fpGetInstanceProcAddr(NULL, "vkCreateInstance");
+    if (fpCreateInstance == NULL) {
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
+
+    // Advance the link info for the next element on the chain
+    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
+
+    result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+    VkLayerInstanceDispatchTable *pTable = initInstanceTable(
+        *pInstance, fpGetInstanceProcAddr, pc_instance_table_map);
+
+    my_data->report_data = debug_report_create_instance(
+        pTable, *pInstance, pCreateInfo->enabledExtensionCount,
+        pCreateInfo->ppEnabledExtensionNames);
+
+    InitParamChecker(my_data, pAllocator);
 
     // Ordinarily we'd check these before calling down the chain, but none of the layer
     // support is in place until now, if we survive we can report the issue now.
-    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+    layer_data *my_instance_data =
+        get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+
+    param_check_vkCreateInstance(my_instance_data->report_data, pCreateInfo,
+                                 pAllocator, pInstance);
+
     if (pCreateInfo->pApplicationInfo) {
         if (pCreateInfo->pApplicationInfo->pApplicationName) {
-            skipCall |= validate_string(my_device_data, "vkCreateInstance()", "VkInstanceCreateInfo->VkApplicationInfo->pApplicationName",
-                                        pCreateInfo->pApplicationInfo->pApplicationName);
+            validate_string(
+                my_instance_data, "vkCreateInstance()",
+                "VkInstanceCreateInfo->VkApplicationInfo->pApplicationName",
+                pCreateInfo->pApplicationInfo->pApplicationName);
         }
 
         if (pCreateInfo->pApplicationInfo->pEngineName) {
-          skipCall |= validate_string(my_device_data, "vkCreateInstance()", "VkInstanceCreateInfo->VkApplicationInfo->pEngineName",
-                                        pCreateInfo->pApplicationInfo->pEngineName);
+            validate_string(
+                my_instance_data, "vkCreateInstance()",
+                "VkInstanceCreateInfo->VkApplicationInfo->pEngineName",
+                pCreateInfo->pApplicationInfo->pEngineName);
         }
     }
 
@@ -2236,6 +2246,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+
+    skipCall |= param_check_vkCreateDevice(my_instance_data->report_data,
+                                           pCreateInfo, pAllocator, pDevice);
 
     if ((pCreateInfo->enabledLayerCount > 0) && (pCreateInfo->ppEnabledLayerNames != NULL)) {
         for (auto i = 0; i < pCreateInfo->enabledLayerCount; i++) {

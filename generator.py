@@ -2708,8 +2708,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.INDENT_SPACES = 4
         # Commands to ignore
         self.blacklist = [
-            'vkCreateInstance', 'vkCreateDevice',
-            'vkGetInstanceProcAddr', 'vkGetDeviceProcAddr',
+            'vkGetInstanceProcAddr',
+            'vkGetDeviceProcAddr',
             'vkEnumerateInstanceLayerProperties',
             'vkEnumerateInstanceExtensionsProperties',
             'vkEnumerateDeviceLayerProperties',
@@ -2735,7 +2735,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         if indent:
             return indent + inc
         return inc
-
+    #
     def decIndent(self, indent):
         if indent and (len(indent) > self.INDENT_SPACES):
             return indent[:-self.INDENT_SPACES]
@@ -3032,8 +3032,13 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         lines = cmd.cdecl[:-1].split('\n')
         # Replace Vulkan prototype
         lines[0] = 'static VkBool32 param_check_' + cmd.name + '('
-        # Replace the first argument with debug_report_data
-        lines[1] = '    debug_report_data*'.ljust(self.genOpts.alignFuncParam) + 'report_data,'
+        # Replace the first argument with debug_report_data, when the first
+        # argument is a handle (not vkCreateInstance)
+        reportData = '    debug_report_data*'.ljust(self.genOpts.alignFuncParam) + 'report_data,'
+        if cmd.name != 'vkCreateInstance':
+            lines[1] = reportData
+        else:
+            lines.insert(1, reportData)
         return '\n'.join(lines)
     #
     # Generate the code to check for a NULL dereference before calling the
@@ -3129,8 +3134,6 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                                 checkExpr = 'skipCall |= validate_array(report_data, {}, "{ln}", {dn}, {pf}{ln}, {pf}{vn}, {}, {});\n'.format(name, cvReq, req, ln=lenParam.name, dn=valueDisplayName, vn=value.name, pf=valuePrefix)
                     elif not value.isoptional:
                         checkExpr = 'skipCall |= validate_required_pointer(report_data, {}, {}, {}{vn});\n'.format(name, valueDisplayName, valuePrefix, vn=value.name)
-                    else:
-                        unused.append(value.name)
                 #
                 # If this is a pointer to a struct, see if it contains members
                 # that need to be checked
@@ -3145,8 +3148,6 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 # The name prefix used when reporting an error with a struct member (eg. the 'pCreateInfor->' in 'pCreateInfo->sType')
                 prefix = '(std::string({}) + std::string("{}.")).c_str()'.format(variablePrefix, value.name) if variablePrefix else '"{}."'.format(value.name)
                 checkExpr += 'skipCall |= param_check_{}(report_data, {}, {}, &({}{}));\n'.format(value.type, name, prefix, valuePrefix, value.name)
-            elif not value.iscount:
-                unused.append(value.name)
             #
             # Append the parameter check to the function body for the current command
             if checkExpr:
@@ -3156,6 +3157,10 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     funcBody += self.genCheckedLengthCall(indent, lenParam.name, checkExpr)
                 else:
                     funcBody += indent + checkExpr
+            elif not value.iscount:
+                # The parameter is not checked (counts will be checked with
+                # their associated array)
+                unused.append(value.name)
         return funcBody, unused
     #
     # Post-process the collected struct member data to create a list of structs
@@ -3224,8 +3229,12 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 cmdDef += '{\n'
                 # Process unused parameters
                 # Ignore the first dispatch handle parameter, which is not
-                # processed by param_check
-                for name in unused[1:]:
+                # processed by param_check (except for vkCreateInstance, which
+                # does not have a handle as its first parameter)
+                startIndex = 1
+                if command.name == 'vkCreateInstance':
+                    startIndex = 0
+                for name in unused[startIndex:]:
                     cmdDef += indent + 'UNUSED_PARAMETER({});\n'.format(name)
                 if len(unused) > 1:
                     cmdDef += '\n'
@@ -3235,5 +3244,3 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 cmdDef += indent + 'return skipCall;\n'
                 cmdDef += '}\n'
                 self.appendSection('command', cmdDef)
-            
-
