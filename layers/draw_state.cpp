@@ -2643,12 +2643,27 @@ static VkBool32 validateImageView(const layer_data* my_data, const VkImageView* 
         VkImageAspectFlags aspectMask = ivIt->second->subresourceRange.aspectMask;
         VkImage image = ivIt->second->image;
         // TODO : Check here in case we have a bad image
+        VkFormat format = VK_FORMAT_MAX_ENUM;
         auto imgIt = my_data->imageMap.find(image);
-        if (imgIt == my_data->imageMap.end()) {
+        if (imgIt != my_data->imageMap.end()) {
+            format = (*imgIt).second->format;
+        }
+        else {
+            // Also need to check the swapchains.
+            auto swapchainIt = my_data->device_extensions.imageToSwapchainMap.find(image);
+            if (swapchainIt != my_data->device_extensions.imageToSwapchainMap.end()) {
+                VkSwapchainKHR swapchain = swapchainIt->second;
+                auto swapchain_nodeIt = my_data->device_extensions.swapchainMap.find(swapchain);
+                if (swapchain_nodeIt != my_data->device_extensions.swapchainMap.end()) {
+                    SWAPCHAIN_NODE* pswapchain_node = swapchain_nodeIt->second;
+                    format = pswapchain_node->createInfo.imageFormat;
+                }
+            }
+        }
+        if (format == VK_FORMAT_MAX_ENUM) {
             skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, (uint64_t) image, __LINE__, DRAWSTATE_IMAGEVIEW_DESCRIPTOR_ERROR, "DS",
                 "vkUpdateDescriptorSets: Attempt to update descriptor with invalid image %#" PRIxLEAST64 " in imageView %#" PRIxLEAST64, (uint64_t) image, (uint64_t) *pImageView);
         } else {
-            VkFormat format = (*imgIt).second->format;
             VkBool32 ds = vk_format_is_depth_or_stencil(format);
             switch (imageLayout) {
                 case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
