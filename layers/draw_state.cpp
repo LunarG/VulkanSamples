@@ -4399,16 +4399,18 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyEvent(VkDevice device, VkEve
     bool skip_call = false;
     loader_platform_thread_lock_mutex(&globalLock);
     auto event_data = dev_data->eventMap.find(event);
-    if (event_data != dev_data->eventMap.end() &&
-        event_data->second.in_use.load()) {
-        skip_call |=
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                    VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                    reinterpret_cast<uint64_t &>(event), __LINE__,
-                    DRAWSTATE_INVALID_EVENT, "DS",
-                    "Cannot delete event %" PRIu64
-                    " which is in use by a command buffer.",
-                    reinterpret_cast<uint64_t &>(event));
+    if (event_data != dev_data->eventMap.end()) {
+        if (event_data->second.in_use.load()) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                        reinterpret_cast<uint64_t &>(event), __LINE__,
+                        DRAWSTATE_INVALID_EVENT, "DS",
+                        "Cannot delete event %" PRIu64
+                        " which is in use by a command buffer.",
+                        reinterpret_cast<uint64_t &>(event));
+        }
+        dev_data->eventMap.erase(event_data);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (!skip_call)
@@ -7973,6 +7975,23 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(
     return result;
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateEvent(
+    VkDevice                                    device,
+    const VkEventCreateInfo*                    pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkEvent*                                    pEvent) {
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateEvent(device, pCreateInfo, pAllocator, pEvent);
+    if (result == VK_SUCCESS) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        dev_data->eventMap[*pEvent].needsSignaled = false;
+        dev_data->eventMap[*pEvent].in_use.store(0);
+        dev_data->eventMap[*pEvent].stageMask = VkPipelineStageFlags(0);
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    return result;
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkDevice                        device,
     const VkSwapchainCreateInfoKHR *pCreateInfo,
@@ -8389,6 +8408,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkQueueBindSparse;
     if (!strcmp(funcName, "vkCreateSemaphore"))
         return (PFN_vkVoidFunction) vkCreateSemaphore;
+    if (!strcmp(funcName, "vkCreateEvent"))
+        return (PFN_vkVoidFunction) vkCreateEvent;
 
     if (dev == NULL)
         return NULL;
