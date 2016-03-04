@@ -63,8 +63,19 @@ Icon ${ICOFILE}
 UninstallIcon ${ICOFILE}
 WindowIcon off
 
-# Define name of installer
-OutFile "VulkanRT-${PRODUCTVERSION}-Installer.exe"
+# If /DUNINSTALLER was specified, Create the uinstaller
+!ifdef UNINSTALLER
+  !echo "Creating RT uninstaller...."
+  OutFile "$%TEMP%\tempinstaller.exe"
+  SetCompress off
+!else
+  !echo "Creating RT installer...."
+
+  # Define name of installer
+  OutFile "VulkanRT-${PRODUCTVERSION}-Installer.exe"
+  SetCompressor /SOLID lzma
+
+!endif
 
 # Define default installation directory
 InstallDir "$PROGRAMFILES\${PRODUCTNAME}\${PRODUCTVERSION}"
@@ -75,7 +86,9 @@ Var FileVersion
 # Directory RT was installed to.
 # The uninstaller can't just use $INSTDIR because it is set to the
 # directory the uninstaller exe file is located in.
+!ifdef UNINSTALLER
 Var IDir
+!endif
 
 # Install count
 Var IC
@@ -191,6 +204,12 @@ RequestExecutionLevel admin
 
 Function .onInit
 
+!ifdef UNINSTALLER
+   ; Write out the uinstaller and quit
+   WriteUninstaller "$%TEMP%\Uninstall${PRODUCTNAME}.exe"
+   Quit
+!endif
+
 FunctionEnd
 
 AddBrandingImage left 150
@@ -256,8 +275,12 @@ Section
     StrCpy $1 10
     Call CheckForError
 
-    # Create the uninstaller
-    WriteUninstaller "$INSTDIR\Uninstall${PRODUCTNAME}.exe"
+    # Add the signed uninstaller
+    !ifndef UNINSTALLER
+        SetOutPath $INSTDIR
+        File "Uninstall${PRODUCTNAME}.exe"
+    !endif
+
     StrCpy $1 11
     Call CheckForError
 
@@ -423,7 +446,7 @@ Section
 
     # Possibly install MSVC 2013 redistributables
     ${If} ${RunningX64}
-    
+
         # If running on a 64-bit OS machine, we need the 64-bit Visual Studio re-distributable.  Install it if it's not already present.
         ReadRegDword $1 HKLM "SOFTWARE\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
         ClearErrors
@@ -435,27 +458,27 @@ Section
            ExecWait '"$TEMP\vcredist_x64.exe"  /quiet /norestart'
 
         RedistributablesInstalled6464:
-        
+
         # We also need the 32-bit Visual Studio re-distributable.  Install it as well if it's not present
         ReadRegDword $1 HKLM "SOFTWARE\WOW6432Node\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
         ClearErrors
         IntCmp $1 1 RedistributablesInstalled InstallRedistributables InstallRedistributables
 
     ${Else}
-    
+
         # Otherwise, we're running on a 32-bit OS machine, we need to install the 32-bit Visual Studio re-distributable if it's not present.
         ReadRegDword $1 HKLM "SOFTWARE\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
         ClearErrors
         IntCmp $1 1 RedistributablesInstalled InstallRedistributables InstallRedistributables
 
     ${Endif}
-    
+
     InstallRedistributables:
        SetOutPath "$TEMP"
 
        File vcredist_x86.exe
        ExecWait '"$TEMP\vcredist_x86.exe"  /quiet /norestart'
-    
+
     RedistributablesInstalled:
 
     StrCpy $1 20
@@ -464,6 +487,7 @@ Section
 SectionEnd
 
 # Uninstaller section start
+!ifdef UNINSTALLER
 Section "uninstall"
 
     # If running on a 64-bit OS machine, disable registry re-direct since we're running as a 32-bit executable.
@@ -498,7 +522,7 @@ Section "uninstall"
         IntOp $1 $IC - 1
         Rename "$IDir\Instance_$IC" "$IDir\Instance_$1"
     ${ElseIf} $IC = 2
-        Delete /REBOOTOK "$IDir\Instance_$IC\UninstallVulkanRT.exe"
+        Delete /REBOOTOK "$IDir\Instance_$IC\Uninstall${PRODUCTNAME}.exe"
         Rmdir /REBOOTOK "$IDir\Instance_$IC"
     ${Endif}
 
@@ -589,7 +613,7 @@ Section "uninstall"
         # Remove files in install dir
         Delete /REBOOTOK "$IDir\VULKANRT_LICENSE.rtf"
         Delete /REBOOTOK "$IDir\LICENSE.txt"
-        Delete /REBOOTOK "$IDir\UninstallVulkanRT.exe"
+        Delete /REBOOTOK "$IDir\Uninstall${PRODUCTNAME}.exe"
         Delete /REBOOTOK "$IDir\V.ico"
         Delete /REBOOTOK "$IDir\ConfigLayersAndVulkanDLL.ps1"
         Delete /REBOOTOK "$IDir\vulkaninfo.exe"
@@ -630,6 +654,7 @@ Section "uninstall"
     Call un.CheckForError
 
 SectionEnd
+!endif
 
 Function brandimage
   SetOutPath "$TEMP"
