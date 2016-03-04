@@ -1308,7 +1308,6 @@ static bool validate_push_constant_block_against_pipeline(
   for (auto insn : *src) {
     if (insn.opcode() == spv::OpMemberDecorate &&
         insn.word(1) == type.word(1)) {
-      unsigned member_index = insn.word(2);
 
       if (insn.word(3) == spv::DecorationOffset) {
         unsigned offset = insn.word(4);
