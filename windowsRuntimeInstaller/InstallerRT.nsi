@@ -63,8 +63,19 @@ Icon ${ICOFILE}
 UninstallIcon ${ICOFILE}
 WindowIcon off
 
-# Define name of installer
-OutFile "VulkanRT-${PRODUCTVERSION}-Installer.exe"
+# If /DUNINSTALLER was specified, Create the uinstaller
+!ifdef UNINSTALLER
+  !echo "Creating RT uninstaller...."
+  OutFile "$%TEMP%\tempinstaller.exe"
+  SetCompress off
+!else
+  !echo "Creating RT installer...."
+
+  # Define name of installer
+  OutFile "VulkanRT-${PRODUCTVERSION}-Installer.exe"
+  SetCompressor /SOLID lzma
+
+!endif
 
 # Define default installation directory
 InstallDir "$PROGRAMFILES\${PRODUCTNAME}\${PRODUCTVERSION}"
@@ -75,7 +86,9 @@ Var FileVersion
 # Directory RT was installed to.
 # The uninstaller can't just use $INSTDIR because it is set to the
 # directory the uninstaller exe file is located in.
+!ifdef UNINSTALLER
 Var IDir
+!endif
 
 # Install count
 Var IC
@@ -191,6 +204,12 @@ RequestExecutionLevel admin
 
 Function .onInit
 
+!ifdef UNINSTALLER
+   ; Write out the uinstaller and quit
+   WriteUninstaller "$%TEMP%\Uninstall${PRODUCTNAME}.exe"
+   Quit
+!endif
+
 FunctionEnd
 
 AddBrandingImage left 150
@@ -256,8 +275,12 @@ Section
     StrCpy $1 10
     Call CheckForError
 
-    # Create the uninstaller
-    WriteUninstaller "$INSTDIR\Uninstall${PRODUCTNAME}.exe"
+    # Add the signed uninstaller
+    !ifndef UNINSTALLER
+        SetOutPath $INSTDIR
+        File "Uninstall${PRODUCTNAME}.exe"
+    !endif
+
     StrCpy $1 11
     Call CheckForError
 
@@ -333,6 +356,16 @@ Section
     ${StrRep} $0 ${VERSION_BUILDNO} "." "-"
     StrCpy $FileVersion ${VERSION_ABI_MAJOR}-${VERSION_API_MAJOR}-${VERSION_MINOR}-${VERSION_PATCH}-$0
 
+    # Remove vulkaninfo from Start Menu
+    SetShellVarContext all
+    Delete "$SMPROGRAMS\Vulkan\vulkaninfo32.lnk"
+    Delete "$SMPROGRAMS\Vulkan\vulkaninfo.lnk"
+    ClearErrors
+
+    # Create Vulkan in the Start Menu
+    CreateDirectory "$SMPROGRAMS\Vulkan"
+    ClearErrors
+
     # If running on a 64-bit OS machine
     ${If} ${RunningX64}
 
@@ -356,11 +389,6 @@ Section
         SetOutPath "$INSTDIR"
         File ..\build\demos\Release\vulkaninfo.exe
         File /oname=vulkaninfo32.exe ..\build32\demos\Release\vulkaninfo.exe
-        SetShellVarContext all
-        CreateDirectory "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}"
-        CreateDirectory "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos"
-        CreateShortCut "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos\vulkaninfo32.lnk" "$INSTDIR\vulkaninfo32.exe"
-        CreateShortCut "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos\vulkaninfo.lnk" "$INSTDIR\vulkaninfo.exe"
         StrCpy $1 15
         Call CheckForError
 
@@ -389,10 +417,6 @@ Section
         File /oname=vulkaninfo-$FileVersion.exe ..\build32\demos\Release\vulkaninfo.exe
         SetOutPath "$INSTDIR"
         File ..\build32\demos\Release\vulkaninfo.exe
-        SetShellVarContext all
-        CreateDirectory "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}"
-        CreateDirectory "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos"
-        CreateShortCut "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos\vulkaninfo.lnk" "$INSTDIR\vulkaninfo.exe"
         StrCpy $1 18
         Call CheckForError
 
@@ -413,9 +437,16 @@ Section
     # by the uninstaller when it needs to be run again during uninstall.
     Delete ConfigLayersAndVulkanDLL.ps1
 
+    # Add vulkaninfo to Start Menu
+    SetShellVarContext all
+    IfFileExists $WINDIR\System32\vulkaninfo.exe 0 +2
+        CreateShortCut "$SMPROGRAMS\Vulkan\vulkaninfo.lnk" "$WINDIR\System32\vulkaninfo.exe"
+    IfFileExists $WINDIR\SysWow64\vulkaninfo.exe 0 +2
+        CreateShortCut "$SMPROGRAMS\Vulkan\vulkaninfo32.lnk" "$WINDIR\SysWow64\vulkaninfo.exe"
+
     # Possibly install MSVC 2013 redistributables
     ${If} ${RunningX64}
-    
+
         # If running on a 64-bit OS machine, we need the 64-bit Visual Studio re-distributable.  Install it if it's not already present.
         ReadRegDword $1 HKLM "SOFTWARE\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
         ClearErrors
@@ -427,27 +458,27 @@ Section
            ExecWait '"$TEMP\vcredist_x64.exe"  /quiet /norestart'
 
         RedistributablesInstalled6464:
-        
+
         # We also need the 32-bit Visual Studio re-distributable.  Install it as well if it's not present
         ReadRegDword $1 HKLM "SOFTWARE\WOW6432Node\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
         ClearErrors
         IntCmp $1 1 RedistributablesInstalled InstallRedistributables InstallRedistributables
 
     ${Else}
-    
+
         # Otherwise, we're running on a 32-bit OS machine, we need to install the 32-bit Visual Studio re-distributable if it's not present.
         ReadRegDword $1 HKLM "SOFTWARE\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
         ClearErrors
         IntCmp $1 1 RedistributablesInstalled InstallRedistributables InstallRedistributables
 
     ${Endif}
-    
+
     InstallRedistributables:
        SetOutPath "$TEMP"
 
        File vcredist_x86.exe
        ExecWait '"$TEMP\vcredist_x86.exe"  /quiet /norestart'
-    
+
     RedistributablesInstalled:
 
     StrCpy $1 20
@@ -456,6 +487,7 @@ Section
 SectionEnd
 
 # Uninstaller section start
+!ifdef UNINSTALLER
 Section "uninstall"
 
     # If running on a 64-bit OS machine, disable registry re-direct since we're running as a 32-bit executable.
@@ -490,12 +522,15 @@ Section "uninstall"
         IntOp $1 $IC - 1
         Rename "$IDir\Instance_$IC" "$IDir\Instance_$1"
     ${ElseIf} $IC = 2
-        Delete /REBOOTOK "$IDir\Instance_$IC\UninstallVulkanRT.exe"
+        Delete /REBOOTOK "$IDir\Instance_$IC\Uninstall${PRODUCTNAME}.exe"
         Rmdir /REBOOTOK "$IDir\Instance_$IC"
     ${Endif}
 
     # Modify registry for Programs and Features
-    DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC"
+
+    ${If} $IC > 1
+        DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC"
+    ${EndIf}
     ${If} $IC > 2
         IntOp $IC $IC - 1
         WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}-$IC" "SystemComponent" 0
@@ -555,24 +590,30 @@ Section "uninstall"
         ${EndIf}
 
         # Delete vulkaninfo from start menu.
-        # Delete vulkan start menu if the vulkan start menu is empty
         SetShellVarContext all
-        Delete "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos\vulkaninfo.lnk"
+        Delete "$SMPROGRAMS\Vulkan\vulkaninfo.lnk"
 
         # If running on a 64-bit OS machine
         ${If} ${RunningX64}
-            Delete "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos\vulkaninfo32.lnk"
+            Delete "$SMPROGRAMS\Vulkan\vulkaninfo32.lnk"
         ${EndIf}
 
-        StrCpy $0 "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}\Demos"
+        # Possibly add vulkaninfo to Start Menu
+        SetShellVarContext all
+        IfFileExists $WINDIR\System32\vulkaninfo.exe 0 +2
+            CreateShortCut "$SMPROGRAMS\Vulkan\vulkaninfo.lnk" "$WINDIR\System32\vulkaninfo.exe"
+        IfFileExists $WINDIR\SysWow64\vulkaninfo.exe 0 +2
+            CreateShortCut "$SMPROGRAMS\Vulkan\vulkaninfo32.lnk" "$WINDIR\SysWow64\vulkaninfo.exe"
+
+        # Possibly delete vulkan Start Menu
+        StrCpy $0 "$SMPROGRAMS\Vulkan"
         Call un.DeleteDirIfEmpty
-        StrCpy $0 "$SMPROGRAMS\Vulkan ${PRODUCTVERSION}"
-        Call un.DeleteDirIfEmpty
+        ClearErrors
 
         # Remove files in install dir
         Delete /REBOOTOK "$IDir\VULKANRT_LICENSE.rtf"
         Delete /REBOOTOK "$IDir\LICENSE.txt"
-        Delete /REBOOTOK "$IDir\UninstallVulkanRT.exe"
+        Delete /REBOOTOK "$IDir\Uninstall${PRODUCTNAME}.exe"
         Delete /REBOOTOK "$IDir\V.ico"
         Delete /REBOOTOK "$IDir\ConfigLayersAndVulkanDLL.ps1"
         Delete /REBOOTOK "$IDir\vulkaninfo.exe"
@@ -593,6 +634,7 @@ Section "uninstall"
         Rmdir /REBOOTOK "$IDir"
         StrCpy $0 "$PROGRAMFILES\${PRODUCTNAME}"
         Call un.DeleteDirIfEmpty
+        ClearErrors
 
         # If any of the remove commands failed, request a reboot
         IfRebootFlag 0 noreboot
@@ -612,6 +654,7 @@ Section "uninstall"
     Call un.CheckForError
 
 SectionEnd
+!endif
 
 Function brandimage
   SetOutPath "$TEMP"

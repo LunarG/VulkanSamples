@@ -1,18 +1,15 @@
 # Build Instructions
 These instructions are for Linux and Windows.
 
-## Git the Bits
+It is strongly suggested that you first install a Vulkan-capable driver, obtained from your graphics hardware vendor.
 
-The public repository for Vulkan-LoaderAndValidationLayers is hosted at https://github.com/KhronosGroup/.
-
-If you intend to contribute, the
-preferred work flow is to fork the repo, create a branch in your forked repo, do the work, and create a pull request
-on GitHub to integrate that work back into the repo.
-
-Note: The sample Vulkan driver for Linux (ICD) has been moved to the VulkanTools repo at https://github.com/LunarG/VulkanTools.
+Note: The sample Vulkan Intel driver for Linux (ICD) has been moved to the
+[VulkanTools repo](https://github.com/LunarG/VulkanTools).
 Further instructions regarding the ICD are available there.
 
-## Clone the repository
+## Git the Bits
+
+If you intend to contribute, the preferred work flow is to fork the repo, create a branch in your forked repo, do the work, and create a pull request on GitHub to integrate that work back into the repo.
 
 To create your local git repository:
 ```
@@ -30,8 +27,7 @@ It should be straightforward to use it on other Linux distros.
 
 These packages should be installed 
 ```
-ssudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev qt5-default libpciaccess-dev libpthread-stubs0-dev libudev-dev bison graphviz libpng-dev libxcb1-dev
-sudo apt-get build-dep mesa
+sudo apt-get install git cmake build-essential bison libxcb1-dev
 ```
 
 Example debug build:
@@ -44,9 +40,7 @@ make
 ```
 
 To run Vulkan programs you must tell the icd loader where to find the libraries.
-This is described in a specification in the Khronos documentation Git
-repository.  See the file:
-https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/blob/sdk-1.0.3/loader/LoaderAndLayerInterface.md#vulkan-installable-client-driver-interface-with-the-loader
+This is described in a [specification](https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/blob/sdk-1.0.3/loader/LoaderAndLayerInterface.md#vulkan-installable-client-driver-interface-with-the-loader).
 
 This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
@@ -68,10 +62,9 @@ There are also a few shell and Python scripts that run test collections (eg,
 
 ## Linux Demos
 
-The demos executables can be found in the dbuild/demos directory. The demos use DRI 3
-to render directly onto window surfaces.
+The demos executables can be found in the dbuild/demos directory.
 - vulkaninfo: report GPU properties
-- tri: a textured triangle
+- tri: a textured triangle (which is animated to demonstrate Z-clipping)
 - cube: a textured spinning cube
 
 ## Windows System Requirements
@@ -83,7 +76,17 @@ Windows 7+ with additional required software packages:
   - Tell the installer to "Add CMake to the system PATH" environment variable.
 - Python 3 (from https://www.python.org/downloads).  Notes:
   - Select to install the optional sub-package to add Python to the system PATH environment variable.
+  - Ensure the pip module is installed (it should be by default)
   - Need python3.3 or later to get the Windows py.exe launcher that is used to get python3 rather than python2 if both are installed on Windows
+  - 32 bit python works
+- Python lxml package must be installed
+  - Download the lxml package from
+        http://www.lfd.uci.edu/~gohlke/pythonlibs/#lxml
+        32-bit latest for Python 3.5 is: lxml-3.5.0-cp35-none-win32.whl
+        64-bit latest for Python 3.5 is: lxml-3.5.0-cp35-none-win_amd64.whl
+  - The package can be installed with pip as follows:
+        pip install lxml-3.5.0-cp35-none-win32.whl
+        If pip is not in your path, you can find it at $PYTHON_HOME\Scripts\pip.exe, where PYTHON_HOME is the folder where you installed Python.
 - Git (from http://git-scm.com/download/win).
   - Note: If you use Cygwin, you can normally use Cygwin's "git.exe".  However, in order to use the "update_external_sources.bat" script, you must have this version.
   - Tell the installer to allow it to be used for "Developer Prompt" as well as "Git Bash".
@@ -118,9 +121,7 @@ At this point, you can use Windows Explorer to launch Visual Studio by double-cl
 Vulkan programs must be able to find and use the vulkan-1.dll libary. Make sure it is either installed in the C:\Windows\System32 folder, or the PATH environment variable includes the folder that it is located in.
 
 To run Vulkan programs you must tell the icd loader where to find the libraries.
-This is described in a specification in the Khronos documentation Git
-repository.  See the file:
-https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/blob/sdk-1.0.3/loader/LoaderAndLayerInterface.md#vulkan-installable-client-driver-interface-with-the-loader
+This is described in a [specification](https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/blob/sdk-1.0.3/loader/LoaderAndLayerInterface.md#vulkan-installable-client-driver-interface-with-the-loader).
 
 This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.

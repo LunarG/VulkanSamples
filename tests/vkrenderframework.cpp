@@ -418,7 +418,11 @@ void VkDeviceObj::get_device_queue() {
 VkDescriptorSetObj::VkDescriptorSetObj(VkDeviceObj *device)
     : m_device(device), m_nextSlot(0) {}
 
-VkDescriptorSetObj::~VkDescriptorSetObj() { delete m_set; }
+VkDescriptorSetObj::~VkDescriptorSetObj() {
+    if (m_set) {
+        delete m_set;
+    }
+}
 
 int VkDescriptorSetObj::AppendDummy() {
     /* request a descriptor but do not update it */
@@ -476,13 +480,16 @@ VkDescriptorSet VkDescriptorSetObj::GetDescriptorSetHandle() const {
 
 void VkDescriptorSetObj::CreateVKDescriptorSet(
     VkCommandBufferObj *commandBuffer) {
-    // create VkDescriptorPool
-    VkDescriptorPoolCreateInfo pool = {};
-    pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool.poolSizeCount = m_type_counts.size();
-    pool.maxSets = 1;
-    pool.pPoolSizes = m_type_counts.data();
-    init(*m_device, pool);
+
+    if ( m_type_counts.size()) {
+        // create VkDescriptorPool
+        VkDescriptorPoolCreateInfo pool = {};
+        pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        pool.poolSizeCount = m_type_counts.size();
+        pool.maxSets = 1;
+        pool.pPoolSizes = m_type_counts.data();
+        init(*m_device, pool);
+    }
 
     // create VkDescriptorSetLayout
     vector<VkDescriptorSetLayoutBinding> bindings;
@@ -513,20 +520,22 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(
 
     m_pipeline_layout.init(*m_device, pipeline_layout, layouts);
 
-    // create VkDescriptorSet
-    m_set = alloc_sets(*m_device, m_layout);
+    if (m_type_counts.size()) {
+        // create VkDescriptorSet
+        m_set = alloc_sets(*m_device, m_layout);
 
-    // build the update array
-    size_t imageSamplerCount = 0;
-    for (std::vector<VkWriteDescriptorSet>::iterator it = m_writes.begin();
-         it != m_writes.end(); it++) {
-        it->dstSet = m_set->handle();
-        if (it->descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-            it->pImageInfo = &m_imageSamplerDescriptors[imageSamplerCount++];
+        // build the update array
+        size_t imageSamplerCount = 0;
+        for (std::vector<VkWriteDescriptorSet>::iterator it = m_writes.begin();
+             it != m_writes.end(); it++) {
+            it->dstSet = m_set->handle();
+            if (it->descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+                it->pImageInfo = &m_imageSamplerDescriptors[imageSamplerCount++];
+        }
+
+        // do the updates
+        m_device->update_descriptor_sets(m_writes);
     }
-
-    // do the updates
-    m_device->update_descriptor_sets(m_writes);
 }
 
 VkImageObj::VkImageObj(VkDeviceObj *dev) {
@@ -597,21 +606,37 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
             src_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         else
             src_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        dst_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
+        dst_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
         break;
 
     case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
         if (m_descriptorImageInfo.imageLayout ==
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
             src_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        else if (m_descriptorImageInfo.imageLayout ==
+             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+            src_mask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
         else
             src_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        dst_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
+        dst_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
         break;
 
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-        src_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        if (m_descriptorImageInfo.imageLayout ==
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+            src_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        else
+            src_mask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
         dst_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
+        break;
+
+    case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        if (m_descriptorImageInfo.imageLayout ==
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+            src_mask = VK_ACCESS_TRANSFER_READ_BIT;
+        else
+            src_mask = 0;
+        dst_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         break;
 
     default:
@@ -663,19 +688,8 @@ bool VkImageObj::IsCompatible(VkFlags usage, VkFlags features) {
 void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage,
                       VkImageTiling requested_tiling,
                       VkMemoryPropertyFlags reqs) {
-    uint32_t mipCount;
     VkFormatProperties image_fmt;
     VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
-
-    mipCount = 0;
-
-    uint32_t _w = w;
-    uint32_t _h = h;
-    while ((_w > 0) || (_h > 0)) {
-        _w >>= 1;
-        _h >>= 1;
-        mipCount++;
-    }
 
     vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), fmt,
                                         &image_fmt);
@@ -698,35 +712,29 @@ void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage,
             << "Error: Cannot find requested tiling configuration";
     }
 
-    VkImageFormatProperties imageFormatProperties;
-    vkGetPhysicalDeviceImageFormatProperties(m_device->phy().handle(), fmt,
-                                             VK_IMAGE_TYPE_2D, tiling, usage,
-                                             0, // VkImageCreateFlags
-                                             &imageFormatProperties);
-    if (imageFormatProperties.maxMipLevels < mipCount) {
-        mipCount = imageFormatProperties.maxMipLevels;
-    }
-
     VkImageCreateInfo imageCreateInfo = vk_testing::Image::create_info();
     imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
     imageCreateInfo.format = fmt;
     imageCreateInfo.extent.width = w;
     imageCreateInfo.extent.height = h;
-    imageCreateInfo.mipLevels = mipCount;
+    imageCreateInfo.mipLevels = 1;
     imageCreateInfo.tiling = tiling;
-    if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-        imageCreateInfo.initialLayout =
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    else if (usage & VK_IMAGE_USAGE_SAMPLED_BIT)
-        imageCreateInfo.initialLayout =
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    else
-        imageCreateInfo.initialLayout = m_descriptorImageInfo.imageLayout;
+    imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     layout(imageCreateInfo.initialLayout);
     imageCreateInfo.usage = usage;
 
     vk_testing::Image::init(*m_device, imageCreateInfo, reqs);
+
+    VkImageLayout newLayout;
+    if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+        newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    else if (usage & VK_IMAGE_USAGE_SAMPLED_BIT)
+        newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    else
+        newLayout = m_descriptorImageInfo.imageLayout;
+
+    SetLayout(VK_IMAGE_ASPECT_COLOR_BIT, newLayout);
 }
 
 VkResult VkImageObj::CopyImage(VkImageObj &src_image) {
@@ -758,12 +766,14 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image) {
     copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copy_region.srcSubresource.baseArrayLayer = 0;
     copy_region.srcSubresource.mipLevel = 0;
+    copy_region.srcSubresource.layerCount = 1;
     copy_region.srcOffset.x = 0;
     copy_region.srcOffset.y = 0;
     copy_region.srcOffset.z = 0;
     copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copy_region.dstSubresource.baseArrayLayer = 0;
     copy_region.dstSubresource.mipLevel = 0;
+    copy_region.dstSubresource.layerCount = 1;
     copy_region.dstOffset.x = 0;
     copy_region.dstOffset.y = 0;
     copy_region.dstOffset.z = 0;
@@ -825,6 +835,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     init(16, 16, tex_format,
          VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
          VK_IMAGE_TILING_OPTIMAL);
+    stagingImage.SetLayout(VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL);
 
     /* create image view */
     view.image = handle();
@@ -839,6 +850,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
             row[x] = colors[(x & 1) ^ (y & 1)];
     }
     stagingImage.UnmapMemory();
+    stagingImage.SetLayout(VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     VkImageObj::CopyImage(stagingImage);
 }
 

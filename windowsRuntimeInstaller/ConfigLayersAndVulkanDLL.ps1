@@ -147,7 +147,6 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
 
     # If $VulkanDllList contains at least one element, there's at least one vulkan*.dll file.
     # Copy the most recent vulkan*.dll (named in the last element of $VulkanDllList) to vulkan-$majorabi.dll.
-    # TODO: In the future, also copy the corresponding vulkaninfo-*.exe to vulkaninfo.exe.
 
     if ($VulkanDllList.Length -gt 0) {
 

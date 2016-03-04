@@ -51,7 +51,7 @@ Environment::Environment() : default_dev_(0) {
     app_.applicationVersion = 1;
     app_.pEngineName = "vk_testing";
     app_.engineVersion = 1;
-    app_.apiVersion = VK_API_VERSION;
+    app_.apiVersion = VK_MAKE_VERSION(1, 0, 0);
     app_.pNext = NULL;
 }
 

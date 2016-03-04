@@ -38,83 +38,79 @@ void wsi_create_instance(struct loader_instance *ptr_instance,
                          const VkInstanceCreateInfo *pCreateInfo);
 
 VKAPI_ATTR void VKAPI_CALL
-loader_DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
-                         const VkAllocationCallbacks *pAllocator);
+terminator_DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
+                             const VkAllocationCallbacks *pAllocator);
 
 VKAPI_ATTR VkResult VKAPI_CALL
-loader_GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice,
-                                          uint32_t queueFamilyIndex,
-                                          VkSurfaceKHR surface,
-                                          VkBool32 *pSupported);
+terminator_GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice,
+                                              uint32_t queueFamilyIndex,
+                                              VkSurfaceKHR surface,
+                                              VkBool32 *pSupported);
 
-VKAPI_ATTR VkResult VKAPI_CALL loader_GetPhysicalDeviceSurfaceCapabilitiesKHR(
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_GetPhysicalDeviceSurfaceCapabilitiesKHR(
     VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
     VkSurfaceCapabilitiesKHR *pSurfaceCapabilities);
 
-VKAPI_ATTR VkResult VKAPI_CALL
-loader_GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice,
-                                          VkSurfaceKHR surface,
-                                          uint32_t *pSurfaceFormatCount,
-                                          VkSurfaceFormatKHR *pSurfaceFormats);
+VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceFormatsKHR(
+    VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+    uint32_t *pSurfaceFormatCount, VkSurfaceFormatKHR *pSurfaceFormats);
 
 VKAPI_ATTR VkResult VKAPI_CALL
-loader_GetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice,
-                                               VkSurfaceKHR surface,
-                                               uint32_t *pPresentModeCount,
-                                               VkPresentModeKHR *pPresentModes);
+terminator_GetPhysicalDeviceSurfacePresentModesKHR(
+    VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+    uint32_t *pPresentModeCount, VkPresentModeKHR *pPresentModes);
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 VKAPI_ATTR VkResult VKAPI_CALL
-loader_CreateWin32SurfaceKHR(VkInstance instance,
-                             const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
-                             const VkAllocationCallbacks *pAllocator,
-                             VkSurfaceKHR *pSurface);
+terminator_CreateWin32SurfaceKHR(VkInstance instance,
+                                 const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
+                                 const VkAllocationCallbacks *pAllocator,
+                                 VkSurfaceKHR *pSurface);
 VKAPI_ATTR VkBool32 VKAPI_CALL
-loader_GetPhysicalDeviceWin32PresentationSupportKHR(
+terminator_GetPhysicalDeviceWin32PresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex);
 #endif
 #ifdef VK_USE_PLATFORM_MIR_KHR
 VKAPI_ATTR VkResult VKAPI_CALL
-loader_CreateMirSurfaceKHR(VkInstance instance,
-                           const VkMirSurfaceCreateInfoKHR *pCreateInfo,
-                           const VkAllocationCallbacks *pAllocator,
-                           VkSurfaceKHR *pSurface);
+terminator_CreateMirSurfaceKHR(VkInstance instance,
+                               const VkMirSurfaceCreateInfoKHR *pCreateInfo,
+                               const VkAllocationCallbacks *pAllocator,
+                               VkSurfaceKHR *pSurface);
 VKAPI_ATTR VkBool32 VKAPI_CALL
-loader_GetPhysicalDeviceMirPresentationSupportKHR(
+terminator_GetPhysicalDeviceMirPresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
     MirConnection *connection);
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-VKAPI_ATTR VkResult VKAPI_CALL
-loader_CreateWaylandSurfaceKHR(VkInstance instance,
-                               const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
-                               const VkAllocationCallbacks *pAllocator,
-                               VkSurfaceKHR *pSurface);
+VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWaylandSurfaceKHR(
+    VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface);
 VKAPI_ATTR VkBool32 VKAPI_CALL
-loader_GetPhysicalDeviceWaylandPresentationSupportKHR(
+terminator_GetPhysicalDeviceWaylandPresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
     struct wl_display *display);
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
 VKAPI_ATTR VkResult VKAPI_CALL
-loader_CreateXcbSurfaceKHR(VkInstance instance,
-                           const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
-                           const VkAllocationCallbacks *pAllocator,
-                           VkSurfaceKHR *pSurface);
+terminator_CreateXcbSurfaceKHR(VkInstance instance,
+                               const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
+                               const VkAllocationCallbacks *pAllocator,
+                               VkSurfaceKHR *pSurface);
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
-loader_GetPhysicalDeviceXcbPresentationSupportKHR(
+terminator_GetPhysicalDeviceXcbPresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
     xcb_connection_t *connection, xcb_visualid_t visual_id);
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
 VKAPI_ATTR VkResult VKAPI_CALL
-loader_CreateXlibSurfaceKHR(VkInstance instance,
-                            const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
-                            const VkAllocationCallbacks *pAllocator,
-                            VkSurfaceKHR *pSurface);
+terminator_CreateXlibSurfaceKHR(VkInstance instance,
+                                const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
+                                const VkAllocationCallbacks *pAllocator,
+                                VkSurfaceKHR *pSurface);
 VKAPI_ATTR VkBool32 VKAPI_CALL
-loader_GetPhysicalDeviceXlibPresentationSupportKHR(
+terminator_GetPhysicalDeviceXlibPresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, Display *dpy,
     VisualID visualID);
 #endif

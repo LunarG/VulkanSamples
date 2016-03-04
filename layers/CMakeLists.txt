@@ -9,7 +9,7 @@ endmacro()
 
 macro(run_vk_layer_generate subcmd output)
 	add_custom_command(OUTPUT ${output}
-		COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-layer-generate.py ${subcmd} ${PROJECT_SOURCE_DIR}/include/vulkan/vulkan.h > ${output}
+		COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-layer-generate.py ${DisplayServer} ${subcmd} ${PROJECT_SOURCE_DIR}/include/vulkan/vulkan.h > ${output}
 		DEPENDS ${PROJECT_SOURCE_DIR}/vk-layer-generate.py ${PROJECT_SOURCE_DIR}/include/vulkan/vulkan.h ${PROJECT_SOURCE_DIR}/vulkan.py
 	)
 endmacro()
@@ -62,7 +62,7 @@ endif()
 if (WIN32)
     macro(add_vk_layer target)
 	add_custom_command(OUTPUT VkLayer_${target}.def
-		COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py win-def-file VkLayer_${target} layer > VkLayer_${target}.def
+		COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py ${DisplayServer} win-def-file VkLayer_${target} layer > VkLayer_${target}.def
 		DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vk.py
 	)
 	add_library(VkLayer_${target} SHARED ${ARGN} VkLayer_${target}.def)
@@ -113,7 +113,7 @@ if (NOT WIN32)
 endif()
 
 add_custom_command(OUTPUT vk_dispatch_table_helper.h
-	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py dispatch-table-ops layer > vk_dispatch_table_helper.h
+	COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py ${DisplayServer} dispatch-table-ops layer > vk_dispatch_table_helper.h
 	DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
 
 run_vk_helper(gen_enum_string_helper vk_enum_string_helper.h)
@@ -159,8 +159,8 @@ else()
     install(TARGETS layer_utils DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
 endif()
 
-add_vk_layer(draw_state draw_state.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp)
-add_vk_layer(device_limits device_limits.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp vk_layer_utils.cpp)
+add_vk_layer(draw_state draw_state.cpp vk_layer_table.cpp)
+add_vk_layer(device_limits device_limits.cpp vk_layer_table.cpp vk_layer_utils.cpp)
 add_vk_layer(mem_tracker mem_tracker.cpp vk_layer_table.cpp)
 add_vk_layer(image image.cpp vk_layer_table.cpp)
 add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
@@ -168,4 +168,4 @@ add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
 add_vk_layer(object_tracker object_tracker.cpp vk_layer_table.cpp)
 add_vk_layer(threading threading.cpp thread_check.h vk_layer_table.cpp)
 add_vk_layer(unique_objects unique_objects.cpp vk_layer_table.cpp vk_safe_struct.cpp)
-add_vk_layer(param_checker param_checker.cpp param_check.h vk_layer_debug_marker_table.cpp vk_layer_table.cpp)
+add_vk_layer(param_checker param_checker.cpp param_check.h vk_layer_table.cpp)

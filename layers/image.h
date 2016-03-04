@@ -49,6 +49,7 @@ typedef enum _IMAGE_ERROR
     IMAGE_INVALID_FILTER,                   // Operation specifies an invalid filter setting
     IMAGE_INVALID_IMAGE_RESOURCE,           // Image resource/subresource called with invalid setting
     IMAGE_INVALID_FORMAT_LIMITS_VIOLATION,  // Device limits for this format have been exceeded
+    IMAGE_INVALID_LAYOUT,                   // Operation specifies an invalid layout.
 } IMAGE_ERROR;
 
 typedef struct _IMAGE_STATE

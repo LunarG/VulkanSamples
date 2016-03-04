@@ -29,6 +29,7 @@
 # Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
 # Author: Tobin Ehlis <tobin@lunarg.com>
 # Author: Tony Barbour <tony@LunarG.com>
+# Author: Gwan-gyeong Mun <kk.moon@samsung.com>
 
 class Param(object):
     """A function parameter."""
@@ -1114,6 +1115,58 @@ ext_khr_xcb_surface = Extension(
              Param("xcb_visualid_t", "visual_id")]),
     ],
 )
+ext_khr_xlib_surface = Extension(
+    name="VK_KHR_xlib_surface",
+    headers=["vulkan/vulkan.h"],
+    objects=[],
+    protos=[
+        Proto("VkResult", "CreateXlibSurfaceKHR",
+            [Param("VkInstance", "instance"),
+             Param("const VkXlibSurfaceCreateInfoKHR*", "pCreateInfo"),
+             Param("const VkAllocationCallbacks*", "pAllocator"),
+             Param("VkSurfaceKHR*", "pSurface")]),
+
+        Proto("VkBool32", "GetPhysicalDeviceXlibPresentationSupportKHR",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("uint32_t", "queueFamilyIndex"),
+             Param("Display*", "dpy"),
+             Param("VisualID", "visualID")]),
+    ],
+)
+ext_khr_wayland_surface = Extension(
+    name="VK_KHR_wayland_surface",
+    headers=["vulkan/vulkan.h"],
+    objects=[],
+    protos=[
+        Proto("VkResult", "CreateWaylandSurfaceKHR",
+            [Param("VkInstance", "instance"),
+             Param("const VkWaylandSurfaceCreateInfoKHR*", "pCreateInfo"),
+             Param("const VkAllocationCallbacks*", "pAllocator"),
+             Param("VkSurfaceKHR*", "pSurface")]),
+
+        Proto("VkBool32", "GetPhysicalDeviceWaylandPresentationSupportKHR",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("uint32_t", "queueFamilyIndex"),
+             Param("struct wl_display*", "display")]),
+    ],
+)
+ext_khr_mir_surface = Extension(
+    name="VK_KHR_mir_surface",
+    headers=["vulkan/vulkan.h"],
+    objects=[],
+    protos=[
+        Proto("VkResult", "CreateMirSurfaceKHR",
+            [Param("VkInstance", "instance"),
+             Param("const VkMirSurfaceCreateInfoKHR*", "pCreateInfo"),
+             Param("const VkAllocationCallbacks*", "pAllocator"),
+             Param("VkSurfaceKHR*", "pSurface")]),
+
+        Proto("VkBool32", "GetPhysicalDeviceMirPresentationSupportKHR",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("uint32_t", "queueFamilyIndex"),
+             Param("MirConnection*", "connection")]),
+    ],
+)
 ext_khr_android_surface = Extension(
     name="VK_KHR_android_surface",
     headers=["vulkan/vulkan.h"],
@@ -1171,41 +1224,42 @@ lunarg_debug_report = Extension(
              Param("const char *", "pMsg")]),
     ],
 )
-lunarg_debug_marker = Extension(
-    name="VK_LUNARG_DEBUG_MARKER",
-    headers=["vulkan/vk_lunarg_debug_marker.h"],
-    objects=[],
-    protos=[
-        Proto("void", "CmdDbgMarkerBegin",
-            [Param("VkCommandBuffer", "commandBuffer"),
-             Param("const char*", "pMarker")]),
-
-        Proto("void", "CmdDbgMarkerEnd",
-            [Param("VkCommandBuffer", "commandBuffer")]),
-
-        Proto("VkResult", "DbgSetObjectTag",
-            [Param("VkDevice", "device"),
-             Param("VkDebugReportObjectTypeEXT", "objType"),
-             Param("uint64_t", "object"),
-             Param("size_t", "tagSize"),
-             Param("const void*", "pTag")]),
-
-        Proto("VkResult", "DbgSetObjectName",
-            [Param("VkDevice", "device"),
-             Param("VkDebugReportObjectTypeEXT", "objType"),
-             Param("uint64_t", "object"),
-             Param("size_t", "nameSize"),
-             Param("const char*", "pName")]),
-    ],
-)
 
 import sys
-if sys.platform.startswith('win32'):
-    extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface]
-    extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, lunarg_debug_report, lunarg_debug_marker]
-else: # linux & android
-    extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_android_surface]
-    extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_android_surface, lunarg_debug_report, lunarg_debug_marker]
+
+if len(sys.argv) > 3:
+    if sys.platform.startswith('win32'):
+        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface]
+        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, lunarg_debug_report]
+    elif sys.platform.startswith('linux'):
+        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface]
+        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, lunarg_debug_report]
+    else: # android
+        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface]
+        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface, lunarg_debug_report]
+else :
+    if sys.argv[1] == 'Win32':
+        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface]
+        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, lunarg_debug_report]
+    elif sys.argv[1] == 'Android':
+        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface]
+        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface, lunarg_debug_report]
+    elif sys.argv[1] == 'Xcb':
+        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface]
+        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, lunarg_debug_report]
+    elif sys.argv[1] == 'Xlib':
+        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xlib_surface]
+        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xlib_surface, lunarg_debug_report]
+    elif sys.argv[1] == 'Wayland':
+        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_wayland_surface]
+        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_wayland_surface, lunarg_debug_report]
+    elif sys.argv[1] == 'Mir':
+        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_mir_surface]
+        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_mir_surface, lunarg_debug_report]
+    else:
+        print('Error: Undefined DisplayServer')
+        extensions = []
+        extensions_all = []
 
 object_dispatch_list = [
     "VkInstance",

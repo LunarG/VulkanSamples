@@ -1559,6 +1559,21 @@ static VkBool32 validateCreateSwapchainKHR(
     // Keep around a useful pointer to pPhysicalDevice:
     SwpPhysicalDevice *pPhysicalDevice = pDevice->pPhysicalDevice;
 
+    // Validate pCreateInfo values with result of
+    // vkGetPhysicalDeviceQueueFamilyProperties
+    if (pPhysicalDevice && pPhysicalDevice->gotQueueFamilyPropertyCount) {
+        for (auto i = 0; i < pCreateInfo->queueFamilyIndexCount; i++) {
+            if (pCreateInfo->pQueueFamilyIndices[i] >=
+                pPhysicalDevice->numOfQueueFamilies) {
+                skipCall |= LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(
+                    VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                    pPhysicalDevice, "VkPhysicalDevice",
+                    pCreateInfo->pQueueFamilyIndices[i],
+                    pPhysicalDevice->numOfQueueFamilies);
+            }
+        }
+    }
+
     // Validate pCreateInfo values with the results of
     // vkGetPhysicalDeviceSurfaceCapabilitiesKHR():
     if (!pPhysicalDevice || !pPhysicalDevice->gotSurfaceCapabilities) {

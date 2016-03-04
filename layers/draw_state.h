@@ -162,7 +162,6 @@ typedef enum _DRAW_STATE_ERROR {
                                     // operation
     DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, // Attachment reference must be
                                             // present in active subpass
-    DRAWSTATE_INVALID_EXTENSION,
     DRAWSTATE_SAMPLER_DESCRIPTOR_ERROR, // A Descriptor of *_SAMPLER type is
                                         // being updated with an invalid or bad
                                         // Sampler
@@ -179,9 +178,9 @@ typedef enum _DRAW_STATE_ERROR {
                                            // type is being updated with an
                                            // invalid or bad BufferView
     DRAWSTATE_BUFFERINFO_DESCRIPTOR_ERROR, // A Descriptor of
-                                           // *_[UNIFORM|STORAGE]_BUFFER_[DYNAMIC]
-                                           // type is being updated with an
-                                           // invalid or bad BufferView
+    // *_[UNIFORM|STORAGE]_BUFFER_[DYNAMIC]
+    // type is being updated with an
+    // invalid or bad BufferView
     DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, // At draw time the dynamic offset
                                        // combined with buffer offset and range
                                        // oversteps size of buffer
@@ -193,11 +192,20 @@ typedef enum _DRAW_STATE_ERROR {
                                              // violate device limit
     DRAWSTATE_INVALID_STORAGE_BUFFER_OFFSET, // Dynamic Storage Buffer Offsets
                                              // violate device limit
+    DRAWSTATE_INDEPENDENT_BLEND, // If independent blending is not enabled, all
+                                 // elements of pAttachmentsMustBeIdentical
+    DRAWSTATE_DISABLED_LOGIC_OP, // If logic operations is not enabled, logicOpEnable
+                                 // must be VK_FALSE
+    DRAWSTATE_INVALID_LOGIC_OP,  // If logicOpEnable is VK_TRUE, logicOp must
+                                 // must be a valid VkLogicOp value
+    DRAWSTATE_INVALID_QUEUE_INDEX,           // Specified queue index exceeds number
+                                             // of queried queue families
+    DRAWSTATE_PUSH_CONSTANTS_ERROR, // Push constants exceed maxPushConstantSize
 } DRAW_STATE_ERROR;
 
 typedef enum _SHADER_CHECKER_ERROR {
     SHADER_CHECKER_NONE,
-    SHADER_CHECKER_FS_MIXED_BROADCAST,      /* FS writes broadcast output AND custom outputs */
+    SHADER_CHECKER_FS_MIXED_BROADCAST,      /* FS writes broadcast output AND custom outputs -- DEFUNCT */
     SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, /* Type mismatch between shader stages or shader and pipeline */
     SHADER_CHECKER_OUTPUT_NOT_CONSUMED,     /* Entry appears in output interface, but missing in input */
     SHADER_CHECKER_INPUT_NOT_PRODUCED,      /* Entry appears in input interface, but missing in output */
@@ -208,6 +216,8 @@ typedef enum _SHADER_CHECKER_ERROR {
     SHADER_CHECKER_MISSING_DESCRIPTOR,      /* Shader attempts to use a descriptor binding not declared in the layout */
     SHADER_CHECKER_BAD_SPECIALIZATION,      /* Specialization map entry points outside specialization data block */
     SHADER_CHECKER_MISSING_ENTRYPOINT,      /* Shader module does not contain the requested entrypoint */
+    SHADER_CHECKER_PUSH_CONSTANT_OUT_OF_RANGE,  /* Push constant variable is not in a push constant range */
+    SHADER_CHECKER_PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE, /* Push constant range exists, but not accessible from stage */
 } SHADER_CHECKER_ERROR;
 
 typedef enum _DRAW_TYPE
@@ -304,6 +314,8 @@ typedef struct _SAMPLER_NODE {
 typedef struct _IMAGE_NODE {
     VkImageLayout layout;
     VkFormat      format;
+    uint32_t      mipLevels;
+    uint32_t      arrayLayers;
 } IMAGE_NODE;
 
 typedef struct _IMAGE_CMD_BUF_NODE {
@@ -475,8 +487,7 @@ typedef struct _DESCRIPTOR_POOL_NODE {
 } DESCRIPTOR_POOL_NODE;
 
 // Cmd Buffer Tracking
-typedef enum _CMD_TYPE
-{
+typedef enum _CMD_TYPE {
     CMD_BINDPIPELINE,
     CMD_BINDPIPELINEDELTA,
     CMD_SETVIEWPORTSTATE,
@@ -518,6 +529,7 @@ typedef enum _CMD_TYPE
     CMD_RESETQUERYPOOL,
     CMD_COPYQUERYPOOLRESULTS,
     CMD_WRITETIMESTAMP,
+    CMD_PUSHCONSTANTS,
     CMD_INITATOMICCOUNTERS,
     CMD_LOADATOMICCOUNTERS,
     CMD_SAVEATOMICCOUNTERS,
@@ -525,8 +537,6 @@ typedef enum _CMD_TYPE
     CMD_NEXTSUBPASS,
     CMD_ENDRENDERPASS,
     CMD_EXECUTECOMMANDS,
-    CMD_DBGMARKERBEGIN,
-    CMD_DBGMARKEREND,
 } CMD_TYPE;
 // Data structure for holding sequence of cmds in cmd buffer
 typedef struct _CMD_NODE {

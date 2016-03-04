@@ -34,7 +34,6 @@ class VkImageObj;
 #else
 #include "vktestframework.h"
 #endif
-#include "vulkan/vk_lunarg_debug_marker.h"
 
 #include <vector>
 
@@ -155,7 +154,7 @@ class VkRenderFramework : public VkTestFramework {
         this->app_info.applicationVersion = 1;
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
-        this->app_info.apiVersion = VK_API_VERSION;
+        this->app_info.apiVersion = VK_MAKE_VERSION(1, 0, 0);
 
         InitFramework();
     }
@@ -380,6 +379,7 @@ class VkDescriptorSetObj : public vk_testing::DescriptorPool {
 
     VkDescriptorSet GetDescriptorSetHandle() const;
     VkPipelineLayout GetPipelineLayout() const;
+    int GetTypeCounts() {return m_type_counts.size();}
 
   protected:
     VkDeviceObj *m_device;
@@ -391,7 +391,7 @@ class VkDescriptorSetObj : public vk_testing::DescriptorPool {
 
     vk_testing::DescriptorSetLayout m_layout;
     vk_testing::PipelineLayout m_pipeline_layout;
-    vk_testing::DescriptorSet *m_set;
+    vk_testing::DescriptorSet *m_set = NULL;
 };
 
 class VkShaderObj : public vk_testing::ShaderModule {

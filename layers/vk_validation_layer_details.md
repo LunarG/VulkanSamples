@@ -2,6 +2,12 @@
 
 # Validation Layer Details
 
+## VK_LAYER_LUNARG_standard_validation
+
+### VK_LAYER_LUNARG_standard_validation Overview
+
+This is a meta-layer managed by the loader. Specifying this layer name will cause the loader to load the all of the standard validation layers in the following optimal order: VK_LAYER_GOOGLE_threading, VK_LAYER_LUNARG_param_checker, VK_LAYER_LUNARG_device_limits, VK_LAYER_LUNA    RG_object_tracker, VK_LAYER_LUNARG_image, VK_LAYER_LUNARG_mem_tracker, VK_LAYER_LUNARG_draw_state, VK_LAYER_LUNARG_swapchain, and VK_LAYER_GOOGLE_unique_objects. Other layers can be specified and the loader will remove duplicates. See the following individual layer descriptions for layer details.
+
 ## VK_LAYER_LUNARG_draw_state
 
 ### VK_LAYER_LUNARG_draw_state Overview
@@ -13,7 +19,6 @@ The VK_LAYER_LUNARG_draw_state layer tracks state leading into Draw cmds. This i
 | Check | Overview | ENUM DRAWSTATE_* | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
 | Valid Pipeline Layouts | Verify that sets being bound are compatible with their PipelineLayout and that the last-bound PSO PipelineLayout at Draw time is compatible with all bound sets used by that PSO | PIPELINE_LAYOUTS_INCOMPATIBLE | vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | TBD | None |
-| Validate DbgMarker exensions | Validates that DbgMarker extensions have been enabled before use | INVALID_EXTENSION | vkCmdDbgMarkerBegin vkCmdDbgMarkerEnd | TBD | None |
 | Valid BeginCommandBuffer state | Must not call Begin on command buffers that are being recorded, and primary command buffers must specify VK_NULL_HANDLE for RenderPass or Framebuffer parameters, while secondary command buffers must provide non-null parameters,  | BEGIN_CB_INVALID_STATE | vkBeginCommandBuffer | PrimaryCommandBufferFramebufferAndRenderpass SecondaryCommandBufferFramebufferAndRenderpass | None |
 | Command Buffer Simultaneous Use | Violation of VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT rules. Most likely attempting to simultaneously use a CmdBuffer w/o having that bit set. This also warns if you add secondary command buffer w/o that bit set to a primary command buffer that does have that bit set. | INVALID_CB_SIMULTANEOUS_USE | vkQueueSubmit vkCmdExecuteCommands | TODO | Write test |
 | Valid Command Buffer Reset | Can only reset individual command buffer that was allocated from a pool with VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT set | INVALID_COMMAND_BUFFER_RESET | vkBeginCommandBuffer vkResetCommandBuffer | CommandBufferResetErrors | None |
@@ -24,7 +29,7 @@ The VK_LAYER_LUNARG_draw_state layer tracks state leading into Draw cmds. This i
 | Valid Pipeline | Flag VkPipeline object that was not properly created | INVALID_PIPELINE | vkCmdBindPipeline | InvalidPipeline | NA |
 | Valid PipelineLayout | Flag VkPipelineLayout object that was not properly created | INVALID_PIPELINE_LAYOUT | vkCmdBindPipeline | TODO | Write test for this case |
 | Valid Pipeline Create Info | Tests for the following: That compute shaders are not specified for the graphics pipeline, tess evaluation and tess control shaders are included or excluded as a pair, that VK_PRIMITIVE_TOPOLOGY_PATCH_LIST is set as IA topology for tessellation pipelines, that VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive topology is only set for tessellation pipelines, and that Vtx Shader specified | INVALID_PIPELINE_CREATE_STATE | vkCreateGraphicsPipelines | InvalidPipelineCreateState | NA |
-| Valid CommandBuffer | Validates that the command buffer object was properly created and is currently valid | INVALID_COMMAND_BUFFER | vkQueueSubmit vkBeginCommandBuffer vkEndCommandBuffer vkCmdBindPipeline vkCmdBindDescriptorSets vkCmdBindIndexBuffer vkCmdBindVertexBuffers vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatch vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearAttachments vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdResolveImage vkCmdSetEvent vkCmdResetEvent vkCmdWaitEvents vkCmdPipelineBarrier vkCmdBeginQuery vkCmdEndQuery vkCmdResetQueryPool vkCmdWriteTimestamp vkCmdBeginRenderPass vkCmdNextSubpass vkCmdEndRenderPass vkCmdExecuteCommands vkCmdDbgMarkerBegin vkCmdDbgMarkerEnd vkAllocateCommandBuffers | None | NA |
+| Valid CommandBuffer | Validates that the command buffer object was properly created and is currently valid | INVALID_COMMAND_BUFFER | vkQueueSubmit vkBeginCommandBuffer vkEndCommandBuffer vkCmdBindPipeline vkCmdBindDescriptorSets vkCmdBindIndexBuffer vkCmdBindVertexBuffers vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatch vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearAttachments vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdResolveImage vkCmdSetEvent vkCmdResetEvent vkCmdWaitEvents vkCmdPipelineBarrier vkCmdBeginQuery vkCmdEndQuery vkCmdResetQueryPool vkCmdWriteTimestamp vkCmdBeginRenderPass vkCmdNextSubpass vkCmdEndRenderPass vkCmdExecuteCommands vkAllocateCommandBuffers | None | NA |
 | Vtx Buffer Bounds | Check if VBO index too large for PSO Vtx binding count, and that at least one vertex buffer is attached to pipeline object | VTX_INDEX_OUT_OF_BOUNDS | vkCmdBindDescriptorSets vkCmdBindVertexBuffers | VtxBufferBadIndex | NA |
 | Idx Buffer Alignment | Verify that offset of Index buffer falls on an alignment boundary as defined by IdxBufferAlignmentError param | VTX_INDEX_ALIGNMENT_ERROR | vkCmdBindIndexBuffer | IdxBufferAlignmentError | NA |
 | Cmd Buffer End | Verifies that EndCommandBuffer was called for this commandBuffer at QueueSubmit time | NO_END_COMMAND_BUFFER | vkQueueSubmit | NoEndCommandBuffer | NA |
@@ -78,6 +83,11 @@ The VK_LAYER_LUNARG_draw_state layer tracks state leading into Draw cmds. This i
 | Live Semaphore  | When waiting on a semaphore, need to make sure that the semaphore is live and therefore can be signalled, otherwise queue is stalled and cannot make forward progress. | QUEUE_FORWARD_PROGRESS | vkQueueSubmit vkQueueBindSparse vkQueuePresentKHR vkAcquireNextImageKHR | TODO | Create test |
 | Storage Buffer Alignment  | Storage Buffer offsets in BindDescriptorSets must agree with offset alignment device limit | INVALID_STORAGE_BUFFER_OFFSET | vkCmdBindDescriptorSets | TODO | Create test |
 | Uniform Buffer Alignment  | Uniform Buffer offsets in BindDescriptorSets must agree with offset alignment device limit | INVALID_UNIFORM_BUFFER_OFFSET | vkCmdBindDescriptorSets | TODO | Create test |
+| Independent Blending  | If independent blending is not enabled, all elements of pAttachments must be identical | INDEPENDENT_BLEND | vkCreateGraphicsPipelines | TODO | Create test |
+| Enabled Logic Operations  | If logic operations is not enabled, logicOpEnable must be VK_FALSE | DISABLED_LOGIC_OP | vkCreateGraphicsPipelines | TODO | Create test |
+| Valid Logic Operations  | If logicOpEnable is VK_TRUE, logicOp must be a valid VkLogicOp value | INVALID_LOGIC_OP | vkCreateGraphicsPipelines | TODO | Create test |
+| QueueFamilyIndex is Valid | Validates that QueueFamilyIndices are less an the number of QueueFamilies | INVALID_QUEUE_INDEX | vkCmdWaitEvents vkCmdPipelineBarrier vkCreateBuffer vkCreateImage | TODO | Create test |
+| Push Constants | Validate that the size of push constant ranges and updates does not exceed maxPushConstantSize | PUSH_CONSTANTS_ERROR | vkCreatePipelineLayout vkCmdPushConstants | TODO | Create test |
 | NA | Enum used for informational messages | NONE | | NA | None |
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | NA | None |
 | NA | Enum used when VK_LAYER_LUNARG_draw_state attempts to allocate memory for its own internal use and is unable to. | OUT_OF_MEMORY | | NA | None |
@@ -130,6 +140,12 @@ depends on the pair of pipeline stages involved.
 | Shader Specialization | Error if specialization entry data is not fully contained within the specialization data block. | BAD_SPECIALIZATION | vkCreateGraphicsPipelines vkCreateComputePipelines | TBD | NA |
 | Missing Descriptor | Flags error if shader attempts to use a descriptor binding not declared in the layout | MISSING_DESCRIPTOR | vkCreateGraphicsPipelines | CreatePipelineUniformBlockNotProvided | NA |
 | Missing Entrypoint | Flags error if specified entrypoint is not present in the shader module | MISSING_ENTRYPOINT | vkCreateGraphicsPipelines | TBD | NA |
+| Push constant out of range | Flags error if a member of a push constant block
+is not contained within a push constant range specified in the pipeline layout | PUSH_CONSTANT_OUT_OF_RANGE | vkCreateGraphicsPipelines | CreatePipelinePushContantsNotInLayout | NA |
+| Push constant not accessible from stage | Flags error if the push constant
+range containing a push constant block member is not accessible from the current
+shader stage. | PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE |
+vkCreateGraphicsPipelines | TBD | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 
 ### VK_LAYER_LUNARG_ShaderChecker Pending Work
@@ -188,6 +204,7 @@ DETAILS TABLE PENDING
 | Verify Correct Image Filter| Verifies that specified filter is valid | INVALID_FILTER | vkCmdBlitImage | TBD | NA |
 | Verify Correct Image Settings | Verifies that values are valid for a given resource or subresource | INVALID_IMAGE_RESOURCE | vkCmdPipelineBarrier | TBD | NA |
 | Verify Image Format Limits | Verifies that image creation parameters are with the device format limits | INVALID_FORMAT_LIMITS_VIOLATION | vkCreateImage | TBD | NA |
+| Verify Layout | Verifies the layouts are valid for this image operation | INVALID_LAYOUT | vkCreateImage vkCmdClearColorImage | TBD | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 
 ### VK_LAYER_LUNARG_image Pending Work
@@ -395,7 +412,7 @@ Note: The following platform-specific functions are not mentioned above, because
 - vkGetPhysicalDeviceWin32PresentationSupportKHR
 - vkCreateXcbSurfaceKHR
 - vkGetPhysicalDeviceXcbPresentationSupportKHR
-- vkCreateXlibSurfaceKHR 
+- vkCreateXlibSurfaceKHR
 - vkGetPhysicalDeviceXlibPresentationSupportKHR
 
 ### VK_LAYER_LUNARG_Swapchain Pending Work
@@ -404,6 +421,13 @@ Additional checks to be added to VK_LAYER_LUNARG_swapchain
  1. Check that the queue used for presenting was checked/valid during vkGetPhysicalDeviceSurfaceSupportKHR.
  2. One issue that has already come up is correct UsageFlags for WSI SwapChains and SurfaceProperties.
  3. Tons of other stuff including semaphore and synchronization validation.
+
+## VK_LAYER_GOOGLE_unique_objects
+
+### VK_LAYER_GOOGLE_unique_objects Overview
+
+The unique_objects is not a validation layer but a helper layer that assists with validation. The Vulkan specification allows objects that have non-unique handles. This makes tracking object lifetimes difficult in that it is unclear which object is being referenced upon deletion. The unique_objects layer addresses this by wrapping all objects with a unique object representation allowing proper object lifetime tracking. This layer does no validation on its own and may not be required for the proper operation of all layers or all platforms. One sign that it is needed is the appearance of many errors from the object_tracker layer indicating the use of previously destroyed objects. For optimal effectiveness this layer should be loaded last (to reside in the layer chain closest to the display driver and farthest from the application).
+
 
 ## General Pending Work
 A place to capture general validation work to be done. This includes new checks that don't clearly fit into the above layers.

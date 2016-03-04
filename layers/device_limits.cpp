@@ -45,18 +45,12 @@
 #include "device_limits.h"
 #include "vulkan/vk_layer.h"
 #include "vk_layer_config.h"
-#include "vulkan/vk_debug_marker_layer.h"
 #include "vk_enum_validate_helper.h"
 #include "vk_layer_table.h"
-#include "vk_layer_debug_marker_table.h"
 #include "vk_layer_data.h"
 #include "vk_layer_logging.h"
 #include "vk_layer_extension_utils.h"
 #include "vk_layer_utils.h"
-
-struct devExts {
-    bool debug_marker_enabled;
-};
 
 // This struct will be stored in a map hashed by the dispatchable object
 struct layer_data {
@@ -64,7 +58,6 @@ struct layer_data {
     std::vector<VkDebugReportCallbackEXT>               logging_callback;
     VkLayerDispatchTable                               *device_dispatch_table;
     VkLayerInstanceDispatchTable                       *instance_dispatch_table;
-    devExts                                             device_extensions;
     // Track state of each instance
     unique_ptr<INSTANCE_STATE>                          instanceState;
     unique_ptr<PHYSICAL_DEVICE_STATE>                   physicalDeviceState;
@@ -81,7 +74,6 @@ struct layer_data {
         report_data(nullptr),
         device_dispatch_table(nullptr),
         instance_dispatch_table(nullptr),
-        device_extensions(),
         instanceState(nullptr),
         physicalDeviceState(nullptr),
         actualPhysicalDeviceFeatures(),
@@ -407,22 +399,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(
     }
 }
 
-static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
-{
-    uint32_t i;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    my_data->device_extensions.debug_marker_enabled = false;
-
-    for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], DEBUG_MARKER_EXTENSION_NAME) == 0) {
-            /* Found a matching extension name, mark it enabled and init dispatch table*/
-            initDebugMarkerTable(device);
-            my_data->device_extensions.debug_marker_enabled = true;
-        }
-
-    }
-}
-
 // Verify that features have been queried and verify that requested features are available
 static VkBool32 validate_features_request(layer_data *phy_dev_data)
 {
@@ -446,7 +422,7 @@ static VkBool32 validate_features_request(layer_data *phy_dev_data)
     if (errors && (UNCALLED == phy_dev_data->physicalDeviceState->vkGetPhysicalDeviceFeaturesState)) {
         // If user didn't request features, notify them that they should
         // TODO: Verify this against the spec. I believe this is an invalid use of the API and should return an error
-        skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_INVALID_FEATURE_REQUESTED, "DL",
+        skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_INVALID_FEATURE_REQUESTED, "DL",
                 "You requested features that are unavailable on this device. You should first query feature availability by calling vkGetPhysicalDeviceFeatures().");
     }
     return skipCall;
@@ -509,7 +485,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
     layer_init_device_dispatch_table(*pDevice, my_device_data->device_dispatch_table, fpGetDeviceProcAddr);
     my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
     my_device_data->physicalDevice = gpu;
-    createDeviceRegisterExtensions(pCreateInfo, *pDevice);
 
     // Get physical device properties for this device
     phy_dev_data->instance_dispatch_table->GetPhysicalDeviceProperties(gpu, &(phy_dev_data->physDevPropertyMap[*pDevice]));
@@ -522,7 +497,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
     dispatch_key key = get_dispatch_key(device);
     layer_data *my_device_data = get_my_data_ptr(key, layer_data_map);
     my_device_data->device_dispatch_table->DestroyDevice(device, pAllocator);
-    tableDebugMarkerMap.erase(key);
     delete my_device_data->device_dispatch_table;
     layer_data_map.erase(key);
 }

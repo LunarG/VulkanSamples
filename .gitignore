@@ -17,6 +17,8 @@ demos/tri.dir/Debug/*
 demos/tri/Debug/*
 demos/Win32/Debug/*
 demos/xcb_nvidia.dir/*
+demos/smoke/HelpersDispatchTable.cpp
+demos/smoke/HelpersDispatchTable.h
 libs/Win32/Debug/*
 *.pyc
 *.vcproj

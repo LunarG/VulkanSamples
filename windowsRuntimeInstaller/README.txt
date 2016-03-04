@@ -19,7 +19,11 @@ To build the Installer:
           !define VERSION_BUILDNO
           !define PUBLISHER
 
-    4. Right click on the InstallerRT.nsi file and select "Compile NSIS Script".
+    4. Edit the CreateInstaller.sh file and replace SIGNFILE with your
+       command and necessary args for signing an executable. If you don't
+       wish to sign the uninstaller, you can comment out that line.
+
+    5. Run the CreateInstaller.sh script from a Cygwin bash command prompt.
        The Windows Vulkan Runtime Installer package file will be created in
        this folder. The name of the installer file is
        VulkanRT-<version>-Installer.exe.

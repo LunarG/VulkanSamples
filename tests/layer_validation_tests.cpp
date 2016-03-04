@@ -284,7 +284,7 @@ class VkLayerTest : public VkRenderFramework {
         this->app_info.applicationVersion = 1;
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
-        this->app_info.apiVersion = VK_API_VERSION;
+        this->app_info.apiVersion = VK_MAKE_VERSION(1, 0, 0);
 
         m_errorMonitor = new ErrorMonitor;
         InitFramework(instance_layer_names, device_layer_names,
@@ -2039,6 +2039,81 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
+TEST_F(VkLayerTest, InvalidPushConstants) {
+    // Hit push constant error cases:
+    // 1. Create PipelineLayout where push constant overstep maxPushConstantSize
+    // 2. Incorrectly set push constant size to 0
+    // 3. Incorrectly set push constant size to non-multiple of 4
+    // 4. Attempt push constant update that exceeds maxPushConstantSize
+    VkResult err;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreatePipelineLayout() call has push constants with offset ");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkPushConstantRange pc_range = {};
+    pc_range.size = 0xFFFFFFFFu;
+    pc_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pushConstantRangeCount = 1;
+    pipeline_layout_ci.pPushConstantRanges = &pc_range;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
+                                 &pipeline_layout);
+
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Error received was not 'vkCreatePipelineLayout() call has "
+                  "push constants with offset 0...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    // Now cause errors due to size 0 and non-4 byte aligned size
+    pc_range.size = 0;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreatePipelineLayout() call has push constant index 0 with size 0");
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
+                                 &pipeline_layout);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Error received was not 'vkCreatePipelineLayout() call has "
+                  "push constant index 0 with size 0...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    pc_range.size = 1;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreatePipelineLayout() call has push constant index 0 with size 1");
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
+                                 &pipeline_layout);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Error received was not 'vkCreatePipelineLayout() call has "
+                  "push constant index 0 with size 0...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    // Cause error due to bad size in vkCmdPushConstants() call
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCmdPushConstants() call has push constants with offset ");
+    pipeline_layout_ci.pushConstantRangeCount = 0;
+    pipeline_layout_ci.pPushConstantRanges = NULL;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
+                                 &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+    BeginCommandBuffer();
+    vkCmdPushConstants(m_commandBuffer->GetBufferHandle(), pipeline_layout,
+                       VK_SHADER_STAGE_VERTEX_BIT, 0, 0xFFFFFFFFu, NULL);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Error received was not 'vkCmdPushConstants() call has push "
+                  "constants with offset 0...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+}
+
 TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     // Test various desriptorSet errors with bad binding combinations
     VkResult err;
@@ -3720,6 +3795,33 @@ TEST_F(VkLayerTest, IdxBufferAlignmentError) {
     vkDestroyBuffer(m_device->device(), ib, NULL);
 }
 
+TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
+    // Create an out-of-range queueFamilyIndex
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreateBuffer has QueueFamilyIndex greater than");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    VkBufferCreateInfo buffCI = {};
+    buffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffCI.size = 1024;
+    buffCI.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    buffCI.queueFamilyIndexCount = 1;
+    // Introduce failure by specifying invalid queue_family_index
+    uint32_t qfi = 777;
+    buffCI.pQueueFamilyIndices = &qfi;
+
+    VkBuffer ib;
+    vkCreateBuffer(m_device->device(), &buffCI, NULL, &ib);
+
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive Error 'vkCreateBuffer() has "
+        "QueueFamilyIndex greater than...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+}
+
 TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB) {
     // Attempt vkCmdExecuteCommands w/ a primary cmd buffer (should only be
     // secondary)
@@ -4611,7 +4713,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw) {
 
     // TODO: verify that this matches layer
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_WARNING_BIT_EXT,
+        VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
         "vkCmdClearAttachments() issued on CB object ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5696,10 +5798,6 @@ TEST_F(VkLayerTest, CreatePipelineAttribMatrixType) {
     }
 }
 
-/*
- * Would work, but not supported by glslang! This is similar to the matrix case
-above.
- *
 TEST_F(VkLayerTest, CreatePipelineAttribArrayType)
 {
     m_errorMonitor->SetDesiredFailureMsg(~0u, "");
@@ -5763,7 +5861,6 @@ m_errorMonitor->GetFailureMsg();
         m_errorMonitor->DumpFailureMsgs();
     }
 }
-*/
 
 TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict) {
     m_errorMonitor->SetDesiredFailureMsg(
@@ -6028,6 +6125,57 @@ TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided) {
     /* should have generated an error -- pipeline layout does not
      * provide a uniform buffer in 0.0
      */
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive Error 'not declared in pipeline layout'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+}
+
+TEST_F(VkLayerTest, CreatePipelinePushConstantsNotInLayout) {
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "not declared in layout");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    char const *vsSource =
+        "#version 450\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(push_constant, std430) uniform foo { float x; } consts;\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   gl_Position = vec4(consts.x);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 450\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) out vec4 x;\n"
+        "void main(){\n"
+        "   x = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    /* set up CB 0; type is UNORM by default */
+    pipe.AddColorAttachment();
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    /* should have generated an error -- no push constant ranges provided! */
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive Error 'not declared in pipeline layout'";
         m_errorMonitor->DumpFailureMsgs();

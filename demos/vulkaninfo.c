@@ -579,7 +579,7 @@ static void app_create_instance(struct app_instance *inst) {
         .applicationVersion = 1,
         .pEngineName = APP_SHORT_NAME,
         .engineVersion = 1,
-        .apiVersion = VK_API_VERSION,
+        .apiVersion = VK_MAKE_VERSION(1, 0, 0),
     };
     VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,

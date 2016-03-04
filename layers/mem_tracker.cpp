@@ -77,6 +77,7 @@ struct layer_data {
     // Images and Buffers are 2 objects that can have memory bound to them so they get special treatment
     unordered_map<uint64_t,            MT_OBJ_BINDING_INFO>      imageMap;
     unordered_map<uint64_t,            MT_OBJ_BINDING_INFO>      bufferMap;
+    unordered_map<VkBufferView, VkBufferViewCreateInfo> bufferViewMap;
 
     layer_data() :
         report_data(nullptr),
@@ -697,7 +698,7 @@ freeMemObjInfo(
     if (pInfo) {
         if (pInfo->allocInfo.allocationSize == 0 && !internal) {
             // TODO: Verify against Valid Use section
-            skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t) mem, __LINE__, MEMTRACK_INVALID_MEM_OBJ, "MEM",
+            skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t) mem, __LINE__, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                             "Attempting to free memory associated with a Persistent Image, %#" PRIxLEAST64 ", "
                             "this should not be explicitly freed\n", (uint64_t) mem);
         } else {
@@ -812,7 +813,7 @@ set_mem_binding(
     // Handle NULL case separately, just clear previous binding & decrement reference
     if (mem == VK_NULL_HANDLE) {
         // TODO: Verify against Valid Use section of spec.
-        skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, type, handle, __LINE__, MEMTRACK_INVALID_MEM_OBJ, "MEM",
+        skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, type, handle, __LINE__, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                        "In %s, attempting to Bind Obj(%#" PRIxLEAST64 ") to NULL", apiName, handle);
     } else {
         MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(my_data, handle, type);
@@ -1242,7 +1243,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(
             pInfo = &(*ii).second;
             if (pInfo->allocInfo.allocationSize != 0) {
                 // Valid Usage: All child objects created on device must have been destroyed prior to destroying device
-                skipCall |= log_msg(my_device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t) pInfo->mem, __LINE__, MEMTRACK_MEMORY_LEAK, "MEM",
+                skipCall |= log_msg(my_device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t) pInfo->mem, __LINE__, MEMTRACK_MEMORY_LEAK, "MEM",
                                  "Mem Object %" PRIu64 " has not been freed. You should clean up this memory by calling "
                                  "vkFreeMemory(%" PRIu64 ") prior to vkDestroyDevice().", (uint64_t)(pInfo->mem), (uint64_t)(pInfo->mem));
             }
@@ -1532,7 +1533,7 @@ VkBool32 deleteMemRanges(
     if (mem_element != my_data->memObjMap.end()) {
         if (!mem_element->second.memRange.size) {
             // Valid Usage: memory must currently be mapped
-            skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)mem, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
+            skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)mem, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
                                "Unmapping Memory without memory being mapped: mem obj %#" PRIxLEAST64, (uint64_t)mem);
         }
         mem_element->second.memRange.size = 0;
@@ -1621,6 +1622,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUnmapMemory(
 VkBool32
 validateMemoryIsMapped(
     layer_data                *my_data,
+    const char                *funcName,
     uint32_t                   memRangeCount,
     const VkMappedMemoryRange *pMemRanges)
 {
@@ -1628,10 +1630,33 @@ validateMemoryIsMapped(
     for (uint32_t i = 0; i < memRangeCount; ++i) {
         auto mem_element = my_data->memObjMap.find(pMemRanges[i].memory);
         if (mem_element != my_data->memObjMap.end()) {
-            if (mem_element->second.memRange.offset > pMemRanges[i].offset ||
-                (mem_element->second.memRange.offset + mem_element->second.memRange.size) < (pMemRanges[i].offset + pMemRanges[i].size)) {
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)pMemRanges[i].memory,
-                                    __LINE__, MEMTRACK_INVALID_MAP, "MEM", "Memory must be mapped before it can be flushed or invalidated.");
+            if (mem_element->second.memRange.offset > pMemRanges[i].offset) {
+                skipCall |= log_msg(
+                    my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                    (uint64_t)pMemRanges[i].memory, __LINE__,
+                    MEMTRACK_INVALID_MAP, "MEM",
+                    "%s: Flush/Invalidate offset (" PRINTF_SIZE_T_SPECIFIER
+                    ") is less than Memory Object's offset "
+                    "(" PRINTF_SIZE_T_SPECIFIER ").",
+                    funcName, pMemRanges[i].offset,
+                    mem_element->second.memRange.offset);
+            }
+            if ((mem_element->second.memRange.size != VK_WHOLE_SIZE) &&
+                ((mem_element->second.memRange.offset +
+                  mem_element->second.memRange.size) <
+                 (pMemRanges[i].offset + pMemRanges[i].size))) {
+                skipCall |= log_msg(
+                    my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                    (uint64_t)pMemRanges[i].memory, __LINE__,
+                    MEMTRACK_INVALID_MAP, "MEM",
+                    "%s: Flush/Invalidate upper-bound (" PRINTF_SIZE_T_SPECIFIER
+                    ") exceeds the Memory Object's upper-bound "
+                    "(" PRINTF_SIZE_T_SPECIFIER ").",
+                    funcName, pMemRanges[i].offset + pMemRanges[i].size,
+                    mem_element->second.memRange.offset +
+                        mem_element->second.memRange.size);
             }
         }
     }
@@ -1682,7 +1707,7 @@ VK_LAYER_EXPORT VkResult VKAPI_CALL vkFlushMappedMemoryRanges(
 
     loader_platform_thread_lock_mutex(&globalLock);
     skipCall  |= validateAndCopyNoncoherentMemoryToDriver(my_data, memRangeCount, pMemRanges);
-    skipCall  |= validateMemoryIsMapped(my_data, memRangeCount, pMemRanges);
+    skipCall  |= validateMemoryIsMapped(my_data, "vkFlushMappedMemoryRanges", memRangeCount, pMemRanges);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall ) {
         result = my_data->device_dispatch_table->FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
@@ -1700,7 +1725,7 @@ VK_LAYER_EXPORT VkResult VKAPI_CALL vkInvalidateMappedMemoryRanges(
     layer_data *my_data   = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
     loader_platform_thread_lock_mutex(&globalLock);
-    skipCall |= validateMemoryIsMapped(my_data, memRangeCount, pMemRanges);
+    skipCall |= validateMemoryIsMapped(my_data, "vkInvalidateMappedMemoryRanges", memRangeCount, pMemRanges);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         result = my_data->device_dispatch_table->InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
@@ -1892,32 +1917,58 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
     loader_platform_thread_lock_mutex(&globalLock);
 
     for (uint32_t i = 0; i < bindInfoCount; i++) {
+        const VkBindSparseInfo *bindInfo = &pBindInfo[i];
         // Track objects tied to memory
-        for (uint32_t j = 0; j < pBindInfo[i].bufferBindCount; j++) {
-            for (uint32_t k = 0; k < pBindInfo[i].pBufferBinds[j].bindCount; k++) {
+        for (uint32_t j = 0; j < bindInfo->bufferBindCount; j++) {
+            for (uint32_t k = 0; k < bindInfo->pBufferBinds[j].bindCount; k++) {
                 if (set_sparse_mem_binding(my_data, queue,
-                            pBindInfo[i].pBufferBinds[j].pBinds[k].memory,
-                            (uint64_t) pBindInfo[i].pBufferBinds[j].buffer,
+                            bindInfo->pBufferBinds[j].pBinds[k].memory,
+                            (uint64_t) bindInfo->pBufferBinds[j].buffer,
                             VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkQueueBindSparse"))
                     skipCall = VK_TRUE;
             }
         }
-        for (uint32_t j = 0; j < pBindInfo[i].imageOpaqueBindCount; j++) {
-            for (uint32_t k = 0; k < pBindInfo[i].pImageOpaqueBinds[j].bindCount; k++) {
+        for (uint32_t j = 0; j < bindInfo->imageOpaqueBindCount; j++) {
+            for (uint32_t k = 0; k < bindInfo->pImageOpaqueBinds[j].bindCount; k++) {
                 if (set_sparse_mem_binding(my_data, queue,
-                            pBindInfo[i].pImageOpaqueBinds[j].pBinds[k].memory,
-                            (uint64_t) pBindInfo[i].pImageOpaqueBinds[j].image,
+                            bindInfo->pImageOpaqueBinds[j].pBinds[k].memory,
+                            (uint64_t) bindInfo->pImageOpaqueBinds[j].image,
                             VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkQueueBindSparse"))
                     skipCall = VK_TRUE;
             }
         }
-        for (uint32_t j = 0; j < pBindInfo[i].imageBindCount; j++) {
-            for (uint32_t k = 0; k < pBindInfo[i].pImageBinds[j].bindCount; k++) {
+        for (uint32_t j = 0; j < bindInfo->imageBindCount; j++) {
+            for (uint32_t k = 0; k < bindInfo->pImageBinds[j].bindCount; k++) {
                 if (set_sparse_mem_binding(my_data, queue,
-                            pBindInfo[i].pImageBinds[j].pBinds[k].memory,
-                            (uint64_t) pBindInfo[i].pImageBinds[j].image,
+                            bindInfo->pImageBinds[j].pBinds[k].memory,
+                            (uint64_t) bindInfo->pImageBinds[j].image,
                             VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkQueueBindSparse"))
                     skipCall = VK_TRUE;
+            }
+        }
+        // Validate semaphore state
+        for (uint32_t i = 0; i < bindInfo->waitSemaphoreCount; i++) {
+            VkSemaphore sem = bindInfo->pWaitSemaphores[i];
+
+            if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {
+                if (my_data->semaphoreMap[sem] != MEMTRACK_SEMAPHORE_STATE_SIGNALLED) {
+                    skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, (uint64_t) sem,
+                            __LINE__, MEMTRACK_NONE, "SEMAPHORE",
+                            "vkQueueBindSparse: Semaphore must be in signaled state before passing to pWaitSemaphores");
+                }
+                my_data->semaphoreMap[sem] = MEMTRACK_SEMAPHORE_STATE_WAIT;
+            }
+        }
+        for (uint32_t i = 0; i < bindInfo->signalSemaphoreCount; i++) {
+            VkSemaphore sem = bindInfo->pSignalSemaphores[i];
+
+            if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {
+                if (my_data->semaphoreMap[sem] != MEMTRACK_SEMAPHORE_STATE_UNSET) {
+                    skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, (uint64_t) sem,
+                            __LINE__, MEMTRACK_NONE, "SEMAPHORE",
+                            "vkQueueBindSparse: Semaphore must not be currently signaled or in a wait state");
+                }
+                my_data->semaphoreMap[sem] = MEMTRACK_SEMAPHORE_STATE_SIGNALLED;
             }
         }
     }
@@ -1927,6 +1978,21 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
     if (VK_FALSE == skipCall) {
         result = my_data->device_dispatch_table->QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
     }
+
+    // Update semaphore state
+    loader_platform_thread_lock_mutex(&globalLock);
+    for (uint32_t bind_info_idx = 0; bind_info_idx < bindInfoCount; bind_info_idx++) {
+        const VkBindSparseInfo *bindInfo = &pBindInfo[bind_info_idx];
+        for (uint32_t i = 0; i < bindInfo->waitSemaphoreCount; i++) {
+            VkSemaphore sem = bindInfo->pWaitSemaphores[i];
+
+            if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {
+                my_data->semaphoreMap[sem] = MEMTRACK_SEMAPHORE_STATE_UNSET;
+            }
+        }
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+
     return result;
 }
 
@@ -2162,9 +2228,25 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBufferView(
         validate_buffer_usage_flags(my_data, device, pCreateInfo->buffer,
                     VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT,
                     VK_FALSE, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
+        my_data->bufferViewMap[*pView] = *pCreateInfo;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyBufferView(VkDevice device, VkBufferView bufferView,
+                    const VkAllocationCallbacks *pAllocator) {
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    my_data->device_dispatch_table->DestroyBufferView(device, bufferView,
+                                                      pAllocator);
+    loader_platform_thread_lock_mutex(&globalLock);
+    auto item = my_data->bufferViewMap.find(bufferView);
+    if (item != my_data->bufferViewMap.end()) {
+        my_data->bufferViewMap.erase(item);
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(
@@ -2465,16 +2547,34 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUpdateDescriptorSets(
     const VkCopyDescriptorSet*                  pDescriptorCopies)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    uint32_t j = 0;
     for (uint32_t i = 0; i < descriptorWriteCount; ++i) {
         if (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
-            my_data->descriptorSetMap[pDescriptorWrites[i].dstSet].images.push_back(pDescriptorWrites[i].pImageInfo->imageView);
+            for (j = 0; j < pDescriptorWrites[i].descriptorCount; ++j) {
+                my_data->descriptorSetMap[pDescriptorWrites[i].dstSet]
+                    .images.push_back(
+                        pDescriptorWrites[i].pImageInfo[j].imageView);
+            }
         } else if (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER ) {
-            // TODO: Handle texel buffer writes
+            for (j = 0; j < pDescriptorWrites[i].descriptorCount; ++j) {
+                my_data->descriptorSetMap[pDescriptorWrites[i].dstSet]
+                    .buffers.push_back(
+                        my_data
+                            ->bufferViewMap[pDescriptorWrites[i]
+                                                .pTexelBufferView[j]]
+                            .buffer);
+            }
         } else if (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
                    pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
-            my_data->descriptorSetMap[pDescriptorWrites[i].dstSet].buffers.push_back(pDescriptorWrites[i].pBufferInfo->buffer);
+            for (j = 0; j < pDescriptorWrites[i].descriptorCount; ++j) {
+                my_data->descriptorSetMap[pDescriptorWrites[i].dstSet]
+                    .buffers.push_back(
+                        pDescriptorWrites[i].pBufferInfo[j].buffer);
+            }
         }
     }
+    // TODO : Need to handle descriptor copies. Will wait on this until merge w/
+    // draw_state
     my_data->device_dispatch_table->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
 }
 
@@ -3419,6 +3519,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkDestroyFence;
     if (!strcmp(funcName, "vkDestroyBuffer"))
         return (PFN_vkVoidFunction) vkDestroyBuffer;
+    if (!strcmp(funcName, "vkDestroyBufferView"))
+        return (PFN_vkVoidFunction)vkDestroyBufferView;
     if (!strcmp(funcName, "vkDestroyImage"))
         return (PFN_vkVoidFunction) vkDestroyImage;
     if (!strcmp(funcName, "vkBindBufferMemory"))

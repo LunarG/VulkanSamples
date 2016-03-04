@@ -110,3 +110,6 @@ else()
     add_executable(cube WIN32 cube.c ${CMAKE_BINARY_DIR}/demos/cube-vert.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv)
     target_link_libraries(cube ${LIBRARIES} )
 endif()
+
+add_subdirectory(smoke)
+
