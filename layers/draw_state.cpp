@@ -2525,97 +2525,6 @@ static VkBool32 validateSampler(const layer_data* my_data, const VkSampler* pSam
     return skipCall;
 }
 
-// Set the layout on the global level
-void SetLayout(layer_data *my_data, ImageSubresourcePair imgpair,
-               const VkImageLayout &layout) {
-    VkImage &image = imgpair.image;
-    // TODO (mlentine): Maybe set format if new? Not used atm.
-    my_data->imageLayoutMap[imgpair].layout = layout;
-    // TODO (mlentine): Maybe make vector a set?
-    auto subresource =
-        std::find(my_data->imageSubresourceMap[image].begin(),
-                  my_data->imageSubresourceMap[image].end(), imgpair);
-    if (subresource == my_data->imageSubresourceMap[image].end()) {
-        my_data->imageSubresourceMap[image].push_back(imgpair);
-    }
-}
-
-void SetLayout(layer_data *my_data, VkImage image,
-               const VkImageLayout &layout) {
-    ImageSubresourcePair imgpair = {image, false, VkImageSubresource()};
-    SetLayout(my_data, imgpair, layout);
-}
-
-void SetLayout(layer_data *my_data, VkImage image, VkImageSubresource range,
-               const VkImageLayout &layout) {
-    ImageSubresourcePair imgpair = {image, true, range};
-    SetLayout(my_data, imgpair, layout);
-}
-
-// Set the layout on the cmdbuf level
-void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, ImageSubresourcePair imgpair,
-               const IMAGE_CMD_BUF_NODE &node) {
-    pCB->imageLayoutMap[imgpair] = node;
-    // TODO (mlentine): Maybe make vector a set?
-    auto subresource =
-        std::find(pCB->imageSubresourceMap[image].begin(),
-                  pCB->imageSubresourceMap[image].end(), imgpair);
-    if (subresource == pCB->imageSubresourceMap[image].end()) {
-        pCB->imageSubresourceMap[image].push_back(imgpair);
-    }
-}
-
-void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, ImageSubresourcePair imgpair,
-               const VkImageLayout &layout) {
-    pCB->imageLayoutMap[imgpair].layout = layout;
-    // TODO (mlentine): Maybe make vector a set?
-    assert(std::find(pCB->imageSubresourceMap[image].begin(),
-                     pCB->imageSubresourceMap[image].end(),
-                     imgpair) != pCB->imageSubresourceMap[image].end());
-}
-
-void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image,
-               const IMAGE_CMD_BUF_NODE &node) {
-    ImageSubresourcePair imgpair = {image, false, VkImageSubresource()};
-    SetLayout(pCB, image, imgpair, node);
-}
-
-void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, VkImageSubresource range,
-               const IMAGE_CMD_BUF_NODE &node) {
-    ImageSubresourcePair imgpair = {image, true, range};
-    SetLayout(pCB, image, imgpair, node);
-}
-
-void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image,
-               const VkImageLayout &layout) {
-    ImageSubresourcePair imgpair = {image, false, VkImageSubresource()};
-    SetLayout(pCB, image, imgpair, layout);
-}
-
-void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, VkImageSubresource range,
-               const VkImageLayout &layout) {
-    ImageSubresourcePair imgpair = {image, true, range};
-    SetLayout(pCB, image, imgpair, layout);
-}
-
-void SetLayout(const layer_data *dev_data, GLOBAL_CB_NODE *pCB,
-               VkImageView imageView, const VkImageLayout &layout) {
-    auto image_view_data = dev_data->imageViewMap.find(imageView);
-    assert(image_view_data != dev_data->imageViewMap.end());
-    const VkImage &image = image_view_data->second->image;
-    const VkImageSubresourceRange &subRange =
-        image_view_data->second->subresourceRange;
-    // TODO: Do not iterate over every possibility - consolidate where possible
-    for (uint32_t j = 0; j < subRange.levelCount; j++) {
-        uint32_t level = subRange.baseMipLevel + j;
-        for (uint32_t k = 0; k < subRange.layerCount; k++) {
-            uint32_t layer = subRange.baseArrayLayer + k;
-            VkImageSubresource sub = {subRange.aspectMask, level, layer};
-            SetLayout(pCB, image, sub, layout);
-        }
-    }
-}
-
 // find layout(s) on the cmd buf level
 bool FindLayout(const GLOBAL_CB_NODE *pCB, VkImage image,
                 VkImageSubresource range, IMAGE_CMD_BUF_NODE &node) {
@@ -2674,6 +2583,105 @@ bool FindLayouts(const layer_data *my_data, VkImage image,
         }
     }
     return true;
+}
+
+
+// Set the layout on the global level
+void SetLayout(layer_data *my_data, ImageSubresourcePair imgpair,
+               const VkImageLayout &layout) {
+    VkImage &image = imgpair.image;
+    // TODO (mlentine): Maybe set format if new? Not used atm.
+    my_data->imageLayoutMap[imgpair].layout = layout;
+    // TODO (mlentine): Maybe make vector a set?
+    auto subresource =
+        std::find(my_data->imageSubresourceMap[image].begin(),
+                  my_data->imageSubresourceMap[image].end(), imgpair);
+    if (subresource == my_data->imageSubresourceMap[image].end()) {
+        my_data->imageSubresourceMap[image].push_back(imgpair);
+    }
+}
+
+void SetLayout(layer_data *my_data, VkImage image,
+               const VkImageLayout &layout) {
+    ImageSubresourcePair imgpair = {image, false, VkImageSubresource()};
+    SetLayout(my_data, imgpair, layout);
+}
+
+void SetLayout(layer_data *my_data, VkImage image, VkImageSubresource range,
+               const VkImageLayout &layout) {
+    ImageSubresourcePair imgpair = {image, true, range};
+    SetLayout(my_data, imgpair, layout);
+}
+
+// Set the layout on the cmdbuf level
+void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, ImageSubresourcePair imgpair,
+               const IMAGE_CMD_BUF_NODE &node) {
+    pCB->imageLayoutMap[imgpair] = node;
+    // TODO (mlentine): Maybe make vector a set?
+    auto subresource =
+        std::find(pCB->imageSubresourceMap[image].begin(),
+                  pCB->imageSubresourceMap[image].end(), imgpair);
+    if (subresource == pCB->imageSubresourceMap[image].end()) {
+        pCB->imageSubresourceMap[image].push_back(imgpair);
+    }
+}
+
+void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, ImageSubresourcePair imgpair,
+               const VkImageLayout &layout) {
+    // TODO (mlentine): Maybe make vector a set?
+    if(std::find(pCB->imageSubresourceMap[image].begin(),
+                 pCB->imageSubresourceMap[image].end(),
+                 imgpair) != pCB->imageSubresourceMap[image].end()) {
+        pCB->imageLayoutMap[imgpair].layout = layout;
+    } else {
+        // TODO (mlentine): Could be expensive and might need to be removed.
+        assert(imgpair.hasSubresource);
+        IMAGE_CMD_BUF_NODE node;
+        FindLayout(pCB, image, imgpair.subresource, node);
+        SetLayout(pCB, image, imgpair, {node.initialLayout, layout});
+    }
+}
+
+void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image,
+               const IMAGE_CMD_BUF_NODE &node) {
+    ImageSubresourcePair imgpair = {image, false, VkImageSubresource()};
+    SetLayout(pCB, image, imgpair, node);
+}
+
+void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, VkImageSubresource range,
+               const IMAGE_CMD_BUF_NODE &node) {
+    ImageSubresourcePair imgpair = {image, true, range};
+    SetLayout(pCB, image, imgpair, node);
+}
+
+void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image,
+               const VkImageLayout &layout) {
+    ImageSubresourcePair imgpair = {image, false, VkImageSubresource()};
+    SetLayout(pCB, image, imgpair, layout);
+}
+
+void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, VkImageSubresource range,
+               const VkImageLayout &layout) {
+    ImageSubresourcePair imgpair = {image, true, range};
+    SetLayout(pCB, image, imgpair, layout);
+}
+
+void SetLayout(const layer_data *dev_data, GLOBAL_CB_NODE *pCB,
+               VkImageView imageView, const VkImageLayout &layout) {
+    auto image_view_data = dev_data->imageViewMap.find(imageView);
+    assert(image_view_data != dev_data->imageViewMap.end());
+    const VkImage &image = image_view_data->second->image;
+    const VkImageSubresourceRange &subRange =
+        image_view_data->second->subresourceRange;
+    // TODO: Do not iterate over every possibility - consolidate where possible
+    for (uint32_t j = 0; j < subRange.levelCount; j++) {
+        uint32_t level = subRange.baseMipLevel + j;
+        for (uint32_t k = 0; k < subRange.layerCount; k++) {
+            uint32_t layer = subRange.baseArrayLayer + k;
+            VkImageSubresource sub = {subRange.aspectMask, level, layer};
+            SetLayout(pCB, image, sub, layout);
+        }
+    }
 }
 
 // Verify that given imageView is valid
