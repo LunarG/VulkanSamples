@@ -66,6 +66,13 @@
 #include "vk_layer_extension_utils.h"
 #include "vk_layer_utils.h"
 
+#if defined __ANDROID__
+#include <android/log.h>
+#define LOGCONSOLE(...) ((void)__android_log_print(ANDROID_LOG_INFO, "DS", __VA_ARGS__))
+#else
+#define LOGCONSOLE(...) printf(__VA_ARGS__)
+#endif
+
 using std::unordered_map;
 using std::unordered_set;
 
@@ -129,6 +136,24 @@ struct layer_data {
 
     layer_data() : report_data(nullptr), device_dispatch_table(nullptr), instance_dispatch_table(nullptr), device_extensions(){};
 };
+
+static const VkLayerProperties ds_global_layers[] = {{
+    "VK_LAYER_LUNARG_draw_state", VK_API_VERSION, 1, "LunarG Validation Layer",
+}};
+
+template <class TCreateInfo> void ValidateLayerOrdering(const TCreateInfo &createInfo) {
+    bool foundLayer = false;
+    for (uint32_t i = 0; i < createInfo.enabledLayerCount; ++i) {
+        if (!strcmp(createInfo.ppEnabledLayerNames[i], ds_global_layers[0].layerName)) {
+            foundLayer = true;
+        }
+        // This has to be logged to console as we don't have a callback at this point.
+        if (!foundLayer && !strcmp(createInfo.ppEnabledLayerNames[0], "VK_LAYER_GOOGLE_unique_objects")) {
+            LOGCONSOLE("Cannot activate layer VK_LAYER_GOOGLE_unique_objects prior to activating %s.",
+                       ds_global_layers[0].layerName);
+        }
+    }
+}
 
 // Code imported from shader_checker
 static void build_def_index(shader_module *);
@@ -3738,6 +3763,8 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCall
 
     init_draw_state(my_data, pAllocator);
 
+    ValidateLayerOrdering(*pCreateInfo);
+
     return result;
 }
 
@@ -3841,6 +3868,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
         memset(&my_device_data->physDevProperties.features, 0, sizeof(VkPhysicalDeviceFeatures));
     }
     loader_platform_thread_unlock_mutex(&globalLock);
+
+    ValidateLayerOrdering(*pCreateInfo);
+
     return result;
 }
 
@@ -3875,15 +3905,12 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,
     return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);
 }
 
-static const VkLayerProperties ds_global_layers[] = {{
-    "VK_LAYER_LUNARG_draw_state", VK_API_VERSION, 1, "LunarG Validation Layer",
-}};
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
     return util_GetLayerProperties(ARRAY_SIZE(ds_global_layers), ds_global_layers, pCount, pProperties);
 }
 
+// TODO: Why does this exist - can we just use global?
 static const VkLayerProperties ds_device_layers[] = {{
     "VK_LAYER_LUNARG_draw_state", VK_API_VERSION, 1, "LunarG Validation Layer",
 }};
