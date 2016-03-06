@@ -2,8 +2,8 @@ find_package(PythonInterp 3 REQUIRED)
 find_package(Threads REQUIRED)
 
 macro(generate_dispatch_table out)
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${out}
-        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/generate-dispatch-table ${CMAKE_CURRENT_SOURCE_DIR}/${out}
+    add_custom_command(OUTPUT ${out}
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/generate-dispatch-table ${out}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/generate-dispatch-table
         )
 endmacro()
