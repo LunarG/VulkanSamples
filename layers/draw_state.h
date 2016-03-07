@@ -371,6 +371,10 @@ class FENCE_NODE : public BASE_NODE {
     vector<VkCommandBuffer> cmdBuffers;
     bool needsSignaled;
     VkFence priorFence;
+
+    // Default constructor
+    FENCE_NODE() : queue(NULL), needsSignaled(VK_FALSE), priorFence(NULL) {};
+
 };
 
 class SEMAPHORE_NODE : public BASE_NODE {
