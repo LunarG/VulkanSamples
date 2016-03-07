@@ -67,13 +67,13 @@ if (WIN32)
                          IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/${BUILDTGT_DIR}/SPIRV/Debug/SPIRV.lib")
 else ()
    set_target_properties(glslang PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/install/lib/libglslang.a")
+                         IMPORTED_LOCATION       "${GLSLANG_LIB}")
    set_target_properties(OGLCompiler PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/install/lib/libOGLCompiler.a")
+                         IMPORTED_LOCATION       "${OGLCompiler_LIB}")
    set_target_properties(OSDependent PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/install/lib/libOSDependent.a")
+                         IMPORTED_LOCATION       "${OSDependent_LIB}")
    set_target_properties(SPIRV PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/install/lib/libSPIRV.a")
+                         IMPORTED_LOCATION       "${SPIRV_LIB}")
 endif()
 
 include_directories(
