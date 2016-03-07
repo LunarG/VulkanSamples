@@ -5827,9 +5827,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                     skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t) commandBuffer, __LINE__, DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT, "DS",
                             "Attempting to bind %u descriptorSets with %u dynamic descriptors, but dynamicOffsetCount is %u. It should exactly match the number of dynamic descriptors.", setCount, totalDynamicDescriptors, dynamicOffsetCount);
                 }
-                if (dynamicOffsetCount) {
-                    // Save dynamicOffsets bound to this CB
-                    pCB->dynamicOffsets.assign(pDynamicOffsets, pDynamicOffsets + dynamicOffsetCount);
+                // Save dynamicOffsets bound to this CB
+                for (uint32_t i = 0; i < dynamicOffsetCount; i++) {
+                    pCB->dynamicOffsets.emplace_back(pDynamicOffsets[i]);
                 }
             }
         } else {
