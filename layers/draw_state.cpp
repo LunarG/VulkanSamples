@@ -491,6 +491,12 @@ static char *describe_type(char *dst, shader_module const *src, unsigned type) {
     }
     case spv::OpTypeSampler:
         return dst + sprintf(dst, "sampler");
+    case spv::OpTypeSampledImage:
+        dst += sprintf(dst, "sampler+");
+        return describe_type(dst, src, insn.word(2));
+    case spv::OpTypeImage:
+        dst += sprintf(dst, "image(dim=%u, sampled=%u)", insn.word(3), insn.word(7));
+        return dst;
     default:
         return dst + sprintf(dst, "oddtype");
     }
@@ -1251,8 +1257,8 @@ static bool validate_push_constant_block_against_pipeline(layer_data *my_data, V
                             if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                         /* dev */ 0, __LINE__, SHADER_CHECKER_PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE, "SC",
                                         "Push constant range covering variable starting at "
-                                        "offset %u not accessible from %s stage",
-                                        offset, shader_stage_attribs[get_shader_stage_id(stage)].name)) {
+                                        "offset %u not accessible from stage %s",
+                                        offset, string_VkShaderStageFlagBits(stage))) {
                                 pass = false;
                             }
                         }
@@ -1296,16 +1302,27 @@ static bool validate_push_constant_usage(layer_data *my_data, VkDevice dev,
 
 // For given pipelineLayout verify that the setLayout at slot.first
 //  has the requested binding at slot.second
-static bool has_descriptor_binding(layer_data *my_data, vector<VkDescriptorSetLayout> *pipelineLayout, descriptor_slot_t slot) {
+static bool has_descriptor_binding(layer_data *my_data, vector<VkDescriptorSetLayout> *pipelineLayout, descriptor_slot_t slot,
+                                   VkDescriptorType &type, VkShaderStageFlags &stage_flags) {
+    type = VkDescriptorType(0);
+    stage_flags = VkShaderStageFlags(0);
+
     if (!pipelineLayout)
         return false;
 
     if (slot.first >= pipelineLayout->size())
         return false;
 
-    const auto &bindingMap = my_data->descriptorSetLayoutMap[(*pipelineLayout)[slot.first]]->bindingToIndexMap;
+    auto const layout_node = my_data->descriptorSetLayoutMap[(*pipelineLayout)[slot.first]];
 
-    return (bindingMap.find(slot.second) != bindingMap.end());
+    auto bindingIt = layout_node->bindingToIndexMap.find(slot.second);
+    if (bindingIt == layout_node->bindingToIndexMap.end())
+        return false;
+
+    type = layout_node->descriptorTypes[slot.second];
+    stage_flags = layout_node->stageFlags[slot.second];
+
+    return true;
 }
 
 // Block of code at start here for managing/tracking Pipeline state that this layer cares about
@@ -1575,6 +1592,75 @@ static VkBool32 validate_specialization_offsets(layer_data *my_data, VkPipelineS
     return pass;
 }
 
+static bool descriptor_type_match(layer_data *my_data, shader_module const *module, uint32_t type_id,
+                                  VkDescriptorType descriptor_type) {
+    auto type = module->get_def(type_id);
+
+    /* Strip off any array or ptrs */
+    /* TODO: if we see an array type here, we should make use of it in order to
+     * validate the number of descriptors actually required to be set in the
+     * API.
+     */
+    while (type.opcode() == spv::OpTypeArray || type.opcode() == spv::OpTypePointer) {
+        type = module->get_def(type.word(type.opcode() == spv::OpTypeArray ? 2 : 3));
+    }
+
+    switch (type.opcode()) {
+    case spv::OpTypeStruct: {
+        for (auto insn : *module) {
+            if (insn.opcode() == spv::OpDecorate && insn.word(1) == type.word(1)) {
+                if (insn.word(2) == spv::DecorationBlock) {
+                    return descriptor_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
+                           descriptor_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+                } else if (insn.word(2) == spv::DecorationBufferBlock) {
+                    return descriptor_type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
+                           descriptor_type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+                }
+            }
+        }
+
+        /* Invalid */
+        return false;
+    }
+
+    case spv::OpTypeSampler:
+        return descriptor_type == VK_DESCRIPTOR_TYPE_SAMPLER;
+
+    case spv::OpTypeSampledImage:
+        return descriptor_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+    case spv::OpTypeImage: {
+        /* Many descriptor types backing image types-- depends on dimension
+         * and whether the image will be used with a sampler. SPIRV for
+         * Vulkan requires that sampled be 1 or 2 -- leaving the decision to
+         * runtime is unacceptable.
+         */
+        auto dim = type.word(3);
+        auto sampled = type.word(7);
+
+        if (dim == spv::DimSubpassData) {
+            return descriptor_type == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+        } else if (dim == spv::DimBuffer) {
+            if (sampled == 1) {
+                return descriptor_type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+            } else {
+                return descriptor_type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+            }
+        } else if (sampled == 1) {
+            return descriptor_type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        } else {
+            return descriptor_type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        }
+    }
+
+    /* We shouldn't really see any other junk types -- but if we do, they're
+     * a mismatch.
+     */
+    default:
+        return false; /* Mismatch */
+    }
+}
+
 // Validate that the shaders used by the given pipeline
 //  As a side effect this function also records the sets that are actually used by the pipeline
 static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE *pPipeline) {
@@ -1614,7 +1700,8 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                 if (entrypoints[stage_id] == module->end()) {
                     if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                 /*dev*/ 0, __LINE__, SHADER_CHECKER_MISSING_ENTRYPOINT, "SC",
-                                "No entrypoint found named `%s` for stages %u", pStage->pName, pStage->stage)) {
+                                "No entrypoint found named `%s` for stage %s", pStage->pName,
+                                string_VkShaderStageFlagBits(pStage->stage))) {
                         pass = VK_FALSE;
                     }
                 }
@@ -1636,7 +1723,9 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                     pPipeline->active_sets.insert(it->first.first);
 
                     /* find the matching binding */
-                    auto found = has_descriptor_binding(my_data, layouts, it->first);
+                    VkDescriptorType descriptor_type;
+                    VkShaderStageFlags descriptor_stage_flags;
+                    auto found = has_descriptor_binding(my_data, layouts, it->first, descriptor_type, descriptor_stage_flags);
 
                     if (!found) {
                         char type_name[1024];
@@ -1645,6 +1734,28 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                                     /*dev*/ 0, __LINE__, SHADER_CHECKER_MISSING_DESCRIPTOR, "SC",
                                     "Shader uses descriptor slot %u.%u (used as type `%s`) but not declared in pipeline layout",
                                     it->first.first, it->first.second, type_name)) {
+                            pass = VK_FALSE;
+                        }
+                    } else if (~descriptor_stage_flags & pStage->stage) {
+                        char type_name[1024];
+                        describe_type(type_name, module, it->second.type_id);
+                        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                    /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE, "SC",
+                                    "Shader uses descriptor slot %u.%u (used "
+                                    "as type `%s`) but descriptor not "
+                                    "accessible from stage %s",
+                                    it->first.first, it->first.second, type_name, string_VkShaderStageFlagBits(pStage->stage))) {
+                            pass = VK_FALSE;
+                        }
+                    } else if (!descriptor_type_match(my_data, module, it->second.type_id, descriptor_type)) {
+                        char type_name[1024];
+                        describe_type(type_name, module, it->second.type_id);
+                        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                    /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
+                                    "Type mismatch on descriptor slot "
+                                    "%u.%u (used as type `%s`) but "
+                                    "descriptor of type %s",
+                                    it->first.first, it->first.second, type_name, string_VkDescriptorType(descriptor_type))) {
                             pass = VK_FALSE;
                         }
                     }
