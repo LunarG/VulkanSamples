@@ -6190,7 +6190,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(VkCommandBuffe
         skipCall |= addCmd(dev_data, pCB, CMD_COPYBUFFERTOIMAGE, "vkCmdCopyBufferToImage()");
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdCopyBufferToImage");
         for (uint32_t i = 0; i < regionCount; ++i) {
-            skipCall |= VerifySourceImageLayout(commandBuffer, dstImage,
+            skipCall |= VerifyDestImageLayout(commandBuffer, dstImage,
                                                 pRegions[i].imageSubresource,
                                                 dstImageLayout);
         }
