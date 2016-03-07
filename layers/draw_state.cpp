@@ -5515,8 +5515,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(VkCommandBuffer com
                                 __LINE__, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                                 "Incorrectly binding compute pipeline (%#" PRIxLEAST64 ") during active RenderPass (%#" PRIxLEAST64 ")",
                                 (uint64_t) pipeline, (uint64_t) pCB->activeRenderPass);
-        } else if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
-            skipCall |=  outsideRenderPass(dev_data, pCB, "vkCmdBindPipeline");
         }
 
         PIPELINE_NODE* pPN = getPipeline(dev_data, pipeline);
