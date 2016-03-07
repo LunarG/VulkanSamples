@@ -170,8 +170,6 @@ struct demo {
     bool prepared;
     bool use_staging_buffer;
 
-    VkAllocationCallbacks allocator;
-
     VkInstance inst;
     VkPhysicalDevice gpu;
     VkDevice device;
@@ -1715,30 +1713,6 @@ static VkBool32 demo_check_layers(uint32_t check_count, char **check_names,
     return 1;
 }
 
-VKAPI_ATTR void *VKAPI_CALL myrealloc(void *pUserData, void *pOriginal,
-                                      size_t size, size_t alignment,
-                                      VkSystemAllocationScope allocationScope) {
-    return realloc(pOriginal, size);
-}
-
-VKAPI_ATTR void *VKAPI_CALL myalloc(void *pUserData, size_t size,
-                                    size_t alignment,
-                                    VkSystemAllocationScope allocationScope) {
-#ifdef _MSC_VER
-    return _aligned_malloc(size, alignment);
-#else
-    return aligned_alloc(alignment, size);
-#endif
-}
-
-VKAPI_ATTR void VKAPI_CALL myfree(void *pUserData, void *pMemory) {
-#ifdef _MSC_VER
-    _aligned_free(pMemory);
-#else
-    free(pMemory);
-#endif
-}
-
 static void demo_init_vk(struct demo *demo) {
     VkResult err;
     uint32_t instance_extension_count = 0;
@@ -1910,11 +1884,7 @@ static void demo_init_vk(struct demo *demo) {
 
     uint32_t gpu_count;
 
-    demo->allocator.pfnAllocation = myalloc;
-    demo->allocator.pfnFree = myfree;
-    demo->allocator.pfnReallocation = myrealloc;
-
-    err = vkCreateInstance(&inst_info, &demo->allocator, &demo->inst);
+    err = vkCreateInstance(&inst_info, NULL, &demo->inst);
     if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
         ERR_EXIT("Cannot find a compatible Vulkan installable client driver "
                  "(ICD).\n\nPlease look at the Getting Started guide for "
@@ -2362,7 +2332,7 @@ static void demo_cleanup(struct demo *demo) {
         demo->DestroyDebugReportCallback(demo->inst, demo->msg_callback, NULL);
     }
     vkDestroySurfaceKHR(demo->inst, demo->surface, NULL);
-    vkDestroyInstance(demo->inst, &demo->allocator);
+    vkDestroyInstance(demo->inst, NULL);
 
     free(demo->queue_props);
 
