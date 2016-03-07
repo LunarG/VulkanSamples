@@ -40,8 +40,8 @@ The SPIR-V path is included as an alternative to using a front end.
 #include <assert.h>
 #include <string.h>
 #include <cstdlib>
+#include <spirv-tools/libspirv.h>
 #include "cube_data.h"
-#include "libspirv/libspirv.h"
 
 static const bool use_SPIRV_asm = true;
 
