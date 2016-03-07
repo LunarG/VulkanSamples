@@ -6620,10 +6620,12 @@ VkBool32 ValidateBarriers(const char* funcName,
                             "dstQueueFamilyIndex is VK_QUEUE_FAMILY_IGNORED, both "
                             "must be.", funcName,
                             reinterpret_cast<const uint64_t &>(mem_barrier->image));
-                } else if (((src_q_f_index >=
-                                dev_data->physDevProperties.queue_family_properties.size()) ||
+                } else if (((src_q_f_index != VK_QUEUE_FAMILY_IGNORED) &&
+                            (dst_q_f_index != VK_QUEUE_FAMILY_IGNORED)) &&
+                           ((src_q_f_index >=
+                                 dev_data->physDevProperties.queue_family_properties.size()) ||
                             (dst_q_f_index >=
-                                dev_data->physDevProperties.queue_family_properties.size()))) {
+                                 dev_data->physDevProperties.queue_family_properties.size()))) {
                     skip_call |=
                         log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                             (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
