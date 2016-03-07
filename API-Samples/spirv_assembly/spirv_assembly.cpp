@@ -34,7 +34,7 @@ Demonsrate how to use SPIR-V shaders with inline assembly.
 #include <string.h>
 #include <cstdlib>
 #include "cube_data.h"
-#include "libspirv/libspirv.h"
+#include "spirv-tools/libspirv.h"
 
 // clang-format off
 // This sample is based on the template, but instead of using inline GLSL and calls to
