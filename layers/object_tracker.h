@@ -65,6 +65,7 @@ typedef struct _OBJTRACK_NODE {
     VkDebugReportObjectTypeEXT objType;         // Object type identifier
     ObjectStatusFlags          status;          // Object state
     uint64_t                   parentObj;       // Parent object
+    uint64_t                   belongsTo;       // Object Scope -- owning device/instance
 } OBJTRACK_NODE;
 
 // prototype for extension functions
@@ -385,12 +386,13 @@ initObjectTracker(
 }
 
 //
-// Forward declares of generated routines
+// Forward declarations
 //
 
 static void create_physical_device(VkInstance dispatchable_object, VkPhysicalDevice vkObj, VkDebugReportObjectTypeEXT objType);
 static void create_instance(VkInstance dispatchable_object, VkInstance object, VkDebugReportObjectTypeEXT objType);
 static void create_device(VkDevice dispatchable_object, VkDevice object, VkDebugReportObjectTypeEXT objType);
+static void create_device(VkPhysicalDevice dispatchable_object, VkDevice object, VkDebugReportObjectTypeEXT objType);
 static void create_queue(VkDevice dispatchable_object, VkQueue vkObj, VkDebugReportObjectTypeEXT objType);
 static VkBool32 validate_image(VkQueue dispatchable_object, VkImage object, VkDebugReportObjectTypeEXT objType, bool null_allowed);
 static VkBool32 validate_instance(VkInstance dispatchable_object, VkInstance object, VkDebugReportObjectTypeEXT objType, bool null_allowed);
@@ -419,6 +421,7 @@ static VkBool32 validate_status(VkDevice dispatchable_object, VkFence object, Vk
     const char         *fail_msg);
 #endif
 extern unordered_map<uint64_t, OBJTRACK_NODE*> VkPhysicalDeviceMap;
+extern unordered_map<uint64_t, OBJTRACK_NODE*> VkDeviceMap;
 extern unordered_map<uint64_t, OBJTRACK_NODE*> VkImageMap;
 extern unordered_map<uint64_t, OBJTRACK_NODE*> VkQueueMap;
 extern unordered_map<uint64_t, OBJTRACK_NODE*> VkDescriptorSetMap;
@@ -438,6 +441,7 @@ static void create_physical_device(VkInstance dispatchable_object, VkPhysicalDev
 
     OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
     pNewObjNode->objType = objType;
+    pNewObjNode->belongsTo = (uint64_t)dispatchable_object;
     pNewObjNode->status  = OBJSTATUS_NONE;
     pNewObjNode->vkObj  = reinterpret_cast<uint64_t>(vkObj);
     VkPhysicalDeviceMap[reinterpret_cast<uint64_t>(vkObj)] = pNewObjNode;
@@ -455,6 +459,7 @@ static void create_surface_khr(VkInstance dispatchable_object, VkSurfaceKHR vkOb
 
     OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
     pNewObjNode->objType = objType;
+    pNewObjNode->belongsTo = (uint64_t)dispatchable_object;
     pNewObjNode->status  = OBJSTATUS_NONE;
     pNewObjNode->vkObj   = (uint64_t)(vkObj);
     VkSurfaceKHRMap[(uint64_t)vkObj] = pNewObjNode;
@@ -494,6 +499,7 @@ static void alloc_command_buffer(VkDevice device, VkCommandPool commandPool, VkC
 
     OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
     pNewObjNode->objType   = objType;
+    pNewObjNode->belongsTo = (uint64_t)device;
     pNewObjNode->vkObj     = reinterpret_cast<uint64_t>(vkObj);
     pNewObjNode->parentObj = (uint64_t) commandPool;
     if (level == VK_COMMAND_BUFFER_LEVEL_SECONDARY) {
@@ -546,6 +552,7 @@ static void alloc_descriptor_set(VkDevice device, VkDescriptorPool descriptorPoo
 
     OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
     pNewObjNode->objType   = objType;
+    pNewObjNode->belongsTo = (uint64_t)device;
     pNewObjNode->status    = OBJSTATUS_NONE;
     pNewObjNode->vkObj     = (uint64_t)(vkObj);
     pNewObjNode->parentObj = (uint64_t) descriptorPool;
@@ -593,6 +600,7 @@ static void create_queue(VkDevice dispatchable_object, VkQueue vkObj, VkDebugRep
 
     OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
     pNewObjNode->objType = objType;
+    pNewObjNode->belongsTo = (uint64_t)dispatchable_object;
     pNewObjNode->status  = OBJSTATUS_NONE;
     pNewObjNode->vkObj  = reinterpret_cast<uint64_t>(vkObj);
     VkQueueMap[reinterpret_cast<uint64_t>(vkObj)] = pNewObjNode;
@@ -607,11 +615,29 @@ static void create_swapchain_image_obj(VkDevice dispatchable_object, VkImage vkO
         (uint64_t)(vkObj));
 
     OBJTRACK_NODE* pNewObjNode             = new OBJTRACK_NODE;
+    pNewObjNode->belongsTo                 = (uint64_t)dispatchable_object;
     pNewObjNode->objType                   = VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT;
     pNewObjNode->status                    = OBJSTATUS_NONE;
     pNewObjNode->vkObj                     = (uint64_t) vkObj;
     pNewObjNode->parentObj                 = (uint64_t) swapchain;
     swapchainImageMap[(uint64_t)(vkObj)] = pNewObjNode;
+}
+
+static void create_device(VkInstance dispatchable_object, VkDevice vkObj, VkDebugReportObjectTypeEXT objType)
+{
+    log_msg(mid(dispatchable_object), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, objType, (uint64_t)(vkObj), __LINE__, OBJTRACK_NONE, "OBJTRACK",
+        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++, string_VkDebugReportObjectTypeEXT(objType),
+        (uint64_t)(vkObj));
+
+    OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
+    pNewObjNode->belongsTo = (uint64_t)dispatchable_object;
+    pNewObjNode->objType = objType;
+    pNewObjNode->status = OBJSTATUS_NONE;
+    pNewObjNode->vkObj = (uint64_t)(vkObj);
+    VkDeviceMap[(uint64_t)vkObj] = pNewObjNode;
+    uint32_t objIndex = objTypeToIndex(objType);
+    numObjs[objIndex]++;
+    numTotalObjs++;
 }
 
 //
@@ -708,7 +734,10 @@ explicit_CreateDevice(
 
     createDeviceRegisterExtensions(pCreateInfo, *pDevice);
 
-    create_device(*pDevice, *pDevice, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT);
+    if (VkPhysicalDeviceMap.find((uint64_t)gpu) != VkPhysicalDeviceMap.end()) {
+        OBJTRACK_NODE* pNewObjNode = VkPhysicalDeviceMap[(uint64_t)gpu];
+        create_device((VkInstance)pNewObjNode->belongsTo, *pDevice, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT);
+    }
 
     loader_platform_thread_unlock_mutex(&objLock);
     return result;
