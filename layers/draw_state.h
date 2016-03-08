@@ -373,7 +373,8 @@ class FENCE_NODE : public BASE_NODE {
     VkFence priorFence;
 
     // Default constructor
-    FENCE_NODE() : queue(NULL), needsSignaled(VK_FALSE), priorFence(NULL) {};
+    FENCE_NODE() : queue(NULL), needsSignaled(VK_FALSE),
+                   priorFence(static_cast<VkFence>(NULL)) {};
 
 };
 
