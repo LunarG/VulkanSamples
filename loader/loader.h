@@ -291,7 +291,7 @@ struct loader_instance {
 
     struct loader_layer_list activated_layer_list;
 
-    VkInstance instance;
+    VkInstance instance;  // layers/ICD instance returned to trampoline
 
     bool debug_report_enabled;
     VkLayerDbgFunctionNode *DbgFunctionHead;

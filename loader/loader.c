@@ -3287,6 +3287,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
     } else {
         loader_init_instance_core_dispatch_table(inst->disp, nextGIPA,
                                                  *created_instance);
+        inst->instance = *created_instance;
     }
 
     return res;
@@ -3454,7 +3455,7 @@ VkResult loader_create_device_chain(const struct loader_physical_device *pd,
     }
 
     PFN_vkCreateDevice fpCreateDevice =
-        (PFN_vkCreateDevice)nextGIPA((VkInstance)inst, "vkCreateDevice");
+        (PFN_vkCreateDevice)nextGIPA(inst->instance, "vkCreateDevice");
     if (fpCreateDevice) {
         res = fpCreateDevice(pd->phys_dev, &loader_create_info, pAllocator,
                              &dev->device);
