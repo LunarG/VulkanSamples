@@ -100,7 +100,7 @@ int sample_main() {
     image_create_info.arrayLayers = 1;
     image_create_info.samples = NUM_SAMPLES;
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
     image_create_info.usage = needStaging ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT
                                           : VK_IMAGE_USAGE_SAMPLED_BIT;
     image_create_info.queueFamilyIndexCount = 0;
@@ -143,34 +143,6 @@ int sample_main() {
     res = vkBindImageMemory(info.device, mappableImage, mappableMemory, 0);
     assert(res == VK_SUCCESS);
 
-    set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-
-    res = vkEndCommandBuffer(info.cmd);
-    assert(res == VK_SUCCESS);
-    const VkCommandBuffer cmd_bufs[] = {info.cmd};
-    VkFenceCreateInfo fenceInfo;
-    VkFence cmdFence;
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.pNext = NULL;
-    fenceInfo.flags = 0;
-    vkCreateFence(info.device, &fenceInfo, NULL, &cmdFence);
-
-    VkSubmitInfo submit_info[1] = {};
-    submit_info[0].pNext = NULL;
-    submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info[0].waitSemaphoreCount = 0;
-    submit_info[0].pWaitSemaphores = NULL;
-    submit_info[0].pWaitDstStageMask = NULL;
-    submit_info[0].commandBufferCount = 1;
-    submit_info[0].pCommandBuffers = cmd_bufs;
-    submit_info[0].signalSemaphoreCount = 0;
-    submit_info[0].pSignalSemaphores = NULL;
-
-    /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, cmdFence);
-    assert(res == VK_SUCCESS);
-
     VkImageSubresource subres = {};
     subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     subres.mipLevel = 0;
@@ -181,15 +153,6 @@ int sample_main() {
 
     /* Get the subresource layout so we know what the row pitch is */
     vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &layout);
-
-    /* Make sure command buffer is finished before mapping */
-    do {
-        res =
-            vkWaitForFences(info.device, 1, &cmdFence, VK_TRUE, FENCE_TIMEOUT);
-    } while (res == VK_TIMEOUT);
-    assert(res == VK_SUCCESS);
-
-    vkDestroyFence(info.device, cmdFence, NULL);
 
     res = vkMapMemory(info.device, mappableMemory, 0, mem_reqs.size, 0, &data);
     assert(res == VK_SUCCESS);
@@ -219,13 +182,14 @@ int sample_main() {
         texObj.mem = mappableMemory;
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         set_image_layout(info, texObj.image, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_GENERAL, texObj.imageLayout);
+                         VK_IMAGE_LAYOUT_PREINITIALIZED, texObj.imageLayout);
     } else {
         /* The mappable image cannot be our texture, so create an optimally
          * tiled image and blit to it */
         image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         image_create_info.usage =
             VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
         res =
             vkCreateImage(info.device, &image_create_info, NULL, &texObj.image);
@@ -252,7 +216,7 @@ int sample_main() {
          * SOURCE_OPTIMAL */
         /* Side effect is that this will create info.cmd */
         set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_GENERAL,
+                         VK_IMAGE_LAYOUT_PREINITIALIZED,
                          VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
         /* Since we're going to blit to the texture image, set its layout to
