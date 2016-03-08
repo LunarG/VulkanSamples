@@ -1941,19 +1941,24 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
                     (uint64_t)pCB->commandBuffer, (uint64_t)pCB->lastBoundPipeline);
             }
         }
-        // If Viewport or scissors are dynamic, verify that dynamic count matches PSO count
-        VkBool32 dynViewport = isDynamic(pPipe, VK_DYNAMIC_STATE_VIEWPORT);
-        VkBool32 dynScissor = isDynamic(pPipe, VK_DYNAMIC_STATE_SCISSOR);
-        if (dynViewport) {
-            if (pCB->viewports.size() != pPipe->graphicsPipelineCI.pViewportState->viewportCount) {
-                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                    "Dynamic viewportCount from vkCmdSetViewport() is " PRINTF_SIZE_T_SPECIFIER ", but PSO viewportCount is %u. These counts must match.", pCB->viewports.size(), pPipe->graphicsPipelineCI.pViewportState->viewportCount);
+        // If Viewport or scissors are dynamic, verify that dynamic count matches PSO count.
+        // Skip check if rasterization is disabled or there is no viewport.
+        if ((!pPipe->graphicsPipelineCI.pRasterizationState ||
+             !pPipe->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable) &&
+                pPipe->graphicsPipelineCI.pViewportState) {
+            VkBool32 dynViewport = isDynamic(pPipe, VK_DYNAMIC_STATE_VIEWPORT);
+            VkBool32 dynScissor = isDynamic(pPipe, VK_DYNAMIC_STATE_SCISSOR);
+            if (dynViewport) {
+                if (pCB->viewports.size() != pPipe->graphicsPipelineCI.pViewportState->viewportCount) {
+                    result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                                      "Dynamic viewportCount from vkCmdSetViewport() is " PRINTF_SIZE_T_SPECIFIER ", but PSO viewportCount is %u. These counts must match.", pCB->viewports.size(), pPipe->graphicsPipelineCI.pViewportState->viewportCount);
+                }
             }
-        }
-        if (dynScissor) {
-            if (pCB->scissors.size() != pPipe->graphicsPipelineCI.pViewportState->scissorCount) {
-                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                    "Dynamic scissorCount from vkCmdSetScissor() is " PRINTF_SIZE_T_SPECIFIER ", but PSO scissorCount is %u. These counts must match.", pCB->scissors.size(), pPipe->graphicsPipelineCI.pViewportState->scissorCount);
+            if (dynScissor) {
+                if (pCB->scissors.size() != pPipe->graphicsPipelineCI.pViewportState->scissorCount) {
+                    result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                                      "Dynamic scissorCount from vkCmdSetScissor() is " PRINTF_SIZE_T_SPECIFIER ", but PSO scissorCount is %u. These counts must match.", pCB->scissors.size(), pPipe->graphicsPipelineCI.pViewportState->scissorCount);
+                }
             }
         }
     }
@@ -2089,28 +2094,32 @@ static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice de
                     " patchControlPoints should be >0 and <=32.", pPipeline->tessStateCI.patchControlPoints);
         }
     }
-    // Viewport state must be included and viewport and scissor counts should always match
+    // Viewport state must be included if rasterization is enabled.
+    // If the viewport state is included, the viewport and scissor counts should always match.
     // NOTE : Even if these are flagged as dynamic, counts need to be set correctly for shader compiler
-    if (!pPipeline->graphicsPipelineCI.pViewportState) {
-        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-            "Gfx Pipeline pViewportState is null. Even if viewport and scissors are dynamic PSO must include viewportCount and scissorCount in pViewportState.");
-    } else if (pPipeline->graphicsPipelineCI.pViewportState->scissorCount != pPipeline->graphicsPipelineCI.pViewportState->viewportCount) {
-        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                "Gfx Pipeline viewport count (%u) must match scissor count (%u).", pPipeline->vpStateCI.viewportCount, pPipeline->vpStateCI.scissorCount);
-    } else {
-        // If viewport or scissor are not dynamic, then verify that data is appropriate for count
-        VkBool32 dynViewport = isDynamic(pPipeline, VK_DYNAMIC_STATE_VIEWPORT);
-        VkBool32 dynScissor = isDynamic(pPipeline, VK_DYNAMIC_STATE_SCISSOR);
-        if (!dynViewport) {
-            if (pPipeline->graphicsPipelineCI.pViewportState->viewportCount && !pPipeline->graphicsPipelineCI.pViewportState->pViewports) {
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                    "Gfx Pipeline viewportCount is %u, but pViewports is NULL. For non-zero viewportCount, you must either include pViewports data, or include viewport in pDynamicState and set it with vkCmdSetViewport().", pPipeline->graphicsPipelineCI.pViewportState->viewportCount);
+    if (!pPipeline->graphicsPipelineCI.pRasterizationState ||
+            !pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable) {
+        if (!pPipeline->graphicsPipelineCI.pViewportState) {
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                                "Gfx Pipeline pViewportState is null. Even if viewport and scissors are dynamic PSO must include viewportCount and scissorCount in pViewportState.");
+        } else if (pPipeline->graphicsPipelineCI.pViewportState->scissorCount != pPipeline->graphicsPipelineCI.pViewportState->viewportCount) {
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                                "Gfx Pipeline viewport count (%u) must match scissor count (%u).", pPipeline->vpStateCI.viewportCount, pPipeline->vpStateCI.scissorCount);
+        } else {
+            // If viewport or scissor are not dynamic, then verify that data is appropriate for count
+            VkBool32 dynViewport = isDynamic(pPipeline, VK_DYNAMIC_STATE_VIEWPORT);
+            VkBool32 dynScissor = isDynamic(pPipeline, VK_DYNAMIC_STATE_SCISSOR);
+            if (!dynViewport) {
+                if (pPipeline->graphicsPipelineCI.pViewportState->viewportCount && !pPipeline->graphicsPipelineCI.pViewportState->pViewports) {
+                    skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                                        "Gfx Pipeline viewportCount is %u, but pViewports is NULL. For non-zero viewportCount, you must either include pViewports data, or include viewport in pDynamicState and set it with vkCmdSetViewport().", pPipeline->graphicsPipelineCI.pViewportState->viewportCount);
+                }
             }
-        }
-        if (!dynScissor) {
-            if (pPipeline->graphicsPipelineCI.pViewportState->scissorCount && !pPipeline->graphicsPipelineCI.pViewportState->pScissors) {
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                    "Gfx Pipeline scissorCount is %u, but pScissors is NULL. For non-zero scissorCount, you must either include pScissors data, or include scissor in pDynamicState and set it with vkCmdSetScissor().", pPipeline->graphicsPipelineCI.pViewportState->scissorCount);
+            if (!dynScissor) {
+                if (pPipeline->graphicsPipelineCI.pViewportState->scissorCount && !pPipeline->graphicsPipelineCI.pViewportState->pScissors) {
+                    skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                                        "Gfx Pipeline scissorCount is %u, but pScissors is NULL. For non-zero scissorCount, you must either include pScissors data, or include scissor in pDynamicState and set it with vkCmdSetScissor().", pPipeline->graphicsPipelineCI.pViewportState->scissorCount);
+                }
             }
         }
     }
@@ -2272,43 +2281,48 @@ static VkBool32 validatePipelineState(layer_data* my_data, const GLOBAL_CB_NODE*
 {
     if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
         // Verify that any MSAA request in PSO matches sample# in bound FB
-        VkSampleCountFlagBits psoNumSamples = getNumSamples(my_data, pipeline);
-        if (pCB->activeRenderPass) {
-            const VkRenderPassCreateInfo* pRPCI = my_data->renderPassMap[pCB->activeRenderPass]->pCreateInfo;
-            const VkSubpassDescription* pSD = &pRPCI->pSubpasses[pCB->activeSubpass];
-            VkSampleCountFlagBits subpassNumSamples = (VkSampleCountFlagBits) 0;
-            uint32_t i;
+        // Skip the check if rasterization is disabled.
+        PIPELINE_NODE* pPipeline = my_data->pipelineMap[pipeline];
+        if (!pPipeline->graphicsPipelineCI.pRasterizationState ||
+                !pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable) {
+            VkSampleCountFlagBits psoNumSamples = getNumSamples(my_data, pipeline);
+            if (pCB->activeRenderPass) {
+                const VkRenderPassCreateInfo* pRPCI = my_data->renderPassMap[pCB->activeRenderPass]->pCreateInfo;
+                const VkSubpassDescription* pSD = &pRPCI->pSubpasses[pCB->activeSubpass];
+                VkSampleCountFlagBits subpassNumSamples = (VkSampleCountFlagBits) 0;
+                uint32_t i;
 
-            for (i = 0; i < pSD->colorAttachmentCount; i++) {
-                VkSampleCountFlagBits samples;
+                for (i = 0; i < pSD->colorAttachmentCount; i++) {
+                    VkSampleCountFlagBits samples;
 
-                if (pSD->pColorAttachments[i].attachment == VK_ATTACHMENT_UNUSED)
-                    continue;
+                    if (pSD->pColorAttachments[i].attachment == VK_ATTACHMENT_UNUSED)
+                        continue;
 
-                samples = pRPCI->pAttachments[pSD->pColorAttachments[i].attachment].samples;
-                if (subpassNumSamples == (VkSampleCountFlagBits) 0) {
-                    subpassNumSamples = samples;
-                } else if (subpassNumSamples != samples) {
-                    subpassNumSamples = (VkSampleCountFlagBits) -1;
-                    break;
+                    samples = pRPCI->pAttachments[pSD->pColorAttachments[i].attachment].samples;
+                    if (subpassNumSamples == (VkSampleCountFlagBits) 0) {
+                        subpassNumSamples = samples;
+                    } else if (subpassNumSamples != samples) {
+                        subpassNumSamples = (VkSampleCountFlagBits) -1;
+                        break;
+                    }
                 }
-            }
-            if (pSD->pDepthStencilAttachment && pSD->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
-                const VkSampleCountFlagBits samples = pRPCI->pAttachments[pSD->pDepthStencilAttachment->attachment].samples;
-                if (subpassNumSamples == (VkSampleCountFlagBits) 0)
-                    subpassNumSamples = samples;
-                else if (subpassNumSamples != samples)
-                    subpassNumSamples = (VkSampleCountFlagBits) -1;
-            }
+                if (pSD->pDepthStencilAttachment && pSD->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+                    const VkSampleCountFlagBits samples = pRPCI->pAttachments[pSD->pDepthStencilAttachment->attachment].samples;
+                    if (subpassNumSamples == (VkSampleCountFlagBits) 0)
+                        subpassNumSamples = samples;
+                    else if (subpassNumSamples != samples)
+                        subpassNumSamples = (VkSampleCountFlagBits) -1;
+                }
 
-            if (psoNumSamples != subpassNumSamples) {
-                return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, (uint64_t) pipeline, __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
-                        "Num samples mismatch! Binding PSO (%#" PRIxLEAST64 ") with %u samples while current RenderPass (%#" PRIxLEAST64 ") w/ %u samples!",
-                        (uint64_t) pipeline, psoNumSamples, (uint64_t) pCB->activeRenderPass, subpassNumSamples);
+                if (psoNumSamples != subpassNumSamples) {
+                    return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, (uint64_t) pipeline, __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
+                            "Num samples mismatch! Binding PSO (%#" PRIxLEAST64 ") with %u samples while current RenderPass (%#" PRIxLEAST64 ") w/ %u samples!",
+                            (uint64_t) pipeline, psoNumSamples, (uint64_t) pCB->activeRenderPass, subpassNumSamples);
+                }
+            } else {
+                // TODO : I believe it's an error if we reach this point and don't have an activeRenderPass
+                //   Verify and flag error as appropriate
             }
-        } else {
-            // TODO : I believe it's an error if we reach this point and don't have an activeRenderPass
-            //   Verify and flag error as appropriate
         }
         // TODO : Add more checks here
     } else {

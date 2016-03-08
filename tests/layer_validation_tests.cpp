@@ -2645,9 +2645,19 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState) {
     vp_state_ci.viewportCount = 1;
     vp_state_ci.pViewports = &vp;
 
+    VkPipelineRasterizationStateCreateInfo rs_state_ci = {};
+    rs_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rs_state_ci.polygonMode = VK_POLYGON_MODE_FILL;
+    rs_state_ci.cullMode = VK_CULL_MODE_BACK_BIT;
+    rs_state_ci.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rs_state_ci.depthClampEnable = VK_FALSE;
+    rs_state_ci.rasterizerDiscardEnable = VK_FALSE;
+    rs_state_ci.depthBiasEnable = VK_FALSE;
+
     VkGraphicsPipelineCreateInfo gp_ci = {};
     gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     gp_ci.pViewportState = &vp_state_ci;
+    gp_ci.pRasterizationState = &rs_state_ci;
     gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
     gp_ci.layout = pipeline_layout;
     gp_ci.renderPass = renderPass();
@@ -2892,6 +2902,15 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
     vp_state_ci.viewportCount = 1; // Count mismatch should cause error
     vp_state_ci.pViewports = &vp;
 
+    VkPipelineRasterizationStateCreateInfo rs_state_ci = {};
+    rs_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rs_state_ci.polygonMode = VK_POLYGON_MODE_FILL;
+    rs_state_ci.cullMode = VK_CULL_MODE_BACK_BIT;
+    rs_state_ci.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rs_state_ci.depthClampEnable = VK_FALSE;
+    rs_state_ci.rasterizerDiscardEnable = VK_FALSE;
+    rs_state_ci.depthBiasEnable = VK_FALSE;
+
     VkPipelineShaderStageCreateInfo shaderStages[2];
     memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
@@ -2909,6 +2928,7 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
     gp_ci.stageCount = 2;
     gp_ci.pStages = shaderStages;
     gp_ci.pViewportState = &vp_state_ci;
+    gp_ci.pRasterizationState = &rs_state_ci;
     gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
     gp_ci.layout = pipeline_layout;
     gp_ci.renderPass = renderPass();
@@ -3020,10 +3040,21 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet) {
     shaderStages[0] = vs.GetStageCreateInfo();
     shaderStages[1] = fs.GetStageCreateInfo();
 
+
+    VkPipelineRasterizationStateCreateInfo rs_state_ci = {};
+    rs_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rs_state_ci.polygonMode = VK_POLYGON_MODE_FILL;
+    rs_state_ci.cullMode = VK_CULL_MODE_BACK_BIT;
+    rs_state_ci.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rs_state_ci.depthClampEnable = VK_FALSE;
+    rs_state_ci.rasterizerDiscardEnable = VK_FALSE;
+    rs_state_ci.depthBiasEnable = VK_FALSE;
+
     VkGraphicsPipelineCreateInfo gp_ci = {};
     gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     gp_ci.stageCount = 2;
     gp_ci.pStages = shaderStages;
+    gp_ci.pRasterizationState = &rs_state_ci;
     gp_ci.pViewportState = NULL; // Not setting VP state w/o dynamic vp state
                                  // should cause validation error
     gp_ci.pDynamicState = &dyn_state_ci;
