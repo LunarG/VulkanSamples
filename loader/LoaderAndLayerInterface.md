@@ -282,7 +282,7 @@ of an ICD shared library (".dll") file. For example:
     "file_format_version": "1.0.0",
     "ICD": {
         "library_path": "path to ICD library",
-        "api_version": "1.0.3"
+        "api_version": "1.0.5"
     }
   }
   ```
@@ -326,9 +326,9 @@ specified contents:
 
 | Text File Name | Text File Contents |
 |----------------|--------------------|
-|vk\_vendora.json  | "ICD": { "library\_path": "C:\\\\VENDORA\\\\vk\_vendora.dll", "api_version": "1.0.3" } |
-| vendorb\_vk.json |  "ICD": { "library\_path": "vendorb\_vk.dll", "api_version": "1.0.3" } |
-|vendorc\_icd.json  | "ICD": { "library\_path": "vedorc\_icd.dll", "api_version": "1.0.3" }|
+|vk\_vendora.json  | "ICD": { "library\_path": "C:\\\\VENDORA\\\\vk\_vendora.dll", "api_version": "1.0.5" } |
+| vendorb\_vk.json |  "ICD": { "library\_path": "vendorb\_vk.dll", "api_version": "1.0.5" } |
+|vendorc\_icd.json  | "ICD": { "library\_path": "vedorc\_icd.dll", "api_version": "1.0.5" }|
 
 Then the loader will open the three files mentioned in the "Text File Contents"
 column, and then try to load and use the three shared libraries indicated by
@@ -393,7 +393,7 @@ pathname of an ICD shared library (".so") file. For example:
     "file_format_version": "1.0.0",
     "ICD": {
         "library_path": "path to ICD library",
-        "api_version": "1.0.3"
+        "api_version": "1.0.5"
     }
 }
 ```
@@ -430,9 +430,9 @@ the specified contents:
 
 | Text File Name    | Text File Contents     |
 |-------------------|------------------------|
-| vk\_vendora.json | "ICD": { "library\_path": "vendora.so", "api_version": "1.0.3" } |
-| vendorb\_vk.json | "ICD": { "library\_path": "vendorb\_vulkan\_icd.so", "api_version": "1.0.3" } |
-| vendorc\_icd.json | "ICD": { "library\_path": "/usr/lib/VENDORC/icd.so", "api_version": "1.0.3" } |
+| vk\_vendora.json | "ICD": { "library\_path": "vendora.so", "api_version": "1.0.5" } |
+| vendorb\_vk.json | "ICD": { "library\_path": "vendorb\_vulkan\_icd.so", "api_version": "1.0.5" } |
+| vendorc\_icd.json | "ICD": { "library\_path": "/usr/lib/VENDORC/icd.so", "api_version": "1.0.5" } |
 
 then the loader will open the three files mentioned in the "Text File Contents"
 column, and then try to load and use the three shared libraries indicated by
@@ -743,7 +743,7 @@ For example:
     "name": "VK_LAYER_LUNARG_OverlayLayer",
     "type": "DEVICE",
     "library_path": "vkOverlayLayer.dll"
-    "api_version" : "1.0.3",
+    "api_version" : "1.0.5",
     "implementation_version" : "2",
     "description" : "LunarG HUD layer",
     "functions": {
@@ -909,7 +909,7 @@ For example:
     "name": "VK_LAYER_LUNARG_OverlayLayer",
     "type": "DEVICE",
     "library_path": "vkOverlayLayer.dll"
-    "api_version" : "1.0.3",
+    "api_version" : "1.0.5",
     "implementation_version" : "2",
     "description" : "LunarG HUD layer",
     "functions": {
