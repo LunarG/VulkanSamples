@@ -1228,10 +1228,11 @@ lunarg_debug_report = Extension(
 import sys
 
 if len(sys.argv) > 3:
-    if sys.platform.startswith('win32'):
+# TODO : Need to clean this up to more seemlessly handle building different targets than the platform you're on
+    if sys.platform.startswith('win32') and sys.argv[1] != 'Android':
         extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface]
         extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, lunarg_debug_report]
-    elif sys.platform.startswith('linux'):
+    elif sys.platform.startswith('linux') and sys.argv[1] != 'Android':
         extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface]
         extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, lunarg_debug_report]
     else: # android
