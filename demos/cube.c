@@ -2134,21 +2134,21 @@ static void demo_init_vk(struct demo *demo) {
     uint32_t enabled_layer_count = 0;
 
     char *instance_validation_layers[] = {
-        "VK_LAYER_GOOGLE_threading",      "VK_LAYER_LUNARG_mem_tracker",
-        "VK_LAYER_LUNARG_object_tracker", "VK_LAYER_LUNARG_draw_state",
-        "VK_LAYER_LUNARG_param_checker",  "VK_LAYER_LUNARG_swapchain",
-        "VK_LAYER_LUNARG_device_limits",  "VK_LAYER_LUNARG_image",
-        "VK_LAYER_GOOGLE_unique_objects",
+        "VK_LAYER_GOOGLE_threading",     "VK_LAYER_LUNARG_param_checker",
+        "VK_LAYER_LUNARG_device_limits", "VK_LAYER_LUNARG_object_tracker",
+        "VK_LAYER_LUNARG_image",         "VK_LAYER_LUNARG_mem_tracker",
+        "VK_LAYER_LUNARG_draw_state",    "VK_LAYER_LUNARG_swapchain",
+        "VK_LAYER_GOOGLE_unique_objects"
     };
 
     demo->device_validation_layers[0] = "VK_LAYER_GOOGLE_threading";
-    demo->device_validation_layers[1] = "VK_LAYER_LUNARG_mem_tracker";
-    demo->device_validation_layers[2] = "VK_LAYER_LUNARG_object_tracker";
-    demo->device_validation_layers[3] = "VK_LAYER_LUNARG_draw_state";
-    demo->device_validation_layers[4] = "VK_LAYER_LUNARG_param_checker";
-    demo->device_validation_layers[5] = "VK_LAYER_LUNARG_swapchain";
-    demo->device_validation_layers[6] = "VK_LAYER_LUNARG_device_limits";
-    demo->device_validation_layers[7] = "VK_LAYER_LUNARG_image";
+    demo->device_validation_layers[1] = "VK_LAYER_LUNARG_param_checker";
+    demo->device_validation_layers[2] = "VK_LAYER_LUNARG_device_limits";
+    demo->device_validation_layers[3] = "VK_LAYER_LUNARG_object_tracker";
+    demo->device_validation_layers[4] = "VK_LAYER_LUNARG_image";
+    demo->device_validation_layers[5] = "VK_LAYER_LUNARG_mem_tracker";
+    demo->device_validation_layers[6] = "VK_LAYER_LUNARG_draw_state";
+    demo->device_validation_layers[7] = "VK_LAYER_LUNARG_swapchain";
     demo->device_validation_layers[8] = "VK_LAYER_GOOGLE_unique_objects";
     device_validation_layer_count = 9;
 
