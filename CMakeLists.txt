@@ -34,7 +34,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
     if (BUILD_WSI_XLIB_SUPPORT)
         add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)
-        set(DisplayServer XLib)
+        set(DisplayServer Xlib)
     endif()
 
     if (BUILD_WSI_WAYLAND_SUPPORT)
