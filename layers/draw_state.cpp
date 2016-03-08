@@ -3049,6 +3049,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
                         // TODO : This may be a hole. I believe copy should be its own copy,
                         //  otherwise a subsequent write update to src will incorrectly affect the copy
                         pDstSet->ppDescriptors[j+dstStartIndex] = pSrcSet->ppDescriptors[j+srcStartIndex];
+                        pDstSet->pUpdateStructs = pSrcSet->pUpdateStructs;
                     }
                 }
             }
