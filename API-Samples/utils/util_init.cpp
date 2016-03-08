@@ -1709,7 +1709,7 @@ void init_image(struct sample_info &info, texture_object &texObj,
     image_create_info.arrayLayers = 1;
     image_create_info.samples = NUM_SAMPLES;
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
     image_create_info.usage = needStaging ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT
                                           : VK_IMAGE_USAGE_SAMPLED_BIT;
     image_create_info.queueFamilyIndexCount = 0;
@@ -1753,7 +1753,7 @@ void init_image(struct sample_info &info, texture_object &texObj,
     assert(res == VK_SUCCESS);
 
     set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+                     VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_GENERAL);
 
     res = vkEndCommandBuffer(info.cmd);
     assert(res == VK_SUCCESS);
@@ -1838,6 +1838,7 @@ void init_image(struct sample_info &info, texture_object &texObj,
         image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         image_create_info.usage =
             VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
         res =
             vkCreateImage(info.device, &image_create_info, NULL, &texObj.image);
