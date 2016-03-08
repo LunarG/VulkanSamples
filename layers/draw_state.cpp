@@ -115,7 +115,7 @@ struct layer_data {
     unordered_map<VkQueryPool, QUERY_POOL_NODE> queryPoolMap;
     unordered_map<VkSemaphore, SEMAPHORE_NODE> semaphoreMap;
     unordered_map<void*,                 GLOBAL_CB_NODE*>                    commandBufferMap;
-    unordered_map<VkFramebuffer,         VkFramebufferCreateInfo*>           frameBufferMap;
+    unordered_map<VkFramebuffer, FRAMEBUFFER_NODE> frameBufferMap;
     unordered_map<VkImage, vector<ImageSubresourcePair>> imageSubresourceMap;
     unordered_map<ImageSubresourcePair, IMAGE_NODE> imageLayoutMap;
     unordered_map<VkRenderPass,          RENDER_PASS_NODE*>                  renderPassMap;
@@ -3391,6 +3391,7 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->uniqueBoundSets.clear();
         pCB->destroyedSets.clear();
         pCB->updatedSets.clear();
+        pCB->destroyedFramebuffers.clear();
         pCB->boundDescriptorSets.clear();
         pCB->waitedEvents.clear();
         pCB->semaphores.clear();
@@ -4104,21 +4105,57 @@ static bool validateCommandBufferState(layer_data *dev_data,
     if (CB_RECORDED != pCB->state) {
         if (CB_INVALID == pCB->state) {
             // Inform app of reason CB invalid
+            bool causeReported = false;
             if (!pCB->destroyedSets.empty()) {
                 std::stringstream set_string;
-                for (auto set : pCB->destroyedSets) {
+                for (auto set : pCB->destroyedSets)
                     set_string << " " << set;
-                }
+
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
                     "You are submitting command buffer %#" PRIxLEAST64 " that is invalid because it had the following bound descriptor set(s) destroyed: %s", (uint64_t)(pCB->commandBuffer), set_string.str().c_str());
+                causeReported = true;
             }
             if (!pCB->updatedSets.empty()) {
                 std::stringstream set_string;
-                for (auto set : pCB->updatedSets) {
+                for (auto set : pCB->updatedSets)
                     set_string << " " << set;
-                }
+
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
                     "You are submitting command buffer %#" PRIxLEAST64 " that is invalid because it had the following bound descriptor set(s) updated: %s", (uint64_t)(pCB->commandBuffer), set_string.str().c_str());
+                causeReported = true;
+            }
+            if (!pCB->destroyedFramebuffers.empty()) {
+                std::stringstream fb_string;
+                for (auto fb : pCB->destroyedFramebuffers)
+                    fb_string << " " << fb;
+
+                skipCall |= log_msg(
+                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    reinterpret_cast<uint64_t &>(pCB->commandBuffer), __LINE__,
+                    DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
+                    "You are submitting command buffer %#" PRIxLEAST64
+                    " that is invalid because it had the following "
+                    "referenced framebuffers destroyed: %s",
+                    reinterpret_cast<uint64_t &>(pCB->commandBuffer),
+                    fb_string.str().c_str());
+                causeReported = true;
+            }
+            // TODO : This is defensive programming to make sure an error is
+            //  flagged if we hit this INVALID cmd buffer case and none of the
+            //  above cases are hit. As the number of INVALID cases grows, this
+            //  code should be updated to seemlessly handle all the cases.
+            if (!causeReported) {
+                skipCall |= log_msg(
+                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                    reinterpret_cast<uint64_t &>(pCB->commandBuffer), __LINE__,
+                    DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
+                    "You are submitting command buffer %#" PRIxLEAST64
+                    " that is invalid due to an unknown cause. Validation "
+                    "should "
+                    "be improved to report the exact cause.",
+                    reinterpret_cast<uint64_t &>(pCB->commandBuffer));
             }
         } else { // Flag error for using CB w/o vkEndCommandBuffer() called
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_NO_END_COMMAND_BUFFER, "DS",
@@ -4739,8 +4776,22 @@ vkResetFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences) {
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocationCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyFramebuffer(device, framebuffer, pAllocator);
-    // TODO : Clean up any internal data structures using this obj.
+    layer_data *dev_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    auto fbNode = dev_data->frameBufferMap.find(framebuffer);
+    if (fbNode != dev_data->frameBufferMap.end()) {
+        for (auto cb : fbNode->second.referencingCmdBuffers) {
+            auto cbNode = dev_data->commandBufferMap.find(cb);
+            if (cbNode != dev_data->commandBufferMap.end()) {
+                // Set CB as invalid and record destroyed framebuffer
+                cbNode->second->state = CB_INVALID;
+                cbNode->second->destroyedFramebuffers.insert(framebuffer);
+            }
+        }
+        dev_data->frameBufferMap.erase(framebuffer);
+    }
+    dev_data->device_dispatch_table->DestroyFramebuffer(device, framebuffer,
+                                                        pAllocator);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocationCallbacks* pAllocator)
@@ -5377,14 +5428,38 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
                                             reinterpret_cast<void*>(commandBuffer));
                     } else {
                         string errorString = "";
-                        VkRenderPass fbRP = dev_data->frameBufferMap[pInfo->framebuffer]->renderPass;
-                        if (!verify_renderpass_compatibility(dev_data, fbRP, pInfo->renderPass, errorString)) {
-                            // renderPass that framebuffer was created with must be compatible with local renderPass
-                            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer),
-                                                __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
-                                                "vkBeginCommandBuffer(): Secondary Command Buffer (%p) renderPass (%#" PRIxLEAST64 ") is incompatible w/ framebuffer (%#" PRIxLEAST64
-                                                ") w/ render pass (%#" PRIxLEAST64 ") due to: %s", reinterpret_cast<void*>(commandBuffer), (uint64_t)(pInfo->renderPass),
-                                                (uint64_t)(pInfo->framebuffer), (uint64_t)(fbRP), errorString.c_str());
+                        auto fbNode =
+                            dev_data->frameBufferMap.find(pInfo->framebuffer);
+                        if (fbNode != dev_data->frameBufferMap.end()) {
+                            VkRenderPass fbRP =
+                                fbNode->second.createInfo.renderPass;
+                            if (!verify_renderpass_compatibility(
+                                    dev_data, fbRP, pInfo->renderPass,
+                                    errorString)) {
+                                // renderPass that framebuffer was created with
+                                // must
+                                // be compatible with local renderPass
+                                skipCall |= log_msg(
+                                    dev_data->report_data,
+                                    VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                                    reinterpret_cast<uint64_t>(commandBuffer),
+                                    __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE,
+                                    "DS",
+                                    "vkBeginCommandBuffer(): Secondary Command "
+                                    "Buffer (%p) renderPass (%#" PRIxLEAST64
+                                    ") is incompatible w/ framebuffer "
+                                    "(%#" PRIxLEAST64
+                                    ") w/ render pass (%#" PRIxLEAST64
+                                    ") due to: %s",
+                                    reinterpret_cast<void *>(commandBuffer),
+                                    (uint64_t)(pInfo->renderPass),
+                                    (uint64_t)(pInfo->framebuffer),
+                                    (uint64_t)(fbRP), errorString.c_str());
+                            }
+                            // Connect this framebuffer to this cmdBuffer
+                            fbNode->second.referencingCmdBuffers.insert(
+                                pCB->commandBuffer);
                         }
                     }
                 }
@@ -7040,8 +7115,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(VkDevice devi
             localFBCI->pAttachments = new VkImageView[localFBCI->attachmentCount];
             memcpy((void*)localFBCI->pAttachments, pCreateInfo->pAttachments, localFBCI->attachmentCount*sizeof(VkImageView));
         }
+        FRAMEBUFFER_NODE fbNode = {};
+        fbNode.createInfo = *localFBCI;
+        std::pair<VkFramebuffer, FRAMEBUFFER_NODE> fbPair(*pFramebuffer,
+                                                          fbNode);
         loader_platform_thread_lock_mutex(&globalLock);
-        dev_data->frameBufferMap[*pFramebuffer] = localFBCI;
+        dev_data->frameBufferMap.insert(fbPair);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -7399,19 +7478,28 @@ VkBool32 VerifyFramebufferAndRenderPassLayouts(VkCommandBuffer cmdBuffer, const 
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
     const VkRenderPassCreateInfo* pRenderPassInfo = dev_data->renderPassMap[pRenderPassBegin->renderPass]->pCreateInfo;
-    const VkFramebufferCreateInfo* pFramebufferInfo = dev_data->frameBufferMap[pRenderPassBegin->framebuffer];
-    if (pRenderPassInfo->attachmentCount != pFramebufferInfo->attachmentCount) {
-        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                             "You cannot start a render pass using a framebuffer with a different number of attachments.");
+    const VkFramebufferCreateInfo framebufferInfo =
+        dev_data->frameBufferMap[pRenderPassBegin->framebuffer].createInfo;
+    if (pRenderPassInfo->attachmentCount != framebufferInfo.attachmentCount) {
+        skip_call |=
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                    DRAWSTATE_INVALID_RENDERPASS, "DS",
+                    "You cannot start a render pass using a framebuffer "
+                    "with a different number of attachments.");
     }
     for (uint32_t i = 0; i < pRenderPassInfo->attachmentCount; ++i) {
-        const VkImageView& image_view = pFramebufferInfo->pAttachments[i];
+        const VkImageView &image_view = framebufferInfo.pAttachments[i];
         auto image_data = dev_data->imageViewMap.find(image_view);
         assert(image_data != dev_data->imageViewMap.end());
-        const VkImage& image = image_data->second->image;
-        const VkImageSubresourceRange& subRange = image_data->second->subresourceRange;
-        IMAGE_CMD_BUF_NODE newNode = {pRenderPassInfo->pAttachments[i].initialLayout, pRenderPassInfo->pAttachments[i].initialLayout};
-        // TODO: Do not iterate over every possibility - consolidate where possible
+        const VkImage &image = image_data->second->image;
+        const VkImageSubresourceRange &subRange =
+            image_data->second->subresourceRange;
+        IMAGE_CMD_BUF_NODE newNode = {
+            pRenderPassInfo->pAttachments[i].initialLayout,
+            pRenderPassInfo->pAttachments[i].initialLayout};
+        // TODO: Do not iterate over every possibility - consolidate where
+        // possible
         for (uint32_t j = 0; j < subRange.levelCount; j++) {
             uint32_t level = subRange.baseMipLevel + j;
             for (uint32_t k = 0; k < subRange.layerCount; k++) {
@@ -7423,8 +7511,14 @@ VkBool32 VerifyFramebufferAndRenderPassLayouts(VkCommandBuffer cmdBuffer, const 
                     continue;
                 }
                 if (newNode.layout != node.layout) {
-                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                 "You cannot start a render pass using attachment %i where the intial layout differs from the starting layout.", i);
+                    skip_call |= log_msg(
+                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_INVALID_RENDERPASS, "DS",
+                        "You cannot start a render pass using attachment %i "
+                        "where the "
+                        "intial layout differs from the starting layout.",
+                        i);
                 }
             }
         }
@@ -7444,21 +7538,28 @@ void TransitionSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBegin
     if (framebuffer_data == dev_data->frameBufferMap.end()) {
         return;
     }
-    const VkFramebufferCreateInfo* pFramebufferInfo = framebuffer_data->second;
+    const VkFramebufferCreateInfo framebufferInfo =
+        framebuffer_data->second.createInfo;
     const VkSubpassDescription& subpass = pRenderPassInfo->pSubpasses[subpass_index];
     for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
-        const VkImageView& image_view = pFramebufferInfo->pAttachments[subpass.pInputAttachments[j].attachment];
+        const VkImageView &image_view =
+            framebufferInfo
+                .pAttachments[subpass.pInputAttachments[j].attachment];
         SetLayout(dev_data, pCB, image_view,
                   subpass.pInputAttachments[j].layout);
     }
     for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
-        const VkImageView& image_view = pFramebufferInfo->pAttachments[subpass.pColorAttachments[j].attachment];
+        const VkImageView &image_view =
+            framebufferInfo
+                .pAttachments[subpass.pColorAttachments[j].attachment];
         SetLayout(dev_data, pCB, image_view,
                   subpass.pColorAttachments[j].layout);
     }
     if ((subpass.pDepthStencilAttachment != NULL) &&
         (subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED)) {
-        const VkImageView& image_view = pFramebufferInfo->pAttachments[subpass.pDepthStencilAttachment->attachment];
+        const VkImageView &image_view =
+            framebufferInfo
+                .pAttachments[subpass.pDepthStencilAttachment->attachment];
         SetLayout(dev_data, pCB, image_view,
                   subpass.pDepthStencilAttachment->layout);
     }
@@ -7485,9 +7586,10 @@ void TransitionFinalSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPass
     if (framebuffer_data == dev_data->frameBufferMap.end()) {
         return;
     }
-    const VkFramebufferCreateInfo* pFramebufferInfo = framebuffer_data->second;
+    const VkFramebufferCreateInfo framebufferInfo =
+        framebuffer_data->second.createInfo;
     for (uint32_t i = 0; i < pRenderPassInfo->attachmentCount; ++i) {
-        const VkImageView& image_view = pFramebufferInfo->pAttachments[i];
+        const VkImageView &image_view = framebufferInfo.pAttachments[i];
         SetLayout(dev_data, pCB, image_view,
                   pRenderPassInfo->pAttachments[i].finalLayout);
     }
@@ -7511,6 +7613,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(VkCommandBuffer 
             pCB->activeSubpass = 0;
             pCB->activeSubpassContents = contents;
             pCB->framebuffer = pRenderPassBegin->framebuffer;
+            // Connect this framebuffer to this cmdBuffer
+            dev_data->frameBufferMap[pCB->framebuffer]
+                .referencingCmdBuffers.insert(pCB->commandBuffer);
         } else {
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
                     "You cannot use a NULL RenderPass object in vkCmdBeginRenderPass()");
@@ -7704,13 +7809,19 @@ bool validateFramebuffer(layer_data* dev_data, VkCommandBuffer primaryBuffer, co
                 (void*)secondaryBuffer, (uint64_t)(secondary_fb), (uint64_t)(primary_fb));
         }
         auto fb_data = dev_data->frameBufferMap.find(secondary_fb);
-        if (fb_data == dev_data->frameBufferMap.end() || !fb_data->second) {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
-                "vkCmdExecuteCommands() called w/ invalid Cmd Buffer %p which has invalid framebuffer %" PRIx64 ".",
-                (void*)secondaryBuffer, (uint64_t)(secondary_fb));
+        if (fb_data == dev_data->frameBufferMap.end()) {
+            skip_call |= log_msg(
+                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
+                "vkCmdExecuteCommands() called w/ invalid Cmd Buffer %p "
+                "which has invalid framebuffer %" PRIx64 ".",
+                (void *)secondaryBuffer, (uint64_t)(secondary_fb));
             return skip_call;
         }
-        skip_call |= validateRenderPassCompatibility(dev_data, secondaryBuffer, fb_data->second->renderPass, secondaryBuffer, pSubCB->beginInfo.pInheritanceInfo->renderPass);
+        skip_call |= validateRenderPassCompatibility(
+            dev_data, secondaryBuffer, fb_data->second.createInfo.renderPass,
+            secondaryBuffer, pSubCB->beginInfo.pInheritanceInfo->renderPass);
     }
     return skip_call;
 }

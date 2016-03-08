@@ -404,6 +404,12 @@ class QUERY_POOL_NODE : public BASE_NODE {
     VkQueryPoolCreateInfo createInfo;
 };
 
+class FRAMEBUFFER_NODE {
+  public:
+    VkFramebufferCreateInfo createInfo;
+    unordered_set<VkCommandBuffer> referencingCmdBuffers;
+};
+
 // Descriptor Data structures
 // Layout Node has the core layout data
 typedef struct _LAYOUT_NODE {
@@ -674,10 +680,15 @@ typedef struct _GLOBAL_CB_NODE {
     VkFramebuffer                framebuffer;
     // Capture unique std::set of descriptorSets that are bound to this CB.
     std::set<VkDescriptorSet>    uniqueBoundSets;
-    // Keep running track of which sets are bound to which set# at any given time
     // Track descriptor sets that are destroyed or updated while bound to CB
+    // TODO : These data structures relate to tracking resources that invalidate
+    //  a cmd buffer that references them. Need to unify how we handle these
+    //  cases so we don't have different tracking data for each type.
     std::set<VkDescriptorSet>    destroyedSets;
     std::set<VkDescriptorSet>    updatedSets;
+    unordered_set<VkFramebuffer> destroyedFramebuffers;
+    // Keep running track of which sets are bound to which set# at any given
+    // time
     vector<VkDescriptorSet>      boundDescriptorSets; // Index is set# that given set is bound to
     vector<VkEvent>              waitedEvents;
     vector<VkSemaphore> semaphores;
