@@ -1639,8 +1639,8 @@ validateMemoryIsMapped(
                     "%s: Flush/Invalidate offset (" PRINTF_SIZE_T_SPECIFIER
                     ") is less than Memory Object's offset "
                     "(" PRINTF_SIZE_T_SPECIFIER ").",
-                    funcName, pMemRanges[i].offset,
-                    mem_element->second.memRange.offset);
+                    funcName, static_cast<size_t>(pMemRanges[i].offset),
+                    static_cast<size_t>(mem_element->second.memRange.offset));
             }
             if ((mem_element->second.memRange.size != VK_WHOLE_SIZE) &&
                 ((mem_element->second.memRange.offset +
@@ -1654,9 +1654,10 @@ validateMemoryIsMapped(
                     "%s: Flush/Invalidate upper-bound (" PRINTF_SIZE_T_SPECIFIER
                     ") exceeds the Memory Object's upper-bound "
                     "(" PRINTF_SIZE_T_SPECIFIER ").",
-                    funcName, pMemRanges[i].offset + pMemRanges[i].size,
-                    mem_element->second.memRange.offset +
-                        mem_element->second.memRange.size);
+                    funcName, static_cast<size_t>(pMemRanges[i].offset +
+                                                  pMemRanges[i].size),
+                    static_cast<size_t>(mem_element->second.memRange.offset +
+                                        mem_element->second.memRange.size));
             }
         }
     }
