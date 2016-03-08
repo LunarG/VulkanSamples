@@ -3134,7 +3134,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                             # If count and array parameters are optional, there
                             # will be no validation
                             if req == 'VK_TRUE' or cvReq == 'VK_TRUE':
-                                checkExpr = 'skipCall |= validate_array(report_data, {}, "{ln}", {dn}, {pf}{ln}, {pf}{vn}, {}, {});\n'.format(name, cvReq, req, ln=lenParam.name, dn=valueDisplayName, vn=value.name, pf=valuePrefix)
+                                funcName = 'validate_array' if value.type != 'char' else 'validate_string_array'
+                                checkExpr = 'skipCall |= {}(report_data, {}, "{ln}", {dn}, {pf}{ln}, {pf}{vn}, {}, {});\n'.format(funcName, name, cvReq, req, ln=lenParam.name, dn=valueDisplayName, vn=value.name, pf=valuePrefix)
                     elif not value.isoptional:
                         # Function pointers need a reinterpret_cast to void*
                         if value.type[:4] == 'PFN_':

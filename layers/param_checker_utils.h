@@ -71,10 +71,9 @@ VkBool32 validate_required_pointer(
  *
  * Verify that required count and array parameters are not NULL.  If count
  * is not NULL and its value is not optional, verify that it is not 0.  If the
- * array parameter is optional and it is NULL, no verification is perforemd.
- * If the array parameter is not optional and it is NULL, verify that the count
- * is 0.  The array parameter will normally be optional for this case (where
- * count is a pointer), allowing the caller to retrieve the available count.
+ * array parameter is NULL, and it is not optional, verify that count is 0.
+ * The array parameter will typically be optional for this case (where count is
+ * a pointer), allowing the caller to retrieve the available count.
  *
  * @param report_data debug_report_data object for routing validation messages.
  * @param apiName Name of API call being validated.
@@ -121,10 +120,9 @@ VkBool32 validate_array(
 /**
  * Validate array count and pointer to array.
  *
- * Verify that required count parameters are not NULL.  If the array parameter
- * is NULL, verify that count is 0.  If the array parameter is optional and it
- * is NULL, no verification is perforemd.  If the array parameter is not
- *  optional and it is NULL, verify that the count is 0.
+ * Verify that required count and array parameters are not 0 or NULL.  If the
+ * count parameter is not optional, verify that it is not 0.  If the array
+ * parameter is NULL, and it is not optional, verify that count is 0.
  *
  * @param report_data debug_report_data object for routing validation messages.
  * @param apiName Name of API call being validated.
@@ -329,6 +327,72 @@ VkBool32 validate_struct_type_array(
                     (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                     "PARAMCHECK", "%s: parameter %s[%d].sType must be %s",
                     apiName, arrayName, i, sTypeName);
+            }
+        }
+    }
+
+    return skipCall;
+}
+
+/**
+ * Validate string array count and content.
+ *
+ * Verify that required count and array parameters are not 0 or NULL.  If the
+ * count parameter is not optional, verify that it is not 0.  If the array
+ * parameter is NULL, and it is not optional, verify that count is 0.  If the
+ * array parameter is not NULL, verify that none of the strings are NULL.
+ *
+ * @param report_data debug_report_data object for routing validation messages.
+ * @param apiName Name of API call being validated.
+ * @param countName Name of count parameter.
+ * @param arrayName Name of array parameter.
+ * @param count Number of strings in the array.
+ * @param array Array of strings to validate.
+ * @param countRequired The 'count' parameter may not be 0 when true.
+ * @param arrayRequired The 'array' parameter may not be NULL when true.
+ * @return Boolean value indicating that the call should be skipped.
+ */
+static
+VkBool32 validate_string_array(
+    debug_report_data*  report_data,
+    const char*         apiName,
+    const char*         countName,
+    const char*         arrayName,
+    uint32_t            count,
+    const char* const*  array,
+    VkBool32            countRequired,
+    VkBool32            arrayRequired)
+{
+    VkBool32 skipCall = VK_FALSE;
+
+    if ((count == 0) || (array == NULL)) {
+        // Count parameters not tagged as optional cannot be 0
+        if ((count == 0) && (countRequired == VK_TRUE)) {
+            skipCall |= log_msg(
+                report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                "PARAMCHECK", "%s: parameter %s must be greater than 0",
+                apiName, countName);
+        }
+
+        // Array parameters not tagged as optional cannot be NULL,
+        // unless the count is 0
+        if ((array == NULL) && (arrayRequired == VK_TRUE) && (count != 0)) {
+            skipCall |= log_msg(
+                report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                "PARAMCHECK", "%s: required parameter %s specified as NULL",
+                apiName, arrayName);
+        }
+    } else {
+        // Verify that strings in the array not NULL
+        for (uint32_t i = 0; i < count; ++i) {
+            if (array[i] == NULL) {
+                skipCall |= log_msg(
+                    report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                    (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                    "PARAMCHECK", "%s: required parameter %s[%d] specified as NULL",
+                    apiName, arrayName, i);
             }
         }
     }
