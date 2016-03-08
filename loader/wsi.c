@@ -84,6 +84,9 @@ static const VkExtensionProperties wsi_android_surface_extension_info = {
 };
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
+// Note for VK_DISPLAY_KHR don't advertise support since we really need support
+// to come from ICD, although the loader supplements the support from ICD
+
 void wsi_add_instance_extensions(const struct loader_instance *inst,
                                  struct loader_extension_list *ext_list) {
     loader_add_to_ext_list(inst, ext_list, 1, &wsi_surface_extension_info);
@@ -115,7 +118,7 @@ void wsi_create_instance(struct loader_instance *ptr_instance,
     ptr_instance->wsi_surface_enabled = false;
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    ptr_instance->wsi_win32_surface_enabled = true;
+    ptr_instance->wsi_win32_surface_enabled = false;
 #endif // VK_USE_PLATFORM_WIN32_KHR
 #ifdef VK_USE_PLATFORM_MIR_KHR
     ptr_instance->wsi_mir_surface_enabled = false;
@@ -132,6 +135,8 @@ void wsi_create_instance(struct loader_instance *ptr_instance,
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
     ptr_instance->wsi_android_surface_enabled = false;
 #endif // VK_USE_PLATFORM_ANDROID_KHR
+
+    ptr_instance->wsi_display_enabled = false;
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
@@ -181,6 +186,11 @@ void wsi_create_instance(struct loader_instance *ptr_instance,
             continue;
         }
 #endif // VK_USE_PLATFORM_ANDROID_KHR
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
+                   VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
+            ptr_instance->wsi_display_enabled = true;
+            continue;
+        }
     }
 }
 
@@ -200,6 +210,7 @@ vkDestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
     disp->DestroySurfaceKHR(instance, surface, pAllocator);
 }
 
+// TODO probably need to lock around all the loader_get_instance() calls.
 /*
  * This is the instance chain terminator function
  * for DestroySurfaceKHR
@@ -940,6 +951,264 @@ terminator_CreateAndroidSurfaceKHR(VkInstance instance, Window window,
 
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
+
+/*
+ * Functions for the VK_KHR_display instance extension:
+ */
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkGetPhysicalDeviceDisplayPropertiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pPropertyCount,
+    VkDisplayPropertiesKHR*                     pProperties)
+{
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(physicalDevice);
+    VkResult res = disp->GetPhysicalDeviceDisplayPropertiesKHR(
+        unwrapped_phys_dev, pPropertyCount, pProperties);
+    return res;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_GetPhysicalDeviceDisplayPropertiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pPropertyCount,
+    VkDisplayPropertiesKHR*                     pProperties)
+{
+    struct loader_physical_device *phys_dev =
+        (struct loader_physical_device *)physicalDevice;
+    struct loader_icd *icd = phys_dev->this_icd;
+
+    assert(
+        icd->GetPhysicalDeviceDisplayPropertiesKHR &&
+        "loader: null GetPhysicalDeviceDisplayPropertiesKHR ICD pointer");
+
+    return icd->GetPhysicalDeviceDisplayPropertiesKHR(
+        phys_dev->phys_dev, pPropertyCount, pProperties);
+}
+
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkGetPhysicalDeviceDisplayPlanePropertiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pPropertyCount,
+    VkDisplayPlanePropertiesKHR*                pProperties)
+{
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(physicalDevice);
+    VkResult res = disp->GetPhysicalDeviceDisplayPlanePropertiesKHR(
+        unwrapped_phys_dev, pPropertyCount, pProperties);
+    return res;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_GetPhysicalDeviceDisplayPlanePropertiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pPropertyCount,
+    VkDisplayPlanePropertiesKHR*                pProperties)
+{
+    struct loader_physical_device *phys_dev =
+        (struct loader_physical_device *)physicalDevice;
+    struct loader_icd *icd = phys_dev->this_icd;
+
+    assert(
+        icd->GetPhysicalDeviceDisplayPlanePropertiesKHR &&
+        "loader: null GetPhysicalDeviceDisplayPlanePropertiesKHR ICD pointer");
+
+    return icd->GetPhysicalDeviceDisplayPlanePropertiesKHR(
+        phys_dev->phys_dev, pPropertyCount, pProperties);
+}
+
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkGetDisplayPlaneSupportedDisplaysKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    planeIndex,
+    uint32_t*                                   pDisplayCount,
+    VkDisplayKHR*                               pDisplays)
+{
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(physicalDevice);
+    VkResult res = disp->GetDisplayPlaneSupportedDisplaysKHR(
+        unwrapped_phys_dev, planeIndex, pDisplayCount, pDisplays);
+    return res;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_GetDisplayPlaneSupportedDisplaysKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    planeIndex,
+    uint32_t*                                   pDisplayCount,
+    VkDisplayKHR*                               pDisplays)
+{
+    struct loader_physical_device *phys_dev =
+        (struct loader_physical_device *)physicalDevice;
+    struct loader_icd *icd = phys_dev->this_icd;
+
+    assert(
+        icd->GetDisplayPlaneSupportedDisplaysKHR &&
+        "loader: null GetDisplayPlaneSupportedDisplaysKHR ICD pointer");
+
+    return icd->GetDisplayPlaneSupportedDisplaysKHR(
+        phys_dev->phys_dev, planeIndex, pDisplayCount, pDisplays);
+}
+
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkGetDisplayModePropertiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkDisplayKHR                                display,
+    uint32_t*                                   pPropertyCount,
+    VkDisplayModePropertiesKHR*                 pProperties)
+{
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(physicalDevice);
+    VkResult res = disp->GetDisplayModePropertiesKHR(
+        unwrapped_phys_dev, display, pPropertyCount, pProperties);
+    return res;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_GetDisplayModePropertiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkDisplayKHR                                display,
+    uint32_t*                                   pPropertyCount,
+    VkDisplayModePropertiesKHR*                 pProperties)
+{
+    struct loader_physical_device *phys_dev =
+        (struct loader_physical_device *)physicalDevice;
+    struct loader_icd *icd = phys_dev->this_icd;
+
+    assert(
+        icd->GetDisplayModePropertiesKHR &&
+        "loader: null GetDisplayModePropertiesKHR ICD pointer");
+
+    return icd->GetDisplayModePropertiesKHR(
+        phys_dev->phys_dev, display, pPropertyCount, pProperties);
+}
+
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkCreateDisplayModeKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkDisplayKHR                                display,
+    const VkDisplayModeCreateInfoKHR*           pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkDisplayModeKHR*                           pMode)
+{
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(physicalDevice);
+    VkResult res = disp->CreateDisplayModeKHR(
+        unwrapped_phys_dev, display, pCreateInfo, pAllocator, pMode);
+    return res;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_CreateDisplayModeKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkDisplayKHR                                display,
+    const VkDisplayModeCreateInfoKHR*           pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkDisplayModeKHR*                           pMode)
+{
+    struct loader_physical_device *phys_dev =
+        (struct loader_physical_device *)physicalDevice;
+    struct loader_icd *icd = phys_dev->this_icd;
+
+    assert(
+        icd->CreateDisplayModeKHR &&
+        "loader: null CreateDisplayModeKHR ICD pointer");
+
+    return icd->CreateDisplayModeKHR(
+        phys_dev->phys_dev, display, pCreateInfo, pAllocator, pMode);
+}
+
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkGetDisplayPlaneCapabilitiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkDisplayModeKHR                            mode,
+    uint32_t                                    planeIndex,
+    VkDisplayPlaneCapabilitiesKHR*              pCapabilities)
+{
+    VkPhysicalDevice unwrapped_phys_dev =
+        loader_unwrap_physical_device(physicalDevice);
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(physicalDevice);
+    VkResult res = disp->GetDisplayPlaneCapabilitiesKHR(
+        unwrapped_phys_dev, mode, planeIndex, pCapabilities);
+    return res;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_GetDisplayPlaneCapabilitiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkDisplayModeKHR                            mode,
+    uint32_t                                    planeIndex,
+    VkDisplayPlaneCapabilitiesKHR*              pCapabilities)
+{
+    struct loader_physical_device *phys_dev =
+        (struct loader_physical_device *)physicalDevice;
+    struct loader_icd *icd = phys_dev->this_icd;
+
+    assert(
+        icd->GetDisplayPlaneCapabilitiesKHR &&
+        "loader: null GetDisplayPlaneCapabilitiesKHR ICD pointer");
+
+    return icd->GetDisplayPlaneCapabilitiesKHR(
+        phys_dev->phys_dev, mode, planeIndex, pCapabilities);
+}
+
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkCreateDisplayPlaneSurfaceKHR(
+    VkInstance                                  instance,
+    const VkDisplaySurfaceCreateInfoKHR*        pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(instance);
+    VkResult res;
+
+    res = disp->CreateDisplayPlaneSurfaceKHR(instance, pCreateInfo, pAllocator,
+                                             pSurface);
+    return res;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_CreateDisplayPlaneSurfaceKHR(
+    VkInstance                                  instance,
+    const VkDisplaySurfaceCreateInfoKHR*        pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+    struct loader_instance *inst = loader_get_instance(instance);
+    VkIcdSurfaceDisplay *pIcdSurface = NULL;
+
+    pIcdSurface = loader_heap_alloc(inst, sizeof(VkIcdSurfaceDisplay),
+                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    if (pIcdSurface == NULL) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+
+    pIcdSurface->base.platform = VK_ICD_WSI_PLATFORM_DISPLAY;
+    pIcdSurface->displayMode = pCreateInfo->displayMode;
+    pIcdSurface->planeIndex = pCreateInfo->planeIndex;
+    pIcdSurface->planeStackIndex = pCreateInfo->planeStackIndex;
+    pIcdSurface->transform = pCreateInfo->transform;
+    pIcdSurface->globalAlpha = pCreateInfo->globalAlpha;
+    pIcdSurface->alphaMode = pCreateInfo->alphaMode;
+    pIcdSurface->imageExtent = pCreateInfo->imageExtent;
+
+    *pSurface = (VkSurfaceKHR)pIcdSurface;
+
+    return VK_SUCCESS;
+}
+
 bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
                                 const char *name, void **addr) {
     *addr = NULL;
@@ -1103,5 +1372,50 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
     }
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
+    /*
+     * Functions for VK_KHR_display extension:
+     */
+    if (!strcmp("vkGetPhysicalDeviceDisplayPropertiesKHR", name)) {
+        *addr = ptr_instance->wsi_display_enabled
+                    ? (void *)vkGetPhysicalDeviceDisplayPropertiesKHR
+                    : NULL;
+        return true;
+    }
+    if (!strcmp("vkGetPhysicalDeviceDisplayPlanePropertiesKHR", name)) {
+        *addr = ptr_instance->wsi_display_enabled
+                    ? (void *)vkGetPhysicalDeviceDisplayPlanePropertiesKHR
+                    : NULL;
+        return true;
+    }
+    if (!strcmp("vkGetDisplayPlaneSupportedDisplaysKHR", name)) {
+        *addr = ptr_instance->wsi_display_enabled
+                    ? (void *)vkGetDisplayPlaneSupportedDisplaysKHR
+                    : NULL;
+        return true;
+    }
+    if (!strcmp("vkGetDisplayModePropertiesKHR", name)) {
+        *addr = ptr_instance->wsi_display_enabled
+                    ? (void *)vkGetDisplayModePropertiesKHR
+                    : NULL;
+        return true;
+    }
+    if (!strcmp("vkCreateDisplayModeKHR", name)) {
+        *addr = ptr_instance->wsi_display_enabled
+                    ? (void *)vkCreateDisplayModeKHR
+                    : NULL;
+        return true;
+    }
+    if (!strcmp("vkGetDisplayPlaneCapabilitiesKHR", name)) {
+        *addr = ptr_instance->wsi_display_enabled
+                    ? (void *)vkGetDisplayPlaneCapabilitiesKHR
+                    : NULL;
+        return true;
+    }
+    if (!strcmp("vkCreateDisplayPlaneSurfaceKHR", name)) {
+        *addr = ptr_instance->wsi_display_enabled
+                    ? (void *)vkCreateDisplayPlaneSurfaceKHR
+                    : NULL;
+        return true;
+    }
     return false;
 }

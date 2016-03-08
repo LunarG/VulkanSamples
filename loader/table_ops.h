@@ -626,14 +626,38 @@ static inline void loader_init_instance_extension_dispatch_table(
         (PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR)gpa(
             inst, "vkGetPhysicalDeviceXlibPresentationSupportKHR");
 #endif
+    table->GetPhysicalDeviceDisplayPropertiesKHR =
+        (PFN_vkGetPhysicalDeviceDisplayPropertiesKHR) gpa(inst,
+        "vkGetPhysicalDeviceDisplayPropertiesKHR");
+    table->GetPhysicalDeviceDisplayPlanePropertiesKHR =
+        (PFN_vkGetPhysicalDeviceDisplayPlanePropertiesKHR) gpa(inst,
+        "vkGetPhysicalDeviceDisplayPlanePropertiesKHR");
+    table->GetDisplayPlaneSupportedDisplaysKHR =
+        (PFN_vkGetDisplayPlaneSupportedDisplaysKHR) gpa(inst,
+        "vkGetDisplayPlaneSupportedDisplaysKHR");
+    table->GetDisplayModePropertiesKHR =
+        (PFN_vkGetDisplayModePropertiesKHR) gpa(inst,
+        "vkGetDisplayModePropertiesKHR");
+    table->CreateDisplayModeKHR =
+        (PFN_vkCreateDisplayModeKHR) gpa(inst,
+        "vkCreateDisplayModeKHR");
+    table->GetDisplayPlaneCapabilitiesKHR =
+        (PFN_vkGetDisplayPlaneCapabilitiesKHR) gpa(inst,
+        "vkGetDisplayPlaneCapabilitiesKHR");
+    table->CreateDisplayPlaneSurfaceKHR =
+        (PFN_vkCreateDisplayPlaneSurfaceKHR) gpa(inst,
+        "vkCreateDisplayPlaneSurfaceKHR");
 }
 
 static inline void *
 loader_lookup_instance_dispatch_table(const VkLayerInstanceDispatchTable *table,
-                                      const char *name) {
-    if (!name || name[0] != 'v' || name[1] != 'k')
+                                      const char *name, bool *found_name) {
+    if (!name || name[0] != 'v' || name[1] != 'k') {
+        *found_name = false;
         return NULL;
+    }
 
+    *found_name = true;
     name += 2;
     if (!strcmp(name, "DestroyInstance"))
         return (void *)table->DestroyInstance;
@@ -699,6 +723,21 @@ loader_lookup_instance_dispatch_table(const VkLayerInstanceDispatchTable *table,
     if (!strcmp(name, "GetPhysicalDeviceXlibPresentationSupportKHR"))
         return (void *)table->GetPhysicalDeviceXlibPresentationSupportKHR;
 #endif
+    if (!strcmp(name, "GetPhysicalDeviceDisplayPropertiesKHR"))
+        return (void *)table->GetPhysicalDeviceDisplayPropertiesKHR;
+    if (!strcmp(name, "GetPhysicalDeviceDisplayPlanePropertiesKHR"))
+        return (void *)table->GetPhysicalDeviceDisplayPlanePropertiesKHR;
+    if (!strcmp(name, "GetDisplayPlaneSupportedDisplaysKHR"))
+        return (void *)table->GetDisplayPlaneSupportedDisplaysKHR;
+    if (!strcmp(name, "GetDisplayModePropertiesKHR"))
+        return (void *)table->GetDisplayModePropertiesKHR;
+    if (!strcmp(name, "CreateDisplayModeKHR"))
+        return (void *)table->CreateDisplayModeKHR;
+    if (!strcmp(name, "GetDisplayPlaneCapabilitiesKHR"))
+        return (void *)table->GetDisplayPlaneCapabilitiesKHR;
+    if (!strcmp(name, "CreateDisplayPlaneSurfaceKHR"))
+        return (void *)table->CreateDisplayPlaneSurfaceKHR;
+
     if (!strcmp(name, "CreateDebugReportCallbackEXT"))
         return (void *)table->CreateDebugReportCallbackEXT;
     if (!strcmp(name, "DestroyDebugReportCallbackEXT"))
@@ -706,5 +745,6 @@ loader_lookup_instance_dispatch_table(const VkLayerInstanceDispatchTable *table,
     if (!strcmp(name, "DebugReportMessageEXT"))
         return (void *)table->DebugReportMessageEXT;
 
+    *found_name = false;
     return NULL;
 }
