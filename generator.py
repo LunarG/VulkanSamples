@@ -2942,6 +2942,9 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         paramtype = param.find('type')
         if (paramtype.tail is not None) and ('*' in paramtype.tail):
             ispointer = paramtype.tail.count('*')
+        elif paramtype.text[:4] == 'PFN_':
+            # Treat function pointer typedefs as a pointer to a single value
+            ispointer = 1
         return ispointer
     #
     # Check if the parameter passed in is a static array
@@ -3133,7 +3136,11 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                             if req == 'VK_TRUE' or cvReq == 'VK_TRUE':
                                 checkExpr = 'skipCall |= validate_array(report_data, {}, "{ln}", {dn}, {pf}{ln}, {pf}{vn}, {}, {});\n'.format(name, cvReq, req, ln=lenParam.name, dn=valueDisplayName, vn=value.name, pf=valuePrefix)
                     elif not value.isoptional:
-                        checkExpr = 'skipCall |= validate_required_pointer(report_data, {}, {}, {}{vn});\n'.format(name, valueDisplayName, valuePrefix, vn=value.name)
+                        # Function pointers need a reinterpret_cast to void*
+                        if value.type[:4] == 'PFN_':
+                            checkExpr = 'skipCall |= validate_required_pointer(report_data, {}, {}, reinterpret_cast<const void*>({}{vn}));\n'.format(name, valueDisplayName, valuePrefix, vn=value.name)
+                        else:
+                            checkExpr = 'skipCall |= validate_required_pointer(report_data, {}, {}, {}{vn});\n'.format(name, valueDisplayName, valuePrefix, vn=value.name)
                 #
                 # If this is a pointer to a struct, see if it contains members
                 # that need to be checked

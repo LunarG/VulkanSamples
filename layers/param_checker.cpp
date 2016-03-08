@@ -1862,21 +1862,31 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
 {
     // Grab the key before the instance is destroyed.
     dispatch_key key = get_dispatch_key(instance);
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, instance);
-    pTable->DestroyInstance(instance, pAllocator);
-
-    // Clean up logging callback, if any
+    VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
-    while (my_data->logging_callback.size() > 0) {
-        VkDebugReportCallbackEXT callback = my_data->logging_callback.back();
-        layer_destroy_msg_callback(my_data->report_data, callback, pAllocator);
-        my_data->logging_callback.pop_back();
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkDestroyInstance(my_data->report_data, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        VkLayerInstanceDispatchTable *pTable =
+            get_dispatch_table(pc_instance_table_map, instance);
+        pTable->DestroyInstance(instance, pAllocator);
+
+        // Clean up logging callback, if any
+        while (my_data->logging_callback.size() > 0) {
+            VkDebugReportCallbackEXT callback =
+                my_data->logging_callback.back();
+            layer_destroy_msg_callback(my_data->report_data, callback,
+                                       pAllocator);
+            my_data->logging_callback.pop_back();
+        }
+
+        layer_debug_report_destroy_instance(mid(instance));
+        layer_data_map.erase(pTable);
+
+        pc_instance_table_map.erase(key);
     }
-
-    layer_debug_report_destroy_instance(mid(instance));
-    layer_data_map.erase(pTable);
-
-    pc_instance_table_map.erase(key);
 }
 
 bool PostEnumeratePhysicalDevices(
@@ -2302,15 +2312,24 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(
     VkDevice device,
     const VkAllocationCallbacks* pAllocator)
 {
-    layer_debug_report_destroy_device(device);
-
     dispatch_key key = get_dispatch_key(device);
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkDestroyDevice(my_data->report_data, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        layer_debug_report_destroy_device(device);
+
 #if DISPATCH_MAP_DEBUG
-    fprintf(stderr, "Device: %p, key: %p\n", device, key);
+        fprintf(stderr, "Device: %p, key: %p\n", device, key);
 #endif
 
-    get_dispatch_table(pc_device_table_map, device)->DestroyDevice(device, pAllocator);
-    pc_device_table_map.erase(key);
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyDevice(device, pAllocator);
+        pc_device_table_map.erase(key);
+    }
 }
 
 bool PreGetDeviceQueue(
@@ -2553,6 +2572,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateMemory(
     }
 
     return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkFreeMemory(VkDevice device, VkDeviceMemory memory,
+             const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |=
+        param_check_vkFreeMemory(my_data->report_data, memory, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->FreeMemory(device, memory, pAllocator);
+    }
 }
 
 bool PostMapMemory(
@@ -3166,6 +3202,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFence(
     return result;
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyFence(VkDevice device, VkFence fence,
+               const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |=
+        param_check_vkDestroyFence(my_data->report_data, fence, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyFence(device, fence, pAllocator);
+    }
+}
+
 bool PreResetFences(
     VkDevice device,
     const VkFence* pFences)
@@ -3375,6 +3428,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(
     return result;
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroySemaphore(VkDevice device, VkSemaphore semaphore,
+                   const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkDestroySemaphore(my_data->report_data, semaphore,
+                                               pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroySemaphore(device, semaphore, pAllocator);
+    }
+}
+
 bool PreCreateEvent(
     VkDevice device,
     const VkEventCreateInfo* pCreateInfo)
@@ -3438,6 +3508,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateEvent(
     }
 
     return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyEvent(VkDevice device, VkEvent event,
+               const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |=
+        param_check_vkDestroyEvent(my_data->report_data, event, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyEvent(device, event, pAllocator);
+    }
 }
 
 bool PostGetEventStatus(
@@ -3596,6 +3683,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateQueryPool(
     return result;
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyQueryPool(VkDevice device, VkQueryPool queryPool,
+                   const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkDestroyQueryPool(my_data->report_data, queryPool,
+                                               pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyQueryPool(device, queryPool, pAllocator);
+    }
+}
+
 bool PostGetQueryPoolResults(
     VkDevice device,
     VkQueryPool queryPool,
@@ -3735,6 +3839,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBuffer(
     return result;
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyBuffer(VkDevice device, VkBuffer buffer,
+                const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |=
+        param_check_vkDestroyBuffer(my_data->report_data, buffer, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyBuffer(device, buffer, pAllocator);
+    }
+}
+
 bool PreCreateBufferView(
     VkDevice device,
     const VkBufferViewCreateInfo* pCreateInfo)
@@ -3805,6 +3926,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBufferView(
     }
 
     return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyBufferView(VkDevice device, VkBufferView bufferView,
+                    const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkDestroyBufferView(my_data->report_data,
+                                                bufferView, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyBufferView(device, bufferView, pAllocator);
+    }
 }
 
 bool PreCreateImage(
@@ -3901,6 +4039,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(
     }
 
     return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyImage(VkDevice device, VkImage image,
+               const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |=
+        param_check_vkDestroyImage(my_data->report_data, image, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyImage(device, image, pAllocator);
+    }
 }
 
 bool PreGetImageSubresourceLayout(
@@ -4067,6 +4222,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(
     return result;
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyImageView(VkDevice device, VkImageView imageView,
+                   const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkDestroyImageView(my_data->report_data, imageView,
+                                               pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyImageView(device, imageView, pAllocator);
+    }
+}
+
 bool PreCreateShaderModule(
     VkDevice device,
     const VkShaderModuleCreateInfo* pCreateInfo)
@@ -4131,6 +4303,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateShaderModule(
     }
 
     return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule,
+                      const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkDestroyShaderModule(my_data->report_data,
+                                                  shaderModule, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyShaderModule(device, shaderModule, pAllocator);
+    }
 }
 
 bool PreCreatePipelineCache(
@@ -4199,6 +4388,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineCache(
     }
 
     return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyPipelineCache(VkDevice device, VkPipelineCache pipelineCache,
+                       const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkDestroyPipelineCache(my_data->report_data,
+                                                   pipelineCache, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyPipelineCache(device, pipelineCache, pAllocator);
+    }
 }
 
 bool PostGetPipelineCacheData(
@@ -4771,6 +4977,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateComputePipelines(
     return result;
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyPipeline(VkDevice device, VkPipeline pipeline,
+                  const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkDestroyPipeline(my_data->report_data, pipeline,
+                                              pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyPipeline(device, pipeline, pAllocator);
+    }
+}
+
 bool PreCreatePipelineLayout(
     VkDevice device,
     const VkPipelineLayoutCreateInfo* pCreateInfo)
@@ -4840,6 +5063,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineLayout(
     }
 
     return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout,
+                        const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkDestroyPipelineLayout(my_data->report_data,
+                                                    pipelineLayout, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyPipelineLayout(device, pipelineLayout, pAllocator);
+    }
 }
 
 bool PreCreateSampler(
@@ -4984,6 +5224,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSampler(
     return result;
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroySampler(VkDevice device, VkSampler sampler,
+                 const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |=
+        param_check_vkDestroySampler(my_data->report_data, sampler, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroySampler(device, sampler, pAllocator);
+    }
+}
+
 bool PreCreateDescriptorSetLayout(
     VkDevice device,
     const VkDescriptorSetLayoutCreateInfo* pCreateInfo)
@@ -5062,6 +5319,25 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(
     return result;
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyDescriptorSetLayout(VkDevice device,
+                             VkDescriptorSetLayout descriptorSetLayout,
+                             const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkDestroyDescriptorSetLayout(
+        my_data->report_data, descriptorSetLayout, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyDescriptorSetLayout(device, descriptorSetLayout,
+                                         pAllocator);
+    }
+}
+
 bool PreCreateDescriptorPool(
     VkDevice device,
     const VkDescriptorPoolCreateInfo* pCreateInfo)
@@ -5138,6 +5414,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorPool(
     }
 
     return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool,
+                        const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkDestroyDescriptorPool(my_data->report_data,
+                                                    descriptorPool, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyDescriptorPool(device, descriptorPool, pAllocator);
+    }
 }
 
 bool PostResetDescriptorPool(
@@ -5428,6 +5721,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(
     return result;
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer,
+                     const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkDestroyFramebuffer(my_data->report_data,
+                                                 framebuffer, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyFramebuffer(device, framebuffer, pAllocator);
+    }
+}
+
 bool PreCreateRenderPass(
     VkDevice device,
     const VkRenderPassCreateInfo* pCreateInfo)
@@ -5602,6 +5912,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(
     return result;
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass,
+                    const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkDestroyRenderPass(my_data->report_data,
+                                                renderPass, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyRenderPass(device, renderPass, pAllocator);
+    }
+}
+
 bool PostGetRenderAreaGranularity(
     VkDevice device,
     VkRenderPass renderPass,
@@ -5700,6 +6027,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(
     }
 
     return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool,
+                     const VkAllocationCallbacks *pAllocator) {
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data =
+        get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= param_check_vkDestroyCommandPool(my_data->report_data,
+                                                 commandPool, pAllocator);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, device)
+            ->DestroyCommandPool(device, commandPool, pAllocator);
+    }
 }
 
 bool PostResetCommandPool(
@@ -7636,6 +7980,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkDeviceWaitIdle;
     if (!strcmp(funcName, "vkAllocateMemory"))
         return (PFN_vkVoidFunction) vkAllocateMemory;
+    if (!strcmp(funcName, "vkFreeMemory"))
+        return (PFN_vkVoidFunction)vkFreeMemory;
     if (!strcmp(funcName, "vkMapMemory"))
         return (PFN_vkVoidFunction) vkMapMemory;
     if (!strcmp(funcName, "vkFlushMappedMemoryRanges"))
@@ -7644,6 +7990,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkInvalidateMappedMemoryRanges;
     if (!strcmp(funcName, "vkCreateFence"))
         return (PFN_vkVoidFunction) vkCreateFence;
+    if (!strcmp(funcName, "vkDestroyFence"))
+        return (PFN_vkVoidFunction)vkDestroyFence;
     if (!strcmp(funcName, "vkResetFences"))
         return (PFN_vkVoidFunction) vkResetFences;
     if (!strcmp(funcName, "vkGetFenceStatus"))
@@ -7652,8 +8000,12 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkWaitForFences;
     if (!strcmp(funcName, "vkCreateSemaphore"))
         return (PFN_vkVoidFunction) vkCreateSemaphore;
+    if (!strcmp(funcName, "vkDestroySemaphore"))
+        return (PFN_vkVoidFunction)vkDestroySemaphore;
     if (!strcmp(funcName, "vkCreateEvent"))
         return (PFN_vkVoidFunction) vkCreateEvent;
+    if (!strcmp(funcName, "vkDestroyEvent"))
+        return (PFN_vkVoidFunction)vkDestroyEvent;
     if (!strcmp(funcName, "vkGetEventStatus"))
         return (PFN_vkVoidFunction) vkGetEventStatus;
     if (!strcmp(funcName, "vkSetEvent"))
@@ -7662,32 +8014,62 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkResetEvent;
     if (!strcmp(funcName, "vkCreateQueryPool"))
         return (PFN_vkVoidFunction) vkCreateQueryPool;
+    if (!strcmp(funcName, "vkDestroyQueryPool"))
+        return (PFN_vkVoidFunction)vkDestroyQueryPool;
     if (!strcmp(funcName, "vkGetQueryPoolResults"))
         return (PFN_vkVoidFunction) vkGetQueryPoolResults;
     if (!strcmp(funcName, "vkCreateBuffer"))
         return (PFN_vkVoidFunction) vkCreateBuffer;
+    if (!strcmp(funcName, "vkDestroyBuffer"))
+        return (PFN_vkVoidFunction)vkDestroyBuffer;
     if (!strcmp(funcName, "vkCreateBufferView"))
         return (PFN_vkVoidFunction) vkCreateBufferView;
+    if (!strcmp(funcName, "vkDestroyBufferView"))
+        return (PFN_vkVoidFunction)vkDestroyBufferView;
     if (!strcmp(funcName, "vkCreateImage"))
         return (PFN_vkVoidFunction) vkCreateImage;
+    if (!strcmp(funcName, "vkDestroyImage"))
+        return (PFN_vkVoidFunction)vkDestroyImage;
     if (!strcmp(funcName, "vkGetImageSubresourceLayout"))
         return (PFN_vkVoidFunction) vkGetImageSubresourceLayout;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (PFN_vkVoidFunction) vkCreateImageView;
+    if (!strcmp(funcName, "vkDestroyImageView"))
+        return (PFN_vkVoidFunction)vkDestroyImageView;
     if (!strcmp(funcName, "vkCreateShaderModule"))
         return (PFN_vkVoidFunction) vkCreateShaderModule;
+    if (!strcmp(funcName, "vkDestroyShaderModule"))
+        return (PFN_vkVoidFunction)vkDestroyShaderModule;
+    if (!strcmp(funcName, "vkCreatePipelineCache"))
+        return (PFN_vkVoidFunction)vkCreatePipelineCache;
+    if (!strcmp(funcName, "vkDestroyPipelineCache"))
+        return (PFN_vkVoidFunction)vkDestroyPipelineCache;
+    if (!strcmp(funcName, "vkGetPipelineCacheData"))
+        return (PFN_vkVoidFunction)vkGetPipelineCacheData;
+    if (!strcmp(funcName, "vkMergePipelineCaches"))
+        return (PFN_vkVoidFunction)vkMergePipelineCaches;
     if (!strcmp(funcName, "vkCreateGraphicsPipelines"))
         return (PFN_vkVoidFunction) vkCreateGraphicsPipelines;
     if (!strcmp(funcName, "vkCreateComputePipelines"))
         return (PFN_vkVoidFunction) vkCreateComputePipelines;
+    if (!strcmp(funcName, "vkDestroyPipeline"))
+        return (PFN_vkVoidFunction)vkDestroyPipeline;
     if (!strcmp(funcName, "vkCreatePipelineLayout"))
         return (PFN_vkVoidFunction) vkCreatePipelineLayout;
+    if (!strcmp(funcName, "vkDestroyPipelineLayout"))
+        return (PFN_vkVoidFunction)vkDestroyPipelineLayout;
     if (!strcmp(funcName, "vkCreateSampler"))
         return (PFN_vkVoidFunction) vkCreateSampler;
+    if (!strcmp(funcName, "vkDestroySampler"))
+        return (PFN_vkVoidFunction)vkDestroySampler;
     if (!strcmp(funcName, "vkCreateDescriptorSetLayout"))
         return (PFN_vkVoidFunction) vkCreateDescriptorSetLayout;
+    if (!strcmp(funcName, "vkDestroyDescriptorSetLayout"))
+        return (PFN_vkVoidFunction)vkDestroyDescriptorSetLayout;
     if (!strcmp(funcName, "vkCreateDescriptorPool"))
         return (PFN_vkVoidFunction) vkCreateDescriptorPool;
+    if (!strcmp(funcName, "vkDestroyDescriptorPool"))
+        return (PFN_vkVoidFunction)vkDestroyDescriptorPool;
     if (!strcmp(funcName, "vkResetDescriptorPool"))
         return (PFN_vkVoidFunction) vkResetDescriptorPool;
     if (!strcmp(funcName, "vkAllocateDescriptorSets"))
@@ -7778,8 +8160,18 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkCmdCopyQueryPoolResults;
     if (!strcmp(funcName, "vkCreateFramebuffer"))
         return (PFN_vkVoidFunction) vkCreateFramebuffer;
+    if (!strcmp(funcName, "vkDestroyFramebuffer"))
+        return (PFN_vkVoidFunction)vkDestroyFramebuffer;
     if (!strcmp(funcName, "vkCreateRenderPass"))
         return (PFN_vkVoidFunction) vkCreateRenderPass;
+    if (!strcmp(funcName, "vkDestroyRenderPass"))
+        return (PFN_vkVoidFunction)vkDestroyRenderPass;
+    if (!strcmp(funcName, "vkGetRenderAreaGranularity"))
+        return (PFN_vkVoidFunction)vkGetRenderAreaGranularity;
+    if (!strcmp(funcName, "vkCreateCommandPool"))
+        return (PFN_vkVoidFunction)vkCreateCommandPool;
+    if (!strcmp(funcName, "vkDestroyCommandPool"))
+        return (PFN_vkVoidFunction)vkDestroyCommandPool;
     if (!strcmp(funcName, "vkCmdBeginRenderPass"))
         return (PFN_vkVoidFunction) vkCmdBeginRenderPass;
     if (!strcmp(funcName, "vkCmdNextSubpass"))
