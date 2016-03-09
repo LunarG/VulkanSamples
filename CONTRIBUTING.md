@@ -59,6 +59,17 @@ The Khronos Group is still finalizing the CLA process and documentation,
 so the details about using or requiring a CLA are not available yet.
 In the meantime, we suggest that you not submit any contributions unless you are comfortable doing so without a CLA.
 
-### **Large or New Contributions**
- 
-All contributions made to the Vulkan-LoaderAndValidationLayers repository are Khronos branded and as such any new files need to have the Khronos license (MIT like) and copyright included. You can include your individual copyright after the Khronos copyright. See an existing file as an example.
+#### **LunarG Repositories**
+
+You'll be prompted with a "click-through" CLA as part of submitting your pull request in GitHub.
+
+### **License and Copyrights**
+
+All contributions made to the Vulkan-LoaderAndValidationLayers repository are Khronos branded and as such,
+any new files need to have the Khronos license (MIT style) and copyright included.
+Please see an existing file in this repository for an example.
+
+All contributions made to the LunarG repositories are to be made under the MIT license
+and any new files need to include this license and any applicable copyrights.
+
+You can include your individual copyright after any existing copyrights.
