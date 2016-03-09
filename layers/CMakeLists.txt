@@ -20,11 +20,12 @@ macro(run_vk_layer_xml_generate subcmd output)
 		DEPENDS ${PROJECT_SOURCE_DIR}/vk.xml ${PROJECT_SOURCE_DIR}/generator.py ${PROJECT_SOURCE_DIR}/genvk.py ${PROJECT_SOURCE_DIR}/reg.py
 	)
 endmacro()
-
+# TODO : Remove draw_state and mem_tracker once core_validation fully merged
 set(LAYER_JSON_FILES
+    VkLayer_core_validation
     VkLayer_draw_state
-    VkLayer_image
     VkLayer_mem_tracker
+    VkLayer_image
     VkLayer_object_tracker
     VkLayer_unique_objects
     VkLayer_param_checker
@@ -93,11 +94,11 @@ if (WIN32)
     set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -D_CRT_SECURE_NO_WARNINGS")
     set (CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} -D_CRT_SECURE_NO_WARNINGS")
 
-    # For VS 2015, which uses compiler version 1900, draw_state.cpp fails with too many objects
+    # For VS 2015, which uses compiler version 1900, core_validation.cpp fails with too many objects
     # without either optimizations enabled, or setting the /bigobj compilation option.  Since
     # optimizations are enabled in a release build, this only affects the debug build.  For now,
     # enable /bigobj mode for all debug layer files. An alternative for the future is to split
-    # draw_state.cpp into multiple files, which will also alleviate the compilation error.
+    # core_validation.cpp into multiple files, which will also alleviate the compilation error.
     if (MSVC AND NOT (MSVC_VERSION LESS 1900))
         set (CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} -D_CRT_SECURE_NO_WARNINGS /bigobj")
         set (CMAKE_C_FLAGS_DEBUG     "${CMAKE_C_FLAGS_DEBUG} -D_CRT_SECURE_NO_WARNINGS /bigobj")
@@ -158,10 +159,11 @@ if (WIN32)
 else()
     install(TARGETS layer_utils DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
 endif()
-
+# TODO : Remove draw_state and mem_tracker once core_validation fully merged
+add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp)
 add_vk_layer(draw_state draw_state.cpp vk_layer_table.cpp)
-add_vk_layer(device_limits device_limits.cpp vk_layer_table.cpp vk_layer_utils.cpp)
 add_vk_layer(mem_tracker mem_tracker.cpp vk_layer_table.cpp)
+add_vk_layer(device_limits device_limits.cpp vk_layer_table.cpp vk_layer_utils.cpp)
 add_vk_layer(image image.cpp vk_layer_table.cpp)
 add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
 # generated

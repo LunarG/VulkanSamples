@@ -4,8 +4,8 @@
 #  Settings lines are of the form "<LayerIdentifier>.<SettingName> = <SettingValue>"
 #
 #  <LayerIdentifier> is typically the official layer name, minus the VK_LAYER prefix
-#  and all lower-camel-case -- i.e., for VK_LAYER_LUNARG_draw_state, the layer
-#  identifier is 'lunarg_draw_state', and for VK_LAYER_GOOGLE_threading the layer
+#  and all lower-camel-case -- i.e., for VK_LAYER_LUNARG_core_validation, the layer
+#  identifier is 'lunarg_core_validation', and for VK_LAYER_GOOGLE_threading the layer
 #  identifier is 'google_threading'.
 #
 #  There are some common settings that are used by each layer.
@@ -54,6 +54,11 @@
 lunarg_device_limits.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
 lunarg_device_limits.report_flags = error,warn,perf
 lunarg_device_limits.log_filename = stdout
+
+# VK_LAYER_LUNARG_core_validation Settings
+lunarg_core_validation.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
+lunarg_core_validation.report_flags = error,warn,perf
+lunarg_core_validation.log_filename = stdout
 
 # VK_LAYER_LUNARG_draw_state Settings
 lunarg_draw_state.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG

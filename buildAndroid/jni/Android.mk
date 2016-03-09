@@ -27,25 +27,13 @@ LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
 include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
-LOCAL_MODULE := VkLayer_draw_state
-LOCAL_SRC_FILES += $(SRC_DIR)/layers/draw_state.cpp
+LOCAL_MODULE := VkLayer_core_validation
+LOCAL_SRC_FILES += $(SRC_DIR)/layers/core_validation.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/buildAndroid/generated \
                     $(SRC_DIR)/loader \
                     $(SRC_DIR)/../glslang
-LOCAL_STATIC_LIBRARIES += layer_utils
-LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
-LOCAL_LDLIBS    := -llog
-include $(BUILD_SHARED_LIBRARY)
-
-include $(CLEAR_VARS)
-LOCAL_MODULE := VkLayer_mem_tracker
-LOCAL_SRC_FILES += $(SRC_DIR)/layers/mem_tracker.cpp
-LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
-LOCAL_C_INCLUDES += $(SRC_DIR)/include \
-                    $(SRC_DIR)/buildAndroid/generated \
-                    $(SRC_DIR)/loader
 LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
 LOCAL_LDLIBS    := -llog
