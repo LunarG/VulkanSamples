@@ -2726,7 +2726,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.validatedStructs = set()                     # Set of structs containing members that require validation
         # Named tuples to store struct and command data
         self.StructType = namedtuple('StructType', ['name', 'value'])
-        self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isstaticarray', 'isoptional', 'iscount', 'len', 'cdecl'])
+        self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isstaticarray', 'isoptional', 'iscount', 'len', 'extstructs', 'cdecl'])
         self.CommandData = namedtuple('CommandData', ['name', 'params', 'cdecl'])
         self.StructMemberData = namedtuple('StructMemberData', ['name', 'members'])
     #
@@ -2759,6 +2759,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         #
         # Headers
         write('#include "vulkan/vulkan.h"', file=self.outFile)
+        write('#include "vk_layer_extension_utils.h"', file=self.outFile)
         write('#include "param_checker_utils.h"', file=self.outFile)
         #
         # Macros
@@ -2893,6 +2894,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                                                 isoptional=isoptional,
                                                 iscount=iscount,
                                                 len=self.getLen(member),
+                                                extstructs=member.attrib.get('validextensionstructs') if name == 'pNext' else None,
                                                 cdecl=self.makeCParamDecl(member, 0)))
         self.structMembers.append(self.StructMemberData(name=typeName, members=membersInfo))
     #
@@ -2933,6 +2935,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                                                     isoptional=self.paramIsOptional(param),
                                                     iscount=iscount,
                                                     len=self.getLen(param),
+                                                    extstructs=None,
                                                     cdecl=self.makeCParamDecl(param, 0)))
             self.commands.append(self.CommandData(name=name, params=paramsInfo, cdecl=self.makeCDecls(cmdinfo.elem)[0]))
     #
@@ -3017,7 +3020,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         if name:
             if '->' in name:
                 # The count is obtained by dereferencing a member of a struct parameter
-                lenParam = self.CommandParam(name=name, iscount=True, ispointer=False, isoptional=False, type=None, len=None, isstaticarray=None, cdecl=None)
+                lenParam = self.CommandParam(name=name, iscount=True, ispointer=False, isoptional=False, type=None, len=None, isstaticarray=None, extstructs=None, cdecl=None)
             elif 'latexmath' in name:
                 result = re.search('mathit\{(\w+)\}', name)
                 lenParam = self.getParamByName(params, result.group(1))
@@ -3067,7 +3070,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         return indent + expr
     #
     # Generate the parameter checking code
-    def genFuncBody(self, indent, name, values, valuePrefix, variablePrefix):
+    def genFuncBody(self, indent, name, values, valuePrefix, variablePrefix, structName):
         funcBody = ''
         unused = []
         for value in values:
@@ -3121,6 +3124,20 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                             checkExpr = 'skipCall |= validate_struct_type_array(report_data, {}, "{ln}", {dn}, "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {});\n'.format(name, cvReq, req, ln=lenParam.name, dn=valueDisplayName, vn=value.name, sv=stype.value, pf=valuePrefix)
                     else:
                         checkExpr = 'skipCall |= validate_struct_type(report_data, {}, {}, "{sv}", {}{vn}, {sv}, {});\n'.format(name, valueDisplayName, valuePrefix, req, vn=value.name, sv=stype.value)
+                elif value.name == 'pNext':
+                    # We need to ignore VkDeviceCreateInfo and VkInstanceCreateInfo, as the loader manipulates them in a way that is not documented in vk.xml
+                    if not structName in ['VkDeviceCreateInfo', 'VkInstanceCreateInfo']:
+                        # Generate an array of acceptable VkStructureType values for pNext
+                        extStructCount = 0
+                        extStructVar = 'NULL'
+                        extStructNames = 'NULL'
+                        if value.extstructs:
+                            structs = value.extstructs.split(',')
+                            checkExpr = 'const VkStructureType allowedStructs[] = {' + ', '.join([self.structTypes[s].value for s in structs]) + '};\n' + indent
+                            extStructCount = 'ARRAY_SIZE(allowedStructs)'
+                            extStructVar = 'allowedStructs'
+                            extStructNames = '"' + ', '.join(structs) + '"'
+                        checkExpr += 'skipCall |= validate_struct_pnext(report_data, {}, {}, {}, {}{vn}, {}, {});\n'.format(name, valueDisplayName, extStructNames, valuePrefix, extStructCount, extStructVar, vn=value.name)
                 else:
                     if lenParam:
                         # This is an array
@@ -3209,7 +3226,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         for struct in self.structMembers:
             # The string returned by genFuncBody will be nested in an if check
             # for a NULL pointer, so needs its indent incremented
-            funcBody, unused = self.genFuncBody(self.incIndent(indent), 'pFuncName', struct.members, 'pStruct->', 'pVariableName')
+            funcBody, unused = self.genFuncBody(self.incIndent(indent), 'pFuncName', struct.members, 'pStruct->', 'pVariableName', struct.name)
             if funcBody:
                 cmdDef = 'static VkBool32 param_check_{}(\n'.format(struct.name)
                 cmdDef += '    debug_report_data*'.ljust(self.genOpts.alignFuncParam) + ' report_data,\n'
@@ -3231,7 +3248,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
     def processCmdData(self):
         indent = self.incIndent(None)
         for command in self.commands:
-            cmdBody, unused = self.genFuncBody(indent, '"{}"'.format(command.name), command.params, '', None)
+            cmdBody, unused = self.genFuncBody(indent, '"{}"'.format(command.name), command.params, '', None, None)
             if cmdBody:
                 cmdDef = self.getCmdDef(command) + '\n'
                 cmdDef += '{\n'
