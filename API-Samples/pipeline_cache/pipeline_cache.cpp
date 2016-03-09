@@ -328,8 +328,9 @@ int sample_main() {
     void *endCacheData = nullptr;
 
     // Call with nullptr to get cache size
-    vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize,
+    res = vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize,
                            nullptr);
+    assert(res == VK_SUCCESS);
 
     // Allocate memory to hold the populated cache data
     endCacheData = (char *)malloc(sizeof(char) * endCacheSize);
@@ -339,8 +340,9 @@ int sample_main() {
     }
 
     // Call again with pointer to buffer
-    vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize,
+    res = vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize,
                            endCacheData);
+    assert(res == VK_SUCCESS);
 
     // Write the file to disk, overwriting whatever was there
     FILE *pWriteFile;
