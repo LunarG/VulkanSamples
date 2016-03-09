@@ -32,7 +32,11 @@
  * Author: Tony Barbour <tony@LunarG.com>
  */
 
+#ifdef ANDROID
+#include "vulkan_wrapper.h"
+#else
 #include <vulkan/vulkan.h>
+#endif
 #include "test_common.h"
 #include "vkrenderframework.h"
 #include "vk_layer_config.h"
@@ -7125,6 +7129,12 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError) {
 
 int main(int argc, char **argv) {
     int result;
+
+#ifdef ANDROID
+    int vulkanSupport = InitVulkan();
+    if (vulkanSupport == 0)
+        return 1;
+#endif
 
     ::testing::InitGoogleTest(&argc, argv);
     VkTestFramework::InitArgs(&argc, argv);
