@@ -47,7 +47,7 @@ target_link_libraries(VKLayer_overlay layer_utils)
 set_target_properties(VKLayer_overlay PROPERTIES CXX_FLAGS "-Wno-unused-function")
 
 include_directories(
-        "${CMAKE_SOURCE_DIR}/build/layers"
+        "${CMAKE_BINARY_DIR}/layers"
         "${CMAKE_SOURCE_DIR}/layers"
         "${CMAKE_SOURCE_DIR}/loader"
         "${UTILDIR}/stb"
