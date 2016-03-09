@@ -4895,6 +4895,25 @@ static void ResolveRemainingLevelsLayers(layer_data *dev_data, VkImageSubresourc
     }
 }
 
+// Return the correct layer/level counts if the caller used the special
+// values VK_REMAINING_MIP_LEVELS or VK_REMAINING_ARRAY_LAYERS.
+static void ResolveRemainingLevelsLayers(layer_data *dev_data, uint32_t *levels, uint32_t *layers, VkImageSubresourceRange range,
+                                         VkImage image) {
+    /* expects globalLock to be held by caller */
+
+    *levels = range.levelCount;
+    *layers = range.layerCount;
+    auto image_node_it = dev_data->imageMap.find(image);
+    if (image_node_it != dev_data->imageMap.end()) {
+        if (range.levelCount == VK_REMAINING_MIP_LEVELS) {
+            *levels = image_node_it->second.createInfo.mipLevels - range.baseMipLevel;
+        }
+        if (range.layerCount == VK_REMAINING_ARRAY_LAYERS) {
+            *layers = image_node_it->second.createInfo.arrayLayers - range.baseArrayLayer;
+        }
+    }
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device, const VkImageViewCreateInfo *pCreateInfo,
                                                                  const VkAllocationCallbacks *pAllocator, VkImageView *pView) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -6484,6 +6503,8 @@ VkBool32 TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCo
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, cmdBuffer);
     VkBool32 skip = VK_FALSE;
+    uint32_t levelCount = 0;
+    uint32_t layerCount = 0;
 
     for (uint32_t i = 0; i < memBarrierCount; ++i) {
         auto mem_barrier = &pImgMemBarriers[i];
@@ -6491,9 +6512,11 @@ VkBool32 TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCo
             continue;
         // TODO: Do not iterate over every possibility - consolidate where
         // possible
-        for (uint32_t j = 0; j < mem_barrier->subresourceRange.levelCount; j++) {
+        ResolveRemainingLevelsLayers(dev_data, &levelCount, &layerCount, mem_barrier->subresourceRange, mem_barrier->image);
+
+        for (uint32_t j = 0; j < levelCount; j++) {
             uint32_t level = mem_barrier->subresourceRange.baseMipLevel + j;
-            for (uint32_t k = 0; k < mem_barrier->subresourceRange.layerCount; k++) {
+            for (uint32_t k = 0; k < layerCount; k++) {
                 uint32_t layer = mem_barrier->subresourceRange.baseArrayLayer + k;
                 VkImageSubresource sub = {mem_barrier->subresourceRange.aspectMask, level, layer};
                 IMAGE_CMD_BUF_LAYOUT_NODE node;
