@@ -152,6 +152,20 @@ const VkLayerInstanceDispatchTable instance_disp = {
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
     .CreateAndroidSurfaceKHR = terminator_CreateAndroidSurfaceKHR,
 #endif
+    .GetPhysicalDeviceDisplayPropertiesKHR =
+        terminator_GetPhysicalDeviceDisplayPropertiesKHR,
+    .GetPhysicalDeviceDisplayPlanePropertiesKHR =
+        terminator_GetPhysicalDeviceDisplayPlanePropertiesKHR,
+    .GetDisplayPlaneSupportedDisplaysKHR =
+        terminator_GetDisplayPlaneSupportedDisplaysKHR,
+    .GetDisplayModePropertiesKHR =
+        terminator_GetDisplayModePropertiesKHR,
+    .CreateDisplayModeKHR =
+        terminator_CreateDisplayModeKHR,
+    .GetDisplayPlaneCapabilitiesKHR =
+        terminator_GetDisplayPlaneCapabilitiesKHR,
+    .CreateDisplayPlaneSurfaceKHR =
+        terminator_CreateDisplayPlaneSurfaceKHR,
 };
 
 LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_init);
@@ -1366,6 +1380,9 @@ static bool loader_icd_init_entrys(struct loader_icd *icd, VkInstance inst,
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
     LOOKUP_GIPA(GetPhysicalDeviceXcbPresentationSupportKHR, false);
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    LOOKUP_GIPA(GetPhysicalDeviceXlibPresentationSupportKHR, false);
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
     LOOKUP_GIPA(GetPhysicalDeviceWaylandPresentationSupportKHR, false);
@@ -2599,15 +2616,16 @@ loader_gpa_instance_internal(VkInstance inst, const char *pName) {
     if (disp_table == NULL)
         return NULL;
 
-    addr = loader_lookup_instance_dispatch_table(disp_table, pName);
-    if (addr) {
+    bool found_name;
+    addr = loader_lookup_instance_dispatch_table(disp_table, pName, &found_name);
+    if (found_name) {
         return addr;
     }
 
-    if (disp_table->GetInstanceProcAddr == NULL) {
-        return NULL;
-    }
-    return disp_table->GetInstanceProcAddr(inst, pName);
+    // Don't call down the chain, this would be an infinite loop
+    loader_log(NULL, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
+                "loader_gpa_instance_internal() unrecognized name %s", pName);
+    return NULL;
 }
 
 /**
@@ -3269,6 +3287,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
     } else {
         loader_init_instance_core_dispatch_table(inst->disp, nextGIPA,
                                                  *created_instance);
+        inst->instance = *created_instance;
     }
 
     return res;
@@ -3436,7 +3455,7 @@ VkResult loader_create_device_chain(const struct loader_physical_device *pd,
     }
 
     PFN_vkCreateDevice fpCreateDevice =
-        (PFN_vkCreateDevice)nextGIPA((VkInstance)inst, "vkCreateDevice");
+        (PFN_vkCreateDevice)nextGIPA(inst->instance, "vkCreateDevice");
     if (fpCreateDevice) {
         res = fpCreateDevice(pd->phys_dev, &loader_create_info, pAllocator,
                              &dev->device);

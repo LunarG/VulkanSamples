@@ -488,7 +488,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member optional="true" len="enabledLayerCount,null-terminated">const <type>char</type>* const*      <name>ppEnabledLayerNames</name></member>            <!-- Ordered list of layer names to be enabled -->
             <member optional="true"><type>uint32_t</type>               <name>enabledExtensionCount</name></member>
             <member optional="true" len="enabledExtensionCount,null-terminated">const <type>char</type>* const*      <name>ppEnabledExtensionNames</name></member>
-            <member>const <type>VkPhysicalDeviceFeatures</type>* <name>pEnabledFeatures</name></member>
+            <member optional="true">const <type>VkPhysicalDeviceFeatures</type>* <name>pEnabledFeatures</name></member>
             <validity>
                 <usage>Any given element of pname:ppEnabledLayerNames must: be the name of a layer present on the system, exactly matching a string returned in the sname:VkLayerProperties structure by fname:vkEnumerateDeviceLayerProperties</usage>
                 <usage>Any given element of pname:ppEnabledExtensionNames must: be the name of an extension present on the system, exactly matching a string returned in the sname:VkExtensionProperties structure by fname:vkEnumerateDeviceExtensionProperties</usage>
@@ -1174,7 +1174,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkPipelineInputAssemblyStateCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_IINPUT_ASSEMBLY_STATE_CREATE_INFO -->
+            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO -->
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineInputAssemblyStateCreateFlags</type>    <name>flags</name></member>      <!-- Reserved -->
             <member><type>VkPrimitiveTopology</type>    <name>topology</name></member>

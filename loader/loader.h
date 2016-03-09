@@ -247,7 +247,20 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR
         GetPhysicalDeviceXlibPresentationSupportKHR;
 #endif
-
+    PFN_vkGetPhysicalDeviceDisplayPropertiesKHR
+        GetPhysicalDeviceDisplayPropertiesKHR;
+    PFN_vkGetPhysicalDeviceDisplayPlanePropertiesKHR
+        GetPhysicalDeviceDisplayPlanePropertiesKHR;
+    PFN_vkGetDisplayPlaneSupportedDisplaysKHR
+        GetDisplayPlaneSupportedDisplaysKHR;
+    PFN_vkGetDisplayModePropertiesKHR
+        GetDisplayModePropertiesKHR;
+    PFN_vkCreateDisplayModeKHR
+        CreateDisplayModeKHR;
+    PFN_vkGetDisplayPlaneCapabilitiesKHR
+        GetDisplayPlaneCapabilitiesKHR;
+    PFN_vkCreateDisplayPlaneSurfaceKHR
+        CreateDisplayPlaneSurfaceKHR;
     struct loader_icd *next;
 };
 
@@ -278,7 +291,7 @@ struct loader_instance {
 
     struct loader_layer_list activated_layer_list;
 
-    VkInstance instance;
+    VkInstance instance;  // layers/ICD instance returned to trampoline
 
     bool debug_report_enabled;
     VkLayerDbgFunctionNode *DbgFunctionHead;
@@ -304,6 +317,7 @@ struct loader_instance {
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
     bool wsi_android_surface_enabled;
 #endif
+    bool wsi_display_enabled;
 };
 
 /* VkPhysicalDevice requires special treatment by loader.  Firstly, terminator

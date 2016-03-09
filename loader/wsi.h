@@ -114,3 +114,44 @@ terminator_GetPhysicalDeviceXlibPresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, Display *dpy,
     VisualID visualID);
 #endif
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_GetPhysicalDeviceDisplayPropertiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pPropertyCount,
+    VkDisplayPropertiesKHR*                     pProperties);
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_GetPhysicalDeviceDisplayPlanePropertiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pPropertyCount,
+    VkDisplayPlanePropertiesKHR*                pProperties);
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_GetDisplayPlaneSupportedDisplaysKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    planeIndex,
+    uint32_t*                                   pDisplayCount,
+    VkDisplayKHR*                               pDisplays);
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_GetDisplayModePropertiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkDisplayKHR                                display,
+    uint32_t*                                   pPropertyCount,
+    VkDisplayModePropertiesKHR*                 pProperties);
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_CreateDisplayModeKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkDisplayKHR                                display,
+    const VkDisplayModeCreateInfoKHR*           pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkDisplayModeKHR*                           pMode);
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_GetDisplayPlaneCapabilitiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkDisplayModeKHR                            mode,
+    uint32_t                                    planeIndex,
+    VkDisplayPlaneCapabilitiesKHR*              pCapabilities);
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_CreateDisplayPlaneSurfaceKHR(
+    VkInstance                                  instance,
+    const VkDisplaySurfaceCreateInfoKHR*        pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface);

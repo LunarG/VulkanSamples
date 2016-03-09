@@ -22,7 +22,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     #   TODO: Basic support is present for Xlib but is untested.
     #         Mir support is stubbed in but unimplemented and untested.
     option(BUILD_WSI_XCB_SUPPORT "Build XCB WSI support" ON)
-    option(BUILD_WSI_XLIB_SUPPORT "Build Xlib WSI support" OFF)
+    option(BUILD_WSI_XLIB_SUPPORT "Build Xlib WSI support" ON)
     option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" OFF)
     option(BUILD_WSI_MIR_SUPPORT "Build Mir WSI support" OFF)
 
@@ -33,7 +33,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
     if (BUILD_WSI_XLIB_SUPPORT)
         add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)
-        set(DisplayServer XLib)
+        set(DisplayServer Xlib)
     endif()
 
     if (BUILD_WSI_WAYLAND_SUPPORT)

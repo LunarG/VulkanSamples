@@ -4,13 +4,13 @@
         "name": "VK_LAYER_LUNARG_swapchain",
         "type": "GLOBAL",
         "library_path": ".\\VkLayer_swapchain.dll",
-        "api_version": "1.0.3",
+        "api_version": "1.0.5",
         "implementation_version": "1",
         "description": "LunarG Validation Layer",
         "instance_extensions": [
              {
                  "name": "VK_EXT_debug_report",
-                 "spec_version": "1"
+                 "spec_version": "2"
              }
          ]
     }
