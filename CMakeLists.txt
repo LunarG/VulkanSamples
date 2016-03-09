@@ -122,8 +122,6 @@ if(BUILD_VKJSON)
     add_subdirectory(libs/vkjson)
 endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
-
 set (UTILS_NAME vsamputils)
 
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
