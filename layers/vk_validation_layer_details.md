@@ -134,7 +134,6 @@ depends on the pair of pipeline stages involved.
 | Type mismatch | Flag error if a location has inconsistent types | INTERFACE_TYPE_MISMATCH | vkCreateGraphicsPipelines | CreatePipeline*TypeMismatch | Between shader stages, an exact structural type match is required. Between VI and VS, or between FS and CB, only the basic component type must match (float for UNORM/SNORM/FLOAT, int for SINT, uint for UINT) as the VI and CB stages perform conversions to the exact format. |
 | Inconsistent shader | Flag error if an inconsistent SPIR-V image is detected. Possible cases include broken type definitions which the layer fails to walk. | INCONSISTENT_SPIRV | vkCreateGraphicsPipelines | TODO | All current tests use the reference compiler to produce valid SPIRV images from GLSL. |
 | Non-SPIRV shader | Flag warning if a non-SPIR-V shader image is detected. This can occur if early drivers are ingesting GLSL. VK_LAYER_LUNARG_ShaderChecker cannot analyze non-SPIRV shaders, so this suppresses most other checks. | NON_SPIRV_SHADER | vkCreateGraphicsPipelines | TODO | NA |
-| FS mixed broadcast | Flag error if the fragment shader writes both the legacy gl_FragCoord (which broadcasts to all CBs) and custom FS outputs. | FS_MIXED_BROADCAST | vkCreateGraphicsPipelines | TODO | Reference compiler refuses to compile shaders which do this |
 | VI Binding Descriptions | Validate that there is a single vertex input binding description for each binding | INCONSISTENT_VI | vkCreateGraphicsPipelines | CreatePipelineAttribBindingConflict | NA |
 | Shader Stage Check | Warns if shader stage is unsupported | UNKNOWN_STAGE | vkCreateGraphicsPipelines | TBD | NA |
 | Shader Specialization | Error if specialization entry data is not fully contained within the specialization data block. | BAD_SPECIALIZATION | vkCreateGraphicsPipelines vkCreateComputePipelines | TBD | NA |
@@ -142,6 +141,8 @@ depends on the pair of pipeline stages involved.
 | Missing Entrypoint | Flags error if specified entrypoint is not present in the shader module | MISSING_ENTRYPOINT | vkCreateGraphicsPipelines | TBD | NA |
 | Push constant out of range | Flags error if a member of a push constant block is not contained within a push constant range specified in the pipeline layout | PUSH_CONSTANT_OUT_OF_RANGE | vkCreateGraphicsPipelines | CreatePipelinePushContantsNotInLayout | NA |
 | Push constant not accessible from stage | Flags error if the push constant range containing a push constant block member is not accessible from the current shader stage. | PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE | vkCreateGraphicsPipelines | TBD | NA |
+| Descriptor not accessible from stage | Flags error if a descriptor used by a shader stage does not include that stage in its stageFlags | DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE | vkCreateGraphicsPipelines | TBD | NA |
+| Descriptor type mismatch | Flags error if a descriptor type does not match the shader resource type. | DESCRIPTOR_TYPE_MISMATCH | vkCreateGraphicsPipelines | TBD | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 
 ### VK_LAYER_LUNARG_ShaderChecker Pending Work

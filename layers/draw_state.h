@@ -205,19 +205,20 @@ typedef enum _DRAW_STATE_ERROR {
 
 typedef enum _SHADER_CHECKER_ERROR {
     SHADER_CHECKER_NONE,
-    SHADER_CHECKER_FS_MIXED_BROADCAST,         /* FS writes broadcast output AND custom outputs -- DEFUNCT */
-    SHADER_CHECKER_INTERFACE_TYPE_MISMATCH,    /* Type mismatch between shader stages or shader and pipeline */
-    SHADER_CHECKER_OUTPUT_NOT_CONSUMED,        /* Entry appears in output interface, but missing in input */
-    SHADER_CHECKER_INPUT_NOT_PRODUCED,         /* Entry appears in input interface, but missing in output */
-    SHADER_CHECKER_NON_SPIRV_SHADER,           /* Shader image is not SPIR-V */
-    SHADER_CHECKER_INCONSISTENT_SPIRV,         /* General inconsistency within a SPIR-V module */
-    SHADER_CHECKER_UNKNOWN_STAGE,              /* Stage is not supported by analysis */
-    SHADER_CHECKER_INCONSISTENT_VI,            /* VI state contains conflicting binding or attrib descriptions */
-    SHADER_CHECKER_MISSING_DESCRIPTOR,         /* Shader attempts to use a descriptor binding not declared in the layout */
-    SHADER_CHECKER_BAD_SPECIALIZATION,         /* Specialization map entry points outside specialization data block */
-    SHADER_CHECKER_MISSING_ENTRYPOINT,         /* Shader module does not contain the requested entrypoint */
-    SHADER_CHECKER_PUSH_CONSTANT_OUT_OF_RANGE, /* Push constant variable is not in a push constant range */
-    SHADER_CHECKER_PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE, /* Push constant range exists, but not accessible from stage */
+    SHADER_CHECKER_INTERFACE_TYPE_MISMATCH,    // Type mismatch between shader stages or shader and pipeline
+    SHADER_CHECKER_OUTPUT_NOT_CONSUMED,        // Entry appears in output interface, but missing in input
+    SHADER_CHECKER_INPUT_NOT_PRODUCED,         // Entry appears in input interface, but missing in output
+    SHADER_CHECKER_NON_SPIRV_SHADER,           // Shader image is not SPIR-V
+    SHADER_CHECKER_INCONSISTENT_SPIRV,         // General inconsistency within a SPIR-V module
+    SHADER_CHECKER_UNKNOWN_STAGE,              // Stage is not supported by analysis
+    SHADER_CHECKER_INCONSISTENT_VI,            // VI state contains conflicting binding or attrib descriptions
+    SHADER_CHECKER_MISSING_DESCRIPTOR,         // Shader attempts to use a descriptor binding not declared in the layout
+    SHADER_CHECKER_BAD_SPECIALIZATION,         // Specialization map entry points outside specialization data block
+    SHADER_CHECKER_MISSING_ENTRYPOINT,         // Shader module does not contain the requested entrypoint
+    SHADER_CHECKER_PUSH_CONSTANT_OUT_OF_RANGE, // Push constant variable is not in a push constant range
+    SHADER_CHECKER_PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE, // Push constant range exists, but not accessible from stage
+    SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH,                // Descriptor type does not match shader resource type
+    SHADER_CHECKER_DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE,    // Descriptor used by shader, but not accessible from stage
 } SHADER_CHECKER_ERROR;
 
 typedef enum _DRAW_TYPE {
