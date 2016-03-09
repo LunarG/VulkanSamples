@@ -30,19 +30,16 @@
 #include <unordered_map>
 #include "vk_layer_table.h"
 
-template<typename DATA_T>
-DATA_T *get_my_data_ptr(void *data_key,
-                        std::unordered_map<void *, DATA_T*> &layer_data_map)
-{
+template <typename DATA_T> DATA_T *get_my_data_ptr(void *data_key, std::unordered_map<void *, DATA_T *> &layer_data_map) {
     DATA_T *debug_data;
     typename std::unordered_map<void *, DATA_T *>::const_iterator got;
 
     /* TODO: We probably should lock here, or have caller lock */
     got = layer_data_map.find(data_key);
 
-    if ( got == layer_data_map.end() ) {
+    if (got == layer_data_map.end()) {
         debug_data = new DATA_T;
-        layer_data_map[(void *) data_key] = debug_data;
+        layer_data_map[(void *)data_key] = debug_data;
     } else {
         debug_data = got->second;
     }
@@ -51,4 +48,3 @@ DATA_T *get_my_data_ptr(void *data_key,
 }
 
 #endif // LAYER_DATA_H
-
