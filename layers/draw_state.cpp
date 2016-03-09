@@ -1319,8 +1319,8 @@ static bool has_descriptor_binding(layer_data *my_data, vector<VkDescriptorSetLa
     if (bindingIt == layout_node->bindingToIndexMap.end())
         return false;
 
-    type = layout_node->descriptorTypes[slot.second];
-    stage_flags = layout_node->stageFlags[slot.second];
+    type = layout_node->descriptorTypes[bindingIt->second];
+    stage_flags = layout_node->stageFlags[bindingIt->second];
 
     return true;
 }
