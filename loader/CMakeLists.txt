@@ -34,11 +34,12 @@ set(LOADER_SRCS
 
 if (WIN32)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
-	# build dev_ext_trampoline with release flags to allow tail-call optimization
-	# cmake and MSVC doesn't make this easy to do
-    set_source_files_properties(${LOADER_SRCS} PROPERTIES COMPILE_FLAGS ${CMAKE_C_FLAGS_DEBUG})
-	set(CMAKE_C_FLAGS_DEBUG "")
-	set_source_files_properties(dev_ext_trampoline.c PROPERTIES COMPILE_FLAGS ${CMAKE_C_FLAGS_RELEASE})
+    # Build dev_ext_trampoline with -O2 to allow tail-call optimization.
+    # We have to disable Real Time Checks when we specify -O2.
+    # Unfortunately, this also disables them for all of the loader.
+    STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    STRING (REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+    set_source_files_properties(dev_ext_trampoline.c PROPERTIES COMPILE_FLAGS -O2)
 
     add_library(vulkan-${MAJOR} SHARED ${LOADER_SRCS} dirent_on_windows.c ${CMAKE_CURRENT_BINARY_DIR}/vulkan-${MAJOR}.def)
     set_target_properties(vulkan-${MAJOR} PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_BINARY_DIR}/vulkan-${MAJOR}.def")
