@@ -4049,8 +4049,7 @@ void decrementResources(layer_data *my_data, VkQueue queue) {
     }
 }
 
-void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t cmdBufferCount, const VkCommandBuffer *pCmdBuffers,
-                         VkFence fence) {
+void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, VkFence fence) {
     auto queue_data = my_data->queueMap.find(queue);
     if (fence != VK_NULL_HANDLE) {
         VkFence priorFence = VK_NULL_HANDLE;
@@ -4071,31 +4070,40 @@ void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t cmdBufferC
         fence_data->second.needsSignaled = true;
         fence_data->second.queue = queue;
         fence_data->second.in_use.fetch_add(1);
-        for (uint32_t i = 0; i < cmdBufferCount; ++i) {
-            for (auto secondaryCmdBuffer : my_data->commandBufferMap[pCmdBuffers[i]]->secondaryCommandBuffers) {
-                fence_data->second.cmdBuffers.push_back(secondaryCmdBuffer);
+        for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
+            const VkSubmitInfo *submit = &pSubmits[submit_idx];
+            for (uint32_t i = 0; i < submit->commandBufferCount; ++i) {
+                for (auto secondaryCmdBuffer : my_data->commandBufferMap[submit->pCommandBuffers[i]]->secondaryCommandBuffers) {
+                    fence_data->second.cmdBuffers.push_back(secondaryCmdBuffer);
+                }
+                fence_data->second.cmdBuffers.push_back(submit->pCommandBuffers[i]);
             }
-            fence_data->second.cmdBuffers.push_back(pCmdBuffers[i]);
         }
     } else {
         if (queue_data != my_data->queueMap.end()) {
-            for (uint32_t i = 0; i < cmdBufferCount; ++i) {
-                for (auto secondaryCmdBuffer : my_data->commandBufferMap[pCmdBuffers[i]]->secondaryCommandBuffers) {
-                    queue_data->second.untrackedCmdBuffers.push_back(secondaryCmdBuffer);
+            for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
+                const VkSubmitInfo *submit = &pSubmits[submit_idx];
+                for (uint32_t i = 0; i < submit->commandBufferCount; ++i) {
+                    for (auto secondaryCmdBuffer : my_data->commandBufferMap[submit->pCommandBuffers[i]]->secondaryCommandBuffers) {
+                        queue_data->second.untrackedCmdBuffers.push_back(secondaryCmdBuffer);
+                    }
+                    queue_data->second.untrackedCmdBuffers.push_back(submit->pCommandBuffers[i]);
                 }
-                queue_data->second.untrackedCmdBuffers.push_back(pCmdBuffers[i]);
             }
         }
     }
     if (queue_data != my_data->queueMap.end()) {
-        for (uint32_t i = 0; i < cmdBufferCount; ++i) {
-            // Add cmdBuffers to both the global set and queue set
-            for (auto secondaryCmdBuffer : my_data->commandBufferMap[pCmdBuffers[i]]->secondaryCommandBuffers) {
-                my_data->globalInFlightCmdBuffers.insert(secondaryCmdBuffer);
-                queue_data->second.inFlightCmdBuffers.insert(secondaryCmdBuffer);
+        for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
+            const VkSubmitInfo *submit = &pSubmits[submit_idx];
+            for (uint32_t i = 0; i < submit->commandBufferCount; ++i) {
+                // Add cmdBuffers to both the global set and queue set
+                for (auto secondaryCmdBuffer : my_data->commandBufferMap[submit->pCommandBuffers[i]]->secondaryCommandBuffers) {
+                    my_data->globalInFlightCmdBuffers.insert(secondaryCmdBuffer);
+                    queue_data->second.inFlightCmdBuffers.insert(secondaryCmdBuffer);
+                }
+                my_data->globalInFlightCmdBuffers.insert(submit->pCommandBuffers[i]);
+                queue_data->second.inFlightCmdBuffers.insert(submit->pCommandBuffers[i]);
             }
-            my_data->globalInFlightCmdBuffers.insert(pCmdBuffers[i]);
-            queue_data->second.inFlightCmdBuffers.insert(pCmdBuffers[i]);
         }
     }
 }
@@ -4256,9 +4264,9 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
             pCB->submitCount++; // increment submit count
             skipCall |= validatePrimaryCommandBufferState(dev_data, pCB);
         }
-        // Update cmdBuffer-related data structs and mark fence in-use
-        trackCommandBuffers(dev_data, queue, submit->commandBufferCount, submit->pCommandBuffers, fence);
     }
+    // Update cmdBuffer-related data structs and mark fence in-use
+    trackCommandBuffers(dev_data, queue, submitCount, pSubmits, fence);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall)
         return dev_data->device_dispatch_table->QueueSubmit(queue, submitCount, pSubmits, fence);
