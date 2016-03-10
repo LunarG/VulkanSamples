@@ -4224,6 +4224,13 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
     GLOBAL_CB_NODE *pCB = NULL;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
+    // First verify that fence is not in use
+    if ((fence != VK_NULL_HANDLE) && (submitCount != 0) && dev_data->fenceMap[fence].in_use.load()) {
+        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                            (uint64_t)(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
+                            "Fence %#" PRIx64 " is already in use by another submission.", (uint64_t)(fence));
+    }
+    // Now verify each individual submit
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
         const VkSubmitInfo *submit = &pSubmits[submit_idx];
         vector<VkSemaphore> semaphoreList;
@@ -4249,11 +4256,7 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
             pCB->submitCount++; // increment submit count
             skipCall |= validatePrimaryCommandBufferState(dev_data, pCB);
         }
-        if ((fence != VK_NULL_HANDLE) && dev_data->fenceMap[fence].in_use.load()) {
-            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                                (uint64_t)(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
-                                "Fence %#" PRIx64 " is already in use by another submission.", (uint64_t)(fence));
-        }
+        // Update cmdBuffer-related data structs and mark fence in-use
         trackCommandBuffers(dev_data, queue, submit->commandBufferCount, submit->pCommandBuffers, fence);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
