@@ -1,18 +1,22 @@
 # Vulkan Ecosystem Components
 *Version 1.0, January 25, 2016*
 
-This project provides loader and validation layers for Vulkan developers on Windows and Linux.
+This project provides Khronos offical ICD loader and validation layers for Vulkan developers on Windows and Linux.
 
 ## Introduction
 
-Vulkan is an Explicit API, enabling direct control over how GPUs actually work. No (or very little) validation or error checking is done inside a VK driver. Applications have full control and responsibility. Any errors in how VK is used are likely to result in a crash. This project provides layered utility libraries to ease development and help guide developers to proven safe patterns.
+Vulkan is an Explicit API, enabling direct control over how GPUs actually work. No (or very little) validation
+or error checking is done inside a Vulkan driver. Applications have full control and responsibility. Any errors in
+how Vulkan is used often result in a crash. This project provides standard validation layers that can be enabled to ease development by 
+helping developers verify their applications correctly use the Vulkan API.
 
-New with Vulkan is an extensible layered architecture that enables validation libraries to be implemented as layers. The loader is essential in supporting multiple drivers and GPUs along with layer library enablement.
+Vulkan supports multiple GPUs and multiple global contexts (VkInstance). The ICD loader is necessary to support multiple GPUs  and the VkInstance level Vulkan commands.  Additionally, the loader manages inserting Vulkan layer libraries,
+including validation layers between the application and the ICD.
 
 The following components are available in this repository:
 - Vulkan header files
-- [*ICD Loader*](loader) and [*Layer Manager*](layers/README.md, loader/README.md
-- Core [*Validation Layers*](layers/)
+- [*ICD Loader*](loader/)
+- [*Validation Layers*](layers/)
 - Demos and tests for the loader and validation layers
 
 
@@ -24,18 +28,18 @@ includes directions for building all the components, running the validation test
 Information on how to enable the various Validation layers is in
 [layers/README.md](layers/README.md).
 
+Architecture and interface information for the loader is in
+[loader/LoaderAndLayerInterface.md](loader/LoaderAndLayerInterface.md).
 
 ## License
-This work is intended to be released as open source under a MIT-style
-license once the Vulkan specification is public. Until that time, this work
-is covered by the Khronos NDA governing the details of the VK API.
+This work is released as open source under a MIT-style license from Khronos including a Khronos copyright.
+
+See LICENSE.txt for a full list of licenses used in this repository.
 
 ## Acknowledgements
-While this project is being developed by LunarG, Inc; there are many other
-companies and individuals making this possible: Valve Software, funding
-project development; Intel Corporation, providing full hardware specifications
-and valuable technical feedback; AMD, providing VK spec editor contributions;
-ARM, contributing a Chairman for this working group within Khronos; Nvidia,
-providing an initial co-editor for the spec; Qualcomm for picking up the
-co-editor's chair; and Khronos, for providing hosting within GitHub.
+While this project has been developed primarily by LunarG, Inc; there are many other
+companies and individuals making this possible: Valve Corporation, funding
+project development; Google providing significant contributions to the validation layers;
+Khronos providing oversight and hosting of the project.
+
 
