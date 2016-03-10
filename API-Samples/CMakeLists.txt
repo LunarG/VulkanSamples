@@ -106,11 +106,18 @@ find_program(GLSLANG_VALIDATOR NAMES glslangValidator
 
 if(WIN32)
     set (MOVE_CMD "move")
-    set (VULKAN_LOADER "vulkan-${MAJOR}")
+    set (VULKAN_LOADER_NAME "vulkan-${MAJOR}")
 else()
     set (MOVE_CMD "mv")
     set (PTHREAD "pthread")
-    set (VULKAN_LOADER "vulkan")
+    set (VULKAN_LOADER_NAME "vulkan")
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/layers")
+    set (VULKAN_LOADER ${VULKAN_LOADER_NAME})
+else()
+    find_library(VULKAN_LOADER NAMES ${VULKAN_LOADER_NAME}
+                 HINTS "${PROJECT_SOURCE_DIR}/../${BINDATA_DIR}" )
 endif()
 
 set (LIBGLM_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/libs)

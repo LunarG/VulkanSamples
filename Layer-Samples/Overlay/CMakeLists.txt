@@ -23,10 +23,19 @@ add_custom_command(OUTPUT ${SHADER_DIR}/${SFILE}-frag.spv
 message(STATUS "Shader dir: ${SHADER_DIR}")
 message(STATUS "Cxxflags: ${CMAKE_CXX_FLAGS}")
 
+if (EXISTS "${CMAKE_SOURCE_DIR}/layers")
+    set(LAYERS_LOC ${CMAKE_SOURCE_DIR})
+    set(LAYER_UTILS_LIB layer_utils)
+else()
+    set(LAYERS_LOC ${CMAKE_SOURCE_DIR}/../source)
+    find_library(LAYER_UTILS_LIB NAMES layer_utils
+                 HINTS "${CMAKE_SOURCE_DIR}/../bin" )
+endif()
+
 set(UTILDIR "${CMAKE_SOURCE_DIR}/Layer-Samples/utils")
 
 add_library(VKLayer_overlay SHARED overlay.cpp
-        ${CMAKE_SOURCE_DIR}/layers/vk_layer_table.cpp
+        ${LAYERS_LOC}/layers/vk_layer_table.cpp
         ${SHADER_DIR}/overlay-vert.spv
         ${SHADER_DIR}/overlay-frag.spv
         overlay.json)
@@ -43,13 +52,13 @@ else()
         VERBATIM)
 endif()
 
-target_link_libraries(VKLayer_overlay layer_utils)
+target_link_libraries(VKLayer_overlay ${LAYER_UTILS_LIB})
 set_target_properties(VKLayer_overlay PROPERTIES CXX_FLAGS "-Wno-unused-function")
 
 include_directories(
         "${CMAKE_BINARY_DIR}/layers"
-        "${CMAKE_SOURCE_DIR}/layers"
-        "${CMAKE_SOURCE_DIR}/loader"
+        "${LAYERS_LOC}/layers"
+        "${LAYERS_LOC}/loader"
         "${UTILDIR}/stb"
         )
 
