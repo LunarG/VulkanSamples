@@ -7263,8 +7263,8 @@ VkBool32 ValidateLayouts(const layer_data *my_data, VkDevice device, const VkRen
                 } else {
                     skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                     DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                    "Layout for input attachment is %d but can only be READ_ONLY_OPTIMAL or GENERAL.",
-                                    subpass.pInputAttachments[j].attachment);
+                                    "Layout for input attachment is %s but can only be READ_ONLY_OPTIMAL or GENERAL.",
+                                    string_VkImageLayout(subpass.pInputAttachments[j].layout));
                 }
             }
         }
@@ -7278,8 +7278,8 @@ VkBool32 ValidateLayouts(const layer_data *my_data, VkDevice device, const VkRen
                 } else {
                     skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                     DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                    "Layout for color attachment is %d but can only be COLOR_ATTACHMENT_OPTIMAL or GENERAL.",
-                                    subpass.pColorAttachments[j].attachment);
+                                    "Layout for color attachment is %s but can only be COLOR_ATTACHMENT_OPTIMAL or GENERAL.",
+                                    string_VkImageLayout(subpass.pColorAttachments[j].layout));
                 }
             }
         }
@@ -7294,8 +7294,8 @@ VkBool32 ValidateLayouts(const layer_data *my_data, VkDevice device, const VkRen
                     skip |=
                         log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                 DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                "Layout for depth attachment is %d but can only be DEPTH_STENCIL_ATTACHMENT_OPTIMAL or GENERAL.",
-                                subpass.pDepthStencilAttachment->attachment);
+                                "Layout for depth attachment is %s but can only be DEPTH_STENCIL_ATTACHMENT_OPTIMAL or GENERAL.",
+                                string_VkImageLayout(subpass.pDepthStencilAttachment->layout));
                 }
             }
         }
