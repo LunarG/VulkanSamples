@@ -31,6 +31,7 @@ set (GLMINCLUDES "${CMAKE_SOURCE_DIR}/API-Samples/utils")
 
 # to run with source glslang libs/headers
 if(UNIX)
+    add_definitions(-DVK_USE_PLATFORM_XCB_KHR)
     if (EXISTS "${CMAKE_SOURCE_DIR}/../glslang")
          set (GLSLANGDIR "${CMAKE_SOURCE_DIR}/../glslang")
     else()
