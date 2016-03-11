@@ -38,13 +38,23 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #define NOMINMAX /* Don't let Windows define min() or max() */
 #define APP_NAME_STR_LEN 80
+
+#elif defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
+#	define VK_USE_PLATFORM_IOS_MVK
+#	include <MoltenVK/vk_mvk_ios_surface.h>
+#elif defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
+#	define VK_USE_PLATFORM_OSX_MVK
+#	include <MoltenVK/vk_mvk_osx_surface.h>
+
 #else // _WIN32
 #include <unistd.h>
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
 
+#if !(defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
 #include "vulkan/vk_sdk_platform.h"
+#endif
 
 /* Number of descriptor sets needs to be the same at alloc,       */
 /* pipeline layout creation, and descriptor set layout creation   */
@@ -134,6 +144,8 @@ struct sample_info {
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND window;                 // hWnd - window handle
+#elif (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
+	void* window;
 #else                            // _WIN32
     xcb_connection_t *connection;
     xcb_screen_t *screen;

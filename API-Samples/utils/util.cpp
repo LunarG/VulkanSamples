@@ -35,7 +35,11 @@ samples utility functions
 #include <iomanip>
 #include <iostream>
 #include "util.hpp"
-#include "SPIRV/GlslangToSpv.h"
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
+#	include <MoltenGLSLToSPIRVConverter/GLSLToSPIRVConverter.h>
+#else
+#	include "SPIRV/GlslangToSpv.h"
+#endif
 
 // For timestamp code (get_milliseconds)
 #ifdef WIN32
@@ -46,7 +50,10 @@ samples utility functions
 
 using namespace std;
 
+#if !(defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
+// iOS & OSX: main() implemented externally to allow access to Objective-C components
 int main(int argc, char **argv) { return sample_main(); }
+#endif
 
 void extract_version(uint32_t version, uint32_t &major, uint32_t &minor,
                      uint32_t &patch) {
@@ -72,9 +79,12 @@ string get_file_name(const string &s) {
     return ("");
 }
 
+#if !(defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
+// iOS & OSX: get_base_data_dir() implemented externally to allow access to Objective-C components
 std::string get_base_data_dir() {
     return std::string(VULKAN_SAMPLES_BASE_DIR) + "/API-Samples/data/";
 }
+#endif
 
 std::string get_data_dir(std::string filename) {
     std::string basedir = get_base_data_dir();
@@ -251,6 +261,47 @@ bool read_ppm(char const *const filename, int &width, int &height,
     return true;
 }
 
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
+
+void init_glslang() {}
+
+void finalize_glslang() {}
+
+bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spirv) {
+
+ 	MLNShaderStage shaderStage;
+ 	switch (shader_type) {
+		 		case VK_SHADER_STAGE_VERTEX_BIT:
+		 			shaderStage = kMLNShaderStageVertex;
+		 			break;
+		 		case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
+		 			shaderStage = kMLNShaderStageTessControl;
+		 			break;
+				case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
+		 			shaderStage = kMLNShaderStageTessEval;
+		 			break;
+		 		case VK_SHADER_STAGE_GEOMETRY_BIT:
+		 			shaderStage = kMLNShaderStageGeometry;
+		 			break;
+		 		case VK_SHADER_STAGE_FRAGMENT_BIT:
+		 			shaderStage = kMLNShaderStageFragment;
+		 			break;
+		 		case VK_SHADER_STAGE_COMPUTE_BIT:
+		 			shaderStage = kMLNShaderStageCompute;
+		 			break;
+		 		default:
+		 			shaderStage = kMLNShaderStageAuto;
+		 			break;
+	 	}
+
+ 	molten::GLSLToSPIRVConverter glslConverter;
+ 	glslConverter.setGLSL(pshader);
+ 	bool wasConverted = glslConverter.convert(shaderStage, false, false);
+ 	if (wasConverted) { spirv = glslConverter.getSPIRV(); }
+ 	return wasConverted;
+ }
+
+#else
 void init_resources(TBuiltInResource &Resources) {
     Resources.maxLights = 32;
     Resources.maxClipPlanes = 6;
@@ -417,6 +468,8 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
 
     return true;
 }
+#endif
+
 void wait_seconds(int seconds) {
 #ifdef WIN32
     Sleep(seconds * 1000);

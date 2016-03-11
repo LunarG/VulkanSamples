@@ -228,6 +228,10 @@ void init_instance_extension_names(struct sample_info &info) {
 #ifdef _WIN32
     info.instance_extension_names.push_back(
         VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
+	info.instance_extension_names.push_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
+#elif defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
+	info.instance_extension_names.push_back(VK_MVK_OSX_SURFACE_EXTENSION_NAME);
 #else
     info.instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #endif
@@ -415,7 +419,7 @@ void destroy_debug_report_callback(struct sample_info &info) {
 }
 
 void init_connection(struct sample_info &info) {
-#ifndef _WIN32
+#if !(defined(_WIN32) || defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
@@ -513,6 +517,15 @@ void destroy_window(struct sample_info &info) {
     vkDestroySurfaceKHR(info.inst, info.surface, NULL);
     DestroyWindow(info.window);
 }
+
+#elif defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
+
+// iOS & OSX: init_window() implemented externally to allow access to Objective-C components
+
+void destroy_window(struct sample_info &info) {
+	info.window = NULL;
+}
+
 #else
 void init_window(struct sample_info &info) {
     assert(info.width > 0);
@@ -696,6 +709,20 @@ void init_swapchain_extension(struct sample_info &info) {
     createInfo.hinstance = info.connection;
     createInfo.hwnd = info.window;
     res = vkCreateWin32SurfaceKHR(info.inst, &createInfo, NULL, &info.surface);
+#elif defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
+	VkIOSSurfaceCreateInfoMVK createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK;
+	createInfo.pNext = NULL;
+	createInfo.flags = 0;
+	createInfo.pView = info.window;
+	res = vkCreateIOSSurfaceMVK(info.inst, &createInfo, NULL, &info.surface);
+#elif defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
+	VkOSXSurfaceCreateInfoMVK createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_OSX_SURFACE_CREATE_INFO_MVK;
+	createInfo.pNext = NULL;
+	createInfo.flags = 0;
+	createInfo.pView = info.window;
+	res = vkCreateOSXSurfaceMVK(info.inst, &createInfo, NULL, &info.surface);
 #else  // _WIN32
     VkXcbSurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
