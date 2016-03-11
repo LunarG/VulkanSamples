@@ -786,6 +786,8 @@ void execute_queue_cmdbuf(struct sample_info &info,
     VkResult U_ASSERT_ONLY res;
     VkFence nullFence = VK_NULL_HANDLE;
 
+    VkPipelineStageFlags pipe_stage_flags =
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -794,6 +796,7 @@ void execute_queue_cmdbuf(struct sample_info &info,
     submit_info[0].pWaitDstStageMask = NULL;
     submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
+    submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
     submit_info[0].signalSemaphoreCount = 0;
     submit_info[0].pSignalSemaphores = NULL;
 
@@ -1521,14 +1524,16 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth,
     dynamicState.dynamicStateCount = 0;
 
     VkPipelineVertexInputStateCreateInfo vi;
+    memset(&vi, 0, sizeof(vi));
     vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vi.pNext = NULL;
-    vi.flags = 0;
-    vi.vertexBindingDescriptionCount = 1;
-    vi.pVertexBindingDescriptions = &info.vi_binding;
-    vi.vertexAttributeDescriptionCount = 2;
-    vi.pVertexAttributeDescriptions = info.vi_attribs;
-
+    if (include_vi) {
+        vi.pNext = NULL;
+        vi.flags = 0;
+        vi.vertexBindingDescriptionCount = 1;
+        vi.pVertexBindingDescriptions = &info.vi_binding;
+        vi.vertexAttributeDescriptionCount = 2;
+        vi.pVertexAttributeDescriptions = info.vi_attribs;
+    }
     VkPipelineInputAssemblyStateCreateInfo ia;
     ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     ia.pNext = NULL;
@@ -1625,7 +1630,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth,
     pipeline.basePipelineHandle = VK_NULL_HANDLE;
     pipeline.basePipelineIndex = 0;
     pipeline.flags = 0;
-    pipeline.pVertexInputState = include_vi ? &vi : NULL;
+    pipeline.pVertexInputState = &vi;
     pipeline.pInputAssemblyState = &ia;
     pipeline.pRasterizationState = &rs;
     pipeline.pColorBlendState = &cb;
