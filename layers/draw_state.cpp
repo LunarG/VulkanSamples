@@ -3889,6 +3889,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
     deleteLayouts(dev_data);
     dev_data->imageViewMap.clear();
     dev_data->imageMap.clear();
+    dev_data->imageSubresourceMap.clear();
+    dev_data->imageLayoutMap.clear();
+    dev_data->memImageMap.clear();
     dev_data->bufferViewMap.clear();
     dev_data->bufferMap.clear();
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -4610,7 +4613,18 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(VkDevice device, VkIma
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     dev_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
     loader_platform_thread_lock_mutex(&globalLock);
-    dev_data->imageMap.erase(image);
+    const auto& entry = dev_data->imageMap.find(image);
+    if (entry != dev_data->imageMap.end()) {
+        dev_data->memImageMap.erase(entry->second.mem);
+        dev_data->imageMap.erase(entry);
+    }
+    const auto& subEntry = dev_data->imageSubresourceMap.find(image);
+    if (subEntry != dev_data->imageSubresourceMap.end()) {
+        for (const auto& pair : subEntry->second) {
+            dev_data->imageLayoutMap.erase(pair);
+        }
+        dev_data->imageSubresourceMap.erase(subEntry);
+    }
     loader_platform_thread_unlock_mutex(&globalLock);
 }
 
