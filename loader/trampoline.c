@@ -629,8 +629,9 @@ vkCreateDevice(VkPhysicalDevice physicalDevice,
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
+    //TODO handle more than one phys dev per icd (icd->phys_devs[0])
     res = loader_add_device_extensions(
-        inst, icd, phys_dev->phys_dev,
+        inst, icd, icd->phys_devs[0],
         phys_dev->this_icd->this_icd_lib->lib_name, &icd_exts);
     if (res != VK_SUCCESS) {
         loader_platform_thread_unlock_mutex(&loader_lock);

@@ -66,6 +66,13 @@
 #include "vk_layer_extension_utils.h"
 #include "vk_layer_utils.h"
 
+#if defined __ANDROID__
+#include <android/log.h>
+#define LOGCONSOLE(...) ((void)__android_log_print(ANDROID_LOG_INFO, "DS", __VA_ARGS__))
+#else
+#define LOGCONSOLE(...) printf(__VA_ARGS__)
+#endif
+
 using std::unordered_map;
 using std::unordered_set;
 
@@ -129,6 +136,24 @@ struct layer_data {
 
     layer_data() : report_data(nullptr), device_dispatch_table(nullptr), instance_dispatch_table(nullptr), device_extensions(){};
 };
+
+static const VkLayerProperties ds_global_layers[] = {{
+    "VK_LAYER_LUNARG_draw_state", VK_API_VERSION, 1, "LunarG Validation Layer",
+}};
+
+template <class TCreateInfo> void ValidateLayerOrdering(const TCreateInfo &createInfo) {
+    bool foundLayer = false;
+    for (uint32_t i = 0; i < createInfo.enabledLayerCount; ++i) {
+        if (!strcmp(createInfo.ppEnabledLayerNames[i], ds_global_layers[0].layerName)) {
+            foundLayer = true;
+        }
+        // This has to be logged to console as we don't have a callback at this point.
+        if (!foundLayer && !strcmp(createInfo.ppEnabledLayerNames[0], "VK_LAYER_GOOGLE_unique_objects")) {
+            LOGCONSOLE("Cannot activate layer VK_LAYER_GOOGLE_unique_objects prior to activating %s.",
+                       ds_global_layers[0].layerName);
+        }
+    }
+}
 
 // Code imported from shader_checker
 static void build_def_index(shader_module *);
@@ -3738,6 +3763,8 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCall
 
     init_draw_state(my_data, pAllocator);
 
+    ValidateLayerOrdering(*pCreateInfo);
+
     return result;
 }
 
@@ -3841,6 +3868,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
         memset(&my_device_data->physDevProperties.features, 0, sizeof(VkPhysicalDeviceFeatures));
     }
     loader_platform_thread_unlock_mutex(&globalLock);
+
+    ValidateLayerOrdering(*pCreateInfo);
+
     return result;
 }
 
@@ -3875,15 +3905,12 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,
     return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);
 }
 
-static const VkLayerProperties ds_global_layers[] = {{
-    "VK_LAYER_LUNARG_draw_state", VK_API_VERSION, 1, "LunarG Validation Layer",
-}};
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
     return util_GetLayerProperties(ARRAY_SIZE(ds_global_layers), ds_global_layers, pCount, pProperties);
 }
 
+// TODO: Why does this exist - can we just use global?
 static const VkLayerProperties ds_device_layers[] = {{
     "VK_LAYER_LUNARG_draw_state", VK_API_VERSION, 1, "LunarG Validation Layer",
 }};
@@ -4049,8 +4076,7 @@ void decrementResources(layer_data *my_data, VkQueue queue) {
     }
 }
 
-void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t cmdBufferCount, const VkCommandBuffer *pCmdBuffers,
-                         VkFence fence) {
+void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, VkFence fence) {
     auto queue_data = my_data->queueMap.find(queue);
     if (fence != VK_NULL_HANDLE) {
         VkFence priorFence = VK_NULL_HANDLE;
@@ -4071,31 +4097,40 @@ void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t cmdBufferC
         fence_data->second.needsSignaled = true;
         fence_data->second.queue = queue;
         fence_data->second.in_use.fetch_add(1);
-        for (uint32_t i = 0; i < cmdBufferCount; ++i) {
-            for (auto secondaryCmdBuffer : my_data->commandBufferMap[pCmdBuffers[i]]->secondaryCommandBuffers) {
-                fence_data->second.cmdBuffers.push_back(secondaryCmdBuffer);
+        for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
+            const VkSubmitInfo *submit = &pSubmits[submit_idx];
+            for (uint32_t i = 0; i < submit->commandBufferCount; ++i) {
+                for (auto secondaryCmdBuffer : my_data->commandBufferMap[submit->pCommandBuffers[i]]->secondaryCommandBuffers) {
+                    fence_data->second.cmdBuffers.push_back(secondaryCmdBuffer);
+                }
+                fence_data->second.cmdBuffers.push_back(submit->pCommandBuffers[i]);
             }
-            fence_data->second.cmdBuffers.push_back(pCmdBuffers[i]);
         }
     } else {
         if (queue_data != my_data->queueMap.end()) {
-            for (uint32_t i = 0; i < cmdBufferCount; ++i) {
-                for (auto secondaryCmdBuffer : my_data->commandBufferMap[pCmdBuffers[i]]->secondaryCommandBuffers) {
-                    queue_data->second.untrackedCmdBuffers.push_back(secondaryCmdBuffer);
+            for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
+                const VkSubmitInfo *submit = &pSubmits[submit_idx];
+                for (uint32_t i = 0; i < submit->commandBufferCount; ++i) {
+                    for (auto secondaryCmdBuffer : my_data->commandBufferMap[submit->pCommandBuffers[i]]->secondaryCommandBuffers) {
+                        queue_data->second.untrackedCmdBuffers.push_back(secondaryCmdBuffer);
+                    }
+                    queue_data->second.untrackedCmdBuffers.push_back(submit->pCommandBuffers[i]);
                 }
-                queue_data->second.untrackedCmdBuffers.push_back(pCmdBuffers[i]);
             }
         }
     }
     if (queue_data != my_data->queueMap.end()) {
-        for (uint32_t i = 0; i < cmdBufferCount; ++i) {
-            // Add cmdBuffers to both the global set and queue set
-            for (auto secondaryCmdBuffer : my_data->commandBufferMap[pCmdBuffers[i]]->secondaryCommandBuffers) {
-                my_data->globalInFlightCmdBuffers.insert(secondaryCmdBuffer);
-                queue_data->second.inFlightCmdBuffers.insert(secondaryCmdBuffer);
+        for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
+            const VkSubmitInfo *submit = &pSubmits[submit_idx];
+            for (uint32_t i = 0; i < submit->commandBufferCount; ++i) {
+                // Add cmdBuffers to both the global set and queue set
+                for (auto secondaryCmdBuffer : my_data->commandBufferMap[submit->pCommandBuffers[i]]->secondaryCommandBuffers) {
+                    my_data->globalInFlightCmdBuffers.insert(secondaryCmdBuffer);
+                    queue_data->second.inFlightCmdBuffers.insert(secondaryCmdBuffer);
+                }
+                my_data->globalInFlightCmdBuffers.insert(submit->pCommandBuffers[i]);
+                queue_data->second.inFlightCmdBuffers.insert(submit->pCommandBuffers[i]);
             }
-            my_data->globalInFlightCmdBuffers.insert(pCmdBuffers[i]);
-            queue_data->second.inFlightCmdBuffers.insert(pCmdBuffers[i]);
         }
     }
 }
@@ -4224,6 +4259,13 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
     GLOBAL_CB_NODE *pCB = NULL;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
+    // First verify that fence is not in use
+    if ((fence != VK_NULL_HANDLE) && (submitCount != 0) && dev_data->fenceMap[fence].in_use.load()) {
+        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                            (uint64_t)(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
+                            "Fence %#" PRIx64 " is already in use by another submission.", (uint64_t)(fence));
+    }
+    // Now verify each individual submit
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
         const VkSubmitInfo *submit = &pSubmits[submit_idx];
         vector<VkSemaphore> semaphoreList;
@@ -4249,13 +4291,9 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
             pCB->submitCount++; // increment submit count
             skipCall |= validatePrimaryCommandBufferState(dev_data, pCB);
         }
-        if ((fence != VK_NULL_HANDLE) && dev_data->fenceMap[fence].in_use.load()) {
-            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                                (uint64_t)(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
-                                "Fence %#" PRIx64 " is already in use by another submission.", (uint64_t)(fence));
-        }
-        trackCommandBuffers(dev_data, queue, submit->commandBufferCount, submit->pCommandBuffers, fence);
     }
+    // Update cmdBuffer-related data structs and mark fence in-use
+    trackCommandBuffers(dev_data, queue, submitCount, pSubmits, fence);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall)
         return dev_data->device_dispatch_table->QueueSubmit(queue, submitCount, pSubmits, fence);
@@ -4880,6 +4918,25 @@ static void ResolveRemainingLevelsLayers(layer_data *dev_data, VkImageSubresourc
 
         if (range->layerCount == VK_REMAINING_ARRAY_LAYERS) {
             range->layerCount = image_node_it->second.createInfo.arrayLayers - range->baseArrayLayer;
+        }
+    }
+}
+
+// Return the correct layer/level counts if the caller used the special
+// values VK_REMAINING_MIP_LEVELS or VK_REMAINING_ARRAY_LAYERS.
+static void ResolveRemainingLevelsLayers(layer_data *dev_data, uint32_t *levels, uint32_t *layers, VkImageSubresourceRange range,
+                                         VkImage image) {
+    /* expects globalLock to be held by caller */
+
+    *levels = range.levelCount;
+    *layers = range.layerCount;
+    auto image_node_it = dev_data->imageMap.find(image);
+    if (image_node_it != dev_data->imageMap.end()) {
+        if (range.levelCount == VK_REMAINING_MIP_LEVELS) {
+            *levels = image_node_it->second.createInfo.mipLevels - range.baseMipLevel;
+        }
+        if (range.layerCount == VK_REMAINING_ARRAY_LAYERS) {
+            *layers = image_node_it->second.createInfo.arrayLayers - range.baseArrayLayer;
         }
     }
 }
@@ -6473,6 +6530,8 @@ VkBool32 TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCo
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, cmdBuffer);
     VkBool32 skip = VK_FALSE;
+    uint32_t levelCount = 0;
+    uint32_t layerCount = 0;
 
     for (uint32_t i = 0; i < memBarrierCount; ++i) {
         auto mem_barrier = &pImgMemBarriers[i];
@@ -6480,9 +6539,11 @@ VkBool32 TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCo
             continue;
         // TODO: Do not iterate over every possibility - consolidate where
         // possible
-        for (uint32_t j = 0; j < mem_barrier->subresourceRange.levelCount; j++) {
+        ResolveRemainingLevelsLayers(dev_data, &levelCount, &layerCount, mem_barrier->subresourceRange, mem_barrier->image);
+
+        for (uint32_t j = 0; j < levelCount; j++) {
             uint32_t level = mem_barrier->subresourceRange.baseMipLevel + j;
-            for (uint32_t k = 0; k < mem_barrier->subresourceRange.layerCount; k++) {
+            for (uint32_t k = 0; k < layerCount; k++) {
                 uint32_t layer = mem_barrier->subresourceRange.baseArrayLayer + k;
                 VkImageSubresource sub = {mem_barrier->subresourceRange.aspectMask, level, layer};
                 IMAGE_CMD_BUF_LAYOUT_NODE node;
@@ -7195,21 +7256,21 @@ VkBool32 ValidateDependencies(const layer_data *my_data, const VkRenderPassBegin
             uint32_t attachment = subpass.pInputAttachments[j].attachment;
             input_attachment_to_subpass[attachment].push_back(i);
             for (auto overlapping_attachment : overlapping_attachments[attachment]) {
-                input_attachment_to_subpass[attachment].push_back(overlapping_attachment);
+                input_attachment_to_subpass[overlapping_attachment].push_back(i);
             }
         }
         for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
             uint32_t attachment = subpass.pColorAttachments[j].attachment;
             output_attachment_to_subpass[attachment].push_back(i);
             for (auto overlapping_attachment : overlapping_attachments[attachment]) {
-                output_attachment_to_subpass[attachment].push_back(overlapping_attachment);
+                output_attachment_to_subpass[overlapping_attachment].push_back(i);
             }
         }
         if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
             uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
             output_attachment_to_subpass[attachment].push_back(i);
             for (auto overlapping_attachment : overlapping_attachments[attachment]) {
-                output_attachment_to_subpass[attachment].push_back(overlapping_attachment);
+                output_attachment_to_subpass[overlapping_attachment].push_back(i);
             }
         }
     }
@@ -7260,8 +7321,8 @@ VkBool32 ValidateLayouts(const layer_data *my_data, VkDevice device, const VkRen
                 } else {
                     skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                     DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                    "Layout for input attachment is %d but can only be READ_ONLY_OPTIMAL or GENERAL.",
-                                    subpass.pInputAttachments[j].attachment);
+                                    "Layout for input attachment is %s but can only be READ_ONLY_OPTIMAL or GENERAL.",
+                                    string_VkImageLayout(subpass.pInputAttachments[j].layout));
                 }
             }
         }
@@ -7275,8 +7336,8 @@ VkBool32 ValidateLayouts(const layer_data *my_data, VkDevice device, const VkRen
                 } else {
                     skip |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                     DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                    "Layout for color attachment is %d but can only be COLOR_ATTACHMENT_OPTIMAL or GENERAL.",
-                                    subpass.pColorAttachments[j].attachment);
+                                    "Layout for color attachment is %s but can only be COLOR_ATTACHMENT_OPTIMAL or GENERAL.",
+                                    string_VkImageLayout(subpass.pColorAttachments[j].layout));
                 }
             }
         }
@@ -7291,8 +7352,8 @@ VkBool32 ValidateLayouts(const layer_data *my_data, VkDevice device, const VkRen
                     skip |=
                         log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                 DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                "Layout for depth attachment is %d but can only be DEPTH_STENCIL_ATTACHMENT_OPTIMAL or GENERAL.",
-                                subpass.pDepthStencilAttachment->attachment);
+                                "Layout for depth attachment is %s but can only be DEPTH_STENCIL_ATTACHMENT_OPTIMAL or GENERAL.",
+                                string_VkImageLayout(subpass.pDepthStencilAttachment->layout));
                 }
             }
         }

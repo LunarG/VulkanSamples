@@ -6,13 +6,25 @@
 
 ### VK_LAYER_LUNARG_standard_validation Overview
 
-This is a meta-layer managed by the loader. Specifying this layer name will cause the loader to load the all of the standard validation layers in the following optimal order: VK_LAYER_GOOGLE_threading, VK_LAYER_LUNARG_param_checker, VK_LAYER_LUNARG_device_limits, VK_LAYER_LUNA    RG_object_tracker, VK_LAYER_LUNARG_image, VK_LAYER_LUNARG_mem_tracker, VK_LAYER_LUNARG_draw_state, VK_LAYER_LUNARG_swapchain, and VK_LAYER_GOOGLE_unique_objects. Other layers can be specified and the loader will remove duplicates. See the following individual layer descriptions for layer details.
+This is a meta-layer managed by the loader. Specifying this layer name will cause the loader to load the all of the standard validation layers in the following optimal order:
+
+ - VK_LAYER_GOOGLE_threading
+ - VK_LAYER_LUNARG_param_checker
+ - VK_LAYER_LUNARG_device_limits
+ - VK_LAYER_LUNARG_object_tracker
+ - VK_LAYER_LUNARG_image
+ - VK_LAYER_LUNARG_mem_tracker
+ - VK_LAYER_LUNARG_draw_state
+ - VK_LAYER_LUNARG_swapchain
+ - VK_LAYER_GOOGLE_unique_objects
+
+Other layers can be specified and the loader will remove duplicates. See the following individual layer descriptions for layer details.
 
 ## VK_LAYER_LUNARG_draw_state
 
 ### VK_LAYER_LUNARG_draw_state Overview
 
-The VK_LAYER_LUNARG_draw_state layer tracks state leading into Draw cmds. This includes the Pipeline state, dynamic state, shaders, and descriptor set state. VK_LAYER_LUNARG_draw_state validates the consistency and correctness between and within these states. VK_LAYER_LUNARG_draw_state also includes SPIR-V validation which functionality is recorded under the VK_LAYER_LUNARG_ShaderChecker section below.
+The VK_LAYER_LUNARG_draw_state layer tracks state leading into Draw commands. This includes the Pipeline state, dynamic state, shaders, and descriptor set state. VK_LAYER_LUNARG_draw_state validates the consistency and correctness between and within these states. VK_LAYER_LUNARG_draw_state also includes SPIR-V validation which functionality is recorded under the VK_LAYER_LUNARG_ShaderChecker section below.
 
 ### VK_LAYER_LUNARG_draw_state Details Table
 
@@ -96,26 +108,12 @@ The VK_LAYER_LUNARG_draw_state layer tracks state leading into Draw cmds. This i
 ### VK_LAYER_LUNARG_draw_state Pending Work
 Additional checks to be added to VK_LAYER_LUNARG_draw_state
 
- 7. Lifetime validation (See [bug 13383](https://cvs.khronos.org/bugzilla/show_bug.cgi?id=13383))
-	 8. XGL_DESCRIPTOR_SET
-		 9. Cannot be deleted until no longer in use on GPU, or referenced in any pending command.
-                 10. Sets in XGL_DESCRIPTOR_REGION_USAGE_NON_FREE regions can never be deleted. Instead the xglClearDescriptorRegion() deletes all sets.
-		 11. Sets in XGL_DESCRIPTOR_REGION_USAGE_DYNAMIC regions can be deleted.
-	 12. XGL_DESCRIPTOR_SET_LAYOUT
-		 13. What do IHVs want here?
-		 14. Option 1 (assuming this one): Must not be deleted until all sets and layout chains referencing the set layout are deleted.
-		 15. Option 2: Can be freely deleted after usage.
-	 19. XGL_DESCRIPTOR_REGION
-		 20. Cannot be deleted until no longer in use on the GPU, or referenced in any pending command.
-	 21. XGL_BUFFER_VIEW, XGL_IMAGE_VIEW, etc
-		 22. Cannot be deleted until the descriptors referencing the objects are deleted.
-	 23. For ClearAttachments function, verify that the index of referenced attachment actually exists
- 24. GetRenderAreaGranularity - The pname:renderPass parameter must be the same as the one given in the sname:VkRenderPassBeginInfo structure for which the render area is relevant.
- 28. Verify that all relevent dynamic state objects are bound (See https://cvs.khronos.org/bugzilla/show_bug.cgi?id=14323)
- 30. At PSO creation time, there is no case when NOT including a FS should flag an error since there exist dynamic state configurations that can be set to cause a FS to not be required. Instead, in the case when no FS is in the PSO, validation should detect at runtime if dynamic state will require a FS, and in those case issue a runtime warning about undefined behavior. (see bug https://cvs.khronos.org/bugzilla/show_bug.cgi?id=14429)
- 31. Error if a cmdbuffer is submitted on a queue whose family doesn't match the family of the pool from which it was created.
- 32. Update Gfx Pipe Create Info shadowing to remove new/delete and instead use unique_ptrs for auto clean-up
- 33. Add validation for Pipeline Derivatives (see Pipeline Derivatives) section of the spec
+ 1. Lifetime validation (See [bug 13383](https://cvs.khronos.org/bugzilla/show_bug.cgi?id=13383))
+ 2. GetRenderAreaGranularity - The pname:renderPass parameter must be the same as the one given in the sname:VkRenderPassBeginInfo structure for which the render area is relevant.
+ 3. Update Gfx Pipe Create Info shadowing to remove new/delete and instead use unique_ptrs for auto clean-up
+ 4. Add validation for Pipeline Derivatives (see Pipeline Derivatives) section of the spec
+ 
+ See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ## VK_LAYER_LUNARG_ShaderChecker
 
@@ -148,6 +146,7 @@ depends on the pair of pipeline stages involved.
 ### VK_LAYER_LUNARG_ShaderChecker Pending Work
 - Additional test cases for variously broken SPIRV images
 - Validation of a single SPIRV image in isolation (the spec describes many constraints)
+ See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ## VK_LAYER_LUNARG_param_checker
 
@@ -167,7 +166,7 @@ The VK_LAYER_LUNARG_param_checker layer validates parameter values and flags err
 Additional work to be done
 
  1. Source2 was creating a VK_FORMAT_R8_SRGB texture (and image view) which was not supported by the underlying implementation (rendersystemtest imageformat test).  Checking that formats are supported by the implementation is something the validation layer could do using the VK_FORMAT_INFO_TYPE_PROPERTIES query.   There are probably a bunch of checks here you could be doing around vkCreateImage formats along with whether image/color/depth attachment views are valid.  I’m not sure how much of this is already there.
- 2.  From AMD: we were using an image view with a swizzle of VK_COLOR_COMPONENT_FORMAT_A with a BC1_RGB texture, which is not valid because the texture does not have an alpha channel.  In general, should validate that the swizzles do not reference components not in the texture format.
+ 2. From AMD: we were using an image view with a swizzle of VK_COLOR_COMPONENT_FORMAT_A with a BC1_RGB texture, which is not valid because the texture does not have an alpha channel.  In general, should validate that the swizzles do not reference components not in the texture format.
  3. When querying VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES must provide enough memory for all the queues on the device (not just 1 when device has multiple queues).
  4. INT & FLOAT bordercolors. Border color int/float selection must match associated texture format.
  5. Flag error on VkBufferCreateInfo if buffer size is 0
@@ -175,6 +174,8 @@ Additional work to be done
  7. For vkCreateGraphicsPipelines, correctly handle array of pCreateInfos and array of pStages within each element of pCreatInfos
  8. Check for valid VkIndexType in vkCmdBindIndexBuffer() should be in PreCmdBindIndexBuffer() call
  9. Check for valid VkPipelineBindPoint in vkCmdBindPipeline() & vkCmdBindDescriptorSets() should be in PreCmdBindPipeline() & PreCmdBindDescriptorSets() calls respectively.
+
+ See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ## VK_LAYER_LUNARG_image
 
@@ -205,7 +206,7 @@ DETAILS TABLE PENDING
 | NA | Enum used for informational messages | NONE | | NA | None |
 
 ### VK_LAYER_LUNARG_image Pending Work
-Additional work to be done
+ See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ## VK_LAYER_LUNARG_mem_tracker
 
@@ -237,20 +238,14 @@ The VK_LAYER_LUNARG_mem_tracker layer tracks memory objects and references and v
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | NA | None |
 
 ### VK_LAYER_LUNARG_mem_tracker Pending Work
+ See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 #### VK_LAYER_LUNARG_mem_tracker Enhancements
 
-1.  Flag any memory hazards: Validate that the pipeline barriers for buffers are sufficient to avoid hazards
-2.  Make sure that the XGL_IMAGE_VIEW_ATTACH_INFO.layout matches the layout of the image as determined by the last IMAGE_MEMORY_BARRIER
-3.  Verify that the XGL_IMAGE_MEMORY_BARRIER.oldLayout matches the actual previous layout (this one was super important for previous work in dealing with out-of-order command buffer generation). Note that these need to be tracked for each subresource.
-4.  Update for new Memory Binding Model
-5.  Consolidate error messages and make them consistent
-7.  Add validation for having mapped objects in a command list - GPU writing to mapped object is warning
-8.  Add validation for maximum memory references, maximum object counts, and object leaks
-9. When performing clears on surfaces that have both Depth and Stencil, WARN user if subresource range for depth and stencil are not both set (see blit_tests.cpp VkCmdClearDepthStencilTest test).
-11. Warn on image/buffer deletion if USAGE bits were set that were not needed
-12. Modify INVALID_FENCE_STATE to be WARNINGs instead of ERROR
-13. Report destroy or modify of resources in use on queues and not cleared by fence or WaitIdle. Could be fence, semaphore, or objects used by submitted CommandBuffers.
+1. Consolidate error messages and make them consistent
+2. Add validation for maximum memory references, maximum object counts, and object leaks
+3. Warn on image/buffer deletion if USAGE bits were set that were not needed
+4. Modify INVALID_FENCE_STATE to be WARNINGs instead of ERROR
 
 ## VK_LAYER_LUNARG_object_tracker
 
@@ -275,12 +270,12 @@ The VK_LAYER_LUNARG_object_tracker layer maintains a record of all Vulkan object
 
 ### VK_LAYER_LUNARG_object_tracker Pending Work
 
- 4. Verify images have CmdPipelineBarrier layouts matching new layout parameters to Cmd*Image* functions
- 6. For specific object instances that are allowed to be NULL, update object validation to verify that such objects are either NULL or valid
- 7. Verify cube array VkImageView objects use subresourceRange.arraySize (or effective arraySize when VK_REMAINING_ARRAY_SLICES is specified) that is a multiple of 6. 
- 8. Make object maps specific to instance and device.  Objects may only be used with matching instance or device.
- 9. Use reference counting for non-dispatchable objects.  Multiple object creation calls may return identical handles.
- 10. Update codegen for destroy_obj & validate_obj to generate all of the correct signatures and use the generated code
+ 1. Verify images have CmdPipelineBarrier layouts matching new layout parameters to Cmd*Image* functions
+ 2. For specific object instances that are allowed to be NULL, update object validation to verify that such objects are either NULL or valid
+ 3. Verify cube array VkImageView objects use subresourceRange.arraySize (or effective arraySize when VK_REMAINING_ARRAY_SLICES is specified) that is a multiple of 6. 
+ 4. Make object maps specific to instance and device.  Objects may only be used with matching instance or device.
+
+ See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ## VK_LAYER_GOOGLE_threading
 
@@ -316,7 +311,7 @@ It cannot insure that there is no latent race condition.
 | NA | Enum used for informational messages | NONE | | NA | None |
 
 ### VK_LAYER_GOOGLE_threading Pending Work
-Additional work to be done
+ See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ## VK_LAYER_LUNARG_device_limits
 
@@ -353,6 +348,8 @@ For the second category of errors, VK_LAYER_LUNARG_device_limits stores its own 
 ### VK_LAYER_LUNARG_device_limits Pending Work
 
  1. For all Formats, call vkGetPhysicalDeviceFormatProperties to pull their properties for the underlying device. After that point, if the app attempts to use any formats in violation of those properties, flag errors (this is done for Images).
+
+ See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ## VK_LAYER_LUNARG_swapchain
 
@@ -418,6 +415,8 @@ Additional checks to be added to VK_LAYER_LUNARG_swapchain
  1. Check that the queue used for presenting was checked/valid during vkGetPhysicalDeviceSurfaceSupportKHR.
  2. One issue that has already come up is correct UsageFlags for WSI SwapChains and SurfaceProperties.
  3. Tons of other stuff including semaphore and synchronization validation.
+
+ See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ## VK_LAYER_GOOGLE_unique_objects
 
