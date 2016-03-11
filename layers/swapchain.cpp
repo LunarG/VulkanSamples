@@ -1781,6 +1781,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice de
             }
         }
         if (imagesOwnedByApp >= (pSwapchain->imageCount - 1)) {
+
+/*  TODO:  Temporarily disable for SDK release while correct behavior is being determined
+
             skipCall |= LOG_PERF_WARNING(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, swapchain, "VkSwapchainKHR",
                                          SWAPCHAIN_APP_OWNS_TOO_MANY_IMAGES, "%s() called when the application "
                                                                              "already owns all presentable images "
@@ -1793,6 +1796,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice de
                                                                              "the presentable images of this "
                                                                              "swapchain.",
                                          __FUNCTION__, __FUNCTION__);
+*/
         }
     }
     if (!pImageIndex) {
