@@ -2256,7 +2256,7 @@ static void demo_init(struct demo *demo, const int argc, const char *argv[])
     if (strncmp(pCmdLine, "--use_staging", strlen("--use_staging")) == 0)
         demo->use_staging_buffer = true;
     else if (strncmp(pCmdLine, "--validate", strlen("--validate")) == 0)
-        demo->use_staging_buffer = true;
+        demo->validate = true;
     else if (strlen(pCmdLine) != 0) {
         fprintf(stderr, "Do not recognize argument \"%s\".\n", pCmdLine);
         argv_error = true;
