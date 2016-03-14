@@ -45,7 +45,7 @@
 #include <iostream>
 #include <algorithm>
 #include <list>
-#include <spirv.hpp>
+#include <SPIRV/spirv.hpp>
 #include <set>
 
 #include "vk_loader_platform.h"
