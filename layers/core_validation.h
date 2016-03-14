@@ -404,6 +404,8 @@ typedef enum _SHADER_CHECKER_ERROR {
     SHADER_CHECKER_PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE, // Push constant range exists, but not accessible from stage
     SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH,                // Descriptor type does not match shader resource type
     SHADER_CHECKER_DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE,    // Descriptor used by shader, but not accessible from stage
+    SHADER_CHECKER_FEATURE_NOT_ENABLED,        // Shader uses capability requiring a feature not enabled on device
+    SHADER_CHECKER_BAD_CAPABILITY,             // Shader uses capability not supported by Vulkan (OpenCL features)
 } SHADER_CHECKER_ERROR;
 
 typedef enum _DRAW_TYPE {

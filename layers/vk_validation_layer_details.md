@@ -136,6 +136,8 @@ It flags errors when inconsistencies are found across interfaces between shader 
 | Push constant not accessible from stage | Flags error if the push constant range containing a push constant block member is not accessible from the current shader stage. | PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE | vkCreateGraphicsPipelines | TBD | NA |
 | Descriptor not accessible from stage | Flags error if a descriptor used by a shader stage does not include that stage in its stageFlags | DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE | vkCreateGraphicsPipelines | TBD | NA |
 | Descriptor type mismatch | Flags error if a descriptor type does not match the shader resource type. | DESCRIPTOR_TYPE_MISMATCH | vkCreateGraphicsPipelines | TBD | NA |
+| Feature not enabled | Flags error if a capability declared by the shader requires a feature not enabled on the device | FEATURE_NOT_ENABLED | vkCreateGraphicsPipelines | TBD | NA |
+| Bad capability | Flags error if a capability declared by the shader is not supported by Vulkan shaders | BAD_CAPABILITY | vkCreateGraphicsPipelines | TBD | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 
 ### VK_LAYER_LUNARG_core_validation Shader Checker Pending Work
