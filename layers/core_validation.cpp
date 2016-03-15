@@ -4528,38 +4528,8 @@ static VkBool32 outsideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB
 }
 
 static void init_core_validation(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
-    uint32_t report_flags = 0;
-    uint32_t debug_action = 0;
-    FILE *log_output = NULL;
-    const char *option_str;
-    VkDebugReportCallbackEXT callback;
-    // initialize draw_state options
-    report_flags = getLayerOptionFlags("lunarg_core_validation.report_flags", 0);
-    getLayerOptionEnum("lunarg_core_validation.debug_action", (uint32_t *)&debug_action);
 
-    if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG) {
-        option_str = getLayerOption("lunarg_core_validation.log_filename");
-        log_output = getLayerLogOutput(option_str, "lunarg_core_validation");
-        VkDebugReportCallbackCreateInfoEXT dbgInfo;
-        memset(&dbgInfo, 0, sizeof(dbgInfo));
-        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgInfo.pfnCallback = log_callback;
-        dbgInfo.pUserData = log_output;
-        dbgInfo.flags = report_flags;
-        layer_create_msg_callback(my_data->report_data, &dbgInfo, pAllocator, &callback);
-        my_data->logging_callback.push_back(callback);
-    }
-
-    if (debug_action & VK_DBG_LAYER_ACTION_DEBUG_OUTPUT) {
-        VkDebugReportCallbackCreateInfoEXT dbgInfo;
-        memset(&dbgInfo, 0, sizeof(dbgInfo));
-        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgInfo.pfnCallback = win32_debug_output_msg;
-        dbgInfo.pUserData = log_output;
-        dbgInfo.flags = report_flags;
-        layer_create_msg_callback(my_data->report_data, &dbgInfo, pAllocator, &callback);
-        my_data->logging_callback.push_back(callback);
-    }
+    layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_core_validation");
 
     if (!globalLockInitialized) {
         loader_platform_thread_create_mutex(&globalLock);

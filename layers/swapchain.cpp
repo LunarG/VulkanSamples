@@ -33,6 +33,7 @@
 #include "swapchain.h"
 #include "vk_layer_extension_utils.h"
 #include "vk_enum_string_helper.h"
+#include "vk_layer_utils.h"
 
 static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
@@ -230,40 +231,10 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreate
 }
 
 #include "vk_dispatch_table_helper.h"
-static void initSwapchain(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
-    uint32_t report_flags = 0;
-    uint32_t debug_action = 0;
-    FILE *log_output = NULL;
-    const char *option_str;
-    VkDebugReportCallbackEXT callback;
+static void init_swapchain(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
 
-    // Initialize swapchain options:
-    report_flags = getLayerOptionFlags("lunarg_swapchain.report_flags", 0);
-    getLayerOptionEnum("lunarg_swapchain.debug_action", (uint32_t *)&debug_action);
+    layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_swapchain");
 
-    if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG) {
-        // Turn on logging, since it was requested:
-        option_str = getLayerOption("lunarg_swapchain.log_filename");
-        log_output = getLayerLogOutput(option_str, "lunarg_swapchain");
-        VkDebugReportCallbackCreateInfoEXT dbgInfo;
-        memset(&dbgInfo, 0, sizeof(dbgInfo));
-        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgInfo.pfnCallback = log_callback;
-        dbgInfo.pUserData = log_output;
-        dbgInfo.flags = report_flags;
-        layer_create_msg_callback(my_data->report_data, &dbgInfo, pAllocator, &callback);
-        my_data->logging_callback.push_back(callback);
-    }
-    if (debug_action & VK_DBG_LAYER_ACTION_DEBUG_OUTPUT) {
-        VkDebugReportCallbackCreateInfoEXT dbgInfo;
-        memset(&dbgInfo, 0, sizeof(dbgInfo));
-        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgInfo.pfnCallback = win32_debug_output_msg;
-        dbgInfo.pUserData = log_output;
-        dbgInfo.flags = report_flags;
-        layer_create_msg_callback(my_data->report_data, &dbgInfo, pAllocator, &callback);
-        my_data->logging_callback.push_back(callback);
-    }
     if (!globalLockInitialized) {
         loader_platform_thread_create_mutex(&globalLock);
         globalLockInitialized = 1;
@@ -318,7 +289,7 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCall
 
     // Call the following function after my_data is initialized:
     createInstanceRegisterExtensions(pCreateInfo, *pInstance);
-    initSwapchain(my_data, pAllocator);
+    init_swapchain(my_data, pAllocator);
 
     return result;
 }

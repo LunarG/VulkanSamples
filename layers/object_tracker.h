@@ -31,6 +31,7 @@
 #include "vk_layer_extension_utils.h"
 #include "vk_enum_string_helper.h"
 #include "vk_layer_table.h"
+#include "vk_layer_utils.h"
 
 // Object Tracker ERROR codes
 typedef enum _OBJECT_TRACK_ERROR {
@@ -77,11 +78,11 @@ typedef uint64_t (*OBJ_TRACK_GET_OBJECTS_OF_TYPE_COUNT)(VkDevice, VkDebugReportO
 struct layer_data {
     debug_report_data *report_data;
     // TODO: put instance data here
-    VkDebugReportCallbackEXT logging_callback;
+    std::vector<VkDebugReportCallbackEXT> logging_callback;
     bool wsi_enabled;
     bool objtrack_extensions_enabled;
 
-    layer_data() : report_data(nullptr), logging_callback(VK_NULL_HANDLE), wsi_enabled(false), objtrack_extensions_enabled(false){};
+    layer_data() : report_data(nullptr), wsi_enabled(false), objtrack_extensions_enabled(false){};
 };
 
 struct instExts {
@@ -325,26 +326,10 @@ validate_status(
 #endif
 
 #include "vk_dispatch_table_helper.h"
-static void initObjectTracker(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
-    uint32_t report_flags = 0;
-    uint32_t debug_action = 0;
-    FILE *log_output = NULL;
-    const char *option_str;
-    // initialize object_tracker options
-    report_flags = getLayerOptionFlags("lunarg_object_tracker.report_flags", 0);
-    getLayerOptionEnum("lunarg_object_tracker.debug_action", (uint32_t *)&debug_action);
 
-    if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG) {
-        option_str = getLayerOption("lunarg_object_tracker.log_filename");
-        log_output = getLayerLogOutput(option_str, "lunarg_object_tracker");
-        VkDebugReportCallbackCreateInfoEXT dbgInfo;
-        memset(&dbgInfo, 0, sizeof(dbgInfo));
-        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgInfo.pfnCallback = log_callback;
-        dbgInfo.pUserData = log_output;
-        dbgInfo.flags = report_flags;
-        layer_create_msg_callback(my_data->report_data, &dbgInfo, pAllocator, &my_data->logging_callback);
-    }
+static void init_object_tracker(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
+
+    layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_object_tracker");
 
     if (!objLockInitialized) {
         // TODO/TBD: Need to delete this mutex sometime.  How???  One
@@ -651,7 +636,7 @@ VkResult explicit_CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const 
     my_data->report_data = debug_report_create_instance(pInstanceTable, *pInstance, pCreateInfo->enabledExtensionCount,
                                                         pCreateInfo->ppEnabledExtensionNames);
 
-    initObjectTracker(my_data, pAllocator);
+    init_object_tracker(my_data, pAllocator);
     createInstanceRegisterExtensions(pCreateInfo, *pInstance);
 
     create_instance(*pInstance, *pInstance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT);

@@ -70,35 +70,9 @@ struct layer_data {
 
 static unordered_map<void *, layer_data *> layer_data_map;
 
-static void InitImage(layer_data *data, const VkAllocationCallbacks *pAllocator) {
-    VkDebugReportCallbackEXT callback;
-    uint32_t report_flags = getLayerOptionFlags("lunarg_image.report_flags", 0);
+static void init_image(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
 
-    uint32_t debug_action = 0;
-    getLayerOptionEnum("lunarg_image.debug_action", (uint32_t *)&debug_action);
-    if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG) {
-        FILE *log_output = NULL;
-        const char *option_str = getLayerOption("lunarg_image.log_filename");
-        log_output = getLayerLogOutput(option_str, "lunarg_image");
-        VkDebugReportCallbackCreateInfoEXT dbgInfo;
-        memset(&dbgInfo, 0, sizeof(dbgInfo));
-        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgInfo.pfnCallback = log_callback;
-        dbgInfo.pUserData = log_output;
-        dbgInfo.flags = report_flags;
-        layer_create_msg_callback(data->report_data, &dbgInfo, pAllocator, &callback);
-        data->logging_callback.push_back(callback);
-    }
-
-    if (debug_action & VK_DBG_LAYER_ACTION_DEBUG_OUTPUT) {
-        VkDebugReportCallbackCreateInfoEXT dbgInfo;
-        memset(&dbgInfo, 0, sizeof(dbgInfo));
-        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgInfo.pfnCallback = win32_debug_output_msg;
-        dbgInfo.flags = report_flags;
-        layer_create_msg_callback(data->report_data, &dbgInfo, pAllocator, &callback);
-        data->logging_callback.push_back(callback);
-    }
+    layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_image");
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -153,7 +127,7 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCall
     my_data->report_data = debug_report_create_instance(my_data->instance_dispatch_table, *pInstance,
                                                         pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
 
-    InitImage(my_data, pAllocator);
+    init_image(my_data, pAllocator);
 
     return result;
 }
