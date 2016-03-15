@@ -4480,7 +4480,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyEvent(VkDevice device, VkEve
             skip_call |= log_msg(
                 dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                 reinterpret_cast<uint64_t &>(event), __LINE__, DRAWSTATE_INVALID_EVENT, "DS",
-                "Cannot delete event %" PRIu64 " which is in use by a command buffer.", reinterpret_cast<uint64_t &>(event));
+                "Cannot delete event %" PRIx64 " which is in use by a command buffer.", reinterpret_cast<uint64_t &>(event));
         }
         dev_data->eventMap.erase(event_data);
     }
