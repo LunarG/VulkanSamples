@@ -229,28 +229,11 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     endif()
 endif()
 
-
 set (GLMINCLUDES "${CMAKE_SOURCE_DIR}/API-Samples/utils")
-
-# to run with source glslang libs/headers
-if(UNIX)
-    if (EXISTS "${CMAKE_SOURCE_DIR}/../glslang")
-         set (GLSLANGDIR "${CMAKE_SOURCE_DIR}/../glslang")
-    else()
-         set (GLSLANGDIR "${CMAKE_SOURCE_DIR}/../source/glslang")
-    endif()
-else()
-    set (GLSLANGDIR "${CMAKE_SOURCE_DIR}/../glslang")
-endif()
 
 get_filename_component(GLMINC_PREFIX "${GLMINCLUDES}" ABSOLUTE)
 if(NOT EXISTS ${GLMINC_PREFIX})
     message(FATAL_ERROR "Necessary glm headers do not exist: " ${GLMINC_PREFIX})
-endif()
-
-get_filename_component(GLSLANG_PREFIX "${GLSLANGDIR}" ABSOLUTE)
-if(NOT EXISTS ${GLSLANG_PREFIX})
-    message(FATAL_ERROR "Necessary glslang components do not exist: " ${GLSLANG_PREFIX})
 endif()
 
 add_definitions(-DVULKAN_SAMPLES_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
