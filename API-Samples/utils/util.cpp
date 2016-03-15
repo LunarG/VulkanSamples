@@ -384,7 +384,9 @@ void finalize_glslang() { glslang::FinalizeProcess(); }
 //
 bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
                std::vector<unsigned int> &spirv) {
-    glslang::TProgram &program = *new glslang::TProgram;
+    EShLanguage stage = FindLanguage(shader_type);
+    glslang::TShader shader(stage);
+    glslang::TProgram program;
     const char *shaderStrings[1];
     TBuiltInResource Resources;
     init_resources(Resources);
@@ -392,27 +394,25 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
     // Enable SPIR-V and Vulkan rules when parsing GLSL
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
-    EShLanguage stage = FindLanguage(shader_type);
-    glslang::TShader *shader = new glslang::TShader(stage);
-
     shaderStrings[0] = pshader;
-    shader->setStrings(shaderStrings, 1);
+    shader.setStrings(shaderStrings, 1);
 
-    if (!shader->parse(&Resources, 100, false, messages)) {
-        puts(shader->getInfoLog());
-        puts(shader->getInfoDebugLog());
+    if (!shader.parse(&Resources, 100, false, messages)) {
+        puts(shader.getInfoLog());
+        puts(shader.getInfoDebugLog());
         return false; // something didn't work
     }
 
-    program.addShader(shader);
+    program.addShader(&shader);
 
     //
     // Program-level processing...
     //
 
     if (!program.link(messages)) {
-        puts(shader->getInfoLog());
-        puts(shader->getInfoDebugLog());
+        puts(shader.getInfoLog());
+        puts(shader.getInfoDebugLog());
+        fflush(stdout);
         return false;
     }
 
