@@ -37,6 +37,7 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <functional>
 
 using std::vector;
 
