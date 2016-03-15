@@ -5,8 +5,6 @@ cmake_minimum_required(VERSION 2.8.11)
 project (VULKAN)
 # set (CMAKE_VERBOSE_MAKEFILE 1)
 
-
-
 # The MAJOR number of the version we're building, used in naming
 # vulkan-<major>.dll (and other files).
 set(MAJOR "1")
@@ -50,10 +48,6 @@ else()
     message(FATAL_ERROR "Unsupported Platform!")
 endif()
 
-
-
-
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 # Header file for CMake settings
@@ -76,19 +70,116 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     endif()
 endif()
 
+if(NOT WIN32)
+    find_package(XCB REQUIRED)
+    set (BUILDTGT_DIR build)
+    set (BINDATA_DIR Bin)
+    set (LIBSOURCE_DIR Lib)
+else()
+    # For Windows, since 32-bit and 64-bit items can co-exist, we build each in its own build directory.
+    # 32-bit target data goes in build32, and 64-bit target data goes into build.  So, include/link the
+    # appropriate data at build time.
+    if (CMAKE_CL_64)
+        set (BUILDTGT_DIR build)
+        set (BINDATA_DIR Bin)
+        set (LIBSOURCE_DIR Lib)
+    else()
+        set (BUILDTGT_DIR build32)
+        set (BINDATA_DIR Bin32)
+        set (LIBSOURCE_DIR Lib32)
+    endif()
+endif()
+
 option(BUILD_LOADER "Build loader" ON)
 option(BUILD_TESTS "Build tests" ON)
 option(BUILD_LAYERS "Build layers" ON)
 option(BUILD_DEMOS "Build demos" ON)
 option(BUILD_VKJSON "Build vkjson" ON)
 
-if (BUILD_TESTS)
-    # Hard code our glslang path for now
-    get_filename_component(GLSLANG_PREFIX ../glslang ABSOLUTE)
+find_program(GLSLANG_VALIDATOR NAMES glslangValidator
+             HINTS "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/install/bin"
+                   "${PROJECT_SOURCE_DIR}/../${BINDATA_DIR}" )
 
-    if(NOT EXISTS ${GLSLANG_PREFIX})
-        message(FATAL_ERROR "Necessary glslang components do not exist: " ${GLSLANG_PREFIX})
-    endif()
+find_path(GLSLANG_SPIRV_INCLUDE_DIR SPIRV/spirv.hpp HINTS "${CMAKE_SOURCE_DIR}/../glslang" DOC "Path to SPIRV/spirv.hpp")
+find_path(SPIRV_TOOLS_INCLUDE_DIR spirv-tools/libspirv.h HINTS "${CMAKE_SOURCE_DIR}/../spirv-tools/include"
+                                                               "${CMAKE_SOURCE_DIR}/../source/spirv-tools/include"
+                                                               "${CMAKE_SOURCE_DIR}/../spirv-tools/external/include"
+                                                               "${CMAKE_SOURCE_DIR}/../source/spirv-tools/external/include"
+                                                         DOC "Path to spirv-tools/libspirv.h")
+
+if (WIN32)
+    set (GLSLANG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/glslang/Release"
+                             "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/glslang/OSDependent/Windows/Release"
+                             "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/OGLCompilersDLL/Release"
+                             "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/SPIRV/Release" )
+    set (SPIRV_TOOLS_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../spirv-tools/${BUILDTGT_DIR}/Release")
+else()
+    set (GLSLANG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/build/install/lib" "${CMAKE_SOURCE_DIR}/../x86_64/lib/glslang" )
+    set (SPIRV_TOOLS_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../spirv-tools/build" "${CMAKE_SOURCE_DIR}/../x86_64/lib/spirv-tools" )
+endif()
+
+find_library(GLSLANG_LIB NAMES glslang
+             HINTS ${GLSLANG_SEARCH_PATH} )
+
+find_library(OGLCompiler_LIB NAMES OGLCompiler
+             HINTS ${GLSLANG_SEARCH_PATH} )
+
+find_library(OSDependent_LIB NAMES OSDependent
+             HINTS ${GLSLANG_SEARCH_PATH} )
+
+find_library(SPIRV_LIB NAMES SPIRV
+             HINTS ${GLSLANG_SEARCH_PATH} )
+
+find_library(SPIRV_TOOLS_LIB NAMES SPIRV-Tools
+             HINTS ${SPIRV_TOOLS_SEARCH_PATH} )
+
+# On Windows, we must pair Debug and Release appropriately
+if (WIN32)
+    set (GLSLANG_DEBUG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/glslang/Debug"
+                                   "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/glslang/OSDependent/Windows/Debug"
+                                   "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/OGLCompilersDLL/Debug"
+                                   "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/SPIRV/Debug")
+    set (SPIRV_TOOLS_DEBUG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../spirv-tools/${BUILDTGT_DIR}/Debug")
+
+    add_library(glslang     STATIC IMPORTED)
+    add_library(OGLCompiler STATIC IMPORTED)
+    add_library(OSDependent STATIC IMPORTED)
+    add_library(SPIRV       STATIC IMPORTED)
+    add_library(Loader      STATIC IMPORTED)
+    add_library(SPIRV-Tools STATIC IMPORTED)
+
+    find_library(GLSLANG_DLIB NAMES glslang
+                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
+    find_library(OGLCompiler_DLIB NAMES OGLCompiler
+                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
+    find_library(OSDependent_DLIB NAMES OSDependent
+                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
+    find_library(SPIRV_DLIB NAMES SPIRV
+                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
+    find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Tools
+                 HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH} )
+
+    set_target_properties(glslang PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_LIB}"
+                         IMPORTED_LOCATION_DEBUG "${GLSLANG_DLIB}")
+    set_target_properties(OGLCompiler PROPERTIES
+                         IMPORTED_LOCATION       "${OGLCompiler_LIB}"
+                         IMPORTED_LOCATION_DEBUG "${OGLCompiler_DLIB}")
+    set_target_properties(OSDependent PROPERTIES
+                         IMPORTED_LOCATION       "${OSDependent_LIB}"
+                         IMPORTED_LOCATION_DEBUG "${OSDependent_DLIB}")
+    set_target_properties(SPIRV PROPERTIES
+                         IMPORTED_LOCATION       "${SPIRV_LIB}"
+                         IMPORTED_LOCATION_DEBUG "${SPIRV_DLIB}")
+    set_target_properties(SPIRV-Tools PROPERTIES
+                         IMPORTED_LOCATION       "${SPIRV_TOOLS_LIB}"
+                         IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_DLIB}")
+
+    set (GLSLANG_LIBRARIES glslang OGLCompiler OSDependent SPIRV)
+    set (SPIRV_TOOLS_LIBRARIES SPIRV-Tools)
+else ()
+    set (GLSLANG_LIBRARIES ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${SPIRV_LIB})
+    set (SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_LIB})
 endif()
 
 set (PYTHON_CMD ${PYTHON_EXECUTABLE})

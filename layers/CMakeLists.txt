@@ -87,7 +87,7 @@ include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/../loader
 	${CMAKE_CURRENT_SOURCE_DIR}/../include/vulkan
 	${CMAKE_CURRENT_BINARY_DIR}
-	${PROJECT_SOURCE_DIR}/../glslang
+	${GLSLANG_SPIRV_INCLUDE_DIR}
 )
 
 if (WIN32)
