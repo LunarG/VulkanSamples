@@ -50,6 +50,15 @@ $vulkandll = "vulkan-"+$majorabi+".dll"
 $windrive  = $env:SYSTEMDRIVE
 $winfolder = $env:SYSTEMROOT
 
+function notNumeric ($x) {
+    try {
+        0 + $x | Out-Null
+        return $false
+    } catch {
+        return $true
+    }
+}
+
 # The name of the versioned vulkan dll file is one of the following:
 #
 #   vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>-<prerelease>-<prebuildno>
@@ -80,6 +89,7 @@ $winfolder = $env:SYSTEMROOT
 # from the file name. They are used later to find the path to the SDK
 # install directory for the given filename.
 
+
 function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
 {
    # Push the current path on the stack and go to $dir
@@ -91,6 +101,17 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
    # Find all DLL objects in this directory
    dir -name vulkan-$majorabi-*.dll |
    ForEach-Object {
+       if ($_ -match "=" -or
+           $_ -match "@" -or
+           $_ -match " " -or
+           ($_.Split('-').count -lt 6)  -or
+           ($_.Split('-').count -gt 8))
+       {
+           # If a file name contains "=", "@", or " ", or it contains less then 5 dashes or more than
+           # 7 dashes, it wasn't installed by the Vulkan Run Time.
+           # Note that we need to use return inside of ForEach-Object is to continue with iteration.
+           return
+       }
        $major=$_.Split('-')[2]
        $majorOrig=$major
        $minor=$_.Split('-')[3]
@@ -100,17 +121,16 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
        $buildno=$_.Split('-')[5]
 
        if ($buildno -match ".dll") {
-           # <prerelease> and <prebuildno> are not in the name
-           $buildno=$buildno -replace ".dll",""
-           $buildnoOrig=$buildno
-           $prerelease="z"*10
-           $prereleaseOrig=""
-           $prebuildno="z"*10
-           $prebuildnoOrig=""
+          # prerelease and prebuildno are not in the name
+          # Extract buildno, and set prerelease and prebuildno to "z"s
+          $buildno=$buildno -replace ".dll",""
+          $buildnoOrig=$buildno
+          $prerelease="z"*10
+          $prereleaseOrig=""
+          $prebuildno="z"*10
+          $prebuildnoOrig=""
        } else {
-
-          # We assume we don't have more than 5 dashes
-
+          # Extract buildno, prerelease, and prebuildno
           $f=$_ -replace ".dll",""
           $buildno=$f.Split('-')[5]
           $buildnoOrig=$buildno
@@ -132,6 +152,15 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
           if ($prebuildno.Length -eq 0) {
               $prebuildno="z"*10
           }
+       }
+
+       # Make sure fields that are supposed to be numbers are numbers
+       if (notNumeric($major)) {return}
+       if (notNumeric($minor)) {return}
+       if (notNumeric($patch)) {return}
+       if (notNumeric($buildno)) {return}
+       if (notNumeric($prebuildno)) {
+           if ($prebuildno -ne "z"*10) {return}
        }
 
        $major = $major.padleft(10,'0')
