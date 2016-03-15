@@ -1341,11 +1341,13 @@ static bool has_descriptor_binding(layer_data *my_data, vector<VkDescriptorSetLa
     auto const layout_node = my_data->descriptorSetLayoutMap[(*pipelineLayout)[slot.first]];
 
     auto bindingIt = layout_node->bindingToIndexMap.find(slot.second);
-    if (bindingIt == layout_node->bindingToIndexMap.end())
+    if ((bindingIt == layout_node->bindingToIndexMap.end()) || (layout_node->createInfo.pBindings == NULL))
         return false;
 
-    type = layout_node->descriptorTypes[bindingIt->second];
-    stage_flags = layout_node->stageFlags[bindingIt->second];
+    assert(bindingIt->second < layout_node->createInfo.bindingCount);
+    VkDescriptorSetLayoutBinding binding = layout_node->createInfo.pBindings[bindingIt->second];
+    type = binding.descriptorType;
+    stage_flags = binding.stageFlags;
 
     return true;
 }
