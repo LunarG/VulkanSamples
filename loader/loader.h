@@ -36,7 +36,7 @@
 #define LOADER_H
 
 #include <vulkan/vulkan.h>
-#include <vk_loader_platform.h>
+#include "vk_loader_platform.h"
 
 #include <vulkan/vk_layer.h>
 #include <vulkan/vk_icd.h>

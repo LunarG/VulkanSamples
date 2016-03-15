@@ -1,4 +1,3 @@
-set(GLSLANG_VALIDATOR ${GLSLANG_PREFIX}/build/install/bin/glslangValidator)
 set (GLMINC_PREFIX ${PROJECT_SOURCE_DIR}/libs)
 
 macro(generate_dispatch_table out)

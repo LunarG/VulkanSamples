@@ -1729,9 +1729,8 @@ static void demo_init_vk(struct demo *demo) {
     char *instance_validation_layers_alt2[] = {
         "VK_LAYER_GOOGLE_threading",     "VK_LAYER_LUNARG_param_checker",
         "VK_LAYER_LUNARG_device_limits", "VK_LAYER_LUNARG_object_tracker",
-        "VK_LAYER_LUNARG_image",         "VK_LAYER_LUNARG_mem_tracker",
-        "VK_LAYER_LUNARG_draw_state",    "VK_LAYER_LUNARG_swapchain",
-        "VK_LAYER_GOOGLE_unique_objects"
+        "VK_LAYER_LUNARG_image",         "VK_LAYER_LUNARG_core_validation",
+        "VK_LAYER_LUNARG_swapchain",     "VK_LAYER_GOOGLE_unique_objects"
     };
 
     /* Look for validation layers */
@@ -2256,7 +2255,7 @@ static void demo_init(struct demo *demo, const int argc, const char *argv[])
     if (strncmp(pCmdLine, "--use_staging", strlen("--use_staging")) == 0)
         demo->use_staging_buffer = true;
     else if (strncmp(pCmdLine, "--validate", strlen("--validate")) == 0)
-        demo->use_staging_buffer = true;
+        demo->validate = true;
     else if (strlen(pCmdLine) != 0) {
         fprintf(stderr, "Do not recognize argument \"%s\".\n", pCmdLine);
         argv_error = true;

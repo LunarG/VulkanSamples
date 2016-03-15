@@ -1518,10 +1518,12 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
     // Validate pCreateInfo values with the results of
     // vkGetPhysicalDeviceSurfacePresentModesKHR():
     if (!pPhysicalDevice || !pPhysicalDevice->presentModeCount) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,
-                              "%s() called before calling "
-                              "vkGetPhysicalDeviceSurfacePresentModesKHR().",
-                              fn);
+        if (!pCreateInfo || (pCreateInfo->presentMode != VK_PRESENT_MODE_FIFO_KHR)) {
+            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,
+                                  "%s() called before calling "
+                                  "vkGetPhysicalDeviceSurfacePresentModesKHR().",
+                                  fn);
+        }
     } else if (pCreateInfo) {
         // Validate pCreateInfo->presentMode against
         // vkGetPhysicalDeviceSurfacePresentModesKHR():

@@ -445,42 +445,34 @@ Section
         CreateShortCut "$SMPROGRAMS\Vulkan\vulkaninfo32.lnk" "$WINDIR\SysWow64\vulkaninfo.exe"
 
     # Possibly install MSVC 2013 redistributables
+    ClearErrors
     ${If} ${RunningX64}
-
-        # If running on a 64-bit OS machine, we need the 64-bit Visual Studio re-distributable.  Install it if it's not already present.
-        ReadRegDword $1 HKLM "SOFTWARE\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
-        ClearErrors
-        IntCmp $1 1 RedistributablesInstalled6464 InstallRedistributables6464 InstallRedistributables6464
-        InstallRedistributables6464:
-           SetOutPath "$TEMP"
-
-           File vcredist_x64.exe
-           ExecWait '"$TEMP\vcredist_x64.exe"  /quiet /norestart'
-
-        RedistributablesInstalled6464:
-
-        # We also need the 32-bit Visual Studio re-distributable.  Install it as well if it's not present
         ReadRegDword $1 HKLM "SOFTWARE\WOW6432Node\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
-        ClearErrors
-        IntCmp $1 1 RedistributablesInstalled InstallRedistributables InstallRedistributables
-
+        ${If} ${Errors}
+           StrCpy $1 0
+           ClearErrors
+        ${Endif}
     ${Else}
-
-        # Otherwise, we're running on a 32-bit OS machine, we need to install the 32-bit Visual Studio re-distributable if it's not present.
-        ReadRegDword $1 HKLM "SOFTWARE\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
-        ClearErrors
-        IntCmp $1 1 RedistributablesInstalled InstallRedistributables InstallRedistributables
-
+       StrCpy $1 1
     ${Endif}
-
-    InstallRedistributables:
-       SetOutPath "$TEMP"
-
-       File vcredist_x86.exe
-       ExecWait '"$TEMP\vcredist_x86.exe"  /quiet /norestart'
-
-    RedistributablesInstalled:
-
+    ReadRegDword $2 HKLM "SOFTWARE\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
+    ${If} ${Errors}
+       StrCpy $2 0
+       ClearErrors
+    ${Endif}
+    IntOp $3 $1 + $2
+    ${If} $3 <= 1
+        # If either x86 or x64 redistributables are not present, install redistributables.
+        # We install both resdistributables because we have found that the x86 redist
+        # will uninstall the x64 redist if the x64 redistrib is an old version. Amazing, isn't it?
+        SetOutPath "$TEMP"
+        ${If} ${RunningX64}
+            File vcredist_x64.exe
+            ExecWait '"$TEMP\vcredist_x64.exe"  /quiet /norestart'
+        ${Endif}
+        File vcredist_x86.exe
+        ExecWait '"$TEMP\vcredist_x86.exe"  /quiet /norestart'
+    ${Endif}
     StrCpy $1 20
     Call CheckForError
 
