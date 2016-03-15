@@ -70,8 +70,9 @@ else()
     list(APPEND libraries PRIVATE ${XCB_LIBRARIES})
 endif()
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/demos)
 
-add_executable(smoke ${sources})
-target_compile_definitions(smoke ${definitions})
-target_include_directories(smoke ${includes})
-target_link_libraries(smoke ${libraries})
+add_executable(smoketest ${sources})
+target_compile_definitions(smoketest ${definitions})
+target_include_directories(smoketest ${includes})
+target_link_libraries(smoketest ${libraries})
