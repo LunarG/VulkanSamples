@@ -33,7 +33,7 @@ LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/buildAndroid/generated \
                     $(SRC_DIR)/loader \
-                    $(SRC_DIR)/../glslang/SPIRV
+                    $(SRC_DIR)/../glslang
 LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
 LOCAL_LDLIBS    := -llog
