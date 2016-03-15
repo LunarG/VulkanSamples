@@ -6816,7 +6816,9 @@ vkAllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pCr
             // Validate command pool
             if (dev_data->commandPoolMap.find(pCreateInfo->commandPool) != dev_data->commandPoolMap.end()) {
                 // Add command buffer to its commandPool map
+#if !MTMERGE
                 dev_data->commandPoolMap[pCreateInfo->commandPool].commandBuffers.push_back(pCommandBuffer[i]);
+#endif
                 GLOBAL_CB_NODE *pCB = new GLOBAL_CB_NODE;
                 // Add command buffer to map
                 dev_data->commandBufferMap[pCommandBuffer[i]] = pCB;
