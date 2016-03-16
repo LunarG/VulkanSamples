@@ -61,11 +61,7 @@
 #pragma GCC diagnostic warning "-Wwrite-strings"
 #endif
 #include "vk_struct_size_helper.h"
-#if MTMERGE
 #include "core_validation.h"
-#else
-#include "draw_state.h"
-#endif
 #include "vk_layer_config.h"
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
@@ -128,7 +124,6 @@ struct layer_data {
     //unordered_map<VkSemaphore, MtSemaphoreState> semaphoreMap;
     //unordered_map<VkImageView, MT_IMAGE_VIEW_INFO> imageViewMap;
     //unordered_map<VkBufferView, VkBufferViewCreateInfo> bufferViewMap;
-    unordered_map<VkSwapchainKHR, MT_SWAP_CHAIN_INFO *> swapchainMap;
     unordered_map<VkFramebuffer, MT_FB_INFO> fbMap;
     unordered_map<VkRenderPass, MT_PASS_INFO> passMap;
     unordered_map<VkDescriptorSet, MT_DESCRIPTOR_SET_INFO> descriptorSetMap;
@@ -313,12 +308,6 @@ template layer_data *get_my_data_ptr<layer_data>(void *data_key, std::unordered_
 static void delete_queue_info_list(layer_data *my_data) {
     // Process queue list, cleaning up each entry before deleting
     my_data->queueMap.clear();
-}
-
-static void add_swap_chain_info(layer_data *my_data, const VkSwapchainKHR swapchain, const VkSwapchainCreateInfoKHR *pCI) {
-    MT_SWAP_CHAIN_INFO *pInfo = new MT_SWAP_CHAIN_INFO;
-    memcpy(&pInfo->createInfo, pCI, sizeof(VkSwapchainCreateInfoKHR));
-    my_data->swapchainMap[swapchain] = pInfo;
 }
 
 // Add new CBInfo for this cb to map container
@@ -10459,12 +10448,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(VkDevice dev
     VkResult result = dev_data->device_dispatch_table->CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
 
     if (VK_SUCCESS == result) {
-        SWAPCHAIN_NODE *swapchain_data = new SWAPCHAIN_NODE(pCreateInfo);
+        SWAPCHAIN_NODE *psc_node = new SWAPCHAIN_NODE(pCreateInfo);
         loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
-        add_swap_chain_info(dev_data, *pSwapchain, pCreateInfo);
-#endif
-        dev_data->device_extensions.swapchainMap[*pSwapchain] = swapchain_data;
+        dev_data->device_extensions.swapchainMap[*pSwapchain] = psc_node;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
 
@@ -10477,22 +10463,6 @@ vkDestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocat
     bool skipCall = false;
 
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
-    if (dev_data->swapchainMap.find(swapchain) != dev_data->swapchainMap.end()) {
-        MT_SWAP_CHAIN_INFO *pInfo = dev_data->swapchainMap[swapchain];
-
-        if (pInfo->images.size() > 0) {
-            for (auto it = pInfo->images.begin(); it != pInfo->images.end(); it++) {
-                skipCall = clear_object_binding(dev_data, device, (uint64_t)*it, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT);
-                auto image_item = dev_data->imageBindingMap.find((uint64_t)*it);
-                if (image_item != dev_data->imageBindingMap.end())
-                    dev_data->imageBindingMap.erase(image_item);
-            }
-        }
-        delete pInfo;
-        dev_data->swapchainMap.erase(swapchain);
-    }
-#endif
     auto swapchain_data = dev_data->device_extensions.swapchainMap.find(swapchain);
     if (swapchain_data != dev_data->device_extensions.swapchainMap.end()) {
         if (swapchain_data->second->images.size() > 0) {
@@ -10507,6 +10477,9 @@ vkDestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocat
                     }
                     dev_data->imageSubresourceMap.erase(image_sub);
                 }
+                skipCall = clear_object_binding(dev_data, device, (uint64_t)swapchain_image,
+                                                VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT);
+                dev_data->imageBindingMap.erase((uint64_t)swapchain_image);
             }
         }
         delete swapchain_data->second;
@@ -10527,27 +10500,12 @@ vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCo
         if (!pCount)
             return result;
         loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
         const size_t count = *pCount;
-        MT_SWAP_CHAIN_INFO *pInfo = dev_data->swapchainMap[swapchain];
-
-        if (pInfo->images.empty()) {
-            pInfo->images.resize(count);
-            memcpy(&pInfo->images[0], pSwapchainImages, sizeof(pInfo->images[0]) * count);
-
-            if (pInfo->images.size() > 0) {
-                for (std::vector<VkImage>::const_iterator it = pInfo->images.begin(); it != pInfo->images.end(); it++) {
-                    // Add image object binding, then insert the new Mem Object and then bind it to created image
-                    add_object_create_info(dev_data, (uint64_t)*it, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-                                           &pInfo->createInfo);
-                }
-            }
-        } else {
-            const size_t count = *pCount;
-            MT_SWAP_CHAIN_INFO *pInfo = dev_data->swapchainMap[swapchain];
-            const VkBool32 mismatch =
-                (pInfo->images.size() != count || memcmp(&pInfo->images[0], pSwapchainImages, sizeof(pInfo->images[0]) * count));
-
+        auto swapchain_node = dev_data->device_extensions.swapchainMap[swapchain];
+        if (!swapchain_node->images.empty()) {
+            // TODO : Not sure I like the memcmp here, but it works
+            const bool mismatch = (swapchain_node->images.size() != count ||
+                                   memcmp(&swapchain_node->images[0], pSwapchainImages, sizeof(swapchain_node->images[0]) * count));
             if (mismatch) {
                 // TODO: Verify against Valid Usage section of extension
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
@@ -10557,11 +10515,9 @@ vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCo
                         (uint64_t)(swapchain));
             }
         }
-#endif
         for (uint32_t i = 0; i < *pCount; ++i) {
             IMAGE_LAYOUT_NODE image_layout_node;
             image_layout_node.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-            auto swapchain_node = dev_data->device_extensions.swapchainMap[swapchain];
             image_layout_node.format = swapchain_node->createInfo.imageFormat;
             dev_data->imageMap[pSwapchainImages[i]].createInfo.mipLevels = 1;
             dev_data->imageMap[pSwapchainImages[i]].createInfo.arrayLayers = swapchain_node->createInfo.imageArrayLayers;
@@ -10570,6 +10526,13 @@ vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCo
             dev_data->imageSubresourceMap[pSwapchainImages[i]].push_back(subpair);
             dev_data->imageLayoutMap[subpair] = image_layout_node;
             dev_data->device_extensions.imageToSwapchainMap[pSwapchainImages[i]] = swapchain;
+        }
+        if (!swapchain_node->images.empty()) {
+            for (auto image : swapchain_node->images) {
+                // Add image object binding, then insert the new Mem Object and then bind it to created image
+                add_object_create_info(dev_data, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                                       &swapchain_node->createInfo);
+            }
         }
         loader_platform_thread_unlock_mutex(&globalLock);
     }
@@ -10583,16 +10546,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
 
     if (pPresentInfo) {
         loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
-        VkDeviceMemory mem;
-        // MTMTODO : Combine this code with loops below
-        for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
-            MT_SWAP_CHAIN_INFO *pInfo = dev_data->swapchainMap[pPresentInfo->pSwapchains[i]];
-            VkImage image = pInfo->images[pPresentInfo->pImageIndices[i]];
-            skip_call |= get_mem_binding_from_object(dev_data, queue, (uint64_t)(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
-            skip_call |= validate_memory_is_valid(dev_data, mem, "vkQueuePresentKHR()", image);
-        }
-#endif
         for (uint32_t i = 0; i < pPresentInfo->waitSemaphoreCount; ++i) {
             if (dev_data->semaphoreMap[pPresentInfo->pWaitSemaphores[i]].signaled) {
                 dev_data->semaphoreMap[pPresentInfo->pWaitSemaphores[i]].signaled = 0;
@@ -10604,11 +10557,15 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
                             (uint64_t)(queue), (uint64_t)(pPresentInfo->pWaitSemaphores[i]));
             }
         }
+        VkDeviceMemory mem;
         for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
             auto swapchain_data = dev_data->device_extensions.swapchainMap.find(pPresentInfo->pSwapchains[i]);
             if (swapchain_data != dev_data->device_extensions.swapchainMap.end() &&
                 pPresentInfo->pImageIndices[i] < swapchain_data->second->images.size()) {
                 VkImage image = swapchain_data->second->images[pPresentInfo->pImageIndices[i]];
+                skip_call |=
+                    get_mem_binding_from_object(dev_data, queue, (uint64_t)(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
+                skip_call |= validate_memory_is_valid(dev_data, mem, "vkQueuePresentKHR()", image);
                 vector<VkImageLayout> layouts;
                 if (FindLayouts(dev_data, image, layouts)) {
                     for (auto layout : layouts) {

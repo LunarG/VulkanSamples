@@ -889,19 +889,20 @@ typedef struct _GLOBAL_CB_NODE {
     vector<uint32_t> dynamicOffsets; // one dynamic offset per dynamic descriptor bound to this CB
 } GLOBAL_CB_NODE;
 
-typedef struct _SWAPCHAIN_NODE {
+class SWAPCHAIN_NODE {
+  public:
     VkSwapchainCreateInfoKHR createInfo;
     uint32_t *pQueueFamilyIndices;
     std::vector<VkImage> images;
-    _SWAPCHAIN_NODE(const VkSwapchainCreateInfoKHR *pCreateInfo) : createInfo(*pCreateInfo), pQueueFamilyIndices(NULL) {
+    SWAPCHAIN_NODE(const VkSwapchainCreateInfoKHR *pCreateInfo) : createInfo(*pCreateInfo), pQueueFamilyIndices(NULL) {
         if (pCreateInfo->queueFamilyIndexCount && pCreateInfo->imageSharingMode == VK_SHARING_MODE_CONCURRENT) {
             pQueueFamilyIndices = new uint32_t[pCreateInfo->queueFamilyIndexCount];
             memcpy(pQueueFamilyIndices, pCreateInfo->pQueueFamilyIndices, pCreateInfo->queueFamilyIndexCount * sizeof(uint32_t));
             createInfo.pQueueFamilyIndices = pQueueFamilyIndices;
         }
     }
-    ~_SWAPCHAIN_NODE() { delete pQueueFamilyIndices; }
-} SWAPCHAIN_NODE;
+    ~SWAPCHAIN_NODE() { delete[] pQueueFamilyIndices; }
+};
 
 //#ifdef __cplusplus
 //}
