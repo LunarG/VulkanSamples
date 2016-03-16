@@ -108,8 +108,6 @@ struct layer_data {
     VkLayerInstanceDispatchTable *instance_dispatch_table;
 #if MTMERGE
 // MTMERGE - stuff pulled directly from MT
-    // MTMTODO : Should be able just use device_extensions.wsi_enabled instead
-    VkBool32 wsi_enabled;
     uint64_t currentFenceId;
     VkPhysicalDeviceProperties properties;
     unordered_map<VkDeviceMemory, vector<MEMORY_RANGE>> bufferRanges, imageRanges;
@@ -171,7 +169,7 @@ struct layer_data {
     layer_data()
         : report_data(nullptr), device_dispatch_table(nullptr), instance_dispatch_table(nullptr),
 #if MTMERGE
-        wsi_enabled(VK_FALSE), currentFenceId(1),
+        currentFenceId(1),
 #endif
         device_extensions(){};
 };
