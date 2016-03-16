@@ -534,52 +534,53 @@ Section "uninstall"
         DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}"
     ${EndIf}
 
-    # Ref count is in $1. If it is zero, uninstall everything
+
+    # Install the ConfigLayersAndVulkanDLL.ps1 so we can run it.
+    # It will be deleted later when we remove the install directory.
+    File ConfigLayersAndVulkanDLL.ps1
+
+    # If running on a 64-bit OS machine
+    ${If} ${RunningX64}
+
+        # Delete vulkaninfo.exe in C:\Windows\System32 and C:\Windows\SysWOW64
+        Delete /REBOOTOK $WINDIR\SysWow64\vulkaninfo.exe
+        Delete /REBOOTOK "$WINDIR\SysWow64\vulkaninfo-$FileVersion.exe"
+        Delete /REBOOTOK $WINDIR\System32\vulkaninfo.exe
+        Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
+
+        # Delete vullkan dll files: vulkan-<majorabi>.dll and vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll
+        Delete /REBOOTOK $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
+        Delete /REBOOTOK $WINDIR\SysWow64\vulkan-$FileVersion.dll
+        Delete /REBOOTOK $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
+        Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
+
+        # Run the ConfigLayersAndVulkanDLL.ps1 script to:
+        #   Copy the most recent version of vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll
+        #   Copy the most recent version of vulkaninfo-<abimajor>-*.exe to vulkaninfo.exe
+        #   Set up layer registry entries to use layers from the corresponding SDK
+        nsExec::ExecToStack 'powershell -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File "$IDir\ConfigLayersAndVulkanDLL.ps1" ${VERSION_ABI_MAJOR} 64'
+
+    # Else, running on a 32-bit OS machine
+    ${Else}
+
+        # Delete vulkaninfo.exe in C:\Windows\System32
+        Delete /REBOOTOK $WINDIR\System32\vulkaninfo.exe
+        Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
+
+        # Delete vullkan dll files: vulkan-<majorabi>.dll and vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll
+        Delete /REBOOTOK $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
+        Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
+
+        # Run the ConfigLayersAndVulkanDLL.ps1 script to:
+        #   Copy the most recent version of vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll
+        #   Copy the most recent version of vulkaninfo-<abimajor>-*.exe to vulkaninfo.exe
+        #   Set up layer registry entries to use layers from the corresponding SDK
+        nsExec::ExecToStack 'powershell -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File "$IDir\ConfigLayersAndVulkanDLL.ps1" ${VERSION_ABI_MAJOR} 32'
+
+    ${EndIf}
+
+    # If Ref Count is zero, uninstall everything
     ${If} $IC <= 0
-
-        # Install the ConfigLayersAndVulkanDLL.ps1 so we can run it.
-        # It will be deleted later when we remove the install directory.
-        File ConfigLayersAndVulkanDLL.ps1
-
-        # If running on a 64-bit OS machine
-        ${If} ${RunningX64}
-
-            # Delete vulkaninfo.exe in C:\Windows\System32 and C:\Windows\SysWOW64
-            Delete /REBOOTOK $WINDIR\SysWow64\vulkaninfo.exe
-            Delete /REBOOTOK "$WINDIR\SysWow64\vulkaninfo-$FileVersion.exe"
-            Delete /REBOOTOK $WINDIR\System32\vulkaninfo.exe
-            Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
-
-            # Delete vullkan dll files: vulkan-<majorabi>.dll and vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll
-            Delete /REBOOTOK $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
-            Delete /REBOOTOK $WINDIR\SysWow64\vulkan-$FileVersion.dll
-            Delete /REBOOTOK $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
-            Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
-
-            # Run the ConfigLayersAndVulkanDLL.ps1 script to:
-            #   Copy the most recent version of vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll
-            #   Copy the most recent version of vulkaninfo-<abimajor>-*.exe to vulkaninfo.exe
-            #   Set up layer registry entries to use layers from the corresponding SDK
-            nsExec::ExecToStack 'powershell -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File "$IDir\ConfigLayersAndVulkanDLL.ps1" ${VERSION_ABI_MAJOR} 64'
-
-        # Else, running on a 32-bit OS machine
-        ${Else}
-
-            # Delete vulkaninfo.exe in C:\Windows\System32
-            Delete /REBOOTOK $WINDIR\System32\vulkaninfo.exe
-            Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
-
-            # Delete vullkan dll files: vulkan-<majorabi>.dll and vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll
-            Delete /REBOOTOK $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
-            Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
-
-            # Run the ConfigLayersAndVulkanDLL.ps1 script to:
-            #   Copy the most recent version of vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll
-            #   Copy the most recent version of vulkaninfo-<abimajor>-*.exe to vulkaninfo.exe
-            #   Set up layer registry entries to use layers from the corresponding SDK
-            nsExec::ExecToStack 'powershell -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File "$IDir\ConfigLayersAndVulkanDLL.ps1" ${VERSION_ABI_MAJOR} 32'
-
-        ${EndIf}
 
         # Delete vulkaninfo from start menu.
         SetShellVarContext all
