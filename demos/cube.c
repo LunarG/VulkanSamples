@@ -43,7 +43,6 @@
 
 #include <vulkan/vulkan.h>
 
-#include <vulkan/vk_sdk_platform.h>
 #include "linmath.h"
 
 #define DEMO_TEXTURE_COUNT 1
@@ -324,6 +323,8 @@ struct demo {
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND window;                 // hWnd - window handle
+#elif (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
+	void* window;
 #else                            // _WIN32
     xcb_connection_t *connection;
     xcb_screen_t *screen;
@@ -1001,6 +1002,11 @@ static void demo_prepare_depth(struct demo *demo) {
 /* Load a ppm file into memory */
 bool loadTexture(const char *filename, uint8_t *rgba_data,
                  VkSubresourceLayout *layout, int32_t *width, int32_t *height) {
+
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
+	filename =[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent: @(filename)].UTF8String;
+#endif
+	
     FILE *fPtr = fopen(filename, "rb");
     char header[256], *cPtr, *tmp;
 
@@ -1464,6 +1470,10 @@ char *demo_read_spv(const char *filename, size_t *psize) {
     size_t U_ASSERT_ONLY retval;
     void *shader_code;
 
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
+	filename =[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent: @(filename)].UTF8String;
+#endif
+	
     FILE *fp = fopen(filename, "rb");
     if (!fp)
         return NULL;
@@ -1829,7 +1839,7 @@ static void demo_cleanup(struct demo *demo) {
     vkDestroySurfaceKHR(demo->inst, demo->surface, NULL);
     vkDestroyInstance(demo->inst, NULL);
 
-#ifndef _WIN32
+#if !(defined(_WIN32) || defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
     xcb_destroy_window(demo->connection, demo->window);
     xcb_disconnect(demo->connection);
     free(demo->atom_wm_delete_window);
@@ -1983,6 +1993,7 @@ static void demo_create_window(struct demo *demo) {
         exit(1);
     }
 }
+#elif defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
 #else  // _WIN32
 static void demo_handle_event(struct demo *demo,
                               const xcb_generic_event_t *event) {
@@ -2212,6 +2223,16 @@ static void demo_init_vk(struct demo *demo) {
                 extension_names[enabled_extension_count++] =
                     VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
             }
+#elif defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
+			if (!strcmp(VK_MVK_IOS_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
+				platformSurfaceExtFound = 1;
+				demo->extension_names[demo->enabled_extension_count++] = VK_MVK_IOS_SURFACE_EXTENSION_NAME;
+			}
+#elif defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
+			if (!strcmp(VK_MVK_OSX_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
+				platformSurfaceExtFound = 1;
+				demo->extension_names[demo->enabled_extension_count++] = VK_MVK_OSX_SURFACE_EXTENSION_NAME;
+			}
 #else  // _WIN32
             if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
@@ -2251,6 +2272,20 @@ static void demo_init_vk(struct demo *demo) {
                  "look at the Getting Started guide for additional "
                  "information.\n",
                  "vkCreateInstance Failure");
+#elif defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
+		ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
+				 VK_MVK_IOS_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
+				 "Vulkan installable client driver (ICD) installed?\nPlease "
+				 "look at the Getting Started guide for additional "
+				 "information.\n",
+				 "vkCreateInstance Failure");
+#elif defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
+		ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
+				 VK_MVK_OSX_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
+				 "Vulkan installable client driver (ICD) installed?\nPlease "
+				 "look at the Getting Started guide for additional "
+				 "information.\n",
+				 "vkCreateInstance Failure");
 #else  // _WIN32
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_XCB_SURFACE_EXTENSION_NAME
@@ -2529,6 +2564,21 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     err =
         vkCreateWin32SurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
 
+#elif defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
+	VkIOSSurfaceCreateInfoMVK surface;
+	surface.sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK;
+	surface.pNext = NULL;
+	surface.flags = 0;
+	surface.pView = demo->window;
+	err = vkCreateIOSSurfaceMVK(demo->inst, &surface, NULL, &demo->surface);
+#elif defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
+	VkOSXSurfaceCreateInfoMVK surface;
+	surface.sType = VK_STRUCTURE_TYPE_OSX_SURFACE_CREATE_INFO_MVK;
+	surface.pNext = NULL;
+	surface.flags = 0;
+	surface.pView = demo->window;
+	err = vkCreateOSXSurfaceMVK(demo->inst, &surface, NULL, &demo->surface);
+
 #else  // _WIN32
     VkXcbSurfaceCreateInfoKHR createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
@@ -2636,7 +2686,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 }
 
 static void demo_init_connection(struct demo *demo) {
-#ifndef _WIN32
+#if !(defined(_WIN32) || defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
@@ -2790,6 +2840,27 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
     return (int)msg.wParam;
 }
+
+#elif defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
+static void demo_main(struct demo *demo, void* view) {
+	const char* argv[] = { "CubeSample" };
+	int argc = sizeof(argv) / sizeof(char*);
+
+	demo_init(demo, argc, (char**)argv);
+	demo->window = view;
+	demo_init_vk_swapchain(demo);
+	demo_prepare(demo);
+	demo->spin_angle = 0.4f;
+}
+
+static void demo_update_and_draw(struct demo *demo) {
+	// Wait for work to finish before updating MVP.
+	vkDeviceWaitIdle(demo->device);
+	demo_update_data_buffer(demo);
+
+	demo_draw(demo);
+}
+
 #else  // _WIN32
 int main(int argc, char **argv) {
     struct demo demo;
