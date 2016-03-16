@@ -109,7 +109,6 @@ struct layer_data {
 #if MTMERGE
 // MTMERGE - stuff pulled directly from MT
     uint64_t currentFenceId;
-    VkPhysicalDeviceProperties properties;
     unordered_map<VkDeviceMemory, vector<MEMORY_RANGE>> bufferRanges, imageRanges;
     // Maps for tracking key structs related to mem_tracker state
     unordered_map<VkCommandBuffer, MT_CB_INFO> cbMap;
@@ -4798,7 +4797,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
     my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
     createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     // Get physical device limits for this device
-    // MTMTODO : Anywhere ...->properties used from MT, use ...->physDevProperties.properties instead
     my_instance_data->instance_dispatch_table->GetPhysicalDeviceProperties(gpu, &(my_device_data->physDevProperties.properties));
     uint32_t count;
     my_instance_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(gpu, &count, nullptr);
@@ -5935,11 +5933,11 @@ VkBool32 validate_memory_range(layer_data *my_data, const unordered_map<VkDevice
         return false;
     const vector<MEMORY_RANGE> &ranges = memory.at(new_range.memory);
     for (auto range : ranges) {
-        if ((range.end & ~(my_data->properties.limits.bufferImageGranularity - 1)) <
-            (new_range.start & ~(my_data->properties.limits.bufferImageGranularity - 1)))
+        if ((range.end & ~(my_data->physDevProperties.properties.limits.bufferImageGranularity - 1)) <
+            (new_range.start & ~(my_data->physDevProperties.properties.limits.bufferImageGranularity - 1)))
             continue;
-        if ((range.start & ~(my_data->properties.limits.bufferImageGranularity - 1)) >
-            (new_range.end & ~(my_data->properties.limits.bufferImageGranularity - 1)))
+        if ((range.start & ~(my_data->physDevProperties.properties.limits.bufferImageGranularity - 1)) >
+            (new_range.end & ~(my_data->physDevProperties.properties.limits.bufferImageGranularity - 1)))
             continue;
         skip_call |= print_memory_range_error(my_data, new_range.handle, range.handle, object_type);
     }
