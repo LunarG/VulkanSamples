@@ -81,6 +81,7 @@ struct MemRange {
 };
 
 /*
+ * MTMTODO : Update this comment
  * Data Structure overview
  *  There are 4 global STL(' maps
  *  cbMap -- map of command Buffer (CB) objects to MT_CB_INFO structures
@@ -116,8 +117,15 @@ struct MT_OBJ_HANDLE_TYPE {
     VkDebugReportObjectTypeEXT type;
 };
 
+struct MEMORY_RANGE {
+    uint64_t handle;
+    VkDeviceMemory memory;
+    VkDeviceSize start;
+    VkDeviceSize end;
+};
+
 // Data struct for tracking memory object
-struct MT_MEM_OBJ_INFO {
+struct DEVICE_MEM_INFO {
     void *object;      // Dispatchable object used to create this memory (device of swapchain)
     uint32_t refCount; // Count of references (obj bindings or CB use)
     bool valid;        // Stores if the memory has valid data or not
@@ -125,6 +133,9 @@ struct MT_MEM_OBJ_INFO {
     VkMemoryAllocateInfo allocInfo;
     list<MT_OBJ_HANDLE_TYPE> pObjBindings;        // list container of objects bound to this memory
     list<VkCommandBuffer> pCommandBufferBindings; // list container of cmd buffers that reference this mem object
+    vector<MEMORY_RANGE> bufferRanges;
+    vector<MEMORY_RANGE> imageRanges;
+    VkImage image; // If memory is bound to image, this will have VkImage handle, else VK_NULL_HANDLE
     MemRange memRange;
     void *pData, *pDriverData;
 };
@@ -213,12 +224,6 @@ struct MT_SWAP_CHAIN_INFO {
     std::vector<VkImage> images;
 };
 
-struct MEMORY_RANGE {
-    uint64_t handle;
-    VkDeviceMemory memory;
-    VkDeviceSize start;
-    VkDeviceSize end;
-};
 #endif
 // Draw State ERROR codes
 typedef enum _DRAW_STATE_ERROR {
