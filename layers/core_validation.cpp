@@ -6231,13 +6231,13 @@ vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, const VkAll
     }
 
     if (VK_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
 #if MTMERGE
         add_object_create_info(dev_data, (uint64_t)*pImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, pCreateInfo);
 #endif
         IMAGE_LAYOUT_NODE image_node;
         image_node.layout = pCreateInfo->initialLayout;
         image_node.format = pCreateInfo->format;
-        loader_platform_thread_lock_mutex(&globalLock);
         dev_data->imageMap[*pImage].createInfo = *pCreateInfo;
         ImageSubresourcePair subpair = {*pImage, false, VkImageSubresource()};
         dev_data->imageSubresourceMap[*pImage].push_back(subpair);
