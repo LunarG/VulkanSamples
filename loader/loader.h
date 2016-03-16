@@ -36,7 +36,7 @@
 #define LOADER_H
 
 #include <vulkan/vulkan.h>
-#include <vk_loader_platform.h>
+#include "vk_loader_platform.h"
 
 #include <vulkan/vk_layer.h>
 #include <vulkan/vk_icd.h>
@@ -200,7 +200,7 @@ struct loader_icd {
     // pointers to find other structs
     const struct loader_scanned_icds *this_icd_lib;
     const struct loader_instance *this_instance;
-
+    VkPhysicalDevice *phys_devs;  // physicalDevice object from icd
     struct loader_device *logical_device_list;
     VkInstance instance; // instance object from the icd
     PFN_vkGetDeviceProcAddr GetDeviceProcAddr;

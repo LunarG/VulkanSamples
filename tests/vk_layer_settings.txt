@@ -1,3 +1,5 @@
+lunarg_core_validation.report_flags = error
+lunarg_core_validation.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
 lunarg_mem_tracker.report_flags = error
 lunarg_mem_tracker.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
 lunarg_draw_state.report_flags = error

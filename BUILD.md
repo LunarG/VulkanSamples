@@ -1,60 +1,68 @@
 # Build Instructions
-These instructions are for Linux and Windows.
+This document contains the instructions for building this repository on Linux and Windows.
 
-It is strongly suggested that you first install a Vulkan-capable driver, obtained from your graphics hardware vendor.
+This repository does not contain a Vulkan-capable driver.
+Before proceeding, it is strongly recommended that you obtain a Vulkan driver from your graphics hardware vendor
+and install it.
 
-Note: The sample Vulkan Intel driver for Linux (ICD) has been moved to the
-[VulkanTools repo](https://github.com/LunarG/VulkanTools).
-Further instructions regarding the ICD are available there.
+Note: The sample Vulkan Intel driver for Linux (ICD) is being deprecated in favor of other driver options from Intel.
+This driver has been moved to the [VulkanTools repo](https://github.com/LunarG/VulkanTools).
+Further instructions regarding this ICD are available there.
 
 ## Git the Bits
-
-If you intend to contribute, the preferred work flow is to fork the repo, create a branch in your forked repo, do the work, and create a pull request on GitHub to integrate that work back into the repo.
 
 To create your local git repository:
 ```
 git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers 
-# Or substitute the URL from your forked repo for https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers above.
 ```
+
+If you intend to contribute, the preferred work flow is for you to develop your contribution
+in a fork of this repo in your GitHub account and then submit a pull request.
+Please see the CONTRIBUTING.md file in this respository for more details.
 
 ## Linux Build
 
-The build process uses cmake and should work with the usual cmake options and utilities.
+The build process uses CMake to generate makefiles for this project.
 The build generates the loader, layers, and tests.
 
 This repo has been built and tested on Ubuntu 14.04.3 LTS, 14.10, 15.04 and 15.10.
 It should be straightforward to use it on other Linux distros.
 
-These packages should be installed 
+These packages are needed to build this repository: 
 ```
 sudo apt-get install git cmake build-essential bison libxcb1-dev
 ```
 
 Example debug build:
 ```
-cd YOUR_DEV_DIRECTORY  # cd to the root of the Vulkan-LoaderAndValidationLayers git repository
+cd Vulkan-LoaderAndValidationLayers  # cd to the root of the cloned git repository
 ./update_external_sources.sh  # Fetches and builds glslang and spirv-tools
 cmake -H. -Bdbuild -DCMAKE_BUILD_TYPE=Debug
 cd dbuild
 make
 ```
 
-To run Vulkan programs you must tell the icd loader where to find the libraries.
-This is described in a [specification](https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/blob/sdk-1.0.3/loader/LoaderAndLayerInterface.md#vulkan-installable-client-driver-interface-with-the-loader).
+If you have installed a Vulkan driver obtained from your graphics hardware vendor, the install process should
+have configured the driver so that the Vulkan loader can find and load it.
 
-This specification describes both how ICDs and layers should be properly
+If you want to use the loader and layers that you have just built:
+```
+export LD_LIBRARY_PATH=<path to your repository root>/dbuild/loader
+export VK_LAYER_PATH=<path to your repository root>/dbuild/layers
+```
+Note that if you have installed the [LunarG Vulkan SDK](https://vulkan.lunarg.com),
+you will also have the SDK version of the loader and layers installed in your default system libraries.
+
+You can run the `vulkaninfo` application to see which driver, loader and layers are being used.
+
+The `LoaderAndLayerInterface` document in the `loader` folder in this repository is a specification that
+describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
-
-For example, you may wish to point to your just-built loader and layers with:
-```
-export LD_LIBRARY_PATH=<path to your build root>/dbuild/loader
-export VK_LAYER_PATH=<path to your build root>/dbuild/layers
-```
 
 ## Validation Test
 
-The test executables can be found in the dbuild/tests directory. The tests use the Google
-gtest infrastructure. Tests available so far:
+The test executables can be found in the dbuild/tests directory. 
+Some of the tests that are available:
 - vk_layer_validation_tests: Test Vulkan layers.
 
 There are also a few shell and Python scripts that run test collections (eg,
@@ -62,10 +70,11 @@ There are also a few shell and Python scripts that run test collections (eg,
 
 ## Linux Demos
 
-The demos executables can be found in the dbuild/demos directory.
+Some demos that can be found in the dbuild/demos directory are:
 - vulkaninfo: report GPU properties
 - tri: a textured triangle (which is animated to demonstrate Z-clipping)
 - cube: a textured spinning cube
+- smoke/smoke: A "smoke" test using a more complex Vulkan demo
 
 ## Windows System Requirements
 
@@ -109,9 +118,9 @@ Optional software packages:
 
 Cygwin is used in order to obtain a local copy of the Git repository, and to run the CMake command that creates Visual Studio files.  Visual Studio is used to build the software, and will re-run CMake as appropriate.
 
-Example debug x64 build (e.g. in a "Developer Command Prompt for VS2013" window):
+To build all Windows targets (e.g. in a "Developer Command Prompt for VS2013" window):
 ```
-cd YOUR_DEV_DIRECTORY  # cd to the root of the Vulkan-LoaderAndValidationLayers git repository
+cd Vulkan-LoaderAndValidationLayers  # cd to the root of the cloned git repository
 update_external_sources.bat --all
 build_windows_targets.bat 
 ```
@@ -121,25 +130,7 @@ At this point, you can use Windows Explorer to launch Visual Studio by double-cl
 Vulkan programs must be able to find and use the vulkan-1.dll libary. Make sure it is either installed in the C:\Windows\System32 folder, or the PATH environment variable includes the folder that it is located in.
 
 To run Vulkan programs you must tell the icd loader where to find the libraries.
-This is described in a [specification](https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/blob/sdk-1.0.3/loader/LoaderAndLayerInterface.md#vulkan-installable-client-driver-interface-with-the-loader).
-
+This is described in a `LoaderAndLayerInterface` document in the `loader` folder in this repository.
 This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
-
-### Windows 64-bit Installation Notes
-If you plan on creating a Windows Install file (done in the windowsRuntimeInstaller sub-directory) you will need to build for both 32-bit and 64-bit Windows since both versions of EXEs and DLLs exist simultaneously on Windows 64.
-
-To do this, simply create and build the release versions of each target:
-```
-cd LoaderAndTools  # cd to the root of the Vulkan git repository
-update_external_sources.bat --all
-mkdir build
-cd build
-cmake -G "Visual Studio 12 Win64" ..
-msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release
-mkdir build32
-cd build32
-cmake -G "Visual Studio 12" ..
-msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release
-```
 

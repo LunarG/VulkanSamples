@@ -880,7 +880,7 @@ void execute_present_image(struct sample_info &info) {
     assert(!res);
 }
 
-void init_swap_chain(struct sample_info &info) {
+void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
     /* DEPENDS on info.cmd and info.queue initialized */
 
     VkResult U_ASSERT_ONLY res;
@@ -963,8 +963,7 @@ void init_swap_chain(struct sample_info &info) {
     swap_chain.oldSwapchain = VK_NULL_HANDLE;
     swap_chain.clipped = true;
     swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-    swap_chain.imageUsage =
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    swap_chain.imageUsage = usageFlags;
     swap_chain.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swap_chain.queueFamilyIndexCount = 0;
     swap_chain.pQueueFamilyIndices = NULL;

@@ -134,10 +134,13 @@ void set_image_layout(struct sample_info &info, VkImage image,
     image_memory_barrier.dstAccessMask = 0;
     image_memory_barrier.oldLayout = old_image_layout;
     image_memory_barrier.newLayout = new_image_layout;
+    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     image_memory_barrier.image = image;
     image_memory_barrier.subresourceRange.aspectMask = aspectMask;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
     image_memory_barrier.subresourceRange.levelCount = 1;
+    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
     image_memory_barrier.subresourceRange.layerCount = 1;
 
     if (old_image_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
@@ -432,7 +435,9 @@ void finalize_glslang() { glslang::FinalizeProcess(); }
 //
 bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
                std::vector<unsigned int> &spirv) {
-    glslang::TProgram &program = *new glslang::TProgram;
+    EShLanguage stage = FindLanguage(shader_type);
+    glslang::TShader shader(stage);
+    glslang::TProgram program;
     const char *shaderStrings[1];
     TBuiltInResource Resources;
     init_resources(Resources);
@@ -440,27 +445,25 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
     // Enable SPIR-V and Vulkan rules when parsing GLSL
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
-    EShLanguage stage = FindLanguage(shader_type);
-    glslang::TShader *shader = new glslang::TShader(stage);
-
     shaderStrings[0] = pshader;
-    shader->setStrings(shaderStrings, 1);
+    shader.setStrings(shaderStrings, 1);
 
-    if (!shader->parse(&Resources, 100, false, messages)) {
-        puts(shader->getInfoLog());
-        puts(shader->getInfoDebugLog());
+    if (!shader.parse(&Resources, 100, false, messages)) {
+        puts(shader.getInfoLog());
+        puts(shader.getInfoDebugLog());
         return false; // something didn't work
     }
 
-    program.addShader(shader);
+    program.addShader(&shader);
 
     //
     // Program-level processing...
     //
 
     if (!program.link(messages)) {
-        puts(shader->getInfoLog());
-        puts(shader->getInfoDebugLog());
+        puts(shader.getInfoLog());
+        puts(shader.getInfoDebugLog());
+        fflush(stdout);
         return false;
     }
 

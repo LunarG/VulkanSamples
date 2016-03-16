@@ -59,12 +59,22 @@ int sample_main() {
     init_connection(info);
     init_window(info);
     init_swapchain_extension(info);
+
+    VkSurfaceCapabilitiesKHR surfCapabilities;
+    res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(info.gpus[0], info.surface,
+                                                    &surfCapabilities);
+    if (!(surfCapabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)) {
+        std::cout << "Surface cannot be destination of blit - abort \n";
+        exit(-1);
+    }
+
     init_device(info);
     init_command_pool(info);
     init_command_buffer(info);
     execute_begin_command_buffer(info);
     init_device_queue(info);
-    init_swap_chain(info);
+    init_swap_chain(info,  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                           VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
     /* VULKAN_KEY_START */
 

@@ -3137,6 +3137,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction)vkCmdBindVertexBuffers;
     if (!strcmp(funcName, "vkCmdBindIndexBuffer"))
         return (PFN_vkVoidFunction)vkCmdBindIndexBuffer;
+    if (!strcmp(funcName, "vkCmdBlitImage"))
+        return (PFN_vkVoidFunction)vkCmdBlitImage;
     if (!strcmp(funcName, "vkCmdDraw"))
         return (PFN_vkVoidFunction)vkCmdDraw;
     if (!strcmp(funcName, "vkCmdDrawIndexed"))
