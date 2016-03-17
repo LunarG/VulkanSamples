@@ -5049,9 +5049,7 @@ void decrementResources(layer_data *my_data, uint32_t fenceCount, const VkFence 
             return;
         fence_data->second.needsSignaled = false;
         fence_data->second.in_use.fetch_sub(1);
-        if (fence_data->second.priorFence != VK_NULL_HANDLE) {
-            decrementResources(my_data, 1, &fence_data->second.priorFence);
-        }
+        decrementResources(my_data, fence_data->second.priorFences.size(), &fence_data->second.priorFences[0]);
         for (auto cmdBuffer : fence_data->second.cmdBuffers) {
             decrementResources(my_data, cmdBuffer);
         }
@@ -5065,28 +5063,58 @@ void decrementResources(layer_data *my_data, VkQueue queue) {
             decrementResources(my_data, cmdBuffer);
         }
         queue_data->second.untrackedCmdBuffers.clear();
-        decrementResources(my_data, 1, &queue_data->second.priorFence);
+        decrementResources(my_data, queue_data->second.lastFences.size(), &queue_data->second.lastFences[0]);
+    }
+}
+
+void updateTrackedCommandBuffers(layer_data *dev_data, VkQueue queue, VkQueue other_queue, VkFence fence) {
+    if (queue == other_queue) {
+        return;
+    }
+    auto queue_data = dev_data->queueMap.find(queue);
+    auto other_queue_data = dev_data->queueMap.find(other_queue);
+    if (queue_data == dev_data->queueMap.end() || other_queue_data == dev_data->queueMap.end()) {
+        return;
+    }
+    for (auto fence : other_queue_data->second.lastFences) {
+        queue_data->second.lastFences.push_back(fence);
+    }
+    if (fence != VK_NULL_HANDLE) {
+        auto fence_data = dev_data->fenceMap.find(fence);
+        if (fence_data == dev_data->fenceMap.end()) {
+            return;
+        }
+        for (auto cmdbuffer : other_queue_data->second.untrackedCmdBuffers) {
+            fence_data->second.cmdBuffers.push_back(cmdbuffer);
+        }
+        other_queue_data->second.untrackedCmdBuffers.clear();
+    } else {
+        for (auto cmdbuffer : other_queue_data->second.untrackedCmdBuffers) {
+            queue_data->second.untrackedCmdBuffers.push_back(cmdbuffer);
+        }
+        other_queue_data->second.untrackedCmdBuffers.clear();
     }
 }
 
 void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, VkFence fence) {
     auto queue_data = my_data->queueMap.find(queue);
     if (fence != VK_NULL_HANDLE) {
-        VkFence priorFence = VK_NULL_HANDLE;
+        vector<VkFence> prior_fences;
         auto fence_data = my_data->fenceMap.find(fence);
         if (fence_data == my_data->fenceMap.end()) {
             return;
         }
         if (queue_data != my_data->queueMap.end()) {
-            priorFence = queue_data->second.priorFence;
-            queue_data->second.priorFence = fence;
-            for (auto cmdBuffer : queue_data->second.untrackedCmdBuffers) {
-                fence_data->second.cmdBuffers.push_back(cmdBuffer);
+            prior_fences = queue_data->second.lastFences;
+            queue_data->second.lastFences.clear();
+            queue_data->second.lastFences.push_back(fence);
+            for (auto cmdbuffer : queue_data->second.untrackedCmdBuffers) {
+                fence_data->second.cmdBuffers.push_back(cmdbuffer);
             }
             queue_data->second.untrackedCmdBuffers.clear();
         }
         fence_data->second.cmdBuffers.clear();
-        fence_data->second.priorFence = priorFence;
+        fence_data->second.priorFences = prior_fences;
         fence_data->second.needsSignaled = true;
         fence_data->second.queue = queue;
         fence_data->second.in_use.fetch_add(1);
@@ -5310,23 +5338,41 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
                             "Fence %#" PRIx64 " is already in use by another submission.", (uint64_t)(fence));
     }
     // Now verify each individual submit
+    std::unordered_set<VkQueue> processed_other_queues;
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
         const VkSubmitInfo *submit = &pSubmits[submit_idx];
         vector<VkSemaphore> semaphoreList;
         for (uint32_t i = 0; i < submit->waitSemaphoreCount; ++i) {
-            semaphoreList.push_back(submit->pWaitSemaphores[i]);
-            if (dev_data->semaphoreMap[submit->pWaitSemaphores[i]].signaled) {
-                dev_data->semaphoreMap[submit->pWaitSemaphores[i]].signaled = 0;
+            const VkSemaphore &semaphore = submit->pWaitSemaphores[i];
+            semaphoreList.push_back(semaphore);
+            if (dev_data->semaphoreMap[semaphore].signaled) {
+                dev_data->semaphoreMap[semaphore].signaled = 0;
             } else {
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                     VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS,
                                     "DS", "Queue %#" PRIx64 " is waiting on semaphore %#" PRIx64 " that has no way to be signaled.",
-                                    (uint64_t)(queue), (uint64_t)(submit->pWaitSemaphores[i]));
+                                    reinterpret_cast<uint64_t &>(queue), reinterpret_cast<const uint64_t &>(semaphore));
+            }
+            const VkQueue &other_queue = dev_data->semaphoreMap[semaphore].queue;
+            if (other_queue != VK_NULL_HANDLE && !processed_other_queues.count(other_queue)) {
+                updateTrackedCommandBuffers(dev_data, queue, other_queue, fence);
+                processed_other_queues.insert(other_queue);
             }
         }
         for (uint32_t i = 0; i < submit->signalSemaphoreCount; ++i) {
-            semaphoreList.push_back(submit->pSignalSemaphores[i]);
-            dev_data->semaphoreMap[submit->pSignalSemaphores[i]].signaled = 1;
+            const VkSemaphore &semaphore = submit->pSignalSemaphores[i];
+            semaphoreList.push_back(semaphore);
+            if (dev_data->semaphoreMap[semaphore].signaled) {
+                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS,
+                                    "DS", "Queue %#" PRIx64 " is signaling semaphore %#" PRIx64
+                                          " that has already been signaled but not waited on by queue %#" PRIx64 ".",
+                                    reinterpret_cast<uint64_t &>(queue), reinterpret_cast<const uint64_t &>(semaphore),
+                                    reinterpret_cast<uint64_t &>(dev_data->semaphoreMap[semaphore].queue));
+            } else {
+                dev_data->semaphoreMap[semaphore].signaled = 1;
+                dev_data->semaphoreMap[semaphore].queue = queue;
+            }
         }
         for (uint32_t i = 0; i < submit->commandBufferCount; i++) {
             skipCall |= ValidateCmdBufImageLayouts(submit->pCommandBuffers[i]);
@@ -10407,6 +10453,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(VkDevice device, const VkSemaph
         loader_platform_thread_lock_mutex(&globalLock);
         SEMAPHORE_NODE* sNode = &dev_data->semaphoreMap[*pSemaphore];
         sNode->signaled = 0;
+        sNode->queue = VK_NULL_HANDLE;
         sNode->in_use.store(0);
         sNode->state = MEMTRACK_SEMAPHORE_STATE_UNSET;
         loader_platform_thread_unlock_mutex(&globalLock);

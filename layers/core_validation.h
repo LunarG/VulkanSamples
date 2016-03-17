@@ -561,10 +561,10 @@ class FENCE_NODE : public BASE_NODE {
     VkQueue queue;
     vector<VkCommandBuffer> cmdBuffers;
     bool needsSignaled;
-    VkFence priorFence;
+    vector<VkFence> priorFences;
 
     // Default constructor
-    FENCE_NODE() : queue(NULL), needsSignaled(VK_FALSE), priorFence(static_cast<VkFence>(NULL)){};
+    FENCE_NODE() : queue(NULL), needsSignaled(VK_FALSE){};
 };
 
 class SEMAPHORE_NODE : public BASE_NODE {
@@ -572,6 +572,7 @@ class SEMAPHORE_NODE : public BASE_NODE {
     using BASE_NODE::in_use;
     uint32_t signaled;
     SemaphoreState state;
+    VkQueue queue;
 };
 
 class EVENT_NODE : public BASE_NODE {
@@ -584,7 +585,7 @@ class EVENT_NODE : public BASE_NODE {
 class QUEUE_NODE {
   public:
     VkDevice device;
-    VkFence priorFence;
+    vector<VkFence> lastFences;
 #if MTMERGE
     uint64_t lastRetiredId;
     uint64_t lastSubmittedId;
