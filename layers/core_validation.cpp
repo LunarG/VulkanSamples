@@ -2735,19 +2735,19 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                                    ? &(my_data->pipelineLayoutMap[pCreateInfo->layout].descriptorSetLayouts)
                                    : nullptr;
 
-                for (auto it = descriptor_uses.begin(); it != descriptor_uses.end(); it++) {
+                for (auto use : descriptor_uses) {
                     // As a side-effect of this function, capture which sets are used by the pipeline
-                    pPipeline->active_sets.insert(it->first.first);
+                    pPipeline->active_sets.insert(use.first.first);
 
                     /* find the matching binding */
-                    auto binding = get_descriptor_binding(my_data, layouts, it->first);
+                    auto binding = get_descriptor_binding(my_data, layouts, use.first);
                     unsigned required_descriptor_count;
 
                     if (!binding) {
                         if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                     /*dev*/ 0, __LINE__, SHADER_CHECKER_MISSING_DESCRIPTOR, "SC",
                                     "Shader uses descriptor slot %u.%u (used as type `%s`) but not declared in pipeline layout",
-                                    it->first.first, it->first.second, describe_type(module, it->second.type_id).c_str())) {
+                                    use.first.first, use.first.second, describe_type(module, use.second.type_id).c_str())) {
                             pass = VK_FALSE;
                         }
                     } else if (~binding->stageFlags & pStage->stage) {
@@ -2756,19 +2756,19 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                                     "Shader uses descriptor slot %u.%u (used "
                                     "as type `%s`) but descriptor not "
                                     "accessible from stage %s",
-                                    it->first.first, it->first.second,
-                                    describe_type(module, it->second.type_id).c_str(),
+                                    use.first.first, use.first.second,
+                                    describe_type(module, use.second.type_id).c_str(),
                                     string_VkShaderStageFlagBits(pStage->stage))) {
                             pass = VK_FALSE;
                         }
-                    } else if (!descriptor_type_match(my_data, module, it->second.type_id, binding->descriptorType, /*out*/ required_descriptor_count)) {
+                    } else if (!descriptor_type_match(my_data, module, use.second.type_id, binding->descriptorType, /*out*/ required_descriptor_count)) {
                         if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                     /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
                                     "Type mismatch on descriptor slot "
                                     "%u.%u (used as type `%s`) but "
                                     "descriptor of type %s",
-                                    it->first.first, it->first.second,
-                                    describe_type(module, it->second.type_id).c_str(),
+                                    use.first.first, use.first.second,
+                                    describe_type(module, use.second.type_id).c_str(),
                                     string_VkDescriptorType(binding->descriptorType))) {
                             pass = VK_FALSE;
                         }
@@ -2776,8 +2776,8 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                         if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                     /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
                                     "Shader expects at least %u descriptors for binding %u.%u (used as type `%s`) but only %u provided",
-                                    required_descriptor_count, it->first.first, it->first.second,
-                                    describe_type(module, it->second.type_id).c_str(),
+                                    required_descriptor_count, use.first.first, use.first.second,
+                                    describe_type(module, use.second.type_id).c_str(),
                                     binding->descriptorCount)) {
                             pass = VK_FALSE;
                         }
