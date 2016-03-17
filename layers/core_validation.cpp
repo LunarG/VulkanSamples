@@ -2144,29 +2144,22 @@ static bool validate_push_constant_usage(layer_data *my_data, VkDevice dev,
 
 // For given pipelineLayout verify that the setLayout at slot.first
 //  has the requested binding at slot.second
-static bool has_descriptor_binding(layer_data *my_data, vector<VkDescriptorSetLayout> *pipelineLayout, descriptor_slot_t slot,
-                                   VkDescriptorType &type, VkShaderStageFlags &stage_flags) {
-    type = VkDescriptorType(0);
-    stage_flags = VkShaderStageFlags(0);
+static VkDescriptorSetLayoutBinding const * get_descriptor_binding(layer_data *my_data, vector<VkDescriptorSetLayout> *pipelineLayout, descriptor_slot_t slot) {
 
     if (!pipelineLayout)
-        return false;
+        return nullptr;
 
     if (slot.first >= pipelineLayout->size())
-        return false;
+        return nullptr;
 
     auto const layout_node = my_data->descriptorSetLayoutMap[(*pipelineLayout)[slot.first]];
 
     auto bindingIt = layout_node->bindingToIndexMap.find(slot.second);
     if ((bindingIt == layout_node->bindingToIndexMap.end()) || (layout_node->createInfo.pBindings == NULL))
-        return false;
+        return nullptr;
 
     assert(bindingIt->second < layout_node->createInfo.bindingCount);
-    VkDescriptorSetLayoutBinding binding = layout_node->createInfo.pBindings[bindingIt->second];
-    type = binding.descriptorType;
-    stage_flags = binding.stageFlags;
-
-    return true;
+    return &layout_node->createInfo.pBindings[bindingIt->second];
 }
 
 // Block of code at start here for managing/tracking Pipeline state that this layer cares about
@@ -2725,11 +2718,9 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                     pPipeline->active_sets.insert(it->first.first);
 
                     /* find the matching binding */
-                    VkDescriptorType descriptor_type;
-                    VkShaderStageFlags descriptor_stage_flags;
-                    auto found = has_descriptor_binding(my_data, layouts, it->first, descriptor_type, descriptor_stage_flags);
+                    auto binding = get_descriptor_binding(my_data, layouts, it->first);
 
-                    if (!found) {
+                    if (!binding) {
                         char type_name[1024];
                         describe_type(type_name, module, it->second.type_id);
                         if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
@@ -2738,7 +2729,7 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                                     it->first.first, it->first.second, type_name)) {
                             pass = VK_FALSE;
                         }
-                    } else if (~descriptor_stage_flags & pStage->stage) {
+                    } else if (~binding->stageFlags & pStage->stage) {
                         char type_name[1024];
                         describe_type(type_name, module, it->second.type_id);
                         if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
@@ -2749,7 +2740,7 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                                     it->first.first, it->first.second, type_name, string_VkShaderStageFlagBits(pStage->stage))) {
                             pass = VK_FALSE;
                         }
-                    } else if (!descriptor_type_match(my_data, module, it->second.type_id, descriptor_type)) {
+                    } else if (!descriptor_type_match(my_data, module, it->second.type_id, binding->descriptorType)) {
                         char type_name[1024];
                         describe_type(type_name, module, it->second.type_id);
                         if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
@@ -2757,7 +2748,7 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                                     "Type mismatch on descriptor slot "
                                     "%u.%u (used as type `%s`) but "
                                     "descriptor of type %s",
-                                    it->first.first, it->first.second, type_name, string_VkDescriptorType(descriptor_type))) {
+                                    it->first.first, it->first.second, type_name, string_VkDescriptorType(binding->descriptorType))) {
                             pass = VK_FALSE;
                         }
                     }
