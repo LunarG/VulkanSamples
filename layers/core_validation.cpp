@@ -2430,8 +2430,10 @@ static VkBool32 validate_specialization_offsets(layer_data *my_data, VkPipelineS
 }
 
 static bool descriptor_type_match(layer_data *my_data, shader_module const *module, uint32_t type_id,
-                                  VkDescriptorType descriptor_type) {
+                                  VkDescriptorType descriptor_type, unsigned &descriptor_count) {
     auto type = module->get_def(type_id);
+
+    descriptor_count = 1;
 
     /* Strip off any array or ptrs */
     /* TODO: if we see an array type here, we should make use of it in order to
@@ -2719,6 +2721,7 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
 
                     /* find the matching binding */
                     auto binding = get_descriptor_binding(my_data, layouts, it->first);
+                    unsigned required_descriptor_count;
 
                     if (!binding) {
                         char type_name[1024];
@@ -2740,7 +2743,7 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                                     it->first.first, it->first.second, type_name, string_VkShaderStageFlagBits(pStage->stage))) {
                             pass = VK_FALSE;
                         }
-                    } else if (!descriptor_type_match(my_data, module, it->second.type_id, binding->descriptorType)) {
+                    } else if (!descriptor_type_match(my_data, module, it->second.type_id, binding->descriptorType, /*out*/ required_descriptor_count)) {
                         char type_name[1024];
                         describe_type(type_name, module, it->second.type_id);
                         if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
@@ -2749,6 +2752,15 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                                     "%u.%u (used as type `%s`) but "
                                     "descriptor of type %s",
                                     it->first.first, it->first.second, type_name, string_VkDescriptorType(binding->descriptorType))) {
+                            pass = VK_FALSE;
+                        }
+                    } else if (binding->descriptorCount < required_descriptor_count) {
+                        char type_name[1024];
+                        describe_type(type_name, module, it->second.type_id);
+                        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                    /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
+                                    "Shader expects at least %u descriptors for binding %u.%u (used as type `%s`) but only %u provided"
+                                    required_descriptor_count, it->first.first, it->first.second, type_name, binding->descriptorCount)) {
                             pass = VK_FALSE;
                         }
                     }
