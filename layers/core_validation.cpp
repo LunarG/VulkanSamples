@@ -6286,7 +6286,9 @@ vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocat
             if (cbNode != dev_data->commandBufferMap.end()) {
                 // Set CB as invalid and record destroyed framebuffer
                 cbNode->second->state = CB_INVALID;
+                loader_platform_thread_lock_mutex(&globalLock);
                 cbNode->second->destroyedFramebuffers.insert(framebuffer);
+                loader_platform_thread_unlock_mutex(&globalLock);
             }
         }
         dev_data->frameBufferMap.erase(framebuffer);
