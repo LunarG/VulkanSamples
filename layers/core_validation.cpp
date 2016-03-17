@@ -2435,13 +2435,16 @@ static bool descriptor_type_match(layer_data *my_data, shader_module const *modu
 
     descriptor_count = 1;
 
-    /* Strip off any array or ptrs */
-    /* TODO: if we see an array type here, we should make use of it in order to
-     * validate the number of descriptors actually required to be set in the
-     * API.
-     */
+    /* Strip off any array or ptrs. Where we remove array levels, adjust the
+     * descriptor count for each dimension. */
     while (type.opcode() == spv::OpTypeArray || type.opcode() == spv::OpTypePointer) {
-        type = module->get_def(type.word(type.opcode() == spv::OpTypeArray ? 2 : 3));
+        if (type.opcode() == spv::OpTypeArray) {
+            descriptor_count *= get_constant_value(module, type.word(3));
+            type = module->get_def(type.word(2));
+        }
+        else {
+            type = module->get_def(type.word(3));
+        }
     }
 
     switch (type.opcode()) {
@@ -2759,7 +2762,7 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                         describe_type(type_name, module, it->second.type_id);
                         if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                     /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
-                                    "Shader expects at least %u descriptors for binding %u.%u (used as type `%s`) but only %u provided"
+                                    "Shader expects at least %u descriptors for binding %u.%u (used as type `%s`) but only %u provided",
                                     required_descriptor_count, it->first.first, it->first.second, type_name, binding->descriptorCount)) {
                             pass = VK_FALSE;
                         }
