@@ -457,18 +457,16 @@ typedef struct _PIPELINE_NODE {
     // Capture which sets are actually used by the shaders of this pipeline
     std::set<unsigned> active_sets;
     // Vtx input info (if any)
-    uint32_t vtxBindingCount; // number of bindings
-    VkVertexInputBindingDescription *pVertexBindingDescriptions;
-    uint32_t vtxAttributeCount; // number of attributes
-    VkVertexInputAttributeDescription *pVertexAttributeDescriptions;
-    uint32_t attachmentCount; // number of CB attachments
-    VkPipelineColorBlendAttachmentState *pAttachments;
+    std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
+    std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions;
+    std::vector<VkPipelineColorBlendAttachmentState> attachments;
     // Default constructor
     _PIPELINE_NODE()
         : pipeline{}, graphicsPipelineCI{}, vertexInputCI{}, iaStateCI{}, tessStateCI{}, vpStateCI{}, rsStateCI{}, msStateCI{},
           cbStateCI{}, dsStateCI{}, dynStateCI{}, vsCI{}, tcsCI{}, tesCI{}, gsCI{}, fsCI{}, computePipelineCI{}, active_shaders(0),
-          vtxBindingCount(0), pVertexBindingDescriptions(0), vtxAttributeCount(0), pVertexAttributeDescriptions(0),
-          attachmentCount(0), pAttachments(0){};
+          active_sets(),
+          vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments()
+          {}
 } PIPELINE_NODE;
 
 class BASE_NODE {

@@ -2976,15 +2976,15 @@ static VkBool32 validate_draw_state(layer_data *my_data, GLOBAL_CB_NODE *pCB, Vk
                 result |= validate_dynamic_offsets(my_data, pCB, activeSetNodes);
         }
         // Verify Vtx binding
-        if (pPipe->vtxBindingCount > 0) {
-            VkPipelineVertexInputStateCreateInfo *vtxInCI = &pPipe->vertexInputCI;
-            for (uint32_t i = 0; i < vtxInCI->vertexBindingDescriptionCount; i++) {
+        if (pPipe->vertexBindingDescriptions.size() > 0) {
+            for (size_t i = 0; i < pPipe->vertexBindingDescriptions.size(); i++) {
                 if ((pCB->currentDrawData.buffers.size() < (i + 1)) || (pCB->currentDrawData.buffers[i] == VK_NULL_HANDLE)) {
                     result |= log_msg(
                         my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                         DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
                         "The Pipeline State Object (%#" PRIxLEAST64
-                        ") expects that this Command Buffer's vertex binding Index %d should be set via vkCmdBindVertexBuffers.",
+                        ") expects that this Command Buffer's vertex binding Index " PRINTF_SIZE_T_SPECIFIER
+                        " should be set via vkCmdBindVertexBuffers.",
                         (uint64_t)pCB->lastBoundPipeline, i);
                 }
             }
@@ -3066,8 +3066,8 @@ static VkBool32 verifyPipelineCreateState(layer_data *my_data, const VkDevice de
 
     if (pPipeline->graphicsPipelineCI.pColorBlendState != NULL) {
         if (!my_data->physDevProperties.features.independentBlend) {
-            VkPipelineColorBlendAttachmentState *pAttachments = pPipeline->pAttachments;
-            for (uint32_t i = 1; i < pPipeline->attachmentCount; i++) {
+            VkPipelineColorBlendAttachmentState *pAttachments = &pPipeline->attachments[0];
+            for (size_t i = 1; i < pPipeline->attachments.size(); i++) {
                 if ((pAttachments[0].blendEnable != pAttachments[i].blendEnable) ||
                     (pAttachments[0].srcColorBlendFactor != pAttachments[i].srcColorBlendFactor) ||
                     (pAttachments[0].dstColorBlendFactor != pAttachments[i].dstColorBlendFactor) ||
@@ -3262,61 +3262,55 @@ static PIPELINE_NODE *initGraphicsPipeline(layer_data *dev_data, const VkGraphic
         memcpy((void *)pPipeline->graphicsPipelineCI.pStages, pCreateInfo->pStages, bufferSize);
     }
     if (pCreateInfo->pVertexInputState != NULL) {
-        memcpy((void *)&pPipeline->vertexInputCI, pCreateInfo->pVertexInputState, sizeof(VkPipelineVertexInputStateCreateInfo));
+        pPipeline->vertexInputCI = *pCreateInfo->pVertexInputState;
         // Copy embedded ptrs
         pVICI = pCreateInfo->pVertexInputState;
-        pPipeline->vtxBindingCount = pVICI->vertexBindingDescriptionCount;
-        if (pPipeline->vtxBindingCount) {
-            pPipeline->pVertexBindingDescriptions = new VkVertexInputBindingDescription[pPipeline->vtxBindingCount];
-            bufferSize = pPipeline->vtxBindingCount * sizeof(VkVertexInputBindingDescription);
-            memcpy((void *)pPipeline->pVertexBindingDescriptions, pVICI->pVertexBindingDescriptions, bufferSize);
+        if (pVICI->vertexBindingDescriptionCount) {
+            pPipeline->vertexBindingDescriptions = std::vector<VkVertexInputBindingDescription>(
+                pVICI->pVertexBindingDescriptions, pVICI->pVertexBindingDescriptions + pVICI->vertexBindingDescriptionCount);
         }
-        pPipeline->vtxAttributeCount = pVICI->vertexAttributeDescriptionCount;
-        if (pPipeline->vtxAttributeCount) {
-            pPipeline->pVertexAttributeDescriptions = new VkVertexInputAttributeDescription[pPipeline->vtxAttributeCount];
-            bufferSize = pPipeline->vtxAttributeCount * sizeof(VkVertexInputAttributeDescription);
-            memcpy((void *)pPipeline->pVertexAttributeDescriptions, pVICI->pVertexAttributeDescriptions, bufferSize);
+        if (pVICI->vertexAttributeDescriptionCount) {
+            pPipeline->vertexAttributeDescriptions = std::vector<VkVertexInputAttributeDescription>(
+                pVICI->pVertexAttributeDescriptions, pVICI->pVertexAttributeDescriptions + pVICI->vertexAttributeDescriptionCount);
         }
         pPipeline->graphicsPipelineCI.pVertexInputState = &pPipeline->vertexInputCI;
     }
     if (pCreateInfo->pInputAssemblyState != NULL) {
-        memcpy((void *)&pPipeline->iaStateCI, pCreateInfo->pInputAssemblyState, sizeof(VkPipelineInputAssemblyStateCreateInfo));
+        pPipeline->iaStateCI = *pCreateInfo->pInputAssemblyState;
         pPipeline->graphicsPipelineCI.pInputAssemblyState = &pPipeline->iaStateCI;
     }
     if (pCreateInfo->pTessellationState != NULL) {
-        memcpy((void *)&pPipeline->tessStateCI, pCreateInfo->pTessellationState, sizeof(VkPipelineTessellationStateCreateInfo));
+        pPipeline->tessStateCI = *pCreateInfo->pTessellationState;
         pPipeline->graphicsPipelineCI.pTessellationState = &pPipeline->tessStateCI;
     }
     if (pCreateInfo->pViewportState != NULL) {
-        memcpy((void *)&pPipeline->vpStateCI, pCreateInfo->pViewportState, sizeof(VkPipelineViewportStateCreateInfo));
+        pPipeline->vpStateCI = *pCreateInfo->pViewportState;
         pPipeline->graphicsPipelineCI.pViewportState = &pPipeline->vpStateCI;
     }
     if (pCreateInfo->pRasterizationState != NULL) {
-        memcpy((void *)&pPipeline->rsStateCI, pCreateInfo->pRasterizationState, sizeof(VkPipelineRasterizationStateCreateInfo));
+        pPipeline->rsStateCI = *pCreateInfo->pRasterizationState;
         pPipeline->graphicsPipelineCI.pRasterizationState = &pPipeline->rsStateCI;
     }
     if (pCreateInfo->pMultisampleState != NULL) {
-        memcpy((void *)&pPipeline->msStateCI, pCreateInfo->pMultisampleState, sizeof(VkPipelineMultisampleStateCreateInfo));
+        pPipeline->msStateCI = *pCreateInfo->pMultisampleState;
         pPipeline->graphicsPipelineCI.pMultisampleState = &pPipeline->msStateCI;
     }
     if (pCreateInfo->pDepthStencilState != NULL) {
-        memcpy((void *)&pPipeline->dsStateCI, pCreateInfo->pDepthStencilState, sizeof(VkPipelineDepthStencilStateCreateInfo));
+        pPipeline->dsStateCI = *pCreateInfo->pDepthStencilState;
         pPipeline->graphicsPipelineCI.pDepthStencilState = &pPipeline->dsStateCI;
     }
     if (pCreateInfo->pColorBlendState != NULL) {
-        memcpy((void *)&pPipeline->cbStateCI, pCreateInfo->pColorBlendState, sizeof(VkPipelineColorBlendStateCreateInfo));
+        pPipeline->cbStateCI = *pCreateInfo->pColorBlendState;
         // Copy embedded ptrs
         pCBCI = pCreateInfo->pColorBlendState;
-        pPipeline->attachmentCount = pCBCI->attachmentCount;
-        if (pPipeline->attachmentCount) {
-            pPipeline->pAttachments = new VkPipelineColorBlendAttachmentState[pPipeline->attachmentCount];
-            bufferSize = pPipeline->attachmentCount * sizeof(VkPipelineColorBlendAttachmentState);
-            memcpy((void *)pPipeline->pAttachments, pCBCI->pAttachments, bufferSize);
+        if (pCBCI->attachmentCount) {
+            pPipeline->attachments = std::vector<VkPipelineColorBlendAttachmentState>(
+                pCBCI->pAttachments, pCBCI->pAttachments + pCBCI->attachmentCount);
         }
         pPipeline->graphicsPipelineCI.pColorBlendState = &pPipeline->cbStateCI;
     }
     if (pCreateInfo->pDynamicState != NULL) {
-        memcpy((void *)&pPipeline->dynStateCI, pCreateInfo->pDynamicState, sizeof(VkPipelineDynamicStateCreateInfo));
+        pPipeline->dynStateCI = *pCreateInfo->pDynamicState;
         if (pPipeline->dynStateCI.dynamicStateCount) {
             pPipeline->dynStateCI.pDynamicStates = new VkDynamicState[pPipeline->dynStateCI.dynamicStateCount];
             bufferSize = pPipeline->dynStateCI.dynamicStateCount * sizeof(VkDynamicState);
@@ -3324,7 +3318,6 @@ static PIPELINE_NODE *initGraphicsPipeline(layer_data *dev_data, const VkGraphic
         }
         pPipeline->graphicsPipelineCI.pDynamicState = &pPipeline->dynStateCI;
     }
-    pPipeline->active_sets.clear();
     return pPipeline;
 }
 
@@ -3336,9 +3329,6 @@ static void deletePipelines(layer_data *my_data) {
         if ((*ii).second->graphicsPipelineCI.stageCount != 0) {
             delete[](*ii).second->graphicsPipelineCI.pStages;
         }
-        delete[](*ii).second->pVertexBindingDescriptions;
-        delete[](*ii).second->pVertexAttributeDescriptions;
-        delete[](*ii).second->pAttachments;
         if ((*ii).second->dynStateCI.dynamicStateCount != 0) {
             delete[](*ii).second->dynStateCI.pDynamicStates;
         }
@@ -4516,8 +4506,8 @@ static void resetCB(layer_data *my_data, const VkCommandBuffer cb) {
 
 // Set PSO-related status bits for CB, including dynamic state set via PSO
 static void set_cb_pso_status(GLOBAL_CB_NODE *pCB, const PIPELINE_NODE *pPipe) {
-    for (uint32_t i = 0; i < pPipe->cbStateCI.attachmentCount; i++) {
-        if (0 != pPipe->pAttachments[i].colorWriteMask) {
+    for (auto const & att : pPipe->attachments) {
+        if (0 != att.colorWriteMask) {
             pCB->status |= CBSTATUS_COLOR_BLEND_WRITE_ENABLE;
         }
     }
@@ -6612,13 +6602,7 @@ vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32
         loader_platform_thread_unlock_mutex(&globalLock);
     } else {
         for (i = 0; i < count; i++) {
-            if (pPipeNode[i]) {
-                // If we allocated a pipeNode, need to clean it up here
-                delete[] pPipeNode[i]->pVertexBindingDescriptions;
-                delete[] pPipeNode[i]->pVertexAttributeDescriptions;
-                delete[] pPipeNode[i]->pAttachments;
-                delete pPipeNode[i];
-            }
+            delete pPipeNode[i];
         }
         loader_platform_thread_unlock_mutex(&globalLock);
         return VK_ERROR_VALIDATION_FAILED_EXT;
