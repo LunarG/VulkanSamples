@@ -5379,6 +5379,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateMemory(VkDevice device,
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkFreeMemory(VkDevice device, VkDeviceMemory mem, const VkAllocationCallbacks *pAllocator) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     my_data->bufferRanges.erase(mem);
     my_data->imageRanges.erase(mem);
 
@@ -5389,7 +5390,6 @@ vkFreeMemory(VkDevice device, VkDeviceMemory mem, const VkAllocationCallbacks *p
     // buffers (on host or device) for anything other than destroying those objects will result in
     // undefined behavior.
 
-    loader_platform_thread_lock_mutex(&globalLock);
     freeMemObjInfo(my_data, device, mem, VK_FALSE);
     print_mem_list(my_data, device);
     printCBList(my_data, device);
