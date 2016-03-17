@@ -29,5 +29,5 @@ python ../vk-layer-generate.py Android unique_objects ../include/vulkan/vulkan.h
 
 cd generated
 python ../../genvk.py threading -registry ../../vk.xml thread_check.h
-python ../../genvk.py paramchecker -registry ../../vk.xml param_check.h
+python ../../genvk.py paramchecker -registry ../../vk.xml parameter_validation.h
 cd ..

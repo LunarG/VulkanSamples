@@ -183,9 +183,9 @@ An example of using these environment variables to activate the validation
 layer VK\_LAYER\_LUNARG\_param\_checker on Windows or Linux is as follows:
 
 ```
-> $ export VK_INSTANCE_LAYERS=VK_LAYER_LUNARG_param_checker
+> $ export VK_INSTANCE_LAYERS=VK_LAYER_LUNARG_parameter_validation
 
-> $ export VK_DEVICE_LAYERS=VK_LAYER_LUNARG_param_checker
+> $ export VK_DEVICE_LAYERS=VK_LAYER_LUNARG_parameter_validation
 ```
 
 **Note**: Many layers, including all LunarG validation layers are “global”

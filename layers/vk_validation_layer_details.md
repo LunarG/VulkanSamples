@@ -9,7 +9,7 @@
 This is a meta-layer managed by the loader. Specifying this layer name will cause the loader to load the all of the standard validation layers in the following optimal order:
 
  - VK_LAYER_GOOGLE_threading
- - VK_LAYER_LUNARG_param_checker
+ - VK_LAYER_LUNARG_parameter_validation
  - VK_LAYER_LUNARG_device_limits
  - VK_LAYER_LUNARG_object_tracker
  - VK_LAYER_LUNARG_image
@@ -35,7 +35,7 @@ The Draw State portion of the core validation layer tracks state leading into Dr
 | Command Buffer Simultaneous Use | Violation of VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT rules. Most likely attempting to simultaneously use a CmdBuffer w/o having that bit set. This also warns if you add secondary command buffer w/o that bit set to a primary command buffer that does have that bit set. | INVALID_CB_SIMULTANEOUS_USE | vkQueueSubmit vkCmdExecuteCommands | TODO | Write test |
 | Valid Command Buffer Reset | Can only reset individual command buffer that was allocated from a pool with VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT set | INVALID_COMMAND_BUFFER_RESET | vkBeginCommandBuffer vkResetCommandBuffer | CommandBufferResetErrors | None |
 | PSO Bound | Verify that a properly created and valid pipeline object is bound to the CommandBuffer specified in these calls | NO_PIPELINE_BOUND | vkCmdBindDescriptorSets vkCmdBindVertexBuffers | PipelineNotBound | This check is currently more related to VK_LAYER_LUNARG_core_validation internal data structures and less about verifying that PSO is bound at all appropriate points in API. For API purposes, need to make sure this is checked at Draw time and any other relevant calls. |
-| Valid DescriptorPool | Verifies that the descriptor set pool object was properly created and is valid | INVALID_POOL | vkResetDescriptorPool vkAllocateDescriptorSets | None | This is just an internal layer data structure check. VK_LAYER_LUNARG_param_checker or VK_LAYER_LUNARG_object_tracker should really catch bad DSPool |
+| Valid DescriptorPool | Verifies that the descriptor set pool object was properly created and is valid | INVALID_POOL | vkResetDescriptorPool vkAllocateDescriptorSets | None | This is just an internal layer data structure check. VK_LAYER_LUNARG_parameter_validation or VK_LAYER_LUNARG_object_tracker should really catch bad DSPool |
 | Valid DescriptorSet | Validate that descriptor set was properly created and is currently valid | INVALID_SET | vkCmdBindDescriptorSets | None | Is this needed other places (like Update/Clear descriptors) |
 | Valid DescriptorSetLayout | Flag DescriptorSetLayout object that was not properly created | INVALID_LAYOUT | vkAllocateDescriptorSets | None | Anywhere else to check this? |
 | Valid Pipeline | Flag VkPipeline object that was not properly created | INVALID_PIPELINE | vkCmdBindPipeline | InvalidPipeline | NA |
@@ -178,13 +178,13 @@ The Mem Tracker portion of the VK_LAYER_LUNARG_core_validation layer tracks memo
 3. Warn on image/buffer deletion if USAGE bits were set that were not needed
 4. Modify INVALID_FENCE_STATE to be WARNINGs instead of ERROR
 
-## VK_LAYER_LUNARG_param_checker
+## VK_LAYER_LUNARG_parameter_validation
 
-### VK_LAYER_LUNARG_param_checker Overview
+### VK_LAYER_LUNARG_parameter_validation Overview
 
-The VK_LAYER_LUNARG_param_checker layer validates parameter values and flags errors for any values that are outside of acceptable values for the given parameter.
+The VK_LAYER_LUNARG_parameter_validation layer validates parameter values and flags errors for any values that are outside of acceptable values for the given parameter.
 
-### VK_LAYER_LUNARG_param_checker Details Table
+### VK_LAYER_LUNARG_parameter_validation Details Table
 
 | Check | Overview | ENUM | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
@@ -192,7 +192,7 @@ The VK_LAYER_LUNARG_param_checker layer validates parameter values and flags err
 | Call results, Output Parameters | Return values are checked for VK_SUCCESS, returned pointers are checked to be NON-NULL, enumerated types of return values are checked to be within the defined range. | NA | vkEnumeratePhysicalDevices vkGetPhysicalDeviceFeatures vkGetPhysicalDeviceFormatProperties vkGetPhysicalDeviceImageFormatProperties vkGetPhysicalDeviceLimits vkGetPhysicalDeviceProperties vkGetPhysicalDeviceQueueFamilyProperties vkGetPhysicalDeviceMemoryProperties vkGetDeviceQueue vkQueueSubmit vkQueueWaitIdle vkDeviceWaitIdle vkAllocateMemory vkFreeMemory vkMapMemory vkUnmapMemory vkFlushMappedMemoryRanges vkInvalidateMappedMemoryRanges vkGetDeviceMemoryCommitment vkBindBufferMemory vkBindImageMemory vkGetBufferMemoryRequirements vkGetImageMemoryRequirements vkGetImageSparseMemoryRequirements vkGetPhysicalDeviceSparseImageFormatProperties vkQueueBindSparse vkCreateFence vkDestroyFence vkResetFences vkGetFenceStatus vkWaitForFences vkCreateSemaphore vkDestroySemaphore vkCreateEvent vkDestroyEvent vkGetEventStatus vkSetEvent vkResetEvent vkCreateQueryPool vkDestroyQueryPool vkGetQueryPoolResults vkCreateBuffer vkDestroyBuffer vkCreateBufferView vkDestroyBufferView vkCreateImage vkDestroyImage vkGetImageSubresourceLayout vkCreateImageView vkDestroyImageView vkDestroyShaderModule vkCreatePipelineCache vkDestroyPipelineCache vkGetPipelineCacheData vkMergePipelineCaches vkCreateGraphicsPipelines vkCreateComputePipelines vkDestroyPipeline vkCreatePipelineLayout vkDestroyPipelineLayout vkCreateSampler vkDestroySampler vkCreateDescriptorSetLayout vkDestroyDescriptorSetLayout vkCreateDescriptorPool vkDestroyDescriptorPool vkResetDescriptorPool vkAllocateDescriptorSets vkFreeDescriptorSets vkUpdateDescriptorSets vkCreateFramebuffer vkDestroyFramebuffer vkCreateRenderPass vkDestroyRenderPass vkGetRenderAreaGranularity vkCreateCommandPool vkDestroyCommandPool vkResetCommandPool vkAllocateCommandBuffers vkFreeCommandBuffers vkBeginCommandBuffer vkEndCommandBuffer vkResetCommandBuffer vkCmdBindPipeline vkCmdBindDescriptorSets vkCmdBindIndexBuffer vkCmdBindVertexBuffers vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatch vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdClearAttachments vkCmdResolveImage vkCmdSetEvent vkCmdResetEvent vkCmdWaitEvents vkCmdPipelineBarrier vkCmdBeginQuery vkCmdEndQuery vkCmdResetQueryPool vkCmdWriteTimestamp vkCmdCopyQueryPoolResults vkCmdPushConstants vkCmdBeginRenderPass vkCmdNextSubpass vkCmdEndRenderPass vkCmdExecuteCommands | TBD | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 
-### VK_LAYER_LUNARG_param_checker Pending Work
+### VK_LAYER_LUNARG_parameter_validation Pending Work
 Additional work to be done
 
  1. Source2 was creating a VK_FORMAT_R8_SRGB texture (and image view) which was not supported by the underlying implementation (rendersystemtest imageformat test).  Checking that formats are supported by the implementation is something the validation layer could do using the VK_FORMAT_INFO_TYPE_PROPERTIES query.   There are probably a bunch of checks here you could be doing around vkCreateImage formats along with whether image/color/depth attachment views are valid.  I’m not sure how much of this is already there.
