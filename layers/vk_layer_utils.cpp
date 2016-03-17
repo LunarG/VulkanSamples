@@ -616,22 +616,22 @@ void layer_debug_actions(debug_report_data *report_data, std::vector<VkDebugRepo
 
     uint32_t report_flags = 0;
     uint32_t debug_action = 0;
-    FILE *log_output = NULL;
-    const char *option_str;
     VkDebugReportCallbackEXT callback;
 
-    std::string option_flags = layer_identifier;
-    std::string log_filename = layer_identifier;
-    option_flags.append(".report_flags");
-    log_filename.append(".log_filename");
+    std::string report_flags_key = layer_identifier;
+    std::string debug_action_key = layer_identifier;
+    std::string log_filename_key = layer_identifier;
+    report_flags_key.append(".report_flags");
+    debug_action_key.append(".debug_action");
+    log_filename_key.append(".log_filename");
 
     // initialize layer options
-    report_flags = getLayerOptionFlags(option_flags.c_str(), 0);
-    getLayerOptionEnum(log_filename.c_str(), (uint32_t *)&debug_action);
+    report_flags = getLayerOptionFlags(report_flags_key.c_str(), 0);
+    getLayerOptionEnum(debug_action_key.c_str(), (uint32_t *)&debug_action);
 
     if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG) {
-        option_str = getLayerOption(log_filename.c_str());
-        log_output = getLayerLogOutput(option_str, layer_identifier);
+        const char *log_filename = getLayerOption(log_filename_key.c_str());
+        FILE *log_output = getLayerLogOutput(log_filename, layer_identifier);
         VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
         memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
