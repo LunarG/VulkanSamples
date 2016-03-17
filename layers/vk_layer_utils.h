@@ -96,7 +96,7 @@ typedef enum VkStringErrorFlagBits {
 } VkStringErrorFlagBits;
 typedef VkFlags VkStringErrorFlags;
 
-void layer_debug_actions(debug_report_data* report_data, std::vector<VkDebugReportCallbackEXT> logging_callback,
+void layer_debug_actions(debug_report_data* report_data, std::vector<VkDebugReportCallbackEXT> &logging_callback,
     const VkAllocationCallbacks *pAllocator, const char* layer_identifier);
 
 static inline bool vk_format_is_undef(VkFormat format) { return (format == VK_FORMAT_UNDEFINED); }

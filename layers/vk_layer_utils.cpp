@@ -611,12 +611,12 @@ VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8) {
     return result;
 }
 
-void layer_debug_actions(debug_report_data *report_data, std::vector<VkDebugReportCallbackEXT> logging_callback,
+void layer_debug_actions(debug_report_data *report_data, std::vector<VkDebugReportCallbackEXT> &logging_callback,
                       const VkAllocationCallbacks *pAllocator, const char *layer_identifier) {
 
     uint32_t report_flags = 0;
     uint32_t debug_action = 0;
-    VkDebugReportCallbackEXT callback;
+    VkDebugReportCallbackEXT callback = VK_NULL_HANDLE;
 
     std::string report_flags_key = layer_identifier;
     std::string debug_action_key = layer_identifier;
