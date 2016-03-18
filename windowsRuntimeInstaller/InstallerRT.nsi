@@ -245,6 +245,20 @@ Section
 
     ${Endif}
 
+    # Create our temp directory, with minimal permissions
+    SetOutPath "$TEMP\VulkanRT"
+    AccessControl::DisableFileInheritance $TEMP\VulkanRT
+    AccessControl::SetFileOwner $TEMP\VulkanRT "Administrators"
+    AccessControl::ClearOnFile  $TEMP\VulkanRT "Administrators" "FullAccess"
+    AccessControl::SetOnFile    $TEMP\VulkanRT "SYSTEM" "FullAccess"
+    AccessControl::GrantOnFile  $TEMP\VulkanRT "Everyone" "ListDirectory"
+    AccessControl::GrantOnFile  $TEMP\VulkanRT "Everyone" "GenericExecute"
+    AccessControl::GrantOnFile  $TEMP\VulkanRT "Everyone" "GenericRead"
+    AccessControl::GrantOnFile  $TEMP\VulkanRT "Everyone" "ReadAttributes"
+    StrCpy $1 10
+    Call CheckForError
+
+    # Check the registry to see if we are already installed
     ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallDir"
 
     # If the registry entry isn't there, it will throw an error as well as return a blank value.  So, clear the errors.
@@ -268,11 +282,19 @@ Section
     ${EndIf}
 
     SetOutPath "$INSTDIR"
+    AccessControl::DisableFileInheritance $INSTDIR
+    AccessControl::SetFileOwner $INSTDIR "Administrators"
+    AccessControl::ClearOnFile  $INSTDIR "Administrators" "FullAccess"
+    AccessControl::SetOnFile    $INSTDIR "SYSTEM" "FullAccess"
+    AccessControl::GrantOnFile  $INSTDIR "Everyone" "ListDirectory"
+    AccessControl::GrantOnFile  $INSTDIR "Everyone" "GenericExecute"
+    AccessControl::GrantOnFile  $INSTDIR "Everyone" "GenericRead"
+    AccessControl::GrantOnFile  $INSTDIR "Everyone" "ReadAttributes"
     File ${ICOFILE}
     File VULKANRT_LICENSE.RTF
     File LICENSE.txt
     File ConfigLayersAndVulkanDLL.ps1
-    StrCpy $1 10
+    StrCpy $1 15
     Call CheckForError
 
     # Add the signed uninstaller
@@ -281,7 +303,7 @@ Section
         File "Uninstall${PRODUCTNAME}.exe"
     !endif
 
-    StrCpy $1 11
+    StrCpy $1 20
     Call CheckForError
 
     # Reference count the number of times we have been installed.
@@ -349,7 +371,7 @@ Section
         WriteRegDword HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "SystemComponent" 0
     ${EndIf}
 
-    StrCpy $1 12
+    StrCpy $1 25
     Call CheckForError
 
     # Set up version number for file names
@@ -374,14 +396,14 @@ Section
         SetOutPath $WINDIR\SysWow64
         File /oname=vulkan-$FileVersion.dll ..\build32\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
         File /oname=vulkaninfo-$FileVersion.exe ..\build32\demos\Release\vulkaninfo.exe
-        StrCpy $1 13
+        StrCpy $1 30
         Call CheckForError
 
         # 64-bit DLLs/EXEs
         ##########################################
         SetOutPath $WINDIR\System32
         File /oname=vulkan-$FileVersion.dll ..\build\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
-        StrCpy $1 14
+        StrCpy $1 35
         Call CheckForError
 
         # vulkaninfo.exe
@@ -389,7 +411,7 @@ Section
         SetOutPath "$INSTDIR"
         File ..\build\demos\Release\vulkaninfo.exe
         File /oname=vulkaninfo32.exe ..\build32\demos\Release\vulkaninfo.exe
-        StrCpy $1 15
+        StrCpy $1 40
         Call CheckForError
 
         # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
@@ -400,7 +422,7 @@ Section
         ${If} $PsErr != 0
             SetErrors
         ${EndIf}
-        StrCpy $1 16
+        StrCpy $1 45
         Call CheckForError
 
     # Else, running on a 32-bit OS machine
@@ -410,14 +432,14 @@ Section
         ##########################################
         SetOutPath $WINDIR\System32
         File /oname=vulkan-$FileVersion.dll ..\build32\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
-        StrCpy $1 17
+        StrCpy $1 50
         Call CheckForError
 
         # vulkaninfo.exe
         File /oname=vulkaninfo-$FileVersion.exe ..\build32\demos\Release\vulkaninfo.exe
         SetOutPath "$INSTDIR"
         File ..\build32\demos\Release\vulkaninfo.exe
-        StrCpy $1 18
+        StrCpy $1 55
         Call CheckForError
 
         # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
@@ -428,7 +450,7 @@ Section
         ${If} $PsErr != 0
             SetErrors
         ${EndIf}
-        StrCpy $1 19
+        StrCpy $1 60
         Call CheckForError
 
     ${Endif}
@@ -465,15 +487,15 @@ Section
         # If either x86 or x64 redistributables are not present, install redistributables.
         # We install both resdistributables because we have found that the x86 redist
         # will uninstall the x64 redist if the x64 redistrib is an old version. Amazing, isn't it?
-        SetOutPath "$TEMP"
+        SetOutPath "$TEMP\VulkanRT"
         ${If} ${RunningX64}
             File vcredist_x64.exe
-            ExecWait '"$TEMP\vcredist_x64.exe"  /quiet /norestart'
+            ExecWait '"$TEMP\VulkanRT\vcredist_x64.exe"  /quiet /norestart'
         ${Endif}
         File vcredist_x86.exe
-        ExecWait '"$TEMP\vcredist_x86.exe"  /quiet /norestart'
+        ExecWait '"$TEMP\VulkanRT\vcredist_x86.exe"  /quiet /norestart'
     ${Endif}
-    StrCpy $1 20
+    StrCpy $1 65
     Call CheckForError
 
 SectionEnd
@@ -495,7 +517,7 @@ Section "uninstall"
     ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallDir"
     StrCpy $IDir $0
 
-    StrCpy $1 21
+    StrCpy $1 70
     Call un.CheckForError
 
     SetOutPath "$IDir"
@@ -616,7 +638,7 @@ Section "uninstall"
             Delete /REBOOTOK "$IDir\vulkaninfo32.exe"
         ${EndIf}
 
-        StrCpy $1 22
+        StrCpy $1 75
         Call un.CheckForError
 
         # Need to do a SetOutPath to something outside of install dir,
@@ -624,7 +646,8 @@ Section "uninstall"
         SetOutPath "$TEMP"
 
         # Remove install directories
-        Rmdir /REBOOTOK "$IDir"
+        StrCpy $0 "$IDir"
+        Call un.DeleteDirIfEmpty
         StrCpy $0 "$PROGRAMFILES\${PRODUCTNAME}"
         Call un.DeleteDirIfEmpty
         ClearErrors
@@ -643,8 +666,12 @@ Section "uninstall"
 
     ${Endif}
 
-    StrCpy $1 23
+    StrCpy $1 80
     Call un.CheckForError
+
+    # Remove temp dir
+    SetOutPath "$TEMP"
+    RmDir /R "$TEMP\VulkanRT"
 
 SectionEnd
 !endif
@@ -688,15 +715,15 @@ Function CheckForError
 
         # Copy the uninstaller to a temp folder of our own creation so we can completely
         # delete the old contents.
-        SetOutPath "$TEMP\tempun"
-        CopyFiles "$INSTDIR\Uninstall${PRODUCTNAME}.exe" "$TEMP\tempun"
+        SetOutPath "$TEMP\VulkanRT"
+        CopyFiles "$INSTDIR\Uninstall${PRODUCTNAME}.exe" "$TEMP\VulkanRT"
 
         # No uninstall using the version in the temporary folder.
-        ExecWait '"$TEMP\tempun\Uninstall${PRODUCTNAME}.exe" /S _?=$INSTDIR'
+        ExecWait '"$TEMP\VulkanRT\Uninstall${PRODUCTNAME}.exe" /S _?=$INSTDIR'
 
         # Delete the copy of the uninstaller we ran
-        Delete /REBOOTOK "$TEMP\tempun\Uninstall${PRODUCTNAME}.exe"
-        RmDir /R /REBOOTOK "$TEMP\tempun"
+        Delete /REBOOTOK "$TEMP\VulkanRT\Uninstall${PRODUCTNAME}.exe"
+        RmDir /R /REBOOTOK "$TEMP\VulkanRT"
 
         # Set an error message to output
         SetErrorLevel $1
