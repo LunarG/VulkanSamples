@@ -154,7 +154,7 @@ struct layer_data {
     unordered_map<VkImage, vector<ImageSubresourcePair>> imageSubresourceMap;
     unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> imageLayoutMap;
     unordered_map<VkRenderPass, RENDER_PASS_NODE *> renderPassMap;
-    unordered_map<VkShaderModule, shader_module *> shaderModuleMap;
+    unordered_map<VkShaderModule, unique_ptr<shader_module>> shaderModuleMap;
     // Current render pass
     VkRenderPassBeginInfo renderPassBeginInfo;
     uint32_t currentSubpass;
@@ -2706,7 +2706,7 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                 pass = validate_specialization_offsets(my_data, pStage) && pass;
 
                 auto stage_id = get_shader_stage_id(pStage->stage);
-                shader_module *module = my_data->shaderModuleMap[pStage->module];
+                auto module = my_data->shaderModuleMap[pStage->module].get();
                 shaders[stage_id] = module;
 
                 /* find the entrypoint */
@@ -6074,9 +6074,15 @@ vkDestroyImageView(VkDevice device, VkImageView imageView, const VkAllocationCal
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule, const VkAllocationCallbacks *pAllocator) {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)
-        ->device_dispatch_table->DestroyShaderModule(device, shaderModule, pAllocator);
-    // TODO : Clean up any internal data structures using this obj.
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    loader_platform_thread_lock_mutex(&globalLock);
+
+    my_data->shaderModuleMap.erase(shaderModule);
+
+    loader_platform_thread_unlock_mutex(&globalLock);
+
+    my_data->device_dispatch_table->DestroyShaderModule(device, shaderModule, pAllocator);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
@@ -9397,7 +9403,7 @@ VkBool32 CreatePassDAG(const layer_data *my_data, VkDevice device, const VkRende
     }
     return skip_call;
 }
-// TODOSC : Add intercept of vkCreateShaderModule
+
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateShaderModule(VkDevice device, const VkShaderModuleCreateInfo *pCreateInfo,
                                                                     const VkAllocationCallbacks *pAllocator,
@@ -9416,7 +9422,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateShaderModule(VkDevice dev
 
     if (res == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        my_data->shaderModuleMap[*pShaderModule] = new shader_module(pCreateInfo);
+        my_data->shaderModuleMap[*pShaderModule] = unique_ptr<shader_module>(new shader_module(pCreateInfo));
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return res;
