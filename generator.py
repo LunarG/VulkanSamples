@@ -2420,7 +2420,7 @@ class ThreadOutputGenerator(OutputGenerator):
                 externsync = param.attrib.get('externsync')
                 if externsync == 'true':
                     if self.paramIsArray(param):
-                        paramdecl += '    for (int index=0;index<' + param.attrib.get('len') + ';index++) {\n'
+                        paramdecl += '    for (uint32_t index=0;index<' + param.attrib.get('len') + ';index++) {\n'
                         paramdecl += '        ' + functionprefix + 'WriteObject(my_data, ' + paramname.text + '[index]);\n'
                         paramdecl += '    }\n'
                     else:
@@ -2428,7 +2428,7 @@ class ThreadOutputGenerator(OutputGenerator):
                 elif (param.attrib.get('externsync')):
                     if self.paramIsArray(param):
                         # Externsync can list pointers to arrays of members to synchronize
-                        paramdecl += '    for (int index=0;index<' + param.attrib.get('len') + ';index++) {\n'
+                        paramdecl += '    for (uint32_t index=0;index<' + param.attrib.get('len') + ';index++) {\n'
                         for member in externsync.split(","):
                             # Replace first empty [] in member name with index
                             element = member.replace('[]','[index]',1)
@@ -2441,7 +2441,7 @@ class ThreadOutputGenerator(OutputGenerator):
                                 limit = element[0:element.find('s[]')] + 'Count'
                                 dotp = limit.rfind('.p')
                                 limit = limit[0:dotp+1] + limit[dotp+2:dotp+3].lower() + limit[dotp+3:]
-                                paramdecl += '        for(int index2=0;index2<'+limit+';index2++)'
+                                paramdecl += '        for(uint32_t index2=0;index2<'+limit+';index2++)'
                                 element = element.replace('[]','[index2]')
                             paramdecl += '        ' + functionprefix + 'WriteObject(my_data, ' + element + ');\n'
                         paramdecl += '    }\n'
@@ -2457,7 +2457,7 @@ class ThreadOutputGenerator(OutputGenerator):
                         paramtype = 'None'
                     if paramtype in thread_check_dispatchable_objects or paramtype in thread_check_nondispatchable_objects:
                         if self.paramIsArray(param) and ('pPipelines' != paramname.text):
-                            paramdecl += '    for (int index=0;index<' + param.attrib.get('len') + ';index++) {\n'
+                            paramdecl += '    for (uint32_t index=0;index<' + param.attrib.get('len') + ';index++) {\n'
                             paramdecl += '        ' + functionprefix + 'ReadObject(my_data, ' + paramname.text + '[index]);\n'
                             paramdecl += '    }\n'
                         elif not self.paramIsPointer(param):
