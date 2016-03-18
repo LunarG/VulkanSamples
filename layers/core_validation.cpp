@@ -1299,50 +1299,72 @@ unsigned get_constant_value(shader_module const *src, unsigned id) {
     return value.word(3);
 }
 
-/* returns ptr to null terminator */
-static char *describe_type(char *dst, shader_module const *src, unsigned type) {
+
+static void describe_type_inner(std::ostringstream &ss, shader_module const *src, unsigned type) {
     auto insn = src->get_def(type);
     assert(insn != src->end());
 
     switch (insn.opcode()) {
     case spv::OpTypeBool:
-        return dst + sprintf(dst, "bool");
+        ss << "bool";
+        break;
     case spv::OpTypeInt:
-        return dst + sprintf(dst, "%cint%d", insn.word(3) ? 's' : 'u', insn.word(2));
+        ss << (insn.word(3) ? 's' : 'u') << "int" << insn.word(2);
+        break;
     case spv::OpTypeFloat:
-        return dst + sprintf(dst, "float%d", insn.word(2));
+        ss << "float" << insn.word(2);
+        break;
     case spv::OpTypeVector:
-        dst += sprintf(dst, "vec%d of ", insn.word(3));
-        return describe_type(dst, src, insn.word(2));
+        ss << "vec" << insn.word(3) << " of ";
+        describe_type_inner(ss, src, insn.word(2));
+        break;
     case spv::OpTypeMatrix:
-        dst += sprintf(dst, "mat%d of ", insn.word(3));
-        return describe_type(dst, src, insn.word(2));
+        ss << "mat" << insn.word(3) << " of ";
+        describe_type_inner(ss, src, insn.word(2));
+        break;
     case spv::OpTypeArray:
-        dst += sprintf(dst, "arr[%d] of ", get_constant_value(src, insn.word(3)));
-        return describe_type(dst, src, insn.word(2));
+        ss << "arr[" << get_constant_value(src, insn.word(3)) << "] of ";
+        describe_type_inner(ss, src, insn.word(2));
+        break;
     case spv::OpTypePointer:
-        dst += sprintf(dst, "ptr to %s ", storage_class_name(insn.word(2)));
-        return describe_type(dst, src, insn.word(3));
+        ss << "ptr to " << storage_class_name(insn.word(2)) << " ";
+        describe_type_inner(ss, src, insn.word(3));
+        break;
     case spv::OpTypeStruct: {
-        dst += sprintf(dst, "struct of (");
+        ss << "struct of (";
         for (unsigned i = 2; i < insn.len(); i++) {
-            dst = describe_type(dst, src, insn.word(i));
-            dst += sprintf(dst, i == insn.len() - 1 ? ")" : ", ");
+            describe_type_inner(ss, src, insn.word(i));
+            if (i == insn.len() - 1) {
+                ss << ")";
+            } else {
+                ss << ", ";
+            }
         }
-        return dst;
+        break;
     }
     case spv::OpTypeSampler:
-        return dst + sprintf(dst, "sampler");
+        ss << "sampler";
+        break;
     case spv::OpTypeSampledImage:
-        dst += sprintf(dst, "sampler+");
-        return describe_type(dst, src, insn.word(2));
+        ss << "sampler+";
+        describe_type_inner(ss, src, insn.word(2));
+        break;
     case spv::OpTypeImage:
-        dst += sprintf(dst, "image(dim=%u, sampled=%u)", insn.word(3), insn.word(7));
-        return dst;
+        ss << "image(dim=" << insn.word(3) << ", sampled=" << insn.word(7) << ")";
+        break;
     default:
-        return dst + sprintf(dst, "oddtype");
+        ss << "oddtype";
+        break;
     }
 }
+
+
+static std::string describe_type(shader_module const *src, unsigned type) {
+    std::ostringstream ss;
+    describe_type_inner(ss, src, type);
+    return ss.str();
+}
+
 
 static bool types_match(shader_module const *a, shader_module const *b, unsigned a_type, unsigned b_type, bool b_arrayed) {
     /* walk two type trees together, and complain about differences */
@@ -1701,14 +1723,11 @@ static bool validate_interface_between_stages(layer_data *my_data, VkDevice dev,
             if (types_match(producer, consumer, a_it->second.type_id, b_it->second.type_id, consumer_arrayed_input)) {
                 /* OK! */
             } else {
-                char producer_type[1024];
-                char consumer_type[1024];
-                describe_type(producer_type, producer, a_it->second.type_id);
-                describe_type(consumer_type, consumer, b_it->second.type_id);
-
                 if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", "Type mismatch on location %u.%u: '%s' vs '%s'",
-                            a_first.first, a_first.second, producer_type, consumer_type)) {
+                            a_first.first, a_first.second,
+                            describe_type(producer, a_it->second.type_id).c_str(),
+                            describe_type(consumer, b_it->second.type_id).c_str())) {
                     pass = false;
                 }
             }
@@ -1865,12 +1884,11 @@ static bool validate_vi_against_vs_inputs(layer_data *my_data, VkDevice dev, VkP
 
             /* type checking */
             if (attrib_type != FORMAT_TYPE_UNDEFINED && input_type != FORMAT_TYPE_UNDEFINED && attrib_type != input_type) {
-                char vs_type[1024];
-                describe_type(vs_type, vs, it_b->second.type_id);
                 if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                             "Attribute type of `%s` at location %d does not match VS input type of `%s`",
-                            string_VkFormat(it_a->second->format), a_first, vs_type)) {
+                            string_VkFormat(it_a->second->format), a_first,
+                            describe_type(vs, it_b->second.type_id).c_str())) {
                     pass = false;
                 }
             }
@@ -1921,12 +1939,11 @@ static bool validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevic
 
             /* type checking */
             if (att_type != FORMAT_TYPE_UNDEFINED && output_type != FORMAT_TYPE_UNDEFINED && att_type != output_type) {
-                char fs_type[1024];
-                describe_type(fs_type, fs, it->second.type_id);
                 if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                             "Attachment %d of type `%s` does not match FS output type of `%s`", attachment,
-                            string_VkFormat(color_formats[attachment]), fs_type)) {
+                            string_VkFormat(color_formats[attachment]),
+                            describe_type(fs, it->second.type_id).c_str())) {
                     pass = false;
                 }
             }
@@ -2727,43 +2744,41 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                     unsigned required_descriptor_count;
 
                     if (!binding) {
-                        char type_name[1024];
-                        describe_type(type_name, module, it->second.type_id);
                         if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                     /*dev*/ 0, __LINE__, SHADER_CHECKER_MISSING_DESCRIPTOR, "SC",
                                     "Shader uses descriptor slot %u.%u (used as type `%s`) but not declared in pipeline layout",
-                                    it->first.first, it->first.second, type_name)) {
+                                    it->first.first, it->first.second, describe_type(module, it->second.type_id).c_str())) {
                             pass = VK_FALSE;
                         }
                     } else if (~binding->stageFlags & pStage->stage) {
-                        char type_name[1024];
-                        describe_type(type_name, module, it->second.type_id);
                         if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                     /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE, "SC",
                                     "Shader uses descriptor slot %u.%u (used "
                                     "as type `%s`) but descriptor not "
                                     "accessible from stage %s",
-                                    it->first.first, it->first.second, type_name, string_VkShaderStageFlagBits(pStage->stage))) {
+                                    it->first.first, it->first.second,
+                                    describe_type(module, it->second.type_id).c_str(),
+                                    string_VkShaderStageFlagBits(pStage->stage))) {
                             pass = VK_FALSE;
                         }
                     } else if (!descriptor_type_match(my_data, module, it->second.type_id, binding->descriptorType, /*out*/ required_descriptor_count)) {
-                        char type_name[1024];
-                        describe_type(type_name, module, it->second.type_id);
                         if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                     /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
                                     "Type mismatch on descriptor slot "
                                     "%u.%u (used as type `%s`) but "
                                     "descriptor of type %s",
-                                    it->first.first, it->first.second, type_name, string_VkDescriptorType(binding->descriptorType))) {
+                                    it->first.first, it->first.second,
+                                    describe_type(module, it->second.type_id).c_str(),
+                                    string_VkDescriptorType(binding->descriptorType))) {
                             pass = VK_FALSE;
                         }
                     } else if (binding->descriptorCount < required_descriptor_count) {
-                        char type_name[1024];
-                        describe_type(type_name, module, it->second.type_id);
                         if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                     /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
                                     "Shader expects at least %u descriptors for binding %u.%u (used as type `%s`) but only %u provided",
-                                    required_descriptor_count, it->first.first, it->first.second, type_name, binding->descriptorCount)) {
+                                    required_descriptor_count, it->first.first, it->first.second,
+                                    describe_type(module, it->second.type_id).c_str(),
+                                    binding->descriptorCount)) {
                             pass = VK_FALSE;
                         }
                     }
