@@ -2371,21 +2371,21 @@ static bool verify_renderpass_compatibility(layer_data *my_data, const VkRenderP
 static bool verify_set_layout_compatibility(layer_data *my_data, const SET_NODE *pSet, const VkPipelineLayout layout,
                                             const uint32_t layoutIndex, string &errorMsg) {
     stringstream errorStr;
-    if (my_data->pipelineLayoutMap.find(layout) == my_data->pipelineLayoutMap.end()) {
+    auto pipeline_layout_it = my_data->pipelineLayoutMap.find(layout);
+    if (pipeline_layout_it == my_data->pipelineLayoutMap.end()) {
         errorStr << "invalid VkPipelineLayout (" << layout << ")";
         errorMsg = errorStr.str();
         return false;
     }
-    PIPELINE_LAYOUT_NODE pl = my_data->pipelineLayoutMap[layout];
-    if (layoutIndex >= pl.descriptorSetLayouts.size()) {
-        errorStr << "VkPipelineLayout (" << layout << ") only contains " << pl.descriptorSetLayouts.size()
-                 << " setLayouts corresponding to sets 0-" << pl.descriptorSetLayouts.size() - 1
+    if (layoutIndex >= pipeline_layout_it->second.descriptorSetLayouts.size()) {
+        errorStr << "VkPipelineLayout (" << layout << ") only contains " << pipeline_layout_it->second.descriptorSetLayouts.size()
+                 << " setLayouts corresponding to sets 0-" << pipeline_layout_it->second.descriptorSetLayouts.size() - 1
                  << ", but you're attempting to bind set to index " << layoutIndex;
         errorMsg = errorStr.str();
         return false;
     }
     // Get the specific setLayout from PipelineLayout that overlaps this set
-    LAYOUT_NODE *pLayoutNode = my_data->descriptorSetLayoutMap[pl.descriptorSetLayouts[layoutIndex]];
+    LAYOUT_NODE *pLayoutNode = my_data->descriptorSetLayoutMap[pipeline_layout_it->second.descriptorSetLayouts[layoutIndex]];
     if (pLayoutNode->layout == pSet->pLayout->layout) { // trivial pass case
         return true;
     }
