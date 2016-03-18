@@ -569,6 +569,7 @@ class QUEUE_NODE {
 #endif
     vector<VkCommandBuffer> untrackedCmdBuffers;
     unordered_set<VkCommandBuffer> inFlightCmdBuffers;
+    unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
 };
 
 class QUERY_POOL_NODE : public BASE_NODE {
@@ -881,6 +882,7 @@ struct GLOBAL_CB_NODE {
     vector<VkDescriptorSet> activeDescriptorSets;
     vector<std::function<VkBool32()>> validate_functions;
     list<VkDeviceMemory> pMemObjList; // List container of Mem objs referenced by this CB
+    vector<std::function<bool(VkQueue)>> eventUpdates;
 };
 
 class SWAPCHAIN_NODE {

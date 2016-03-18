@@ -4456,6 +4456,10 @@ static void resetCB(layer_data *my_data, const VkCommandBuffer cb) {
         pCB->currentDrawData.buffers.clear();
         pCB->primaryCommandBuffer = VK_NULL_HANDLE;
         pCB->secondaryCommandBuffers.clear();
+        pCB->activeDescriptorSets.clear();
+        pCB->validate_functions.clear();
+        pCB->pMemObjList.clear();
+        pCB->eventUpdates.clear();
     }
 }
 
@@ -5014,6 +5018,9 @@ void updateTrackedCommandBuffers(layer_data *dev_data, VkQueue queue, VkQueue ot
         }
         other_queue_data->second.untrackedCmdBuffers.clear();
     }
+    for (auto eventStagePair : other_queue_data->second.eventToStageMap) {
+        queue_data->second.eventToStageMap[eventStagePair.first] = eventStagePair.second;
+    }
 }
 
 void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, VkFence fence) {
@@ -5219,6 +5226,9 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
                 pCBNode->lastSubmittedQueue = queue;
                 for (auto &function : pCBNode->validate_functions) {
                     skipCall |= function();
+                }
+                for (auto &function : pCBNode->eventUpdates) {
+                    skipCall |= static_cast<VkBool32>(function(queue));
                 }
             }
         }
@@ -8328,6 +8338,19 @@ vkCmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout
                                                          regionCount, pRegions);
 }
 
+bool setEventStageMask(VkQueue queue, VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
+    if (pCB) {
+        pCB->eventToStageMap[event] = stageMask;
+    }
+    auto queue_data = dev_data->queueMap.find(queue);
+    if (queue_data != dev_data->queueMap.end()) {
+        queue_data->second.eventToStageMap[event] = stageMask;
+    }
+    return false;
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdSetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask) {
     VkBool32 skipCall = VK_FALSE;
@@ -8338,7 +8361,9 @@ vkCmdSetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags
         skipCall |= addCmd(dev_data, pCB, CMD_SETEVENT, "vkCmdSetEvent()");
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdSetEvent");
         pCB->events.push_back(event);
-        pCB->eventToStageMap[event] = stageMask;
+        std::function<bool(VkQueue)> eventUpdate =
+            std::bind(setEventStageMask, std::placeholders::_1, commandBuffer, event, stageMask);
+        pCB->eventUpdates.push_back(eventUpdate);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall)
@@ -8355,6 +8380,9 @@ vkCmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFla
         skipCall |= addCmd(dev_data, pCB, CMD_RESETEVENT, "vkCmdResetEvent()");
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdResetEvent");
         pCB->events.push_back(event);
+        std::function<bool(VkQueue)> eventUpdate =
+            std::bind(setEventStageMask, std::placeholders::_1, commandBuffer, event, VkPipelineStageFlags(0));
+        pCB->eventUpdates.push_back(eventUpdate);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall)
@@ -8689,6 +8717,40 @@ VkBool32 ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, uint3
     return skip_call;
 }
 
+bool validateEventStageMask(VkQueue queue, uint32_t eventCount, const VkEvent *pEvents, VkPipelineStageFlags sourceStageMask) {
+    bool skip_call = false;
+    VkPipelineStageFlags stageMask = 0;
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
+    for (uint32_t i = 0; i < eventCount; ++i) {
+        auto queue_data = dev_data->queueMap.find(queue);
+        if (queue_data == dev_data->queueMap.end())
+            return false;
+        auto event_data = queue_data->second.eventToStageMap.find(pEvents[i]);
+        if (event_data != queue_data->second.eventToStageMap.end()) {
+            stageMask |= event_data->second;
+        } else {
+            auto global_event_data = dev_data->eventMap.find(pEvents[i]);
+            if (global_event_data == dev_data->eventMap.end()) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT,
+                                     reinterpret_cast<const uint64_t &>(pEvents[i]), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
+                                     "Fence 0x%" PRIx64 " cannot be waited on if it has never been set.",
+                                     reinterpret_cast<const uint64_t &>(pEvents[i]));
+            } else {
+                stageMask |= global_event_data->second.stageMask;
+            }
+        }
+    }
+    if (sourceStageMask != stageMask) {
+        skip_call |=
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                    DRAWSTATE_INVALID_FENCE, "DS",
+                    "Submitting cmdbuffer with call to VkCmdWaitEvents using srcStageMask 0x%x which must be the bitwise OR of the "
+                    "stageMask parameters used in calls to vkCmdSetEvent and VK_PIPELINE_STAGE_HOST_BIT if used with vkSetEvent.",
+                    sourceStageMask);
+    }
+    return skip_call;
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent *pEvents, VkPipelineStageFlags sourceStageMask,
                 VkPipelineStageFlags dstStageMask, uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers,
@@ -8699,31 +8761,13 @@ vkCmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEven
     loader_platform_thread_lock_mutex(&globalLock);
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
-        VkPipelineStageFlags stageMask = 0;
         for (uint32_t i = 0; i < eventCount; ++i) {
             pCB->waitedEvents.push_back(pEvents[i]);
             pCB->events.push_back(pEvents[i]);
-            auto event_data = pCB->eventToStageMap.find(pEvents[i]);
-            if (event_data != pCB->eventToStageMap.end()) {
-                stageMask |= event_data->second;
-            } else {
-                auto global_event_data = dev_data->eventMap.find(pEvents[i]);
-                if (global_event_data == dev_data->eventMap.end()) {
-                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT,
-                                        reinterpret_cast<const uint64_t &>(pEvents[i]), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
-                                        "Fence 0x%" PRIx64 " cannot be waited on if it has never been set.",
-                                        reinterpret_cast<const uint64_t &>(pEvents[i]));
-                } else {
-                    stageMask |= global_event_data->second.stageMask;
-                }
-            }
         }
-        if (sourceStageMask != stageMask) {
-            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                DRAWSTATE_INVALID_FENCE, "DS", "srcStageMask in vkCmdWaitEvents must be the bitwise OR of the "
-                                                               "stageMask parameters used in calls to vkCmdSetEvent and "
-                                                               "VK_PIPELINE_STAGE_HOST_BIT if used with vkSetEvent.");
-        }
+        std::function<bool(VkQueue)> eventUpdate =
+            std::bind(validateEventStageMask, std::placeholders::_1, eventCount, pEvents, sourceStageMask);
+        pCB->eventUpdates.push_back(eventUpdate);
         if (pCB->state == CB_RECORDING) {
             skipCall |= addCmd(dev_data, pCB, CMD_WAITEVENTS, "vkCmdWaitEvents()");
         } else {
