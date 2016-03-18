@@ -8730,7 +8730,10 @@ VkBool32 ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, uint3
                                                              "VK_IMAGE_ASPECT_STENCIL_BIT set.",
                             funcName);
                 }
-                if ((mem_barrier->subresourceRange.baseArrayLayer + mem_barrier->subresourceRange.layerCount) > arrayLayers) {
+                int layerCount = (mem_barrier->subresourceRange.layerCount == VK_REMAINING_ARRAY_LAYERS)
+                                     ? 1
+                                     : mem_barrier->subresourceRange.layerCount;
+                if ((mem_barrier->subresourceRange.baseArrayLayer + layerCount) > arrayLayers) {
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                             DRAWSTATE_INVALID_BARRIER, "DS", "%s: Subresource must have the sum of the "
                                                              "baseArrayLayer (%d) and layerCount (%d) be less "
@@ -8738,7 +8741,10 @@ VkBool32 ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, uint3
                             funcName, mem_barrier->subresourceRange.baseArrayLayer, mem_barrier->subresourceRange.layerCount,
                             arrayLayers);
                 }
-                if ((mem_barrier->subresourceRange.baseMipLevel + mem_barrier->subresourceRange.levelCount) > mipLevels) {
+                int levelCount = (mem_barrier->subresourceRange.levelCount == VK_REMAINING_MIP_LEVELS)
+                                     ? 1
+                                     : mem_barrier->subresourceRange.levelCount;
+                if ((mem_barrier->subresourceRange.baseMipLevel + levelCount) > mipLevels) {
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                             DRAWSTATE_INVALID_BARRIER, "DS", "%s: Subresource must have the sum of the baseMipLevel "
                                                              "(%d) and levelCount (%d) be less than or equal to "
