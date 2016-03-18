@@ -166,16 +166,6 @@ int sample_main() {
 
     vkUnmapMemory(info.device, mappableMemory);
 
-    VkCommandBufferBeginInfo cmd_buf_info = {};
-    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = 0;
-    cmd_buf_info.pInheritanceInfo = NULL;
-
-    res = vkResetCommandBuffer(info.cmd, 0);
-    res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
-    assert(res == VK_SUCCESS);
-
     if (!needStaging) {
         /* If we can use the linear tiled image as a texture, just do it */
         texObj.image = mappableImage;
