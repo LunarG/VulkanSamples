@@ -1705,7 +1705,6 @@ static VkBool32 demo_check_layers(uint32_t check_count, char **check_names,
             }
         }
     }
-
     return 1;
 }
 
