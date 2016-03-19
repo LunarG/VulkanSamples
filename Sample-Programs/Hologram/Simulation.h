@@ -36,6 +36,7 @@ public:
     Animation(unsigned rng_seed, float scale);
 
     glm::mat4 transformation(float t);
+    float Animation::transparency();
 
 private:
     struct Data {
@@ -44,6 +45,9 @@ private:
         float scale;
 
         glm::mat4 matrix;
+
+        float alpha;
+        float alpha_inc;
     };
 
     std::mt19937 rng_;
@@ -95,6 +99,7 @@ public:
         uint32_t frame_data_offset;
 
         glm::mat4 model;
+        float alpha;
     };
 
     const std::vector<Object> &objects() const { return objects_; }

@@ -39,6 +39,7 @@ struct ShaderParamBlock {
     float light_color[4];
     float model[4 * 4];
     float view_projection[4 * 4];
+    float alpha;
 };
 
 } // namespace
@@ -678,6 +679,7 @@ void Hologram::draw_object(const Simulation::Object &obj, FrameData &data, VkCom
         memcpy(params.light_color, glm::value_ptr(obj.light_color), sizeof(obj.light_color));
         memcpy(params.model, glm::value_ptr(obj.model), sizeof(obj.model));
         memcpy(params.view_projection, glm::value_ptr(camera_.view_projection), sizeof(camera_.view_projection));
+        params.alpha = obj.alpha;
 
         vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
                 0, sizeof(params), &params);
@@ -688,6 +690,7 @@ void Hologram::draw_object(const Simulation::Object &obj, FrameData &data, VkCom
         memcpy(params->light_color, glm::value_ptr(obj.light_color), sizeof(obj.light_color));
         memcpy(params->model, glm::value_ptr(obj.model), sizeof(obj.model));
         memcpy(params->view_projection, glm::value_ptr(camera_.view_projection), sizeof(camera_.view_projection));
+        params->alpha = obj.alpha;
 
         vk::CmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 pipeline_layout_, 0, 1, &data.desc_set, 1, &obj.frame_data_offset);
