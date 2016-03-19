@@ -1964,19 +1964,17 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
     layer_data *my_data;
 
     my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkLayerDispatchTable *pDisp = my_data->device_dispatch_table;
-    if (my_data->deviceMap.size() != 0 && my_data->deviceMap[device].swapchainExtensionEnabled) {
-        if (!strcmp("vkCreateSwapchainKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateSwapchainKHR);
-        if (!strcmp("vkDestroySwapchainKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkDestroySwapchainKHR);
-        if (!strcmp("vkGetSwapchainImagesKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetSwapchainImagesKHR);
-        if (!strcmp("vkAcquireNextImageKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkAcquireNextImageKHR);
-        if (!strcmp("vkQueuePresentKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkQueuePresentKHR);
-    }
+    VkLayerDispatchTable *pDisp =  my_data->device_dispatch_table;
+    if (!strcmp("vkCreateSwapchainKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkCreateSwapchainKHR);
+    if (!strcmp("vkDestroySwapchainKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkDestroySwapchainKHR);
+    if (!strcmp("vkGetSwapchainImagesKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetSwapchainImagesKHR);
+    if (!strcmp("vkAcquireNextImageKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkAcquireNextImageKHR);
+    if (!strcmp("vkQueuePresentKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkQueuePresentKHR);
     if (!strcmp("vkGetDeviceQueue", funcName))
         return reinterpret_cast<PFN_vkVoidFunction>(vkGetDeviceQueue);
 
@@ -2022,63 +2020,49 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
     }
 
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
-    if (my_data->instanceMap.size() != 0 && my_data->instanceMap[instance].androidSurfaceExtensionEnabled) {
-        if (!strcmp("vkCreateAndroidSurfaceKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateAndroidSurfaceKHR);
-    }
+    if (!strcmp("vkCreateAndroidSurfaceKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkCreateAndroidSurfaceKHR);
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 #ifdef VK_USE_PLATFORM_MIR_KHR
-    if (my_data->instanceMap.size() != 0 && my_data->instanceMap[instance].mirSurfaceExtensionEnabled) {
-        if (!strcmp("vkCreateMirSurfaceKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateMirSurfaceKHR);
-        if (!strcmp("vkGetPhysicalDeviceMirPresentationSupportKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceMirPresentationSupportKHR);
-    }
+    if (!strcmp("vkCreateMirSurfaceKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkCreateMirSurfaceKHR);
+    if (!strcmp("vkGetPhysicalDeviceMirPresentationSupportKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceMirPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_MIR_KHR
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    if (my_data->instanceMap.size() != 0 && my_data->instanceMap[instance].waylandSurfaceExtensionEnabled) {
-        if (!strcmp("vkCreateWaylandSurfaceKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateWaylandSurfaceKHR);
-        if (!strcmp("vkGetPhysicalDeviceWaylandPresentationSupportKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceWaylandPresentationSupportKHR);
-    }
+    if (!strcmp("vkCreateWaylandSurfaceKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkCreateWaylandSurfaceKHR);
+    if (!strcmp("vkGetPhysicalDeviceWaylandPresentationSupportKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceWaylandPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_WAYLAND_KHR
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    if (my_data->instanceMap.size() != 0 && my_data->instanceMap[instance].win32SurfaceExtensionEnabled) {
-        if (!strcmp("vkCreateWin32SurfaceKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateWin32SurfaceKHR);
-        if (!strcmp("vkGetPhysicalDeviceWin32PresentationSupportKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceWin32PresentationSupportKHR);
-    }
+    if (!strcmp("vkCreateWin32SurfaceKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkCreateWin32SurfaceKHR);
+    if (!strcmp("vkGetPhysicalDeviceWin32PresentationSupportKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceWin32PresentationSupportKHR);
 #endif // VK_USE_PLATFORM_WIN32_KHR
 #ifdef VK_USE_PLATFORM_XCB_KHR
-    if (my_data->instanceMap.size() != 0 && my_data->instanceMap[instance].xcbSurfaceExtensionEnabled) {
-        if (!strcmp("vkCreateXcbSurfaceKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateXcbSurfaceKHR);
-        if (!strcmp("vkGetPhysicalDeviceXcbPresentationSupportKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceXcbPresentationSupportKHR);
-    }
+    if (!strcmp("vkCreateXcbSurfaceKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkCreateXcbSurfaceKHR);
+    if (!strcmp("vkGetPhysicalDeviceXcbPresentationSupportKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceXcbPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_XCB_KHR
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-    if (my_data->instanceMap.size() != 0 && my_data->instanceMap[instance].xlibSurfaceExtensionEnabled) {
-        if (!strcmp("vkCreateXlibSurfaceKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateXlibSurfaceKHR);
-        if (!strcmp("vkGetPhysicalDeviceXlibPresentationSupportKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceXlibPresentationSupportKHR);
-    }
+    if (!strcmp("vkCreateXlibSurfaceKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkCreateXlibSurfaceKHR);
+    if (!strcmp("vkGetPhysicalDeviceXlibPresentationSupportKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceXlibPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_XLIB_KHR
-    if (my_data->instanceMap.size() != 0 && my_data->instanceMap[instance].surfaceExtensionEnabled) {
-        if (!strcmp("vkDestroySurfaceKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkDestroySurfaceKHR);
-        if (!strcmp("vkGetPhysicalDeviceSurfaceSupportKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceSupportKHR);
-        if (!strcmp("vkGetPhysicalDeviceSurfaceCapabilitiesKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceCapabilitiesKHR);
-        if (!strcmp("vkGetPhysicalDeviceSurfaceFormatsKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceFormatsKHR);
-        if (!strcmp("vkGetPhysicalDeviceSurfacePresentModesKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfacePresentModesKHR);
-    }
+    if (!strcmp("vkDestroySurfaceKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkDestroySurfaceKHR);
+    if (!strcmp("vkGetPhysicalDeviceSurfaceSupportKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceSupportKHR);
+    if (!strcmp("vkGetPhysicalDeviceSurfaceCapabilitiesKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceCapabilitiesKHR);
+    if (!strcmp("vkGetPhysicalDeviceSurfaceFormatsKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceFormatsKHR);
+    if (!strcmp("vkGetPhysicalDeviceSurfacePresentModesKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfacePresentModesKHR);
 
     if (pTable->GetInstanceProcAddr == NULL)
         return NULL;
