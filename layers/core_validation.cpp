@@ -4109,11 +4109,25 @@ static VkBool32 dsUpdate(layer_data *my_data, VkDevice device, uint32_t descript
     return skipCall;
 }
 
-// Verify that given pool has descriptors that are being requested for allocation
+// Verify that given pool has descriptors that are being requested for allocation.
+// NOTE : Calls to this function should be wrapped in mutex
 static VkBool32 validate_descriptor_availability_in_pool(layer_data *dev_data, DESCRIPTOR_POOL_NODE *pPoolNode, uint32_t count,
                                                          const VkDescriptorSetLayout *pSetLayouts) {
     VkBool32 skipCall = VK_FALSE;
-    uint32_t i = 0, j = 0;
+    uint32_t i = 0;
+    uint32_t j = 0;
+
+    // Track number of descriptorSets allowable in this pool
+    if (pPoolNode->availableSets < count) {
+        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+                            reinterpret_cast<uint64_t &>(pPoolNode->pool), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY, "DS",
+                            "Unable to allocate %u descriptorSets from pool %#" PRIxLEAST64
+                            ". This pool only has %d descriptorSets remaining.",
+                            count, reinterpret_cast<uint64_t &>(pPoolNode->pool), pPoolNode->availableSets);
+    } else {
+        pPoolNode->availableSets -= count;
+    }
+
     for (i = 0; i < count; ++i) {
         LAYOUT_NODE *pLayout = getLayoutNode(dev_data, pSetLayouts[i]);
         if (NULL == pLayout) {
@@ -4132,7 +4146,7 @@ static VkBool32 validate_descriptor_availability_in_pool(layer_data *dev_data, D
                                         VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, (uint64_t)pLayout->layout, __LINE__,
                                         DRAWSTATE_DESCRIPTOR_POOL_EMPTY, "DS",
                                         "Unable to allocate %u descriptors of type %s from pool %#" PRIxLEAST64
-                                        ". This pool only has %u descriptors of this type remaining.",
+                                        ". This pool only has %d descriptors of this type remaining.",
                                         poolSizeCount, string_VkDescriptorType(pLayout->createInfo.pBindings[j].descriptorType),
                                         (uint64_t)pPoolNode->pool, pPoolNode->availableDescriptorTypeCount[typeIndex]);
                 } else { // Decrement available descriptors of this type
@@ -6842,8 +6856,12 @@ vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t 
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
     if (VK_SUCCESS == result) {
-        // For each freed descriptor add it back into the pool as available
         loader_platform_thread_lock_mutex(&globalLock);
+
+        // Update available descriptor sets in pool
+        pPoolNode->availableSets += count;
+
+        // For each freed descriptor add it back into the pool as available
         for (uint32_t i = 0; i < count; ++i) {
             SET_NODE *pSet = dev_data->setMap[pDescriptorSets[i]]; // getSetNode() without locking
             invalidateBoundCmdBuffers(dev_data, pSet);
