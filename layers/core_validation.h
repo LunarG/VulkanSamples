@@ -150,30 +150,6 @@ struct MT_OBJ_BINDING_INFO {
     } create_info;
 };
 
-// Track all command buffers
-typedef struct _MT_CB_INFO {
-    VkCommandBufferAllocateInfo createInfo;
-    VkPipeline pipelines[VK_PIPELINE_BIND_POINT_RANGE_SIZE];
-    uint32_t attachmentCount;
-    VkCommandBuffer commandBuffer;
-    uint64_t fenceId;
-    VkFence lastSubmittedFence;
-    VkQueue lastSubmittedQueue;
-    VkRenderPass pass;
-    vector<VkDescriptorSet> activeDescriptorSets;
-    vector<std::function<VkBool32()>> validate_functions;
-    // Order dependent, stl containers must be at end of struct
-    list<VkDeviceMemory> pMemObjList; // List container of Mem objs referenced by this CB
-    // Constructor
-    _MT_CB_INFO() : createInfo{}, pipelines{}, attachmentCount(0), fenceId(0), lastSubmittedFence{}, lastSubmittedQueue{} {};
-} MT_CB_INFO;
-
-// Track command pools and their command buffers
-//typedef struct _MT_CMD_POOL_INFO {
-//    VkCommandPoolCreateFlags createFlags;
-//    list<VkCommandBuffer> pCommandBuffers; // list container of cmd buffers allocated from this pool
-//} MT_CMD_POOL_INFO;
-
 struct MT_FB_ATTACHMENT_INFO {
     VkImage image;
     VkDeviceMemory mem;
@@ -823,15 +799,33 @@ template <> struct hash<QueryObject> {
     }
 };
 }
-
+// Track last states that are bound per pipeline bind point (Gfx & Compute)
+struct LAST_BOUND_STATE {
+    VkPipeline pipeline;
+    VkPipelineLayout pipelineLayout;
+    // Track each set that has been bound
+    // TODO : can unique be global per CB? (do we care about Gfx vs. Compute?)
+    unordered_set<VkDescriptorSet> uniqueBoundSets;
+    // Ordered bound set tracking where index is set# that given set is bound to
+    vector<VkDescriptorSet> boundDescriptorSets;
+    // one dynamic offset per dynamic descriptor bound to this CB
+    vector<uint32_t> dynamicOffsets;
+    void reset() {
+        pipeline = VK_NULL_HANDLE;
+        pipelineLayout = VK_NULL_HANDLE;
+        uniqueBoundSets.clear();
+        boundDescriptorSets.clear();
+        dynamicOffsets.clear();
+    }
+};
 // Cmd Buffer Wrapper Struct
-typedef struct _GLOBAL_CB_NODE {
+struct GLOBAL_CB_NODE {
     VkCommandBuffer commandBuffer;
     VkCommandBufferAllocateInfo createInfo;
     VkCommandBufferBeginInfo beginInfo;
     VkCommandBufferInheritanceInfo inheritanceInfo;
-    VkFence fence;                      // fence tracking this cmd buffer
-    VkDevice device;                    // device this DB belongs to
+    // VkFence fence;                      // fence tracking this cmd buffer
+    VkDevice device;                    // device this CB belongs to
     uint64_t numCmds;                   // number of cmds in this CB
     uint64_t drawCount[NUM_DRAW_TYPES]; // Count of each type of draw in this CB
     CB_STATE state;                     // Track cmd buffer update state
@@ -841,29 +835,25 @@ typedef struct _GLOBAL_CB_NODE {
     // Currently storing "lastBound" objects on per-CB basis
     //  long-term may want to create caches of "lastBound" states and could have
     //  each individual CMD_NODE referencing its own "lastBound" state
-    VkPipeline lastBoundPipeline;
-    uint32_t lastVtxBinding;
-    vector<VkBuffer> boundVtxBuffers;
+    //    VkPipeline lastBoundPipeline;
+    //    VkPipelineLayout lastBoundPipelineLayout;
+    //    // Capture unique std::set of descriptorSets that are bound to this CB.
+    //    std::set<VkDescriptorSet> uniqueBoundSets;
+    //    vector<VkDescriptorSet> boundDescriptorSets; // Index is set# that given set is bound to
+    // Store last bound state for Gfx & Compute pipeline bind points
+    LAST_BOUND_STATE lastBound[VK_PIPELINE_BIND_POINT_RANGE_SIZE];
+
+    vector<uint32_t> dynamicOffsets;
     vector<VkViewport> viewports;
     vector<VkRect2D> scissors;
-    float lineWidth;
-    float depthBiasConstantFactor;
-    float depthBiasClamp;
-    float depthBiasSlopeFactor;
-    float blendConstants[4];
-    float minDepthBounds;
-    float maxDepthBounds;
-    CBStencilData front;
-    CBStencilData back;
-    VkDescriptorSet lastBoundDescriptorSet;
-    VkPipelineLayout lastBoundPipelineLayout;
     VkRenderPassBeginInfo activeRenderPassBeginInfo;
+    uint64_t fenceId;
+    VkFence lastSubmittedFence;
+    VkQueue lastSubmittedQueue;
     VkRenderPass activeRenderPass;
     VkSubpassContents activeSubpassContents;
     uint32_t activeSubpass;
     VkFramebuffer framebuffer;
-    // Capture unique std::set of descriptorSets that are bound to this CB.
-    std::set<VkDescriptorSet> uniqueBoundSets;
     // Track descriptor sets that are destroyed or updated while bound to CB
     // TODO : These data structures relate to tracking resources that invalidate
     //  a cmd buffer that references them. Need to unify how we handle these
@@ -871,9 +861,6 @@ typedef struct _GLOBAL_CB_NODE {
     std::set<VkDescriptorSet> destroyedSets;
     std::set<VkDescriptorSet> updatedSets;
     unordered_set<VkFramebuffer> destroyedFramebuffers;
-    // Keep running track of which sets are bound to which set# at any given
-    // time
-    vector<VkDescriptorSet> boundDescriptorSets; // Index is set# that given set is bound to
     vector<VkEvent> waitedEvents;
     vector<VkSemaphore> semaphores;
     vector<VkEvent> events;
@@ -890,8 +877,11 @@ typedef struct _GLOBAL_CB_NODE {
     // If cmd buffer is primary, track secondary command buffers pending
     // execution
     std::unordered_set<VkCommandBuffer> secondaryCommandBuffers;
-    vector<uint32_t> dynamicOffsets; // one dynamic offset per dynamic descriptor bound to this CB
-} GLOBAL_CB_NODE;
+    // MTMTODO : Scrub these data fields and merge active sets w/ lastBound as appropriate
+    vector<VkDescriptorSet> activeDescriptorSets;
+    vector<std::function<VkBool32()>> validate_functions;
+    list<VkDeviceMemory> pMemObjList; // List container of Mem objs referenced by this CB
+};
 
 class SWAPCHAIN_NODE {
   public:
