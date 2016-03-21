@@ -5070,7 +5070,7 @@ void decrementResources(layer_data *my_data, uint32_t fenceCount, const VkFence 
             return;
         fence_data->second.needsSignaled = false;
         fence_data->second.in_use.fetch_sub(1);
-        decrementResources(my_data, fence_data->second.priorFences.size(), &fence_data->second.priorFences[0]);
+        decrementResources(my_data, fence_data->second.priorFences.size(), fence_data->second.priorFences.data());
         for (auto cmdBuffer : fence_data->second.cmdBuffers) {
             decrementResources(my_data, cmdBuffer);
         }
