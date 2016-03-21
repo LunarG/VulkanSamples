@@ -6364,7 +6364,9 @@ vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocat
                 loader_platform_thread_unlock_mutex(&globalLock);
             }
         }
+        loader_platform_thread_lock_mutex(&globalLock);
         dev_data->frameBufferMap.erase(framebuffer);
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     dev_data->device_dispatch_table->DestroyFramebuffer(device, framebuffer, pAllocator);
 }
