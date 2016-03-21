@@ -1698,16 +1698,11 @@ static VkBool32 demo_check_layers(uint32_t check_count, char **check_names,
                                   uint32_t layer_count,
                                   VkLayerProperties *layers) {
     for (uint32_t i = 0; i < check_count; i++) {
-        VkBool32 found = 0;
         for (uint32_t j = 0; j < layer_count; j++) {
             if (!strcmp(check_names[i], layers[j].layerName)) {
-                found = 1;
-                break;
+                fprintf(stderr, "Cannot find layer: %s\n", check_names[i]);
+                return 0;
             }
-        }
-        if (!found) {
-            fprintf(stderr, "Cannot find layer: %s\n", check_names[i]);
-            return 0;
         }
     }
     return 1;
