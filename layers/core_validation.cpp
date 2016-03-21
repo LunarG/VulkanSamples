@@ -5084,7 +5084,7 @@ void decrementResources(layer_data *my_data, VkQueue queue) {
             decrementResources(my_data, cmdBuffer);
         }
         queue_data->second.untrackedCmdBuffers.clear();
-        decrementResources(my_data, queue_data->second.lastFences.size(), &queue_data->second.lastFences[0]);
+        decrementResources(my_data, queue_data->second.lastFences.size(), queue_data->second.lastFences.data());
     }
 }
 
