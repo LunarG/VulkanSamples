@@ -60,20 +60,10 @@ lunarg_core_validation.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
 lunarg_core_validation.report_flags = error,warn,perf
 lunarg_core_validation.log_filename = stdout
 
-# VK_LAYER_LUNARG_draw_state Settings
-lunarg_draw_state.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
-lunarg_draw_state.report_flags = error,warn,perf
-lunarg_draw_state.log_filename = stdout
-
 # VK_LAYER_LUNARG_image Settings
 lunarg_image.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
 lunarg_image.report_flags = error,warn,perf
 lunarg_image.log_filename = stdout
-
-# VK_LAYER_LUNARG_mem_tracker Settings
-lunarg_mem_tracker.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
-lunarg_mem_tracker.report_flags = error,warn,perf
-lunarg_mem_tracker.log_filename = stdout
 
 # VK_LAYER_LUNARG_object_tracker Settings
 lunarg_object_tracker.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG

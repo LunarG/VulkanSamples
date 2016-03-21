@@ -81,6 +81,7 @@ struct MemRange {
 };
 
 /*
+ * MTMTODO : Update this comment
  * Data Structure overview
  *  There are 4 global STL(' maps
  *  cbMap -- map of command Buffer (CB) objects to MT_CB_INFO structures
@@ -116,8 +117,15 @@ struct MT_OBJ_HANDLE_TYPE {
     VkDebugReportObjectTypeEXT type;
 };
 
+struct MEMORY_RANGE {
+    uint64_t handle;
+    VkDeviceMemory memory;
+    VkDeviceSize start;
+    VkDeviceSize end;
+};
+
 // Data struct for tracking memory object
-struct MT_MEM_OBJ_INFO {
+struct DEVICE_MEM_INFO {
     void *object;      // Dispatchable object used to create this memory (device of swapchain)
     uint32_t refCount; // Count of references (obj bindings or CB use)
     bool valid;        // Stores if the memory has valid data or not
@@ -125,6 +133,9 @@ struct MT_MEM_OBJ_INFO {
     VkMemoryAllocateInfo allocInfo;
     list<MT_OBJ_HANDLE_TYPE> pObjBindings;        // list container of objects bound to this memory
     list<VkCommandBuffer> pCommandBufferBindings; // list container of cmd buffers that reference this mem object
+    vector<MEMORY_RANGE> bufferRanges;
+    vector<MEMORY_RANGE> imageRanges;
+    VkImage image; // If memory is bound to image, this will have VkImage handle, else VK_NULL_HANDLE
     MemRange memRange;
     void *pData, *pDriverData;
 };
@@ -213,12 +224,6 @@ struct MT_SWAP_CHAIN_INFO {
     std::vector<VkImage> images;
 };
 
-struct MEMORY_RANGE {
-    uint64_t handle;
-    VkDeviceMemory memory;
-    VkDeviceSize start;
-    VkDeviceSize end;
-};
 #endif
 // Draw State ERROR codes
 typedef enum _DRAW_STATE_ERROR {
@@ -404,6 +409,8 @@ typedef enum _SHADER_CHECKER_ERROR {
     SHADER_CHECKER_PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE, // Push constant range exists, but not accessible from stage
     SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH,                // Descriptor type does not match shader resource type
     SHADER_CHECKER_DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE,    // Descriptor used by shader, but not accessible from stage
+    SHADER_CHECKER_FEATURE_NOT_ENABLED,        // Shader uses capability requiring a feature not enabled on device
+    SHADER_CHECKER_BAD_CAPABILITY,             // Shader uses capability not supported by Vulkan (OpenCL features)
 } SHADER_CHECKER_ERROR;
 
 typedef enum _DRAW_TYPE {
@@ -554,10 +561,10 @@ class FENCE_NODE : public BASE_NODE {
     VkQueue queue;
     vector<VkCommandBuffer> cmdBuffers;
     bool needsSignaled;
-    VkFence priorFence;
+    vector<VkFence> priorFences;
 
     // Default constructor
-    FENCE_NODE() : queue(NULL), needsSignaled(VK_FALSE), priorFence(static_cast<VkFence>(NULL)){};
+    FENCE_NODE() : queue(NULL), needsSignaled(VK_FALSE){};
 };
 
 class SEMAPHORE_NODE : public BASE_NODE {
@@ -565,6 +572,7 @@ class SEMAPHORE_NODE : public BASE_NODE {
     using BASE_NODE::in_use;
     uint32_t signaled;
     SemaphoreState state;
+    VkQueue queue;
 };
 
 class EVENT_NODE : public BASE_NODE {
@@ -577,7 +585,7 @@ class EVENT_NODE : public BASE_NODE {
 class QUEUE_NODE {
   public:
     VkDevice device;
-    VkFence priorFence;
+    vector<VkFence> lastFences;
 #if MTMERGE
     uint64_t lastRetiredId;
     uint64_t lastSubmittedId;
@@ -887,19 +895,20 @@ typedef struct _GLOBAL_CB_NODE {
     vector<uint32_t> dynamicOffsets; // one dynamic offset per dynamic descriptor bound to this CB
 } GLOBAL_CB_NODE;
 
-typedef struct _SWAPCHAIN_NODE {
+class SWAPCHAIN_NODE {
+  public:
     VkSwapchainCreateInfoKHR createInfo;
     uint32_t *pQueueFamilyIndices;
     std::vector<VkImage> images;
-    _SWAPCHAIN_NODE(const VkSwapchainCreateInfoKHR *pCreateInfo) : createInfo(*pCreateInfo), pQueueFamilyIndices(NULL) {
+    SWAPCHAIN_NODE(const VkSwapchainCreateInfoKHR *pCreateInfo) : createInfo(*pCreateInfo), pQueueFamilyIndices(NULL) {
         if (pCreateInfo->queueFamilyIndexCount && pCreateInfo->imageSharingMode == VK_SHARING_MODE_CONCURRENT) {
             pQueueFamilyIndices = new uint32_t[pCreateInfo->queueFamilyIndexCount];
             memcpy(pQueueFamilyIndices, pCreateInfo->pQueueFamilyIndices, pCreateInfo->queueFamilyIndexCount * sizeof(uint32_t));
             createInfo.pQueueFamilyIndices = pQueueFamilyIndices;
         }
     }
-    ~_SWAPCHAIN_NODE() { delete pQueueFamilyIndices; }
-} SWAPCHAIN_NODE;
+    ~SWAPCHAIN_NODE() { delete[] pQueueFamilyIndices; }
+};
 
 //#ifdef __cplusplus
 //}

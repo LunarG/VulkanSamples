@@ -27,7 +27,9 @@
 
 #include <string.h>
 #include <string>
+#include <vector>
 #include "vulkan/vulkan.h"
+#include "vk_layer_config.h"
 #include "vk_layer_utils.h"
 
 typedef struct _VULKAN_FORMAT_INFO {
@@ -607,4 +609,47 @@ VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8) {
         }
     }
     return result;
+}
+
+void layer_debug_actions(debug_report_data *report_data, std::vector<VkDebugReportCallbackEXT> &logging_callback,
+                      const VkAllocationCallbacks *pAllocator, const char *layer_identifier) {
+
+    uint32_t report_flags = 0;
+    uint32_t debug_action = 0;
+    VkDebugReportCallbackEXT callback = VK_NULL_HANDLE;
+
+    std::string report_flags_key = layer_identifier;
+    std::string debug_action_key = layer_identifier;
+    std::string log_filename_key = layer_identifier;
+    report_flags_key.append(".report_flags");
+    debug_action_key.append(".debug_action");
+    log_filename_key.append(".log_filename");
+
+    // initialize layer options
+    report_flags = getLayerOptionFlags(report_flags_key.c_str(), 0);
+    getLayerOptionEnum(debug_action_key.c_str(), (uint32_t *)&debug_action);
+
+    if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG) {
+        const char *log_filename = getLayerOption(log_filename_key.c_str());
+        FILE *log_output = getLayerLogOutput(log_filename, layer_identifier);
+        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+        dbgCreateInfo.flags = report_flags;
+        dbgCreateInfo.pfnCallback = log_callback;
+        dbgCreateInfo.pUserData = (void *)log_output;
+        layer_create_msg_callback(report_data, &dbgCreateInfo, pAllocator, &callback);
+        logging_callback.push_back(callback);
+    }
+
+    if (debug_action & VK_DBG_LAYER_ACTION_DEBUG_OUTPUT) {
+        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+        dbgCreateInfo.flags = report_flags;
+        dbgCreateInfo.pfnCallback = win32_debug_output_msg;
+        dbgCreateInfo.pUserData = NULL;
+        layer_create_msg_callback(report_data, &dbgCreateInfo, pAllocator, &callback);
+        logging_callback.push_back(callback);
+    }
 }

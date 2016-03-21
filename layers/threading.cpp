@@ -38,47 +38,16 @@
 #include "vk_layer_table.h"
 #include "vk_layer_logging.h"
 #include "threading.h"
-
 #include "vk_dispatch_table_helper.h"
 #include "vk_struct_string_helper_cpp.h"
 #include "vk_layer_data.h"
+#include "vk_layer_utils.h"
 
 #include "thread_check.h"
 
 static void initThreading(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
 
-    uint32_t report_flags = 0;
-    uint32_t debug_action = 0;
-    FILE *log_output = NULL;
-    const char *strOpt;
-    VkDebugReportCallbackEXT callback;
-    // initialize threading options
-    report_flags = getLayerOptionFlags("google_threading.report_flags", 0);
-    getLayerOptionEnum("google_threading.debug_action", (uint32_t *)&debug_action);
-
-    if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG) {
-        strOpt = getLayerOption("google_threading.log_filename");
-        log_output = getLayerLogOutput(strOpt, "google_threading");
-        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
-        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
-        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgCreateInfo.flags = report_flags;
-        dbgCreateInfo.pfnCallback = log_callback;
-        dbgCreateInfo.pUserData = (void *)log_output;
-        layer_create_msg_callback(my_data->report_data, &dbgCreateInfo, pAllocator, &callback);
-        my_data->logging_callback.push_back(callback);
-    }
-
-    if (debug_action & VK_DBG_LAYER_ACTION_DEBUG_OUTPUT) {
-        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
-        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
-        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgCreateInfo.flags = report_flags;
-        dbgCreateInfo.pfnCallback = win32_debug_output_msg;
-        dbgCreateInfo.pUserData = NULL;
-        layer_create_msg_callback(my_data->report_data, &dbgCreateInfo, pAllocator, &callback);
-        my_data->logging_callback.push_back(callback);
-    }
+    layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "google_threading");
 
     if (!threadingLockInitialized) {
         loader_platform_thread_create_mutex(&threadingLock);

@@ -84,38 +84,8 @@ static loader_platform_thread_mutex globalLock;
 template layer_data *get_my_data_ptr<layer_data>(void *data_key, std::unordered_map<void *, layer_data *> &data_map);
 
 static void init_device_limits(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
-    uint32_t report_flags = 0;
-    uint32_t debug_action = 0;
-    FILE *log_output = NULL;
-    const char *option_str;
-    VkDebugReportCallbackEXT callback;
-    // initialize device_limits options
-    report_flags = getLayerOptionFlags("lunarg_device_limits.report_flags", 0);
-    getLayerOptionEnum("lunarg_device_limits.debug_action", (uint32_t *)&debug_action);
 
-    if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG) {
-        option_str = getLayerOption("lunarg_device_limits.log_filename");
-        log_output = getLayerLogOutput(option_str, "lunarg_device_limits");
-        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
-        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
-        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgCreateInfo.flags = report_flags;
-        dbgCreateInfo.pfnCallback = log_callback;
-        dbgCreateInfo.pUserData = (void *)log_output;
-        layer_create_msg_callback(my_data->report_data, &dbgCreateInfo, pAllocator, &callback);
-        my_data->logging_callback.push_back(callback);
-    }
-
-    if (debug_action & VK_DBG_LAYER_ACTION_DEBUG_OUTPUT) {
-        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
-        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
-        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgCreateInfo.flags = report_flags;
-        dbgCreateInfo.pfnCallback = win32_debug_output_msg;
-        dbgCreateInfo.pUserData = NULL;
-        layer_create_msg_callback(my_data->report_data, &dbgCreateInfo, pAllocator, &callback);
-        my_data->logging_callback.push_back(callback);
-    }
+    layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_device_limits");
 
     if (!globalLockInitialized) {
         // TODO/TBD: Need to delete this mutex sometime.  How???  One
