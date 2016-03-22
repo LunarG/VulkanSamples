@@ -1405,6 +1405,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
         layer_data_map.erase(pTable);
 
         pc_instance_table_map.erase(key);
+        layer_data_map.erase(key);
     }
 }
 
