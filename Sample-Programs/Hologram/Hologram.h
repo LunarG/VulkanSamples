@@ -122,6 +122,7 @@ private:
     void update_camera();
 
     bool sim_paused_;
+    bool sim_fade_;
     Simulation sim_;
     Camera camera_;
 

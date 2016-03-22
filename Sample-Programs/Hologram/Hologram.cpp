@@ -46,7 +46,7 @@ struct ShaderParamBlock {
 
 Hologram::Hologram(const std::vector<std::string> &args)
     : Game("Hologram", args), multithread_(true), use_push_constants_(false),
-      sim_paused_(false), sim_(5000), camera_(2.5f), frame_data_(),
+      sim_paused_(false), sim_(5000), camera_(2.5f), frame_data_(), sim_fade_(false),
       render_pass_clear_value_({{ 0.0f, 0.1f, 0.2f, 1.0f }}),
       render_pass_begin_info_(),
       primary_cmd_begin_info_(), primary_cmd_submit_info_()
@@ -679,7 +679,7 @@ void Hologram::draw_object(const Simulation::Object &obj, FrameData &data, VkCom
         memcpy(params.light_color, glm::value_ptr(obj.light_color), sizeof(obj.light_color));
         memcpy(params.model, glm::value_ptr(obj.model), sizeof(obj.model));
         memcpy(params.view_projection, glm::value_ptr(camera_.view_projection), sizeof(camera_.view_projection));
-        params.alpha = obj.alpha;
+        params.alpha = sim_fade_ ? obj.alpha : 0.5f;
 
         vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
                 0, sizeof(params), &params);
@@ -690,7 +690,7 @@ void Hologram::draw_object(const Simulation::Object &obj, FrameData &data, VkCom
         memcpy(params->light_color, glm::value_ptr(obj.light_color), sizeof(obj.light_color));
         memcpy(params->model, glm::value_ptr(obj.model), sizeof(obj.model));
         memcpy(params->view_projection, glm::value_ptr(camera_.view_projection), sizeof(camera_.view_projection));
-        params->alpha = obj.alpha;
+        params->alpha = sim_fade_ ? obj.alpha : 0.5f;
 
         vk::CmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 pipeline_layout_, 0, 1, &data.desc_set, 1, &obj.frame_data_offset);
@@ -767,6 +767,9 @@ void Hologram::on_key(Key key)
         break;
     case KEY_SPACE:
         sim_paused_ = !sim_paused_;
+        break;
+    case KEY_F:
+        sim_fade_ = !sim_fade_;
         break;
     default:
         break;
