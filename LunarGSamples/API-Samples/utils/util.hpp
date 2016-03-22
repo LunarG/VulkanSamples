@@ -56,7 +56,6 @@
 #endif
 #ifdef USE_DEBUG_EXTENTIONS
 // Inclucde files from LoaderAndTools.
-#include <vulkan/vk_ext_debug_report.h>
 #include <vulkan/vk_sdk_platform.h>
 #endif
 
