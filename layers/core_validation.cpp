@@ -110,7 +110,6 @@ struct layer_data {
 // MTMERGESOURCE - stuff pulled directly from MT
     uint64_t currentFenceId;
     // Maps for tracking key structs related to mem_tracker state
-    unordered_map<VkFramebuffer, MT_FB_INFO> fbMap;
     unordered_map<VkRenderPass, MT_PASS_INFO> passMap;
     unordered_map<VkDescriptorSet, MT_DESCRIPTOR_SET_INFO> descriptorSetMap;
     // Images and Buffers are 2 objects that can have memory bound to them so they get special treatment
@@ -6267,15 +6266,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(VkDevice device, ui
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-#if MTMERGESOURCE
-    // MTMTODO : Merge with code below
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = dev_data->fbMap.find(framebuffer);
-    if (item != dev_data->fbMap.end()) {
-        dev_data->fbMap.erase(framebuffer);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-#endif
     auto fbNode = dev_data->frameBufferMap.find(framebuffer);
     if (fbNode != dev_data->frameBufferMap.end()) {
         for (auto cb : fbNode->second.referencingCmdBuffers) {
@@ -9008,7 +8998,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(VkDevice devi
         fbNode.createInfo = *localFBCI;
         std::pair<VkFramebuffer, FRAMEBUFFER_NODE> fbPair(*pFramebuffer, fbNode);
         loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGESOURCE
         for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
             VkImageView view = pCreateInfo->pAttachments[i];
             auto view_data = dev_data->imageViewMap.find(view);
@@ -9019,9 +9008,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(VkDevice devi
             get_mem_binding_from_object(dev_data, device, (uint64_t)(view_data->second.image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                                         &fb_info.mem);
             fb_info.image = view_data->second.image;
-            dev_data->fbMap[*pFramebuffer].attachments.push_back(fb_info);
+            fbPair.second.attachments.push_back(fb_info);
         }
-#endif
         dev_data->frameBufferMap.insert(fbPair);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
@@ -9613,7 +9601,7 @@ vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo 
                 pass_info.fb = pRenderPassBegin->framebuffer;
                 auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
                 for (size_t i = 0; i < pass_info.attachments.size(); ++i) {
-                    MT_FB_ATTACHMENT_INFO &fb_info = dev_data->fbMap[pass_info.fb].attachments[i];
+                    MT_FB_ATTACHMENT_INFO &fb_info = dev_data->frameBufferMap[pass_info.fb].attachments[i];
                     if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
                         if (cb_data != dev_data->commandBufferMap.end()) {
                             std::function<VkBool32()> function = [=]() {
@@ -9725,7 +9713,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndRenderPass(VkCommandBuffer co
         if (pass_data != dev_data->passMap.end()) {
             MT_PASS_INFO &pass_info = pass_data->second;
             for (size_t i = 0; i < pass_info.attachments.size(); ++i) {
-                MT_FB_ATTACHMENT_INFO &fb_info = dev_data->fbMap[pass_info.fb].attachments[i];
+                MT_FB_ATTACHMENT_INFO &fb_info = dev_data->frameBufferMap[pass_info.fb].attachments[i];
                 if (pass_info.attachments[i].store_op == VK_ATTACHMENT_STORE_OP_STORE) {
                     if (cb_data != dev_data->commandBufferMap.end()) {
                         std::function<VkBool32()> function = [=]() {
