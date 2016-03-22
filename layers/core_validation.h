@@ -155,10 +155,6 @@ struct MT_FB_ATTACHMENT_INFO {
     VkDeviceMemory mem;
 };
 
-struct MT_FB_INFO {
-    std::vector<MT_FB_ATTACHMENT_INFO> attachments;
-};
-
 struct MT_PASS_ATTACHMENT_INFO {
     uint32_t attachment;
     VkAttachmentLoadOp load_op;
@@ -581,6 +577,7 @@ class FRAMEBUFFER_NODE {
   public:
     VkFramebufferCreateInfo createInfo;
     unordered_set<VkCommandBuffer> referencingCmdBuffers;
+    vector<MT_FB_ATTACHMENT_INFO> attachments;
 };
 
 // Descriptor Data structures
