@@ -161,13 +161,6 @@ struct MT_PASS_ATTACHMENT_INFO {
     VkAttachmentStoreOp store_op;
 };
 
-struct MT_PASS_INFO {
-    VkFramebuffer fb;
-    std::vector<MT_PASS_ATTACHMENT_INFO> attachments;
-    std::unordered_map<uint32_t, bool> attachment_first_read;
-    std::unordered_map<uint32_t, VkImageLayout> attachment_first_layout;
-};
-
 // Associate fenceId with a fence object
 struct MT_FENCE_INFO {
     uint64_t fenceId;         // Sequence number for fence at last submit
@@ -486,11 +479,15 @@ struct DAGNode {
 
 struct RENDER_PASS_NODE {
     VkRenderPassCreateInfo const *pCreateInfo;
-    std::vector<bool> hasSelfDependency;
-    std::vector<DAGNode> subpassToNode;
-    vector<std::vector<VkFormat>> subpassColorFormats;
+    VkFramebuffer fb;
+    vector<bool> hasSelfDependency;
+    vector<DAGNode> subpassToNode;
+    vector<vector<VkFormat>> subpassColorFormats;
+    vector<MT_PASS_ATTACHMENT_INFO> attachments;
+    unordered_map<uint32_t, bool> attachment_first_read;
+    unordered_map<uint32_t, VkImageLayout> attachment_first_layout;
 
-    RENDER_PASS_NODE(VkRenderPassCreateInfo const *pCreateInfo) : pCreateInfo(pCreateInfo) {
+    RENDER_PASS_NODE(VkRenderPassCreateInfo const *pCreateInfo) : pCreateInfo(pCreateInfo), fb(VK_NULL_HANDLE) {
         uint32_t i;
 
         subpassColorFormats.reserve(pCreateInfo->subpassCount);
