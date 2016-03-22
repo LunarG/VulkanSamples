@@ -1275,6 +1275,30 @@ static std::string EnumeratorString(VkImageAspectFlagBits const &enumerator) {
     return enumeratorString;
 }
 
+static bool validate_queue_family_indices(VkDevice device, const char *function_name, const uint32_t count,
+                                          const uint32_t *indices) {
+    bool skipCall = false;
+    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    for (auto i = 0u; i < count; i++) {
+        if (indices[i] == VK_QUEUE_FAMILY_IGNORED) {
+            skipCall |=
+                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+                        "%s: the specified queueFamilyIndex cannot be VK_QUEUE_FAMILY_IGNORED.", function_name);
+        } else {
+            const auto &queue_data = my_device_data->queueFamilyIndexMap.find(indices[i]);
+            if (queue_data == my_device_data->queueFamilyIndexMap.end()) {
+                skipCall |= log_msg(
+                    mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+                    "VkGetDeviceQueue parameter, uint32_t queueFamilyIndex %d, must have been given when the device was created.",
+                    indices[i]);
+                return false;
+            }
+        }
+    }
+    return skipCall;
+}
+
 static bool ValidateEnumerator(VkQueryControlFlagBits const &enumerator) {
     VkQueryControlFlagBits allFlags = (VkQueryControlFlagBits)(VK_QUERY_CONTROL_PRECISE_BIT);
     if (enumerator & (~allFlags)) {
@@ -1756,15 +1780,9 @@ bool PreGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queu
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     assert(my_device_data != nullptr);
 
+    validate_queue_family_indices(device, "vkGetDeviceQueue", 1, &queueFamilyIndex);
+
     const auto &queue_data = my_device_data->queueFamilyIndexMap.find(queueFamilyIndex);
-
-    if (queue_data == my_device_data->queueFamilyIndexMap.end()) {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "VkGetDeviceQueue parameter, uint32_t queueFamilyIndex %d, must have been given when the device was created.",
-                queueFamilyIndex);
-        return false;
-    }
-
     if (queue_data->second <= queueIndex) {
         log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
                 "VkGetDeviceQueue parameter, uint32_t queueIndex %d, must be less than the number of queues given when the device "
@@ -2552,6 +2570,9 @@ bool PreCreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo) {
             log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
                     "vkCreateBuffer parameter, VkSharingMode pCreateInfo->sharingMode, is an unrecognized enumerator");
             return false;
+        } else if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
+            validate_queue_family_indices(device, "vkCreateBuffer", pCreateInfo->queueFamilyIndexCount,
+                                          pCreateInfo->pQueueFamilyIndices);
         }
     }
 
@@ -2679,6 +2700,9 @@ bool PreCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo) {
             log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
                     "vkCreateImage parameter, VkSharingMode pCreateInfo->sharingMode, is an unrecognized enumerator");
             return false;
+        } else if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
+            validate_queue_family_indices(device, "vkCreateImage", pCreateInfo->queueFamilyIndexCount,
+                                          pCreateInfo->pQueueFamilyIndices);
         }
     }
 
@@ -3935,9 +3959,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(VkDevice devi
                                                                    const VkAllocationCallbacks *pAllocator,
                                                                    VkCommandPool *pCommandPool) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
+
+    skipCall |= validate_queue_family_indices(device, "vkCreateCommandPool", 1, &(pCreateInfo->queueFamilyIndex));
 
     skipCall |= parameter_validation_vkCreateCommandPool(my_data->report_data, pCreateInfo, pAllocator, pCommandPool);
 
