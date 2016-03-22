@@ -117,6 +117,8 @@ struct texture_object {
 
 static char *tex_files[] = {"lunarg.ppm"};
 
+static int validation_error = 0;
+
 struct vkcube_vs_uniform {
     // Must start with MVP
     float mvp[4][4];
@@ -268,6 +270,7 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         sprintf(message, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode,
                 pMsg);
+        validation_error = 1;
     } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
         // We know that we're submitting queues without fences, ignore this
         // warning
@@ -277,7 +280,9 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
         }
         sprintf(message, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode,
                 pMsg);
+        validation_error = 1;
     } else {
+        validation_error = 1;
         return false;
     }
 
@@ -1917,7 +1922,7 @@ static void demo_run(struct demo *demo) {
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
     case WM_CLOSE:
-        PostQuitMessage(0);
+        PostQuitMessage(validation_error);
         break;
     case WM_PAINT:
         demo_run(&demo);
@@ -2803,6 +2808,6 @@ int main(int argc, char **argv) {
 
     demo_cleanup(&demo);
 
-    return 0;
+    return validation_error;
 }
 #endif // _WIN32
