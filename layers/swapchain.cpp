@@ -63,7 +63,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionPropert
 }
 
 static const VkLayerProperties swapchain_layers[] = {{
-    "VK_LAYER_LUNARG_swapchain", VK_API_VERSION, 1, "LunarG Validation Layer",
+    "VK_LAYER_LUNARG_swapchain", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
 }};
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL

@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
                                       1,
                                       "",
                                       0,
-                                      VK_API_VERSION};
+                                      VK_API_VERSION_1_0};
   VkInstanceCreateInfo instance_info = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
                                         nullptr,
                                         0,

@@ -388,12 +388,12 @@ class Subcommand(object):
         ggep_body.append('    {')
         if self.layer_name in ['unique_objects']:
           ggep_body.append('        "VK_LAYER_GOOGLE_%s",' % layer)
-          ggep_body.append('        VK_API_VERSION, // specVersion')
+          ggep_body.append('        VK_LAYER_API_VERSION, // specVersion')
           ggep_body.append('        1, // implementationVersion')
           ggep_body.append('        "Google Validation Layer"')
         else:
           ggep_body.append('        "VK_LAYER_LUNARG_%s",' % layer)
-          ggep_body.append('        VK_API_VERSION, // specVersion')
+          ggep_body.append('        VK_LAYER_API_VERSION, // specVersion')
           ggep_body.append('        1, // implementationVersion')
           ggep_body.append('        "LunarG Validation Layer"')
         ggep_body.append('    }')
@@ -414,12 +414,12 @@ class Subcommand(object):
         gpdlp_body.append('    {')
         if self.layer_name in ['unique_objects']:
           gpdlp_body.append('        "VK_LAYER_GOOGLE_%s",' % layer)
-          gpdlp_body.append('        VK_API_VERSION, // specVersion')
+          gpdlp_body.append('        VK_LAYER_API_VERSION, // specVersion')
           gpdlp_body.append('        1, // implementationVersion')
           gpdlp_body.append('        "Google Validation Layer"')
         else:
           gpdlp_body.append('        "VK_LAYER_LUNARG_%s",' % layer)
-          gpdlp_body.append('        VK_API_VERSION, // specVersion')
+          gpdlp_body.append('        VK_LAYER_API_VERSION, // specVersion')
           gpdlp_body.append('        1, // implementationVersion')
           gpdlp_body.append('        "LunarG Validation Layer"')
         gpdlp_body.append('    }')

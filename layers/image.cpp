@@ -211,7 +211,7 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,
 }
 
 static const VkLayerProperties pc_global_layers[] = {{
-    "VK_LAYER_LUNARG_image", VK_API_VERSION, 1, "LunarG Validation Layer",
+    "VK_LAYER_LUNARG_image", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
 }};
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL

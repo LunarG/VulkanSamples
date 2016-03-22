@@ -160,7 +160,7 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,
 
 static const VkLayerProperties globalLayerProps[] = {{
     "VK_LAYER_GOOGLE_threading",
-    VK_API_VERSION, // specVersion
+    VK_LAYER_API_VERSION, // specVersion
     1, "Google Validation Layer",
 }};
 
@@ -170,7 +170,7 @@ VK_LAYER_EXPORT VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(uint32_t 
 
 static const VkLayerProperties deviceLayerProps[] = {{
     "VK_LAYER_GOOGLE_threading",
-    VK_API_VERSION, // specVersion
+    VK_LAYER_API_VERSION, // specVersion
     1, "Google Validation Layer",
 }};
 

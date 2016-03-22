@@ -163,7 +163,7 @@ struct layer_data {
 };
 
 static const VkLayerProperties cv_global_layers[] = {{
-    "VK_LAYER_LUNARG_core_validation", VK_API_VERSION, 1, "LunarG Validation Layer",
+    "VK_LAYER_LUNARG_core_validation", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
 }};
 
 template <class TCreateInfo> void ValidateLayerOrdering(const TCreateInfo &createInfo) {
@@ -4825,7 +4825,7 @@ vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pPropert
 
 // TODO: Why does this exist - can we just use global?
 static const VkLayerProperties cv_device_layers[] = {{
-    "VK_LAYER_LUNARG_core_validation", VK_API_VERSION, 1, "LunarG Validation Layer",
+    "VK_LAYER_LUNARG_core_validation", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
 }};
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
