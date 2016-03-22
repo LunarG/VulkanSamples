@@ -36,7 +36,7 @@ public:
     Animation(unsigned rng_seed, float scale);
 
     glm::mat4 transformation(float t);
-    float Animation::transparency();
+    float transparency();
 
 private:
     struct Data {
