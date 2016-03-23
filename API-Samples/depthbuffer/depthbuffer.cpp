@@ -34,7 +34,7 @@ create Vulkan depth buffer
 #include <assert.h>
 #include <cstdlib>
 
-int sample_main() {
+int main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
 

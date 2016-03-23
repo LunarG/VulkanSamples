@@ -32,7 +32,7 @@ layers are available to enable at CreateInstance time.
 #include <util_init.hpp>
 #include <cstdlib>
 
-int sample_main() {
+int main(int argc, char *argv[]) {
     VkResult res;
     struct sample_info info;
     uint32_t instance_layer_count;

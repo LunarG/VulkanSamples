@@ -32,7 +32,7 @@ extension are available to enable at CreateInstance time.
 #include <util_init.hpp>
 #include <cstdlib>
 
-int sample_main() {
+int main(int argc, char *argv[]) {
     VkResult res;
     VkExtensionProperties *vk_props = NULL;
     uint32_t instance_extension_count;

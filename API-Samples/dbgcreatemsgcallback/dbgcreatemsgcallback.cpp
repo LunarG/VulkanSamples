@@ -73,7 +73,7 @@ dbgFunc(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType,
     return false;
 }
 
-int sample_main() {
+int main(int argc, char *argv[]) {
     VkExtensionProperties *vk_props = NULL;
     uint32_t instance_extension_count;
     VkResult res;

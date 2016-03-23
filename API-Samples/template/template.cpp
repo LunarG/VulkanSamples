@@ -69,12 +69,13 @@ const char *fragShaderText =
     "   outColor = textureLod(tex, texcoord, 0.0);\n"
     "}\n";
 
-int sample_main() {
+int main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Draw Textured Cube";
     const bool depthPresent = true;
 
+    process_command_line_args(info, argc, argv);
     init_global_layer_properties(info);
     init_instance_extension_names(info);
     init_device_extension_names(info);
@@ -159,6 +160,8 @@ int sample_main() {
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);
+    if (info.save_images)
+        write_ppm(info, "template");
 
     vkDestroyFence(info.device, drawFence, NULL);
     vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);

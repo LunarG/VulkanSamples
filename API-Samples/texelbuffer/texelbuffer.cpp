@@ -72,7 +72,7 @@ static const char *fragShaderText =
     "   outColor = color;\n"
     "}\n";
 
-int sample_main() {
+int main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
     struct sample_info info = {};
@@ -81,6 +81,7 @@ int sample_main() {
     const bool depthPresent = false;
     const bool vertexPresent = false;
 
+    process_command_line_args(info, argc, argv);
     init_global_layer_properties(info);
     init_instance_extension_names(info);
     init_device_extension_names(info);
@@ -319,6 +320,8 @@ int sample_main() {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
+    if (info.save_images)
+        write_ppm(info, "texelbuffer");
 
     vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);
     vkDestroyBufferView(info.device, texel_view, NULL);

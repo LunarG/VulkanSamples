@@ -34,7 +34,7 @@ enumerate physical devices
 #include <iostream>
 #include <util_init.hpp>
 
-int sample_main() {
+int main(int argc, char *argv[]) {
     struct sample_info info = {};
     init_instance(info, "vulkansamples_enumerate");
 

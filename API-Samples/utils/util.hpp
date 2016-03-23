@@ -143,6 +143,7 @@ struct sample_info {
     VkSurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;
+    bool save_images;
 
     std::vector<const char *> instance_layer_names;
     std::vector<const char *> instance_extension_names;
@@ -232,7 +233,8 @@ struct sample_info {
     VkViewport viewport;
     VkRect2D scissor;
 };
-
+void process_command_line_args(struct sample_info &info, int argc,
+                               char *argv[]);
 bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits,
                                  VkFlags requirements_mask,
                                  uint32_t *typeIndex);

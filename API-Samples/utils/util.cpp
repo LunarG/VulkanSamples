@@ -47,8 +47,6 @@ samples utility functions
 
 using namespace std;
 
-int main(int argc, char **argv) { return sample_main(); }
-
 void extract_version(uint32_t version, uint32_t &major, uint32_t &minor,
                      uint32_t &patch) {
     major = version >> 22;
@@ -453,6 +451,41 @@ void print_UUID(uint8_t *pipelineCacheUUID) {
         if (j == 3 || j == 5 || j == 7 || j == 9) {
             std::cout << '-';
         }
+    }
+}
+static bool optionMatch(const char *option, char *optionLine) {
+    if (strncmp(option, optionLine, strlen(option)) == 0)
+        return true;
+    else
+        return false;
+}
+
+void process_command_line_args(struct sample_info &info, int argc,
+                               char *argv[]) {
+    int i, n;
+
+    for (i = 1, n = 1; i < argc; i++) {
+        if (optionMatch("--save-images", argv[i]))
+            info.save_images = true;
+        else if (optionMatch("--help", argv[i]) || optionMatch("-h", argv[i])) {
+            printf("\nOther options:\n");
+            printf("\t--save-images\n"
+                   "\t\tSave tests images as ppm files in current working "
+                   "directory.\n");
+            exit(0);
+        } else {
+            printf("\nUnrecognized option: %s\n", argv[i]);
+            printf("\nUse --help or -h for option list.\n");
+            exit(0);
+        }
+
+        /*
+         * Since the above "consume" inputs, update argv
+         * so that it contains the trimmed list of args for glutInit
+         */
+
+        argv[n] = argv[i];
+        n++;
     }
 }
 

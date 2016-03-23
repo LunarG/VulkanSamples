@@ -31,7 +31,7 @@ Get list of global layers and their associated extensions, if any.
 #include <util_init.hpp>
 #include <cstdlib>
 
-int sample_main() {
+int main(int argc, char *argv[]) {
     VkResult res;
     uint32_t instance_layer_count;
     VkLayerProperties *vk_props = NULL;

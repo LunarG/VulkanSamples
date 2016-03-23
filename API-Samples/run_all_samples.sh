@@ -21,7 +21,7 @@ do
 
    # run the built sample; need to remove .cpp from name
    RNAME=./${BNAME%.cpp}
-   $RNAME
+   $RNAME --save-images
    echo ""
 done
 
