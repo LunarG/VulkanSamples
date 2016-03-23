@@ -206,6 +206,7 @@ struct sample_info {
     glm::mat4 Projection;
     glm::mat4 View;
     glm::mat4 Model;
+    glm::mat4 Clip;
     glm::mat4 MVP;
 
     VkCommandBuffer cmd; // Buffer for initialization commands

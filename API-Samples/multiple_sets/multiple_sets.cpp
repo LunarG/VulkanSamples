@@ -64,9 +64,6 @@ const char *vertShaderText =
     "   outColor = texture(surface, vec2(0.0));\n"
     "   outTexCoords = inTexCoords;\n"
     "   gl_Position = myBufferVals.mvp * pos;\n"
-    "   // GL->VK conventions\n"
-    "   gl_Position.y = -gl_Position.y;\n"
-    "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
     "}\n";
 
 const char *fragShaderText =

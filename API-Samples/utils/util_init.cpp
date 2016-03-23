@@ -1007,7 +1007,13 @@ void init_uniform_buffer(struct sample_info &info) {
         glm::vec3(0, -1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
         );
     info.Model = glm::mat4(1.0f);
-    info.MVP = info.Projection * info.View * info.Model;
+    // Vulkan clip space has inverted Y and half Z.
+    info.Clip = glm::mat4(1.0f,  0.0f, 0.0f, 0.0f,
+                          0.0f, -1.0f, 0.0f, 0.0f,
+                          0.0f,  0.0f, 0.5f, 0.0f,
+                          0.0f,  0.0f, 0.5f, 1.0f);
+
+    info.MVP = info.Clip * info.Projection * info.View * info.Model;
 
     /* VULKAN_KEY_START */
     VkBufferCreateInfo buf_info = {};
