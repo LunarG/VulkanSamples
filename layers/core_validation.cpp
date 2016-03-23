@@ -35,7 +35,7 @@
 #define NOMINMAX
 
 // Turn on mem_tracker merged code
-#define MTMERGE 1
+#define MTMERGESOURCE 1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,7 +79,7 @@
 using std::unordered_map;
 using std::unordered_set;
 
-#if MTMERGE
+#if MTMERGESOURCE
 // WSI Image Objects bypass usual Image Object creation methods.  A special Memory
 // Object value will be used to identify them internally.
 static const VkDeviceMemory MEMTRACKER_SWAP_CHAIN_IMAGE_KEY = (VkDeviceMemory)(-1);
@@ -106,8 +106,8 @@ struct layer_data {
     std::vector<VkDebugReportCallbackEXT> logging_callback;
     VkLayerDispatchTable *device_dispatch_table;
     VkLayerInstanceDispatchTable *instance_dispatch_table;
-#if MTMERGE
-// MTMERGE - stuff pulled directly from MT
+#if MTMERGESOURCE
+// MTMERGESOURCE - stuff pulled directly from MT
     uint64_t currentFenceId;
     // Maps for tracking key structs related to mem_tracker state
     unordered_map<VkFramebuffer, MT_FB_INFO> fbMap;
@@ -116,7 +116,7 @@ struct layer_data {
     // Images and Buffers are 2 objects that can have memory bound to them so they get special treatment
     unordered_map<uint64_t, MT_OBJ_BINDING_INFO> imageBindingMap;
     unordered_map<uint64_t, MT_OBJ_BINDING_INFO> bufferBindingMap;
-// MTMERGE - End of MT stuff
+// MTMERGESOURCE - End of MT stuff
 #endif
     devExts device_extensions;
     vector<VkQueue> queues; // all queues under given device
@@ -153,10 +153,10 @@ struct layer_data {
 
     // Device specific data
     PHYS_DEV_PROPERTIES_NODE physDevProperties;
-// MTMERGE - added a couple of fields to constructor initializer
+// MTMERGESOURCE - added a couple of fields to constructor initializer
     layer_data()
         : report_data(nullptr), device_dispatch_table(nullptr), instance_dispatch_table(nullptr),
-#if MTMERGE
+#if MTMERGESOURCE
         currentFenceId(1),
 #endif
         device_extensions(){};
@@ -258,8 +258,8 @@ static loader_platform_thread_mutex globalLock;
 #define MAX_TID 513
 static loader_platform_thread_id g_tidMapping[MAX_TID] = {0};
 static uint32_t g_maxTID = 0;
-#if MTMERGE
-// MTMERGE - start of direct pull
+#if MTMERGESOURCE
+// MTMERGESOURCE - start of direct pull
 static VkPhysicalDeviceMemoryProperties memProps;
 
 static void clear_cmd_buf_and_mem_references(layer_data *my_data, const VkCommandBuffer cb);
@@ -286,14 +286,14 @@ static MT_OBJ_BINDING_INFO *get_object_binding_info(layer_data *my_data, uint64_
     }
     return retValue;
 }
-// MTMERGE - end section
+// MTMERGESOURCE - end section
 #endif
 template layer_data *get_my_data_ptr<layer_data>(void *data_key, std::unordered_map<void *, layer_data *> &data_map);
 
 // prototype
 static GLOBAL_CB_NODE *getCBNode(layer_data *, const VkCommandBuffer);
 
-#if MTMERGE
+#if MTMERGESOURCE
 static void delete_queue_info_list(layer_data *my_data) {
     // Process queue list, cleaning up each entry before deleting
     my_data->queueMap.clear();
@@ -3034,7 +3034,7 @@ static VkBool32 verifyPipelineCreateState(layer_data *my_data, const VkDevice de
 
     if (pPipeline->graphicsPipelineCI.pColorBlendState != NULL) {
         if (!my_data->physDevProperties.features.independentBlend) {
-            VkPipelineColorBlendAttachmentState *pAttachments = &pPipeline->attachments[0];
+            VkPipelineColorBlendAttachmentState *pAttachments = pAttachments = &pPipeline->attachments[0];
             for (size_t i = 1; i < pPipeline->attachments.size(); i++) {
                 if ((pAttachments[0].blendEnable != pAttachments[i].blendEnable) ||
                     (pAttachments[0].srcColorBlendFactor != pAttachments[i].srcColorBlendFactor) ||
@@ -4599,7 +4599,7 @@ static void init_core_validation(layer_data *my_data, const VkAllocationCallback
         loader_platform_thread_create_mutex(&globalLock);
         globalLockInitialized = 1;
     }
-#if MTMERGE
+#if MTMERGESOURCE
     // Zero out memory property data
     memset(&memProps, 0, sizeof(VkPhysicalDeviceMemoryProperties));
 #endif
@@ -4756,7 +4756,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
     dev_data->bufferViewMap.clear();
     dev_data->bufferMap.clear();
     loader_platform_thread_unlock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
@@ -4801,7 +4801,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
     layer_data_map.erase(key);
 }
 
-#if MTMERGE
+#if MTMERGESOURCE
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkGetPhysicalDeviceMemoryProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties *pMemoryProperties) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
@@ -5208,7 +5208,7 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     // TODO : Need to track fence and clear mem references when fence clears
     // MTMTODO : Merge this code with code below to avoid duplicating efforts
     uint64_t fenceId = 0;
@@ -5316,7 +5316,7 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall)
         result = dev_data->device_dispatch_table->QueueSubmit(queue, submitCount, pSubmits, fence);
-#if MTMERGE
+#if MTMERGESOURCE
     loader_platform_thread_lock_mutex(&globalLock);
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
         const VkSubmitInfo *submit = &pSubmits[submit_idx];
@@ -5333,7 +5333,7 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
     return result;
 }
 
-#if MTMERGE
+#if MTMERGESOURCE
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateMemory(VkDevice device, const VkMemoryAllocateInfo *pAllocateInfo,
                                                                 const VkAllocationCallbacks *pAllocator, VkDeviceMemory *pMemory) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -5494,7 +5494,7 @@ static inline void removeInFlightCmdBuffer(layer_data *dev_data, VkCommandBuffer
         }
     }
 }
-#if MTMERGE
+#if MTMERGESOURCE
 static inline bool verifyFenceStatus(VkDevice device, VkFence fence, const char *apiCall) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = false;
@@ -5526,7 +5526,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkWaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, VkBool32 waitAll, uint64_t timeout) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skip_call = VK_FALSE;
-#if MTMERGE
+#if MTMERGESOURCE
     // Verify fence status of submitted fences
     loader_platform_thread_lock_mutex(&globalLock);
     for (uint32_t i = 0; i < fenceCount; i++) {
@@ -5543,7 +5543,7 @@ vkWaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, Vk
         // When we know that all fences are complete we can clean/remove their CBs
         if (waitAll || fenceCount == 1) {
             for (uint32_t i = 0; i < fenceCount; ++i) {
-#if MTMERGE
+#if MTMERGESOURCE
                 update_fence_tracking(dev_data, pFences[i]);
 #endif
                 VkQueue fence_queue = dev_data->fenceMap[pFences[i]].queue;
@@ -5568,7 +5568,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(VkDevice device,
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skipCall = false;
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-#if MTMERGE
+#if MTMERGESOURCE
     loader_platform_thread_lock_mutex(&globalLock);
     skipCall = verifyFenceStatus(device, fence, "vkGetFenceStatus");
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -5579,7 +5579,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(VkDevice device,
     VkBool32 skip_call = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     if (result == VK_SUCCESS) {
-#if MTMERGE
+#if MTMERGESOURCE
         update_fence_tracking(dev_data, fence);
 #endif
         auto fence_queue = dev_data->fenceMap[fence].queue;
@@ -5603,7 +5603,7 @@ vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex
     dev_data->queues.push_back(*pQueue);
     QUEUE_NODE *pQNode = &dev_data->queueMap[*pQueue];
     pQNode->device = device;
-#if MTMERGE
+#if MTMERGESOURCE
     pQNode->lastRetiredId = 0;
     pQNode->lastSubmittedId = 0;
 #endif
@@ -5626,7 +5626,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(VkQueue queue) {
     if (VK_FALSE != skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->QueueWaitIdle(queue);
-#if MTMERGE
+#if MTMERGESOURCE
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         retire_queue_fences(dev_data, queue);
@@ -5655,7 +5655,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDeviceWaitIdle(VkDevice device)
     if (VK_FALSE != skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->DeviceWaitIdle(device);
-#if MTMERGE
+#if MTMERGESOURCE
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         retire_device_fences(dev_data, device);
@@ -5674,7 +5674,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFence(VkDevice device, VkFen
                             (uint64_t)(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
                             "Fence %#" PRIx64 " is in use by a command buffer.", (uint64_t)(fence));
     }
-#if MTMERGE
+#if MTMERGESOURCE
     delete_fence_info(dev_data, fence);
     auto item = dev_data->fenceMap.find(fence);
     if (item != dev_data->fenceMap.end()) {
@@ -5826,7 +5826,7 @@ vkDestroyBuffer(VkDevice device, VkBuffer buffer, const VkAllocationCallbacks *p
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     auto item = dev_data->bufferBindingMap.find((uint64_t)buffer);
     if (item != dev_data->bufferBindingMap.end()) {
         skipCall = clear_object_binding(dev_data, device, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
@@ -5857,7 +5857,7 @@ vkDestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocation
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
-#if MTMERGE
+#if MTMERGESOURCE
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = dev_data->imageBindingMap.find((uint64_t)image);
     if (item != dev_data->imageBindingMap.end()) {
@@ -5889,7 +5889,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(VkDevice device, VkIma
     }
     loader_platform_thread_unlock_mutex(&globalLock);
 }
-#if MTMERGE
+#if MTMERGESOURCE
 VkBool32 print_memory_range_error(layer_data *dev_data, const uint64_t object_handle, const uint64_t other_handle,
                                   VkDebugReportObjectTypeEXT object_type) {
     if (object_type == VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT) {
@@ -6033,7 +6033,9 @@ vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t comman
     bool skip_call = false;
     loader_platform_thread_lock_mutex(&globalLock);
     for (uint32_t i = 0; i < commandBufferCount; i++) {
+#if MTMERGESOURCE
         clear_cmd_buf_and_mem_references(dev_data, pCommandBuffers[i]);
+#endif
         if (dev_data->globalInFlightCmdBuffers.count(pCommandBuffers[i])) {
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
@@ -6053,7 +6055,7 @@ vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t comman
         // Remove commandBuffer reference from commandPoolMap
         dev_data->commandPoolMap[commandPool].commandBuffers.remove(pCommandBuffers[i]);
     }
-#if MTMERGE
+#if MTMERGESOURCE
     printCBList(dev_data, device);
 #endif
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -6115,7 +6117,7 @@ vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocat
     bool commandBufferComplete = false;
     bool skipCall = false;
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     // Verify that command buffers in pool are complete (not in-flight)
     // MTMTODO : Merge this with code below (separate *NotInUse() call)
     for (auto it = dev_data->commandPoolMap[commandPool].commandBuffers.begin();
@@ -6151,7 +6153,7 @@ vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocat
 
     if (!skipCall)
         dev_data->device_dispatch_table->DestroyCommandPool(device, commandPool, pAllocator);
-#if MTMERGE
+#if MTMERGESOURCE
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = dev_data->commandPoolMap[commandPool].commandBuffers.begin();
     // Remove command buffers from command buffer map
@@ -6170,7 +6172,7 @@ vkResetCommandPool(VkDevice device, VkCommandPool commandPool, VkCommandPoolRese
     bool commandBufferComplete = false;
     bool skipCall = false;
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-#if MTMERGE
+#if MTMERGESOURCE
     // MTMTODO : Merge this with *NotInUse() call below
     loader_platform_thread_lock_mutex(&globalLock);
     auto it = dev_data->commandPoolMap[commandPool].commandBuffers.begin();
@@ -6216,7 +6218,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(VkDevice device, ui
     bool skipCall = false;
     loader_platform_thread_lock_mutex(&globalLock);
     for (uint32_t i = 0; i < fenceCount; ++i) {
-#if MTMERGE
+#if MTMERGESOURCE
         // Reset fence state in fenceCreateInfo structure
         // MTMTODO : Merge with code below
         auto fence_item = dev_data->fenceMap.find(pFences[i]);
@@ -6249,7 +6251,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(VkDevice device, ui
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-#if MTMERGE
+#if MTMERGESOURCE
     // MTMTODO : Merge with code below
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = dev_data->fbMap.find(framebuffer);
@@ -6283,7 +6285,9 @@ vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocation
     dev_data->device_dispatch_table->DestroyRenderPass(device, renderPass, pAllocator);
     loader_platform_thread_lock_mutex(&globalLock);
     dev_data->renderPassMap.erase(renderPass);
+#if MTMERGESOURCE
     dev_data->passMap.erase(renderPass);
+#endif
     loader_platform_thread_unlock_mutex(&globalLock);
 }
 
@@ -6314,7 +6318,7 @@ vkCreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo, const VkA
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
         add_object_create_info(dev_data, (uint64_t)*pBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, pCreateInfo);
 #endif
         // TODO : This doesn't create deep copy of pQueueFamilyIndices so need to fix that if/when we want that data to be valid
@@ -6332,7 +6336,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBufferView(VkDevice devic
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         dev_data->bufferViewMap[*pView] = VkBufferViewCreateInfo(*pCreateInfo);
-#if MTMERGE
+#if MTMERGESOURCE
         // In order to create a valid buffer view, the buffer must have been created with at least one of the
         // following flags:  UNIFORM_TEXEL_BUFFER_BIT or STORAGE_TEXEL_BUFFER_BIT
         validate_buffer_usage_flags(dev_data, device, pCreateInfo->buffer,
@@ -6356,7 +6360,7 @@ vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, const VkAll
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
         add_object_create_info(dev_data, (uint64_t)*pImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, pCreateInfo);
 #endif
         IMAGE_LAYOUT_NODE image_node;
@@ -6418,7 +6422,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device
         VkImageViewCreateInfo localCI = VkImageViewCreateInfo(*pCreateInfo);
         ResolveRemainingLevelsLayers(dev_data, &localCI.subresourceRange, pCreateInfo->image);
         dev_data->imageViewMap[*pView] = localCI;
-#if MTMERGE
+#if MTMERGESOURCE
         // Validate that img has correct usage flags set
         validate_image_usage_flags(dev_data, device, pCreateInfo->image,
                                    VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
@@ -6437,7 +6441,7 @@ vkCreateFence(VkDevice device, const VkFenceCreateInfo *pCreateInfo, const VkAll
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         FENCE_NODE *pFN = &dev_data->fenceMap[*pFence];
-#if MTMERGE
+#if MTMERGESOURCE
         memset(pFN, 0, sizeof(MT_FENCE_INFO));
         memcpy(&(pFN->createInfo), pCreateInfo, sizeof(VkFenceCreateInfo));
         if (pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT) {
@@ -6861,7 +6865,7 @@ vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkW
     // dsUpdate will return VK_TRUE only if a bailout error occurs, so we want to call down tree when update returns VK_FALSE
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     // MTMTODO : Merge this in with existing update code below and handle descriptor copies case
     uint32_t j = 0;
     for (uint32_t i = 0; i < descriptorWriteCount; ++i) {
@@ -6911,7 +6915,7 @@ vkAllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pCr
                 pCB->device = device;
             }
         }
-#if MTMERGE
+#if MTMERGESOURCE
         printCBList(dev_data, device);
 #endif
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -6927,7 +6931,7 @@ vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginIn
     // Validate command buffer level
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
-#if MTMERGE
+#if MTMERGESOURCE
         bool commandBufferComplete = false;
         // MTMTODO : Merge this with code below
         // This implicitly resets the Cmd Buffer so make sure any fence is done and then clear memory references
@@ -7053,7 +7057,7 @@ vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginIn
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     VkResult result = dev_data->device_dispatch_table->BeginCommandBuffer(commandBuffer, pBeginInfo);
-#if MTMERGE
+#if MTMERGESOURCE
     loader_platform_thread_lock_mutex(&globalLock);
     clear_cmd_buf_and_mem_references(dev_data, commandBuffer);
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -7100,7 +7104,7 @@ vkResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags fl
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     bool commandBufferComplete = false;
     // Verify that CB is complete (not in-flight)
     skipCall = checkCBCompleted(dev_data, commandBuffer, &commandBufferComplete);
@@ -7140,7 +7144,7 @@ vkResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags fl
     }
     return result;
 }
-#if MTMERGE
+#if MTMERGESOURCE
 // TODO : For any vkCmdBind* calls that include an object which has mem bound to it,
 //    need to account for that mem now having binding to given commandBuffer
 #endif
@@ -7321,7 +7325,7 @@ vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipel
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     // MTMTODO : Merge this with code below
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     if (cb_data != dev_data->commandBufferMap.end()) {
@@ -7511,7 +7515,7 @@ vkCmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSiz
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     VkDeviceMemory mem;
     skipCall =
         get_mem_binding_from_object(dev_data, commandBuffer, (uint64_t)(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
@@ -7568,7 +7572,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(VkCommandBuffe
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     for (uint32_t i = 0; i < bindingCount; ++i) {
         VkDeviceMemory mem;
         skipCall |= get_mem_binding_from_object(dev_data, commandBuffer, (uint64_t)(pBuffers[i]),
@@ -7594,7 +7598,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(VkCommandBuffe
         dev_data->device_dispatch_table->CmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
 }
 
-#if MTMERGE
+#if MTMERGESOURCE
 /* expects globalLock to be held by caller */
 bool markStoreImagesAndBuffersAsWritten(VkCommandBuffer commandBuffer) {
     bool skip_call = false;
@@ -7643,7 +7647,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDraw(VkCommandBuffer commandBuff
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     // MTMTODO : merge with code below
     skipCall = markStoreImagesAndBuffersAsWritten(commandBuffer);
 #endif
@@ -7673,7 +7677,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexed(VkCommandBuffer comm
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     // MTMTODO : merge with code below
     skipCall = markStoreImagesAndBuffersAsWritten(commandBuffer);
 #endif
@@ -7703,7 +7707,7 @@ vkCmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize o
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     VkDeviceMemory mem;
     // MTMTODO : merge with code below
     skipCall =
@@ -7736,7 +7740,7 @@ vkCmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDevic
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     VkDeviceMemory mem;
     // MTMTODO : merge with code below
     skipCall =
@@ -7771,7 +7775,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatch(VkCommandBuffer command
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     skipCall = markStoreImagesAndBuffersAsWritten(commandBuffer);
 #endif
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
@@ -7789,7 +7793,7 @@ vkCmdDispatchIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSi
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     VkDeviceMemory mem;
     skipCall =
         get_mem_binding_from_object(dev_data, commandBuffer, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
@@ -7811,7 +7815,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBuffer(VkCommandBuffer comma
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     VkDeviceMemory mem;
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     loader_platform_thread_lock_mutex(&globalLock);
@@ -7931,7 +7935,7 @@ vkCmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout sr
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     VkDeviceMemory mem;
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     // Validate that src & dst images have correct usage flags set
@@ -7977,7 +7981,7 @@ vkCmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout sr
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     VkDeviceMemory mem;
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     // Validate that src & dst images have correct usage flags set
@@ -8019,7 +8023,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(VkCommandBuffe
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     VkDeviceMemory mem;
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     skipCall = get_mem_binding_from_object(dev_data, commandBuffer, (uint64_t)dstImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
@@ -8064,7 +8068,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(VkCommandBuffe
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     VkDeviceMemory mem;
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     skipCall = get_mem_binding_from_object(dev_data, commandBuffer, (uint64_t)srcImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
@@ -8109,7 +8113,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(VkCommandBuffer com
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     VkDeviceMemory mem;
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     skipCall =
@@ -8141,7 +8145,7 @@ vkCmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize 
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     VkDeviceMemory mem;
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     skipCall =
@@ -8244,7 +8248,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(VkCommandBuffer 
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
     VkDeviceMemory mem;
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
@@ -8275,7 +8279,7 @@ vkCmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImag
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
     VkDeviceMemory mem;
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
@@ -8306,7 +8310,7 @@ vkCmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     VkDeviceMemory mem;
     skipCall = get_mem_binding_from_object(dev_data, commandBuffer, (uint64_t)srcImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
@@ -8885,7 +8889,7 @@ vkCmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, 
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
-#if MTMERGE
+#if MTMERGESOURCE
     VkDeviceMemory mem;
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     skipCall |=
@@ -8984,7 +8988,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(VkDevice devi
         fbNode.createInfo = *localFBCI;
         std::pair<VkFramebuffer, FRAMEBUFFER_NODE> fbPair(*pFramebuffer, fbNode);
         loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
         for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
             VkImageView view = pCreateInfo->pAttachments[i];
             auto view_data = dev_data->imageViewMap.find(view);
@@ -9350,7 +9354,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
     VkResult result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
         // MTMTODO : Merge with code from below to eliminate duplication
         for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
             VkAttachmentDescription desc = pCreateInfo->pAttachments[i];
@@ -9582,7 +9586,7 @@ vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo 
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         if (pRenderPassBegin && pRenderPassBegin->renderPass) {
-#if MTMERGE
+#if MTMERGESOURCE
             auto pass_data = dev_data->passMap.find(pRenderPassBegin->renderPass);
             if (pass_data != dev_data->passMap.end()) {
                 MT_PASS_INFO &pass_info = pass_data->second;
@@ -9694,7 +9698,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndRenderPass(VkCommandBuffer co
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     if (cb_data != dev_data->commandBufferMap.end()) {
         auto pass_data = dev_data->passMap.find(cb_data->second->activeRenderPass);
@@ -10092,7 +10096,7 @@ vkMapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSi
     VkBool32 skip_call = VK_FALSE;
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGE
+#if MTMERGESOURCE
     DEVICE_MEM_INFO *pMemObj = get_mem_obj_info(dev_data, mem);
     if (pMemObj) {
         pMemObj->valid = true;
@@ -10111,14 +10115,14 @@ vkMapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSi
 
     if (VK_FALSE == skip_call) {
         result = dev_data->device_dispatch_table->MapMemory(device, mem, offset, size, flags, ppData);
-#if MTMERGE
+#if MTMERGESOURCE
         initializeAndTrackMemory(dev_data, mem, size, ppData);
 #endif
     }
     return result;
 }
 
-#if MTMERGE
+#if MTMERGESOURCE
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUnmapMemory(VkDevice device, VkDeviceMemory mem) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
@@ -10229,11 +10233,12 @@ vkInvalidateMappedMemoryRanges(VkDevice device, uint32_t memRangeCount, const Vk
 VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(VkDevice device, VkImage image, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-#if MTMERGE
+    VkBool32 skipCall = VK_FALSE;
+#if MTMERGESOURCE
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
     uint64_t image_handle = (uint64_t)(image);
-    VkBool32 skipCall =
+    skipCall =
         set_mem_binding(dev_data, device, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory");
     add_object_binding_info(dev_data, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, mem);
     {
@@ -10275,7 +10280,7 @@ vkQueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo 
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     VkBool32 skip_call = VK_FALSE;
-#if MTMERGE
+#if MTMERGESOURCE
     //MTMTODO : Merge this code with the checks below
     loader_platform_thread_lock_mutex(&globalLock);
 
@@ -10360,7 +10365,7 @@ vkQueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo 
 
     if (VK_FALSE == skip_call)
         return dev_data->device_dispatch_table->QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
-#if MTMERGE
+#if MTMERGESOURCE
     // Update semaphore state
     loader_platform_thread_lock_mutex(&globalLock);
     for (uint32_t bind_info_idx = 0; bind_info_idx < bindInfoCount; bind_info_idx++) {
@@ -10445,9 +10450,11 @@ vkDestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocat
                     }
                     dev_data->imageSubresourceMap.erase(image_sub);
                 }
+#if MTMERGESOURCE
                 skipCall = clear_object_binding(dev_data, device, (uint64_t)swapchain_image,
                                                 VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT);
                 dev_data->imageBindingMap.erase((uint64_t)swapchain_image);
+#endif
             }
         }
         delete swapchain_data->second;
@@ -10498,8 +10505,10 @@ vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCo
         if (!swapchain_node->images.empty()) {
             for (auto image : swapchain_node->images) {
                 // Add image object binding, then insert the new Mem Object and then bind it to created image
+#if MTMERGESOURCE
                 add_object_create_info(dev_data, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
                                        &swapchain_node->createInfo);
+#endif
             }
         }
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -10531,9 +10540,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
             if (swapchain_data != dev_data->device_extensions.swapchainMap.end() &&
                 pPresentInfo->pImageIndices[i] < swapchain_data->second->images.size()) {
                 VkImage image = swapchain_data->second->images[pPresentInfo->pImageIndices[i]];
+#if MTMERGESOURCE
                 skip_call |=
                     get_mem_binding_from_object(dev_data, queue, (uint64_t)(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
                 skip_call |= validate_memory_is_valid(dev_data, mem, "vkQueuePresentKHR()", image);
+#endif
                 vector<VkImageLayout> layouts;
                 if (FindLayouts(dev_data, image, layouts)) {
                     for (auto layout : layouts) {
@@ -10554,7 +10565,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
 
     if (!skip_call)
         result = dev_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
-#if MTMERGE
+#if MTMERGESOURCE
     loader_platform_thread_lock_mutex(&globalLock);
     for (uint32_t i = 0; i < pPresentInfo->waitSemaphoreCount; i++) {
         VkSemaphore sem = pPresentInfo->pWaitSemaphores[i];
@@ -10572,7 +10583,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice device, VkSwapchai
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skipCall = false;
-#if MTMERGE
+#if MTMERGESOURCE
     loader_platform_thread_lock_mutex(&globalLock);
     if (dev_data->semaphoreMap.find(semaphore) != dev_data->semaphoreMap.end()) {
         if (dev_data->semaphoreMap[semaphore].state != MEMTRACK_SEMAPHORE_STATE_UNSET) {
@@ -10841,7 +10852,7 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction)vkSetEvent;
     if (!strcmp(funcName, "vkMapMemory"))
         return (PFN_vkVoidFunction)vkMapMemory;
-#if MTMERGE
+#if MTMERGESOURCE
     if (!strcmp(funcName, "vkUnmapMemory"))
         return (PFN_vkVoidFunction)vkUnmapMemory;
     if (!strcmp(funcName, "vkAllocateMemory"))
@@ -10908,7 +10919,7 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
         return (PFN_vkVoidFunction)vkCreateDevice;
     if (!strcmp(funcName, "vkDestroyInstance"))
         return (PFN_vkVoidFunction)vkDestroyInstance;
-#if MTMERGE
+#if MTMERGESOURCE
     if (!strcmp(funcName, "vkGetPhysicalDeviceMemoryProperties"))
         return (PFN_vkVoidFunction)vkGetPhysicalDeviceMemoryProperties;
 #endif
