@@ -273,7 +273,7 @@ buildList = [
     ],
     [ ParamCheckerOutputGenerator,
       ParamCheckerGeneratorOptions(
-        filename          = 'param_check.h',
+        filename          = 'parameter_validation.h',
         apiname           = 'vulkan',
         profile           = None,
         versions          = allVersions,

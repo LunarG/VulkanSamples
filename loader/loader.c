@@ -1819,7 +1819,7 @@ static void loader_add_layer_property_meta(
                     sizeof(props->info.layerName));
             // TODO what about specVersion? for now insert loader's built
             // version
-            props->info.specVersion = VK_API_VERSION;
+            props->info.specVersion = VK_API_VERSION_1_0;
         }
     }
 }

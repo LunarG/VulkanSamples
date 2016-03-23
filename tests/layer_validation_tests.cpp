@@ -282,7 +282,7 @@ class VkLayerTest : public VkRenderFramework {
         this->app_info.applicationVersion = 1;
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
-        this->app_info.apiVersion = VK_MAKE_VERSION(1, 0, 0);
+        this->app_info.apiVersion = VK_API_VERSION_1_0;
 
         m_errorMonitor = new ErrorMonitor;
         InitFramework(instance_layer_names, device_layer_names,

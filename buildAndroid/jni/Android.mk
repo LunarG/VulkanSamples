@@ -65,8 +65,8 @@ LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
-LOCAL_MODULE := VkLayer_param_checker
-LOCAL_SRC_FILES += $(SRC_DIR)/layers/param_checker.cpp
+LOCAL_MODULE := VkLayer_parameter_validation
+LOCAL_SRC_FILES += $(SRC_DIR)/layers/parameter_validation.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/buildAndroid/generated \

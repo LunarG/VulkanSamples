@@ -211,7 +211,7 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,
 }
 
 static const VkLayerProperties pc_global_layers[] = {{
-    "VK_LAYER_LUNARG_image", VK_API_VERSION, 1, "LunarG Validation Layer",
+    "VK_LAYER_LUNARG_image", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
 }};
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -465,7 +465,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device
         if (pCreateInfo->subresourceRange.baseArrayLayer >= imageEntry->second.arraySize) {
             std::stringstream ss;
             ss << "vkCreateImageView called with baseArrayLayer " << pCreateInfo->subresourceRange.baseArrayLayer << " for image "
-               << pCreateInfo->image << " that only has " << imageEntry->second.arraySize << " mip levels.";
+               << pCreateInfo->image << " that only has " << imageEntry->second.arraySize << " array layers.";
             skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                 IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
         }

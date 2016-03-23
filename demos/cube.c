@@ -117,6 +117,8 @@ struct texture_object {
 
 static char *tex_files[] = {"lunarg.ppm"};
 
+static int validation_error = 0;
+
 struct vkcube_vs_uniform {
     // Must start with MVP
     float mvp[4][4];
@@ -268,6 +270,7 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         sprintf(message, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode,
                 pMsg);
+        validation_error = 1;
     } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
         // We know that we're submitting queues without fences, ignore this
         // warning
@@ -277,7 +280,9 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
         }
         sprintf(message, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode,
                 pMsg);
+        validation_error = 1;
     } else {
+        validation_error = 1;
         return false;
     }
 
@@ -1917,7 +1922,7 @@ static void demo_run(struct demo *demo) {
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
     case WM_CLOSE:
-        PostQuitMessage(0);
+        PostQuitMessage(validation_error);
         break;
     case WM_PAINT:
         demo_run(&demo);
@@ -2134,7 +2139,7 @@ static void demo_init_vk(struct demo *demo) {
     uint32_t enabled_layer_count = 0;
 
     char *instance_validation_layers[] = {
-        "VK_LAYER_GOOGLE_threading",     "VK_LAYER_LUNARG_param_checker",
+        "VK_LAYER_GOOGLE_threading",     "VK_LAYER_LUNARG_parameter_validation",
         "VK_LAYER_LUNARG_device_limits", "VK_LAYER_LUNARG_object_tracker",
         "VK_LAYER_LUNARG_image",         "VK_LAYER_LUNARG_core_validation",
         "VK_LAYER_LUNARG_swapchain",
@@ -2142,7 +2147,7 @@ static void demo_init_vk(struct demo *demo) {
     };
 
     demo->device_validation_layers[0] = "VK_LAYER_GOOGLE_threading";
-    demo->device_validation_layers[1] = "VK_LAYER_LUNARG_param_checker";
+    demo->device_validation_layers[1] = "VK_LAYER_LUNARG_parameter_validation";
     demo->device_validation_layers[2] = "VK_LAYER_LUNARG_device_limits";
     demo->device_validation_layers[3] = "VK_LAYER_LUNARG_object_tracker";
     demo->device_validation_layers[4] = "VK_LAYER_LUNARG_image";
@@ -2268,7 +2273,7 @@ static void demo_init_vk(struct demo *demo) {
         .applicationVersion = 0,
         .pEngineName = APP_SHORT_NAME,
         .engineVersion = 0,
-        .apiVersion = VK_MAKE_VERSION(1, 0, 0),
+        .apiVersion = VK_API_VERSION_1_0,
     };
     VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -2803,6 +2808,6 @@ int main(int argc, char **argv) {
 
     demo_cleanup(&demo);
 
-    return 0;
+    return validation_error;
 }
 #endif // _WIN32

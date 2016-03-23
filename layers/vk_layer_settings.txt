@@ -70,10 +70,10 @@ lunarg_object_tracker.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
 lunarg_object_tracker.report_flags = error,warn,perf
 lunarg_object_tracker.log_filename = stdout
 
-# VK_LAYER_LUNARG_param_checker Settings
-lunarg_param_checker.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
-lunarg_param_checker.report_flags = error,warn,perf
-lunarg_param_checker.log_filename = stdout
+# VK_LAYER_LUNARG_parameter_validation Settings
+lunarg_parameter_validation.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
+lunarg_parameter_validation.report_flags = error,warn,perf
+lunarg_parameter_validation.log_filename = stdout
 
 # VK_LAYER_LUNARG_swapchain Settings
 lunarg_swapchain.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG

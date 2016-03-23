@@ -579,7 +579,7 @@ static void app_create_instance(struct app_instance *inst) {
         .applicationVersion = 1,
         .pEngineName = APP_SHORT_NAME,
         .engineVersion = 1,
-        .apiVersion = VK_MAKE_VERSION(1, 0, 0),
+        .apiVersion = VK_API_VERSION_1_0,
     };
     VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -1178,9 +1178,9 @@ int main(int argc, char **argv) {
         ConsoleEnlarge();
 #endif
 
-    major = VK_API_VERSION >> 22;
-    minor = (VK_API_VERSION >> 12) & 0x3ff;
-    patch = VK_API_VERSION & 0xfff;
+    major = VK_API_VERSION_1_0 >> 22;
+    minor = (VK_API_VERSION_1_0 >> 12) & 0x3ff;
+    patch = VK_HEADER_VERSION & 0xfff;
     printf("===========\n");
     printf("VULKAN INFO\n");
     printf("===========\n\n");
