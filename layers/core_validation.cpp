@@ -3034,20 +3034,22 @@ static VkBool32 verifyPipelineCreateState(layer_data *my_data, const VkDevice de
 
     if (pPipeline->graphicsPipelineCI.pColorBlendState != NULL) {
         if (!my_data->physDevProperties.features.independentBlend) {
-            VkPipelineColorBlendAttachmentState *pAttachments = pAttachments = &pPipeline->attachments[0];
-            for (size_t i = 1; i < pPipeline->attachments.size(); i++) {
-                if ((pAttachments[0].blendEnable != pAttachments[i].blendEnable) ||
-                    (pAttachments[0].srcColorBlendFactor != pAttachments[i].srcColorBlendFactor) ||
-                    (pAttachments[0].dstColorBlendFactor != pAttachments[i].dstColorBlendFactor) ||
-                    (pAttachments[0].colorBlendOp != pAttachments[i].colorBlendOp) ||
-                    (pAttachments[0].srcAlphaBlendFactor != pAttachments[i].srcAlphaBlendFactor) ||
-                    (pAttachments[0].dstAlphaBlendFactor != pAttachments[i].dstAlphaBlendFactor) ||
-                    (pAttachments[0].alphaBlendOp != pAttachments[i].alphaBlendOp) ||
-                    (pAttachments[0].colorWriteMask != pAttachments[i].colorWriteMask)) {
-                    skipCall |=
-                        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                DRAWSTATE_INDEPENDENT_BLEND, "DS", "Invalid Pipeline CreateInfo: If independent blend feature not "
-                                                                   "enabled, all elements of pAttachments must be identical");
+            if (pPipeline->attachments.size() > 0) {
+                VkPipelineColorBlendAttachmentState *pAttachments = pAttachments = &pPipeline->attachments[0];
+                for (size_t i = 1; i < pPipeline->attachments.size(); i++) {
+                    if ((pAttachments[0].blendEnable != pAttachments[i].blendEnable) ||
+                        (pAttachments[0].srcColorBlendFactor != pAttachments[i].srcColorBlendFactor) ||
+                        (pAttachments[0].dstColorBlendFactor != pAttachments[i].dstColorBlendFactor) ||
+                        (pAttachments[0].colorBlendOp != pAttachments[i].colorBlendOp) ||
+                        (pAttachments[0].srcAlphaBlendFactor != pAttachments[i].srcAlphaBlendFactor) ||
+                        (pAttachments[0].dstAlphaBlendFactor != pAttachments[i].dstAlphaBlendFactor) ||
+                        (pAttachments[0].alphaBlendOp != pAttachments[i].alphaBlendOp) ||
+                        (pAttachments[0].colorWriteMask != pAttachments[i].colorWriteMask)) {
+                        skipCall |=
+                            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            DRAWSTATE_INDEPENDENT_BLEND, "DS", "Invalid Pipeline CreateInfo: If independent blend feature not "
+                            "enabled, all elements of pAttachments must be identical");
+                    }
                 }
             }
         }
