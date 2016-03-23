@@ -33,6 +33,7 @@ samples utility functions
 #include <assert.h>
 #include <cstdlib>
 #include <iomanip>
+#include <fstream>
 #include <iostream>
 #include "util.hpp"
 #include "SPIRV/GlslangToSpv.h"
@@ -453,4 +454,191 @@ void print_UUID(uint8_t *pipelineCacheUUID) {
             std::cout << '-';
         }
     }
+}
+
+void write_ppm(struct sample_info &info, const char *basename) {
+    string filename;
+    uint32_t x, y;
+    VkResult res;
+
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = info.format;
+    image_create_info.extent.width = info.width;
+    image_create_info.extent.height = info.height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    image_create_info.queueFamilyIndexCount = 0;
+    image_create_info.pQueueFamilyIndices = NULL;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.flags = 0;
+
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 0;
+    mem_alloc.memoryTypeIndex = 0;
+
+    VkImage mappableImage;
+    VkDeviceMemory mappableMemory;
+
+    /* Create a mappable image.  It will be the texture if linear images are ok
+     * to be textures or it will be the staging image if they are not. */
+    res = vkCreateImage(info.device, &image_create_info, NULL, &mappableImage);
+    assert(res == VK_SUCCESS);
+
+    VkMemoryRequirements mem_reqs;
+    vkGetImageMemoryRequirements(info.device, mappableImage, &mem_reqs);
+
+    mem_alloc.allocationSize = mem_reqs.size;
+
+    /* Find the memory type that is host mappable */
+    bool pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
+                                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                            &mem_alloc.memoryTypeIndex);
+    assert(pass);
+
+    /* allocate memory */
+    res = vkAllocateMemory(info.device, &mem_alloc, NULL, &(mappableMemory));
+    assert(res == VK_SUCCESS);
+
+    /* bind memory */
+    res = vkBindImageMemory(info.device, mappableImage, mappableMemory, 0);
+    assert(res == VK_SUCCESS);
+
+    VkCommandBufferBeginInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmd_buf_info.pNext = NULL;
+    cmd_buf_info.flags = 0;
+    cmd_buf_info.pInheritanceInfo = NULL;
+
+    res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
+    set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
+                     VK_IMAGE_LAYOUT_PREINITIALIZED,
+                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    set_image_layout(info, info.buffers[info.current_buffer].image,
+                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+    VkImageCopy copy_region;
+    copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.srcSubresource.mipLevel = 0;
+    copy_region.srcSubresource.baseArrayLayer = 0;
+    copy_region.srcSubresource.layerCount = 1;
+    copy_region.srcOffset.x = 0;
+    copy_region.srcOffset.y = 0;
+    copy_region.srcOffset.z = 0;
+    copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.dstSubresource.mipLevel = 0;
+    copy_region.dstSubresource.baseArrayLayer = 0;
+    copy_region.dstSubresource.layerCount = 1;
+    copy_region.dstOffset.x = 0;
+    copy_region.dstOffset.y = 0;
+    copy_region.dstOffset.z = 0;
+    copy_region.extent.width = info.width;
+    copy_region.extent.height = info.height;
+    copy_region.extent.depth = 1;
+
+    /* Put the copy command into the command buffer */
+    vkCmdCopyImage(info.cmd, info.buffers[info.current_buffer].image,
+                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mappableImage,
+                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
+
+    set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
+                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     VK_IMAGE_LAYOUT_GENERAL);
+
+    res = vkEndCommandBuffer(info.cmd);
+    assert(res == VK_SUCCESS);
+    const VkCommandBuffer cmd_bufs[] = {info.cmd};
+    VkFenceCreateInfo fenceInfo;
+    VkFence cmdFence;
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+    fenceInfo.flags = 0;
+    vkCreateFence(info.device, &fenceInfo, NULL, &cmdFence);
+
+    VkSubmitInfo submit_info[1] = {};
+    submit_info[0].pNext = NULL;
+    submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info[0].waitSemaphoreCount = 0;
+    submit_info[0].pWaitSemaphores = NULL;
+    submit_info[0].pWaitDstStageMask = NULL;
+    submit_info[0].commandBufferCount = 1;
+    submit_info[0].pCommandBuffers = cmd_bufs;
+    submit_info[0].signalSemaphoreCount = 0;
+    submit_info[0].pSignalSemaphores = NULL;
+
+    /* Queue the command buffer for execution */
+    res = vkQueueSubmit(info.queue, 1, submit_info, cmdFence);
+    assert(res == VK_SUCCESS);
+
+    /* Make sure command buffer is finished before mapping */
+    do {
+        res =
+            vkWaitForFences(info.device, 1, &cmdFence, VK_TRUE, FENCE_TIMEOUT);
+    } while (res == VK_TIMEOUT);
+    assert(res == VK_SUCCESS);
+
+    vkDestroyFence(info.device, cmdFence, NULL);
+
+    filename.append(basename);
+    filename.append(".ppm");
+
+    VkImageSubresource subres = {};
+    subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    subres.mipLevel = 0;
+    subres.arrayLayer = 0;
+    VkSubresourceLayout sr_layout;
+    vkGetImageSubresourceLayout(info.device, mappableImage, &subres,
+                                &sr_layout);
+
+    char *ptr;
+    res = vkMapMemory(info.device, mappableMemory, 0, mem_reqs.size, 0,
+                      (void **)&ptr);
+    assert(res == VK_SUCCESS);
+
+    ptr += sr_layout.offset;
+    ofstream file(filename.c_str(), ios::binary);
+
+    file << "P6\n";
+    file << info.width << " ";
+    file << info.height << "\n";
+    file << 255 << "\n";
+
+    for (y = 0; y < info.height; y++) {
+        const int *row = (const int *)ptr;
+        int swapped;
+
+        if (info.format == VK_FORMAT_B8G8R8A8_UNORM) {
+            for (x = 0; x < info.width; x++) {
+                swapped = (*row & 0xff00ff00) | (*row & 0x000000ff) << 16 |
+                          (*row & 0x00ff0000) >> 16;
+                file.write((char *)&swapped, 3);
+                row++;
+            }
+        } else if (info.format == VK_FORMAT_R8G8B8A8_UNORM) {
+            for (x = 0; x < info.width; x++) {
+                file.write((char *)row, 3);
+                row++;
+            }
+        } else {
+            printf("Unrecognized image format - will not write image files");
+            break;
+        }
+
+        ptr += sr_layout.rowPitch;
+    }
+
+    file.close();
+    vkDestroyImage(info.device, mappableImage, NULL);
+    vkFreeMemory(info.device, mappableMemory, NULL);
 }

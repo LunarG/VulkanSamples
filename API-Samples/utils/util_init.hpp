@@ -63,7 +63,10 @@ void execute_begin_command_buffer(struct sample_info &info);
 void execute_end_command_buffer(struct sample_info &info);
 void execute_queue_command_buffer(struct sample_info &info);
 void init_device_queue(struct sample_info &info);
-void init_swap_chain(struct sample_info &info,  VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+void init_swap_chain(
+    struct sample_info &info,
+    VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                   VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
 void init_depth_buffer(struct sample_info &info);
 void init_uniform_buffer(struct sample_info &info);
 void init_descriptor_and_pipeline_layouts(struct sample_info &info,

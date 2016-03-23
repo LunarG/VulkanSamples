@@ -243,6 +243,7 @@ void set_image_layout(struct sample_info &demo, VkImage image,
 
 bool read_ppm(char const *const filename, int &width, int &height,
               uint64_t rowPitch, unsigned char *dataPtr);
+void write_ppm(struct sample_info &info, const char *basename);
 void extract_version(uint32_t version, uint32_t &major, uint32_t &minor,
                      uint32_t &patch);
 bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
