@@ -212,6 +212,21 @@ static inline VkBool32 will_log_msg(debug_report_data *debug_data, VkFlags msgFl
     return true;
 }
 
+#ifdef WIN32
+static inline int vasprintf(char **strp, char const *fmt, va_list ap) {
+    *strp = nullptr;
+    int size = _vscprintf(fmt, ap);
+    if (size >= 0) {
+        *strp = (char *)malloc(size+1);
+        if (!*strp) {
+            return -1;
+        }
+        _vsnprintf(*strp, size+1, fmt, ap);
+    }
+    return size;
+}
+#endif
+
 /*
  * Output log message via DEBUG_REPORT
  * Takes format and variable arg list so that output string
@@ -230,12 +245,14 @@ static inline VkBool32 log_msg(debug_report_data *debug_data, VkFlags msgFlags, 
         return false;
     }
 
-    char str[1024];
     va_list argptr;
     va_start(argptr, format);
-    vsnprintf(str, 1024, format, argptr);
+    char *str;
+    vasprintf(&str, format, argptr);
     va_end(argptr);
-    return debug_report_log_msg(debug_data, msgFlags, objectType, srcObject, location, msgCode, pLayerPrefix, str);
+    VkBool32 result = debug_report_log_msg(debug_data, msgFlags, objectType, srcObject, location, msgCode, pLayerPrefix, str);
+    free(str);
+    return result;
 }
 
 static inline VKAPI_ATTR VkBool32 VKAPI_CALL log_callback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
