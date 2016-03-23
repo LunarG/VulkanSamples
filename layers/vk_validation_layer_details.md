@@ -385,6 +385,7 @@ This layer is a work in progress. VK_LAYER_LUNARG_swapchain layer is intended to
 | Valid use of queueFamilyIndex | Validates that a queueFamilyIndex not used before vkGetPhysicalDeviceQueueFamilyProperties() was called | DID_NOT_QUERY_QUEUE_FAMILIES | vkGetPhysicalDeviceSurfaceSupportKHR | NA | None |
 | Valid queueFamilyIndex value | Validates that a queueFamilyIndex value is less-than pQueueFamilyPropertyCount returned by vkGetPhysicalDeviceQueueFamilyProperties | QUEUE_FAMILY_INDEX_TOO_LARGE | vkGetPhysicalDeviceSurfaceSupportKHR | NA | None |
 | Supported combination of queue and surface | Validates that the surface associated with a swapchain was seen to support the queueFamilyIndex of a given queue | SURFACE_NOT_SUPPORTED_WITH_QUEUE | vkQueuePresentKHR | NA | None |
+| Proper synchronization of acquired images | vkAcquireNextImageKHR should be called with a valid semaphore and/or fence | NO_SYNC_FOR_ACQUIRE | vkAcquireNextImageKHR | NA | None |
 
 Note: The following platform-specific functions are not mentioned above, because they are protected by ifdefs, which cause test failures:
 

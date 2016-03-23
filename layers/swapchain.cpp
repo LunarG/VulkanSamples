@@ -1743,6 +1743,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice de
                               "%s() called even though the %s extension was not enabled for this VkDevice.", __FUNCTION__,
                               VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
+    if ((semaphore == VK_NULL_HANDLE) && (fence == VK_NULL_HANDLE)) {
+        skipCall |= LOG_WARNING(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_NO_SYNC_FOR_ACQUIRE,
+                                "%s() called with both the semaphore and fence parameters set to "
+                                "VK_NULL_HANDLE (at least one should be used).", __FUNCTION__);
+    }
     SwpSwapchain *pSwapchain = &my_data->swapchainMap[swapchain];
     if (pSwapchain) {
         // Look to see if the application is trying to own too many images at
