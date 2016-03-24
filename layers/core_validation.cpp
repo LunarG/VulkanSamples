@@ -6760,8 +6760,10 @@ vkAllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAl
                     if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pDescriptorSets[i], __LINE__,
                                 DRAWSTATE_OUT_OF_MEMORY, "DS",
-                                "Out of memory while attempting to allocate SET_NODE in vkAllocateDescriptorSets()"))
+                                "Out of memory while attempting to allocate SET_NODE in vkAllocateDescriptorSets()")) {
+                        loader_platform_thread_unlock_mutex(&globalLock);
                         return VK_ERROR_VALIDATION_FAILED_EXT;
+                    }
                 } else {
                     // TODO : Pool should store a total count of each type of Descriptor available
                     //  When descriptors are allocated, decrement the count and validate here
@@ -6777,8 +6779,10 @@ vkAllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAl
                                     __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
                                     "Unable to find set layout node for layout %#" PRIxLEAST64
                                     " specified in vkAllocateDescriptorSets() call",
-                                    (uint64_t)pAllocateInfo->pSetLayouts[i]))
+                                    (uint64_t)pAllocateInfo->pSetLayouts[i])) {
+                            loader_platform_thread_unlock_mutex(&globalLock);
                             return VK_ERROR_VALIDATION_FAILED_EXT;
+                        }
                     }
                     pNewNode->pLayout = pLayout;
                     pNewNode->pool = pAllocateInfo->descriptorPool;
@@ -7801,7 +7805,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBuffer(VkCommandBuffer comma
 #if MTMERGESOURCE
     VkDeviceMemory mem;
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
-    loader_platform_thread_lock_mutex(&globalLock);
     skipCall =
         get_mem_binding_from_object(dev_data, commandBuffer, (uint64_t)srcBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     if (cb_data != dev_data->commandBufferMap.end()) {
@@ -9329,6 +9332,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
     // Validate
     skip_call |= ValidateLayouts(dev_data, device, pCreateInfo);
     if (VK_FALSE != skip_call) {
+        loader_platform_thread_unlock_mutex(&globalLock);
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
