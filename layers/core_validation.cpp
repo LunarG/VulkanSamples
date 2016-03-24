@@ -7739,9 +7739,7 @@ vkCmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDevic
     if (pCB) {
         skipCall |= addCmd(dev_data, pCB, CMD_DRAWINDEXEDINDIRECT, "vkCmdDrawIndexedIndirect()");
         pCB->drawCount[DRAW_INDEXED_INDIRECT]++;
-        loader_platform_thread_unlock_mutex(&globalLock);
         skipCall |= validate_draw_state(dev_data, pCB, VK_TRUE);
-        loader_platform_thread_lock_mutex(&globalLock);
         // TODO : Need to pass commandBuffer as srcObj here
         skipCall |=
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
@@ -10102,7 +10100,9 @@ vkMapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSi
     if (VK_FALSE == skip_call) {
         result = dev_data->device_dispatch_table->MapMemory(device, mem, offset, size, flags, ppData);
 #if MTMERGESOURCE
+        loader_platform_thread_lock_mutex(&globalLock);
         initializeAndTrackMemory(dev_data, mem, size, ppData);
+        loader_platform_thread_unlock_mutex(&globalLock);
 #endif
     }
     return result;
