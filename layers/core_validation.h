@@ -419,8 +419,8 @@ typedef struct _PIPELINE_NODE {
     VkComputePipelineCreateInfo computePipelineCI;
     // Flag of which shader stages are active for this pipeline
     uint32_t active_shaders;
-    // Capture which sets are actually used by the shaders of this pipeline
-    std::set<unsigned> active_sets;
+    // Capture which slots (set#->bindings) are actually used by the shaders of this pipeline
+    unordered_map<uint32_t, unordered_set<uint32_t>> active_slots;
     // Vtx input info (if any)
     std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
     std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions;
@@ -429,9 +429,7 @@ typedef struct _PIPELINE_NODE {
     _PIPELINE_NODE()
         : pipeline{}, graphicsPipelineCI{}, vertexInputCI{}, iaStateCI{}, tessStateCI{}, vpStateCI{}, rsStateCI{}, msStateCI{},
           cbStateCI{}, dsStateCI{}, dynStateCI{}, vsCI{}, tcsCI{}, tesCI{}, gsCI{}, fsCI{}, computePipelineCI{}, active_shaders(0),
-          active_sets(),
-          vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments()
-          {}
+          active_slots(), vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments() {}
 } PIPELINE_NODE;
 
 class BASE_NODE {
@@ -597,7 +595,7 @@ typedef struct _LAYOUT_NODE {
     vector<VkShaderStageFlags> stageFlags;               // stageFlags per descriptor in this
                                                          // layout to verify correct updates
     unordered_map<uint32_t, uint32_t> bindingToIndexMap; // map set binding # to
-                                                         // pBindings index
+                                                         // createInfo.pBindings index
     // Default constructor
     _LAYOUT_NODE() : layout{}, createInfo{}, startIndex(0), endIndex(0), dynamicDescriptorCount(0){};
 } LAYOUT_NODE;
