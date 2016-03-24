@@ -491,8 +491,8 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
     if (inst->phys_devs)
         loader_heap_free(inst, inst->phys_devs);
     count = inst->total_gpu_count;
-    inst->phys_devs = (struct loader_physical_device *)loader_heap_alloc(
-        inst, count * sizeof(struct loader_physical_device),
+    inst->phys_devs = (struct loader_physical_device_tramp *)loader_heap_alloc(
+        inst, count * sizeof(struct loader_physical_device_tramp),
         VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (!inst->phys_devs) {
         loader_platform_thread_unlock_mutex(&loader_lock);
@@ -505,6 +505,7 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
         loader_set_dispatch((void *)&inst->phys_devs[i], inst->disp);
         inst->phys_devs[i].this_icd = inst->phys_devs_term[i].this_icd;
         inst->phys_devs[i].phys_dev = pPhysicalDevices[i];
+        inst->phys_devs[i].icd_phys_dev = inst->phys_devs_term[i].phys_dev;
 
         // copy wrapped object into Application provided array
         pPhysicalDevices[i] = (VkPhysicalDevice)&inst->phys_devs[i];
@@ -586,7 +587,7 @@ vkCreateDevice(VkPhysicalDevice physicalDevice,
                const VkDeviceCreateInfo *pCreateInfo,
                const VkAllocationCallbacks *pAllocator, VkDevice *pDevice) {
     VkResult res;
-    struct loader_physical_device *phys_dev;
+    struct loader_physical_device_tramp *phys_dev;
     struct loader_icd *icd;
     struct loader_device *dev;
     struct loader_instance *inst;
@@ -596,7 +597,7 @@ vkCreateDevice(VkPhysicalDevice physicalDevice,
 
     loader_platform_thread_lock_mutex(&loader_lock);
 
-    phys_dev = (struct loader_physical_device *)physicalDevice;
+    phys_dev = (struct loader_physical_device_tramp *)physicalDevice;
     icd = phys_dev->this_icd;
     if (!icd) {
         loader_platform_thread_unlock_mutex(&loader_lock);
@@ -629,9 +630,8 @@ vkCreateDevice(VkPhysicalDevice physicalDevice,
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
-    //TODO handle more than one phys dev per icd (icd->phys_devs[0])
     res = loader_add_device_extensions(
-        inst, icd, icd->phys_devs[0],
+        inst, icd, phys_dev->icd_phys_dev,
         phys_dev->this_icd->this_icd_lib->lib_name, &icd_exts);
     if (res != VK_SUCCESS) {
         loader_platform_thread_unlock_mutex(&loader_lock);
@@ -763,8 +763,8 @@ vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
                                      uint32_t *pPropertyCount,
                                      VkExtensionProperties *pProperties) {
     VkResult res = VK_SUCCESS;
-    struct loader_physical_device *phys_dev;
-    phys_dev = (struct loader_physical_device *)physicalDevice;
+    struct loader_physical_device_tramp *phys_dev;
+    phys_dev = (struct loader_physical_device_tramp *)physicalDevice;
 
     loader_platform_thread_lock_mutex(&loader_lock);
 
@@ -830,14 +830,14 @@ vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice,
                                  uint32_t *pPropertyCount,
                                  VkLayerProperties *pProperties) {
     uint32_t copy_size;
-    struct loader_physical_device *phys_dev;
+    struct loader_physical_device_tramp *phys_dev;
 
     loader_platform_thread_lock_mutex(&loader_lock);
 
     /* Don't dispatch this call down the instance chain, want all device layers
        enumerated and instance chain may not contain all device layers */
 
-    phys_dev = (struct loader_physical_device *)physicalDevice;
+    phys_dev = (struct loader_physical_device_tramp *)physicalDevice;
     const struct loader_instance *inst = phys_dev->this_icd->this_instance;
     uint32_t count = inst->device_layer_list.count;
 
