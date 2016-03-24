@@ -753,7 +753,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWaylandSurfaceKHR(
     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     // First, check to ensure the appropriate extension was enabled:
     struct loader_instance *ptr_instance = loader_get_instance(instance);
-    if (!ptr_instance->wsi_waland_surface_enabled) {
+    if (!ptr_instance->wsi_wayland_surface_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "VK_KHR_wayland_surface extension not enabled.  "
                    "vkCreateWaylandSurfaceKHR not executed!\n");
@@ -808,7 +808,7 @@ terminator_GetPhysicalDeviceWaylandPresentationSupportKHR(
         (struct loader_physical_device *)physicalDevice;
     struct loader_instance *ptr_instance =
         (struct loader_instance *)phys_dev->this_icd->this_instance;
-    if (!ptr_instance->wsi_waland_surface_enabled) {
+    if (!ptr_instance->wsi_wayland_surface_enabled) {
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "VK_KHR_wayland_surface extension not enabled.  "
                    "vkGetPhysicalDeviceWaylandPresentationSupportKHR not executed!\n");
