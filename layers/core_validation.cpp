@@ -2852,10 +2852,10 @@ static VkBool32 validate_dynamic_offsets(layer_data *my_data, const GLOBAL_CB_NO
             uint32_t startIdx = getBindingStartIndex(layout_node, binding);
             uint32_t endIdx = getBindingEndIndex(layout_node, binding);
             for (uint32_t i = startIdx; i <= endIdx; ++i) {
-                // TODO : Flag error here if set_node->ppDescriptors[i] is NULL
-                switch (set_node->ppDescriptors[i]->sType) {
+                // TODO : Flag error here if set_node->pDescriptorUpdates[i] is NULL
+                switch (set_node->pDescriptorUpdates[i]->sType) {
                 case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
-                    pWDS = (VkWriteDescriptorSet *)set_node->ppDescriptors[i];
+                    pWDS = (VkWriteDescriptorSet *)set_node->pDescriptorUpdates[i];
                     if ((pWDS->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
                         (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
                         for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
@@ -4021,7 +4021,7 @@ static VkBool32 dsUpdate(layer_data *my_data, VkDevice device, uint32_t descript
                             // Now update appropriate descriptor(s) to point to new Update node
                             for (uint32_t j = startIndex; j <= endIndex; j++) {
                                 assert(j < pSet->descriptorCount);
-                                pSet->ppDescriptors[j] = pNewNode;
+                                pSet->pDescriptorUpdates[j] = pNewNode;
                             }
                         }
                     }
@@ -4098,7 +4098,7 @@ static VkBool32 dsUpdate(layer_data *my_data, VkDevice device, uint32_t descript
                         // point dst descriptor at corresponding src descriptor
                         // TODO : This may be a hole. I believe copy should be its own copy,
                         //  otherwise a subsequent write update to src will incorrectly affect the copy
-                        pDstSet->ppDescriptors[j + dstStartIndex] = pSrcSet->ppDescriptors[j + srcStartIndex];
+                        pDstSet->pDescriptorUpdates[j + dstStartIndex] = pSrcSet->pDescriptorUpdates[j + srcStartIndex];
                         pDstSet->pUpdateStructs = pSrcSet->pUpdateStructs;
                     }
                 }
@@ -4164,7 +4164,7 @@ static void freeShadowUpdateTree(SET_NODE *pSet) {
     pSet->pUpdateStructs = NULL;
     GENERIC_HEADER *pFreeUpdate = pShadowUpdate;
     // Clear the descriptor mappings as they will now be invalid
-    memset(pSet->ppDescriptors, 0, pSet->descriptorCount * sizeof(GENERIC_HEADER *));
+    pSet->pDescriptorUpdates.clear();
     while (pShadowUpdate) {
         pFreeUpdate = pShadowUpdate;
         pShadowUpdate = (GENERIC_HEADER *)pShadowUpdate->pNext;
@@ -4217,7 +4217,6 @@ static void deletePools(layer_data *my_data) {
             // Freeing layouts handled in deleteLayouts() function
             // Free Update shadow struct tree
             freeShadowUpdateTree(pFreeSet);
-            delete[] pFreeSet->ppDescriptors;
             delete pFreeSet;
         }
         delete (*ii).second;
@@ -6790,9 +6789,7 @@ vkAllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAl
                     pNewNode->set = pDescriptorSets[i];
                     pNewNode->descriptorCount = (pLayout->createInfo.bindingCount != 0) ? pLayout->endIndex + 1 : 0;
                     if (pNewNode->descriptorCount) {
-                        size_t descriptorArraySize = sizeof(GENERIC_HEADER *) * pNewNode->descriptorCount;
-                        pNewNode->ppDescriptors = new GENERIC_HEADER *[descriptorArraySize];
-                        memset(pNewNode->ppDescriptors, 0, descriptorArraySize);
+                        pNewNode->pDescriptorUpdates.reserve(pNewNode->descriptorCount);
                     }
                     dev_data->setMap[pDescriptorSets[i]] = pNewNode;
                 }
