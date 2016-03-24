@@ -2247,11 +2247,11 @@ static bool attachment_references_compatible(const uint32_t index, const VkAttac
                                              const VkAttachmentReference *pSecondary, const uint32_t secondaryCount,
                                              const VkAttachmentDescription *pSecondaryAttachments) {
     if (index >= primaryCount) { // Check secondary as if primary is VK_ATTACHMENT_UNUSED
-        if (VK_ATTACHMENT_UNUSED != pSecondary[index].attachment)
-            return false;
+        if (VK_ATTACHMENT_UNUSED == pSecondary[index].attachment)
+            return true;
     } else if (index >= secondaryCount) { // Check primary as if secondary is VK_ATTACHMENT_UNUSED
-        if (VK_ATTACHMENT_UNUSED != pPrimary[index].attachment)
-            return false;
+        if (VK_ATTACHMENT_UNUSED == pPrimary[index].attachment)
+            return true;
     } else { // format and sample count must match
         if ((pPrimaryAttachments[pPrimary[index].attachment].format ==
              pSecondaryAttachments[pSecondary[index].attachment].format) &&
