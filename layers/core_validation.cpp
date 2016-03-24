@@ -2453,6 +2453,16 @@ static bool descriptor_type_match(layer_data *my_data, shader_module const *modu
         return descriptor_type == VK_DESCRIPTOR_TYPE_SAMPLER;
 
     case spv::OpTypeSampledImage:
+        if (descriptor_type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) {
+            /* Slight relaxation for some GLSL historical madness: samplerBuffer
+             * doesn't really have a sampler, and a texel buffer descriptor
+             * doesn't really provide one. Allow this slight mismatch.
+             */
+            auto image_type = module->get_def(type.word(2));
+            auto dim = image_type.word(3);
+            auto sampled = image_type.word(7);
+            return dim == spv::DimBuffer && sampled == 1;
+        }
         return descriptor_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 
     case spv::OpTypeImage: {
