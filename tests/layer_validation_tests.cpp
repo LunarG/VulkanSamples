@@ -263,6 +263,7 @@ class VkLayerTest : public VkRenderFramework {
         // Use Threading layer first to protect others from
         // ThreadCommandBufferCollision test
         instance_layer_names.push_back("VK_LAYER_GOOGLE_threading");
+        instance_layer_names.push_back("VK_LAYER_LUNARG_parameter_validation");
         instance_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
         instance_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
         instance_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
@@ -270,6 +271,7 @@ class VkLayerTest : public VkRenderFramework {
         instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
 
         device_layer_names.push_back("VK_LAYER_GOOGLE_threading");
+        device_layer_names.push_back("VK_LAYER_LUNARG_parameter_validation");
         device_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
         device_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
         device_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
@@ -3716,7 +3718,7 @@ TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
     // Create an out-of-range queueFamilyIndex
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "vkCreateBuffer has QueueFamilyIndex greater than");
+        "queueFamilyIndex 777, must have been given when the device was created.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -3728,13 +3730,14 @@ TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
     // Introduce failure by specifying invalid queue_family_index
     uint32_t qfi = 777;
     buffCI.pQueueFamilyIndices = &qfi;
+    buffCI.sharingMode = VK_SHARING_MODE_CONCURRENT; // qfi only matters in CONCURRENT mode
 
     VkBuffer ib;
     vkCreateBuffer(m_device->device(), &buffCI, NULL, &ib);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not receive Error 'vkCreateBuffer() has "
-        "QueueFamilyIndex greater than...'";
+        FAIL() << "Did not receive Error 'queueFamilyIndex %d, must have "
+        "been given when the device was created.'";
         m_errorMonitor->DumpFailureMsgs();
     }
 }
