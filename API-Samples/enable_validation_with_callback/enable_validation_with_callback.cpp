@@ -74,21 +74,10 @@ int main(int argc, char *argv[]) {
 
     /* VULKAN_KEY_START */
 
-    /* Common validation layers
-     * Loader will chain them together in the order given,
-     * though order doesn't really matter for these validation
-     * layers.
+    /* Use standard_validation meta layer that enables all
+     * recommended validation layers
      */
-    info.instance_layer_names.push_back("VK_LAYER_GOOGLE_threading");
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_draw_state");
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_image");
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_mem_tracker");
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_param_checker");
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
-    info.instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
-
+    info.instance_layer_names.push_back("VK_LAYER_LUNARG_standard_validation");
     if (!demo_check_layers(info.instance_layer_properties,
                            info.instance_layer_names)) {
         exit(1);
@@ -125,23 +114,12 @@ int main(int argc, char *argv[]) {
 
     init_device_layer_properties(info);
 
-    /*
-     * Common validation layers
-     * Loader will chain them together in the order given,
-     * though order doesn't really matter for these validation
-     * layers.
+    /* Use standard_validation meta layer that enables all
+     * recommended validation layers
      * Instance layers and Device layers are independent so
      * must enable validation layers for both to see everything.
      */
-    info.device_layer_names.push_back("VK_LAYER_GOOGLE_threading");
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_draw_state");
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_image");
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_mem_tracker");
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_param_checker");
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
-    info.device_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
+    info.device_layer_names.push_back("VK_LAYER_LUNARG_standard_validation");
 
     if (!demo_check_layers(info.device_layer_properties,
                            info.device_layer_names)) {
