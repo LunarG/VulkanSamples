@@ -33,6 +33,7 @@
 #define PARAMETER_VALIDATION_UTILS_H
 
 #include <algorithm>
+#include <cstdlib>
 #include <string>
 
 #include "vulkan/vulkan.h"
@@ -46,8 +47,28 @@ struct GenericHeader {
 };
 }
 
-// String returned by string_VkStructureType for an unrecognized type
+// Layer name string to be logged with validation messages.
+const char ParameterValidationName[] = "ParameterValidation";
+
+// String returned by string_VkStructureType for an unrecognized type.
 const std::string UnsupportedStructureTypeString = "Unhandled VkStructureType";
+
+// The base value used when computing the offset for an enumeration token value that is added by an extension.
+// When validating enumeration tokens, any value >= to this value is considered to be provided by an extension.
+// See Appendix C.10 "Assigning Extension Token Values" from the Vulkan specification
+const uint32_t ExtEnumBaseValue = 1000000000;
+
+template <typename T> bool is_extension_added_token(T value) {
+    return (std::abs(static_cast<int32_t>(value)) >= ExtEnumBaseValue);
+}
+
+// VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE token is a special case that was converted from a core token to an
+// extension added token.  Its original value was intentionally preserved after the conversion, so it does not use
+// the base value that other extension added tokens use, and it does not fall within the enum's begin/end range.
+template <> bool is_extension_added_token(VkSamplerAddressMode value) {
+    bool result = (std::abs(static_cast<int32_t>(value)) >= ExtEnumBaseValue);
+    return (result || (value == VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE));
+}
 
 /**
  * Validate a required pointer.
@@ -65,8 +86,8 @@ static VkBool32 validate_required_pointer(debug_report_data *report_data, const 
     VkBool32 skipCall = VK_FALSE;
 
     if (value == NULL) {
-        skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                            "%s: required parameter %s specified as NULL", apiName, parameterName);
+        skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                            ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, parameterName);
     }
 
     return skipCall;
@@ -101,7 +122,7 @@ VkBool32 validate_array(debug_report_data *report_data, const char *apiName, con
     if (count == NULL) {
         if (countPtrRequired == VK_TRUE) {
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                "PARAMCHECK", "%s: required parameter %s specified as NULL", apiName, countName);
+                                ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, countName);
         }
     } else {
         skipCall |= validate_array(report_data, apiName, countName, arrayName, (*count), array, countValueRequired, arrayRequired);
@@ -134,15 +155,15 @@ VkBool32 validate_array(debug_report_data *report_data, const char *apiName, con
 
     // Count parameters not tagged as optional cannot be 0
     if ((count == 0) && (countRequired == VK_TRUE)) {
-        skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                            "%s: value of %s must be greater than 0", apiName, countName);
+        skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                            ParameterValidationName, "%s: value of %s must be greater than 0", apiName, countName);
     }
 
     // Array parameters not tagged as optional cannot be NULL,
     // unless the count is 0
     if ((array == NULL) && (arrayRequired == VK_TRUE) && (count != 0)) {
-        skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                            "%s: required parameter %s specified as NULL", apiName, arrayName);
+        skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                            ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, arrayName);
     }
 
     return skipCall;
@@ -168,11 +189,11 @@ VkBool32 validate_struct_type(debug_report_data *report_data, const char *apiNam
     if (value == NULL) {
         if (required == VK_TRUE) {
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                "PARAMCHECK", "%s: required parameter %s specified as NULL", apiName, parameterName);
+                                ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, parameterName);
         }
     } else if (value->sType != sType) {
-        skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                            "%s: parameter %s->sType must be %s", apiName, parameterName, sTypeName);
+        skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                            ParameterValidationName, "%s: parameter %s->sType must be %s", apiName, parameterName, sTypeName);
     }
 
     return skipCall;
@@ -209,7 +230,7 @@ VkBool32 validate_struct_type_array(debug_report_data *report_data, const char *
     if (count == NULL) {
         if (countPtrRequired == VK_TRUE) {
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                "PARAMCHECK", "%s: required parameter %s specified as NULL", apiName, countName);
+                                ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, countName);
         }
     } else {
         skipCall |= validate_struct_type_array(report_data, apiName, countName, arrayName, sTypeName, (*count), array, sType,
@@ -248,21 +269,22 @@ VkBool32 validate_struct_type_array(debug_report_data *report_data, const char *
         // Count parameters not tagged as optional cannot be 0
         if ((count == 0) && (countRequired == VK_TRUE)) {
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                "PARAMCHECK", "%s: parameter %s must be greater than 0", apiName, countName);
+                                ParameterValidationName, "%s: parameter %s must be greater than 0", apiName, countName);
         }
 
         // Array parameters not tagged as optional cannot be NULL,
         // unless the count is 0
         if ((array == NULL) && (arrayRequired == VK_TRUE) && (count != 0)) {
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                "PARAMCHECK", "%s: required parameter %s specified as NULL", apiName, arrayName);
+                                ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, arrayName);
         }
     } else {
         // Verify that all structs in the array have the correct type
         for (uint32_t i = 0; i < count; ++i) {
             if (array[i].sType != sType) {
-                skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                    "PARAMCHECK", "%s: parameter %s[%d].sType must be %s", apiName, arrayName, i, sTypeName);
+                skipCall |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                            ParameterValidationName, "%s: parameter %s[%d].sType must be %s", apiName, arrayName, i, sTypeName);
             }
         }
     }
@@ -297,21 +319,22 @@ static VkBool32 validate_string_array(debug_report_data *report_data, const char
         // Count parameters not tagged as optional cannot be 0
         if ((count == 0) && (countRequired == VK_TRUE)) {
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                "PARAMCHECK", "%s: parameter %s must be greater than 0", apiName, countName);
+                                ParameterValidationName, "%s: parameter %s must be greater than 0", apiName, countName);
         }
 
         // Array parameters not tagged as optional cannot be NULL,
         // unless the count is 0
         if ((array == NULL) && (arrayRequired == VK_TRUE) && (count != 0)) {
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                "PARAMCHECK", "%s: required parameter %s specified as NULL", apiName, arrayName);
+                                ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, arrayName);
         }
     } else {
         // Verify that strings in the array not NULL
         for (uint32_t i = 0; i < count; ++i) {
             if (array[i] == NULL) {
-                skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                    "PARAMCHECK", "%s: required parameter %s[%d] specified as NULL", apiName, arrayName, i);
+                skipCall |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                            ParameterValidationName, "%s: required parameter %s[%d] specified as NULL", apiName, arrayName, i);
             }
         }
     }
@@ -343,7 +366,7 @@ static VkBool32 validate_struct_pnext(debug_report_data *report_data, const char
     if (next != NULL) {
         if (allowedTypeCount == 0) {
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                "PARAMCHECK", "%s: value of %s must be NULL", apiName, parameterName);
+                                ParameterValidationName, "%s: value of %s must be NULL", apiName, parameterName);
         } else {
             const VkStructureType *start = allowedTypes;
             const VkStructureType *end = allowedTypes + allowedTypeCount;
@@ -355,12 +378,14 @@ static VkBool32 validate_struct_pnext(debug_report_data *report_data, const char
 
                     if (typeName == UnsupportedStructureTypeString) {
                         skipCall |= log_msg(
-                            report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+                            report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                            ParameterValidationName,
                             "%s: %s chain includes a structure with unexpected VkStructureType (%d); Allowed structures are [%s]",
                             apiName, parameterName, current->sType, allowedStructNames);
                     } else {
                         skipCall |= log_msg(
-                            report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+                            report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                            ParameterValidationName,
                             "%s: %s chain includes a structure with unexpected VkStructureType %s; Allowed structures are [%s]",
                             apiName, parameterName, typeName.c_str(), allowedStructNames);
                     }
@@ -368,6 +393,101 @@ static VkBool32 validate_struct_pnext(debug_report_data *report_data, const char
 
                 current = reinterpret_cast<const GenericHeader *>(current->pNext);
             }
+        }
+    }
+
+    return skipCall;
+}
+
+/**
+* Validate a VkBool32 value.
+*
+* Generate a warning if a VkBool32 value is neither VK_TRUE nor VK_FALSE.
+*
+* @param report_data debug_report_data object for routing validation messages.
+* @param apiName Name of API call being validated.
+* @param parameterName Name of parameter being validated.
+* @param value Boolean value to validate.
+* @return Boolean value indicating that the call should be skipped.
+*/
+static VkBool32 validate_bool32(debug_report_data *report_data, const char *apiName, const char *parameterName, VkBool32 value) {
+    VkBool32 skipCall = VK_FALSE;
+
+    if ((value != VK_TRUE) && (value != VK_FALSE)) {
+        skipCall |=
+            log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                    ParameterValidationName, "%s: value of %s (%d) is neither VK_TRUE nor VK_FALSE", apiName, parameterName, value);
+    }
+
+    return skipCall;
+}
+
+/**
+* Validate a Vulkan enumeration value.
+*
+* Generate a warning if an enumeration token value does not fall within the core enumeration
+* begin and end token values, and was not added to the enumeration by an extension.  Extension
+* provided enumerations use the equation specified in Appendix C.10 of the Vulkan specification,
+* with 1,000,000,000 as the base token value.
+*
+* @note This function does not expect to process enumerations defining bitmask flag bits.
+*
+* @param report_data debug_report_data object for routing validation messages.
+* @param apiName Name of API call being validated.
+* @param parameterName Name of parameter being validated.
+* @param enumName Name of the enumeration being validated.
+* @param begin The begin range value for the enumeration.
+* @param end The end range value for the enumeration.
+* @param value Boolean value to validate.
+* @return Boolean value indicating that the call should be skipped.
+*/
+template <typename T>
+VkBool32 validate_ranged_enum(debug_report_data *report_data, const char *apiName, const char *parameterName, const char *enumName,
+                              T begin, T end, T value) {
+    VkBool32 skipCall = VK_FALSE;
+
+    if (((value < begin) || (value > end)) && !is_extension_added_token(value)) {
+        skipCall |=
+            log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                    ParameterValidationName, "%s: value of %s (%d) does not fall within the begin..end range of the core %s "
+                                             "enumeration tokens and is not an extension added token",
+                    apiName, parameterName, value, enumName);
+    }
+
+    return skipCall;
+}
+
+/**
+* Validate an array of Vulkan enumeration value.
+*
+* Process all enumeration token values in the specified array and generate a warning if a value
+* does not fall within the core enumeration begin and end token values, and was not added to
+* the enumeration by an extension.  Extension provided enumerations use the equation specified
+* in Appendix C.10 of the Vulkan specification, with 1,000,000,000 as the base token value.
+*
+* @note This function does not expect to process enumerations defining bitmask flag bits.
+*
+* @param report_data debug_report_data object for routing validation messages.
+* @param apiName Name of API call being validated.
+* @param parameterName Name of parameter being validated.
+* @param enumName Name of the enumeration being validated.
+* @param begin The begin range value for the enumeration.
+* @param end The end range value for the enumeration.
+* @param value Boolean value to validate.
+* @return Boolean value indicating that the call should be skipped.
+*/
+template <typename T>
+static VkBool32 validate_ranged_enum_array(debug_report_data *report_data, const char *apiName, const char *parameterName,
+                                           const char *enumName, T begin, T end, uint32_t count, const T *pValues) {
+    VkBool32 skipCall = VK_FALSE;
+
+    for (uint32_t i = 0; i < count; ++i) {
+        if (((pValues[i] < begin) || (pValues[i] > end)) && !is_extension_added_token(pValues[i])) {
+            skipCall |=
+                log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                ParameterValidationName, "%s: value of %s[%d] (%d) does not fall within the begin..end range of the core %s "
+                "enumeration tokens and is not an extension added token",
+                apiName, parameterName, i, pValues[i], enumName);
         }
     }
 
