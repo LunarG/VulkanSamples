@@ -3645,58 +3645,51 @@ void SetLayout(layer_data *my_data, ImageSubresourcePair imgpair, const VkImageL
     }
 }
 
-void SetLayout(layer_data *my_data, VkImage image, const VkImageLayout &layout) {
-    ImageSubresourcePair imgpair = {image, false, VkImageSubresource()};
-    SetLayout(my_data, imgpair, layout);
-}
-
-void SetLayout(layer_data *my_data, VkImage image, VkImageSubresource range, const VkImageLayout &layout) {
-    ImageSubresourcePair imgpair = {image, true, range};
-    SetLayout(my_data, imgpair, layout);
-}
-
 // Set the layout on the cmdbuf level
-void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, ImageSubresourcePair imgpair, const IMAGE_CMD_BUF_LAYOUT_NODE &node) {
+void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const IMAGE_CMD_BUF_LAYOUT_NODE &node) {
     pCB->imageLayoutMap[imgpair] = node;
     // TODO (mlentine): Maybe make vector a set?
-    auto subresource = std::find(pCB->imageSubresourceMap[image].begin(), pCB->imageSubresourceMap[image].end(), imgpair);
-    if (subresource == pCB->imageSubresourceMap[image].end()) {
-        pCB->imageSubresourceMap[image].push_back(imgpair);
+    auto subresource =
+        std::find(pCB->imageSubresourceMap[imgpair.image].begin(), pCB->imageSubresourceMap[imgpair.image].end(), imgpair);
+    if (subresource == pCB->imageSubresourceMap[imgpair.image].end()) {
+        pCB->imageSubresourceMap[imgpair.image].push_back(imgpair);
     }
 }
 
-void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, ImageSubresourcePair imgpair, const VkImageLayout &layout) {
+void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const VkImageLayout &layout) {
     // TODO (mlentine): Maybe make vector a set?
-    if (std::find(pCB->imageSubresourceMap[image].begin(), pCB->imageSubresourceMap[image].end(), imgpair) !=
-        pCB->imageSubresourceMap[image].end()) {
+    if (std::find(pCB->imageSubresourceMap[imgpair.image].begin(), pCB->imageSubresourceMap[imgpair.image].end(), imgpair) !=
+        pCB->imageSubresourceMap[imgpair.image].end()) {
         pCB->imageLayoutMap[imgpair].layout = layout;
     } else {
         // TODO (mlentine): Could be expensive and might need to be removed.
         assert(imgpair.hasSubresource);
         IMAGE_CMD_BUF_LAYOUT_NODE node;
-        FindLayout(pCB, image, imgpair.subresource, node);
-        SetLayout(pCB, image, imgpair, {node.initialLayout, layout});
+        FindLayout(pCB, imgpair.image, imgpair.subresource, node);
+        SetLayout(pCB, imgpair, {node.initialLayout, layout});
     }
 }
 
-void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, const IMAGE_CMD_BUF_LAYOUT_NODE &node) {
-    ImageSubresourcePair imgpair = {image, false, VkImageSubresource()};
-    SetLayout(pCB, image, imgpair, node);
+template <class OBJECT, class LAYOUT>
+void SetLayout(OBJECT *pObject, ImageSubresourcePair imgpair, const LAYOUT &layout, VkImageAspectFlags aspectMask) {
+    if (imgpair.subresource.aspectMask & aspectMask) {
+        imgpair.subresource.aspectMask = aspectMask;
+        SetLayout(pObject, imgpair, layout);
+    }
 }
 
-void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, VkImageSubresource range, const IMAGE_CMD_BUF_LAYOUT_NODE &node) {
+template <class OBJECT, class LAYOUT>
+void SetLayout(OBJECT *pObject, VkImage image, VkImageSubresource range, const LAYOUT &layout) {
     ImageSubresourcePair imgpair = {image, true, range};
-    SetLayout(pCB, image, imgpair, node);
+    SetLayout(pObject, imgpair, layout, VK_IMAGE_ASPECT_COLOR_BIT);
+    SetLayout(pObject, imgpair, layout, VK_IMAGE_ASPECT_DEPTH_BIT);
+    SetLayout(pObject, imgpair, layout, VK_IMAGE_ASPECT_STENCIL_BIT);
+    SetLayout(pObject, imgpair, layout, VK_IMAGE_ASPECT_METADATA_BIT);
 }
 
-void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, const VkImageLayout &layout) {
+template <class OBJECT, class LAYOUT> void SetLayout(OBJECT *pObject, VkImage image, const LAYOUT &layout) {
     ImageSubresourcePair imgpair = {image, false, VkImageSubresource()};
-    SetLayout(pCB, image, imgpair, layout);
-}
-
-void SetLayout(GLOBAL_CB_NODE *pCB, VkImage image, VkImageSubresource range, const VkImageLayout &layout) {
-    ImageSubresourcePair imgpair = {image, true, range};
-    SetLayout(pCB, image, imgpair, layout);
+    SetLayout(pObject, image, imgpair, layout);
 }
 
 void SetLayout(const layer_data *dev_data, GLOBAL_CB_NODE *pCB, VkImageView imageView, const VkImageLayout &layout) {
@@ -7847,7 +7840,7 @@ VkBool32 VerifySourceImageLayout(VkCommandBuffer cmdBuffer, VkImage srcImage, Vk
         VkImageSubresource sub = {subLayers.aspectMask, subLayers.mipLevel, layer};
         IMAGE_CMD_BUF_LAYOUT_NODE node;
         if (!FindLayout(pCB, srcImage, sub, node)) {
-            SetLayout(pCB, srcImage, sub, {srcImageLayout, srcImageLayout});
+            SetLayout(pCB, srcImage, sub, IMAGE_CMD_BUF_LAYOUT_NODE(srcImageLayout, srcImageLayout));
             continue;
         }
         if (node.layout != srcImageLayout) {
@@ -7886,7 +7879,7 @@ VkBool32 VerifyDestImageLayout(VkCommandBuffer cmdBuffer, VkImage destImage, VkI
         VkImageSubresource sub = {subLayers.aspectMask, subLayers.mipLevel, layer};
         IMAGE_CMD_BUF_LAYOUT_NODE node;
         if (!FindLayout(pCB, destImage, sub, node)) {
-            SetLayout(pCB, destImage, sub, {destImageLayout, destImageLayout});
+            SetLayout(pCB, destImage, sub, IMAGE_CMD_BUF_LAYOUT_NODE(destImageLayout, destImageLayout));
             continue;
         }
         if (node.layout != destImageLayout) {
@@ -8399,7 +8392,8 @@ VkBool32 TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCo
                 VkImageSubresource sub = {mem_barrier->subresourceRange.aspectMask, level, layer};
                 IMAGE_CMD_BUF_LAYOUT_NODE node;
                 if (!FindLayout(pCB, mem_barrier->image, sub, node)) {
-                    SetLayout(pCB, mem_barrier->image, sub, {mem_barrier->oldLayout, mem_barrier->newLayout});
+                    SetLayout(pCB, mem_barrier->image, sub,
+                              IMAGE_CMD_BUF_LAYOUT_NODE(mem_barrier->oldLayout, mem_barrier->newLayout));
                     continue;
                 }
                 if (mem_barrier->oldLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
