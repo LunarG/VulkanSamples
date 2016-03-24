@@ -199,7 +199,6 @@ struct loader_icd {
     // pointers to find other structs
     const struct loader_scanned_icds *this_icd_lib;
     const struct loader_instance *this_instance;
-    VkPhysicalDevice *phys_devs;  // physicalDevice object from icd
     struct loader_device *logical_device_list;
     VkInstance instance; // instance object from the icd
     PFN_vkGetDeviceProcAddr GetDeviceProcAddr;
@@ -276,7 +275,7 @@ struct loader_instance {
 
     uint32_t total_gpu_count; // count of the next two arrays
     struct loader_physical_device *phys_devs_term;
-    struct loader_physical_device *phys_devs; // tramp wrapped physDev obj list
+    struct loader_physical_device_tramp *phys_devs; // tramp wrapped physDev obj list
     uint32_t total_icd_count;
     struct loader_icd *icds;
     struct loader_instance *next;
@@ -335,10 +334,18 @@ struct loader_instance {
 
 /* per enumerated PhysicalDevice structure, used to wrap in trampoline code and
    also same structure used to wrap in terminator code */
+struct loader_physical_device_tramp {
+    VkLayerInstanceDispatchTable *disp; // must be first entry in structure
+    struct loader_icd *this_icd;
+    VkPhysicalDevice phys_dev;      // object from layers/loader terminator
+    VkPhysicalDevice icd_phys_dev;  // object from icd
+};
+
+/* per enumerated PhysicalDevice structure, used to wrap in terminator code */
 struct loader_physical_device {
     VkLayerInstanceDispatchTable *disp; // must be first entry in structure
     struct loader_icd *this_icd;
-    VkPhysicalDevice phys_dev; // object from ICD/layers/loader terminator
+    VkPhysicalDevice phys_dev; // object from ICD
 };
 
 struct loader_struct {
@@ -527,14 +534,14 @@ loader_enable_device_layers(const struct loader_instance *inst,
                             const VkDeviceCreateInfo *pCreateInfo,
                             const struct loader_layer_list *device_layers);
 
-VkResult loader_create_device_chain(const struct loader_physical_device *pd,
+VkResult loader_create_device_chain(const struct loader_physical_device_tramp *pd,
                                     const VkDeviceCreateInfo *pCreateInfo,
                                     const VkAllocationCallbacks *pAllocator,
                                     const struct loader_instance *inst,
                                     struct loader_icd *icd,
                                     struct loader_device *dev);
 VkResult loader_validate_device_extensions(
-    struct loader_physical_device *phys_dev,
+    struct loader_physical_device_tramp *phys_dev,
     const struct loader_layer_list *activated_device_layers,
     const struct loader_extension_list *icd_exts,
     const VkDeviceCreateInfo *pCreateInfo);
