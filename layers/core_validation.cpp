@@ -2642,9 +2642,9 @@ static VkBool32 validate_shader_capabilities(layer_data *my_data, VkDevice dev, 
 }
 
 
-// Validate that the shaders used by the given pipeline
-//  As a side effect this function also records the sets that are actually used by the pipeline
-static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE *pPipeline) {
+// Validate that the shaders used by the given pipeline and store the active_slots
+//  that are actually used by the pipeline into pPipeline->active_slots
+static VkBool32 validate_and_capture_pipeline_shader_state(layer_data *my_data, const VkDevice dev, PIPELINE_NODE *pPipeline) {
     VkGraphicsPipelineCreateInfo const *pCreateInfo = &pPipeline->graphicsPipelineCI;
     /* We seem to allow pipeline stages to be specified out of order, so collect and identify them
      * before trying to do anything more: */
@@ -2703,8 +2703,8 @@ static VkBool32 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIP
                                    : nullptr;
 
                 for (auto use : descriptor_uses) {
-                    // As a side-effect of this function, capture which sets are used by the pipeline
-                    pPipeline->active_sets.insert(use.first.first);
+                    // While validating shaders capture which slots are used by the pipeline
+                    pPipeline->active_slots[use.first.first].insert(use.first.second);
 
                     /* find the matching binding */
                     auto binding = get_descriptor_binding(my_data, layouts, use.first);
@@ -2811,20 +2811,48 @@ static SET_NODE *getSetNode(layer_data *my_data, const VkDescriptorSet set) {
     }
     return my_data->setMap[set];
 }
-// For the given command buffer, verify that for each set set in activeSetNodes
+
+// For given Layout Node and binding, return index where that binding begins
+static uint32_t getBindingStartIndex(const LAYOUT_NODE *pLayout, const uint32_t binding) {
+    uint32_t offsetIndex = 0;
+    for (uint32_t i = 0; i < pLayout->createInfo.bindingCount; i++) {
+        if (pLayout->createInfo.pBindings[i].binding == binding)
+            break;
+        offsetIndex += pLayout->createInfo.pBindings[i].descriptorCount;
+    }
+    return offsetIndex;
+}
+
+// For given layout node and binding, return last index that is updated
+static uint32_t getBindingEndIndex(const LAYOUT_NODE *pLayout, const uint32_t binding) {
+    uint32_t offsetIndex = 0;
+    for (uint32_t i = 0; i < pLayout->createInfo.bindingCount; i++) {
+        offsetIndex += pLayout->createInfo.pBindings[i].descriptorCount;
+        if (pLayout->createInfo.pBindings[i].binding == binding)
+            break;
+    }
+    return offsetIndex - 1;
+}
+
+// For the given command buffer, verify that for each set in activeSetBindingsPairs
 //  that any dynamic descriptor in that set has a valid dynamic offset bound.
 //  To be valid, the dynamic offset combined with the offset and range from its
 //  descriptor update must not overflow the size of its buffer being updated
-static VkBool32 validate_dynamic_offsets(layer_data *my_data, const GLOBAL_CB_NODE *pCB, const vector<SET_NODE *> activeSetNodes) {
+static VkBool32 validate_dynamic_offsets(layer_data *my_data, const GLOBAL_CB_NODE *pCB,
+                                         const vector<std::pair<SET_NODE *, unordered_set<uint32_t>>> &activeSetBindingsPairs) {
     VkBool32 result = VK_FALSE;
 
     VkWriteDescriptorSet *pWDS = NULL;
     uint32_t dynOffsetIndex = 0;
     VkDeviceSize bufferSize = 0;
-    for (auto set_node : activeSetNodes) {
-        for (uint32_t i = 0; i < set_node->descriptorCount; ++i) {
-            // TODO: Add validation for descriptors dynamically skipped in shader
-            if (set_node->ppDescriptors[i] != NULL) {
+    for (auto set_bindings_pair : activeSetBindingsPairs) {
+        SET_NODE *set_node = set_bindings_pair.first;
+        LAYOUT_NODE *layout_node = set_node->pLayout;
+        for (auto binding : set_bindings_pair.second) {
+            uint32_t startIdx = getBindingStartIndex(layout_node, binding);
+            uint32_t endIdx = getBindingEndIndex(layout_node, binding);
+            for (uint32_t i = startIdx; i <= endIdx; ++i) {
+                // TODO : Flag error here if set_node->ppDescriptors[i] is NULL
                 switch (set_node->ppDescriptors[i]->sType) {
                 case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
                     pWDS = (VkWriteDescriptorSet *)set_node->ppDescriptors[i];
@@ -2904,8 +2932,9 @@ static VkBool32 validate_draw_state(layer_data *my_data, GLOBAL_CB_NODE *pCB, Vk
         if (state.pipelineLayout) {
             string errorString;
             // Need a vector (vs. std::set) of active Sets for dynamicOffset validation in case same set bound w/ different offsets
-            vector<SET_NODE *> activeSetNodes;
-            for (auto setIndex : pPipe->active_sets) {
+            vector<std::pair<SET_NODE *, unordered_set<uint32_t>>> activeSetBindingsPairs;
+            for (auto setBindingPair : pPipe->active_slots) {
+                uint32_t setIndex = setBindingPair.first;
                 // If valid set is not bound throw an error
                 if ((state.boundDescriptorSets.size() <= setIndex) || (!state.boundDescriptorSets[setIndex])) {
                     result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
@@ -2926,7 +2955,8 @@ static VkBool32 validate_draw_state(layer_data *my_data, GLOBAL_CB_NODE *pCB, Vk
                     // Pull the set node
                     SET_NODE *pSet = my_data->setMap[state.boundDescriptorSets[setIndex]];
                     // Save vector of all active sets to verify dynamicOffsets below
-                    activeSetNodes.push_back(pSet);
+                    // activeSetNodes.push_back(pSet);
+                    activeSetBindingsPairs.push_back(std::make_pair(pSet, setBindingPair.second));
                     // Make sure set has been updated
                     if (!pSet->pUpdateStructs) {
                         result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -2940,7 +2970,7 @@ static VkBool32 validate_draw_state(layer_data *my_data, GLOBAL_CB_NODE *pCB, Vk
             }
             // For each dynamic descriptor, make sure dynamic offset doesn't overstep buffer
             if (!state.dynamicOffsets.empty())
-                result |= validate_dynamic_offsets(my_data, pCB, activeSetNodes);
+                result |= validate_dynamic_offsets(my_data, pCB, activeSetBindingsPairs);
         }
         // Verify Vtx binding
         if (pPipe->vertexBindingDescriptions.size() > 0) {
@@ -3068,7 +3098,7 @@ static VkBool32 verifyPipelineCreateState(layer_data *my_data, const VkDevice de
         }
     }
 
-    // Ensure the subpass index is valid. If not, then validate_pipeline_shaders
+    // Ensure the subpass index is valid. If not, then validate_and_capture_pipeline_shader_state
     // produces nonsense errors that confuse users. Other layers should already
     // emit errors for renderpass being invalid.
     auto rp_data = my_data->renderPassMap.find(pPipeline->graphicsPipelineCI.renderPass);
@@ -3080,7 +3110,7 @@ static VkBool32 verifyPipelineCreateState(layer_data *my_data, const VkDevice de
                             pPipeline->graphicsPipelineCI.subpass, rp_data->second->pCreateInfo->subpassCount - 1);
     }
 
-    if (!validate_pipeline_shaders(my_data, device, pPipeline)) {
+    if (!validate_and_capture_pipeline_shader_state(my_data, device, pPipeline)) {
         skipCall = VK_TRUE;
     }
     // VS is required
@@ -3415,28 +3445,6 @@ static uint32_t getUpdateCount(layer_data *my_data, const VkDevice device, const
         return 0;
     }
     return 0;
-}
-
-// For given Layout Node and binding, return index where that binding begins
-static uint32_t getBindingStartIndex(const LAYOUT_NODE *pLayout, const uint32_t binding) {
-    uint32_t offsetIndex = 0;
-    for (uint32_t i = 0; i < pLayout->createInfo.bindingCount; i++) {
-        if (pLayout->createInfo.pBindings[i].binding == binding)
-            break;
-        offsetIndex += pLayout->createInfo.pBindings[i].descriptorCount;
-    }
-    return offsetIndex;
-}
-
-// For given layout node and binding, return last index that is updated
-static uint32_t getBindingEndIndex(const LAYOUT_NODE *pLayout, const uint32_t binding) {
-    uint32_t offsetIndex = 0;
-    for (uint32_t i = 0; i < pLayout->createInfo.bindingCount; i++) {
-        offsetIndex += pLayout->createInfo.pBindings[i].descriptorCount;
-        if (pLayout->createInfo.pBindings[i].binding == binding)
-            break;
-    }
-    return offsetIndex - 1;
 }
 
 // For given layout and update, return the first overall index of the layout that is updated
