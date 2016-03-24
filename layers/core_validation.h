@@ -41,10 +41,6 @@
 
 using std::vector;
 
-//#ifdef __cplusplus
-//extern "C" {
-//#endif
-
 #if MTMERGE
 // Mem Tracker ERROR codes
 typedef enum _MEM_TRACK_ERROR {
@@ -618,11 +614,11 @@ class SET_NODE : public BASE_NODE {
     GENERIC_HEADER *pUpdateStructs;
     // Total num of descriptors in this set (count of its layout plus all prior layouts)
     uint32_t descriptorCount;
-    GENERIC_HEADER **ppDescriptors; // Array where each index points to update node for its slot
+    vector<GENERIC_HEADER*> pDescriptorUpdates; // Vector where each index points to update node for its slot
     LAYOUT_NODE *pLayout;           // Layout for this set
     SET_NODE *pNext;
     unordered_set<VkCommandBuffer> boundCmdBuffers; // Cmd buffers that this set has been bound to
-    SET_NODE() : pUpdateStructs(NULL), ppDescriptors(NULL), pLayout(NULL), pNext(NULL){};
+    SET_NODE() : set(VK_NULL_HANDLE), pool(VK_NULL_HANDLE), pUpdateStructs(nullptr), pLayout(nullptr), pNext(nullptr){};
 };
 
 typedef struct _DESCRIPTOR_POOL_NODE {
@@ -896,7 +892,3 @@ class SWAPCHAIN_NODE {
     }
     ~SWAPCHAIN_NODE() { delete[] pQueueFamilyIndices; }
 };
-
-//#ifdef __cplusplus
-//}
-//#endif
