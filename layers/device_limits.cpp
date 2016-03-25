@@ -508,14 +508,15 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo *pBeginInfo) {
     bool skipCall = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(dev_data->physicalDevice), layer_data_map);
     const VkCommandBufferInheritanceInfo *pInfo = pBeginInfo->pInheritanceInfo;
-    if (dev_data->actualPhysicalDeviceFeatures.inheritedQueries == VK_FALSE && pInfo && pInfo->occlusionQueryEnable != VK_FALSE) {
+    if (phy_dev_data->actualPhysicalDeviceFeatures.inheritedQueries == VK_FALSE && pInfo && pInfo->occlusionQueryEnable != VK_FALSE) {
         skipCall |= log_msg(
             dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
             reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DEVLIMITS_INVALID_INHERITED_QUERY, "DL",
             "Cannot set inherited occlusionQueryEnable in vkBeginCommandBuffer() when device does not support inheritedQueries.");
     }
-    if (dev_data->actualPhysicalDeviceFeatures.inheritedQueries != VK_FALSE && pInfo && pInfo->occlusionQueryEnable != VK_FALSE &&
+    if (phy_dev_data->actualPhysicalDeviceFeatures.inheritedQueries != VK_FALSE && pInfo && pInfo->occlusionQueryEnable != VK_FALSE &&
         !validate_VkQueryControlFlagBits(VkQueryControlFlagBits(pInfo->queryFlags))) {
         skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DEVLIMITS_INVALID_INHERITED_QUERY, "DL",
