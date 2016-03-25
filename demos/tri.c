@@ -152,6 +152,19 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     return false;
 }
 
+VkBool32 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
+                       uint64_t srcObject, size_t location, int32_t msgCode,
+                       const char *pLayerPrefix, const char *pMsg,
+                       void *pUserData) {
+#ifndef WIN32
+    raise(SIGTRAP);
+#else
+    DebugBreak();
+#endif
+
+    return false;
+}
+
 typedef struct _SwapchainBuffers {
     VkImage image;
     VkCommandBuffer cmd;
@@ -2040,7 +2053,7 @@ static void demo_init_vk(struct demo *demo) {
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfo.flags =
             VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
-        dbgCreateInfo.pfnCallback = dbgFunc;
+        dbgCreateInfo.pfnCallback = demo->use_break ? BreakCallback : dbgFunc;
         dbgCreateInfo.pUserData = NULL;
         dbgCreateInfo.pNext = NULL;
         err = demo->CreateDebugReportCallback(demo->inst, &dbgCreateInfo, NULL,
