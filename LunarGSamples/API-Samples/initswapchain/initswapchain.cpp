@@ -73,11 +73,6 @@ int sample_main() {
     res = vkCreateWin32SurfaceKHR(info.inst, &createInfo,
                                   NULL, &info.surface);
 #elif defined(__ANDROID__)
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceSupportKHR);
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceCapabilitiesKHR);
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceFormatsKHR);
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfacePresentModesKHR);
-    GET_INSTANCE_PROC_ADDR(info.inst, DestroySurfaceKHR);
     GET_INSTANCE_PROC_ADDR(info.inst, CreateAndroidSurfaceKHR);
 
     VkAndroidSurfaceCreateInfoKHR createInfo;
