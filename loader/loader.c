@@ -583,14 +583,17 @@ static void loader_add_instance_extensions(
     for (i = 0; i < count; i++) {
         char spec_version[64];
 
-        snprintf(spec_version, sizeof(spec_version), "%d.%d.%d",
-                 VK_MAJOR(ext_props[i].specVersion),
-                 VK_MINOR(ext_props[i].specVersion),
-                 VK_PATCH(ext_props[i].specVersion));
-        loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
-                   "Instance Extension: %s (%s) version %s",
-                   ext_props[i].extensionName, lib_name, spec_version);
-        loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);
+        bool ext_unsupported = wsi_unsupported_instance_extension(&ext_props[i]);
+        if (!ext_unsupported) {
+            snprintf(spec_version, sizeof(spec_version), "%d.%d.%d",
+                     VK_MAJOR(ext_props[i].specVersion),
+                     VK_MINOR(ext_props[i].specVersion),
+                     VK_PATCH(ext_props[i].specVersion));
+            loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
+                       "Instance Extension: %s (%s) version %s",
+                       ext_props[i].extensionName, lib_name, spec_version);
+            loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);
+        }
     }
 
     return;
@@ -1099,7 +1102,6 @@ void loader_get_icd_loader_instance_extensions(
     };
 
     // Traverse loader's extensions, adding non-duplicate extensions to the list
-    wsi_add_instance_extensions(inst, inst_exts);
     debug_report_add_instance_extensions(inst, inst_exts);
 }
 
@@ -2076,8 +2078,11 @@ loader_add_layer_properties(const struct loader_instance *inst,
                         '\0';
                 }
                 ext_prop.specVersion = atoi(spec_version);
-                loader_add_to_ext_list(inst, &props->instance_extension_list, 1,
-                                       &ext_prop);
+                bool ext_unsupported = wsi_unsupported_instance_extension(&ext_prop);
+                if (!ext_unsupported) {
+                    loader_add_to_ext_list(inst, &props->instance_extension_list,
+                                           1, &ext_prop);
+                }
             }
         }
         /**
