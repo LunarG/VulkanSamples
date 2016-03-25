@@ -279,6 +279,12 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
     while (pNext) {
         if (((VkInstanceCreateInfo *)pNext)->sType ==
             VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT) {
+            // Use this pNext so that vkCreateInstance has a callback that can
+            // be used to log messages.  Make a copy for use by
+            // vkDestroyInstance as well.
+            ptr_instance->pDebugReportCreateInfo =
+                ((VkDebugReportCallbackCreateInfoEXT *)
+                 malloc(sizeof(VkDebugReportCallbackCreateInfoEXT)));
             instance_callback = (VkDebugReportCallbackEXT)ptr_instance;
             if (util_CreateDebugReportCallback(ptr_instance, pNext, NULL,
                                                instance_callback)) {
@@ -442,18 +448,33 @@ vkDestroyInstance(VkInstance instance,
                   const VkAllocationCallbacks *pAllocator) {
     const VkLayerInstanceDispatchTable *disp;
     struct loader_instance *ptr_instance = NULL;
+    VkDebugReportCallbackEXT instance_callback = VK_NULL_HANDLE;
+    bool callback_setup = false;
+
     disp = loader_get_instance_dispatch(instance);
 
     loader_platform_thread_lock_mutex(&loader_lock);
 
-    /* TODO: Do we need a temporary callback here to catch cleanup issues? */
-
     ptr_instance = loader_get_instance(instance);
+
+    if (ptr_instance->pDebugReportCreateInfo) {
+        // Setup a temporary callback here to catch cleanup issues:
+        instance_callback = (VkDebugReportCallbackEXT)ptr_instance;
+        if (!util_CreateDebugReportCallback(ptr_instance,
+                                            ptr_instance->pDebugReportCreateInfo,
+                                            NULL, instance_callback)) {
+            callback_setup = true;
+        }
+    }
+
     disp->DestroyInstance(instance, pAllocator);
 
     loader_deactivate_instance_layers(ptr_instance);
     if (ptr_instance->phys_devs)
         loader_heap_free(ptr_instance, ptr_instance->phys_devs);
+    if (callback_setup) {
+        util_DestroyDebugReportCallback(ptr_instance, instance_callback, NULL);
+    }
     loader_heap_free(ptr_instance, ptr_instance->disp);
     loader_heap_free(ptr_instance, ptr_instance);
     loader_platform_thread_unlock_mutex(&loader_lock);
