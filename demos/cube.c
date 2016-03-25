@@ -1910,11 +1910,8 @@ static void demo_run(struct demo *demo) {
     vkDeviceWaitIdle(demo->device);
 
     demo->curFrame++;
-
     if (demo->frameCount != INT_MAX && demo->curFrame == demo->frameCount) {
-        demo->quit = true;
-        demo_cleanup(demo);
-        ExitProcess(0);
+        PostQuitMessage(validation_error);
     }
 }
 
