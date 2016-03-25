@@ -44,6 +44,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <signal.h>
 
 #ifdef _WIN32
 #pragma comment(linker, "/subsystem:windows")
