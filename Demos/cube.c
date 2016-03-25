@@ -2283,20 +2283,17 @@ static void demo_init_vk(struct demo *demo) {
         .enabledExtensionCount = enabled_extension_count,
         .ppEnabledExtensionNames = (const char *const *)extension_names,
     };
+
+    /*
+     * This is info for a temp callback to use during CreateInstance.
+     * After the instance is created, we use the instance-based
+     * function to register the final callback.
+     */
     VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
-    PFN_vkDebugReportCallbackEXT callback;
     if (demo->validate) {
-        if (!demo->use_break) {
-            callback = dbgFunc;
-        } else {
-            callback = dbgFunc;
-            // TODO add a break callback defined locally since there is no
-            // longer
-            // one included in the loader
-        }
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfo.pNext = NULL;
-        dbgCreateInfo.pfnCallback = callback;
+        dbgCreateInfo.pfnCallback = demo->use_break ? BreakCallback : dbgFunc;
         dbgCreateInfo.pUserData = NULL;
         dbgCreateInfo.flags =
             VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
@@ -2440,17 +2437,9 @@ static void demo_init_vk(struct demo *demo) {
                      "vkGetProcAddr Failure");
         }
 
-        PFN_vkDebugReportCallbackEXT callback;
-
-        if (!demo->use_break) {
-            callback = dbgFunc;
-        } else {
-            callback = dbgFunc;
-            // TODO add a break callback defined locally since there is no
-            // longer
-            // one included in the loader
-        }
         VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+        PFN_vkDebugReportCallbackEXT callback;
+        callback = demo->use_break ? BreakCallback : dbgFunc;
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfo.pNext = NULL;
         dbgCreateInfo.pfnCallback = callback;
