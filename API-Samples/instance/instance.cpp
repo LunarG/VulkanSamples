@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
     app_info.applicationVersion = 1;
     app_info.pEngineName = APP_SHORT_NAME;
     app_info.engineVersion = 1;
-    app_info.apiVersion = VK_MAKE_VERSION(1, 0, 0);
+    app_info.apiVersion = VK_API_VERSION_1_0;
 
     // initialize the VkInstanceCreateInfo structure
     VkInstanceCreateInfo inst_info = {};
