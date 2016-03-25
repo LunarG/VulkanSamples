@@ -192,11 +192,14 @@ struct MT_SWAP_CHAIN_INFO {
 #endif
 // Draw State ERROR codes
 typedef enum _DRAW_STATE_ERROR {
+    // TODO: Remove the comments here or expand them. There isn't any additional information in the
+    // comments than in the name in almost all cases.
     DRAWSTATE_NONE,                          // Used for INFO & other non-error messages
     DRAWSTATE_INTERNAL_ERROR,                // Error with DrawState internal data structures
     DRAWSTATE_NO_PIPELINE_BOUND,             // Unable to identify a bound pipeline
     DRAWSTATE_INVALID_POOL,                  // Invalid DS pool
     DRAWSTATE_INVALID_SET,                   // Invalid DS
+    DRAWSTATE_INVALID_RENDER_AREA,           // Invalid renderArea
     DRAWSTATE_INVALID_LAYOUT,                // Invalid DS layout
     DRAWSTATE_INVALID_IMAGE_LAYOUT,          // Invalid Image layout
     DRAWSTATE_INVALID_PIPELINE,              // Invalid Pipeline handle referenced
