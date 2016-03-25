@@ -109,7 +109,6 @@ struct layer_data {
 // MTMERGESOURCE - stuff pulled directly from MT
     uint64_t currentFenceId;
     // Maps for tracking key structs related to mem_tracker state
-    unordered_map<VkDescriptorSet, MT_DESCRIPTOR_SET_INFO> descriptorSetMap;
     // Images and Buffers are 2 objects that can have memory bound to them so they get special treatment
     unordered_map<uint64_t, MT_OBJ_BINDING_INFO> imageBindingMap;
     unordered_map<uint64_t, MT_OBJ_BINDING_INFO> bufferBindingMap;
@@ -606,7 +605,6 @@ static void clear_cmd_buf_and_mem_references(layer_data *dev_data, const VkComma
             }
             pCBNode->pMemObjList.clear();
         }
-        pCBNode->activeDescriptorSets.clear();
         pCBNode->validate_functions.clear();
     }
 }
@@ -2827,12 +2825,16 @@ static uint32_t getBindingEndIndex(const LAYOUT_NODE *pLayout, const uint32_t bi
     return offsetIndex - 1;
 }
 
-// For the given command buffer, verify that for each set in activeSetBindingsPairs
-//  that any dynamic descriptor in that set has a valid dynamic offset bound.
-//  To be valid, the dynamic offset combined with the offset and range from its
-//  descriptor update must not overflow the size of its buffer being updated
-static VkBool32 validate_dynamic_offsets(layer_data *my_data, const GLOBAL_CB_NODE *pCB,
-                                         const vector<std::pair<SET_NODE *, unordered_set<uint32_t>>> &activeSetBindingsPairs) {
+// For the given command buffer, verify and update the state for activeSetBindingsPairs
+//  This includes:
+//  1. Verifying that any dynamic descriptor in that set has a valid dynamic offset bound.
+//     To be valid, the dynamic offset combined with the offset and range from its
+//     descriptor update must not overflow the size of its buffer being updated
+//  2. Grow updateImages for given pCB to include any bound STORAGE_IMAGE descriptor images
+//  3. Grow updateBuffers for pCB to include buffers from STORAGE*_BUFFER descriptor buffers
+static VkBool32 validate_and_update_drawtime_descriptor_state(
+    layer_data *dev_data, GLOBAL_CB_NODE *pCB,
+    const vector<std::pair<SET_NODE *, unordered_set<uint32_t>>> &activeSetBindingsPairs) {
     VkBool32 result = VK_FALSE;
 
     VkWriteDescriptorSet *pWDS = NULL;
@@ -2852,11 +2854,11 @@ static VkBool32 validate_dynamic_offsets(layer_data *my_data, const GLOBAL_CB_NO
                     if ((pWDS->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
                         (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
                         for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
-                            bufferSize = my_data->bufferMap[pWDS->pBufferInfo[j].buffer].create_info->size;
+                            bufferSize = dev_data->bufferMap[pWDS->pBufferInfo[j].buffer].create_info->size;
                             uint32_t dynOffset = pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].dynamicOffsets[dynOffsetIndex];
                             if (pWDS->pBufferInfo[j].range == VK_WHOLE_SIZE) {
                                 if ((dynOffset + pWDS->pBufferInfo[j].offset) > bufferSize) {
-                                    result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                                       VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                                       reinterpret_cast<const uint64_t &>(set_node->set), __LINE__,
                                                       DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, "DS",
@@ -2870,7 +2872,7 @@ static VkBool32 validate_dynamic_offsets(layer_data *my_data, const GLOBAL_CB_NO
                                 }
                             } else if ((dynOffset + pWDS->pBufferInfo[j].offset + pWDS->pBufferInfo[j].range) > bufferSize) {
                                 result |= log_msg(
-                                    my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                     VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                     reinterpret_cast<const uint64_t &>(set_node->set), __LINE__, DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW,
                                     "DS",
@@ -2883,7 +2885,7 @@ static VkBool32 validate_dynamic_offsets(layer_data *my_data, const GLOBAL_CB_NO
                                     reinterpret_cast<const uint64_t &>(pWDS->pBufferInfo[j].buffer), bufferSize);
                             } else if ((dynOffset + pWDS->pBufferInfo[j].offset + pWDS->pBufferInfo[j].range) > bufferSize) {
                                 result |= log_msg(
-                                    my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                     VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                     reinterpret_cast<const uint64_t &>(set_node->set), __LINE__, DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW,
                                     "DS",
@@ -2896,10 +2898,24 @@ static VkBool32 validate_dynamic_offsets(layer_data *my_data, const GLOBAL_CB_NO
                                     reinterpret_cast<const uint64_t &>(pWDS->pBufferInfo[j].buffer), bufferSize);
                             }
                             dynOffsetIndex++;
-                            i += j; // Advance i to end of this set of descriptors (++i at end of for loop will move 1 index past
-                                    // last of these descriptors)
+                        }
+                    } else if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
+                        for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
+                            pCB->updateImages.insert(pWDS->pImageInfo[j].imageView);
+                        }
+                    } else if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
+                        for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
+                            assert(dev_data->bufferViewMap.find(pWDS->pTexelBufferView[j]) != dev_data->bufferViewMap.end());
+                            pCB->updateBuffers.insert(dev_data->bufferViewMap[pWDS->pTexelBufferView[j]].buffer);
+                        }
+                    } else if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
+                               pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+                        for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
+                            pCB->updateBuffers.insert(pWDS->pBufferInfo[j].buffer);
                         }
                     }
+                    i += pWDS->descriptorCount; // Advance i to end of this set of descriptors (++i at end of for loop will move 1
+                                                // index past last of these descriptors)
                     break;
                 default: // Currently only shadowing Write update nodes so shouldn't get here
                     assert(0);
@@ -2910,18 +2926,57 @@ static VkBool32 validate_dynamic_offsets(layer_data *my_data, const GLOBAL_CB_NO
     }
     return result;
 }
+// TODO : This is a temp function that naively updates bound storage images and buffers based on which descriptor sets are bound.
+//   When validate_and_update_draw_state() handles computer shaders so that active_slots is correct for compute pipelines, this
+//   function can be killed and validate_and_update_draw_state() used instead
+static void update_shader_storage_images_and_buffers(layer_data *dev_data, GLOBAL_CB_NODE *pCB) {
+    VkWriteDescriptorSet *pWDS = nullptr;
+    SET_NODE *pSet = nullptr;
+    // For the bound descriptor sets, pull off any storage images and buffers
+    //  This may be more than are actually updated depending on which are active, but for now this is a stop-gap for compute
+    //  pipelines
+    for (auto set : pCB->lastBound[VK_PIPELINE_BIND_POINT_COMPUTE].uniqueBoundSets) {
+        // Get the set node
+        pSet = getSetNode(dev_data, set);
+        // For each update in the set
+        for (auto pUpdate : pSet->pDescriptorUpdates) {
+            // If it's a write update to STORAGE type capture image/buffer being updated
+            if (pUpdate && (pUpdate->sType == VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)) {
+                pWDS = reinterpret_cast<VkWriteDescriptorSet *>(pUpdate);
+                if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
+                    for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
+                        pCB->updateImages.insert(pWDS->pImageInfo[j].imageView);
+                    }
+                } else if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
+                    for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
+                        pCB->updateBuffers.insert(dev_data->bufferViewMap[pWDS->pTexelBufferView[j]].buffer);
+                    }
+                } else if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
+                           pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+                    for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
+                        pCB->updateBuffers.insert(pWDS->pBufferInfo[j].buffer);
+                    }
+                }
+            }
+        }
+    }
+}
 
 // Validate overall state at the time of a draw call
-static VkBool32 validate_draw_state(layer_data *my_data, GLOBAL_CB_NODE *pCB, VkBool32 indexedDraw) {
-    PIPELINE_NODE *pPipe = getPipeline(my_data, pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].pipeline);
+static VkBool32 validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *pCB, const VkBool32 indexedDraw,
+                                               const VkPipelineBindPoint bindPoint) {
+    VkBool32 result = VK_FALSE;
+    auto const &state = pCB->lastBound[bindPoint];
+    PIPELINE_NODE *pPipe = getPipeline(my_data, state.pipeline);
     // First check flag states
-    VkBool32 result = validate_draw_state_flags(my_data, pCB, pPipe, indexedDraw);
+    if (VK_PIPELINE_BIND_POINT_GRAPHICS == bindPoint)
+        result = validate_draw_state_flags(my_data, pCB, pPipe, indexedDraw);
+
     // Now complete other state checks
     // TODO : Currently only performing next check if *something* was bound (non-zero last bound)
     //  There is probably a better way to gate when this check happens, and to know if something *should* have been bound
     //  We should have that check separately and then gate this check based on that check
     if (pPipe) {
-        auto const &state = pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS];
         if (state.pipelineLayout) {
             string errorString;
             // Need a vector (vs. std::set) of active Sets for dynamicOffset validation in case same set bound w/ different offsets
@@ -2944,7 +2999,7 @@ static VkBool32 validate_draw_state(layer_data *my_data, GLOBAL_CB_NODE *pCB, Vk
                         "VkDescriptorSet (%#" PRIxLEAST64
                         ") bound as set #%u is not compatible with overlapping VkPipelineLayout %#" PRIxLEAST64 " due to: %s",
                         (uint64_t)setHandle, setIndex, (uint64_t)pPipe->graphicsPipelineCI.layout, errorString.c_str());
-                } else { // Valid set is bound and layout compatible, validate that it's updated and verify any dynamic offsets
+                } else { // Valid set is bound and layout compatible, validate that it's updated
                     // Pull the set node
                     SET_NODE *pSet = my_data->setMap[state.boundDescriptorSets[setIndex]];
                     // Save vector of all active sets to verify dynamicOffsets below
@@ -2961,54 +3016,55 @@ static VkBool32 validate_draw_state(layer_data *my_data, GLOBAL_CB_NODE *pCB, Vk
                     }
                 }
             }
-            // For each dynamic descriptor, make sure dynamic offset doesn't overstep buffer
-            if (!state.dynamicOffsets.empty())
-                result |= validate_dynamic_offsets(my_data, pCB, activeSetBindingsPairs);
+            // For given active slots, verify any dynamic descriptors and record updated images & buffers
+            result |= validate_and_update_drawtime_descriptor_state(my_data, pCB, activeSetBindingsPairs);
         }
-        // Verify Vtx binding
-        if (pPipe->vertexBindingDescriptions.size() > 0) {
-            for (size_t i = 0; i < pPipe->vertexBindingDescriptions.size(); i++) {
-                if ((pCB->currentDrawData.buffers.size() < (i + 1)) || (pCB->currentDrawData.buffers[i] == VK_NULL_HANDLE)) {
-                    result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                      __LINE__, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
-                                      "The Pipeline State Object (%#" PRIxLEAST64
-                                      ") expects that this Command Buffer's vertex binding Index " PRINTF_SIZE_T_SPECIFIER
-                                      " should be set via vkCmdBindVertexBuffers.",
-                                      (uint64_t)pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].pipeline, i);
+        if (VK_PIPELINE_BIND_POINT_GRAPHICS == bindPoint) {
+            // Verify Vtx binding
+            if (pPipe->vertexBindingDescriptions.size() > 0) {
+                for (size_t i = 0; i < pPipe->vertexBindingDescriptions.size(); i++) {
+                    if ((pCB->currentDrawData.buffers.size() < (i + 1)) || (pCB->currentDrawData.buffers[i] == VK_NULL_HANDLE)) {
+                        result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                          __LINE__, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
+                                          "The Pipeline State Object (%#" PRIxLEAST64
+                                          ") expects that this Command Buffer's vertex binding Index " PRINTF_SIZE_T_SPECIFIER
+                                          " should be set via vkCmdBindVertexBuffers.",
+                                          (uint64_t)state.pipeline, i);
+                    }
+                }
+            } else {
+                if (!pCB->currentDrawData.buffers.empty()) {
+                    result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                                      (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
+                                      "Vertex buffers are bound to command buffer (%#" PRIxLEAST64
+                                      ") but no vertex buffers are attached to this Pipeline State Object (%#" PRIxLEAST64 ").",
+                                      (uint64_t)pCB->commandBuffer, (uint64_t)state.pipeline);
                 }
             }
-        } else {
-            if (!pCB->currentDrawData.buffers.empty()) {
-                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0,
-                                  0, __LINE__, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
-                                  "Vertex buffers are bound to command buffer (%#" PRIxLEAST64
-                                  ") but no vertex buffers are attached to this Pipeline State Object (%#" PRIxLEAST64 ").",
-                                  (uint64_t)pCB->commandBuffer, (uint64_t)pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].pipeline);
-            }
-        }
-        // If Viewport or scissors are dynamic, verify that dynamic count matches PSO count.
-        // Skip check if rasterization is disabled or there is no viewport.
-        if ((!pPipe->graphicsPipelineCI.pRasterizationState ||
-             !pPipe->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable) &&
-            pPipe->graphicsPipelineCI.pViewportState) {
-            VkBool32 dynViewport = isDynamic(pPipe, VK_DYNAMIC_STATE_VIEWPORT);
-            VkBool32 dynScissor = isDynamic(pPipe, VK_DYNAMIC_STATE_SCISSOR);
-            if (dynViewport) {
-                if (pCB->viewports.size() != pPipe->graphicsPipelineCI.pViewportState->viewportCount) {
-                    result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                      __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                                      "Dynamic viewportCount from vkCmdSetViewport() is " PRINTF_SIZE_T_SPECIFIER
-                                      ", but PSO viewportCount is %u. These counts must match.",
-                                      pCB->viewports.size(), pPipe->graphicsPipelineCI.pViewportState->viewportCount);
+            // If Viewport or scissors are dynamic, verify that dynamic count matches PSO count.
+            // Skip check if rasterization is disabled or there is no viewport.
+            if ((!pPipe->graphicsPipelineCI.pRasterizationState ||
+                 !pPipe->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable) &&
+                pPipe->graphicsPipelineCI.pViewportState) {
+                VkBool32 dynViewport = isDynamic(pPipe, VK_DYNAMIC_STATE_VIEWPORT);
+                VkBool32 dynScissor = isDynamic(pPipe, VK_DYNAMIC_STATE_SCISSOR);
+                if (dynViewport) {
+                    if (pCB->viewports.size() != pPipe->graphicsPipelineCI.pViewportState->viewportCount) {
+                        result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                          __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                                          "Dynamic viewportCount from vkCmdSetViewport() is " PRINTF_SIZE_T_SPECIFIER
+                                          ", but PSO viewportCount is %u. These counts must match.",
+                                          pCB->viewports.size(), pPipe->graphicsPipelineCI.pViewportState->viewportCount);
+                    }
                 }
-            }
-            if (dynScissor) {
-                if (pCB->scissors.size() != pPipe->graphicsPipelineCI.pViewportState->scissorCount) {
-                    result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                      __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                                      "Dynamic scissorCount from vkCmdSetScissor() is " PRINTF_SIZE_T_SPECIFIER
-                                      ", but PSO scissorCount is %u. These counts must match.",
-                                      pCB->scissors.size(), pPipe->graphicsPipelineCI.pViewportState->scissorCount);
+                if (dynScissor) {
+                    if (pCB->scissors.size() != pPipe->graphicsPipelineCI.pViewportState->scissorCount) {
+                        result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                          __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                                          "Dynamic scissorCount from vkCmdSetScissor() is " PRINTF_SIZE_T_SPECIFIER
+                                          ", but PSO scissorCount is %u. These counts must match.",
+                                          pCB->scissors.size(), pPipe->graphicsPipelineCI.pViewportState->scissorCount);
+                    }
                 }
             }
         }
@@ -4465,7 +4521,8 @@ static void resetCB(layer_data *my_data, const VkCommandBuffer cb) {
         pCB->currentDrawData.buffers.clear();
         pCB->primaryCommandBuffer = VK_NULL_HANDLE;
         pCB->secondaryCommandBuffers.clear();
-        pCB->activeDescriptorSets.clear();
+        pCB->updateImages.clear();
+        pCB->updateBuffers.clear();
         pCB->validate_functions.clear();
         pCB->pMemObjList.clear();
         pCB->eventUpdates.clear();
@@ -6864,29 +6921,6 @@ vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkW
     // dsUpdate will return VK_TRUE only if a bailout error occurs, so we want to call down tree when update returns VK_FALSE
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGESOURCE
-    // MTMTODO : Merge this in with existing update code below and handle descriptor copies case
-    uint32_t j = 0;
-    for (uint32_t i = 0; i < descriptorWriteCount; ++i) {
-        if (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
-            for (j = 0; j < pDescriptorWrites[i].descriptorCount; ++j) {
-                dev_data->descriptorSetMap[pDescriptorWrites[i].dstSet].images.push_back(
-                    pDescriptorWrites[i].pImageInfo[j].imageView);
-            }
-        } else if (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
-            for (j = 0; j < pDescriptorWrites[i].descriptorCount; ++j) {
-                dev_data->descriptorSetMap[pDescriptorWrites[i].dstSet].buffers.push_back(
-                    dev_data->bufferViewMap[pDescriptorWrites[i].pTexelBufferView[j]].buffer);
-            }
-        } else if (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
-                   pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
-            for (j = 0; j < pDescriptorWrites[i].descriptorCount; ++j) {
-                dev_data->descriptorSetMap[pDescriptorWrites[i].dstSet].buffers.push_back(
-                    pDescriptorWrites[i].pBufferInfo[j].buffer);
-            }
-        }
-    }
-#endif
     VkBool32 rtn = dsUpdate(dev_data, device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (!rtn) {
@@ -7325,21 +7359,6 @@ vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipel
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGESOURCE
-    // MTMTODO : Merge this with code below
-    auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
-    if (cb_data != dev_data->commandBufferMap.end()) {
-        // MTMTODO : activeDescriptorSets should be merged with lastBound.boundDescriptorSets
-        std::vector<VkDescriptorSet> &activeDescriptorSets = cb_data->second->activeDescriptorSets;
-        if (activeDescriptorSets.size() < (setCount + firstSet)) {
-            activeDescriptorSets.resize(setCount + firstSet);
-        }
-        for (uint32_t i = 0; i < setCount; ++i) {
-            activeDescriptorSets[i + firstSet] = pDescriptorSets[i];
-        }
-    }
-    // TODO : Somewhere need to verify that all textures referenced by shaders in DS are in some type of *SHADER_READ* state
-#endif
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         if (pCB->state == CB_RECORDING) {
@@ -7598,64 +7617,48 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(VkCommandBuffe
         dev_data->device_dispatch_table->CmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
 }
 
-#if MTMERGESOURCE
 /* expects globalLock to be held by caller */
-bool markStoreImagesAndBuffersAsWritten(VkCommandBuffer commandBuffer) {
+bool markStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_NODE *pCB) {
     bool skip_call = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    auto cb_data = my_data->commandBufferMap.find(commandBuffer);
-    if (cb_data == my_data->commandBufferMap.end())
-        return skip_call;
-    std::vector<VkDescriptorSet> &activeDescriptorSets = cb_data->second->activeDescriptorSets;
-    for (auto descriptorSet : activeDescriptorSets) {
-        auto ds_data = my_data->descriptorSetMap.find(descriptorSet);
-        if (ds_data == my_data->descriptorSetMap.end())
+
+    for (auto imageView : pCB->updateImages) {
+        auto iv_data = dev_data->imageViewMap.find(imageView);
+        if (iv_data == dev_data->imageViewMap.end())
             continue;
-        std::vector<VkImageView> images = ds_data->second.images;
-        std::vector<VkBuffer> buffers = ds_data->second.buffers;
-        for (auto imageView : images) {
-            auto iv_data = my_data->imageViewMap.find(imageView);
-            if (iv_data == my_data->imageViewMap.end())
-                continue;
-            VkImage image = iv_data->second.image;
-            VkDeviceMemory mem;
-            skip_call |=
-                get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
-            std::function<VkBool32()> function = [=]() {
-                set_memory_valid(my_data, mem, true, image);
-                return VK_FALSE;
-            };
-            cb_data->second->validate_functions.push_back(function);
-        }
-        for (auto buffer : buffers) {
-            VkDeviceMemory mem;
-            skip_call |=
-                get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
-            std::function<VkBool32()> function = [=]() {
-                set_memory_valid(my_data, mem, true);
-                return VK_FALSE;
-            };
-            cb_data->second->validate_functions.push_back(function);
-        }
+        VkImage image = iv_data->second.image;
+        VkDeviceMemory mem;
+        skip_call |=
+            get_mem_binding_from_object(dev_data, pCB->commandBuffer, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
+        std::function<VkBool32()> function = [=]() {
+            set_memory_valid(dev_data, mem, true, image);
+            return VK_FALSE;
+        };
+        pCB->validate_functions.push_back(function);
+    }
+    for (auto buffer : pCB->updateBuffers) {
+        VkDeviceMemory mem;
+        skip_call |= get_mem_binding_from_object(dev_data, pCB->commandBuffer, (uint64_t)buffer,
+                                                 VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
+        std::function<VkBool32()> function = [=]() {
+            set_memory_valid(dev_data, mem, true);
+            return VK_FALSE;
+        };
+        pCB->validate_functions.push_back(function);
     }
     return skip_call;
 }
-#endif
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t instanceCount,
                                                      uint32_t firstVertex, uint32_t firstInstance) {
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGESOURCE
-    // MTMTODO : merge with code below
-    skipCall = markStoreImagesAndBuffersAsWritten(commandBuffer);
-#endif
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skipCall |= addCmd(dev_data, pCB, CMD_DRAW, "vkCmdDraw()");
         pCB->drawCount[DRAW]++;
-        skipCall |= validate_draw_state(dev_data, pCB, VK_FALSE);
+        skipCall |= validate_and_update_draw_state(dev_data, pCB, VK_FALSE, VK_PIPELINE_BIND_POINT_GRAPHICS);
+        skipCall |= markStoreImagesAndBuffersAsWritten(dev_data, pCB);
         // TODO : Need to pass commandBuffer as srcObj here
         skipCall |=
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
@@ -7677,15 +7680,12 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexed(VkCommandBuffer comm
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGESOURCE
-    // MTMTODO : merge with code below
-    skipCall = markStoreImagesAndBuffersAsWritten(commandBuffer);
-#endif
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skipCall |= addCmd(dev_data, pCB, CMD_DRAWINDEXED, "vkCmdDrawIndexed()");
         pCB->drawCount[DRAW_INDEXED]++;
-        skipCall |= validate_draw_state(dev_data, pCB, VK_TRUE);
+        skipCall |= validate_and_update_draw_state(dev_data, pCB, VK_TRUE, VK_PIPELINE_BIND_POINT_GRAPHICS);
+        skipCall |= markStoreImagesAndBuffersAsWritten(dev_data, pCB);
         // TODO : Need to pass commandBuffer as srcObj here
         skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
                             VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
@@ -7713,13 +7713,13 @@ vkCmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize o
     skipCall =
         get_mem_binding_from_object(dev_data, commandBuffer, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, mem, "vkCmdDrawIndirect");
-    skipCall |= markStoreImagesAndBuffersAsWritten(commandBuffer);
 #endif
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skipCall |= addCmd(dev_data, pCB, CMD_DRAWINDIRECT, "vkCmdDrawIndirect()");
         pCB->drawCount[DRAW_INDIRECT]++;
-        skipCall |= validate_draw_state(dev_data, pCB, VK_FALSE);
+        skipCall |= validate_and_update_draw_state(dev_data, pCB, VK_FALSE, VK_PIPELINE_BIND_POINT_GRAPHICS);
+        skipCall |= markStoreImagesAndBuffersAsWritten(dev_data, pCB);
         // TODO : Need to pass commandBuffer as srcObj here
         skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
                             VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_NONE, "DS",
@@ -7746,13 +7746,13 @@ vkCmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDevic
     skipCall =
         get_mem_binding_from_object(dev_data, commandBuffer, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, mem, "vkCmdDrawIndexedIndirect");
-    skipCall |= markStoreImagesAndBuffersAsWritten(commandBuffer);
 #endif
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skipCall |= addCmd(dev_data, pCB, CMD_DRAWINDEXEDINDIRECT, "vkCmdDrawIndexedIndirect()");
         pCB->drawCount[DRAW_INDEXED_INDIRECT]++;
-        skipCall |= validate_draw_state(dev_data, pCB, VK_TRUE);
+        skipCall |= validate_and_update_draw_state(dev_data, pCB, VK_TRUE, VK_PIPELINE_BIND_POINT_GRAPHICS);
+        skipCall |= markStoreImagesAndBuffersAsWritten(dev_data, pCB);
         // TODO : Need to pass commandBuffer as srcObj here
         skipCall |=
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
@@ -7773,11 +7773,13 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatch(VkCommandBuffer command
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGESOURCE
-    skipCall = markStoreImagesAndBuffersAsWritten(commandBuffer);
-#endif
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
+        // TODO : Re-enable validate_and_update_draw_state() when it supports compute shaders
+        // skipCall |= validate_and_update_draw_state(dev_data, pCB, VK_FALSE, VK_PIPELINE_BIND_POINT_COMPUTE);
+        // TODO : Call below is temporary until call above can be re-enabled
+        update_shader_storage_images_and_buffers(dev_data, pCB);
+        skipCall |= markStoreImagesAndBuffersAsWritten(dev_data, pCB);
         skipCall |= addCmd(dev_data, pCB, CMD_DISPATCH, "vkCmdDispatch()");
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdDispatch");
     }
@@ -7796,10 +7798,14 @@ vkCmdDispatchIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSi
     skipCall =
         get_mem_binding_from_object(dev_data, commandBuffer, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, mem, "vkCmdDispatchIndirect");
-    skipCall |= markStoreImagesAndBuffersAsWritten(commandBuffer);
 #endif
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
+        // TODO : Re-enable validate_and_update_draw_state() when it supports compute shaders
+        // skipCall |= validate_and_update_draw_state(dev_data, pCB, VK_FALSE, VK_PIPELINE_BIND_POINT_COMPUTE);
+        // TODO : Call below is temporary until call above can be re-enabled
+        update_shader_storage_images_and_buffers(dev_data, pCB);
+        skipCall |= markStoreImagesAndBuffersAsWritten(dev_data, pCB);
         skipCall |= addCmd(dev_data, pCB, CMD_DISPATCHINDIRECT, "vkCmdDispatchIndirect()");
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdDispatchIndirect");
     }

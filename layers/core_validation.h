@@ -868,11 +868,13 @@ struct GLOBAL_CB_NODE {
     vector<DRAW_DATA> drawData;
     DRAW_DATA currentDrawData;
     VkCommandBuffer primaryCommandBuffer;
+    // Track images and buffers that are updated by this CB at the point of a draw
+    unordered_set<VkImageView> updateImages;
+    unordered_set<VkBuffer> updateBuffers;
     // If cmd buffer is primary, track secondary command buffers pending
     // execution
     std::unordered_set<VkCommandBuffer> secondaryCommandBuffers;
     // MTMTODO : Scrub these data fields and merge active sets w/ lastBound as appropriate
-    vector<VkDescriptorSet> activeDescriptorSets;
     vector<std::function<VkBool32()>> validate_functions;
     list<VkDeviceMemory> pMemObjList; // List container of Mem objs referenced by this CB
     vector<std::function<bool(VkQueue)>> eventUpdates;
