@@ -5807,7 +5807,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice device, VkQueryPoo
         } else if (queryToStateElement == dev_data->queryToStateMap.end()) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT,
                                  0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
-                                 "Cannot get query results on queryPool %" PRIu64 " with index %d which is uninitialized.",
+                                 "Cannot get query results on queryPool %" PRIu64 " with index %d as data has not been collected for this index.",
                                  (uint64_t)(queryPool), firstQuery + i);
         }
     }
