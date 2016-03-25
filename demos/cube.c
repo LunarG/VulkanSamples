@@ -2283,6 +2283,25 @@ static void demo_init_vk(struct demo *demo) {
         .enabledExtensionCount = enabled_extension_count,
         .ppEnabledExtensionNames = (const char *const *)extension_names,
     };
+    VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+    PFN_vkDebugReportCallbackEXT callback;
+    if (demo->validate) {
+        if (!demo->use_break) {
+            callback = dbgFunc;
+        } else {
+            callback = dbgFunc;
+            // TODO add a break callback defined locally since there is no
+            // longer
+            // one included in the loader
+        }
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+        dbgCreateInfo.pNext = NULL;
+        dbgCreateInfo.pfnCallback = callback;
+        dbgCreateInfo.pUserData = NULL;
+        dbgCreateInfo.flags =
+            VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+        inst_info.pNext = &dbgCreateInfo;
+    }
 
     uint32_t gpu_count;
 
