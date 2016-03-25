@@ -293,7 +293,7 @@ struct loader_instance {
 
     bool debug_report_enabled;
     VkLayerDbgFunctionNode *DbgFunctionHead;
-    VkDebugReportCallbackCreateInfoEXT *pDebugReportCreateInfo;
+    VkDebugReportCallbackCreateInfoEXT debugReportCreateInfo;
 
     VkAllocationCallbacks alloc_callbacks;
 
