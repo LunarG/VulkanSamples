@@ -9498,8 +9498,9 @@ VkBool32 VerifyFramebufferAndRenderPassLayouts(VkCommandBuffer cmdBuffer, const 
                         log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                 DRAWSTATE_INVALID_RENDERPASS, "DS", "You cannot start a render pass using attachment %i "
                                                                     "where the "
-                                                                    "intial layout differs from the starting layout.",
-                                i);
+                                                                    "intial layout is %s and the layout of the attachment at the "
+                                                                    "start of the render pass is %s. The layouts must match.",
+                                i, string_VkImageLayout(newNode.layout), string_VkImageLayout(node.layout));
                 }
             }
         }
