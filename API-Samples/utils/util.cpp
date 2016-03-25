@@ -522,8 +522,7 @@ void write_ppm(struct sample_info &info, const char *basename) {
     VkImage mappableImage;
     VkDeviceMemory mappableMemory;
 
-    /* Create a mappable image.  It will be the texture if linear images are ok
-     * to be textures or it will be the staging image if they are not. */
+    /* Create a mappable image */
     res = vkCreateImage(info.device, &image_create_info, NULL, &mappableImage);
     assert(res == VK_SUCCESS);
 
@@ -672,6 +671,7 @@ void write_ppm(struct sample_info &info, const char *basename) {
     }
 
     file.close();
+    vkUnmapMemory(info.device, mappableMemory);
     vkDestroyImage(info.device, mappableImage, NULL);
     vkFreeMemory(info.device, mappableMemory, NULL);
 }
