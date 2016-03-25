@@ -282,9 +282,8 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
             // Use this pNext so that vkCreateInstance has a callback that can
             // be used to log messages.  Make a copy for use by
             // vkDestroyInstance as well.
-            ptr_instance->pDebugReportCreateInfo =
-                ((VkDebugReportCallbackCreateInfoEXT *)
-                 malloc(sizeof(VkDebugReportCallbackCreateInfoEXT)));
+            memcpy(&ptr_instance->debugReportCreateInfo, pNext,
+                   sizeof(VkDebugReportCallbackCreateInfoEXT));
             instance_callback = (VkDebugReportCallbackEXT)ptr_instance;
             if (util_CreateDebugReportCallback(ptr_instance, pNext, NULL,
                                                instance_callback)) {
@@ -457,11 +456,12 @@ vkDestroyInstance(VkInstance instance,
 
     ptr_instance = loader_get_instance(instance);
 
-    if (ptr_instance->pDebugReportCreateInfo) {
+    if (ptr_instance->debugReportCreateInfo.sType ==
+        VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT) {
         // Setup a temporary callback here to catch cleanup issues:
         instance_callback = (VkDebugReportCallbackEXT)ptr_instance;
         if (!util_CreateDebugReportCallback(ptr_instance,
-                                            ptr_instance->pDebugReportCreateInfo,
+                                            &ptr_instance->debugReportCreateInfo,
                                             NULL, instance_callback)) {
             callback_setup = true;
         }
