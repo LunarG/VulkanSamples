@@ -53,6 +53,9 @@ const char ParameterValidationName[] = "ParameterValidation";
 // String returned by string_VkStructureType for an unrecognized type.
 const std::string UnsupportedStructureTypeString = "Unhandled VkStructureType";
 
+// String returned by string_VkResult for an unrecognized type.
+const std::string UnsupportedResultString = "Unhandled VkResult";
+
 // The base value used when computing the offset for an enumeration token value that is added by an extension.
 // When validating enumeration tokens, any value >= to this value is considered to be provided by an extension.
 // See Appendix C.10 "Assigning Extension Token Values" from the Vulkan specification
@@ -492,6 +495,77 @@ static VkBool32 validate_ranged_enum_array(debug_report_data *report_data, const
     }
 
     return skipCall;
+}
+
+/**
+* Get VkResult code description.
+*
+* Returns a string describing the specified VkResult code.  The description is based on the language in the Vulkan API specification.
+*
+* @param value VkResult code to process.
+* @return String describing the specified VkResult code.
+*/
+static std::string get_result_description(VkResult result) {
+    // clang-format off
+    switch (result) {
+        case VK_SUCCESS:                        return "a command completed successfully";
+        case VK_NOT_READY:                      return "a fence or query has not yet completed";
+        case VK_TIMEOUT:                        return "a wait operation has not completed in the specified time";
+        case VK_EVENT_SET:                      return "an event is signaled";
+        case VK_EVENT_RESET:                    return "an event is unsignalled";
+        case VK_INCOMPLETE:                     return "a return array was too small for the result";
+        case VK_ERROR_OUT_OF_HOST_MEMORY:       return "a host memory allocation has failed";
+        case VK_ERROR_OUT_OF_DEVICE_MEMORY:     return "a device memory allocation has failed";
+        case VK_ERROR_INITIALIZATION_FAILED:    return "the logical device has been lost";
+        case VK_ERROR_DEVICE_LOST:              return "initialization of an object has failed";
+        case VK_ERROR_MEMORY_MAP_FAILED:        return "mapping of a memory object has failed";
+        case VK_ERROR_LAYER_NOT_PRESENT:        return "the specified layer does not exist";
+        case VK_ERROR_EXTENSION_NOT_PRESENT:    return "the specified extension does not exist";
+        case VK_ERROR_FEATURE_NOT_PRESENT:      return "the requested feature is not available on this device";
+        case VK_ERROR_INCOMPATIBLE_DRIVER:      return "a Vulkan driver could not be found";
+        case VK_ERROR_TOO_MANY_OBJECTS:         return "too many objects of the type have already been created";
+        case VK_ERROR_FORMAT_NOT_SUPPORTED:     return "the requested format is not supported on this device";
+        case VK_ERROR_SURFACE_LOST_KHR:         return "a surface is no longer available";
+        case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR: return "the requested window is already connected to another "
+                                                       "VkSurfaceKHR object, or some other non-Vulkan surface object";
+        case VK_SUBOPTIMAL_KHR:                 return "an image became available, and the swapchain no longer "
+                                                       "matches the surface properties exactly, but can still be used to "
+                                                       "present to the surface successfully.";
+        case VK_ERROR_OUT_OF_DATE_KHR:          return "a surface has changed in such a way that it is no "
+                                                       "longer compatible with the swapchain";
+        case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR: return "the display used by a swapchain does not use the same "
+                                                       "presentable image layout, or is incompatible in a way that prevents "
+                                                       "sharing an image";
+        case VK_ERROR_VALIDATION_FAILED_EXT:    return "API validation has detected an invalid use of the API";
+        case VK_ERROR_INVALID_SHADER_NV:        return "one or more shaders failed to compile or link";
+        default:                                return "an error has occured";
+    };
+    // clang-format on
+}
+
+/**
+* Validate return code.
+*
+* Print a message describing the reason for failure when an error code is returned.
+*
+* @param report_data debug_report_data object for routing validation messages.
+* @param apiName Name of API call being validated.
+* @param value VkResult value to validate.
+*/
+static void validate_result(debug_report_data *report_data, const char *apiName, VkResult result) {
+    if (result < 0) {
+        std::string resultName = string_VkResult(result);
+
+        if (resultName == UnsupportedResultString) {
+            // Unrecognized result code
+            log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                    ParameterValidationName, "%s: returned a result code indicating that an error has occured", apiName);
+        } else {
+            std::string resultDesc = get_result_description(result);
+            log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                    ParameterValidationName, "%s: returned %s, indicating that %s", apiName, resultName.c_str(), resultDesc.c_str());
+        }
+    }
 }
 
 #endif // PARAMETER_VALIDATION_UTILS_H
