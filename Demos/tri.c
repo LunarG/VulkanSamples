@@ -153,10 +153,11 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     return false;
 }
 
-VkBool32 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-                       uint64_t srcObject, size_t location, int32_t msgCode,
-                       const char *pLayerPrefix, const char *pMsg,
-                       void *pUserData) {
+VKAPI_ATTR VkBool32 VKAPI_CALL
+BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
+              uint64_t srcObject, size_t location, int32_t msgCode,
+              const char *pLayerPrefix, const char *pMsg,
+              void *pUserData) {
 #ifndef WIN32
     raise(SIGTRAP);
 #else
