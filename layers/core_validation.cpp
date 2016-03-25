@@ -6789,7 +6789,7 @@ vkAllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAl
                     pNewNode->set = pDescriptorSets[i];
                     pNewNode->descriptorCount = (pLayout->createInfo.bindingCount != 0) ? pLayout->endIndex + 1 : 0;
                     if (pNewNode->descriptorCount) {
-                        pNewNode->pDescriptorUpdates.reserve(pNewNode->descriptorCount);
+                        pNewNode->pDescriptorUpdates.resize(pNewNode->descriptorCount);
                     }
                     dev_data->setMap[pDescriptorSets[i]] = pNewNode;
                 }
