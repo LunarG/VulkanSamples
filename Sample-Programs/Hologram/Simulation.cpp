@@ -113,6 +113,9 @@ Animation::Animation(unsigned int rng_seed, float scale)
     current_.scale = scale;
 
     current_.matrix = glm::scale(glm::mat4(1.0f), glm::vec3(current_.scale));
+
+    current_.alpha = current_.speed;
+    current_.alpha_inc = current_.alpha > 0.5f ? 0.05f : -0.05f;
 }
 
 glm::mat4 Animation::transformation(float t)
@@ -120,6 +123,16 @@ glm::mat4 Animation::transformation(float t)
     current_.matrix = glm::rotate(current_.matrix, current_.speed * t, current_.axis);
 
     return current_.matrix;
+}
+
+float Animation::transparency()
+{
+    if (current_.alpha <= 0.0f || current_.alpha >= 1.0f) 
+    {
+        current_.alpha_inc *= -1.0f;
+    }
+    current_.alpha += current_.alpha_inc;
+    return current_.alpha;
 }
 
 class Curve {
@@ -323,5 +336,6 @@ void Simulation::update(float time, int begin, int end)
         glm::vec3 pos = obj.path.position(time);
         glm::mat4 trans = obj.animation.transformation(time);
         obj.model = glm::translate(glm::mat4(1.0f), pos) * trans;
+        obj.alpha = obj.animation.transparency();
     }
 }
