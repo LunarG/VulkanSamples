@@ -236,7 +236,7 @@ VkBool32 demo_check_layers(const std::vector<layer_properties> &layer_props,
 void init_instance_extension_names(struct sample_info &info) {
     info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 #ifdef __ANDROID__
-    // Do nothing on Android.
+    info.instance_extension_names.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #elif defined(_WIN32)
     info.instance_extension_names.push_back(
         VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
@@ -261,15 +261,12 @@ VkResult init_instance(struct sample_info &info,
     inst_info.pNext = NULL;
     inst_info.flags = 0;
     inst_info.pApplicationInfo = &app_info;
-    // Disable extension parameters on Android.
-#ifndef __ANDROID__
     inst_info.enabledLayerCount = info.instance_layer_names.size();
     inst_info.ppEnabledLayerNames = info.instance_layer_names.size()
                                         ? info.instance_layer_names.data()
                                         : NULL;
     inst_info.enabledExtensionCount = info.instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
-#endif // !__ANDROID__
     VkResult res = vkCreateInstance(&inst_info, NULL, &info.inst);
     assert(res == VK_SUCCESS);
 
@@ -296,8 +293,6 @@ VkResult init_device(struct sample_info &info) {
     device_info.pNext = NULL;
     device_info.queueCreateInfoCount = 1;
     device_info.pQueueCreateInfos = &queue_info;
-    // Temporarily disable extension parameters on Android.
-#ifndef __ANDROID__
     device_info.enabledLayerCount = info.device_layer_names.size();
     device_info.ppEnabledLayerNames =
         device_info.enabledLayerCount ? info.device_layer_names.data() : NULL;
@@ -305,18 +300,10 @@ VkResult init_device(struct sample_info &info) {
     device_info.ppEnabledExtensionNames =
         device_info.enabledExtensionCount ? info.device_extension_names.data()
                                           : NULL;
-#endif
     device_info.pEnabledFeatures = NULL;
 
     res = vkCreateDevice(info.gpus[0], &device_info, NULL, &info.device);
     assert(res == VK_SUCCESS);
-#ifdef __ANDROID__
-    GET_DEVICE_PROC_ADDR(info.device, CreateSwapchainKHR);
-    GET_DEVICE_PROC_ADDR(info.device, DestroySwapchainKHR);
-    GET_DEVICE_PROC_ADDR(info.device, GetSwapchainImagesKHR);
-    GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
-    GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
-#endif
     return res;
 }
 
@@ -743,11 +730,6 @@ void init_swapchain_extension(struct sample_info &info) {
     res = vkCreateWin32SurfaceKHR(info.inst, &createInfo,
                                   NULL, &info.surface);
 #elif defined(__ANDROID__)
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceSupportKHR);
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceCapabilitiesKHR);
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceFormatsKHR);
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfacePresentModesKHR);
-    GET_INSTANCE_PROC_ADDR(info.inst, DestroySurfaceKHR);
     GET_INSTANCE_PROC_ADDR(info.inst, CreateAndroidSurfaceKHR);
 
     VkAndroidSurfaceCreateInfoKHR createInfo;
@@ -1397,16 +1379,6 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData,
                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &alloc_info.memoryTypeIndex);
-    // Workaround for some driver issue on Android.
-    bool cached = false;
-    if (!pass) {
-        pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                           VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-                                           &alloc_info.memoryTypeIndex);
-        cached = true;
-    }
-    assert(pass);
 
     res = vkAllocateMemory(info.device, &alloc_info, NULL,
                            &(info.vertex_buffer.mem));
@@ -1421,15 +1393,6 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData,
 
     memcpy(pData, vertexData, dataSize);
 
-    if (cached) {
-        VkMappedMemoryRange memRange;
-        memRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-        memRange.pNext = NULL;
-        memRange.memory = info.vertex_buffer.mem;
-        memRange.offset = 0;
-        memRange.size = mem_reqs.size;
-        vkFlushMappedMemoryRanges(info.device, 1, &memRange);
-    }
     vkUnmapMemory(info.device, info.vertex_buffer.mem);
 
     res = vkBindBufferMemory(info.device, info.vertex_buffer.buf,
