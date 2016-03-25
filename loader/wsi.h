@@ -31,11 +31,10 @@
 
 bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
                                 const char *name, void **addr);
-void wsi_add_instance_extensions(const struct loader_instance *inst,
-                                 struct loader_extension_list *ext_list);
 
 void wsi_create_instance(struct loader_instance *ptr_instance,
                          const VkInstanceCreateInfo *pCreateInfo);
+bool wsi_unsupported_instance_extension(const VkExtensionProperties *ext_prop);
 
 VKAPI_ATTR void VKAPI_CALL
 terminator_DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,

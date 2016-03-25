@@ -85,34 +85,6 @@ static const VkExtensionProperties wsi_android_surface_extension_info = {
 };
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
-// Note for VK_DISPLAY_KHR don't advertise support since we really need support
-// to come from ICD, although the loader supplements the support from ICD
-
-void wsi_add_instance_extensions(const struct loader_instance *inst,
-                                 struct loader_extension_list *ext_list) {
-    loader_add_to_ext_list(inst, ext_list, 1, &wsi_surface_extension_info);
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    loader_add_to_ext_list(inst, ext_list, 1,
-                           &wsi_win32_surface_extension_info);
-#endif // VK_USE_PLATFORM_WIN32_KHR
-#ifdef VK_USE_PLATFORM_MIR_KHR
-    loader_add_to_ext_list(inst, ext_list, 1, &wsi_mir_surface_extension_info);
-#endif // VK_USE_PLATFORM_MIR_KHR
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    loader_add_to_ext_list(inst, ext_list, 1,
-                           &wsi_wayland_surface_extension_info);
-#endif // VK_USE_PLATFORM_WAYLAND_KHR
-#ifdef VK_USE_PLATFORM_XCB_KHR
-    loader_add_to_ext_list(inst, ext_list, 1, &wsi_xcb_surface_extension_info);
-#endif // VK_USE_PLATFORM_XCB_KHR
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-    loader_add_to_ext_list(inst, ext_list, 1, &wsi_xlib_surface_extension_info);
-#endif // VK_USE_PLATFORM_XLIB_KHR
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-    loader_add_to_ext_list(inst, ext_list, 1,
-                           &wsi_android_surface_extension_info);
-#endif // VK_USE_PLATFORM_ANDROID_KHR
-}
 
 void wsi_create_instance(struct loader_instance *ptr_instance,
                          const VkInstanceCreateInfo *pCreateInfo) {
@@ -194,7 +166,36 @@ void wsi_create_instance(struct loader_instance *ptr_instance,
         }
     }
 }
+/*
+ * Linux WSI surface extensions are not always compiled into the loader. (Assume
+ * for Windows the KHR_win32_surface is always compiled into loader). A given
+ * Linux build environment might not have the headers required for building one
+ * of the four extensions  (Xlib, Xcb, Mir, Wayland).  Thus, need to check if
+ * the built loader actually supports the particular Linux surface extension.
+ * If not supported by the built loader it will not be included in the list of
+ * enumerated instance extensions.  This solves the issue where an ICD or layer
+ * advertises support for a given Linux surface extension but the loader was not
+ * built to support the extension. */
+bool wsi_unsupported_instance_extension(const VkExtensionProperties *ext_prop) {
+#ifndef VK_USE_PLATFORM_MIR_KHR
+    if (!strcmp(ext_prop->extensionName, "VK_KHR_mir_surface"))
+        return true;
+#endif // VK_USE_PLATFORM_MIR_KHR
+#ifndef VK_USE_PLATFORM_WAYLAND_KHR
+    if (!strcmp(ext_prop->extensionName, "VK_KHR_wayland_surface"))
+        return true;
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#ifndef VK_USE_PLATFORM_XCB_KHR
+    if (!strcmp(ext_prop->extensionName, "VK_KHR_xcb_surface"))
+        return true;
+#endif // VK_USE_PLATFORM_XCB_KHR
+#ifndef VK_USE_PLATFORM_XLIB_KHR
+    if (!strcmp(ext_prop->extensionName, "VK_KHR_xlib_surface"))
+        return true;
+#endif // VK_USE_PLATFORM_XLIB_KHR
 
+    return false;
+}
 /*
  * Functions for the VK_KHR_surface extension:
  */
