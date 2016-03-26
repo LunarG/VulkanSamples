@@ -56,10 +56,6 @@ static const char *normalVertShaderText =
     "void main() {\n"
     "   outColor = inColor;\n"
     "   gl_Position = myBufferVals.mvp * pos;\n"
-    "\n"
-    "   // GL->VK conventions\n"
-    "   gl_Position.y = -gl_Position.y;\n"
-    "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
     "}\n";
 
 /* This shader renders a simple fullscreen quad using the VS alone */
@@ -101,6 +97,7 @@ int sample_main() {
     char sample_title[] = "Multi-pass render passes";
     const bool depthPresent = true;
 
+    process_command_line_args(info, argc, argv);
     init_global_layer_properties(info);
     init_instance_extension_names(info);
     init_device_extension_names(info);
@@ -648,6 +645,8 @@ int sample_main() {
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
+    VkPipelineStageFlags pipe_stage_flags =
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -655,6 +654,7 @@ int sample_main() {
     submit_info[0].pWaitSemaphores = &presentCompleteSemaphore;
     submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
+    submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
     submit_info[0].signalSemaphoreCount = 0;
     submit_info[0].pSignalSemaphores = NULL;
 
@@ -685,6 +685,8 @@ int sample_main() {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
+    if (info.save_images)
+        write_ppm(info, "drawsubpasses");
 
     for (uint32_t i = 0; i < info.swapchainImageCount; i++)
         vkDestroyFramebuffer(info.device, stencil_framebuffers[i], NULL);
@@ -711,8 +713,8 @@ int sample_main() {
     destroy_swap_chain(info);
     destroy_command_buffer(info);
     destroy_command_pool(info);
-    destroy_window(info);
     destroy_device(info);
+    destroy_window(info);
     destroy_instance(info);
     return 0;
 }

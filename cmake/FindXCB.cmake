@@ -1,6 +1,10 @@
 # - FindXCB
 #
+<<<<<<< HEAD
 # Copyright 2015 Valve Coporation
+=======
+# Copyright (C) 2015 Valve Corporation
+>>>>>>> lunarg/master
 
 find_package(PkgConfig)
 

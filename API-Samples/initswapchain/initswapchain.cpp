@@ -286,6 +286,7 @@ int sample_main() {
                                 &info.buffers[i].view);
         assert(res == VK_SUCCESS);
     }
+    free(swapchainImages);
     execute_end_command_buffer(info);
     execute_queue_command_buffer(info);
     /* VULKAN_KEY_END */
@@ -298,8 +299,8 @@ int sample_main() {
         vkDestroyImageView(info.device, info.buffers[i].view, NULL);
     }
     vkDestroySwapchainKHR(info.device, info.swap_chain, NULL);
-    destroy_window(info);
     destroy_device(info);
+    destroy_window(info);
     destroy_instance(info);
 
     return 0;

@@ -39,7 +39,7 @@ Use an immutable sampler to texture a cube.
 // along with a sampled image.  It should render the LunarG textured cube.
 
 const char *vertShaderText =
-    "#version 140\n"
+    "#version 400\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
     "layout (std140, set = 0, binding = 0) uniform buf {\n"
@@ -48,16 +48,16 @@ const char *vertShaderText =
     "layout (location = 0) in vec4 pos;\n"
     "layout (location = 1) in vec2 inTexCoords;\n"
     "layout (location = 0) out vec2 outTexCoords;\n"
+    "out gl_PerVertex { \n"
+    "    vec4 gl_Position;\n"
+    "};\n"
     "void main() {\n"
     "   outTexCoords = inTexCoords;\n"
     "   gl_Position = ubuf.mvp * pos;\n"
-    "   // GL->VK conventions\n"
-    "   gl_Position.y = -gl_Position.y;\n"
-    "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
     "}\n";
 
 const char *fragShaderText =
-    "#version 140\n"
+    "#version 400\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
     "layout (set = 0, binding = 1) uniform sampler2D surface;\n"
@@ -76,6 +76,7 @@ int sample_main() {
     char sample_title[] = "Simple Immutable Sampler";
     const bool depthPresent = true;
 
+    process_command_line_args(info, argc, argv);
     init_global_layer_properties(info);
     init_instance_extension_names(info);
     init_device_extension_names(info);
@@ -287,6 +288,8 @@ int sample_main() {
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);
+    if (info.save_images)
+        write_ppm(info, "immutable_sampler");
 
     vkDestroyFence(info.device, drawFence, NULL);
     vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);
@@ -316,8 +319,8 @@ int sample_main() {
     destroy_swap_chain(info);
     destroy_command_buffer(info);
     destroy_command_pool(info);
-    destroy_window(info);
     destroy_device(info);
+    destroy_window(info);
     destroy_instance(info);
     return 0;
 }

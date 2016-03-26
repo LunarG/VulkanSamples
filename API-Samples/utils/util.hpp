@@ -3,7 +3,6 @@
  *
  * Copyright (C) 2015-2016 Valve Corporation
  * Copyright (C) 2015-2016 LunarG, Inc.
- * Copyright (C) 2015-2016 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -51,13 +50,7 @@
 
 #include <vulkan/vulkan.h>
 
-#ifndef __ANDROID__
-#define USE_DEBUG_EXTENTIONS (1) // Enable debug report extension other than Android by default.
-#endif
-#ifdef USE_DEBUG_EXTENTIONS
-// Inclucde files from LoaderAndTools.
-#include <vulkan/vk_sdk_platform.h>
-#endif
+#include "vulkan/vk_sdk_platform.h"
 
 /* Number of descriptor sets needs to be the same at alloc,       */
 /* pipeline layout creation, and descriptor set layout creation   */
@@ -158,6 +151,7 @@ struct sample_info {
     VkSurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;
+    bool save_images;
 
     std::vector<const char *> instance_layer_names;
     std::vector<const char *> instance_extension_names;
@@ -221,6 +215,7 @@ struct sample_info {
     glm::mat4 Projection;
     glm::mat4 View;
     glm::mat4 Model;
+    glm::mat4 Clip;
     glm::mat4 MVP;
 
     VkCommandBuffer cmd; // Buffer for initialization commands
@@ -235,19 +230,19 @@ struct sample_info {
     VkDescriptorPool desc_pool;
     std::vector<VkDescriptorSet> desc_set;
 
-#ifdef USE_DEBUG_EXTENTIONS
     PFN_vkCreateDebugReportCallbackEXT dbgCreateDebugReportCallback;
     PFN_vkDestroyDebugReportCallbackEXT dbgDestroyDebugReportCallback;
     PFN_vkDebugReportMessageEXT dbgBreakCallback;
     std::vector<VkDebugReportCallbackEXT> debug_report_callbacks;
-#endif
+
     uint32_t current_buffer;
     uint32_t queue_count;
 
     VkViewport viewport;
     VkRect2D scissor;
 };
-
+void process_command_line_args(struct sample_info &info, int argc,
+                               char *argv[]);
 bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits,
                                  VkFlags requirements_mask,
                                  uint32_t *typeIndex);
@@ -259,6 +254,7 @@ void set_image_layout(struct sample_info &demo, VkImage image,
 
 bool read_ppm(char const *const filename, int &width, int &height,
               uint64_t rowPitch, unsigned char *dataPtr);
+void write_ppm(struct sample_info &info, const char *basename);
 void extract_version(uint32_t version, uint32_t &major, uint32_t &minor,
                      uint32_t &patch);
 bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,

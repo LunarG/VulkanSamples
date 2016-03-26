@@ -50,6 +50,7 @@ int sample_main() {
     VkDeviceMemory dmem;
     unsigned char *pImgMem;
 
+    process_command_line_args(info, argc, argv);
     init_global_layer_properties(info);
     init_instance_extension_names(info);
     init_device_extension_names(info);
@@ -59,12 +60,22 @@ int sample_main() {
     init_connection(info);
     init_window(info);
     init_swapchain_extension(info);
+
+    VkSurfaceCapabilitiesKHR surfCapabilities;
+    res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(info.gpus[0], info.surface,
+                                                    &surfCapabilities);
+    if (!(surfCapabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)) {
+        std::cout << "Surface cannot be destination of blit - abort \n";
+        exit(-1);
+    }
+
     init_device(info);
     init_command_pool(info);
     init_command_buffer(info);
     execute_begin_command_buffer(info);
     init_device_queue(info);
-    init_swap_chain(info);
+    init_swap_chain(info,  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                           VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
     /* VULKAN_KEY_START */
 
@@ -126,6 +137,39 @@ int sample_main() {
     memAllocInfo.allocationSize = memReq.size;
     res = vkAllocateMemory(info.device, &memAllocInfo, NULL, &dmem);
     res = vkBindImageMemory(info.device, bltSrcImage, dmem, 0);
+    set_image_layout(info, bltSrcImage, VK_IMAGE_ASPECT_COLOR_BIT,
+                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+    res = vkEndCommandBuffer(info.cmd);
+    assert(res == VK_SUCCESS);
+
+    VkFence cmdFence;
+    init_fence(info, cmdFence);
+    VkPipelineStageFlags pipe_stage_flags =
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    VkSubmitInfo submit_info = {};
+    submit_info.pNext = NULL;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.waitSemaphoreCount = 1;
+    submit_info.pWaitSemaphores = &presentCompleteSemaphore;
+    submit_info.pWaitDstStageMask = &pipe_stage_flags;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &info.cmd;
+    submit_info.signalSemaphoreCount = 0;
+    submit_info.pSignalSemaphores = NULL;
+
+    /* Queue the command buffer for execution */
+    res = vkQueueSubmit(info.queue, 1, &submit_info, cmdFence);
+    assert(res == VK_SUCCESS);
+
+    /* Make sure command buffer is finished before mapping */
+    do {
+        res =
+            vkWaitForFences(info.device, 1, &cmdFence, VK_TRUE, FENCE_TIMEOUT);
+    } while (res == VK_TIMEOUT);
+    assert(res == VK_SUCCESS);
+    vkDestroyFence(info.device, cmdFence, NULL);
+
     res = vkMapMemory(info.device, dmem, 0, memReq.size, 0, (void **)&pImgMem);
     // Checkerboard of 8x8 pixel squares
     for (int row = 0; row < info.height; row++) {
@@ -150,8 +194,11 @@ int sample_main() {
     res = vkFlushMappedMemoryRanges(info.device, 1, &memRange);
 
     vkUnmapMemory(info.device, dmem);
+
+    vkResetCommandBuffer(info.cmd, 0);
+    execute_begin_command_buffer(info);
     set_image_layout(info, bltSrcImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                     VK_IMAGE_LAYOUT_UNDEFINED,
+                     VK_IMAGE_LAYOUT_GENERAL,
                      VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
     bltDstImage = info.buffers[info.current_buffer].image;
@@ -232,7 +279,6 @@ int sample_main() {
                          NULL, 1, &prePresentBarrier);
 
     res = vkEndCommandBuffer(info.cmd);
-    const VkCommandBuffer cmd_bufs[] = {info.cmd};
     VkFenceCreateInfo fenceInfo;
     VkFence drawFence;
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -240,21 +286,18 @@ int sample_main() {
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
-    VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-    VkSubmitInfo submit_info[1] = {};
-    submit_info[0].pNext = NULL;
-    submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info[0].waitSemaphoreCount = 1;
-    submit_info[0].pWaitSemaphores = &presentCompleteSemaphore;
-    submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
-    submit_info[0].commandBufferCount = 1;
-    submit_info[0].pCommandBuffers = cmd_bufs;
-    submit_info[0].signalSemaphoreCount = 0;
-    submit_info[0].pSignalSemaphores = NULL;
+    submit_info.pNext = NULL;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.waitSemaphoreCount = 0;
+    submit_info.pWaitSemaphores = NULL;
+    submit_info.pWaitDstStageMask = NULL;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &info.cmd;
+    submit_info.signalSemaphoreCount = 0;
+    submit_info.pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, drawFence);
+    res = vkQueueSubmit(info.queue, 1, &submit_info, drawFence);
     assert(res == VK_SUCCESS);
 
     res = vkQueueWaitIdle(info.queue);
@@ -283,6 +326,8 @@ int sample_main() {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
+    if (info.save_images)
+        write_ppm(info, "copyblitimage");
 
     vkDestroySemaphore(info.device, presentCompleteSemaphore, NULL);
     vkDestroyFence(info.device, drawFence, NULL);
@@ -291,8 +336,8 @@ int sample_main() {
     destroy_swap_chain(info);
     destroy_command_buffer(info);
     destroy_command_pool(info);
-    destroy_window(info);
     destroy_device(info);
+    destroy_window(info);
     destroy_instance(info);
     return 0;
 }

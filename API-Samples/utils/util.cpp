@@ -33,6 +33,7 @@ samples utility functions
 #include <assert.h>
 #include <cstdlib>
 #include <iomanip>
+#include <fstream>
 #include <iostream>
 #include "util.hpp"
 
@@ -147,10 +148,13 @@ void set_image_layout(struct sample_info &info, VkImage image,
     image_memory_barrier.dstAccessMask = 0;
     image_memory_barrier.oldLayout = old_image_layout;
     image_memory_barrier.newLayout = new_image_layout;
+    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     image_memory_barrier.image = image;
     image_memory_barrier.subresourceRange.aspectMask = aspectMask;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
     image_memory_barrier.subresourceRange.levelCount = 1;
+    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
     image_memory_barrier.subresourceRange.layerCount = 1;
 
     if (old_image_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
@@ -159,12 +163,22 @@ void set_image_layout(struct sample_info &info, VkImage image,
     }
 
     if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        /* Make sure anything that was copying from this image has completed */
-        image_memory_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    }
+
+    if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
+        image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    }
+
+    if (old_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    }
+
+    if (old_image_layout == VK_IMAGE_LAYOUT_PREINITIALIZED) {
+        image_memory_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
     }
 
     if (new_image_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-        /* Make sure any Copy or CPU writes to image are flushed */
         image_memory_barrier.srcAccessMask =
             VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
         image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -172,12 +186,12 @@ void set_image_layout(struct sample_info &info, VkImage image,
 
     if (new_image_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
         image_memory_barrier.dstAccessMask =
-            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     }
 
     if (new_image_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
         image_memory_barrier.dstAccessMask =
-            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     }
 
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
@@ -451,12 +465,11 @@ shaderc_shader_kind MapShadercType(VkShaderStageFlagBits vkShader) {
 // Compile a given string containing GLSL into SPV for use by VK
 // Return value of false means an error was encountered.
 //
-bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
-               const char *pshader,
-               std::vector<unsigned int> &spirv)
-{
-#ifndef __ANDROID__
-    glslang::TProgram& program = *new glslang::TProgram;
+bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
+               std::vector<unsigned int> &spirv) {
+    EShLanguage stage = FindLanguage(shader_type);
+    glslang::TShader shader(stage);
+    glslang::TProgram program;
     const char *shaderStrings[1];
     TBuiltInResource Resources;
     init_resources(Resources);
@@ -464,27 +477,25 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
     // Enable SPIR-V and Vulkan rules when parsing GLSL
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
-    EShLanguage stage = FindLanguage(shader_type);
-    glslang::TShader *shader = new glslang::TShader(stage);
-
     shaderStrings[0] = pshader;
-    shader->setStrings(shaderStrings, 1);
+    shader.setStrings(shaderStrings, 1);
 
-    if (!shader->parse(&Resources, 100, false, messages)) {
-        puts(shader->getInfoLog());
-        puts(shader->getInfoDebugLog());
+    if (!shader.parse(&Resources, 100, false, messages)) {
+        puts(shader.getInfoLog());
+        puts(shader.getInfoDebugLog());
         return false; // something didn't work
     }
 
-    program.addShader(shader);
+    program.addShader(&shader);
 
     //
     // Program-level processing...
     //
 
     if (!program.link(messages)) {
-        puts(shader->getInfoLog());
-        puts(shader->getInfoDebugLog());
+        puts(shader.getInfoLog());
+        puts(shader.getInfoDebugLog());
+        fflush(stdout);
         return false;
     }
 
@@ -571,6 +582,229 @@ void print_UUID(uint8_t *pipelineCacheUUID) {
         }
     }
 }
+static bool optionMatch(const char *option, char *optionLine) {
+    if (strncmp(option, optionLine, strlen(option)) == 0)
+        return true;
+    else
+        return false;
+}
+
+void process_command_line_args(struct sample_info &info, int argc,
+                               char *argv[]) {
+    int i, n;
+
+    for (i = 1, n = 1; i < argc; i++) {
+        if (optionMatch("--save-images", argv[i]))
+            info.save_images = true;
+        else if (optionMatch("--help", argv[i]) || optionMatch("-h", argv[i])) {
+            printf("\nOther options:\n");
+            printf("\t--save-images\n"
+                   "\t\tSave tests images as ppm files in current working "
+                   "directory.\n");
+            exit(0);
+        } else {
+            printf("\nUnrecognized option: %s\n", argv[i]);
+            printf("\nUse --help or -h for option list.\n");
+            exit(0);
+        }
+
+        /*
+         * Since the above "consume" inputs, update argv
+         * so that it contains the trimmed list of args for glutInit
+         */
+
+        argv[n] = argv[i];
+        n++;
+    }
+}
+
+void write_ppm(struct sample_info &info, const char *basename) {
+    string filename;
+    uint32_t x, y;
+    VkResult res;
+
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = info.format;
+    image_create_info.extent.width = info.width;
+    image_create_info.extent.height = info.height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    image_create_info.queueFamilyIndexCount = 0;
+    image_create_info.pQueueFamilyIndices = NULL;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.flags = 0;
+
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 0;
+    mem_alloc.memoryTypeIndex = 0;
+
+    VkImage mappableImage;
+    VkDeviceMemory mappableMemory;
+
+    /* Create a mappable image */
+    res = vkCreateImage(info.device, &image_create_info, NULL, &mappableImage);
+    assert(res == VK_SUCCESS);
+
+    VkMemoryRequirements mem_reqs;
+    vkGetImageMemoryRequirements(info.device, mappableImage, &mem_reqs);
+
+    mem_alloc.allocationSize = mem_reqs.size;
+
+    /* Find the memory type that is host mappable */
+    bool pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
+                                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                            &mem_alloc.memoryTypeIndex);
+    assert(pass);
+
+    /* allocate memory */
+    res = vkAllocateMemory(info.device, &mem_alloc, NULL, &(mappableMemory));
+    assert(res == VK_SUCCESS);
+
+    /* bind memory */
+    res = vkBindImageMemory(info.device, mappableImage, mappableMemory, 0);
+    assert(res == VK_SUCCESS);
+
+    VkCommandBufferBeginInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmd_buf_info.pNext = NULL;
+    cmd_buf_info.flags = 0;
+    cmd_buf_info.pInheritanceInfo = NULL;
+
+    res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
+    set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
+                     VK_IMAGE_LAYOUT_PREINITIALIZED,
+                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    set_image_layout(info, info.buffers[info.current_buffer].image,
+                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+    VkImageCopy copy_region;
+    copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.srcSubresource.mipLevel = 0;
+    copy_region.srcSubresource.baseArrayLayer = 0;
+    copy_region.srcSubresource.layerCount = 1;
+    copy_region.srcOffset.x = 0;
+    copy_region.srcOffset.y = 0;
+    copy_region.srcOffset.z = 0;
+    copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.dstSubresource.mipLevel = 0;
+    copy_region.dstSubresource.baseArrayLayer = 0;
+    copy_region.dstSubresource.layerCount = 1;
+    copy_region.dstOffset.x = 0;
+    copy_region.dstOffset.y = 0;
+    copy_region.dstOffset.z = 0;
+    copy_region.extent.width = info.width;
+    copy_region.extent.height = info.height;
+    copy_region.extent.depth = 1;
+
+    /* Put the copy command into the command buffer */
+    vkCmdCopyImage(info.cmd, info.buffers[info.current_buffer].image,
+                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mappableImage,
+                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
+
+    set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
+                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     VK_IMAGE_LAYOUT_GENERAL);
+
+    res = vkEndCommandBuffer(info.cmd);
+    assert(res == VK_SUCCESS);
+    const VkCommandBuffer cmd_bufs[] = {info.cmd};
+    VkFenceCreateInfo fenceInfo;
+    VkFence cmdFence;
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+    fenceInfo.flags = 0;
+    vkCreateFence(info.device, &fenceInfo, NULL, &cmdFence);
+
+    VkSubmitInfo submit_info[1] = {};
+    submit_info[0].pNext = NULL;
+    submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info[0].waitSemaphoreCount = 0;
+    submit_info[0].pWaitSemaphores = NULL;
+    submit_info[0].pWaitDstStageMask = NULL;
+    submit_info[0].commandBufferCount = 1;
+    submit_info[0].pCommandBuffers = cmd_bufs;
+    submit_info[0].signalSemaphoreCount = 0;
+    submit_info[0].pSignalSemaphores = NULL;
+
+    /* Queue the command buffer for execution */
+    res = vkQueueSubmit(info.queue, 1, submit_info, cmdFence);
+    assert(res == VK_SUCCESS);
+
+    /* Make sure command buffer is finished before mapping */
+    do {
+        res =
+            vkWaitForFences(info.device, 1, &cmdFence, VK_TRUE, FENCE_TIMEOUT);
+    } while (res == VK_TIMEOUT);
+    assert(res == VK_SUCCESS);
+
+    vkDestroyFence(info.device, cmdFence, NULL);
+
+    filename.append(basename);
+    filename.append(".ppm");
+
+    VkImageSubresource subres = {};
+    subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    subres.mipLevel = 0;
+    subres.arrayLayer = 0;
+    VkSubresourceLayout sr_layout;
+    vkGetImageSubresourceLayout(info.device, mappableImage, &subres,
+                                &sr_layout);
+
+    char *ptr;
+    res = vkMapMemory(info.device, mappableMemory, 0, mem_reqs.size, 0,
+                      (void **)&ptr);
+    assert(res == VK_SUCCESS);
+
+    ptr += sr_layout.offset;
+    ofstream file(filename.c_str(), ios::binary);
+
+    file << "P6\n";
+    file << info.width << " ";
+    file << info.height << "\n";
+    file << 255 << "\n";
+
+    for (y = 0; y < info.height; y++) {
+        const int *row = (const int *)ptr;
+        int swapped;
+
+        if (info.format == VK_FORMAT_B8G8R8A8_UNORM) {
+            for (x = 0; x < info.width; x++) {
+                swapped = (*row & 0xff00ff00) | (*row & 0x000000ff) << 16 |
+                          (*row & 0x00ff0000) >> 16;
+                file.write((char *)&swapped, 3);
+                row++;
+            }
+        } else if (info.format == VK_FORMAT_R8G8B8A8_UNORM) {
+            for (x = 0; x < info.width; x++) {
+                file.write((char *)row, 3);
+                row++;
+            }
+        } else {
+            printf("Unrecognized image format - will not write image files");
+            break;
+        }
+
+        ptr += sr_layout.rowPitch;
+    }
+
+    file.close();
+    vkUnmapMemory(info.device, mappableMemory);
+    vkDestroyImage(info.device, mappableImage, NULL);
+    vkFreeMemory(info.device, mappableMemory, NULL);
+}
+
 
 std::string get_file_directory() {
 #ifndef __ANDROID__
@@ -787,3 +1021,5 @@ FILE* AndroidFopen(const char* fname, const char* mode) {
     return funopen(asset, android_read, android_write, android_seek, android_close);
 }
 #endif
+
+

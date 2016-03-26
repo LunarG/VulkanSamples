@@ -254,7 +254,7 @@ VkResult init_instance(struct sample_info &info,
     app_info.applicationVersion = 1;
     app_info.pEngineName = app_short_name;
     app_info.engineVersion = 1;
-    app_info.apiVersion = VK_API_VERSION;
+    app_info.apiVersion = VK_API_VERSION_1_0;
 
     VkInstanceCreateInfo inst_info = {};
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -267,6 +267,7 @@ VkResult init_instance(struct sample_info &info,
                                         : NULL;
     inst_info.enabledExtensionCount = info.instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
+
     VkResult res = vkCreateInstance(&inst_info, NULL, &info.inst);
     assert(res == VK_SUCCESS);
 
@@ -304,6 +305,7 @@ VkResult init_device(struct sample_info &info) {
 
     res = vkCreateDevice(info.gpus[0], &device_info, NULL, &info.device);
     assert(res == VK_SUCCESS);
+
     return res;
 }
 
@@ -349,6 +351,7 @@ void init_queue_family_index(struct sample_info &info) {
     vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count,
                                              info.queue_props.data());
     assert(info.queue_count >= 1);
+
     bool found = false;
     for (unsigned int i = 0; i < info.queue_count; i++) {
         if (info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
@@ -360,7 +363,6 @@ void init_queue_family_index(struct sample_info &info) {
     assert(found);
 }
 
-#ifdef USE_DEBUG_EXTENTIONS
 VkResult init_debug_report_callback(struct sample_info &info,
                                     PFN_vkDebugReportCallbackEXT dbgFunc) {
     VkResult res;
@@ -423,7 +425,6 @@ void destroy_debug_report_callback(struct sample_info &info) {
         info.debug_report_callbacks.pop_back();
     }
 }
-#endif
 
 void init_connection(struct sample_info &info) {
 #ifdef __ANDROID__
@@ -447,7 +448,6 @@ void init_connection(struct sample_info &info) {
     info.screen = iter.data;
 #endif //__Android__
 }
-
 #ifdef _WIN32
 static void run(struct sample_info *info) {
     /* Placeholder for samples that want to show dynamic content */
@@ -643,7 +643,6 @@ void init_depth_buffer(struct sample_info &info) {
     image_info.mipLevels = 1;
     image_info.arrayLayers = 1;
     image_info.samples = NUM_SAMPLES;
-    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     image_info.queueFamilyIndexCount = 0;
     image_info.pQueueFamilyIndices = NULL;
@@ -829,6 +828,8 @@ void execute_queue_cmdbuf(struct sample_info &info,
     VkResult U_ASSERT_ONLY res;
     VkFence nullFence = VK_NULL_HANDLE;
 
+    VkPipelineStageFlags pipe_stage_flags =
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -837,6 +838,7 @@ void execute_queue_cmdbuf(struct sample_info &info,
     submit_info[0].pWaitDstStageMask = NULL;
     submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
+    submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
     submit_info[0].signalSemaphoreCount = 0;
     submit_info[0].pSignalSemaphores = NULL;
 
@@ -893,7 +895,7 @@ void execute_present_image(struct sample_info &info) {
     assert(!res);
 }
 
-void init_swap_chain(struct sample_info &info) {
+void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
     /* DEPENDS on info.cmd and info.queue initialized */
 
     VkResult U_ASSERT_ONLY res;
@@ -984,8 +986,7 @@ void init_swap_chain(struct sample_info &info) {
     swap_chain.clipped = false;
 #endif
     swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-    swap_chain.imageUsage =
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    swap_chain.imageUsage = usageFlags;
     swap_chain.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swap_chain.queueFamilyIndexCount = 0;
     swap_chain.pQueueFamilyIndices = NULL;
@@ -1038,6 +1039,7 @@ void init_swap_chain(struct sample_info &info) {
         info.buffers.push_back(sc_buffer);
         assert(res == VK_SUCCESS);
     }
+    free(swapchainImages);
     info.current_buffer = 0;
 
     if (NULL != presentModes) {
@@ -1048,15 +1050,20 @@ void init_swap_chain(struct sample_info &info) {
 void init_uniform_buffer(struct sample_info &info) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
-    info.Projection = glm::perspective(glm::radians(45.0f), static_cast<float>(info.width) /
-            static_cast<float>(info.height), 0.1f, 100.0f);
+    info.Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
     info.View = glm::lookAt(
         glm::vec3(5, 3, 10), // Camera is at (5,3,10), in World Space
         glm::vec3(0, 0, 0),  // and looks at the origin
         glm::vec3(0, -1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
         );
     info.Model = glm::mat4(1.0f);
-    info.MVP = info.Projection * info.View * info.Model;
+    // Vulkan clip space has inverted Y and half Z.
+    info.Clip = glm::mat4(1.0f,  0.0f, 0.0f, 0.0f,
+                          0.0f, -1.0f, 0.0f, 0.0f,
+                          0.0f,  0.0f, 0.5f, 0.0f,
+                          0.0f,  0.0f, 0.5f, 1.0f);
+
+    info.MVP = info.Clip * info.Projection * info.View * info.Model;
 
     /* VULKAN_KEY_START */
     VkBufferCreateInfo buf_info = {};
@@ -1379,6 +1386,7 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData,
                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &alloc_info.memoryTypeIndex);
+    assert(pass);
 
     res = vkAllocateMemory(info.device, &alloc_info, NULL,
                            &(info.vertex_buffer.mem));
@@ -1571,14 +1579,16 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth,
     dynamicState.dynamicStateCount = 0;
 
     VkPipelineVertexInputStateCreateInfo vi;
+    memset(&vi, 0, sizeof(vi));
     vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vi.pNext = NULL;
-    vi.flags = 0;
-    vi.vertexBindingDescriptionCount = 1;
-    vi.pVertexBindingDescriptions = &info.vi_binding;
-    vi.vertexAttributeDescriptionCount = 2;
-    vi.pVertexAttributeDescriptions = info.vi_attribs;
-
+    if (include_vi) {
+        vi.pNext = NULL;
+        vi.flags = 0;
+        vi.vertexBindingDescriptionCount = 1;
+        vi.pVertexBindingDescriptions = &info.vi_binding;
+        vi.vertexAttributeDescriptionCount = 2;
+        vi.pVertexAttributeDescriptions = info.vi_attribs;
+    }
     VkPipelineInputAssemblyStateCreateInfo ia;
     ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     ia.pNext = NULL;
@@ -1695,7 +1705,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth,
     pipeline.basePipelineHandle = VK_NULL_HANDLE;
     pipeline.basePipelineIndex = 0;
     pipeline.flags = 0;
-    pipeline.pVertexInputState = include_vi ? &vi : NULL;
+    pipeline.pVertexInputState = &vi;
     pipeline.pInputAssemblyState = &ia;
     pipeline.pRasterizationState = &rs;
     pipeline.pColorBlendState = &cb;
@@ -1779,7 +1789,7 @@ void init_image(struct sample_info &info, texture_object &texObj,
     image_create_info.arrayLayers = 1;
     image_create_info.samples = NUM_SAMPLES;
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
     image_create_info.usage = needStaging ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT
                                           : VK_IMAGE_USAGE_SAMPLED_BIT;
     image_create_info.queueFamilyIndexCount = 0;
@@ -1823,7 +1833,7 @@ void init_image(struct sample_info &info, texture_object &texObj,
     assert(res == VK_SUCCESS);
 
     set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+                     VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_GENERAL);
 
     res = vkEndCommandBuffer(info.cmd);
     assert(res == VK_SUCCESS);
@@ -1908,6 +1918,7 @@ void init_image(struct sample_info &info, texture_object &texObj,
         image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         image_create_info.usage =
             VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
         res =
             vkCreateImage(info.device, &image_create_info, NULL, &texObj.image);

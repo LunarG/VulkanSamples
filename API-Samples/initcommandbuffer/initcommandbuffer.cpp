@@ -79,8 +79,8 @@ int sample_main() {
     VkCommandBuffer cmd_bufs[1] = {info.cmd};
     vkFreeCommandBuffers(info.device, info.cmd_pool, 1, cmd_bufs);
     vkDestroyCommandPool(info.device, info.cmd_pool, NULL);
-    destroy_window(info);
     destroy_device(info);
+    destroy_window(info);
     destroy_instance(info);
     return 0;
 }

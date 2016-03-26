@@ -92,7 +92,6 @@ int sample_main() {
     image_info.mipLevels = 1;
     image_info.arrayLayers = 1;
     image_info.samples = NUM_SAMPLES;
-    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     image_info.queueFamilyIndexCount = 0;
@@ -169,8 +168,8 @@ int sample_main() {
     vkFreeMemory(info.device, info.depth.mem, NULL);
     destroy_command_buffer(info);
     destroy_command_pool(info);
-    destroy_window(info);
     destroy_device(info);
+    destroy_window(info);
     destroy_instance(info);
 
     return 0;

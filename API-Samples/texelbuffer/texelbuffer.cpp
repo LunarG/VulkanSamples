@@ -81,6 +81,7 @@ int sample_main() {
     const bool depthPresent = false;
     const bool vertexPresent = false;
 
+    process_command_line_args(info, argc, argv);
     init_global_layer_properties(info);
     init_instance_extension_names(info);
     init_device_extension_names(info);
@@ -276,7 +277,7 @@ int sample_main() {
 
     // Get the index of the next available swapchain image:
     res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
-                                info.presentCompleteSemaphore, VK_NULL_HANDLE,
+                                info.presentCompleteSemaphore, NULL,
                                 &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
@@ -319,6 +320,8 @@ int sample_main() {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
+    if (info.save_images)
+        write_ppm(info, "texelbuffer");
 
     vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);
     vkDestroyBufferView(info.device, texel_view, NULL);
@@ -334,8 +337,8 @@ int sample_main() {
     destroy_swap_chain(info);
     destroy_command_buffer(info);
     destroy_command_pool(info);
-    destroy_window(info);
     destroy_device(info);
+    destroy_window(info);
     destroy_instance(info);
     return 0;
 }

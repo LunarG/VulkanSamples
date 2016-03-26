@@ -58,10 +58,6 @@ const char *vertShaderText =
     "void main() {\n"
     "   texcoord = inTexCoords;\n"
     "   gl_Position = ubuf.mvp * pos;\n"
-    "\n"
-    "   // GL->VK conventions\n"
-    "   gl_Position.y = -gl_Position.y;\n"
-    "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
     "}\n";
 
 const char *fragShaderText =
@@ -81,6 +77,7 @@ int sample_main() {
     char sample_title[] = "Pipeline Cache";
     const bool depthPresent = true;
 
+    process_command_line_args(info, argc, argv);
     init_global_layer_properties(info);
     init_instance_extension_names(info);
     init_device_extension_names(info);
@@ -155,8 +152,20 @@ int sample_main() {
         //
         // Check for cache validity
         //
-        // The code below supports SDK 1.0 Vulkan spec, which contains the following table:
-        ////
+        // TODO: Update this as the spec evolves. The fields are not defined by the header.
+        //
+        // The code below supports SDK 0.10 Vulkan spec, which contains the following table:
+        //
+        // Offset	 Size            Meaning
+        // ------    ------------    ------------------------------------------------------------------
+        //      0               4    a device ID equal to VkPhysicalDeviceProperties::DeviceId written
+        //                           as a stream of bytes, with the least significant byte first
+        //
+        //      4    VK_UUID_SIZE    a pipeline cache ID equal to VkPhysicalDeviceProperties::pipelineCacheUUID
+        //
+        //
+        // The code must be updated for latest Vulkan spec, which contains the following table:
+        //
         // Offset	 Size            Meaning
         // ------    ------------    ------------------------------------------------------------------
         //      0               4    length in bytes of the entire pipeline cache header written as a
@@ -302,6 +311,8 @@ int sample_main() {
     res = vkQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
     wait_seconds(1);
+    if (info.save_images)
+        write_ppm(info, "pipeline_cache");
 
     // End standard draw stuff
 
@@ -317,8 +328,9 @@ int sample_main() {
     void *endCacheData = nullptr;
 
     // Call with nullptr to get cache size
-    vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize,
+    res = vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize,
                            nullptr);
+    assert(res == VK_SUCCESS);
 
     // Allocate memory to hold the populated cache data
     endCacheData = (char *)malloc(sizeof(char) * endCacheSize);
@@ -328,8 +340,9 @@ int sample_main() {
     }
 
     // Call again with pointer to buffer
-    vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize,
+    res = vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize,
                            endCacheData);
+    assert(res == VK_SUCCESS);
 
     // Write the file to disk, overwriting whatever was there
     FILE *pWriteFile;
@@ -362,8 +375,8 @@ int sample_main() {
     destroy_swap_chain(info);
     destroy_command_buffer(info);
     destroy_command_pool(info);
-    destroy_window(info);
     destroy_device(info);
+    destroy_window(info);
     destroy_instance(info);
     return 0;
 }

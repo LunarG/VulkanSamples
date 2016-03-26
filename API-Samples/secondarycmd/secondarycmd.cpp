@@ -55,10 +55,6 @@ const char *vertShaderText =
     "void main() {\n"
     "   texcoord = inTexCoords;\n"
     "   gl_Position = ubuf.mvp * pos;\n"
-    "\n"
-    "   // GL->VK conventions\n"
-    "   gl_Position.y = -gl_Position.y;\n"
-    "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
     "}\n";
 
 const char *fragShaderText =
@@ -78,6 +74,7 @@ int sample_main() {
     char sample_title[] = "Secondary command buffers";
     const bool depthPresent = true;
 
+    process_command_line_args(info, argc, argv);
     init_global_layer_properties(info);
     init_instance_extension_names(info);
     init_device_extension_names(info);
@@ -332,11 +329,14 @@ int sample_main() {
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
+    VkPipelineStageFlags pipe_stage_flags =
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 1;
     submit_info[0].pWaitSemaphores = &presentCompleteSemaphore;
+    submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
     submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
     submit_info[0].signalSemaphoreCount = 0;
@@ -369,6 +369,8 @@ int sample_main() {
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);
+    if (info.save_images)
+        write_ppm(info, "secondarycmd");
 
     vkFreeCommandBuffers(info.device, info.cmd_pool, 4, secondary_cmds);
 
@@ -390,8 +392,8 @@ int sample_main() {
     destroy_swap_chain(info);
     destroy_command_buffer(info);
     destroy_command_pool(info);
-    destroy_window(info);
     destroy_device(info);
+    destroy_window(info);
     destroy_instance(info);
     return 0;
 }

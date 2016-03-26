@@ -63,7 +63,10 @@ void execute_begin_command_buffer(struct sample_info &info);
 void execute_end_command_buffer(struct sample_info &info);
 void execute_queue_command_buffer(struct sample_info &info);
 void init_device_queue(struct sample_info &info);
-void init_swap_chain(struct sample_info &info);
+void init_swap_chain(
+    struct sample_info &info,
+    VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                   VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
 void init_depth_buffer(struct sample_info &info);
 void init_uniform_buffer(struct sample_info &info);
 void init_descriptor_and_pipeline_layouts(struct sample_info &info,
@@ -98,11 +101,9 @@ void init_render_pass_begin_info(struct sample_info &info,
 void init_window_size(struct sample_info &info, int32_t default_width,
                       int32_t default_height);
 
-#ifdef USE_DEBUG_EXTENTIONS
 VkResult init_debug_report_callback(struct sample_info &info,
                                     PFN_vkDebugReportCallbackEXT dbgFunc);
 void destroy_debug_report_callback(struct sample_info &info);
-#endif
 void destroy_pipeline(struct sample_info &info);
 void destroy_pipeline_cache(struct sample_info &info);
 void destroy_descriptor_pool(struct sample_info &info);
