@@ -39,8 +39,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "cJSON.h"
-#include "vk_sdk_platform.h"
+#include <cJSON.h>
+#include <vulkan/vk_sdk_platform.h>
 
 namespace {
 
@@ -456,7 +456,7 @@ inline void VisitForWrite(Visitor* visitor, const T& t) {
   Iterate(visitor, const_cast<T*>(&t));
 }
 
-template <typename T, typename = EnableForStruct<T>, typename = void>
+template <typename T, typename /*= EnableForStruct<T>*/, typename /*= void*/>
 cJSON* ToJsonValue(const T& value) {
   JsonWriterVisitor visitor;
   VisitForWrite(&visitor, value);
@@ -634,7 +634,7 @@ class JsonReaderVisitor {
   std::string* errors_;
 };
 
-template <typename T, typename = EnableForStruct<T>>
+template <typename T, typename /*= EnableForStruct<T>*/>
 bool AsValue(cJSON* json_value, T* t) {
   if (json_value->type != cJSON_Object)
     return false;
