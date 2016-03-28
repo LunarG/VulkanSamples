@@ -3673,7 +3673,9 @@ void SetLayout(GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, const VkImageL
         // TODO (mlentine): Could be expensive and might need to be removed.
         assert(imgpair.hasSubresource);
         IMAGE_CMD_BUF_LAYOUT_NODE node;
-        FindLayout(pCB, imgpair.image, imgpair.subresource, node);
+        if (!FindLayout(pCB, imgpair.image, imgpair.subresource, node)) {
+            node.initialLayout = layout;
+        }
         SetLayout(pCB, imgpair, {node.initialLayout, layout});
     }
 }
