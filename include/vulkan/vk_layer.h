@@ -263,21 +263,8 @@ typedef enum VkLayerDbgAction_ {
 
 typedef enum VkLayerFunction_ {
     VK_LAYER_LINK_INFO = 0,
-    VK_LAYER_DEVICE_INFO = 1,
-    VK_LAYER_INSTANCE_INFO = 2
+    VK_LAYER_DEVICE_INFO = 1
 } VkLayerFunction;
-
-/*
- * When creating the device chain the loader needs to pass
- * down information about it's device structure needed at
- * the end of the chain. Passing the data via the
- * VkLayerInstanceInfo avoids issues with finding the
- * exact instance being used.
- */
-typedef struct VkLayerInstanceInfo_ {
-    void *instance_info;
-    PFN_vkGetInstanceProcAddr pfnNextGetInstanceProcAddr;
-} VkLayerInstanceInfo;
 
 typedef struct VkLayerInstanceLink_ {
     struct VkLayerInstanceLink_ *pNext;
@@ -302,7 +289,6 @@ typedef struct {
     VkLayerFunction function;
     union {
         VkLayerInstanceLink *pLayerInfo;
-        VkLayerInstanceInfo instanceInfo;
     } u;
 } VkLayerInstanceCreateInfo;
 

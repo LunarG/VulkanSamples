@@ -3267,19 +3267,6 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
     PFN_vkCreateInstance fpCreateInstance =
         (PFN_vkCreateInstance)nextGIPA(*created_instance, "vkCreateInstance");
     if (fpCreateInstance) {
-        VkLayerInstanceCreateInfo instance_create_info;
-
-        instance_create_info.sType =
-            VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO;
-        instance_create_info.function = VK_LAYER_INSTANCE_INFO;
-
-        instance_create_info.u.instanceInfo.instance_info = inst;
-        instance_create_info.u.instanceInfo.pfnNextGetInstanceProcAddr =
-            nextGIPA;
-
-        instance_create_info.pNext = loader_create_info.pNext;
-        loader_create_info.pNext = &instance_create_info;
-
         res =
             fpCreateInstance(&loader_create_info, pAllocator, created_instance);
     } else {
@@ -3622,18 +3609,7 @@ terminator_CreateInstance(const VkInstanceCreateInfo *pCreateInfo,
     VkResult res = VK_SUCCESS;
     bool success = false;
 
-    VkLayerInstanceCreateInfo *chain_info =
-        (VkLayerInstanceCreateInfo *)pCreateInfo->pNext;
-    while (
-        chain_info &&
-        !(chain_info->sType == VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO &&
-          chain_info->function == VK_LAYER_INSTANCE_INFO)) {
-        chain_info = (VkLayerInstanceCreateInfo *)chain_info->pNext;
-    }
-    assert(chain_info != NULL);
-
-    struct loader_instance *ptr_instance =
-        (struct loader_instance *)chain_info->u.instanceInfo.instance_info;
+    struct loader_instance *ptr_instance = (struct loader_instance *) *pInstance;
     memcpy(&icd_create_info, pCreateInfo, sizeof(icd_create_info));
 
     icd_create_info.enabledLayerCount = 0;
