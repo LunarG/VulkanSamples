@@ -380,9 +380,19 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText,
     pipelineobj.AddShader(&ps);
     if (failMask & BsoFailLineWidth) {
         pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_LINE_WIDTH);
+        VkPipelineInputAssemblyStateCreateInfo ia_state = {};
+        ia_state.sType =
+            VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        ia_state.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+        pipelineobj.SetInputAssembly(&ia_state);
     }
     if (failMask & BsoFailDepthBias) {
         pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_DEPTH_BIAS);
+        VkPipelineRasterizationStateCreateInfo rs_state = {};
+        rs_state.sType =
+            VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        rs_state.depthBiasEnable = VK_TRUE;
+        pipelineobj.SetRasterization(&rs_state);
     }
     // Viewport and scissors must stay in synch or other errors will occur than
     // the ones we want
@@ -398,6 +408,10 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText,
     }
     if (failMask & BsoFailBlend) {
         pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
+        VkPipelineColorBlendAttachmentState att_state = {};
+        att_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_CONSTANT_COLOR;
+        att_state.blendEnable = VK_TRUE;
+        pipelineobj.AddColorAttachment(0, &att_state);
     }
     if (failMask & BsoFailDepthBounds) {
         pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_DEPTH_BOUNDS);
@@ -460,6 +474,9 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer,
     ds_ci.depthWriteEnable = VK_TRUE;
     ds_ci.depthCompareOp = VK_COMPARE_OP_NEVER;
     ds_ci.depthBoundsTestEnable = VK_FALSE;
+    if (failMask & BsoFailDepthBounds) {
+        ds_ci.depthBoundsTestEnable = VK_TRUE;
+    }
     ds_ci.stencilTestEnable = VK_TRUE;
     ds_ci.front = stencil;
     ds_ci.back = stencil;
@@ -1215,7 +1232,7 @@ TEST_F(VkLayerTest, ViewportStateNotBound) {
                    BsoFailViewport);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error 'Dynamic scissor state not set for "
+        FAIL() << "Did not receive Error 'Dynamic scissor state not set for "
                   "this command buffer'";
         m_errorMonitor->DumpFailureMsgs();
     }
@@ -1233,7 +1250,7 @@ TEST_F(VkLayerTest, ScissorStateNotBound) {
                    BsoFailScissor);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error ' Expected: 'Dynamic scissor state "
+        FAIL() << "Did not receive Error ' Expected: 'Dynamic scissor state "
                   "not set for this command buffer'";
         m_errorMonitor->DumpFailureMsgs();
     }
@@ -1242,7 +1259,7 @@ TEST_F(VkLayerTest, ScissorStateNotBound) {
 TEST_F(VkLayerTest, BlendStateNotBound) {
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Dynamic blend object state not set for this command buffer");
+        "Dynamic blend constants state not set for this command buffer");
 
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a blend "
                      "state object is not bound beforehand");
@@ -1251,8 +1268,9 @@ TEST_F(VkLayerTest, BlendStateNotBound) {
                    BsoFailBlend);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error 'Dynamic blend object state not set "
-                  "for this command buffer'";
+        FAIL()
+            << "Did not receive Error 'Dynamic blend constants state not set "
+               "for this command buffer'";
         m_errorMonitor->DumpFailureMsgs();
     }
 }

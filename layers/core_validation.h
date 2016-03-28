@@ -424,11 +424,12 @@ typedef struct _PIPELINE_NODE {
     std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
     std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions;
     std::vector<VkPipelineColorBlendAttachmentState> attachments;
+    bool blendConstantsEnabled; // Blend constants enabled for any attachments
     // Default constructor
     _PIPELINE_NODE()
         : pipeline{}, graphicsPipelineCI{}, vertexInputCI{}, iaStateCI{}, tessStateCI{}, vpStateCI{}, rsStateCI{}, msStateCI{},
           cbStateCI{}, dsStateCI{}, dynStateCI{}, vsCI{}, tcsCI{}, tesCI{}, gsCI{}, fsCI{}, computePipelineCI{}, active_shaders(0),
-          active_slots(), vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments() {}
+          active_slots(), vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false) {}
 } PIPELINE_NODE;
 
 class BASE_NODE {
@@ -723,21 +724,20 @@ typedef enum _CB_STATE {
 // CB Status -- used to track status of various bindings on cmd buffer objects
 typedef VkFlags CBStatusFlags;
 typedef enum _CBStatusFlagBits {
-    CBSTATUS_NONE = 0x00000000,                     // No status is set
-    CBSTATUS_VIEWPORT_SET = 0x00000001,             // Viewport has been set
-    CBSTATUS_LINE_WIDTH_SET = 0x00000002,           // Line width has been set
-    CBSTATUS_DEPTH_BIAS_SET = 0x00000004,           // Depth bias has been set
-    CBSTATUS_COLOR_BLEND_WRITE_ENABLE = 0x00000008, // PSO w/ CB Enable set has been set
-    CBSTATUS_BLEND_SET = 0x00000010,                // Blend state object has been set
-    CBSTATUS_DEPTH_WRITE_ENABLE = 0x00000020,       // PSO w/ Depth Enable set has been set
-    CBSTATUS_STENCIL_TEST_ENABLE = 0x00000040,      // PSO w/ Stencil Enable set has been set
-    CBSTATUS_DEPTH_BOUNDS_SET = 0x00000080,         // Depth bounds state object has been set
-    CBSTATUS_STENCIL_READ_MASK_SET = 0x00000100,    // Stencil read mask has been set
-    CBSTATUS_STENCIL_WRITE_MASK_SET = 0x00000200,   // Stencil write mask has been set
-    CBSTATUS_STENCIL_REFERENCE_SET = 0x00000400,    // Stencil reference has been set
-    CBSTATUS_INDEX_BUFFER_BOUND = 0x00000800,       // Index buffer has been set
-    CBSTATUS_SCISSOR_SET = 0x00001000,              // Scissor has been set
-    CBSTATUS_ALL = 0x00001FFF,                      // All dynamic state set
+    // clang-format off
+    CBSTATUS_NONE                   = 0x00000000,   // No status is set
+    CBSTATUS_VIEWPORT_SET           = 0x00000001,   // Viewport has been set
+    CBSTATUS_LINE_WIDTH_SET         = 0x00000002,   // Line width has been set
+    CBSTATUS_DEPTH_BIAS_SET         = 0x00000004,   // Depth bias has been set
+    CBSTATUS_BLEND_CONSTANTS_SET    = 0x00000008,   // Blend constants state has been set
+    CBSTATUS_DEPTH_BOUNDS_SET       = 0x00000010,   // Depth bounds state object has been set
+    CBSTATUS_STENCIL_READ_MASK_SET  = 0x00000020,   // Stencil read mask has been set
+    CBSTATUS_STENCIL_WRITE_MASK_SET = 0x00000040,   // Stencil write mask has been set
+    CBSTATUS_STENCIL_REFERENCE_SET  = 0x00000080,   // Stencil reference has been set
+    CBSTATUS_INDEX_BUFFER_BOUND     = 0x00000100,   // Index buffer has been set
+    CBSTATUS_SCISSOR_SET            = 0x00000200,   // Scissor has been set
+    CBSTATUS_ALL                    = 0x000003FF,   // All dynamic state set
+    // clang-format on
 } CBStatusFlagBits;
 
 typedef struct stencil_data {

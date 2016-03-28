@@ -2167,16 +2167,12 @@ static VkBool32 hasDrawCmd(GLOBAL_CB_NODE *pCB) {
 }
 
 // Check object status for selected flag state
-static VkBool32 validate_status(layer_data *my_data, GLOBAL_CB_NODE *pNode, CBStatusFlags enable_mask, CBStatusFlags status_mask,
-                                CBStatusFlags status_flag, VkFlags msg_flags, DRAW_STATE_ERROR error_code, const char *fail_msg) {
-    // If non-zero enable mask is present, check it against status but if enable_mask
-    //  is 0 then no enable required so we should always just check status
-    if ((!enable_mask) || (enable_mask & pNode->status)) {
-        if ((pNode->status & status_mask) != status_flag) {
-            // TODO : How to pass dispatchable objects as srcObject? Here src obj should be cmd buffer
-            return log_msg(my_data->report_data, msg_flags, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, error_code,
-                           "DS", "CB object %#" PRIxLEAST64 ": %s", (uint64_t)(pNode->commandBuffer), fail_msg);
-        }
+static VkBool32 validate_status(layer_data *my_data, GLOBAL_CB_NODE *pNode, CBStatusFlags status_mask, VkFlags msg_flags,
+                                DRAW_STATE_ERROR error_code, const char *fail_msg) {
+    if (!(pNode->status & status_mask)) {
+        return log_msg(my_data->report_data, msg_flags, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                       reinterpret_cast<const uint64_t &>(pNode->commandBuffer), __LINE__, error_code, "DS",
+                       "CB object %#" PRIxLEAST64 ": %s", reinterpret_cast<const uint64_t &>(pNode->commandBuffer), fail_msg);
     }
     return VK_FALSE;
 }
@@ -2201,39 +2197,43 @@ static VkBool32 isDynamic(const PIPELINE_NODE *pPipeline, const VkDynamicState s
 }
 
 // Validate state stored as flags at time of draw call
-static VkBool32 validate_draw_state_flags(layer_data *my_data, GLOBAL_CB_NODE *pCB, VkBool32 indexedDraw) {
+static VkBool32 validate_draw_state_flags(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const PIPELINE_NODE *pPipe,
+                                          VkBool32 indexedDraw) {
     VkBool32 result;
-    result =
-        validate_status(my_data, pCB, CBSTATUS_NONE, CBSTATUS_VIEWPORT_SET, CBSTATUS_VIEWPORT_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                        DRAWSTATE_VIEWPORT_NOT_BOUND, "Dynamic viewport state not set for this command buffer");
-    result |=
-        validate_status(my_data, pCB, CBSTATUS_NONE, CBSTATUS_SCISSOR_SET, CBSTATUS_SCISSOR_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                        DRAWSTATE_SCISSOR_NOT_BOUND, "Dynamic scissor state not set for this command buffer");
-    result |= validate_status(my_data, pCB, CBSTATUS_NONE, CBSTATUS_LINE_WIDTH_SET, CBSTATUS_LINE_WIDTH_SET,
-                              VK_DEBUG_REPORT_ERROR_BIT_EXT, DRAWSTATE_LINE_WIDTH_NOT_BOUND,
-                              "Dynamic line width state not set for this command buffer");
-    result |= validate_status(my_data, pCB, CBSTATUS_NONE, CBSTATUS_DEPTH_BIAS_SET, CBSTATUS_DEPTH_BIAS_SET,
-                              VK_DEBUG_REPORT_ERROR_BIT_EXT, DRAWSTATE_DEPTH_BIAS_NOT_BOUND,
-                              "Dynamic depth bias state not set for this command buffer");
-    result |= validate_status(my_data, pCB, CBSTATUS_COLOR_BLEND_WRITE_ENABLE, CBSTATUS_BLEND_SET, CBSTATUS_BLEND_SET,
-                              VK_DEBUG_REPORT_ERROR_BIT_EXT, DRAWSTATE_BLEND_NOT_BOUND,
-                              "Dynamic blend object state not set for this command buffer");
-    result |= validate_status(my_data, pCB, CBSTATUS_DEPTH_WRITE_ENABLE, CBSTATUS_DEPTH_BOUNDS_SET, CBSTATUS_DEPTH_BOUNDS_SET,
-                              VK_DEBUG_REPORT_ERROR_BIT_EXT, DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND,
-                              "Dynamic depth bounds state not set for this command buffer");
-    result |= validate_status(my_data, pCB, CBSTATUS_STENCIL_TEST_ENABLE, CBSTATUS_STENCIL_READ_MASK_SET,
-                              CBSTATUS_STENCIL_READ_MASK_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT, DRAWSTATE_STENCIL_NOT_BOUND,
-                              "Dynamic stencil read mask state not set for this command buffer");
-    result |= validate_status(my_data, pCB, CBSTATUS_STENCIL_TEST_ENABLE, CBSTATUS_STENCIL_WRITE_MASK_SET,
-                              CBSTATUS_STENCIL_WRITE_MASK_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT, DRAWSTATE_STENCIL_NOT_BOUND,
-                              "Dynamic stencil write mask state not set for this command buffer");
-    result |= validate_status(my_data, pCB, CBSTATUS_STENCIL_TEST_ENABLE, CBSTATUS_STENCIL_REFERENCE_SET,
-                              CBSTATUS_STENCIL_REFERENCE_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT, DRAWSTATE_STENCIL_NOT_BOUND,
-                              "Dynamic stencil reference state not set for this command buffer");
-    if (indexedDraw)
-        result |= validate_status(my_data, pCB, CBSTATUS_NONE, CBSTATUS_INDEX_BUFFER_BOUND, CBSTATUS_INDEX_BUFFER_BOUND,
-                                  VK_DEBUG_REPORT_ERROR_BIT_EXT, DRAWSTATE_INDEX_BUFFER_NOT_BOUND,
+    result = validate_status(dev_data, pCB, CBSTATUS_VIEWPORT_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT, DRAWSTATE_VIEWPORT_NOT_BOUND,
+                             "Dynamic viewport state not set for this command buffer");
+    result |= validate_status(dev_data, pCB, CBSTATUS_SCISSOR_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT, DRAWSTATE_SCISSOR_NOT_BOUND,
+                              "Dynamic scissor state not set for this command buffer");
+    if ((pPipe->iaStateCI.topology == VK_PRIMITIVE_TOPOLOGY_LINE_LIST) ||
+        (pPipe->iaStateCI.topology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP)) {
+        result |= validate_status(dev_data, pCB, CBSTATUS_LINE_WIDTH_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                  DRAWSTATE_LINE_WIDTH_NOT_BOUND, "Dynamic line width state not set for this command buffer");
+    }
+    if (pPipe->rsStateCI.depthBiasEnable) {
+        result |= validate_status(dev_data, pCB, CBSTATUS_DEPTH_BIAS_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                  DRAWSTATE_DEPTH_BIAS_NOT_BOUND, "Dynamic depth bias state not set for this command buffer");
+    }
+    if (pPipe->blendConstantsEnabled) {
+        result |= validate_status(dev_data, pCB, CBSTATUS_BLEND_CONSTANTS_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                  DRAWSTATE_BLEND_NOT_BOUND, "Dynamic blend constants state not set for this command buffer");
+    }
+    if (pPipe->dsStateCI.depthBoundsTestEnable) {
+        result |= validate_status(dev_data, pCB, CBSTATUS_DEPTH_BOUNDS_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                  DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND, "Dynamic depth bounds state not set for this command buffer");
+    }
+    if (pPipe->dsStateCI.stencilTestEnable) {
+        result |= validate_status(dev_data, pCB, CBSTATUS_STENCIL_READ_MASK_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                  DRAWSTATE_STENCIL_NOT_BOUND, "Dynamic stencil read mask state not set for this command buffer");
+        result |= validate_status(dev_data, pCB, CBSTATUS_STENCIL_WRITE_MASK_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                  DRAWSTATE_STENCIL_NOT_BOUND, "Dynamic stencil write mask state not set for this command buffer");
+        result |= validate_status(dev_data, pCB, CBSTATUS_STENCIL_REFERENCE_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                  DRAWSTATE_STENCIL_NOT_BOUND, "Dynamic stencil reference state not set for this command buffer");
+    }
+    if (indexedDraw) {
+        result |= validate_status(dev_data, pCB, CBSTATUS_INDEX_BUFFER_BOUND, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                  DRAWSTATE_INDEX_BUFFER_NOT_BOUND,
                                   "Index buffer object not bound to this command buffer when Indexed Draw attempted");
+    }
     return result;
 }
 
@@ -2920,9 +2920,9 @@ static VkBool32 validate_dynamic_offsets(layer_data *my_data, const GLOBAL_CB_NO
 
 // Validate overall state at the time of a draw call
 static VkBool32 validate_draw_state(layer_data *my_data, GLOBAL_CB_NODE *pCB, VkBool32 indexedDraw) {
-    // First check flag states
-    VkBool32 result = validate_draw_state_flags(my_data, pCB, indexedDraw);
     PIPELINE_NODE *pPipe = getPipeline(my_data, pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].pipeline);
+    // First check flag states
+    VkBool32 result = validate_draw_state_flags(my_data, pCB, pPipe, indexedDraw);
     // Now complete other state checks
     // TODO : Currently only performing next check if *something* was bound (non-zero last bound)
     //  There is probably a better way to gate when this check happens, and to know if something *should* have been bound
@@ -3062,7 +3062,7 @@ static VkBool32 verifyPipelineCreateState(layer_data *my_data, const VkDevice de
 
     if (pPipeline->graphicsPipelineCI.pColorBlendState != NULL) {
         if (!my_data->physDevProperties.features.independentBlend) {
-            if (pPipeline->attachments.size() > 0) {
+            if (pPipeline->attachments.size() > 1) {
                 VkPipelineColorBlendAttachmentState *pAttachments = &pPipeline->attachments[0];
                 for (size_t i = 1; i < pPipeline->attachments.size(); i++) {
                     if ((pAttachments[0].blendEnable != pAttachments[i].blendEnable) ||
@@ -4481,17 +4481,6 @@ static void resetCB(layer_data *my_data, const VkCommandBuffer cb) {
 
 // Set PSO-related status bits for CB, including dynamic state set via PSO
 static void set_cb_pso_status(GLOBAL_CB_NODE *pCB, const PIPELINE_NODE *pPipe) {
-    for (auto const & att : pPipe->attachments) {
-        if (0 != att.colorWriteMask) {
-            pCB->status |= CBSTATUS_COLOR_BLEND_WRITE_ENABLE;
-        }
-    }
-    if (pPipe->dsStateCI.depthWriteEnable) {
-        pCB->status |= CBSTATUS_DEPTH_WRITE_ENABLE;
-    }
-    if (pPipe->dsStateCI.stencilTestEnable) {
-        pCB->status |= CBSTATUS_STENCIL_TEST_ENABLE;
-    }
     // Account for any dynamic state not set via this PSO
     if (!pPipe->dynStateCI.dynamicStateCount) { // All state is static
         pCB->status = CBSTATUS_ALL;
@@ -4515,7 +4504,7 @@ static void set_cb_pso_status(GLOBAL_CB_NODE *pCB, const PIPELINE_NODE *pPipe) {
                 psoDynStateMask &= ~CBSTATUS_DEPTH_BIAS_SET;
                 break;
             case VK_DYNAMIC_STATE_BLEND_CONSTANTS:
-                psoDynStateMask &= ~CBSTATUS_BLEND_SET;
+                psoDynStateMask &= ~CBSTATUS_BLEND_CONSTANTS_SET;
                 break;
             case VK_DYNAMIC_STATE_DEPTH_BOUNDS:
                 psoDynStateMask &= ~CBSTATUS_DEPTH_BOUNDS_SET;
@@ -6466,6 +6455,27 @@ vkMergePipelineCaches(VkDevice device, VkPipelineCache dstCache, uint32_t srcCac
     return result;
 }
 
+// utility function to set collective state for pipeline
+void set_pipeline_state(PIPELINE_NODE *pPipe) {
+    // If any attachment used by this pipeline has blendEnable, set top-level blendEnable
+    if (pPipe->graphicsPipelineCI.pColorBlendState) {
+        for (size_t i = 0; i < pPipe->attachments.size(); ++i) {
+            if (VK_TRUE == pPipe->attachments[i].blendEnable) {
+                if (((pPipe->attachments[i].dstAlphaBlendFactor >= VK_BLEND_FACTOR_CONSTANT_COLOR) &&
+                     (pPipe->attachments[i].dstAlphaBlendFactor <= VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA)) ||
+                    ((pPipe->attachments[i].dstColorBlendFactor >= VK_BLEND_FACTOR_CONSTANT_COLOR) &&
+                     (pPipe->attachments[i].dstColorBlendFactor <= VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA)) ||
+                    ((pPipe->attachments[i].srcAlphaBlendFactor >= VK_BLEND_FACTOR_CONSTANT_COLOR) &&
+                     (pPipe->attachments[i].srcAlphaBlendFactor <= VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA)) ||
+                    ((pPipe->attachments[i].srcColorBlendFactor >= VK_BLEND_FACTOR_CONSTANT_COLOR) &&
+                     (pPipe->attachments[i].srcColorBlendFactor <= VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA))) {
+                    pPipe->blendConstantsEnabled = true;
+                }
+            }
+        }
+    }
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count,
                           const VkGraphicsPipelineCreateInfo *pCreateInfos, const VkAllocationCallbacks *pAllocator,
@@ -7158,6 +7168,7 @@ vkCmdBindPipeline(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBin
         if (pPN) {
             pCB->lastBound[pipelineBindPoint].pipeline = pipeline;
             set_cb_pso_status(pCB, pPN);
+            set_pipeline_state(pPN);
             skipCall |= validatePipelineState(dev_data, pCB, pipelineBindPoint, pipeline);
         } else {
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
@@ -7241,7 +7252,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetBlendConstants(VkCommandBuffe
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skipCall |= addCmd(dev_data, pCB, CMD_SETBLENDSTATE, "vkCmdSetBlendConstants()");
-        pCB->status |= CBSTATUS_BLEND_SET;
+        pCB->status |= CBSTATUS_BLEND_CONSTANTS_SET;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall)

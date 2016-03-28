@@ -427,10 +427,14 @@ class VkPipelineObj : public vk_testing::Pipeline {
         AddColorAttachment(0, &att);
     }
 
-    void SetDepthStencil(VkPipelineDepthStencilStateCreateInfo *);
-    void SetMSAA(VkPipelineMultisampleStateCreateInfo *ms_state);
-    void SetViewport(vector<VkViewport> viewports);
-    void SetScissor(vector<VkRect2D> scissors);
+    void SetDepthStencil(const VkPipelineDepthStencilStateCreateInfo *);
+    void SetMSAA(const VkPipelineMultisampleStateCreateInfo *ms_state);
+    void
+    SetInputAssembly(const VkPipelineInputAssemblyStateCreateInfo *ia_state);
+    void
+    SetRasterization(const VkPipelineRasterizationStateCreateInfo *rs_state);
+    void SetViewport(const vector<VkViewport> viewports);
+    void SetScissor(const vector<VkRect2D> scissors);
     VkResult CreateVKPipeline(VkPipelineLayout layout,
                               VkRenderPass render_pass);
 
