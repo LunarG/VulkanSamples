@@ -1,4 +1,26 @@
 #!/usr/bin/python3 -i
+#
+# Copyright (c) 2013-2016 The Khronos Group Inc.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and/or associated documentation files (the
+# "Materials"), to deal in the Materials without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Materials, and to
+# permit persons to whom the Materials are furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Materials.
+#
+# THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
+
 import os,re,sys
 from collections import namedtuple
 from lxml import etree
@@ -750,7 +772,8 @@ class COutputGenerator(OutputGenerator):
         #
         # Multiple inclusion protection & C++ wrappers.
         if (genOpts.protectFile and self.genOpts.filename):
-            headerSym = '__' + re.sub('\.h', '_h_', os.path.basename(self.genOpts.filename))
+            headerSym = re.sub('\.h', '_h_',
+                               os.path.basename(self.genOpts.filename)).upper()
             write('#ifndef', headerSym, file=self.outFile)
             write('#define', headerSym, '1', file=self.outFile)
             self.newline()
@@ -889,12 +912,21 @@ class COutputGenerator(OutputGenerator):
     def genGroup(self, groupinfo, groupName):
         OutputGenerator.genGroup(self, groupinfo, groupName)
         groupElem = groupinfo.elem
-        # See if this group needs min/max/num/padding at end
-        expand = 'expand' in groupElem.keys()
-        if (expand):
-            expandPrefix = groupElem.get('expand')
+
+        expandName = re.sub(r'([0-9a-z_])([A-Z0-9][^A-Z0-9]?)',r'\1_\2',groupName).upper()
+
+        expandPrefix = expandName
+        expandSuffix = ''
+        expandSuffixMatch = re.search(r'[A-Z][A-Z]+$',groupName)
+        if expandSuffixMatch:
+            expandSuffix = '_' + expandSuffixMatch.group()
+            # Strip off the suffix from the prefix
+            expandPrefix = expandName.rsplit(expandSuffix, 1)[0]
+
         # Prefix
         body = "\ntypedef enum " + groupName + " {\n"
+
+        isEnum = ('FLAG_BITS' not in expandPrefix)
 
         # Loop over the nested 'enum' tags. Keep track of the minimum and
         # maximum numeric values, if they can be determined; but only for
@@ -907,8 +939,15 @@ class COutputGenerator(OutputGenerator):
             # Should catch exceptions here for more complex constructs. Not yet.
             (numVal,strVal) = self.enumToValue(elem, True)
             name = elem.get('name')
-            body += "    " + name + " = " + strVal + ",\n"
-            if (expand and elem.get('extends') is None):
+
+            # Extension enumerants are only included if they are requested
+            # in addExtensions or match defaultExtensions.
+            if (elem.get('extname') is None or
+              re.match(self.genOpts.addExtensions,elem.get('extname')) is not None or
+              self.genOpts.defaultExtensions == elem.get('supported')):
+                body += "    " + name + " = " + strVal + ",\n"
+
+            if (isEnum  and elem.get('extends') is None):
                 if (minName == None):
                     minName = maxName = name
                     minValue = maxValue = numVal
@@ -920,11 +959,13 @@ class COutputGenerator(OutputGenerator):
                     maxValue = numVal
         # Generate min/max value tokens and a range-padding enum. Need some
         # additional padding to generate correct names...
-        if (expand):
-            body += "    " + expandPrefix + "_BEGIN_RANGE = " + minName + ",\n"
-            body += "    " + expandPrefix + "_END_RANGE = " + maxName + ",\n"
-            body += "    " + expandPrefix + "_RANGE_SIZE = (" + maxName + " - " + minName + " + 1),\n"
-            body += "    " + expandPrefix + "_MAX_ENUM = 0x7FFFFFFF\n"
+        if isEnum:
+            body += "    " + expandPrefix + "_BEGIN_RANGE" + expandSuffix + " = " + minName + ",\n"
+            body += "    " + expandPrefix + "_END_RANGE" + expandSuffix + " = " + maxName + ",\n"
+            body += "    " + expandPrefix + "_RANGE_SIZE" + expandSuffix + " = (" + maxName + " - " + minName + " + 1),\n"
+
+        body += "    " + expandPrefix + "_MAX_ENUM" + expandSuffix + " = 0x7FFFFFFF\n"
+
         # Postfix
         body += "} " + groupName + ";"
         if groupElem.get('type') == 'bitmask':
@@ -1000,8 +1041,14 @@ class DocOutputGenerator(OutputGenerator):
         self.logMsg('diag', '# Generating include file:', filename)
         fp = open(filename, 'w')
         # Asciidoc anchor
+        write('// WARNING: DO NOT MODIFY! This file is automatically generated from the vk.xml registry', file=fp)
+        write('ifndef::doctype-manpage[]', file=fp)
         write('[[{0},{0}]]'.format(basename), file=fp)
         write('["source","{basebackend@docbook:c++:cpp}",title=""]', file=fp)
+        write('endif::doctype-manpage[]', file=fp)
+        write('ifdef::doctype-manpage[]', file=fp)
+        write('["source","{basebackend@docbook:c++:cpp}"]', file=fp)
+        write('endif::doctype-manpage[]', file=fp)
         write('------------------------------------------------------------------------------', file=fp)
         write(contents, file=fp)
         write('------------------------------------------------------------------------------', file=fp)
@@ -1064,10 +1111,24 @@ class DocOutputGenerator(OutputGenerator):
     def genGroup(self, groupinfo, groupName):
         OutputGenerator.genGroup(self, groupinfo, groupName)
         groupElem = groupinfo.elem
-        # See if this group needs min/max/num/padding at end
-        expand = self.genOpts.expandEnumerants and ('expand' in groupElem.keys())
-        if (expand):
-            expandPrefix = groupElem.get('expand')
+
+        # See if we need min/max/num/padding at end
+        expand = self.genOpts.expandEnumerants
+
+        if expand:
+            expandName = re.sub(r'([0-9a-z_])([A-Z0-9][^A-Z0-9]?)',r'\1_\2',groupName).upper()
+            isEnum = ('FLAG_BITS' not in expandName)
+
+            expandPrefix = expandName
+            expandSuffix = ''
+
+            # Look for a suffix
+            expandSuffixMatch = re.search(r'[A-Z][A-Z]+$',groupName)
+            if expandSuffixMatch:
+                expandSuffix = '_' + expandSuffixMatch.group()
+                # Strip off the suffix from the prefix
+                expandPrefix = expandName.rsplit(expandSuffix, 1)[0]
+
         # Prefix
         s = "typedef enum " + groupName + " {\n"
 
@@ -1080,8 +1141,15 @@ class DocOutputGenerator(OutputGenerator):
             # Should catch exceptions here for more complex constructs. Not yet.
             (numVal,strVal) = self.enumToValue(elem, True)
             name = elem.get('name')
-            s += "    " + name + " = " + strVal + ",\n"
-            if (expand and elem.get('extends') is None):
+
+            # Extension enumerants are only included if they are requested
+            # in addExtensions or match defaultExtensions.
+            if (elem.get('extname') is None or
+              re.match(self.genOpts.addExtensions,elem.get('extname')) is not None or
+              self.genOpts.defaultExtensions == elem.get('supported')):
+                s += "    " + name + " = " + strVal + ",\n"
+
+            if (expand and isEnum and elem.get('extends') is None):
                 if (minName == None):
                     minName = maxName = name
                     minValue = maxValue = numVal
@@ -1095,10 +1163,12 @@ class DocOutputGenerator(OutputGenerator):
         # additional padding to generate correct names...
         if (expand):
             s += "\n"
-            s += "    " + expandPrefix + "_BEGIN_RANGE = " + minName + ",\n"
-            s += "    " + expandPrefix + "_END_RANGE = " + maxName + ",\n"
-            s += "    " + expandPrefix + "_NUM = (" + maxName + " - " + minName + " + 1),\n"
-            s += "    " + expandPrefix + "_MAX_ENUM = 0x7FFFFFFF\n"
+            if isEnum:
+                s += "    " + expandPrefix + "_BEGIN_RANGE" + expandSuffix + " = " + minName + ",\n"
+                s += "    " + expandPrefix + "_END_RANGE" + expandSuffix + " = " + maxName + ",\n"
+                s += "    " + expandPrefix + "_RANGE_SIZE" + expandSuffix + " = (" + maxName + " - " + minName + " + 1),\n"
+
+            s += "    " + expandPrefix + "_MAX_ENUM" + expandSuffix + " = 0x7FFFFFFF\n"
         # Postfix
         s += "} " + groupName + ";"
         self.writeInclude('enums', groupName, s)
@@ -1319,46 +1389,89 @@ class ValidityOutputGenerator(OutputGenerator):
         self.logMsg('diag', '# Generating include file:', filename)
         fp = open(filename, 'w')
         # Asciidoc anchor
+        write('// WARNING: DO NOT MODIFY! This file is automatically generated from the vk.xml registry', file=fp)
 
         # Valid Usage
         if validity is not None:
+            write('ifndef::doctype-manpage[]', file=fp)
             write('.Valid Usage', file=fp)
             write('*' * 80, file=fp)
+            write('endif::doctype-manpage[]', file=fp)
+            write('ifdef::doctype-manpage[]', file=fp)
+            write('Valid Usage', file=fp)
+            write('-----------', file=fp)
+            write('endif::doctype-manpage[]', file=fp)
             write(validity, file=fp, end='')
+            write('ifndef::doctype-manpage[]', file=fp)
             write('*' * 80, file=fp)
+            write('endif::doctype-manpage[]', file=fp)
             write('', file=fp)
 
         # Host Synchronization
         if threadsafety is not None:
+            write('ifndef::doctype-manpage[]', file=fp)
             write('.Host Synchronization', file=fp)
             write('*' * 80, file=fp)
+            write('endif::doctype-manpage[]', file=fp)
+            write('ifdef::doctype-manpage[]', file=fp)
+            write('Host Synchronization', file=fp)
+            write('--------------------', file=fp)
+            write('endif::doctype-manpage[]', file=fp)
             write(threadsafety, file=fp, end='')
+            write('ifndef::doctype-manpage[]', file=fp)
             write('*' * 80, file=fp)
+            write('endif::doctype-manpage[]', file=fp)
             write('', file=fp)
 
         # Command Properties - contained within a block, to avoid table numbering
         if commandpropertiesentry is not None:
+            write('ifndef::doctype-manpage[]', file=fp)
             write('.Command Properties', file=fp)
             write('*' * 80, file=fp)
+            write('endif::doctype-manpage[]', file=fp)
+            write('ifdef::doctype-manpage[]', file=fp)
+            write('Command Properties', file=fp)
+            write('------------------', file=fp)
+            write('endif::doctype-manpage[]', file=fp)
             write('[options="header", width="100%"]', file=fp)
             write('|=====================', file=fp)
             write('|Command Buffer Levels|Render Pass Scope|Supported Queue Types', file=fp)
             write(commandpropertiesentry, file=fp)
             write('|=====================', file=fp)
+            write('ifndef::doctype-manpage[]', file=fp)
             write('*' * 80, file=fp)
+            write('endif::doctype-manpage[]', file=fp)
             write('', file=fp)
 
         # Success Codes - contained within a block, to avoid table numbering
         if successcodes is not None or errorcodes is not None:
+            write('ifndef::doctype-manpage[]', file=fp)
             write('.Return Codes', file=fp)
             write('*' * 80, file=fp)
+            write('endif::doctype-manpage[]', file=fp)
+            write('ifdef::doctype-manpage[]', file=fp)
+            write('Return Codes', file=fp)
+            write('------------', file=fp)
+            write('endif::doctype-manpage[]', file=fp)
             if successcodes is not None:
+                write('ifndef::doctype-manpage[]', file=fp)
                 write('<<fundamentals-successcodes,Success>>::', file=fp)
+                write('endif::doctype-manpage[]', file=fp)
+                write('ifdef::doctype-manpage[]', file=fp)
+                write('On success, this command returns::', file=fp)
+                write('endif::doctype-manpage[]', file=fp)
                 write(successcodes, file=fp)
             if errorcodes is not None:
+                write('ifndef::doctype-manpage[]', file=fp)
                 write('<<fundamentals-errorcodes,Failure>>::', file=fp)
+                write('endif::doctype-manpage[]', file=fp)
+                write('ifdef::doctype-manpage[]', file=fp)
+                write('On failure, this command returns::', file=fp)
+                write('endif::doctype-manpage[]', file=fp)
                 write(errorcodes, file=fp)
+            write('ifndef::doctype-manpage[]', file=fp)
             write('*' * 80, file=fp)
+            write('endif::doctype-manpage[]', file=fp)
             write('', file=fp)
 
         fp.close()
@@ -1952,13 +2065,9 @@ class ValidityOutputGenerator(OutputGenerator):
 
                         if self.paramIsPointer(param):
                             asciidoc += 'the value referenced by '
-                        else:
-                            asciidoc += 'the value of '
 
                     elif self.paramIsPointer(param):
                         asciidoc += 'The value referenced by '
-                    else:
-                        asciidoc += 'The value of '
 
                     asciidoc += self.makeParameterName(arraylength)
                     asciidoc += ' must: be greater than `0`'
@@ -2003,10 +2112,10 @@ class ValidityOutputGenerator(OutputGenerator):
                 # Capitalize and add to the main language
                 asciidoc += parentlanguage
 
-        # Add in any plain-text validation language that's in the xml
+        # Add in any plain-text validation language that should be added
         for usage in usages:
             asciidoc += '* '
-            asciidoc += usage.text
+            asciidoc += usage
             asciidoc += '\n'
 
         # In case there's nothing to report, return None
@@ -2094,7 +2203,7 @@ class ValidityOutputGenerator(OutputGenerator):
 
             successcodeentry = ''
             successcodes = successcodes.split(',')
-            return '* ' + '\n* '.join(successcodes)
+            return '* ename:' + '\n* ename:'.join(successcodes)
 
         return None
 
@@ -2105,7 +2214,7 @@ class ValidityOutputGenerator(OutputGenerator):
 
             errorcodeentry = ''
             errorcodes = errorcodes.split(',')
-            return '* ' + '\n* '.join(errorcodes)
+            return '* ename:' + '\n* ename:'.join(errorcodes)
 
         return None
 
@@ -2114,9 +2223,17 @@ class ValidityOutputGenerator(OutputGenerator):
     def genCmd(self, cmdinfo, name):
         OutputGenerator.genCmd(self, cmdinfo, name)
         #
-        # Get all thh parameters
+        # Get all the parameters
         params = cmdinfo.elem.findall('param')
-        usages = cmdinfo.elem.findall('validity/usage')
+        usageelements = cmdinfo.elem.findall('validity/usage')
+        usages = []
+
+        for usage in usageelements:
+            usages.append(usage.text)
+        for usage in cmdinfo.additionalValidity:
+            usages.append(usage.text)
+        for usage in cmdinfo.removedValidity:
+            usages.remove(usage.text)
 
         validity = self.makeValidUsageStatements(cmdinfo.elem, name, params, usages)
         threadsafety = self.makeThreadSafetyBlock(cmdinfo.elem, 'param')
@@ -2134,7 +2251,16 @@ class ValidityOutputGenerator(OutputGenerator):
         # Anything that's only ever returned can't be set by the user, so shouldn't have any validity information.
         if typeinfo.elem.attrib.get('returnedonly') is None:
             params = typeinfo.elem.findall('member')
-            usages = typeinfo.elem.findall('validity/usage')
+
+            usageelements = typeinfo.elem.findall('validity/usage')
+            usages = []
+
+            for usage in usageelements:
+                usages.append(usage.text)
+            for usage in typeinfo.additionalValidity:
+                usages.append(usage.text)
+            for usage in typeinfo.removedValidity:
+                usages.remove(usage.text)
 
             validity = self.makeValidUsageStatements(typeinfo.elem, typename, params, usages)
             threadsafety = self.makeThreadSafetyBlock(typeinfo.elem, 'member')
@@ -2194,6 +2320,7 @@ class HostSynchronizationOutputGenerator(OutputGenerator):
             fp = open(filename, 'w')
 
             # Host Synchronization
+            write('// WARNING: DO NOT MODIFY! This file is automatically generated from the vk.xml registry', file=fp)
             write('.Externally Synchronized Parameters', file=fp)
             write('*' * 80, file=fp)
             write(self.threadsafety['parameters'], file=fp, end='')
@@ -2207,6 +2334,7 @@ class HostSynchronizationOutputGenerator(OutputGenerator):
             fp = open(filename, 'w')
 
             # Host Synchronization
+            write('// WARNING: DO NOT MODIFY! This file is automatically generated from the vk.xml registry', file=fp)
             write('.Externally Synchronized Parameter Lists', file=fp)
             write('*' * 80, file=fp)
             write(self.threadsafety['parameterlists'], file=fp, end='')
@@ -2220,6 +2348,7 @@ class HostSynchronizationOutputGenerator(OutputGenerator):
             fp = open(filename, 'w')
 
             # Host Synchronization
+            write('// WARNING: DO NOT MODIFY! This file is automatically generated from the vk.xml registry', file=fp)
             write('.Implicit Externally Synchronized Parameters', file=fp)
             write('*' * 80, file=fp)
             write(self.threadsafety['implicit'], file=fp, end='')
@@ -3014,6 +3143,25 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 return param
         return None
     #
+    # Extract length values from latexmath.  Currently an inflexible solution that looks for specific
+    # patterns that are found in vk.xml.  Will need to be updated when new patterns are introduced.
+    def parseLateXMath(self, source):
+        name = 'ERROR'
+        decoratedName = 'ERROR'
+        if 'mathit' in source:
+            # Matches expressions similar to 'latexmath:[$\lceil{\mathit{rasterizationSamples} \over 32}\rceil$]'
+            match = re.match(r'latexmath\s*\:\s*\[\s*\$\\l(\w+)\s*\{\s*\\mathit\s*\{\s*(\w+)\s*\}\s*\\over\s*(\d+)\s*\}\s*\\r(\w+)\$\s*\]', source)
+            if not match or match.group(1) != match.group(4):
+                raise 'Unrecognized latexmath expression'
+            name = match.group(2)
+            decoratedName = '{}({}/{})'.format(*match.group(1, 2, 3))
+        else:
+            # Matches expressions similar to 'latexmath : [$dataSize \over 4$]'
+            match = re.match(r'latexmath\s*\:\s*\[\s*\$\s*(\w+)\s*\\over\s*(\d+)\s*\$\s*\]', source)
+            name = match.group(1)
+            decoratedName = '{}/{}'.format(*match.group(1, 2))
+        return name, decoratedName
+    #
     # Get the length paramater record for the specified parameter name
     def getLenParam(self, params, name):
         lenParam = None
@@ -3022,11 +3170,14 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 # The count is obtained by dereferencing a member of a struct parameter
                 lenParam = self.CommandParam(name=name, iscount=True, ispointer=False, isoptional=False, type=None, len=None, isstaticarray=None, extstructs=None, cdecl=None)
             elif 'latexmath' in name:
-                result = re.search('mathit\{(\w+)\}', name)
-                lenParam = self.getParamByName(params, result.group(1))
-            elif '/' in name:
-                # Len specified as an equation such as dataSize/4
-                lenParam = self.getParamByName(params, name.split('/')[0])
+                lenName, decoratedName = self.parseLateXMath(name)
+                lenParam = self.getParamByName(params, lenName)
+                # TODO: Zero-check the result produced by the equation?
+                # Copy the stored len parameter entry and overwrite the name with the processed latexmath equation
+                #param = self.getParamByName(params, lenName)
+                #lenParam = self.CommandParam(name=decoratedName, iscount=param.iscount, ispointer=param.ispointer,
+                #                             isoptional=param.isoptional, type=param.type, len=param.len,
+                #                             isstaticarray=param.isstaticarray, extstructs=param.extstructs, cdecl=param.cdecl)
             else:
                 lenParam = self.getParamByName(params, name)
         return lenParam
