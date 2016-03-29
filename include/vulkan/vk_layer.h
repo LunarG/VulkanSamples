@@ -261,9 +261,15 @@ typedef enum VkLayerDbgAction_ {
 // ------------------------------------------------------------------------------------------------
 // CreateInstance and CreateDevice support structures
 
+/* Sub type of structure for instance and device loader ext of CreateInfo.
+ * When sType == VK_STRUCTURE_TYPE_LAYER_INSTANCE_CREATE_INFO
+ * or sType == VK_STRUCTURE_TYPE_LAYER_DEVICE_CREATE_INFO
+ * then VkLayerFunction indicates struct type pointed to by pNext
+ */
 typedef enum VkLayerFunction_ {
     VK_LAYER_LINK_INFO = 0,
-    VK_LAYER_DEVICE_INFO = 1
+    VK_LAYER_DEVICE_INFO = 1,
+    VK_LOADER_DISPATCH_CALLBACK = 2
 } VkLayerFunction;
 
 typedef struct VkLayerInstanceLink_ {
@@ -283,12 +289,16 @@ typedef struct VkLayerDeviceInfo_ {
     PFN_vkGetInstanceProcAddr pfnNextGetInstanceProcAddr;
 } VkLayerDeviceInfo;
 
+typedef VkResult (VKAPI_PTR *PFN_vkSetInstanceLoaderData)(VkInstance instance,
+        void *object);
+
 typedef struct {
     VkStructureType sType; // VK_STRUCTURE_TYPE_LAYER_INSTANCE_CREATE_INFO
     const void *pNext;
     VkLayerFunction function;
     union {
         VkLayerInstanceLink *pLayerInfo;
+        PFN_vkSetInstanceLoaderData pfnSetInstanceLoaderData;
     } u;
 } VkLayerInstanceCreateInfo;
 
