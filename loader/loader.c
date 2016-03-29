@@ -261,6 +261,16 @@ void loader_log(const struct loader_instance *inst, VkFlags msg_type,
     fputc('\n', stderr);
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL vkSetInstanceDispatch(VkInstance instance, void *object) {
+
+    struct loader_instance *inst = loader_get_instance(instance);
+    if (!inst) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+    loader_set_dispatch(object, inst->disp);
+    return VK_SUCCESS;
+}
+
 #if defined(WIN32)
 static char *loader_get_next_path(char *path);
 /**
@@ -3267,6 +3277,16 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
     PFN_vkCreateInstance fpCreateInstance =
         (PFN_vkCreateInstance)nextGIPA(*created_instance, "vkCreateInstance");
     if (fpCreateInstance) {
+        VkLayerInstanceCreateInfo create_info_disp;
+
+        create_info_disp.sType =
+            VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO;
+        create_info_disp.function = VK_LOADER_DISPATCH_CALLBACK;
+
+        create_info_disp.u.pfnSetInstanceLoaderData = vkSetInstanceDispatch;
+
+        create_info_disp.pNext = loader_create_info.pNext;
+        loader_create_info.pNext = &create_info_disp;
         res =
             fpCreateInstance(&loader_create_info, pAllocator, created_instance);
     } else {
