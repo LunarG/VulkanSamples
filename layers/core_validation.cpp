@@ -253,9 +253,6 @@ static unordered_map<void *, layer_data *> layer_data_map;
 // TODO : This can be much smarter, using separate locks for separate global data
 static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
-#define MAX_TID 513
-static loader_platform_thread_id g_tidMapping[MAX_TID] = {0};
-static uint32_t g_maxTID = 0;
 #if MTMERGESOURCE
 // MTMERGESOURCE - start of direct pull
 static VkPhysicalDeviceMemoryProperties memProps;
@@ -1022,21 +1019,6 @@ static void printCBList(layer_data *my_data, void *dispObj) {
 }
 
 #endif
-
-// Map actual TID to an index value and return that index
-//  This keeps TIDs in range from 0-MAX_TID and simplifies compares between runs
-static uint32_t getTIDIndex() {
-    loader_platform_thread_id tid = loader_platform_get_thread_id();
-    for (uint32_t i = 0; i < g_maxTID; i++) {
-        if (tid == g_tidMapping[i])
-            return i;
-    }
-    // Don't yet have mapping, set it and return newly set index
-    uint32_t retVal = (uint32_t)g_maxTID;
-    g_tidMapping[g_maxTID++] = tid;
-    assert(g_maxTID < MAX_TID);
-    return retVal;
-}
 
 // Return a string representation of CMD_TYPE enum
 static string cmdTypeToString(CMD_TYPE cmd) {
