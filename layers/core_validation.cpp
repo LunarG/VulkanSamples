@@ -1356,6 +1356,7 @@ struct interface_var {
     uint32_t id;
     uint32_t type_id;
     uint32_t offset;
+    bool is_patch;
     /* TODO: collect the name, too? Isn't required to be present. */
 };
 
@@ -1378,7 +1379,7 @@ static spirv_inst_iter get_struct_type(shader_module const *src, spirv_inst_iter
 static void collect_interface_block_members(layer_data *my_data, shader_module const *src,
                                             std::map<location_t, interface_var> &out,
                                             std::unordered_map<unsigned, unsigned> const &blocks, bool is_array_of_verts,
-                                            uint32_t id, uint32_t type_id) {
+                                            uint32_t id, uint32_t type_id, bool is_patch) {
     /* Walk down the type_id presented, trying to determine whether it's actually an interface block. */
     auto type = get_struct_type(src, src->get_def(type_id), is_array_of_verts);
     if (type == src->end() || blocks.find(type.word(1)) == blocks.end()) {
@@ -1418,6 +1419,7 @@ static void collect_interface_block_members(layer_data *my_data, shader_module c
                     /* TODO: member index in interface_var too? */
                     v.type_id = member_type_id;
                     v.offset = offset;
+                    v.is_patch = is_patch;
                     out[std::make_pair(location + offset, component)] = v;
                 }
             }
@@ -1432,6 +1434,7 @@ static void collect_interface_by_location(layer_data *my_data, shader_module con
     std::unordered_map<unsigned, unsigned> var_builtins;
     std::unordered_map<unsigned, unsigned> var_components;
     std::unordered_map<unsigned, unsigned> blocks;
+    std::unordered_map<unsigned, unsigned> var_patch;
 
     for (auto insn : *src) {
 
@@ -1453,6 +1456,10 @@ static void collect_interface_by_location(layer_data *my_data, shader_module con
 
             if (insn.word(2) == spv::DecorationBlock) {
                 blocks[insn.word(1)] = 1;
+            }
+
+            if (insn.word(2) == spv::DecorationPatch) {
+                var_patch[insn.word(1)] = 1;
             }
         }
     }
@@ -1482,6 +1489,7 @@ static void collect_interface_by_location(layer_data *my_data, shader_module con
             int location = value_or_default(var_locations, id, -1);
             int builtin = value_or_default(var_builtins, id, -1);
             unsigned component = value_or_default(var_components, id, 0); /* unspecified is OK, is 0 */
+            bool is_patch = var_patch.find(id) != var_patch.end();
 
             /* All variables and interface block members in the Input or Output storage classes
              * must be decorated with either a builtin or an explicit location.
@@ -1500,11 +1508,12 @@ static void collect_interface_by_location(layer_data *my_data, shader_module con
                     v.id = id;
                     v.type_id = type;
                     v.offset = offset;
+                    v.is_patch = is_patch;
                     out[std::make_pair(location + offset, component)] = v;
                 }
             } else if (builtin == -1) {
                 /* An interface block instance */
-                collect_interface_block_members(my_data, src, out, blocks, is_array_of_verts, id, type);
+                collect_interface_block_members(my_data, src, out, blocks, is_array_of_verts, id, type, is_patch);
             }
         }
     }
@@ -1554,6 +1563,8 @@ static void collect_interface_by_descriptor_slot(layer_data *my_data, shader_mod
             interface_var v;
             v.id = insn.word(2);
             v.type_id = insn.word(1);
+            v.offset = 0;
+            v.is_patch = false;
             out[std::make_pair(set, binding)] = v;
         }
     }
