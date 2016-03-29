@@ -385,14 +385,10 @@ Section
     ${StrRep} $0 ${VERSION_BUILDNO} "." "-"
     StrCpy $FileVersion ${VERSION_ABI_MAJOR}-${VERSION_API_MAJOR}-${VERSION_MINOR}-${VERSION_PATCH}-$0
 
-    # Remove vulkaninfo from Start Menu
+    # Complete remove the Vulkan Start Menu. Prior version of the Vulkan RT
+    # created Start Menu items, we don't do that anymore.
     SetShellVarContext all
-    Delete "$SMPROGRAMS\Vulkan\vulkaninfo32.lnk"
-    Delete "$SMPROGRAMS\Vulkan\vulkaninfo.lnk"
-    ClearErrors
-
-    # Create Vulkan in the Start Menu
-    CreateDirectory "$SMPROGRAMS\Vulkan"
+    RmDir /R "$SMPROGRAMS\Vulkan"
     ClearErrors
 
     # If running on a 64-bit OS machine
@@ -465,13 +461,6 @@ Section
     # We are done using ConfigLayersAndVulkanDLL.ps1, delete it. It will be re-installed
     # by the uninstaller when it needs to be run again during uninstall.
     Delete ConfigLayersAndVulkanDLL.ps1
-
-    # Add vulkaninfo to Start Menu
-    SetShellVarContext all
-    IfFileExists $WINDIR\System32\vulkaninfo.exe 0 +2
-        CreateShortCut "$SMPROGRAMS\Vulkan\vulkaninfo.lnk" "$WINDIR\System32\vulkaninfo.exe"
-    IfFileExists $WINDIR\SysWow64\vulkaninfo.exe 0 +2
-        CreateShortCut "$SMPROGRAMS\Vulkan\vulkaninfo32.lnk" "$WINDIR\SysWow64\vulkaninfo.exe"
 
     # Possibly install MSVC 2013 redistributables
     ClearErrors
@@ -621,27 +610,6 @@ Section "uninstall"
 
     # If Ref Count is zero, uninstall everything
     ${If} $IC <= 0
-
-        # Delete vulkaninfo from start menu.
-        SetShellVarContext all
-        Delete "$SMPROGRAMS\Vulkan\vulkaninfo.lnk"
-
-        # If running on a 64-bit OS machine
-        ${If} ${RunningX64}
-            Delete "$SMPROGRAMS\Vulkan\vulkaninfo32.lnk"
-        ${EndIf}
-
-        # Possibly add vulkaninfo to Start Menu
-        SetShellVarContext all
-        IfFileExists $WINDIR\System32\vulkaninfo.exe 0 +2
-            CreateShortCut "$SMPROGRAMS\Vulkan\vulkaninfo.lnk" "$WINDIR\System32\vulkaninfo.exe"
-        IfFileExists $WINDIR\SysWow64\vulkaninfo.exe 0 +2
-            CreateShortCut "$SMPROGRAMS\Vulkan\vulkaninfo32.lnk" "$WINDIR\SysWow64\vulkaninfo.exe"
-
-        # Possibly delete vulkan Start Menu
-        StrCpy $0 "$SMPROGRAMS\Vulkan"
-        Call un.DeleteDirIfEmpty
-        ClearErrors
 
         # Remove files in install dir
         Delete /REBOOTOK "$IDir\VULKANRT_LICENSE.rtf"
