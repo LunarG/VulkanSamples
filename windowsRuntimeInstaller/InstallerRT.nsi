@@ -237,6 +237,13 @@ VIAddVersionKey  "LegalCopyright" ""
 # Start default section
 Section
 
+    # Turn on logging
+    LogSet on
+
+    # Remove contents of temp dir
+    SetOutPath "$TEMP\VulkanRT"
+    RmDir /R "$TEMP\VulkanRT"
+
     # If running on a 64-bit OS machine, disable registry re-direct since we're running as a 32-bit executable.
     ${If} ${RunningX64}
 
@@ -498,11 +505,22 @@ Section
     StrCpy $1 65
     Call CheckForError
 
+    # Finish logging and move log file to TEMP dir
+    LogSet off
+    Rename "$INSTDIR\install.log" "$TEMP\VulkanRT\Install.log"
+
 SectionEnd
 
 # Uninstaller section start
 !ifdef UNINSTALLER
 Section "uninstall"
+
+    # Turn on logging
+    LogSet on
+
+    # Remove contents of temp dir
+    SetOutPath "$TEMP\VulkanRT"
+    RmDir /R "$TEMP\VulkanRT"
 
     # If running on a 64-bit OS machine, disable registry re-direct since we're running as a 32-bit executable.
     ${If} ${RunningX64}
@@ -669,9 +687,9 @@ Section "uninstall"
     StrCpy $1 80
     Call un.CheckForError
 
-    # Remove temp dir
-    SetOutPath "$TEMP"
-    RmDir /R "$TEMP\VulkanRT"
+    # Finish logging and move log file to TEMP dir
+    LogSet off
+    Rename "$INSTDIR\install.log" "$TEMP\VulkanRT\Uninstall.log"
 
 SectionEnd
 !endif
@@ -713,6 +731,10 @@ Function CheckForError
         # IHV's using this install may want no message box.
         MessageBox MB_OK|MB_ICONSTOP "${errorMessage1}${errorMessage2}Errorcode: $1$\r$\n" /SD IDOK
 
+        # Finish logging and move log file to TEMP dir
+        LogSet off
+        Rename "$INSTDIR\install.log" "$TEMP\VulkanRT\install.log"
+
         # Copy the uninstaller to a temp folder of our own creation so we can completely
         # delete the old contents.
         SetOutPath "$TEMP\VulkanRT"
@@ -741,6 +763,11 @@ Function un.CheckForError
 
         # Set an error message to output
         SetErrorLevel $1
+
+        # Finish logging and move log file to TEMP dir
+        LogSet off
+        Delete "$TEMP\VulkanRT\Uninstall.log"
+        Rename "$INSTDIR\install.log" "$TEMP\VulkanRT\Uninstall.log"
 
         Quit
     ${EndIf}
