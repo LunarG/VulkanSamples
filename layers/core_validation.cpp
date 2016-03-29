@@ -1245,67 +1245,70 @@ static std::string describe_type(shader_module const *src, unsigned type) {
 }
 
 
-static bool types_match(shader_module const *a, shader_module const *b, unsigned a_type, unsigned b_type, bool b_arrayed) {
+static bool types_match(shader_module const *a, shader_module const *b, unsigned a_type, unsigned b_type, bool a_arrayed, bool b_arrayed) {
     /* walk two type trees together, and complain about differences */
     auto a_insn = a->get_def(a_type);
     auto b_insn = b->get_def(b_type);
     assert(a_insn != a->end());
     assert(b_insn != b->end());
 
+    if (a_arrayed && a_insn.opcode() == spv::OpTypeArray) {
+        return types_match(a, b, a_insn.word(2), b_type, false, b_arrayed);
+    }
+
     if (b_arrayed && b_insn.opcode() == spv::OpTypeArray) {
         /* we probably just found the extra level of arrayness in b_type: compare the type inside it to a_type */
-        return types_match(a, b, a_type, b_insn.word(2), false);
+        return types_match(a, b, a_type, b_insn.word(2), a_arrayed, false);
     }
 
     if (a_insn.opcode() != b_insn.opcode()) {
         return false;
     }
 
+    if (a_insn.opcode() == spv::OpTypePointer) {
+        /* match on pointee type. storage class is expected to differ */
+        return types_match(a, b, a_insn.word(3), b_insn.word(3), a_arrayed, b_arrayed);
+    }
+
+    if (a_arrayed || b_arrayed) {
+        /* if we havent resolved array-of-verts by here, we're not going to. */
+        return false;
+    }
+
     switch (a_insn.opcode()) {
-    /* if b_arrayed and we hit a leaf type, then we can't match -- there's nowhere for the extra OpTypeArray to be! */
     case spv::OpTypeBool:
-        return true && !b_arrayed;
+        return true;
     case spv::OpTypeInt:
         /* match on width, signedness */
-        return a_insn.word(2) == b_insn.word(2) && a_insn.word(3) == b_insn.word(3) && !b_arrayed;
+        return a_insn.word(2) == b_insn.word(2) && a_insn.word(3) == b_insn.word(3);
     case spv::OpTypeFloat:
         /* match on width */
-        return a_insn.word(2) == b_insn.word(2) && !b_arrayed;
+        return a_insn.word(2) == b_insn.word(2);
     case spv::OpTypeVector:
     case spv::OpTypeMatrix:
-        /* match on element type, count. these all have the same layout. we don't get here if
-         * b_arrayed -- that is handled above. */
-        return !b_arrayed && types_match(a, b, a_insn.word(2), b_insn.word(2), b_arrayed) && a_insn.word(3) == b_insn.word(3);
+        /* match on element type, count. these all have the same layout. */
+        return types_match(a, b, a_insn.word(2), b_insn.word(2), a_arrayed, b_arrayed) && a_insn.word(3) == b_insn.word(3);
     case spv::OpTypeArray:
         /* match on element type, count. these all have the same layout. we don't get here if
          * b_arrayed. This differs from vector & matrix types in that the array size is the id of a constant instruction,
          * not a literal within OpTypeArray */
-        return !b_arrayed && types_match(a, b, a_insn.word(2), b_insn.word(2), b_arrayed) &&
+        return types_match(a, b, a_insn.word(2), b_insn.word(2), a_arrayed, b_arrayed) &&
                get_constant_value(a, a_insn.word(3)) == get_constant_value(b, b_insn.word(3));
     case spv::OpTypeStruct:
         /* match on all element types */
         {
-            if (b_arrayed) {
-                /* for the purposes of matching different levels of arrayness, structs are leaves. */
-                return false;
-            }
-
             if (a_insn.len() != b_insn.len()) {
                 return false; /* structs cannot match if member counts differ */
             }
 
             for (unsigned i = 2; i < a_insn.len(); i++) {
-                if (!types_match(a, b, a_insn.word(i), b_insn.word(i), b_arrayed)) {
+                if (!types_match(a, b, a_insn.word(i), b_insn.word(i), a_arrayed, b_arrayed)) {
                     return false;
                 }
             }
 
             return true;
         }
-    case spv::OpTypePointer:
-        /* match on pointee type. storage class is expected to differ */
-        return types_match(a, b, a_insn.word(3), b_insn.word(3), b_arrayed);
-
     default:
         /* remaining types are CLisms, or may not appear in the interfaces we
          * are interested in. Just claim no match.
@@ -1502,7 +1505,7 @@ static void collect_interface_by_location(layer_data *my_data, shader_module con
             if (location != -1) {
                 /* A user-defined interface variable, with a location. Where a variable
                  * occupied multiple locations, emit one result for each. */
-                unsigned num_locations = get_locations_consumed_by_type(src, type, is_array_of_verts);
+                unsigned num_locations = get_locations_consumed_by_type(src, type, is_array_of_verts && !is_patch);
                 for (unsigned int offset = 0; offset < num_locations; offset++) {
                     interface_var v;
                     v.id = id;
@@ -1610,7 +1613,7 @@ static bool validate_interface_between_stages(layer_data *my_data, shader_module
             }
             b_it++;
         } else {
-            if (types_match(producer, consumer, a_it->second.type_id, b_it->second.type_id, consumer_arrayed_input)) {
+            if (types_match(producer, consumer, a_it->second.type_id, b_it->second.type_id, false, consumer_arrayed_input)) {
                 /* OK! */
             } else {
                 if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
