@@ -1626,16 +1626,24 @@ static bool validate_interface_between_stages(layer_data *my_data, shader_module
             }
             b_it++;
         } else {
-            if (types_match(producer, consumer, a_it->second.type_id, b_it->second.type_id,
+            if (!types_match(producer, consumer, a_it->second.type_id, b_it->second.type_id,
                              producer_stage->arrayed_output && !a_it->second.is_patch,
                              consumer_stage->arrayed_input && !b_it->second.is_patch)) {
-                /* OK! */
-            } else {
                 if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", "Type mismatch on location %u.%u: '%s' vs '%s'",
                             a_first.first, a_first.second,
                             describe_type(producer, a_it->second.type_id).c_str(),
                             describe_type(consumer, b_it->second.type_id).c_str())) {
+                    pass = false;
+                }
+            }
+            if (a_it->second.is_patch != b_it->second.is_patch) {
+                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
+                            __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
+                            "Decoration mismatch on location %u.%u: is per-%s in %s stage but"
+                            "per-%s in %s stage", a_first.first, a_first.second,
+                            a_it->second.is_patch ? "patch" : "vertex", producer_stage->name,
+                            b_it->second.is_patch ? "patch" : "vertex", consumer_stage->name)) {
                     pass = false;
                 }
             }
