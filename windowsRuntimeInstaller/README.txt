@@ -3,8 +3,15 @@ Runtime Installer Package.
 
 To build the Vulkan Runtime Installer:
 
-    1. Install Nullsoft Install System version 3.0b1 or greater. (Available
-       from http://nsis.sourceforge.net/Download.)
+    1. Install Nullsoft Install System (NSIS) version 3.0b1 or greater. The
+       version of NSIS needed for building the Vulkan Runtime Installer
+       must support logging (i.e. must have been built with NSIS_CONFIG_LOG=yes
+       set), and must support long strings (i.e. NSIS_MAX_STRLEN=8192 must be
+       set).  Note that the NSIS binary version available at
+       http://nsis.sourceforge.net/Download does not have these enabled. You
+       may have to build NSIS yourself with these flags set - see
+       http://nsis//sourceforge.net/Docs/AppendixG.html for information on
+       building NSIS.
 
     2. Install the NSIS AccessControl plug-in. (Available from
        http://nsis.sourceforge.net/AccessControl_plug-in.)
@@ -109,3 +116,10 @@ Some notes on the behavior of the Windows Vulkan Runtime Installer:
      This ProductVersion should always be identical to <version> in:
 
        HKLM\Software\Microsoft\Windows\CurrentVersion\Uininstall\VulkanRT<version>\UinstalString
+
+   o The Installer and Uninstaller create log files, which can be
+     found in the VulkanrRT folder in the current TEMP folder.
+     (The TEMP folder is generally identified by the TEMP environment
+     variable). In addition to installer/uninstaller logs files,
+     the folder also contains a log from the last run of the
+     ConfigLayersAndVulkanDLL.ps1 script.
