@@ -1363,6 +1363,20 @@ struct interface_var {
     /* TODO: collect the name, too? Isn't required to be present. */
 };
 
+struct shader_stage_attributes {
+    char const *const name;
+    bool arrayed_input;
+    bool arrayed_output;
+};
+
+static shader_stage_attributes shader_stage_attribs[] = {
+    {"vertex shader", false, false},
+    {"tessellation control shader", true, true},
+    {"tessellation evaluation shader", true, false},
+    {"geometry shader", true, false},
+    {"fragment shader", false, false},
+};
+
 static spirv_inst_iter get_struct_type(shader_module const *src, spirv_inst_iter def, bool is_array_of_verts) {
     while (true) {
 
@@ -1384,7 +1398,7 @@ static void collect_interface_block_members(layer_data *my_data, shader_module c
                                             std::unordered_map<unsigned, unsigned> const &blocks, bool is_array_of_verts,
                                             uint32_t id, uint32_t type_id, bool is_patch) {
     /* Walk down the type_id presented, trying to determine whether it's actually an interface block. */
-    auto type = get_struct_type(src, src->get_def(type_id), is_array_of_verts);
+    auto type = get_struct_type(src, src->get_def(type_id), is_array_of_verts && !is_patch);
     if (type == src->end() || blocks.find(type.word(1)) == blocks.end()) {
         /* this isn't an interface block. */
         return;
@@ -1574,17 +1588,16 @@ static void collect_interface_by_descriptor_slot(layer_data *my_data, shader_mod
 }
 
 static bool validate_interface_between_stages(layer_data *my_data, shader_module const *producer,
-                                              spirv_inst_iter producer_entrypoint, char const *producer_name,
+                                              spirv_inst_iter producer_entrypoint, shader_stage_attributes const *producer_stage,
                                               shader_module const *consumer, spirv_inst_iter consumer_entrypoint,
-                                              char const *consumer_name, bool consumer_arrayed_input) {
+                                              shader_stage_attributes const *consumer_stage) {
     std::map<location_t, interface_var> outputs;
     std::map<location_t, interface_var> inputs;
 
     bool pass = true;
 
-    collect_interface_by_location(my_data, producer, producer_entrypoint, spv::StorageClassOutput, outputs, false);
-    collect_interface_by_location(my_data, consumer, consumer_entrypoint, spv::StorageClassInput, inputs,
-                                  consumer_arrayed_input);
+    collect_interface_by_location(my_data, producer, producer_entrypoint, spv::StorageClassOutput, outputs, producer_stage->arrayed_output);
+    collect_interface_by_location(my_data, consumer, consumer_entrypoint, spv::StorageClassInput, inputs, consumer_stage->arrayed_input);
 
     auto a_it = outputs.begin();
     auto b_it = inputs.begin();
@@ -1599,21 +1612,23 @@ static bool validate_interface_between_stages(layer_data *my_data, shader_module
         if (b_at_end || ((!a_at_end) && (a_first < b_first))) {
             if (log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
-                        "%s writes to output location %u.%u which is not consumed by %s", producer_name, a_first.first,
-                        a_first.second, consumer_name)) {
+                        "%s writes to output location %u.%u which is not consumed by %s", producer_stage->name, a_first.first,
+                        a_first.second, consumer_stage->name)) {
                 pass = false;
             }
             a_it++;
         } else if (a_at_end || a_first > b_first) {
             if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
-                        "%s consumes input location %u.%u which is not written by %s", consumer_name, b_first.first, b_first.second,
-                        producer_name)) {
+                        "%s consumes input location %u.%u which is not written by %s", consumer_stage->name, b_first.first, b_first.second,
+                        producer_stage->name)) {
                 pass = false;
             }
             b_it++;
         } else {
-            if (types_match(producer, consumer, a_it->second.type_id, b_it->second.type_id, false, consumer_arrayed_input)) {
+            if (types_match(producer, consumer, a_it->second.type_id, b_it->second.type_id,
+                             producer_stage->arrayed_output && !a_it->second.is_patch,
+                             consumer_stage->arrayed_input && !b_it->second.is_patch)) {
                 /* OK! */
             } else {
                 if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
@@ -1966,19 +1981,6 @@ static void mark_accessible_ids(shader_module const *src, spirv_inst_iter entryp
         }
     }
 }
-
-struct shader_stage_attributes {
-    char const *const name;
-    bool arrayed_input;
-};
-
-static shader_stage_attributes shader_stage_attribs[] = {
-    {"vertex shader", false},
-    {"tessellation control shader", true},
-    {"tessellation evaluation shader", false},
-    {"geometry shader", true},
-    {"fragment shader", false},
-};
 
 static bool validate_push_constant_block_against_pipeline(layer_data *my_data,
                                                           std::vector<VkPushConstantRange> const *pushConstantRanges,
@@ -2710,10 +2712,9 @@ static VkBool32 validate_and_capture_pipeline_shader_state(layer_data *my_data, 
     for (; producer != fragment_stage && consumer <= fragment_stage; consumer++) {
         assert(shaders[producer]);
         if (shaders[consumer]) {
-            pass &= validate_interface_between_stages(my_data, shaders[producer], entrypoints[producer],
-                                                     shader_stage_attribs[producer].name, shaders[consumer], entrypoints[consumer],
-                                                     shader_stage_attribs[consumer].name,
-                                                     shader_stage_attribs[consumer].arrayed_input);
+            pass &= validate_interface_between_stages(my_data,
+                                                      shaders[producer], entrypoints[producer], &shader_stage_attribs[producer],
+                                                      shaders[consumer], entrypoints[consumer], &shader_stage_attribs[consumer]);
 
             producer = consumer;
         }
