@@ -657,7 +657,7 @@ loader_init_device_extensions(const struct loader_instance *inst,
 }
 
 VkResult loader_add_device_extensions(const struct loader_instance *inst,
-                                      struct loader_icd *icd,
+                                      PFN_vkEnumerateDeviceExtensionProperties fpEnumerateDeviceExtensionProperties,
                                       VkPhysicalDevice physical_device,
                                       const char *lib_name,
                                       struct loader_extension_list *ext_list) {
@@ -665,14 +665,14 @@ VkResult loader_add_device_extensions(const struct loader_instance *inst,
     VkResult res;
     VkExtensionProperties *ext_props;
 
-    res = icd->EnumerateDeviceExtensionProperties(physical_device, NULL, &count,
-                                                  NULL);
+    res = fpEnumerateDeviceExtensionProperties(physical_device, NULL, &count,
+                                               NULL);
     if (res == VK_SUCCESS && count > 0) {
         ext_props = loader_stack_alloc(count * sizeof(VkExtensionProperties));
         if (!ext_props)
             return VK_ERROR_OUT_OF_HOST_MEMORY;
-        res = icd->EnumerateDeviceExtensionProperties(physical_device, NULL,
-                                                      &count, ext_props);
+        res = fpEnumerateDeviceExtensionProperties(physical_device, NULL,
+                                                   &count, ext_props);
         if (res != VK_SUCCESS)
             return res;
         for (i = 0; i < count; i++) {
@@ -1154,8 +1154,7 @@ static void loader_destroy_logical_device(const struct loader_instance *inst,
 }
 
 struct loader_device *
-loader_add_logical_device(const struct loader_instance *inst,
-                          struct loader_device **device_list) {
+loader_create_logical_device(const struct loader_instance *inst) {
     struct loader_device *new_dev;
 
     new_dev = loader_heap_alloc(inst, sizeof(struct loader_device),
@@ -1168,9 +1167,14 @@ loader_add_logical_device(const struct loader_instance *inst,
 
     memset(new_dev, 0, sizeof(struct loader_device));
 
-    new_dev->next = *device_list;
-    *device_list = new_dev;
     return new_dev;
+}
+
+void loader_add_logical_device(const struct loader_instance *inst,
+                               struct loader_icd *icd,
+                               struct loader_device *dev) {
+    dev->next = icd->logical_device_list;
+    icd->logical_device_list = dev;
 }
 
 void loader_remove_logical_device(const struct loader_instance *inst,
@@ -2654,6 +2658,13 @@ loader_gpa_instance_internal(VkInstance inst, const char *pName) {
     return NULL;
 }
 
+static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+loader_gpa_device_internal(VkDevice device, const char* pName) {
+    struct loader_device * dev;
+    struct loader_icd * icd = loader_get_icd_and_device(device, &dev);
+    return icd->GetDeviceProcAddr(device, pName);
+}
+
 /**
  * Initialize device_ext dispatch table entry as follows:
  * If dev == NULL find all logical devices created within this instance and
@@ -3325,7 +3336,6 @@ void loader_activate_instance_layer_extensions(struct loader_instance *inst,
 
 VkResult
 loader_enable_device_layers(const struct loader_instance *inst,
-                            struct loader_icd *icd,
                             struct loader_layer_list *activated_layer_list,
                             const VkDeviceCreateInfo *pCreateInfo,
                             const struct loader_layer_list *device_layers)
@@ -3367,7 +3377,6 @@ VkResult loader_create_device_chain(const struct loader_physical_device_tramp *p
                                     const VkDeviceCreateInfo *pCreateInfo,
                                     const VkAllocationCallbacks *pAllocator,
                                     const struct loader_instance *inst,
-                                    struct loader_icd *icd,
                                     struct loader_device *dev) {
     uint32_t activated_layers = 0;
     VkLayerDeviceLink *layer_device_link_info;
@@ -3375,7 +3384,7 @@ VkResult loader_create_device_chain(const struct loader_physical_device_tramp *p
     VkDeviceCreateInfo loader_create_info;
     VkResult res;
 
-    PFN_vkGetDeviceProcAddr fpGDPA, nextGDPA = icd->GetDeviceProcAddr;
+    PFN_vkGetDeviceProcAddr fpGDPA, nextGDPA = loader_gpa_device_internal;
     PFN_vkGetInstanceProcAddr fpGIPA, nextGIPA = loader_gpa_instance_internal;
 
     memcpy(&loader_create_info, pCreateInfo, sizeof(VkDeviceCreateInfo));
@@ -3389,7 +3398,6 @@ VkResult loader_create_device_chain(const struct loader_physical_device_tramp *p
                    "Failed to alloc Device objects for layer");
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
-
 
 
     if (dev->activated_layer_list.count > 0) {
@@ -3589,7 +3597,7 @@ VkResult loader_validate_device_extensions(
         VkStringErrorFlags result = vk_string_validate(
             MaxLoaderStringLength, pCreateInfo->ppEnabledExtensionNames[i]);
         if (result != VK_STRING_ERROR_NONE) {
-            loader_log(phys_dev->this_icd->this_instance,
+            loader_log(phys_dev->this_instance,
                        VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "Loader: Device ppEnabledExtensionNames contains "
                        "string that is too long or is badly formed");
@@ -3824,7 +3832,7 @@ terminator_CreateDevice(VkPhysicalDevice physicalDevice,
     }
 
     res = loader_add_device_extensions(
-        phys_dev->this_icd->this_instance, phys_dev->this_icd,
+        phys_dev->this_icd->this_instance, phys_dev->this_icd->EnumerateDeviceExtensionProperties,
         phys_dev->phys_dev, phys_dev->this_icd->this_icd_lib->lib_name,
         &icd_exts);
     if (res != VK_SUCCESS) {
@@ -3855,6 +3863,7 @@ terminator_CreateDevice(VkPhysicalDevice physicalDevice,
     }
 
     *pDevice = localDevice;
+    loader_add_logical_device(phys_dev->this_icd->this_instance, phys_dev->this_icd, dev);
 
     /* Init dispatch pointer in new device object */
     loader_init_dispatch(*pDevice, &dev->loader_dispatch);
@@ -3923,7 +3932,6 @@ terminator_EnumeratePhysicalDevices(VkInstance instance,
                      ? inst->total_gpu_count
                      : *pPhysicalDeviceCount;
 
-    // phys_devs_term is used to pass the "this_icd" info to trampoline code
     if (inst->phys_devs_term)
         loader_heap_free(inst, inst->phys_devs_term);
     inst->phys_devs_term = loader_heap_alloc(
@@ -3944,6 +3952,8 @@ terminator_EnumeratePhysicalDevices(VkInstance instance,
         }
     }
     *pPhysicalDeviceCount = copy_count;
+
+    // TODO: Is phys_devs being leaked?
 
     if (copy_count < inst->total_gpu_count) {
         inst->total_gpu_count = copy_count;

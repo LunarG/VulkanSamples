@@ -511,8 +511,9 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
     }
     if (inst->phys_devs)
         loader_heap_free(inst, inst->phys_devs);
-    count = min(inst->total_gpu_count, *pPhysicalDeviceCount);
-    *pPhysicalDevices = count;
+    count = (inst->total_gpu_count < *pPhysicalDeviceCount) ?
+	    inst->total_gpu_count : *pPhysicalDeviceCount;
+    *pPhysicalDeviceCount = count;
     inst->phys_devs = (struct loader_physical_device_tramp *)loader_heap_alloc(
         inst, count * sizeof(struct loader_physical_device_tramp),
         VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
@@ -525,9 +526,8 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
 
         // initialize the loader's physicalDevice object
         loader_set_dispatch((void *)&inst->phys_devs[i], inst->disp);
-        inst->phys_devs[i].this_icd = inst->phys_devs_term[i].this_icd;
+        inst->phys_devs[i].this_instance = inst;
         inst->phys_devs[i].phys_dev = pPhysicalDevices[i];
-        inst->phys_devs[i].icd_phys_dev = inst->phys_devs_term[i].phys_dev;
 
         // copy wrapped object into Application provided array
         pPhysicalDevices[i] = (VkPhysicalDevice)&inst->phys_devs[i];
@@ -610,7 +610,6 @@ vkCreateDevice(VkPhysicalDevice physicalDevice,
                const VkAllocationCallbacks *pAllocator, VkDevice *pDevice) {
     VkResult res;
     struct loader_physical_device_tramp *phys_dev;
-    struct loader_icd *icd;
     struct loader_device *dev;
     struct loader_instance *inst;
     struct loader_layer_list activated_layer_list = {0};
@@ -620,18 +619,7 @@ vkCreateDevice(VkPhysicalDevice physicalDevice,
     loader_platform_thread_lock_mutex(&loader_lock);
 
     phys_dev = (struct loader_physical_device_tramp *)physicalDevice;
-    icd = phys_dev->this_icd;
-    if (!icd) {
-        loader_platform_thread_unlock_mutex(&loader_lock);
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
-
-    inst = (struct loader_instance *)phys_dev->this_icd->this_instance;
-
-    if (!icd->CreateDevice) {
-        loader_platform_thread_unlock_mutex(&loader_lock);
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
+    inst = (struct loader_instance *)phys_dev->this_instance;
 
     /* validate any app enabled layers are available */
     if (pCreateInfo->enabledLayerCount > 0) {
@@ -653,8 +641,8 @@ vkCreateDevice(VkPhysicalDevice physicalDevice,
     }
 
     res = loader_add_device_extensions(
-        inst, icd, phys_dev->icd_phys_dev,
-        phys_dev->this_icd->this_icd_lib->lib_name, &icd_exts);
+        inst, inst->disp->EnumerateDeviceExtensionProperties, phys_dev->phys_dev,
+        "Unknown", &icd_exts);
     if (res != VK_SUCCESS) {
         loader_platform_thread_unlock_mutex(&loader_lock);
         return res;
@@ -678,7 +666,7 @@ vkCreateDevice(VkPhysicalDevice physicalDevice,
         (char ***)&pCreateInfo->ppEnabledLayerNames);
 
     /* fetch a list of all layers activated, explicit and implicit */
-    res = loader_enable_device_layers(inst, icd, &activated_layer_list,
+    res = loader_enable_device_layers(inst, &activated_layer_list,
                                       pCreateInfo, &inst->device_layer_list);
     if (res != VK_SUCCESS) {
         loader_unexpand_dev_layer_names(inst, saved_layer_count,
@@ -701,7 +689,7 @@ vkCreateDevice(VkPhysicalDevice physicalDevice,
         return res;
     }
 
-    dev = loader_add_logical_device(inst, &icd->logical_device_list);
+    dev = loader_create_logical_device(inst);
     if (dev == NULL) {
         loader_unexpand_dev_layer_names(inst, saved_layer_count,
                                         saved_layer_names, saved_layer_ptr,
@@ -720,24 +708,22 @@ vkCreateDevice(VkPhysicalDevice physicalDevice,
     memset(&activated_layer_list, 0, sizeof(activated_layer_list));
 
     /* activate any layers on device chain which terminates with device*/
-    res = loader_enable_device_layers(inst, icd, &dev->activated_layer_list,
+    res = loader_enable_device_layers(inst, &dev->activated_layer_list,
                                       pCreateInfo, &inst->device_layer_list);
     if (res != VK_SUCCESS) {
         loader_unexpand_dev_layer_names(inst, saved_layer_count,
                                         saved_layer_names, saved_layer_ptr,
                                         pCreateInfo);
-        loader_remove_logical_device(inst, icd, dev);
         loader_platform_thread_unlock_mutex(&loader_lock);
         return res;
     }
 
     res = loader_create_device_chain(phys_dev, pCreateInfo, pAllocator, inst,
-                                     icd, dev);
+                                     dev);
     if (res != VK_SUCCESS) {
         loader_unexpand_dev_layer_names(inst, saved_layer_count,
                                         saved_layer_names, saved_layer_ptr,
                                         pCreateInfo);
-        loader_remove_logical_device(inst, icd, dev);
         loader_platform_thread_unlock_mutex(&loader_lock);
         return res;
     }
@@ -804,7 +790,7 @@ vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
 
         uint32_t count;
         uint32_t copy_size;
-        const struct loader_instance *inst = phys_dev->this_icd->this_instance;
+        const struct loader_instance *inst = phys_dev->this_instance;
         if (vk_string_validate(MaxLoaderStringLength, pLayerName) ==
             VK_STRING_ERROR_NONE) {
 
@@ -860,7 +846,7 @@ vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice,
        enumerated and instance chain may not contain all device layers */
 
     phys_dev = (struct loader_physical_device_tramp *)physicalDevice;
-    const struct loader_instance *inst = phys_dev->this_icd->this_instance;
+    const struct loader_instance *inst = phys_dev->this_instance;
     uint32_t count = inst->device_layer_list.count;
 
     if (pProperties == NULL) {
