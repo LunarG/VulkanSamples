@@ -494,14 +494,13 @@ class Image : public internal::NonDispHandle<VkImage> {
     }
 
     static VkImageCreateInfo create_info();
-    static VkImageAspectFlagBits image_aspect(VkImageAspectFlags flags);
-    static VkImageSubresource subresource(VkImageAspectFlagBits aspect,
+    static VkImageSubresource subresource(VkImageAspectFlags aspect,
                                           uint32_t mip_level,
                                           uint32_t array_layer);
     static VkImageSubresource subresource(const VkImageSubresourceRange &range,
                                           uint32_t mip_level,
                                           uint32_t array_layer);
-    static VkImageSubresourceLayers subresource(VkImageAspectFlagBits aspect,
+    static VkImageSubresourceLayers subresource(VkImageAspectFlags aspect,
                                                 uint32_t mip_level,
                                                 uint32_t array_layer,
                                                 uint32_t array_size);
@@ -775,10 +774,13 @@ inline VkImageCreateInfo Image::create_info() {
     return info;
 }
 
-inline VkImageSubresource Image::subresource(VkImageAspectFlagBits aspect,
+inline VkImageSubresource Image::subresource(VkImageAspectFlags aspect,
                                              uint32_t mip_level,
                                              uint32_t array_layer) {
     VkImageSubresource subres = {};
+    if (aspect == 0) {
+        assert(!"Invalid VkImageAspectFlags");
+    }
     subres.aspectMask = aspect;
     subres.mipLevel = mip_level;
     subres.arrayLayer = array_layer;
@@ -788,16 +790,26 @@ inline VkImageSubresource Image::subresource(VkImageAspectFlagBits aspect,
 inline VkImageSubresource
 Image::subresource(const VkImageSubresourceRange &range, uint32_t mip_level,
                    uint32_t array_layer) {
-    return subresource(image_aspect(range.aspectMask),
+    return subresource(range.aspectMask,
                        range.baseMipLevel + mip_level,
                        range.baseArrayLayer + array_layer);
 }
 
-inline VkImageSubresourceLayers Image::subresource(VkImageAspectFlagBits aspect,
+inline VkImageSubresourceLayers Image::subresource(VkImageAspectFlags aspect,
                                                    uint32_t mip_level,
                                                    uint32_t array_layer,
                                                    uint32_t array_size) {
     VkImageSubresourceLayers subres = {};
+    switch (aspect) {
+    case VK_IMAGE_ASPECT_COLOR_BIT:
+    case VK_IMAGE_ASPECT_DEPTH_BIT:
+    case VK_IMAGE_ASPECT_STENCIL_BIT:
+    case VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT:
+        /* valid */
+        break;
+    default:
+        assert(!"Invalid VkImageAspectFlags");
+    }
     subres.aspectMask = aspect;
     subres.mipLevel = mip_level;
     subres.baseArrayLayer = array_layer;
@@ -805,30 +817,10 @@ inline VkImageSubresourceLayers Image::subresource(VkImageAspectFlagBits aspect,
     return subres;
 }
 
-inline VkImageAspectFlagBits Image::image_aspect(VkImageAspectFlags flags) {
-    /*
-     * This will map VkImageAspectFlags into a single VkImageAspect.
-     * If there is more than one bit defined we'll get an assertion.
-     */
-    switch (flags) {
-    case VK_IMAGE_ASPECT_COLOR_BIT:
-        return VK_IMAGE_ASPECT_COLOR_BIT;
-    case VK_IMAGE_ASPECT_DEPTH_BIT:
-        return VK_IMAGE_ASPECT_DEPTH_BIT;
-    case VK_IMAGE_ASPECT_STENCIL_BIT:
-        return VK_IMAGE_ASPECT_STENCIL_BIT;
-    case VK_IMAGE_ASPECT_METADATA_BIT:
-        return VK_IMAGE_ASPECT_METADATA_BIT;
-    default:
-        assert(!"Invalid VkImageAspect");
-    }
-    return VK_IMAGE_ASPECT_COLOR_BIT;
-}
-
 inline VkImageSubresourceLayers
 Image::subresource(const VkImageSubresourceRange &range, uint32_t mip_level,
                    uint32_t array_layer, uint32_t array_size) {
-    return subresource(image_aspect(range.aspectMask),
+    return subresource(range.aspectMask,
                        range.baseMipLevel + mip_level,
                        range.baseArrayLayer + array_layer, array_size);
 }
@@ -838,6 +830,9 @@ Image::subresource_range(VkImageAspectFlags aspect_mask,
                          uint32_t base_mip_level, uint32_t mip_levels,
                          uint32_t base_array_layer, uint32_t num_layers) {
     VkImageSubresourceRange range = {};
+    if (aspect_mask == 0) {
+        assert(!"Invalid VkImageAspectFlags");
+    }
     range.aspectMask = aspect_mask;
     range.baseMipLevel = base_mip_level;
     range.levelCount = mip_levels;

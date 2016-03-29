@@ -583,14 +583,17 @@ static void loader_add_instance_extensions(
     for (i = 0; i < count; i++) {
         char spec_version[64];
 
-        snprintf(spec_version, sizeof(spec_version), "%d.%d.%d",
-                 VK_MAJOR(ext_props[i].specVersion),
-                 VK_MINOR(ext_props[i].specVersion),
-                 VK_PATCH(ext_props[i].specVersion));
-        loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
-                   "Instance Extension: %s (%s) version %s",
-                   ext_props[i].extensionName, lib_name, spec_version);
-        loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);
+        bool ext_unsupported = wsi_unsupported_instance_extension(&ext_props[i]);
+        if (!ext_unsupported) {
+            snprintf(spec_version, sizeof(spec_version), "%d.%d.%d",
+                     VK_MAJOR(ext_props[i].specVersion),
+                     VK_MINOR(ext_props[i].specVersion),
+                     VK_PATCH(ext_props[i].specVersion));
+            loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
+                       "Instance Extension: %s (%s) version %s",
+                       ext_props[i].extensionName, lib_name, spec_version);
+            loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);
+        }
     }
 
     return;
@@ -1099,7 +1102,6 @@ void loader_get_icd_loader_instance_extensions(
     };
 
     // Traverse loader's extensions, adding non-duplicate extensions to the list
-    wsi_add_instance_extensions(inst, inst_exts);
     debug_report_add_instance_extensions(inst, inst_exts);
 }
 
@@ -1181,8 +1183,6 @@ static void loader_icd_destroy(struct loader_instance *ptr_inst,
         dev = next_dev;
     }
 
-    if (icd->phys_devs != NULL)
-        loader_heap_free(ptr_inst, icd->phys_devs);
     loader_heap_free(ptr_inst, icd);
 }
 
@@ -2078,8 +2078,11 @@ loader_add_layer_properties(const struct loader_instance *inst,
                         '\0';
                 }
                 ext_prop.specVersion = atoi(spec_version);
-                loader_add_to_ext_list(inst, &props->instance_extension_list, 1,
-                                       &ext_prop);
+                bool ext_unsupported = wsi_unsupported_instance_extension(&ext_prop);
+                if (!ext_unsupported) {
+                    loader_add_to_ext_list(inst, &props->instance_extension_list,
+                                           1, &ext_prop);
+                }
             }
         }
         /**
@@ -3342,7 +3345,7 @@ loader_enable_device_layers(const struct loader_instance *inst,
     return err;
 }
 
-VkResult loader_create_device_chain(const struct loader_physical_device *pd,
+VkResult loader_create_device_chain(const struct loader_physical_device_tramp *pd,
                                     const VkDeviceCreateInfo *pCreateInfo,
                                     const VkAllocationCallbacks *pAllocator,
                                     const struct loader_instance *inst,
@@ -3556,7 +3559,7 @@ VkResult loader_validate_instance_extensions(
 }
 
 VkResult loader_validate_device_extensions(
-    struct loader_physical_device *phys_dev,
+    struct loader_physical_device_tramp *phys_dev,
     const struct loader_layer_list *activated_device_layers,
     const struct loader_extension_list *icd_exts,
     const VkDeviceCreateInfo *pCreateInfo) {
@@ -3936,19 +3939,11 @@ terminator_EnumeratePhysicalDevices(VkInstance instance,
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     for (i = 0; idx < copy_count && i < inst->total_icd_count; i++) {
-        icd = phys_devs[i].this_icd;
-        if (icd->phys_devs != NULL) {
-            loader_heap_free(inst, icd->phys_devs);
-        }
-        icd->phys_devs = loader_heap_alloc(inst,
-                              sizeof(VkPhysicalDevice) * phys_devs[i].count,
-                              VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
 
         for (j = 0; j < phys_devs[i].count && idx < copy_count; j++) {
             loader_set_dispatch((void *)&inst->phys_devs_term[idx], inst->disp);
             inst->phys_devs_term[idx].this_icd = phys_devs[i].this_icd;
             inst->phys_devs_term[idx].phys_dev = phys_devs[i].phys_devs[j];
-            icd->phys_devs[j] = phys_devs[i].phys_devs[j];
             pPhysicalDevices[idx] =
                 (VkPhysicalDevice)&inst->phys_devs_term[idx];
             idx++;

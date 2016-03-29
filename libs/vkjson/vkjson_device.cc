@@ -65,7 +65,7 @@ VkJsonAllProperties VkJsonGetAllProperties(VkPhysicalDevice physical_device) {
                                      properties.layers.data());
   }
 
-  VkFormatProperties format_properties = {0};
+  VkFormatProperties format_properties = {};
   for (VkFormat format = VK_FORMAT_R4G4_UNORM_PACK8;
        format <= VK_FORMAT_END_RANGE;
        format = static_cast<VkFormat>(format + 1)) {

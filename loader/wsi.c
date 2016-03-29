@@ -30,6 +30,7 @@
 
 //#define _ISOC11_SOURCE /* for aligned_alloc() */
 #define _GNU_SOURCE
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "vk_loader_platform.h"
@@ -84,34 +85,6 @@ static const VkExtensionProperties wsi_android_surface_extension_info = {
 };
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
-// Note for VK_DISPLAY_KHR don't advertise support since we really need support
-// to come from ICD, although the loader supplements the support from ICD
-
-void wsi_add_instance_extensions(const struct loader_instance *inst,
-                                 struct loader_extension_list *ext_list) {
-    loader_add_to_ext_list(inst, ext_list, 1, &wsi_surface_extension_info);
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    loader_add_to_ext_list(inst, ext_list, 1,
-                           &wsi_win32_surface_extension_info);
-#endif // VK_USE_PLATFORM_WIN32_KHR
-#ifdef VK_USE_PLATFORM_MIR_KHR
-    loader_add_to_ext_list(inst, ext_list, 1, &wsi_mir_surface_extension_info);
-#endif // VK_USE_PLATFORM_MIR_KHR
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    loader_add_to_ext_list(inst, ext_list, 1,
-                           &wsi_wayland_surface_extension_info);
-#endif // VK_USE_PLATFORM_WAYLAND_KHR
-#ifdef VK_USE_PLATFORM_XCB_KHR
-    loader_add_to_ext_list(inst, ext_list, 1, &wsi_xcb_surface_extension_info);
-#endif // VK_USE_PLATFORM_XCB_KHR
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-    loader_add_to_ext_list(inst, ext_list, 1, &wsi_xlib_surface_extension_info);
-#endif // VK_USE_PLATFORM_XLIB_KHR
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-    loader_add_to_ext_list(inst, ext_list, 1,
-                           &wsi_android_surface_extension_info);
-#endif // VK_USE_PLATFORM_ANDROID_KHR
-}
 
 void wsi_create_instance(struct loader_instance *ptr_instance,
                          const VkInstanceCreateInfo *pCreateInfo) {
@@ -193,7 +166,36 @@ void wsi_create_instance(struct loader_instance *ptr_instance,
         }
     }
 }
+/*
+ * Linux WSI surface extensions are not always compiled into the loader. (Assume
+ * for Windows the KHR_win32_surface is always compiled into loader). A given
+ * Linux build environment might not have the headers required for building one
+ * of the four extensions  (Xlib, Xcb, Mir, Wayland).  Thus, need to check if
+ * the built loader actually supports the particular Linux surface extension.
+ * If not supported by the built loader it will not be included in the list of
+ * enumerated instance extensions.  This solves the issue where an ICD or layer
+ * advertises support for a given Linux surface extension but the loader was not
+ * built to support the extension. */
+bool wsi_unsupported_instance_extension(const VkExtensionProperties *ext_prop) {
+#ifndef VK_USE_PLATFORM_MIR_KHR
+    if (!strcmp(ext_prop->extensionName, "VK_KHR_mir_surface"))
+        return true;
+#endif // VK_USE_PLATFORM_MIR_KHR
+#ifndef VK_USE_PLATFORM_WAYLAND_KHR
+    if (!strcmp(ext_prop->extensionName, "VK_KHR_wayland_surface"))
+        return true;
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#ifndef VK_USE_PLATFORM_XCB_KHR
+    if (!strcmp(ext_prop->extensionName, "VK_KHR_xcb_surface"))
+        return true;
+#endif // VK_USE_PLATFORM_XCB_KHR
+#ifndef VK_USE_PLATFORM_XLIB_KHR
+    if (!strcmp(ext_prop->extensionName, "VK_KHR_xlib_surface"))
+        return true;
+#endif // VK_USE_PLATFORM_XLIB_KHR
 
+    return false;
+}
 /*
  * Functions for the VK_KHR_surface extension:
  */
@@ -250,8 +252,19 @@ terminator_GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice,
                                               uint32_t queueFamilyIndex,
                                               VkSurfaceKHR surface,
                                               VkBool32 *pSupported) {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
+    struct loader_instance *ptr_instance =
+        (struct loader_instance *)phys_dev->this_icd->this_instance;
+    if (!ptr_instance->wsi_surface_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_VK_KHR_surface extension not enabled.  "
+                   "vkGetPhysicalDeviceSurfaceSupportKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     struct loader_icd *icd = phys_dev->this_icd;
 
     assert(pSupported &&
@@ -291,8 +304,19 @@ VKAPI_ATTR VkResult VKAPI_CALL
 terminator_GetPhysicalDeviceSurfaceCapabilitiesKHR(
     VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
     VkSurfaceCapabilitiesKHR *pSurfaceCapabilities) {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
+    struct loader_instance *ptr_instance =
+        (struct loader_instance *)phys_dev->this_icd->this_instance;
+    if (!ptr_instance->wsi_surface_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_surface extension not enabled.  "
+                   "vkGetPhysicalDeviceSurfaceCapabilitiesKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     struct loader_icd *icd = phys_dev->this_icd;
 
     assert(pSurfaceCapabilities && "GetPhysicalDeviceSurfaceCapabilitiesKHR: "
@@ -330,8 +354,19 @@ vkGetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice,
 VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceFormatsKHR(
     VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
     uint32_t *pSurfaceFormatCount, VkSurfaceFormatKHR *pSurfaceFormats) {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
+    struct loader_instance *ptr_instance =
+        (struct loader_instance *)phys_dev->this_icd->this_instance;
+    if (!ptr_instance->wsi_surface_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_surface extension not enabled.  "
+                   "vkGetPhysicalDeviceSurfaceFormatsKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     struct loader_icd *icd = phys_dev->this_icd;
 
     assert(
@@ -371,8 +406,19 @@ VKAPI_ATTR VkResult VKAPI_CALL
 terminator_GetPhysicalDeviceSurfacePresentModesKHR(
     VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
     uint32_t *pPresentModeCount, VkPresentModeKHR *pPresentModes) {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
+    struct loader_instance *ptr_instance =
+        (struct loader_instance *)phys_dev->this_icd->this_instance;
+    if (!ptr_instance->wsi_surface_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_surface extension not enabled.  "
+                   "vkGetPhysicalDeviceSurfacePresentModesKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     struct loader_icd *icd = phys_dev->this_icd;
 
     assert(pPresentModeCount && "GetPhysicalDeviceSurfacePresentModesKHR: "
@@ -492,7 +538,16 @@ terminator_CreateWin32SurfaceKHR(VkInstance instance,
                                  const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
                                  const VkAllocationCallbacks *pAllocator,
                                  VkSurfaceKHR *pSurface) {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_instance *ptr_instance = loader_get_instance(instance);
+    if (!ptr_instance->wsi_win32_surface_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_win32_surface extension not enabled.  "
+                   "vkCreateWin32SurfaceKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     VkIcdSurfaceWin32 *pIcdSurface = NULL;
 
     pIcdSurface = loader_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceWin32),
@@ -533,8 +588,19 @@ vkGetPhysicalDeviceWin32PresentationSupportKHR(VkPhysicalDevice physicalDevice,
 VKAPI_ATTR VkBool32 VKAPI_CALL
 terminator_GetPhysicalDeviceWin32PresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex) {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
+    struct loader_instance *ptr_instance =
+        (struct loader_instance *)phys_dev->this_icd->this_instance;
+    if (!ptr_instance->wsi_win32_surface_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_win32_surface extension not enabled.  "
+                   "vkGetPhysicalDeviceWin32PresentationSupportKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     struct loader_icd *icd = phys_dev->this_icd;
 
     assert(icd->GetPhysicalDeviceWin32PresentationSupportKHR &&
@@ -579,7 +645,16 @@ terminator_CreateMirSurfaceKHR(VkInstance instance,
                                const VkMirSurfaceCreateInfoKHR *pCreateInfo,
                                const VkAllocationCallbacks *pAllocator,
                                VkSurfaceKHR *pSurface) {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_instance *ptr_instance = loader_get_instance(instance);
+    if (!ptr_instance->wsi_mir_surface_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_mir_surface extension not enabled.  "
+                   "vkCreateMirSurfaceKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     VkIcdSurfaceMir *pIcdSurface = NULL;
 
     pIcdSurface = loader_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceMir),
@@ -622,8 +697,19 @@ VKAPI_ATTR VkBool32 VKAPI_CALL
 terminator_GetPhysicalDeviceMirPresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
     MirConnection *connection) {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
+    struct loader_instance *ptr_instance =
+        (struct loader_instance *)phys_dev->this_icd->this_instance;
+    if (!ptr_instance->wsi_mir_surface_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_mir_surface extension not enabled.  "
+                   "vkGetPhysicalDeviceMirPresentationSupportKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     struct loader_icd *icd = phys_dev->this_icd;
 
     assert(
@@ -666,7 +752,16 @@ vkCreateWaylandSurfaceKHR(VkInstance instance,
 VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWaylandSurfaceKHR(
     VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_instance *ptr_instance = loader_get_instance(instance);
+    if (!ptr_instance->wsi_wayland_surface_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_wayland_surface extension not enabled.  "
+                   "vkCreateWaylandSurfaceKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     VkIcdSurfaceWayland *pIcdSurface = NULL;
 
     pIcdSurface = loader_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceWayland),
@@ -709,8 +804,19 @@ VKAPI_ATTR VkBool32 VKAPI_CALL
 terminator_GetPhysicalDeviceWaylandPresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
     struct wl_display *display) {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
+    struct loader_instance *ptr_instance =
+        (struct loader_instance *)phys_dev->this_icd->this_instance;
+    if (!ptr_instance->wsi_wayland_surface_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_wayland_surface extension not enabled.  "
+                   "vkGetPhysicalDeviceWaylandPresentationSupportKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     struct loader_icd *icd = phys_dev->this_icd;
 
     assert(icd->GetPhysicalDeviceWaylandPresentationSupportKHR &&
@@ -755,7 +861,16 @@ terminator_CreateXcbSurfaceKHR(VkInstance instance,
                                const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
                                const VkAllocationCallbacks *pAllocator,
                                VkSurfaceKHR *pSurface) {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_instance *ptr_instance = loader_get_instance(instance);
+    if (!ptr_instance->wsi_xcb_surface_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_xcb_surface extension not enabled.  "
+                   "vkCreateXcbSurfaceKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     VkIcdSurfaceXcb *pIcdSurface = NULL;
 
     pIcdSurface = loader_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceXcb),
@@ -799,8 +914,19 @@ VKAPI_ATTR VkBool32 VKAPI_CALL
 terminator_GetPhysicalDeviceXcbPresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
     xcb_connection_t *connection, xcb_visualid_t visual_id) {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
+    struct loader_instance *ptr_instance =
+        (struct loader_instance *)phys_dev->this_icd->this_instance;
+    if (!ptr_instance->wsi_xcb_surface_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_xcb_surface extension not enabled.  "
+                   "vkGetPhysicalDeviceXcbPresentationSupportKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     struct loader_icd *icd = phys_dev->this_icd;
 
     assert(
@@ -845,7 +971,16 @@ terminator_CreateXlibSurfaceKHR(VkInstance instance,
                                 const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
                                 const VkAllocationCallbacks *pAllocator,
                                 VkSurfaceKHR *pSurface) {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_instance *ptr_instance = loader_get_instance(instance);
+    if (!ptr_instance->wsi_xlib_surface_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_xlib_surface extension not enabled.  "
+                   "vkCreateXlibSurfaceKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     VkIcdSurfaceXlib *pIcdSurface = NULL;
 
     pIcdSurface = loader_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceXlib),
@@ -888,8 +1023,19 @@ VKAPI_ATTR VkBool32 VKAPI_CALL
 terminator_GetPhysicalDeviceXlibPresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, Display *dpy,
     VisualID visualID) {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
+    struct loader_instance *ptr_instance =
+        (struct loader_instance *)phys_dev->this_icd->this_instance;
+    if (!ptr_instance->wsi_xlib_surface_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_xlib_surface extension not enabled.  "
+                   "vkGetPhysicalDeviceXlibPresentationSupportKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     struct loader_icd *icd = phys_dev->this_icd;
 
     assert(
@@ -931,7 +1077,16 @@ VKAPI_ATTR VkResult VKAPI_CALL
 terminator_CreateAndroidSurfaceKHR(VkInstance instance, Window window,
                                    const VkAllocationCallbacks *pAllocator,
                                    VkSurfaceKHR *pSurface) {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_instance *ptr_instance = loader_get_instance(instance);
+    if (!ptr_instance->wsi_display_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_display extension not enabled.  "
+                   "vkCreateAndroidSurfaceKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     VkIcdSurfaceAndroid *pIcdSurface = NULL;
 
     pIcdSurface = loader_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceAndroid),
@@ -976,8 +1131,19 @@ terminator_GetPhysicalDeviceDisplayPropertiesKHR(
     uint32_t*                                   pPropertyCount,
     VkDisplayPropertiesKHR*                     pProperties)
 {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
+    struct loader_instance *ptr_instance =
+        (struct loader_instance *)phys_dev->this_icd->this_instance;
+    if (!ptr_instance->wsi_display_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_display extension not enabled.  "
+                   "vkGetPhysicalDeviceDisplayPropertiesKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     struct loader_icd *icd = phys_dev->this_icd;
 
     assert(
@@ -1009,8 +1175,19 @@ terminator_GetPhysicalDeviceDisplayPlanePropertiesKHR(
     uint32_t*                                   pPropertyCount,
     VkDisplayPlanePropertiesKHR*                pProperties)
 {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
+    struct loader_instance *ptr_instance =
+        (struct loader_instance *)phys_dev->this_icd->this_instance;
+    if (!ptr_instance->wsi_display_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_display extension not enabled.  "
+                   "vkGetPhysicalDeviceDisplayPlanePropertiesKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     struct loader_icd *icd = phys_dev->this_icd;
 
     assert(
@@ -1044,8 +1221,19 @@ terminator_GetDisplayPlaneSupportedDisplaysKHR(
     uint32_t*                                   pDisplayCount,
     VkDisplayKHR*                               pDisplays)
 {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
+    struct loader_instance *ptr_instance =
+        (struct loader_instance *)phys_dev->this_icd->this_instance;
+    if (!ptr_instance->wsi_display_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_display extension not enabled.  "
+                   "vkGetDisplayPlaneSupportedDisplaysKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     struct loader_icd *icd = phys_dev->this_icd;
 
     assert(
@@ -1079,8 +1267,19 @@ terminator_GetDisplayModePropertiesKHR(
     uint32_t*                                   pPropertyCount,
     VkDisplayModePropertiesKHR*                 pProperties)
 {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
+    struct loader_instance *ptr_instance =
+        (struct loader_instance *)phys_dev->this_icd->this_instance;
+    if (!ptr_instance->wsi_display_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_display extension not enabled.  "
+                   "vkGetDisplayModePropertiesKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     struct loader_icd *icd = phys_dev->this_icd;
 
     assert(
@@ -1116,8 +1315,19 @@ terminator_CreateDisplayModeKHR(
     const VkAllocationCallbacks*                pAllocator,
     VkDisplayModeKHR*                           pMode)
 {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
+    struct loader_instance *ptr_instance =
+        (struct loader_instance *)phys_dev->this_icd->this_instance;
+    if (!ptr_instance->wsi_display_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_display extension not enabled.  "
+                   "vkCreateDisplayModeKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     struct loader_icd *icd = phys_dev->this_icd;
 
     assert(
@@ -1151,8 +1361,19 @@ terminator_GetDisplayPlaneCapabilitiesKHR(
     uint32_t                                    planeIndex,
     VkDisplayPlaneCapabilitiesKHR*              pCapabilities)
 {
+    // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
+    struct loader_instance *ptr_instance =
+        (struct loader_instance *)phys_dev->this_icd->this_instance;
+    if (!ptr_instance->wsi_display_enabled) {
+        loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_display extension not enabled.  "
+                   "vkGetDisplayPlaneCapabilitiesKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
+    // Next, if so, proceed with the implementation of this function:
     struct loader_icd *icd = phys_dev->this_icd;
 
     assert(

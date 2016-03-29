@@ -304,10 +304,11 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     return false;
 }
 
-VkBool32 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-                       uint64_t srcObject, size_t location, int32_t msgCode,
-                       const char *pLayerPrefix, const char *pMsg,
-                       void *pUserData) {
+VKAPI_ATTR VkBool32 VKAPI_CALL
+BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
+              uint64_t srcObject, size_t location, int32_t msgCode,
+              const char *pLayerPrefix, const char *pMsg,
+              void *pUserData) {
 #ifndef WIN32
     raise(SIGTRAP);
 #else
@@ -1910,11 +1911,8 @@ static void demo_run(struct demo *demo) {
     vkDeviceWaitIdle(demo->device);
 
     demo->curFrame++;
-
     if (demo->frameCount != INT_MAX && demo->curFrame == demo->frameCount) {
-        demo->quit = true;
-        demo_cleanup(demo);
-        ExitProcess(0);
+        PostQuitMessage(validation_error);
     }
 }
 
@@ -2287,6 +2285,22 @@ static void demo_init_vk(struct demo *demo) {
         .ppEnabledExtensionNames = (const char *const *)extension_names,
     };
 
+    /*
+     * This is info for a temp callback to use during CreateInstance.
+     * After the instance is created, we use the instance-based
+     * function to register the final callback.
+     */
+    VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+    if (demo->validate) {
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+        dbgCreateInfo.pNext = NULL;
+        dbgCreateInfo.pfnCallback = demo->use_break ? BreakCallback : dbgFunc;
+        dbgCreateInfo.pUserData = NULL;
+        dbgCreateInfo.flags =
+            VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+        inst_info.pNext = &dbgCreateInfo;
+    }
+
     uint32_t gpu_count;
 
     err = vkCreateInstance(&inst_info, NULL, &demo->inst);
@@ -2424,17 +2438,9 @@ static void demo_init_vk(struct demo *demo) {
                      "vkGetProcAddr Failure");
         }
 
-        PFN_vkDebugReportCallbackEXT callback;
-
-        if (!demo->use_break) {
-            callback = dbgFunc;
-        } else {
-            callback = dbgFunc;
-            // TODO add a break callback defined locally since there is no
-            // longer
-            // one included in the loader
-        }
         VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+        PFN_vkDebugReportCallbackEXT callback;
+        callback = demo->use_break ? BreakCallback : dbgFunc;
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfo.pNext = NULL;
         dbgCreateInfo.pfnCallback = callback;

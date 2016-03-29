@@ -54,6 +54,14 @@ if (WIN32)
     add_library(VKstatic.${MAJOR} STATIC $<TARGET_OBJECTS:loader-opt> $<TARGET_OBJECTS:loader-norm>)
     set_target_properties(VKstatic.${MAJOR} PROPERTIES OUTPUT_NAME VKstatic.${MAJOR})
     target_link_libraries(vulkan-${MAJOR} shlwapi)
+    file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/vulkan-${MAJOR}.dll COPY_SRC_PATH)
+    file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/../demos/$<CONFIGURATION>/ COPY_DST_PATH)
+    file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/../tests/$<CONFIGURATION>/ COPY_DST_TEST_PATH)
+    add_custom_command(TARGET vulkan-${MAJOR} POST_BUILD
+      COMMAND xcopy /Y /I ${COPY_SRC_PATH} ${COPY_DST_PATH})
+    add_custom_command(TARGET vulkan-${MAJOR} POST_BUILD
+      COMMAND xcopy /Y /I ${COPY_SRC_PATH} ${COPY_DST_TEST_PATH})
+
 else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith")
 
