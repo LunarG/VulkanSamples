@@ -1773,6 +1773,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
 
         get_dispatch_table(pc_device_table_map, device)->DestroyDevice(device, pAllocator);
         pc_device_table_map.erase(key);
+        layer_data_map.erase(key);
     }
 }
 
