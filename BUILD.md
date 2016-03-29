@@ -134,3 +134,67 @@ This is described in a `LoaderAndLayerInterface` document in the `loader` folder
 This specification describes both how ICDs and layers should be properly
 packaged, and how developers can point to ICDs and layers within their builds.
 
+## Android Build
+Install the required tools for Linux and Windows covered above, then add the
+following.
+### Android Studio
+- Install Android Studio 2.1, latest Preview (tested with 4):
+  - http://tools.android.com/download/studio/canary
+- From the "Welcome to Android Studio" splash screen, add the following components using Configure > SDK Manager:
+  - SDK Platforms > Android N Preview
+  - SDK Tools > Android NDK
+
+#### Add NDK to path
+
+On Linux:
+```
+export PATH=$HOME/Android/sdk/ndk-bundle:$PATH
+```
+On Windows:
+```
+set PATH=%LOCALAPPDATA%\Android\sdk\ndk-bundle;%PATH%
+```
+On OSX:
+```
+export PATH=$HOME/Library/Android/sdk/ndk-bundle:$PATH
+```
+### Additional OSX System Requirements
+Tested on OSX version 10.11.4
+
+ Setup Homebrew and components
+- Follow instructions on [brew.sh](http://brew.sh) to get homebrew installed.
+```
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+```
+- Ensure Homebrew is at the beginning of your PATH:
+```
+export PATH=$HOME/homebrew/bin:$PATH
+```
+- Add packages with the following (may need refinement)
+```
+brew install cmake
+brew install python
+brew install python3
+pip install --upgrade pip
+pip install lxml
+pip3.5 install --upgrade pip
+pip3.5 install lxm
+```
+### Build steps for Android
+Use the following to ensure the Android build works.
+#### Linux and OSX
+Follow the setup steps for Linux or OSX above, then from your terminal:
+```
+cd buildAndroid
+./update_external_sources_android.sh
+./android-generate.sh
+ndk-build
+```
+#### Windows
+Follow the setup steps for Windows above, then from Developer Command Prompt for VS2013:
+```
+cd buildAndroid
+update_external_sources_android.bat
+android-generate.bat
+ndk-build
+```
