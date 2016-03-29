@@ -739,13 +739,10 @@ static const char *object_type_to_string(VkDebugReportObjectTypeEXT type) {
     switch (type) {
     case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:
         return "image";
-        break;
     case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
         return "buffer";
-        break;
     case VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT:
         return "swapchain";
-        break;
     default:
         return "unknown";
     }
