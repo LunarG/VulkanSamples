@@ -268,8 +268,7 @@ typedef enum VkLayerDbgAction_ {
  */
 typedef enum VkLayerFunction_ {
     VK_LAYER_LINK_INFO = 0,
-    VK_LAYER_DEVICE_INFO = 1,
-    VK_LOADER_DISPATCH_CALLBACK = 2
+    VK_LOADER_DISPATCH_CALLBACK = 1
 } VkLayerFunction;
 
 typedef struct VkLayerInstanceLink_ {
@@ -314,9 +313,6 @@ typedef struct {
     VkLayerFunction function;
     union {
         VkLayerDeviceLink *pLayerInfo;
-        VkLayerDeviceInfo deviceInfo;
     } u;
 } VkLayerDeviceCreateInfo;
 
-// ------------------------------------------------------------------------------------------------
-// API functions
