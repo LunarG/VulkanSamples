@@ -117,7 +117,7 @@ struct layer_data {
 // MTMERGESOURCE - End of MT stuff
 #endif
     devExts device_extensions;
-    vector<VkQueue> queues; // all queues under given device
+    unordered_set<VkQueue> queues;  // all queues under given device
     // Global set of all cmdBuffers that are inFlight on this device
     unordered_set<VkCommandBuffer> globalInFlightCmdBuffers;
     // Layer specific data
@@ -5613,18 +5613,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(VkDevice device,
     return result;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
-vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue *pQueue) {
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex,
+                                                            VkQueue *pQueue) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     dev_data->device_dispatch_table->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
     loader_platform_thread_lock_mutex(&globalLock);
-    dev_data->queues.push_back(*pQueue);
-    QUEUE_NODE *pQNode = &dev_data->queueMap[*pQueue];
-    pQNode->device = device;
+
+    // Add queue to tracking set only if it is new
+    auto result = dev_data->queues.emplace(*pQueue);
+    if (result.second == true) {
+        QUEUE_NODE *pQNode = &dev_data->queueMap[*pQueue];
+        pQNode->device = device;
 #if MTMERGESOURCE
-    pQNode->lastRetiredId = 0;
-    pQNode->lastSubmittedId = 0;
+        pQNode->lastRetiredId = 0;
+        pQNode->lastSubmittedId = 0;
 #endif
+    }
+
     loader_platform_thread_unlock_mutex(&globalLock);
 }
 
