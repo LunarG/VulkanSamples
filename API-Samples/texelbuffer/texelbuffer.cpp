@@ -315,7 +315,21 @@ int main(int argc, char *argv[]) {
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = {info.cmd};
 
-    execute_queue_cmdbuf(info, cmd_bufs);
+    VkFenceCreateInfo fenceInfo;
+    VkFence drawFence;
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+    fenceInfo.flags = 0;
+    vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
+
+    execute_queue_cmdbuf(info, cmd_bufs, drawFence);
+
+    do {
+        res =
+            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    } while (res == VK_TIMEOUT);
+    assert(res == VK_SUCCESS);
+
     execute_present_image(info);
 
     wait_seconds(1);
