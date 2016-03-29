@@ -329,6 +329,7 @@ int main(int argc, char *argv[]) {
             vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     } while (res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
+    vkDestroyFence(info.device, drawFence, NULL);
 
     execute_present_image(info);
 
