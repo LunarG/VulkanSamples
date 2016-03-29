@@ -2110,15 +2110,15 @@ static bool validate_push_constant_usage(layer_data *my_data,
 
 // For given pipelineLayout verify that the setLayout at slot.first
 //  has the requested binding at slot.second
-static VkDescriptorSetLayoutBinding const * get_descriptor_binding(layer_data *my_data, vector<VkDescriptorSetLayout> *pipelineLayout, descriptor_slot_t slot) {
+static VkDescriptorSetLayoutBinding const * get_descriptor_binding(layer_data *my_data, PIPELINE_LAYOUT_NODE *pipelineLayout, descriptor_slot_t slot) {
 
     if (!pipelineLayout)
         return nullptr;
 
-    if (slot.first >= pipelineLayout->size())
+    if (slot.first >= pipelineLayout->descriptorSetLayouts.size())
         return nullptr;
 
-    auto const layout_node = my_data->descriptorSetLayoutMap[(*pipelineLayout)[slot.first]];
+    auto const layout_node = my_data->descriptorSetLayoutMap[pipelineLayout->descriptorSetLayouts[slot.first]];
 
     auto bindingIt = layout_node->bindingToIndexMap.find(slot.second);
     if ((bindingIt == layout_node->bindingToIndexMap.end()) || (layout_node->createInfo.pBindings == NULL))
@@ -2631,12 +2631,102 @@ static VkBool32 validate_shader_capabilities(layer_data *my_data, shader_module 
 }
 
 
+
+static VkBool32 validate_pipeline_shader_stage(layer_data *dev_data,
+                                               VkPipelineShaderStageCreateInfo const *pStage,
+                                               PIPELINE_NODE *pipeline,
+                                               PIPELINE_LAYOUT_NODE *pipelineLayout,
+                                               shader_module **out_module,
+                                               spirv_inst_iter *out_entrypoint)
+{
+    VkBool32 pass = VK_TRUE;
+    auto module = *out_module = dev_data->shaderModuleMap[pStage->module].get();
+    pass &= validate_specialization_offsets(dev_data, pStage);
+
+    /* find the entrypoint */
+    auto entrypoint = *out_entrypoint = find_entrypoint(module, pStage->pName, pStage->stage);
+    if (entrypoint == module->end()) {
+        if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                    0, __LINE__, SHADER_CHECKER_MISSING_ENTRYPOINT, "SC",
+                    "No entrypoint found named `%s` for stage %s", pStage->pName,
+                    string_VkShaderStageFlagBits(pStage->stage))) {
+            pass = VK_FALSE;
+        }
+    }
+
+    /* validate shader capabilities against enabled device features */
+    pass &= validate_shader_capabilities(dev_data, module);
+
+    /* mark accessible ids */
+    std::unordered_set<uint32_t> accessible_ids;
+    mark_accessible_ids(module, entrypoint, accessible_ids);
+
+    /* validate descriptor set layout against what the entrypoint actually uses */
+    std::map<descriptor_slot_t, interface_var> descriptor_uses;
+    collect_interface_by_descriptor_slot(dev_data, module, accessible_ids, descriptor_uses);
+
+    /* validate push constant usage */
+    pass &= validate_push_constant_usage(dev_data, &pipelineLayout->pushConstantRanges,
+                                        module, accessible_ids, pStage->stage);
+
+    /* validate descriptor use */
+    for (auto use : descriptor_uses) {
+        // While validating shaders capture which slots are used by the pipeline
+        pipeline->active_slots[use.first.first].insert(use.first.second);
+
+        /* find the matching binding */
+        auto binding = get_descriptor_binding(dev_data, pipelineLayout, use.first);
+        unsigned required_descriptor_count;
+
+        if (!binding) {
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        /*dev*/ 0, __LINE__, SHADER_CHECKER_MISSING_DESCRIPTOR, "SC",
+                        "Shader uses descriptor slot %u.%u (used as type `%s`) but not declared in pipeline layout",
+                        use.first.first, use.first.second, describe_type(module, use.second.type_id).c_str())) {
+                pass = VK_FALSE;
+            }
+        } else if (~binding->stageFlags & pStage->stage) {
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE, "SC",
+                        "Shader uses descriptor slot %u.%u (used "
+                        "as type `%s`) but descriptor not "
+                        "accessible from stage %s",
+                        use.first.first, use.first.second,
+                        describe_type(module, use.second.type_id).c_str(),
+                        string_VkShaderStageFlagBits(pStage->stage))) {
+                pass = VK_FALSE;
+            }
+        } else if (!descriptor_type_match(dev_data, module, use.second.type_id, binding->descriptorType, /*out*/ required_descriptor_count)) {
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
+                        "Type mismatch on descriptor slot "
+                        "%u.%u (used as type `%s`) but "
+                        "descriptor of type %s",
+                        use.first.first, use.first.second,
+                        describe_type(module, use.second.type_id).c_str(),
+                        string_VkDescriptorType(binding->descriptorType))) {
+                pass = VK_FALSE;
+            }
+        } else if (binding->descriptorCount < required_descriptor_count) {
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
+                        "Shader expects at least %u descriptors for binding %u.%u (used as type `%s`) but only %u provided",
+                        required_descriptor_count, use.first.first, use.first.second,
+                        describe_type(module, use.second.type_id).c_str(),
+                        binding->descriptorCount)) {
+                pass = VK_FALSE;
+            }
+        }
+    }
+
+    return pass;
+}
+
+
 // Validate that the shaders used by the given pipeline and store the active_slots
 //  that are actually used by the pipeline into pPipeline->active_slots
 static VkBool32 validate_and_capture_pipeline_shader_state(layer_data *my_data, PIPELINE_NODE *pPipeline) {
     VkGraphicsPipelineCreateInfo const *pCreateInfo = &pPipeline->graphicsPipelineCI;
-    /* We seem to allow pipeline stages to be specified out of order, so collect and identify them
-     * before trying to do anything more: */
     int vertex_stage = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
     int fragment_stage = get_shader_stage_id(VK_SHADER_STAGE_FRAGMENT_BIT);
 
@@ -2644,113 +2734,17 @@ static VkBool32 validate_and_capture_pipeline_shader_state(layer_data *my_data, 
     memset(shaders, 0, sizeof(shaders));
     spirv_inst_iter entrypoints[5];
     memset(entrypoints, 0, sizeof(entrypoints));
-    RENDER_PASS_NODE const *rp = 0;
     VkPipelineVertexInputStateCreateInfo const *vi = 0;
     VkBool32 pass = VK_TRUE;
 
+    auto pipelineLayout = pCreateInfo->layout != VK_NULL_HANDLE ? &my_data->pipelineLayoutMap[pCreateInfo->layout] : nullptr;
+
     for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
         VkPipelineShaderStageCreateInfo const *pStage = &pCreateInfo->pStages[i];
-        if (pStage->sType == VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO) {
-
-            if ((pStage->stage & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT |
-                                  VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)) == 0) {
-                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                            0, __LINE__, SHADER_CHECKER_UNKNOWN_STAGE, "SC", "Unknown shader stage %d", pStage->stage)) {
-                    pass = VK_FALSE;
-                }
-            } else {
-                pass = validate_specialization_offsets(my_data, pStage) && pass;
-
-                auto stage_id = get_shader_stage_id(pStage->stage);
-                auto module = my_data->shaderModuleMap[pStage->module].get();
-                shaders[stage_id] = module;
-
-                /* find the entrypoint */
-                entrypoints[stage_id] = find_entrypoint(module, pStage->pName, pStage->stage);
-                if (entrypoints[stage_id] == module->end()) {
-                    if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                0, __LINE__, SHADER_CHECKER_MISSING_ENTRYPOINT, "SC",
-                                "No entrypoint found named `%s` for stage %s", pStage->pName,
-                                string_VkShaderStageFlagBits(pStage->stage))) {
-                        pass = VK_FALSE;
-                    }
-                }
-
-                /* validate shader capabilities against enabled device features */
-                pass = validate_shader_capabilities(my_data, module) && pass;
-
-                /* mark accessible ids */
-                std::unordered_set<uint32_t> accessible_ids;
-                mark_accessible_ids(module, entrypoints[stage_id], accessible_ids);
-
-                /* validate descriptor set layout against what the entrypoint actually uses */
-                std::map<descriptor_slot_t, interface_var> descriptor_uses;
-                collect_interface_by_descriptor_slot(my_data, module, accessible_ids, descriptor_uses);
-
-                auto layouts = pCreateInfo->layout != VK_NULL_HANDLE
-                                   ? &(my_data->pipelineLayoutMap[pCreateInfo->layout].descriptorSetLayouts)
-                                   : nullptr;
-
-                for (auto use : descriptor_uses) {
-                    // While validating shaders capture which slots are used by the pipeline
-                    pPipeline->active_slots[use.first.first].insert(use.first.second);
-
-                    /* find the matching binding */
-                    auto binding = get_descriptor_binding(my_data, layouts, use.first);
-                    unsigned required_descriptor_count;
-
-                    if (!binding) {
-                        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                    /*dev*/ 0, __LINE__, SHADER_CHECKER_MISSING_DESCRIPTOR, "SC",
-                                    "Shader uses descriptor slot %u.%u (used as type `%s`) but not declared in pipeline layout",
-                                    use.first.first, use.first.second, describe_type(module, use.second.type_id).c_str())) {
-                            pass = VK_FALSE;
-                        }
-                    } else if (~binding->stageFlags & pStage->stage) {
-                        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                    /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE, "SC",
-                                    "Shader uses descriptor slot %u.%u (used "
-                                    "as type `%s`) but descriptor not "
-                                    "accessible from stage %s",
-                                    use.first.first, use.first.second,
-                                    describe_type(module, use.second.type_id).c_str(),
-                                    string_VkShaderStageFlagBits(pStage->stage))) {
-                            pass = VK_FALSE;
-                        }
-                    } else if (!descriptor_type_match(my_data, module, use.second.type_id, binding->descriptorType, /*out*/ required_descriptor_count)) {
-                        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                    /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
-                                    "Type mismatch on descriptor slot "
-                                    "%u.%u (used as type `%s`) but "
-                                    "descriptor of type %s",
-                                    use.first.first, use.first.second,
-                                    describe_type(module, use.second.type_id).c_str(),
-                                    string_VkDescriptorType(binding->descriptorType))) {
-                            pass = VK_FALSE;
-                        }
-                    } else if (binding->descriptorCount < required_descriptor_count) {
-                        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                    /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
-                                    "Shader expects at least %u descriptors for binding %u.%u (used as type `%s`) but only %u provided",
-                                    required_descriptor_count, use.first.first, use.first.second,
-                                    describe_type(module, use.second.type_id).c_str(),
-                                    binding->descriptorCount)) {
-                            pass = VK_FALSE;
-                        }
-                    }
-                }
-
-                /* validate push constant usage */
-                pass =
-                    validate_push_constant_usage(my_data, &my_data->pipelineLayoutMap[pCreateInfo->layout].pushConstantRanges,
-                                                 module, accessible_ids, pStage->stage) &&
-                    pass;
-            }
-        }
+        auto stage_id = get_shader_stage_id(pStage->stage);
+        pass &= validate_pipeline_shader_stage(my_data, pStage, pPipeline, pipelineLayout,
+                                               &shaders[stage_id], &entrypoints[stage_id]);
     }
-
-    if (pCreateInfo->renderPass != VK_NULL_HANDLE)
-        rp = my_data->renderPassMap[pCreateInfo->renderPass];
 
     vi = pCreateInfo->pVertexInputState;
 
@@ -2762,7 +2756,6 @@ static VkBool32 validate_and_capture_pipeline_shader_state(layer_data *my_data, 
         pass = validate_vi_against_vs_inputs(my_data, vi, shaders[vertex_stage], entrypoints[vertex_stage]) && pass;
     }
 
-    /* TODO: enforce rules about present combinations of shaders */
     int producer = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
     int consumer = get_shader_stage_id(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
 
@@ -2783,6 +2776,8 @@ static VkBool32 validate_and_capture_pipeline_shader_state(layer_data *my_data, 
             producer = consumer;
         }
     }
+
+    auto rp = pCreateInfo->renderPass != VK_NULL_HANDLE ? my_data->renderPassMap[pCreateInfo->renderPass] : nullptr;
 
     if (shaders[fragment_stage] && rp) {
         pass = validate_fs_outputs_against_render_pass(my_data, shaders[fragment_stage], entrypoints[fragment_stage], rp,
