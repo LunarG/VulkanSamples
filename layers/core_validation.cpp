@@ -99,7 +99,6 @@ struct devExts {
 
 // fwd decls
 struct shader_module;
-struct render_pass;
 
 struct layer_data {
     debug_report_data *report_data;
