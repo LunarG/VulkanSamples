@@ -822,9 +822,9 @@ void init_presentable_image(struct sample_info &info) {
 }
 
 void execute_queue_cmdbuf(struct sample_info &info,
-                          const VkCommandBuffer *cmd_bufs) {
+                          const VkCommandBuffer *cmd_bufs,
+                          VkFence &fence) {
     VkResult U_ASSERT_ONLY res;
-    VkFence nullFence = VK_NULL_HANDLE;
 
     VkPipelineStageFlags pipe_stage_flags =
         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
@@ -841,10 +841,7 @@ void execute_queue_cmdbuf(struct sample_info &info,
     submit_info[0].pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
-    assert(!res);
-
-    res = vkQueueWaitIdle(info.queue);
+    res = vkQueueSubmit(info.queue, 1, submit_info, fence);
     assert(!res);
 }
 
