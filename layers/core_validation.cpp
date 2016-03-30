@@ -2748,11 +2748,11 @@ static VkBool32 validate_and_capture_pipeline_shader_state(layer_data *my_data, 
     vi = pCreateInfo->pVertexInputState;
 
     if (vi) {
-        pass = validate_vi_consistency(my_data, vi) && pass;
+        pass &= validate_vi_consistency(my_data, vi);
     }
 
     if (shaders[vertex_stage]) {
-        pass = validate_vi_against_vs_inputs(my_data, vi, shaders[vertex_stage], entrypoints[vertex_stage]) && pass;
+        pass &= validate_vi_against_vs_inputs(my_data, vi, shaders[vertex_stage], entrypoints[vertex_stage]);
     }
 
     int producer = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
@@ -2766,11 +2766,10 @@ static VkBool32 validate_and_capture_pipeline_shader_state(layer_data *my_data, 
     for (; producer != fragment_stage && consumer <= fragment_stage; consumer++) {
         assert(shaders[producer]);
         if (shaders[consumer]) {
-            pass = validate_interface_between_stages(my_data, shaders[producer], entrypoints[producer],
+            pass &= validate_interface_between_stages(my_data, shaders[producer], entrypoints[producer],
                                                      shader_stage_attribs[producer].name, shaders[consumer], entrypoints[consumer],
                                                      shader_stage_attribs[consumer].name,
-                                                     shader_stage_attribs[consumer].arrayed_input) &&
-                   pass;
+                                                     shader_stage_attribs[consumer].arrayed_input);
 
             producer = consumer;
         }
@@ -2779,9 +2778,8 @@ static VkBool32 validate_and_capture_pipeline_shader_state(layer_data *my_data, 
     auto rp = pCreateInfo->renderPass != VK_NULL_HANDLE ? my_data->renderPassMap[pCreateInfo->renderPass] : nullptr;
 
     if (shaders[fragment_stage] && rp) {
-        pass = validate_fs_outputs_against_render_pass(my_data, shaders[fragment_stage], entrypoints[fragment_stage], rp,
-                                                       pCreateInfo->subpass) &&
-               pass;
+        pass &= validate_fs_outputs_against_render_pass(my_data, shaders[fragment_stage], entrypoints[fragment_stage], rp,
+                                                       pCreateInfo->subpass);
     }
 
     return pass;
