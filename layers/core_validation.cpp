@@ -5148,8 +5148,8 @@ bool validateCommandBufferSimultaneousUse(layer_data *dev_data, GLOBAL_CB_NODE *
         !(pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
         skip_call |=
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
-                    __LINE__, DRAWSTATE_INVALID_FENCE, "DS", "Command Buffer %#" PRIx64 " is already in use and is not marked "
-                                                             "for simultaneous use.",
+                    __LINE__, DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE, "DS",
+                    "Command Buffer %#" PRIx64 " is already in use and is not marked for simultaneous use.",
                     reinterpret_cast<uint64_t>(pCB->commandBuffer));
     }
     return skip_call;
@@ -8732,8 +8732,8 @@ bool validateEventStageMask(VkQueue queue, GLOBAL_CB_NODE *pCB, uint32_t eventCo
             auto global_event_data = dev_data->eventMap.find(event);
             if (global_event_data == dev_data->eventMap.end()) {
                 skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT,
-                                     reinterpret_cast<const uint64_t &>(event), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
-                                     "Fence 0x%" PRIx64 " cannot be waited on if it has never been set.",
+                                     reinterpret_cast<const uint64_t &>(event), __LINE__, DRAWSTATE_INVALID_EVENT, "DS",
+                                     "Event 0x%" PRIx64 " cannot be waited on if it has never been set.",
                                      reinterpret_cast<const uint64_t &>(event));
             } else {
                 stageMask |= global_event_data->second.stageMask;
@@ -8743,7 +8743,7 @@ bool validateEventStageMask(VkQueue queue, GLOBAL_CB_NODE *pCB, uint32_t eventCo
     if (sourceStageMask != stageMask) {
         skip_call |=
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                    DRAWSTATE_INVALID_FENCE, "DS",
+                    DRAWSTATE_INVALID_EVENT, "DS",
                     "Submitting cmdbuffer with call to VkCmdWaitEvents using srcStageMask 0x%x which must be the bitwise OR of the "
                     "stageMask parameters used in calls to vkCmdSetEvent and VK_PIPELINE_STAGE_HOST_BIT if used with vkSetEvent.",
                     sourceStageMask);
