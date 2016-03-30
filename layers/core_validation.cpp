@@ -8716,24 +8716,25 @@ VkBool32 ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, uint3
     return skip_call;
 }
 
-bool validateEventStageMask(VkQueue queue, uint32_t eventCount, const VkEvent *pEvents, VkPipelineStageFlags sourceStageMask) {
+bool validateEventStageMask(VkQueue queue, GLOBAL_CB_NODE *pCB, uint32_t eventCount, size_t firstEventIndex, VkPipelineStageFlags sourceStageMask) {
     bool skip_call = false;
     VkPipelineStageFlags stageMask = 0;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     for (uint32_t i = 0; i < eventCount; ++i) {
+        auto event = pCB->events[firstEventIndex + i];
         auto queue_data = dev_data->queueMap.find(queue);
         if (queue_data == dev_data->queueMap.end())
             return false;
-        auto event_data = queue_data->second.eventToStageMap.find(pEvents[i]);
+        auto event_data = queue_data->second.eventToStageMap.find(event);
         if (event_data != queue_data->second.eventToStageMap.end()) {
             stageMask |= event_data->second;
         } else {
-            auto global_event_data = dev_data->eventMap.find(pEvents[i]);
+            auto global_event_data = dev_data->eventMap.find(event);
             if (global_event_data == dev_data->eventMap.end()) {
                 skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT,
-                                     reinterpret_cast<const uint64_t &>(pEvents[i]), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
+                                     reinterpret_cast<const uint64_t &>(event), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
                                      "Fence 0x%" PRIx64 " cannot be waited on if it has never been set.",
-                                     reinterpret_cast<const uint64_t &>(pEvents[i]));
+                                     reinterpret_cast<const uint64_t &>(event));
             } else {
                 stageMask |= global_event_data->second.stageMask;
             }
@@ -8760,12 +8761,13 @@ vkCmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEven
     loader_platform_thread_lock_mutex(&globalLock);
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
+        auto firstEventIndex = pCB->events.size();
         for (uint32_t i = 0; i < eventCount; ++i) {
             pCB->waitedEvents.push_back(pEvents[i]);
             pCB->events.push_back(pEvents[i]);
         }
         std::function<bool(VkQueue)> eventUpdate =
-            std::bind(validateEventStageMask, std::placeholders::_1, eventCount, pEvents, sourceStageMask);
+            std::bind(validateEventStageMask, std::placeholders::_1, pCB, eventCount, firstEventIndex, sourceStageMask);
         pCB->eventUpdates.push_back(eventUpdate);
         if (pCB->state == CB_RECORDING) {
             skipCall |= addCmd(dev_data, pCB, CMD_WAITEVENTS, "vkCmdWaitEvents()");
