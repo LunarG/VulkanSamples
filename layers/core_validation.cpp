@@ -2785,6 +2785,18 @@ static VkBool32 validate_and_capture_pipeline_shader_state(layer_data *my_data, 
     return pass;
 }
 
+static VkBool32 validate_compute_pipeline(layer_data *my_data, PIPELINE_NODE *pPipeline) {
+    VkComputePipelineCreateInfo const *pCreateInfo = &pPipeline->computePipelineCI;
+
+    auto pipelineLayout = pCreateInfo->layout != VK_NULL_HANDLE ? &my_data->pipelineLayoutMap[pCreateInfo->layout] : nullptr;
+
+    shader_module *module;
+    spirv_inst_iter entrypoint;
+
+    return validate_pipeline_shader_stage(my_data, &pCreateInfo->stage, pPipeline, pipelineLayout,
+                                          &module, &entrypoint);
+}
+
 // Return Set node ptr for specified set or else NULL
 static SET_NODE *getSetNode(layer_data *my_data, const VkDescriptorSet set) {
     if (my_data->setMap.find(set) == my_data->setMap.end()) {
