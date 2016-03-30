@@ -625,7 +625,7 @@ class SET_NODE : public BASE_NODE {
 typedef struct _DESCRIPTOR_POOL_NODE {
     VkDescriptorPool pool;
     uint32_t maxSets;                              // Max descriptor sets allowed in this pool
-    uint32_t availableSets;                        // Available descriptr sets in this pool
+    uint32_t availableSets;                        // Available descriptor sets in this pool
 
     VkDescriptorPoolCreateInfo createInfo;
     SET_NODE *pSets;                               // Head of LL of sets for this Pool
