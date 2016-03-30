@@ -9109,8 +9109,10 @@ VkBool32 ValidateDependencies(const layer_data *my_data, const VkRenderPassBegin
         }
     }
     // Find for each attachment the subpasses that use them.
+    unordered_set<uint32_t> attachmentIndices;
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
+        attachmentIndices.clear();
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
             uint32_t attachment = subpass.pInputAttachments[j].attachment;
             input_attachment_to_subpass[attachment].push_back(i);
@@ -9124,12 +9126,21 @@ VkBool32 ValidateDependencies(const layer_data *my_data, const VkRenderPassBegin
             for (auto overlapping_attachment : overlapping_attachments[attachment]) {
                 output_attachment_to_subpass[overlapping_attachment].push_back(i);
             }
+            attachmentIndices.insert(attachment);
         }
         if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
             uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
             output_attachment_to_subpass[attachment].push_back(i);
             for (auto overlapping_attachment : overlapping_attachments[attachment]) {
                 output_attachment_to_subpass[overlapping_attachment].push_back(i);
+            }
+
+            if (attachmentIndices.count(attachment)) {
+                skip_call |=
+                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0,
+                            0, __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                            "Cannot use same attachment (%u) as both color and depth output in same subpass (%u).",
+                            attachment, i);
             }
         }
     }
