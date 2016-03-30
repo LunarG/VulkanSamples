@@ -3568,30 +3568,86 @@ static VkBool32 validateSampler(const layer_data *my_data, const VkSampler *pSam
     return skipCall;
 }
 
-// find layout(s) on the cmd buf level
-bool FindLayout(const GLOBAL_CB_NODE *pCB, VkImage image, VkImageSubresource range, IMAGE_CMD_BUF_LAYOUT_NODE &node) {
-    ImageSubresourcePair imgpair = {image, true, range};
+//TODO: Consolidate functions
+bool FindLayout(const GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, IMAGE_CMD_BUF_LAYOUT_NODE &node, const VkImageAspectFlags aspectMask) {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(pCB->commandBuffer), layer_data_map);
+    if (!(imgpair.subresource.aspectMask & aspectMask)) {
+        return false;
+    }
+    VkImageAspectFlags oldAspectMask = imgpair.subresource.aspectMask;
+    imgpair.subresource.aspectMask = aspectMask;
     auto imgsubIt = pCB->imageLayoutMap.find(imgpair);
     if (imgsubIt == pCB->imageLayoutMap.end()) {
-        imgpair = {image, false, VkImageSubresource()};
-        imgsubIt = pCB->imageLayoutMap.find(imgpair);
-        if (imgsubIt == pCB->imageLayoutMap.end())
-            return false;
+        return false;
+    }
+    if (node.layout != VK_IMAGE_LAYOUT_MAX_ENUM && node.layout != imgsubIt->second.layout) {
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                reinterpret_cast<uint64_t&>(imgpair.image), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
+                "Cannot query for VkImage 0x%" PRIx64 " layout when combined aspect mask %d has multiple layout types: %s and %s",
+                reinterpret_cast<uint64_t&>(imgpair.image), oldAspectMask, string_VkImageLayout(node.layout), string_VkImageLayout(imgsubIt->second.layout));
+    }
+    if (node.initialLayout != VK_IMAGE_LAYOUT_MAX_ENUM && node.initialLayout != imgsubIt->second.initialLayout) {
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                reinterpret_cast<uint64_t&>(imgpair.image), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
+                "Cannot query for VkImage 0x%" PRIx64 " layout when combined aspect mask %d has multiple initial layout types: %s and %s",
+                reinterpret_cast<uint64_t&>(imgpair.image), oldAspectMask, string_VkImageLayout(node.initialLayout), string_VkImageLayout(imgsubIt->second.initialLayout));
     }
     node = imgsubIt->second;
     return true;
 }
 
-// find layout(s) on the global level
-bool FindLayout(const layer_data *my_data, ImageSubresourcePair imgpair, VkImageLayout &layout) {
+bool FindLayout(const layer_data *my_data, ImageSubresourcePair imgpair, VkImageLayout &layout, const VkImageAspectFlags aspectMask) {
+    if (!(imgpair.subresource.aspectMask & aspectMask)) {
+        return false;
+    }
+    VkImageAspectFlags oldAspectMask = imgpair.subresource.aspectMask;
+    imgpair.subresource.aspectMask = aspectMask;
     auto imgsubIt = my_data->imageLayoutMap.find(imgpair);
     if (imgsubIt == my_data->imageLayoutMap.end()) {
-        imgpair = {imgpair.image, false, VkImageSubresource()};
-        imgsubIt = my_data->imageLayoutMap.find(imgpair);
-        if (imgsubIt == my_data->imageLayoutMap.end())
-            return false;
+        return false;
+    }
+    if (layout != VK_IMAGE_LAYOUT_MAX_ENUM && layout != imgsubIt->second.layout) {
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                reinterpret_cast<uint64_t&>(imgpair.image), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
+                "Cannot query for VkImage 0x%" PRIx64 " layout when combined aspect mask %d has multiple layout types: %s and %s",
+                reinterpret_cast<uint64_t&>(imgpair.image), oldAspectMask, string_VkImageLayout(layout), string_VkImageLayout(imgsubIt->second.layout));
     }
     layout = imgsubIt->second.layout;
+    return true;
+}
+
+// find layout(s) on the cmd buf level
+bool FindLayout(const GLOBAL_CB_NODE *pCB, VkImage image, VkImageSubresource range, IMAGE_CMD_BUF_LAYOUT_NODE &node) {
+    ImageSubresourcePair imgpair = {image, true, range};
+    node = IMAGE_CMD_BUF_LAYOUT_NODE(VK_IMAGE_LAYOUT_MAX_ENUM, VK_IMAGE_LAYOUT_MAX_ENUM);
+    FindLayout(pCB, imgpair, node, VK_IMAGE_ASPECT_COLOR_BIT);
+    FindLayout(pCB, imgpair, node, VK_IMAGE_ASPECT_DEPTH_BIT);
+    FindLayout(pCB, imgpair, node, VK_IMAGE_ASPECT_STENCIL_BIT);
+    FindLayout(pCB, imgpair, node, VK_IMAGE_ASPECT_METADATA_BIT);
+    if (node.layout == VK_IMAGE_LAYOUT_MAX_ENUM) {
+        imgpair = {image, false, VkImageSubresource()};
+        auto imgsubIt = pCB->imageLayoutMap.find(imgpair);
+        if (imgsubIt == pCB->imageLayoutMap.end())
+            return false;
+        node = imgsubIt->second;
+    }
+    return true;
+}
+
+// find layout(s) on the global level
+bool FindLayout(const layer_data *my_data, ImageSubresourcePair imgpair, VkImageLayout &layout) {
+    layout = VK_IMAGE_LAYOUT_MAX_ENUM;
+    FindLayout(my_data, imgpair, layout, VK_IMAGE_ASPECT_COLOR_BIT);
+    FindLayout(my_data, imgpair, layout, VK_IMAGE_ASPECT_DEPTH_BIT);
+    FindLayout(my_data, imgpair, layout, VK_IMAGE_ASPECT_STENCIL_BIT);
+    FindLayout(my_data, imgpair, layout, VK_IMAGE_ASPECT_METADATA_BIT);
+    if (layout == VK_IMAGE_LAYOUT_MAX_ENUM) {
+        imgpair = {imgpair.image, false, VkImageSubresource()};
+        auto imgsubIt = my_data->imageLayoutMap.find(imgpair);
+        if (imgsubIt == my_data->imageLayoutMap.end())
+            return false;
+        layout = imgsubIt->second.layout;
+    }
     return true;
 }
 
