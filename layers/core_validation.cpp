@@ -1614,7 +1614,7 @@ static void collect_interface_by_descriptor_slot(layer_data *my_data, shader_mod
             auto existing_it = out.find(std::make_pair(set, binding));
             if (existing_it != out.end()) {
                 /* conflict within spv image */
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, 0,
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
                         "var %d (type %d) in %s interface in descriptor slot (%u,%u) conflicts with existing definition",
                         insn.word(2), insn.word(1), storage_class_name(insn.word(3)), existing_it->first.first,
@@ -1653,15 +1653,15 @@ static bool validate_interface_between_stages(layer_data *my_data, shader_module
         auto b_first = b_at_end ? std::make_pair(0u, 0u) : b_it->first;
 
         if (b_at_end || ((!a_at_end) && (a_first < b_first))) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        /*dev*/ 0, __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
+            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                        __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                         "%s writes to output location %u.%u which is not consumed by %s", producer_name, a_first.first,
                         a_first.second, consumer_name)) {
                 pass = false;
             }
             a_it++;
         } else if (a_at_end || a_first > b_first) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
+            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
                         "%s consumes input location %u.%u which is not written by %s", consumer_name, b_first.first, b_first.second,
                         producer_name)) {
@@ -1672,7 +1672,7 @@ static bool validate_interface_between_stages(layer_data *my_data, shader_module
             if (types_match(producer, consumer, a_it->second.type_id, b_it->second.type_id, consumer_arrayed_input)) {
                 /* OK! */
             } else {
-                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
+                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", "Type mismatch on location %u.%u: '%s' vs '%s'",
                             a_first.first, a_first.second,
                             describe_type(producer, a_it->second.type_id).c_str(),
@@ -1778,7 +1778,7 @@ static bool validate_vi_consistency(layer_data *my_data, VkPipelineVertexInputSt
         auto desc = &vi->pVertexBindingDescriptions[i];
         auto &binding = bindings[desc->binding];
         if (binding) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
+            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_INCONSISTENT_VI, "SC",
                         "Duplicate vertex input binding descriptions for binding %d", desc->binding)) {
                 pass = false;
@@ -1814,8 +1814,8 @@ static bool validate_vi_against_vs_inputs(layer_data *my_data, VkPipelineVertexI
         auto a_first = a_at_end ? 0 : it_a->first;
         auto b_first = b_at_end ? 0 : it_b->first.first;
         if (!a_at_end && (b_at_end || a_first < b_first)) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        /*dev*/ 0, __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
+            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                        __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                         "Vertex attribute at location %d not consumed by VS", a_first)) {
                 pass = false;
             }
@@ -1833,7 +1833,7 @@ static bool validate_vi_against_vs_inputs(layer_data *my_data, VkPipelineVertexI
 
             /* type checking */
             if (attrib_type != FORMAT_TYPE_UNDEFINED && input_type != FORMAT_TYPE_UNDEFINED && attrib_type != input_type) {
-                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
+                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                             "Attribute type of `%s` at location %d does not match VS input type of `%s`",
                             string_VkFormat(it_a->second->format), a_first,
@@ -1870,14 +1870,14 @@ static bool validate_fs_outputs_against_render_pass(layer_data *my_data, shader_
 
     while ((outputs.size() > 0 && it != outputs.end()) || attachment < color_formats.size()) {
         if (attachment == color_formats.size() || (it != outputs.end() && it->first.first < attachment)) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
+            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                         "FS writes to output location %d with no matching attachment", it->first.first)) {
                 pass = false;
             }
             it++;
         } else if (it == outputs.end() || it->first.first > attachment) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
+            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", "Attachment %d not written by FS", attachment)) {
                 pass = false;
             }
@@ -1888,7 +1888,7 @@ static bool validate_fs_outputs_against_render_pass(layer_data *my_data, shader_
 
             /* type checking */
             if (att_type != FORMAT_TYPE_UNDEFINED && output_type != FORMAT_TYPE_UNDEFINED && att_type != output_type) {
-                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
+                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                             "Attachment %d of type `%s` does not match FS output type of `%s`", attachment,
                             string_VkFormat(color_formats[attachment]),
@@ -2062,8 +2062,8 @@ static bool validate_push_constant_block_against_pipeline(layer_data *my_data,
                         found_range = true;
 
                         if ((range.stageFlags & stage) == 0) {
-                            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                        /* dev */ 0, __LINE__, SHADER_CHECKER_PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE, "SC",
+                            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                                        __LINE__, SHADER_CHECKER_PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE, "SC",
                                         "Push constant range covering variable starting at "
                                         "offset %u not accessible from stage %s",
                                         offset, string_VkShaderStageFlagBits(stage))) {
@@ -2076,8 +2076,8 @@ static bool validate_push_constant_block_against_pipeline(layer_data *my_data,
                 }
 
                 if (!found_range) {
-                    if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                /* dev */ 0, __LINE__, SHADER_CHECKER_PUSH_CONSTANT_OUT_OF_RANGE, "SC",
+                    if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                                __LINE__, SHADER_CHECKER_PUSH_CONSTANT_OUT_OF_RANGE, "SC",
                                 "Push constant range covering variable starting at "
                                 "offset %u not declared in layout",
                                 offset)) {
@@ -2099,9 +2099,8 @@ static bool validate_push_constant_usage(layer_data *my_data,
     for (auto id : accessible_ids) {
         auto def_insn = src->get_def(id);
         if (def_insn.opcode() == spv::OpVariable && def_insn.word(3) == spv::StorageClassPushConstant) {
-            pass = validate_push_constant_block_against_pipeline(my_data, pushConstantRanges, src,
-                                                                 src->get_def(def_insn.word(1)), stage) &&
-                   pass;
+            pass &= validate_push_constant_block_against_pipeline(my_data, pushConstantRanges, src,
+                                                                 src->get_def(def_insn.word(1)), stage);
         }
     }
 
@@ -2478,8 +2477,8 @@ static bool descriptor_type_match(layer_data *my_data, shader_module const *modu
 
 static VkBool32 require_feature(layer_data *my_data, VkBool32 feature, char const *feature_name) {
     if (!feature) {
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                    0, __LINE__, SHADER_CHECKER_FEATURE_NOT_ENABLED, "SC",
+        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                    __LINE__, SHADER_CHECKER_FEATURE_NOT_ENABLED, "SC",
                     "Shader requires VkPhysicalDeviceFeatures::%s but is not "
                     "enabled on the device",
                     feature_name)) {
@@ -2617,7 +2616,7 @@ static VkBool32 validate_shader_capabilities(layer_data *my_data, shader_module 
                 break;
 
             default:
-                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, 0,
+                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_BAD_CAPABILITY, "SC",
                             "Shader declares capability %u, not supported in Vulkan.",
                             insn.word(1)))
@@ -2646,8 +2645,8 @@ static VkBool32 validate_pipeline_shader_stage(layer_data *dev_data,
     /* find the entrypoint */
     auto entrypoint = *out_entrypoint = find_entrypoint(module, pStage->pName, pStage->stage);
     if (entrypoint == module->end()) {
-        if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                    0, __LINE__, SHADER_CHECKER_MISSING_ENTRYPOINT, "SC",
+        if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                    __LINE__, SHADER_CHECKER_MISSING_ENTRYPOINT, "SC",
                     "No entrypoint found named `%s` for stage %s", pStage->pName,
                     string_VkShaderStageFlagBits(pStage->stage))) {
             pass = VK_FALSE;
@@ -2679,8 +2678,8 @@ static VkBool32 validate_pipeline_shader_stage(layer_data *dev_data,
         unsigned required_descriptor_count;
 
         if (!binding) {
-            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        /*dev*/ 0, __LINE__, SHADER_CHECKER_MISSING_DESCRIPTOR, "SC",
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                        __LINE__, SHADER_CHECKER_MISSING_DESCRIPTOR, "SC",
                         "Shader uses descriptor slot %u.%u (used as type `%s`) but not declared in pipeline layout",
                         use.first.first, use.first.second, describe_type(module, use.second.type_id).c_str())) {
                 pass = VK_FALSE;
@@ -2697,8 +2696,8 @@ static VkBool32 validate_pipeline_shader_stage(layer_data *dev_data,
                 pass = VK_FALSE;
             }
         } else if (!descriptor_type_match(dev_data, module, use.second.type_id, binding->descriptorType, /*out*/ required_descriptor_count)) {
-            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                        __LINE__, SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
                         "Type mismatch on descriptor slot "
                         "%u.%u (used as type `%s`) but "
                         "descriptor of type %s",
@@ -2708,8 +2707,8 @@ static VkBool32 validate_pipeline_shader_stage(layer_data *dev_data,
                 pass = VK_FALSE;
             }
         } else if (binding->descriptorCount < required_descriptor_count) {
-            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                        /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
+            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                        __LINE__, SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
                         "Shader expects at least %u descriptors for binding %u.%u (used as type `%s`) but only %u provided",
                         required_descriptor_count, use.first.first, use.first.second,
                         describe_type(module, use.second.type_id).c_str(),
