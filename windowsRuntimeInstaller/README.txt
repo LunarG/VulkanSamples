@@ -95,12 +95,6 @@ Some notes on the behavior of the Windows Vulkan Runtime Installer:
      C:\Windows\SYSWOW64 on 64-bit Windows systems to set up the
      32-bit loader.
 
-   o The Vulkan Runtime Installer returns an exit code of 0-9
-     to indicate success. All other exit codes indicate failure.
-     If the Installer returns a failure exit code, the Installer
-     will have attempted to uninstall whatever it installed before
-     it detected an error.
-
    o The Vulkan Runtime Uninstaller returns an exit code of 0-9
      to indicate success. An exit code of 3 indicates success, but
      a reboot is required to complete the uninstall.  All other
