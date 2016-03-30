@@ -10606,7 +10606,8 @@ VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice device, VkSwapchai
     bool skipCall = false;
 #if MTMERGESOURCE
     loader_platform_thread_lock_mutex(&globalLock);
-    if (dev_data->semaphoreMap.find(semaphore) != dev_data->semaphoreMap.end()) {
+    if (semaphore != VK_NULL_HANDLE &&
+        dev_data->semaphoreMap.find(semaphore) != dev_data->semaphoreMap.end()) {
         if (dev_data->semaphoreMap[semaphore].state != MEMTRACK_SEMAPHORE_STATE_UNSET) {
             skipCall = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
                                (uint64_t)semaphore, __LINE__, MEMTRACK_NONE, "SEMAPHORE",
