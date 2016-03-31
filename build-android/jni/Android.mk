@@ -116,8 +116,8 @@ LOCAL_SRC_FILES += $(LAYER_DIR)/layer-src/unique_objects/vk_safe_struct.cpp
 LOCAL_SRC_FILES += $(LAYER_DIR)/common/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/layers \
-		                $(MY_PATH)/../generated/include \
-		                $(SRC_DIR)/loader
+                    $(MY_PATH)/../generated/include \
+                    $(SRC_DIR)/loader
 LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
 LOCAL_LDLIBS    := -llog
@@ -129,8 +129,8 @@ LOCAL_SRC_FILES += $(LAYER_DIR)/layer-src/swapchain/swapchain.cpp
 LOCAL_SRC_FILES += $(LAYER_DIR)/common/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     ${SRC_DIR}/layers \
-		                $(MY_PATH)/../generated/include \
-		                $(SRC_DIR)/loader
+                    $(MY_PATH)/../generated/include \
+                    $(SRC_DIR)/loader
 LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
 LOCAL_LDLIBS    := -llog
