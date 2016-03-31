@@ -123,7 +123,6 @@ struct MEMORY_RANGE {
 // Data struct for tracking memory object
 struct DEVICE_MEM_INFO {
     void *object;      // Dispatchable object used to create this memory (device of swapchain)
-    uint32_t refCount; // Count of references (obj bindings or CB use)
     bool valid;        // Stores if the memory has valid data or not
     VkDeviceMemory mem;
     VkMemoryAllocateInfo allocInfo;
