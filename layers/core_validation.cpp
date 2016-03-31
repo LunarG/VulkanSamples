@@ -8976,15 +8976,17 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(VkDevice devi
     VkResult result = dev_data->device_dispatch_table->CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
     if (VK_SUCCESS == result) {
         // Shadow create info and store in map
-        VkFramebufferCreateInfo *localFBCI = new VkFramebufferCreateInfo(*pCreateInfo);
-        if (pCreateInfo->pAttachments) {
-            localFBCI->pAttachments = new VkImageView[localFBCI->attachmentCount];
-            memcpy((void *)localFBCI->pAttachments, pCreateInfo->pAttachments, localFBCI->attachmentCount * sizeof(VkImageView));
-        }
-        FRAMEBUFFER_NODE fbNode = {};
-        fbNode.createInfo = *localFBCI;
-        std::pair<VkFramebuffer, FRAMEBUFFER_NODE> fbPair(*pFramebuffer, fbNode);
         loader_platform_thread_lock_mutex(&globalLock);
+
+        auto & fbNode = dev_data->frameBufferMap[*pFramebuffer];
+        fbNode.createInfo = *pCreateInfo;
+        if (pCreateInfo->pAttachments) {
+            auto attachments = new VkImageView[pCreateInfo->attachmentCount];
+            memcpy(attachments,
+                   pCreateInfo->pAttachments,
+                   pCreateInfo->attachmentCount * sizeof(VkImageView));
+            fbNode.createInfo.pAttachments = attachments;
+        }
         for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
             VkImageView view = pCreateInfo->pAttachments[i];
             auto view_data = dev_data->imageViewMap.find(view);
@@ -8995,9 +8997,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(VkDevice devi
             get_mem_binding_from_object(dev_data, device, (uint64_t)(view_data->second.image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                                         &fb_info.mem);
             fb_info.image = view_data->second.image;
-            fbPair.second.attachments.push_back(fb_info);
+            fbNode.attachments.push_back(fb_info);
         }
-        dev_data->frameBufferMap.insert(fbPair);
+
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
