@@ -585,7 +585,7 @@ VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8) {
     for (i = 0; i < max_length; i++) {
         if (utf8[i] == 0) {
             break;
-        } else if ((utf8[i] >= 0x20) && (utf8[i] < 0x7f)) {
+        } else if ((utf8[i] >= 0xa) && (utf8[i] < 0x7f)) {
             num_char_bytes = 0;
         } else if ((utf8[i] & UTF8_ONE_BYTE_MASK) == UTF8_ONE_BYTE_CODE) {
             num_char_bytes = 1;
