@@ -6315,6 +6315,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(VkDevice device, ui
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     auto fbNode = dev_data->frameBufferMap.find(framebuffer);
     if (fbNode != dev_data->frameBufferMap.end()) {
         for (auto cb : fbNode->second.referencingCmdBuffers) {
@@ -6322,15 +6323,13 @@ vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocat
             if (cbNode != dev_data->commandBufferMap.end()) {
                 // Set CB as invalid and record destroyed framebuffer
                 cbNode->second->state = CB_INVALID;
-                loader_platform_thread_lock_mutex(&globalLock);
                 cbNode->second->destroyedFramebuffers.insert(framebuffer);
-                loader_platform_thread_unlock_mutex(&globalLock);
             }
         }
-        loader_platform_thread_lock_mutex(&globalLock);
-        dev_data->frameBufferMap.erase(framebuffer);
-        loader_platform_thread_unlock_mutex(&globalLock);
+        delete [] fbNode->second.createInfo.pAttachments;
+        dev_data->frameBufferMap.erase(fbNode);
     }
+    loader_platform_thread_unlock_mutex(&globalLock);
     dev_data->device_dispatch_table->DestroyFramebuffer(device, framebuffer, pAllocator);
 }
 
