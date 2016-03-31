@@ -548,21 +548,7 @@ static VkBool32 update_cmd_buf_and_mem_references(layer_data *dev_data, const Vk
         // First update CB binding in MemObj mini CB list
         DEVICE_MEM_INFO *pMemInfo = get_mem_obj_info(dev_data, mem);
         if (pMemInfo) {
-            // Search for cmd buffer object in memory object's binding list
-            VkBool32 found = VK_FALSE;
-            if (pMemInfo->pCommandBufferBindings.size() > 0) {
-                for (list<VkCommandBuffer>::iterator it = pMemInfo->pCommandBufferBindings.begin();
-                     it != pMemInfo->pCommandBufferBindings.end(); ++it) {
-                    if ((*it) == cb) {
-                        found = VK_TRUE;
-                        break;
-                    }
-                }
-            }
-            // If not present, add to list
-            if (found == VK_FALSE) {
-                pMemInfo->pCommandBufferBindings.push_front(cb);
-            }
+            pMemInfo->commandBufferBindings.insert(cb);
             // Now update CBInfo's Mem reference list
             GLOBAL_CB_NODE *pCBNode = getCBNode(dev_data, cb);
             // TODO: keep track of all destroyed CBs so we know if this is a stale or simply invalid object
@@ -597,7 +583,7 @@ static void clear_cmd_buf_and_mem_references(layer_data *dev_data, const VkComma
             for (list<VkDeviceMemory>::iterator it = mem_obj_list.begin(); it != mem_obj_list.end(); ++it) {
                 DEVICE_MEM_INFO *pInfo = get_mem_obj_info(dev_data, *it);
                 if (pInfo) {
-                    pInfo->pCommandBufferBindings.remove(cb);
+                    pInfo->commandBufferBindings.erase(cb);
                 }
             }
             pCBNode->pMemObjList.clear();
@@ -617,10 +603,10 @@ static void delete_cmd_buf_info_list(layer_data *my_data) {
 // For given MemObjInfo, report Obj & CB bindings
 static VkBool32 reportMemReferencesAndCleanUp(layer_data *dev_data, DEVICE_MEM_INFO *pMemObjInfo) {
     VkBool32 skipCall = VK_FALSE;
-    size_t cmdBufRefCount = pMemObjInfo->pCommandBufferBindings.size();
+    size_t cmdBufRefCount = pMemObjInfo->commandBufferBindings.size();
     size_t objRefCount = pMemObjInfo->objBindings.size();
 
-    if ((pMemObjInfo->pCommandBufferBindings.size()) != 0) {
+    if ((pMemObjInfo->commandBufferBindings.size()) != 0) {
         skipCall = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                            (uint64_t)pMemObjInfo->mem, __LINE__, MEMTRACK_FREED_MEM_REF, "MEM",
                            "Attempting to free memory object %#" PRIxLEAST64 " which still contains " PRINTF_SIZE_T_SPECIFIER
@@ -628,16 +614,14 @@ static VkBool32 reportMemReferencesAndCleanUp(layer_data *dev_data, DEVICE_MEM_I
                            (uint64_t)pMemObjInfo->mem, (cmdBufRefCount + objRefCount));
     }
 
-    if (cmdBufRefCount > 0 && pMemObjInfo->pCommandBufferBindings.size() > 0) {
-        for (list<VkCommandBuffer>::const_iterator it = pMemObjInfo->pCommandBufferBindings.begin();
-             it != pMemObjInfo->pCommandBufferBindings.end(); ++it) {
-            // TODO : CommandBuffer should be source Obj here
+    if (cmdBufRefCount > 0 && pMemObjInfo->commandBufferBindings.size() > 0) {
+        for (auto cb : pMemObjInfo->commandBufferBindings) {
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                    (uint64_t)(*it), __LINE__, MEMTRACK_FREED_MEM_REF, "MEM",
-                    "Command Buffer %p still has a reference to mem obj %#" PRIxLEAST64, (*it), (uint64_t)pMemObjInfo->mem);
+                    (uint64_t)cb, __LINE__, MEMTRACK_FREED_MEM_REF, "MEM",
+                    "Command Buffer %p still has a reference to mem obj %#" PRIxLEAST64, cb, (uint64_t)pMemObjInfo->mem);
         }
         // Clear the list of hanging references
-        pMemObjInfo->pCommandBufferBindings.clear();
+        pMemObjInfo->commandBufferBindings.clear();
     }
 
     if (objRefCount > 0 && pMemObjInfo->objBindings.size() > 0) {
@@ -703,24 +687,21 @@ static VkBool32 freeMemObjInfo(layer_data *dev_data, void *object, VkDeviceMemor
             // Clear any CB bindings for completed CBs
             //   TODO : Is there a better place to do this?
 
-            bool commandBufferComplete = false;
             assert(pInfo->object != VK_NULL_HANDLE);
-            list<VkCommandBuffer>::iterator it = pInfo->pCommandBufferBindings.begin();
-            list<VkCommandBuffer>::iterator temp;
-            while (pInfo->pCommandBufferBindings.size() > 0 && it != pInfo->pCommandBufferBindings.end()) {
-                skipCall |= checkCBCompleted(dev_data, *it, &commandBufferComplete);
+            // clear_cmd_buf_and_mem_references removes elements from
+            // pInfo->commandBufferBindings -- this copy not needed in c++14,
+            // and probably not needed in practice in c++11
+            auto bindings = pInfo->commandBufferBindings;
+            for (auto cb : bindings) {
+                bool commandBufferComplete = false;
+                skipCall |= checkCBCompleted(dev_data, cb, &commandBufferComplete);
                 if (commandBufferComplete) {
-                    temp = it;
-                    ++temp;
-                    clear_cmd_buf_and_mem_references(dev_data, *it);
-                    it = temp;
-                } else {
-                    ++it;
+                    clear_cmd_buf_and_mem_references(dev_data, cb);
                 }
             }
 
             // Now verify that no references to this mem obj remain and remove bindings
-            if (pInfo->pCommandBufferBindings.size() || pInfo->objBindings.size()) {
+            if (pInfo->commandBufferBindings.size() || pInfo->objBindings.size()) {
                 skipCall |= reportMemReferencesAndCleanUp(dev_data, pInfo);
             }
             // Delete mem obj info
@@ -912,7 +893,7 @@ static void print_mem_list(layer_data *dev_data, void *dispObj) {
                 __LINE__, MEMTRACK_NONE, "MEM", "    Mem object: %#" PRIxLEAST64, (uint64_t)(pInfo->mem));
         log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
                 __LINE__, MEMTRACK_NONE, "MEM", "    Ref Count: " PRINTF_SIZE_T_SPECIFIER,
-                pInfo->pCommandBufferBindings.size() + pInfo->objBindings.size());
+                pInfo->commandBufferBindings.size() + pInfo->objBindings.size());
         if (0 != pInfo->allocInfo.allocationSize) {
             string pAllocInfoMsg = vk_print_vkmemoryallocateinfo(&pInfo->allocInfo, "MEM(INFO):         ");
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
@@ -935,12 +916,11 @@ static void print_mem_list(layer_data *dev_data, void *dispObj) {
         log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
                 __LINE__, MEMTRACK_NONE, "MEM",
                 "    VK Command Buffer (CB) binding list of size " PRINTF_SIZE_T_SPECIFIER " elements",
-                pInfo->pCommandBufferBindings.size());
-        if (pInfo->pCommandBufferBindings.size() > 0) {
-            for (list<VkCommandBuffer>::iterator it = pInfo->pCommandBufferBindings.begin();
-                 it != pInfo->pCommandBufferBindings.end(); ++it) {
+                pInfo->commandBufferBindings.size());
+        if (pInfo->commandBufferBindings.size() > 0) {
+            for (auto cb : pInfo->commandBufferBindings) {
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                        0, __LINE__, MEMTRACK_NONE, "MEM", "      VK CB %p", (*it));
+                        0, __LINE__, MEMTRACK_NONE, "MEM", "      VK CB %p", cb);
             }
         }
     }
