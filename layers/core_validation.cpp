@@ -553,20 +553,7 @@ static VkBool32 update_cmd_buf_and_mem_references(layer_data *dev_data, const Vk
             GLOBAL_CB_NODE *pCBNode = getCBNode(dev_data, cb);
             // TODO: keep track of all destroyed CBs so we know if this is a stale or simply invalid object
             if (pCBNode) {
-                // Search for memory object in cmd buffer's reference list
-                VkBool32 found = VK_FALSE;
-                if (pCBNode->pMemObjList.size() > 0) {
-                    for (auto it = pCBNode->pMemObjList.begin(); it != pCBNode->pMemObjList.end(); ++it) {
-                        if ((*it) == mem) {
-                            found = VK_TRUE;
-                            break;
-                        }
-                    }
-                }
-                // If not present, add to list
-                if (found == VK_FALSE) {
-                    pCBNode->pMemObjList.push_front(mem);
-                }
+                pCBNode->memObjs.insert(mem);
             }
         }
     }
@@ -578,14 +565,14 @@ static void clear_cmd_buf_and_mem_references(layer_data *dev_data, const VkComma
     GLOBAL_CB_NODE *pCBNode = getCBNode(dev_data, cb);
 
     if (pCBNode) {
-        if (pCBNode->pMemObjList.size() > 0) {
-            for (auto mem : pCBNode->pMemObjList) {
+        if (pCBNode->memObjs.size() > 0) {
+            for (auto mem : pCBNode->memObjs) {
                 DEVICE_MEM_INFO *pInfo = get_mem_obj_info(dev_data, mem);
                 if (pInfo) {
                     pInfo->commandBufferBindings.erase(cb);
                 }
             }
-            pCBNode->pMemObjList.clear();
+            pCBNode->memObjs.clear();
         }
         pCBNode->validate_functions.clear();
     }
@@ -949,11 +936,11 @@ static void printCBList(layer_data *my_data, void *dispObj) {
                 __LINE__, MEMTRACK_NONE, "MEM", "    CB Info (%p) has CB %p, fenceId %" PRIx64 ", and fence %#" PRIxLEAST64,
                 (void *)pCBInfo, (void *)pCBInfo->commandBuffer, pCBInfo->fenceId, (uint64_t)pCBInfo->lastSubmittedFence);
 
-        if (pCBInfo->pMemObjList.size() <= 0)
+        if (pCBInfo->memObjs.size() <= 0)
             continue;
-        for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
+        for (auto obj : pCBInfo->memObjs) {
             log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                    __LINE__, MEMTRACK_NONE, "MEM", "      Mem obj %" PRIu64, (uint64_t)(*it));
+                    __LINE__, MEMTRACK_NONE, "MEM", "      Mem obj %" PRIu64, (uint64_t)obj);
         }
     }
 }
@@ -4479,7 +4466,7 @@ static void resetCB(layer_data *my_data, const VkCommandBuffer cb) {
         pCB->updateImages.clear();
         pCB->updateBuffers.clear();
         pCB->validate_functions.clear();
-        pCB->pMemObjList.clear();
+        pCB->memObjs.clear();
         pCB->eventUpdates.clear();
     }
 }

@@ -891,7 +891,7 @@ struct GLOBAL_CB_NODE {
     std::unordered_set<VkCommandBuffer> secondaryCommandBuffers;
     // MTMTODO : Scrub these data fields and merge active sets w/ lastBound as appropriate
     vector<std::function<VkBool32()>> validate_functions;
-    list<VkDeviceMemory> pMemObjList; // List container of Mem objs referenced by this CB
+    std::unordered_set<VkDeviceMemory> memObjs;
     vector<std::function<bool(VkQueue)>> eventUpdates;
 };
 
