@@ -771,7 +771,7 @@ static VkBool32 set_mem_binding(layer_data *dev_data, void *dispatch_object, VkD
         if (!pObjBindInfo) {
             skipCall |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, type, handle, __LINE__, MEMTRACK_MISSING_MEM_BINDINGS,
-                        "MEM", "In %s, attempting to update Binding of %s Obj(%#" PRIxLEAST64 ") that's not in global list()",
+                        "MEM", "In %s, attempting to update Binding of %s Obj(%#" PRIxLEAST64 ") that's not in global list",
                         object_type_to_string(type), apiName, handle);
         } else {
             // non-null case so should have real mem obj
