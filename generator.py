@@ -2896,6 +2896,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             self.newline()
         #
         # Headers
+        write('#include <string>', file=self.outFile)
+        self.newline()
         write('#include "vulkan/vulkan.h"', file=self.outFile)
         write('#include "vk_layer_extension_utils.h"', file=self.outFile)
         write('#include "parameter_validation_utils.h"', file=self.outFile)
@@ -3348,12 +3350,14 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                         else:
                             checkExpr = 'skipCall |= validate_required_pointer(report_data, {}, {}, {}{vn});\n'.format(name, valueDisplayName, valuePrefix, vn=value.name)
                 #
-                # If this is a pointer to a struct, see if it contains members
-                # that need to be checked
-                if value.type in self.validatedStructs:
+                # If this is a pointer to a struct (input), see if it contains members that need to be checked
+                if value.type in self.validatedStructs and value.isconst:
                     #
                     # The name prefix used when reporting an error with a struct member (eg. the 'pCreateInfor->' in 'pCreateInfo->sType')
-                    prefix = '(std::string({}) + std::string("{}->")).c_str()'.format(variablePrefix, value.name) if variablePrefix else '"{}->"'.format(value.name)
+                    if lenParam:
+                        prefix = '(std::string({}) + std::string("{}[i]->")).c_str()'.format(variablePrefix, value.name) if variablePrefix else '(std::string("{}[i]->")).c_str()'.format(value.name)
+                    else:
+                        prefix = '(std::string({}) + std::string("{}->")).c_str()'.format(variablePrefix, value.name) if variablePrefix else '"{}->"'.format(value.name)
                     #
                     membersInputOnly = self.validatedStructs[value.type]
                     #
@@ -3366,15 +3370,35 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                             isInput = 'true' if value.isconst else 'false'
                         if checkExpr:
                             checkExpr += '\n' + indent
-                        checkExpr += 'skipCall |= parameter_validation_{}(report_data, {}, {}, {}, {}{});\n'.format(value.type, name, prefix, isInput, valuePrefix, value.name)
+                        if lenParam:
+                            # Need to process all elements in the array
+                            checkExpr += 'for (uint32_t i = 0; i < {}{}; ++i) {{\n'.format(valuePrefix, lenParam.name)
+                            indent = self.incIndent(indent)
+                            checkExpr += indent + 'skipCall |= parameter_validation_{}(report_data, {}, {}, {}, &({}{}[i]));\n'.format(value.type, name, prefix, isInput, valuePrefix, value.name)
+                            indent = self.decIndent(indent)
+                            checkExpr += indent + '}\n'
+                        else:
+                            checkExpr += 'skipCall |= parameter_validation_{}(report_data, {}, {}, {}, {}{});\n'.format(value.type, name, prefix, isInput, valuePrefix, value.name)
                     else:
                         # Validation function does not have an isInput field
-                        expr = 'skipCall |= parameter_validation_{}(report_data, {}, {}, {}{});\n'.format(value.type, name, prefix, valuePrefix, value.name)
+                        if lenParam:
+                            # Need to process all elements in the array
+                            expr = 'for (uint32_t i = 0; i < {}{}; ++i) {{\n'.format(valuePrefix, lenParam.name)
+                            indent = self.incIndent(indent)
+                            expr += indent + 'skipCall |= parameter_validation_{}(report_data, {}, {}, &({}{}[i]));\n'.format(value.type, name, prefix, valuePrefix, value.name)
+                            indent = self.decIndent(indent)
+                            expr += indent + '}\n'
+                        else:
+                            expr = 'skipCall |= parameter_validation_{}(report_data, {}, {}, {}{});\n'.format(value.type, name, prefix, valuePrefix, value.name)
                         #
                         # If the struct only has input-only members and is a member of another struct, it is conditionally processed based on 'isInput'
                         if valuePrefix and membersInputOnly == self.STRUCT_MEMBERS_INPUT_ONLY_EXCLUSIVE:
                             if needConditionCheck:
-                                conditionalExprs.append(expr)
+                                if expr.count('\n') > 1:
+                                    # TODO: Proper fix for this formatting workaround
+                                    conditionalExprs.append(expr.replace(' ' * 8, ' ' * 12))
+                                else:
+                                    conditionalExprs.append(expr)
                             else:
                                 if checkExpr:
                                     checkExpr += '\n' + indent
