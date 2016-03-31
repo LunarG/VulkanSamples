@@ -618,7 +618,7 @@ static void delete_cmd_buf_info_list(layer_data *my_data) {
 static VkBool32 reportMemReferencesAndCleanUp(layer_data *dev_data, DEVICE_MEM_INFO *pMemObjInfo) {
     VkBool32 skipCall = VK_FALSE;
     size_t cmdBufRefCount = pMemObjInfo->pCommandBufferBindings.size();
-    size_t objRefCount = pMemObjInfo->pObjBindings.size();
+    size_t objRefCount = pMemObjInfo->objBindings.size();
 
     if ((pMemObjInfo->pCommandBufferBindings.size()) != 0) {
         skipCall = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
@@ -640,14 +640,14 @@ static VkBool32 reportMemReferencesAndCleanUp(layer_data *dev_data, DEVICE_MEM_I
         pMemObjInfo->pCommandBufferBindings.clear();
     }
 
-    if (objRefCount > 0 && pMemObjInfo->pObjBindings.size() > 0) {
-        for (auto it = pMemObjInfo->pObjBindings.begin(); it != pMemObjInfo->pObjBindings.end(); ++it) {
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, it->type, it->handle, __LINE__,
+    if (objRefCount > 0 && pMemObjInfo->objBindings.size() > 0) {
+        for (auto obj : pMemObjInfo->objBindings) {
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, obj.type, obj.handle, __LINE__,
                     MEMTRACK_FREED_MEM_REF, "MEM", "VK Object %#" PRIxLEAST64 " still has a reference to mem obj %#" PRIxLEAST64,
-                    it->handle, (uint64_t)pMemObjInfo->mem);
+                    obj.handle, (uint64_t)pMemObjInfo->mem);
         }
         // Clear the list of hanging references
-        pMemObjInfo->pObjBindings.clear();
+        pMemObjInfo->objBindings.clear();
     }
     return skipCall;
 }
@@ -720,7 +720,7 @@ static VkBool32 freeMemObjInfo(layer_data *dev_data, void *object, VkDeviceMemor
             }
 
             // Now verify that no references to this mem obj remain and remove bindings
-            if (pInfo->pCommandBufferBindings.size() || pInfo->pObjBindings.size()) {
+            if (pInfo->pCommandBufferBindings.size() || pInfo->objBindings.size()) {
                 skipCall |= reportMemReferencesAndCleanUp(dev_data, pInfo);
             }
             // Delete mem obj info
@@ -758,15 +758,7 @@ static VkBool32 clear_object_binding(layer_data *dev_data, void *dispObj, uint64
         if (pMemObjInfo) {
             // This obj is bound to a memory object. Remove the reference to this object in that memory object's list,
             // and set the objects memory binding pointer to NULL.
-            VkBool32 clearSucceeded = VK_FALSE;
-            for (auto it = pMemObjInfo->pObjBindings.begin(); it != pMemObjInfo->pObjBindings.end(); ++it) {
-                if ((it->handle == handle) && (it->type == type)) {
-                    pMemObjInfo->pObjBindings.erase(it);
-                    clearSucceeded = VK_TRUE;
-                    break;
-                }
-            }
-            if (VK_FALSE == clearSucceeded) {
+            if (!pMemObjInfo->objBindings.erase({handle, type})) {
                 skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, type, handle, __LINE__, MEMTRACK_INVALID_OBJECT,
                             "MEM", "While trying to clear mem binding for %s obj %#" PRIxLEAST64
@@ -814,10 +806,7 @@ static VkBool32 set_mem_binding(layer_data *dev_data, void *dispatch_object, VkD
                                 ") which has already been bound to mem object %#" PRIxLEAST64,
                                 apiName, (uint64_t)mem, handle, (uint64_t)pPrevBinding->mem);
                 } else {
-                    MT_OBJ_HANDLE_TYPE oht;
-                    oht.handle = handle;
-                    oht.type = type;
-                    pMemInfo->pObjBindings.push_front(oht);
+                    pMemInfo->objBindings.insert({handle, type});
                     // For image objects, make sure default memory state is correctly set
                     // TODO : What's the best/correct way to handle this?
                     if (VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT == type) {
@@ -856,23 +845,7 @@ static VkBool32 set_sparse_mem_binding(layer_data *dev_data, void *dispObject, V
         // non-null case so should have real mem obj
         DEVICE_MEM_INFO *pInfo = get_mem_obj_info(dev_data, mem);
         if (pInfo) {
-            // Search for object in memory object's binding list
-            VkBool32 found = VK_FALSE;
-            if (pInfo->pObjBindings.size() > 0) {
-                for (auto it = pInfo->pObjBindings.begin(); it != pInfo->pObjBindings.end(); ++it) {
-                    if (((*it).handle == handle) && ((*it).type == type)) {
-                        found = VK_TRUE;
-                        break;
-                    }
-                }
-            }
-            // If not present, add to list
-            if (found == VK_FALSE) {
-                MT_OBJ_HANDLE_TYPE oht;
-                oht.handle = handle;
-                oht.type = type;
-                pInfo->pObjBindings.push_front(oht);
-            }
+            pInfo->objBindings.insert({handle, type});
             // Need to set mem binding for this object
             pObjBindInfo->mem = mem;
         }
@@ -939,7 +912,7 @@ static void print_mem_list(layer_data *dev_data, void *dispObj) {
                 __LINE__, MEMTRACK_NONE, "MEM", "    Mem object: %#" PRIxLEAST64, (uint64_t)(pInfo->mem));
         log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
                 __LINE__, MEMTRACK_NONE, "MEM", "    Ref Count: " PRINTF_SIZE_T_SPECIFIER,
-                pInfo->pCommandBufferBindings.size() + pInfo->pObjBindings.size());
+                pInfo->pCommandBufferBindings.size() + pInfo->objBindings.size());
         if (0 != pInfo->allocInfo.allocationSize) {
             string pAllocInfoMsg = vk_print_vkmemoryallocateinfo(&pInfo->allocInfo, "MEM(INFO):         ");
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
@@ -951,11 +924,11 @@ static void print_mem_list(layer_data *dev_data, void *dispObj) {
 
         log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
                 __LINE__, MEMTRACK_NONE, "MEM", "    VK OBJECT Binding list of size " PRINTF_SIZE_T_SPECIFIER " elements:",
-                pInfo->pObjBindings.size());
-        if (pInfo->pObjBindings.size() > 0) {
-            for (list<MT_OBJ_HANDLE_TYPE>::iterator it = pInfo->pObjBindings.begin(); it != pInfo->pObjBindings.end(); ++it) {
+                pInfo->objBindings.size());
+        if (pInfo->objBindings.size() > 0) {
+            for (auto obj : pInfo->objBindings) {
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                        0, __LINE__, MEMTRACK_NONE, "MEM", "       VK OBJECT %" PRIu64, it->handle);
+                        0, __LINE__, MEMTRACK_NONE, "MEM", "       VK OBJECT %" PRIu64, obj.handle);
             }
         }
 

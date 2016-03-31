@@ -36,10 +36,12 @@
 #include <atomic>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <memory>
 #include <functional>
 
 using std::vector;
+using std::unordered_set;
 
 #if MTMERGE
 // Mem Tracker ERROR codes
@@ -113,6 +115,20 @@ struct MT_OBJ_HANDLE_TYPE {
     VkDebugReportObjectTypeEXT type;
 };
 
+bool operator==(MT_OBJ_HANDLE_TYPE a, MT_OBJ_HANDLE_TYPE b) noexcept {
+    return a.handle == b.handle && a.type == b.type;
+}
+
+namespace std {
+    template<>
+    struct hash<MT_OBJ_HANDLE_TYPE> {
+        size_t operator()(MT_OBJ_HANDLE_TYPE obj) const noexcept {
+            return hash<uint64_t>()(obj.handle) ^
+                   hash<uint32_t>()(obj.type);
+        }
+    };
+}
+
 struct MEMORY_RANGE {
     uint64_t handle;
     VkDeviceMemory memory;
@@ -126,7 +142,7 @@ struct DEVICE_MEM_INFO {
     bool valid;        // Stores if the memory has valid data or not
     VkDeviceMemory mem;
     VkMemoryAllocateInfo allocInfo;
-    list<MT_OBJ_HANDLE_TYPE> pObjBindings;        // list container of objects bound to this memory
+    unordered_set<MT_OBJ_HANDLE_TYPE> objBindings; // objects bound to this memory
     list<VkCommandBuffer> pCommandBufferBindings; // list container of cmd buffers that reference this mem object
     vector<MEMORY_RANGE> bufferRanges;
     vector<MEMORY_RANGE> imageRanges;
