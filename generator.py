@@ -327,7 +327,7 @@ class ThreadGeneratorOptions(GeneratorOptions):
 
 # ParamCheckerGeneratorOptions - subclass of GeneratorOptions.
 #
-# Adds options used by ParamCheckerOutputGenerator objects during param checker
+# Adds options used by ParamCheckerOutputGenerator objects during parameter validation
 # generation.
 #
 # Additional members
@@ -2760,7 +2760,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         # Headers
         write('#include "vulkan/vulkan.h"', file=self.outFile)
         write('#include "vk_layer_extension_utils.h"', file=self.outFile)
-        write('#include "param_checker_utils.h"', file=self.outFile)
+        write('#include "parameter_validation_utils.h"', file=self.outFile)
         #
         # Macros
         self.newline()
@@ -3031,13 +3031,13 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 lenParam = self.getParamByName(params, name)
         return lenParam
     #
-    # Convert a vulkan.h command declaration into a param_check.h definition
+    # Convert a vulkan.h command declaration into a parameter_validation.h definition
     def getCmdDef(self, cmd):
         #
         # Strip the trailing ';' and split into individual lines
         lines = cmd.cdecl[:-1].split('\n')
         # Replace Vulkan prototype
-        lines[0] = 'static VkBool32 param_check_' + cmd.name + '('
+        lines[0] = 'static VkBool32 parameter_validation_' + cmd.name + '('
         # Replace the first argument with debug_report_data, when the first
         # argument is a handle (not vkCreateInstance)
         reportData = '    debug_report_data*'.ljust(self.genOpts.alignFuncParam) + 'report_data,'
@@ -3168,11 +3168,11 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     #
                     # The name prefix used when reporting an error with a struct member (eg. the 'pCreateInfor->' in 'pCreateInfo->sType')
                     prefix = '(std::string({}) + std::string("{}->")).c_str()'.format(variablePrefix, value.name) if variablePrefix else '"{}->"'.format(value.name)
-                    checkExpr += 'skipCall |= param_check_{}(report_data, {}, {}, {}{});\n'.format(value.type, name, prefix, valuePrefix, value.name)
+                    checkExpr += 'skipCall |= parameter_validation_{}(report_data, {}, {}, {}{});\n'.format(value.type, name, prefix, valuePrefix, value.name)
             elif value.type in self.validatedStructs:
                 # The name prefix used when reporting an error with a struct member (eg. the 'pCreateInfor->' in 'pCreateInfo->sType')
                 prefix = '(std::string({}) + std::string("{}.")).c_str()'.format(variablePrefix, value.name) if variablePrefix else '"{}."'.format(value.name)
-                checkExpr += 'skipCall |= param_check_{}(report_data, {}, {}, &({}{}));\n'.format(value.type, name, prefix, valuePrefix, value.name)
+                checkExpr += 'skipCall |= parameter_validation_{}(report_data, {}, {}, &({}{}));\n'.format(value.type, name, prefix, valuePrefix, value.name)
             #
             # Append the parameter check to the function body for the current command
             if checkExpr:
@@ -3228,7 +3228,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             # for a NULL pointer, so needs its indent incremented
             funcBody, unused = self.genFuncBody(self.incIndent(indent), 'pFuncName', struct.members, 'pStruct->', 'pVariableName', struct.name)
             if funcBody:
-                cmdDef = 'static VkBool32 param_check_{}(\n'.format(struct.name)
+                cmdDef = 'static VkBool32 parameter_validation_{}(\n'.format(struct.name)
                 cmdDef += '    debug_report_data*'.ljust(self.genOpts.alignFuncParam) + ' report_data,\n'
                 cmdDef += '    const char*'.ljust(self.genOpts.alignFuncParam) + ' pFuncName,\n'
                 cmdDef += '    const char*'.ljust(self.genOpts.alignFuncParam) + ' pVariableName,\n'
@@ -3254,7 +3254,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 cmdDef += '{\n'
                 # Process unused parameters
                 # Ignore the first dispatch handle parameter, which is not
-                # processed by param_check (except for vkCreateInstance, which
+                # processed by parameter_validation (except for vkCreateInstance, which
                 # does not have a handle as its first parameter)
                 startIndex = 1
                 if command.name == 'vkCreateInstance':

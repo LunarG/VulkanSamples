@@ -116,6 +116,8 @@ struct texture_object {
 
 static char *tex_files[] = {"lunarg.ppm"};
 
+static int validation_error = 0;
+
 struct vkcube_vs_uniform {
     // Must start with MVP
     float mvp[4][4];
@@ -267,6 +269,7 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         sprintf(message, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode,
                 pMsg);
+        validation_error = 1;
     } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
         // We know that we're submitting queues without fences, ignore this
         // warning
@@ -276,7 +279,9 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
         }
         sprintf(message, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode,
                 pMsg);
+        validation_error = 1;
     } else {
+        validation_error = 1;
         return false;
     }
 
@@ -298,10 +303,11 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     return false;
 }
 
-VkBool32 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-                       uint64_t srcObject, size_t location, int32_t msgCode,
-                       const char *pLayerPrefix, const char *pMsg,
-                       void *pUserData) {
+VKAPI_ATTR VkBool32 VKAPI_CALL
+BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
+              uint64_t srcObject, size_t location, int32_t msgCode,
+              const char *pLayerPrefix, const char *pMsg,
+              void *pUserData) {
 #ifndef WIN32
     raise(SIGTRAP);
 #else
@@ -1915,11 +1921,8 @@ static void demo_run(struct demo *demo) {
     vkDeviceWaitIdle(demo->device);
 
     demo->curFrame++;
-
     if (demo->frameCount != INT_MAX && demo->curFrame == demo->frameCount) {
-        demo->quit = true;
-        demo_cleanup(demo);
-        ExitProcess(0);
+        PostQuitMessage(validation_error);
     }
 }
 
@@ -1927,7 +1930,7 @@ static void demo_run(struct demo *demo) {
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
     case WM_CLOSE:
-        PostQuitMessage(0);
+        PostQuitMessage(validation_error);
         break;
     case WM_PAINT:
         demo_run(&demo);
@@ -2145,7 +2148,7 @@ static void demo_init_vk(struct demo *demo) {
     uint32_t enabled_layer_count = 0;
 
     char *instance_validation_layers[] = {
-        "VK_LAYER_GOOGLE_threading",     "VK_LAYER_LUNARG_param_checker",
+        "VK_LAYER_GOOGLE_threading",     "VK_LAYER_LUNARG_parameter_validation",
         "VK_LAYER_LUNARG_device_limits", "VK_LAYER_LUNARG_object_tracker",
         "VK_LAYER_LUNARG_image",         "VK_LAYER_LUNARG_core_validation",
         "VK_LAYER_LUNARG_swapchain",
@@ -2153,7 +2156,7 @@ static void demo_init_vk(struct demo *demo) {
     };
 
     demo->device_validation_layers[0] = "VK_LAYER_GOOGLE_threading";
-    demo->device_validation_layers[1] = "VK_LAYER_LUNARG_param_checker";
+    demo->device_validation_layers[1] = "VK_LAYER_LUNARG_parameter_validation";
     demo->device_validation_layers[2] = "VK_LAYER_LUNARG_device_limits";
     demo->device_validation_layers[3] = "VK_LAYER_LUNARG_object_tracker";
     demo->device_validation_layers[4] = "VK_LAYER_LUNARG_image";
@@ -2303,7 +2306,7 @@ static void demo_init_vk(struct demo *demo) {
         .applicationVersion = 0,
         .pEngineName = APP_SHORT_NAME,
         .engineVersion = 0,
-        .apiVersion = VK_MAKE_VERSION(1, 0, 0),
+        .apiVersion = VK_API_VERSION_1_0,
     };
     VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -2316,6 +2319,22 @@ static void demo_init_vk(struct demo *demo) {
         .enabledExtensionCount = enabled_extension_count,
         .ppEnabledExtensionNames = (const char *const *)extension_names,
     };
+
+    /*
+     * This is info for a temp callback to use during CreateInstance.
+     * After the instance is created, we use the instance-based
+     * function to register the final callback.
+     */
+    VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+    if (demo->validate) {
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+        dbgCreateInfo.pNext = NULL;
+        dbgCreateInfo.pfnCallback = demo->use_break ? BreakCallback : dbgFunc;
+        dbgCreateInfo.pUserData = NULL;
+        dbgCreateInfo.flags =
+            VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+        inst_info.pNext = &dbgCreateInfo;
+    }
 
     uint32_t gpu_count;
 
@@ -2454,17 +2473,9 @@ static void demo_init_vk(struct demo *demo) {
                      "vkGetProcAddr Failure");
         }
 
-        PFN_vkDebugReportCallbackEXT callback;
-
-        if (!demo->use_break) {
-            callback = dbgFunc;
-        } else {
-            callback = dbgFunc;
-            // TODO add a break callback defined locally since there is no
-            // longer
-            // one included in the loader
-        }
         VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+        PFN_vkDebugReportCallbackEXT callback;
+        callback = demo->use_break ? BreakCallback : dbgFunc;
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfo.pNext = NULL;
         dbgCreateInfo.pfnCallback = callback;
@@ -2874,6 +2885,6 @@ int main(int argc, char **argv) {
 
     demo_cleanup(&demo);
 
-    return 0;
+    return validation_error;
 }
 #endif // _WIN32

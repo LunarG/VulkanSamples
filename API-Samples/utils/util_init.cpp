@@ -246,7 +246,7 @@ VkResult init_instance(struct sample_info &info,
     app_info.applicationVersion = 1;
     app_info.pEngineName = app_short_name;
     app_info.engineVersion = 1;
-    app_info.apiVersion = VK_MAKE_VERSION(1, 0, 0);
+    app_info.apiVersion = VK_API_VERSION_1_0;
 
     VkInstanceCreateInfo inst_info = {};
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -809,9 +809,9 @@ void init_presentable_image(struct sample_info &info) {
 }
 
 void execute_queue_cmdbuf(struct sample_info &info,
-                          const VkCommandBuffer *cmd_bufs) {
+                          const VkCommandBuffer *cmd_bufs,
+                          VkFence &fence) {
     VkResult U_ASSERT_ONLY res;
-    VkFence nullFence = VK_NULL_HANDLE;
 
     VkPipelineStageFlags pipe_stage_flags =
         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
@@ -828,10 +828,7 @@ void execute_queue_cmdbuf(struct sample_info &info,
     submit_info[0].pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
-    assert(!res);
-
-    res = vkQueueWaitIdle(info.queue);
+    res = vkQueueSubmit(info.queue, 1, submit_info, fence);
     assert(!res);
 }
 
@@ -1034,7 +1031,13 @@ void init_uniform_buffer(struct sample_info &info) {
         glm::vec3(0, -1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
         );
     info.Model = glm::mat4(1.0f);
-    info.MVP = info.Projection * info.View * info.Model;
+    // Vulkan clip space has inverted Y and half Z.
+    info.Clip = glm::mat4(1.0f,  0.0f, 0.0f, 0.0f,
+                          0.0f, -1.0f, 0.0f, 0.0f,
+                          0.0f,  0.0f, 0.5f, 0.0f,
+                          0.0f,  0.0f, 0.5f, 1.0f);
+
+    info.MVP = info.Clip * info.Projection * info.View * info.Model;
 
     /* VULKAN_KEY_START */
     VkBufferCreateInfo buf_info = {};

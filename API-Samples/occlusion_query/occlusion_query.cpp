@@ -70,10 +70,6 @@ static const char *vertShaderText =
     "void main() {\n"
     "   outColor = inColor;\n"
     "   gl_Position = myBufferVals.mvp * pos;\n"
-    "\n"
-    "   // GL->VK conventions\n"
-    "   gl_Position.y = -gl_Position.y;\n"
-    "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
     "}\n";
 
 static const char *fragShaderText =
@@ -86,12 +82,13 @@ static const char *fragShaderText =
     "   outColor = color;\n"
     "}\n";
 
-int sample_main() {
+int main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
     struct sample_info info = {};
     char sample_title[] = "Draw Cube";
 
+    process_command_line_args(info, argc, argv);
     init_global_layer_properties(info);
     info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 #ifdef _WIN32
@@ -361,6 +358,8 @@ int sample_main() {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
+    if (info.save_images)
+        write_ppm(info, "occlusion_query");
 
     vkDestroyBuffer(info.device, query_result_buf, NULL);
     vkFreeMemory(info.device, query_result_mem, NULL);

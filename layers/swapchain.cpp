@@ -33,6 +33,7 @@
 #include "swapchain.h"
 #include "vk_layer_extension_utils.h"
 #include "vk_enum_string_helper.h"
+#include "vk_layer_utils.h"
 
 static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
@@ -62,7 +63,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionPropert
 }
 
 static const VkLayerProperties swapchain_layers[] = {{
-    "VK_LAYER_LUNARG_swapchain", VK_API_VERSION, 1, "LunarG Validation Layer",
+    "VK_LAYER_LUNARG_swapchain", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
 }};
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -230,40 +231,10 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreate
 }
 
 #include "vk_dispatch_table_helper.h"
-static void initSwapchain(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
-    uint32_t report_flags = 0;
-    uint32_t debug_action = 0;
-    FILE *log_output = NULL;
-    const char *option_str;
-    VkDebugReportCallbackEXT callback;
+static void init_swapchain(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
 
-    // Initialize swapchain options:
-    report_flags = getLayerOptionFlags("lunarg_swapchain.report_flags", 0);
-    getLayerOptionEnum("lunarg_swapchain.debug_action", (uint32_t *)&debug_action);
+    layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_swapchain");
 
-    if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG) {
-        // Turn on logging, since it was requested:
-        option_str = getLayerOption("lunarg_swapchain.log_filename");
-        log_output = getLayerLogOutput(option_str, "lunarg_swapchain");
-        VkDebugReportCallbackCreateInfoEXT dbgInfo;
-        memset(&dbgInfo, 0, sizeof(dbgInfo));
-        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgInfo.pfnCallback = log_callback;
-        dbgInfo.pUserData = log_output;
-        dbgInfo.flags = report_flags;
-        layer_create_msg_callback(my_data->report_data, &dbgInfo, pAllocator, &callback);
-        my_data->logging_callback.push_back(callback);
-    }
-    if (debug_action & VK_DBG_LAYER_ACTION_DEBUG_OUTPUT) {
-        VkDebugReportCallbackCreateInfoEXT dbgInfo;
-        memset(&dbgInfo, 0, sizeof(dbgInfo));
-        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgInfo.pfnCallback = win32_debug_output_msg;
-        dbgInfo.pUserData = log_output;
-        dbgInfo.flags = report_flags;
-        layer_create_msg_callback(my_data->report_data, &dbgInfo, pAllocator, &callback);
-        my_data->logging_callback.push_back(callback);
-    }
     if (!globalLockInitialized) {
         loader_platform_thread_create_mutex(&globalLock);
         globalLockInitialized = 1;
@@ -318,7 +289,7 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCall
 
     // Call the following function after my_data is initialized:
     createInstanceRegisterExtensions(pCreateInfo, *pInstance);
-    initSwapchain(my_data, pAllocator);
+    init_swapchain(my_data, pAllocator);
 
     return result;
 }
@@ -1772,6 +1743,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice de
                               "%s() called even though the %s extension was not enabled for this VkDevice.", __FUNCTION__,
                               VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
+    if ((semaphore == VK_NULL_HANDLE) && (fence == VK_NULL_HANDLE)) {
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_NO_SYNC_FOR_ACQUIRE,
+                              "%s() called with both the semaphore and fence parameters set to "
+                              "VK_NULL_HANDLE (at least one should be used).", __FUNCTION__);
+    }
     SwpSwapchain *pSwapchain = &my_data->swapchainMap[swapchain];
     if (pSwapchain) {
         // Look to see if the application is trying to own too many images at
@@ -1993,19 +1969,17 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
     layer_data *my_data;
 
     my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkLayerDispatchTable *pDisp = my_data->device_dispatch_table;
-    if (my_data->deviceMap.size() != 0 && my_data->deviceMap[device].swapchainExtensionEnabled) {
-        if (!strcmp("vkCreateSwapchainKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateSwapchainKHR);
-        if (!strcmp("vkDestroySwapchainKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkDestroySwapchainKHR);
-        if (!strcmp("vkGetSwapchainImagesKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetSwapchainImagesKHR);
-        if (!strcmp("vkAcquireNextImageKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkAcquireNextImageKHR);
-        if (!strcmp("vkQueuePresentKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkQueuePresentKHR);
-    }
+    VkLayerDispatchTable *pDisp =  my_data->device_dispatch_table;
+    if (!strcmp("vkCreateSwapchainKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkCreateSwapchainKHR);
+    if (!strcmp("vkDestroySwapchainKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkDestroySwapchainKHR);
+    if (!strcmp("vkGetSwapchainImagesKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetSwapchainImagesKHR);
+    if (!strcmp("vkAcquireNextImageKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkAcquireNextImageKHR);
+    if (!strcmp("vkQueuePresentKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkQueuePresentKHR);
     if (!strcmp("vkGetDeviceQueue", funcName))
         return reinterpret_cast<PFN_vkVoidFunction>(vkGetDeviceQueue);
 
@@ -2051,63 +2025,49 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
     }
 
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
-    if (my_data->instanceMap.size() != 0 && my_data->instanceMap[instance].androidSurfaceExtensionEnabled) {
-        if (!strcmp("vkCreateAndroidSurfaceKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateAndroidSurfaceKHR);
-    }
+    if (!strcmp("vkCreateAndroidSurfaceKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkCreateAndroidSurfaceKHR);
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 #ifdef VK_USE_PLATFORM_MIR_KHR
-    if (my_data->instanceMap.size() != 0 && my_data->instanceMap[instance].mirSurfaceExtensionEnabled) {
-        if (!strcmp("vkCreateMirSurfaceKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateMirSurfaceKHR);
-        if (!strcmp("vkGetPhysicalDeviceMirPresentationSupportKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceMirPresentationSupportKHR);
-    }
+    if (!strcmp("vkCreateMirSurfaceKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkCreateMirSurfaceKHR);
+    if (!strcmp("vkGetPhysicalDeviceMirPresentationSupportKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceMirPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_MIR_KHR
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    if (my_data->instanceMap.size() != 0 && my_data->instanceMap[instance].waylandSurfaceExtensionEnabled) {
-        if (!strcmp("vkCreateWaylandSurfaceKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateWaylandSurfaceKHR);
-        if (!strcmp("vkGetPhysicalDeviceWaylandPresentationSupportKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceWaylandPresentationSupportKHR);
-    }
+    if (!strcmp("vkCreateWaylandSurfaceKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkCreateWaylandSurfaceKHR);
+    if (!strcmp("vkGetPhysicalDeviceWaylandPresentationSupportKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceWaylandPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_WAYLAND_KHR
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    if (my_data->instanceMap.size() != 0 && my_data->instanceMap[instance].win32SurfaceExtensionEnabled) {
-        if (!strcmp("vkCreateWin32SurfaceKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateWin32SurfaceKHR);
-        if (!strcmp("vkGetPhysicalDeviceWin32PresentationSupportKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceWin32PresentationSupportKHR);
-    }
+    if (!strcmp("vkCreateWin32SurfaceKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkCreateWin32SurfaceKHR);
+    if (!strcmp("vkGetPhysicalDeviceWin32PresentationSupportKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceWin32PresentationSupportKHR);
 #endif // VK_USE_PLATFORM_WIN32_KHR
 #ifdef VK_USE_PLATFORM_XCB_KHR
-    if (my_data->instanceMap.size() != 0 && my_data->instanceMap[instance].xcbSurfaceExtensionEnabled) {
-        if (!strcmp("vkCreateXcbSurfaceKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateXcbSurfaceKHR);
-        if (!strcmp("vkGetPhysicalDeviceXcbPresentationSupportKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceXcbPresentationSupportKHR);
-    }
+    if (!strcmp("vkCreateXcbSurfaceKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkCreateXcbSurfaceKHR);
+    if (!strcmp("vkGetPhysicalDeviceXcbPresentationSupportKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceXcbPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_XCB_KHR
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-    if (my_data->instanceMap.size() != 0 && my_data->instanceMap[instance].xlibSurfaceExtensionEnabled) {
-        if (!strcmp("vkCreateXlibSurfaceKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateXlibSurfaceKHR);
-        if (!strcmp("vkGetPhysicalDeviceXlibPresentationSupportKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceXlibPresentationSupportKHR);
-    }
+    if (!strcmp("vkCreateXlibSurfaceKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkCreateXlibSurfaceKHR);
+    if (!strcmp("vkGetPhysicalDeviceXlibPresentationSupportKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceXlibPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_XLIB_KHR
-    if (my_data->instanceMap.size() != 0 && my_data->instanceMap[instance].surfaceExtensionEnabled) {
-        if (!strcmp("vkDestroySurfaceKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkDestroySurfaceKHR);
-        if (!strcmp("vkGetPhysicalDeviceSurfaceSupportKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceSupportKHR);
-        if (!strcmp("vkGetPhysicalDeviceSurfaceCapabilitiesKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceCapabilitiesKHR);
-        if (!strcmp("vkGetPhysicalDeviceSurfaceFormatsKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceFormatsKHR);
-        if (!strcmp("vkGetPhysicalDeviceSurfacePresentModesKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfacePresentModesKHR);
-    }
+    if (!strcmp("vkDestroySurfaceKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkDestroySurfaceKHR);
+    if (!strcmp("vkGetPhysicalDeviceSurfaceSupportKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceSupportKHR);
+    if (!strcmp("vkGetPhysicalDeviceSurfaceCapabilitiesKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceCapabilitiesKHR);
+    if (!strcmp("vkGetPhysicalDeviceSurfaceFormatsKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceFormatsKHR);
+    if (!strcmp("vkGetPhysicalDeviceSurfacePresentModesKHR", funcName))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfacePresentModesKHR);
 
     if (pTable->GetInstanceProcAddr == NULL)
         return NULL;

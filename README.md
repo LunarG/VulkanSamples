@@ -9,7 +9,7 @@
 
 ## Requirements/Dependencies
   - A recent version of the LunarG Vulkan SDK must be installed on the system.
-    In addtion to the Vulkan headers and libraries, the SDK also includes the
+    In addition to the Vulkan headers and libraries, the SDK also includes the
     glslang and spirv-tools components necessary to build the sample progams.
   - Linux package dependencies:
     - Vulkan SDK required packages
@@ -54,7 +54,7 @@ From a PowerShell window, first build glslang:
   PS > cd build
   PS > cmake -G "Visual Studio 12 Win64" ..
   ```
-  Open the glslang.sln file in the build folder with Microsoft Visual Studio and build the solution in both Debug and Release mode.  
+  Open the glslang.sln file in the build folder with Microsoft Visual Studio and build the solution in both Debug and Release mode.
 
 Next build spirv-tools:
   ```

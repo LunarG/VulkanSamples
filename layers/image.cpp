@@ -69,35 +69,16 @@ struct layer_data {
 };
 
 static unordered_map<void *, layer_data *> layer_data_map;
+static int globalLockInitialized = 0;
+static loader_platform_thread_mutex globalLock;
 
-static void InitImage(layer_data *data, const VkAllocationCallbacks *pAllocator) {
-    VkDebugReportCallbackEXT callback;
-    uint32_t report_flags = getLayerOptionFlags("lunarg_image.report_flags", 0);
+static void init_image(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
 
-    uint32_t debug_action = 0;
-    getLayerOptionEnum("lunarg_image.debug_action", (uint32_t *)&debug_action);
-    if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG) {
-        FILE *log_output = NULL;
-        const char *option_str = getLayerOption("lunarg_image.log_filename");
-        log_output = getLayerLogOutput(option_str, "lunarg_image");
-        VkDebugReportCallbackCreateInfoEXT dbgInfo;
-        memset(&dbgInfo, 0, sizeof(dbgInfo));
-        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgInfo.pfnCallback = log_callback;
-        dbgInfo.pUserData = log_output;
-        dbgInfo.flags = report_flags;
-        layer_create_msg_callback(data->report_data, &dbgInfo, pAllocator, &callback);
-        data->logging_callback.push_back(callback);
-    }
+    layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_image");
 
-    if (debug_action & VK_DBG_LAYER_ACTION_DEBUG_OUTPUT) {
-        VkDebugReportCallbackCreateInfoEXT dbgInfo;
-        memset(&dbgInfo, 0, sizeof(dbgInfo));
-        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgInfo.pfnCallback = win32_debug_output_msg;
-        dbgInfo.flags = report_flags;
-        layer_create_msg_callback(data->report_data, &dbgInfo, pAllocator, &callback);
-        data->logging_callback.push_back(callback);
+    if (!globalLockInitialized) {
+        loader_platform_thread_create_mutex(&globalLock);
+        globalLockInitialized = 1;
     }
 }
 
@@ -153,7 +134,7 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCall
     my_data->report_data = debug_report_create_instance(my_data->instance_dispatch_table, *pInstance,
                                                         pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
 
-    InitImage(my_data, pAllocator);
+    init_image(my_data, pAllocator);
 
     return result;
 }
@@ -230,7 +211,7 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,
 }
 
 static const VkLayerProperties pc_global_layers[] = {{
-    "VK_LAYER_LUNARG_image", VK_API_VERSION, 1, "LunarG Validation Layer",
+    "VK_LAYER_LUNARG_image", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
 }};
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -372,14 +353,18 @@ vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, const VkAll
         result = device_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
     }
     if (result == VK_SUCCESS) {
+        loader_platform_thread_lock_mutex(&globalLock);
         device_data->imageMap[*pImage] = IMAGE_STATE(pCreateInfo);
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks *pAllocator) {
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
     device_data->imageMap.erase(image);
+    loader_platform_thread_unlock_mutex(&globalLock);
     device_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
 }
 
@@ -480,7 +465,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device
         if (pCreateInfo->subresourceRange.baseArrayLayer >= imageEntry->second.arraySize) {
             std::stringstream ss;
             ss << "vkCreateImageView called with baseArrayLayer " << pCreateInfo->subresourceRange.baseArrayLayer << " for image "
-               << pCreateInfo->image << " that only has " << imageEntry->second.arraySize << " mip levels.";
+               << pCreateInfo->image << " that only has " << imageEntry->second.arraySize << " array layers.";
             skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                 IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
         }

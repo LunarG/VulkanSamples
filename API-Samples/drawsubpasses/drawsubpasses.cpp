@@ -56,10 +56,6 @@ static const char *normalVertShaderText =
     "void main() {\n"
     "   outColor = inColor;\n"
     "   gl_Position = myBufferVals.mvp * pos;\n"
-    "\n"
-    "   // GL->VK conventions\n"
-    "   gl_Position.y = -gl_Position.y;\n"
-    "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
     "}\n";
 
 /* This shader renders a simple fullscreen quad using the VS alone */
@@ -95,12 +91,13 @@ static const char *fragShaderText =
  *  Sample using multiple render passes per framebuffer (different x,y extents)
  *  and multiple subpasses per renderpass.
  */
-int sample_main() {
+int main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Multi-pass render passes";
     const bool depthPresent = true;
 
+    process_command_line_args(info, argc, argv);
     init_global_layer_properties(info);
     init_instance_extension_names(info);
     init_device_extension_names(info);
@@ -688,6 +685,8 @@ int sample_main() {
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
+    if (info.save_images)
+        write_ppm(info, "drawsubpasses");
 
     for (uint32_t i = 0; i < info.swapchainImageCount; i++)
         vkDestroyFramebuffer(info.device, stencil_framebuffers[i], NULL);

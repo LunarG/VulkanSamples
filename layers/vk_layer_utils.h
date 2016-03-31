@@ -27,6 +27,9 @@
 
 #pragma once
 #include <stdbool.h>
+#include <vector>
+#include "vk_layer_logging.h"
+
 #ifndef WIN32
 #include <strings.h> /* for ffs() */
 #else
@@ -37,6 +40,7 @@
 extern "C" {
 #endif
 
+#define VK_LAYER_API_VERSION VK_MAKE_VERSION(1, 0, VK_HEADER_VERSION)
 typedef enum VkFormatCompatibilityClass {
     VK_FORMAT_COMPATIBILITY_CLASS_NONE_BIT = 0,
     VK_FORMAT_COMPATIBILITY_CLASS_8_BIT = 1,
@@ -92,6 +96,9 @@ typedef enum VkStringErrorFlagBits {
     VK_STRING_ERROR_BAD_DATA = 0x00000002,
 } VkStringErrorFlagBits;
 typedef VkFlags VkStringErrorFlags;
+
+void layer_debug_actions(debug_report_data* report_data, std::vector<VkDebugReportCallbackEXT> &logging_callback,
+    const VkAllocationCallbacks *pAllocator, const char* layer_identifier);
 
 static inline bool vk_format_is_undef(VkFormat format) { return (format == VK_FORMAT_UNDEFINED); }
 

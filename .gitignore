@@ -7,8 +7,6 @@ __pycache__
 VKConfig.h
 *.so
 *.so.*
-icd/common/libicd.a
-icd/intel/intel_gpa.c
 _out64
 out32/*
 out64/*
@@ -19,6 +17,8 @@ demos/Win32/Debug/*
 demos/xcb_nvidia.dir/*
 demos/smoke/HelpersDispatchTable.cpp
 demos/smoke/HelpersDispatchTable.h
+Layer-Samples/data/overlay-frag.spv
+Layer-Samples/data/overlay-vert.spv
 libs/Win32/Debug/*
 *.pyc
 *.vcproj

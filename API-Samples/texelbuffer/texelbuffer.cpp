@@ -72,7 +72,7 @@ static const char *fragShaderText =
     "   outColor = color;\n"
     "}\n";
 
-int sample_main() {
+int main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
     struct sample_info info = {};
@@ -81,6 +81,7 @@ int sample_main() {
     const bool depthPresent = false;
     const bool vertexPresent = false;
 
+    process_command_line_args(info, argc, argv);
     init_global_layer_properties(info);
     init_instance_extension_names(info);
     init_device_extension_names(info);
@@ -314,11 +315,28 @@ int sample_main() {
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = {info.cmd};
 
-    execute_queue_cmdbuf(info, cmd_bufs);
+    VkFenceCreateInfo fenceInfo;
+    VkFence drawFence;
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+    fenceInfo.flags = 0;
+    vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
+
+    execute_queue_cmdbuf(info, cmd_bufs, drawFence);
+
+    do {
+        res =
+            vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    } while (res == VK_TIMEOUT);
+    assert(res == VK_SUCCESS);
+    vkDestroyFence(info.device, drawFence, NULL);
+
     execute_present_image(info);
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
+    if (info.save_images)
+        write_ppm(info, "texelbuffer");
 
     vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);
     vkDestroyBufferView(info.device, texel_view, NULL);

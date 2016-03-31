@@ -43,6 +43,7 @@
 #include "vk_layer_logging.h"
 #include "vk_layer_extension_utils.h"
 #include "vk_safe_struct.h"
+#include "vk_layer_utils.h"
 
 struct layer_data {
     bool wsi_enabled;

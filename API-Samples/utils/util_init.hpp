@@ -53,7 +53,7 @@ void init_window(struct sample_info &info);
 void init_queue_family_index(struct sample_info &info);
 void init_presentable_image(struct sample_info &info);
 void execute_queue_cmdbuf(struct sample_info &info,
-                          const VkCommandBuffer *cmd_bufs);
+                          const VkCommandBuffer *cmd_bufs, VkFence &fence);
 void execute_pre_present_barrier(struct sample_info &info);
 void execute_present_image(struct sample_info &info);
 void init_swapchain_extension(struct sample_info &info);
@@ -63,7 +63,10 @@ void execute_begin_command_buffer(struct sample_info &info);
 void execute_end_command_buffer(struct sample_info &info);
 void execute_queue_command_buffer(struct sample_info &info);
 void init_device_queue(struct sample_info &info);
-void init_swap_chain(struct sample_info &info,  VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+void init_swap_chain(
+    struct sample_info &info,
+    VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                   VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
 void init_depth_buffer(struct sample_info &info);
 void init_uniform_buffer(struct sample_info &info);
 void init_descriptor_and_pipeline_layouts(struct sample_info &info,

@@ -79,6 +79,7 @@ typedef enum _SWAPCHAIN_ERROR {
                                                 // vkGetPhysicalDeviceQueueFamilyProperties()
     SWAPCHAIN_SURFACE_NOT_SUPPORTED_WITH_QUEUE, // A surface is not supported by a given queueFamilyIndex, as seen by
                                                 // vkGetPhysicalDeviceSurfaceSupportKHR()
+    SWAPCHAIN_NO_SYNC_FOR_ACQUIRE,      // vkAcquireNextImageKHR should be called with a valid semaphore and/or fence
 } SWAPCHAIN_ERROR;
 
 // The following is for logging error messages:
@@ -123,6 +124,10 @@ typedef enum _SWAPCHAIN_ERROR {
 #define LOG_PERF_WARNING(objType, type, obj, enm, fmt, ...)                                                                        \
     (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (objType), (uint64_t)(obj), __LINE__,   \
                         (enm), LAYER_NAME, (fmt), __VA_ARGS__)                                                                     \
+              : VK_FALSE
+#define LOG_WARNING(objType, type, obj, enm, fmt, ...)                                                                             \
+    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (objType), (uint64_t)(obj), __LINE__, (enm),        \
+                        LAYER_NAME, (fmt), __VA_ARGS__)                                                                            \
               : VK_FALSE
 #define LOG_INFO_WRONG_NEXT(objType, type, obj)                                                                                    \
     (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (objType), (uint64_t)(obj), 0,                  \

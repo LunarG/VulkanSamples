@@ -35,7 +35,7 @@ Initialize Vertex and Fragment Shaders
 #include <string.h>
 #include <cstdlib>
 
-int sample_main() {
+int main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Initialize Shaders Sample";
@@ -69,10 +69,6 @@ int sample_main() {
         "void main() {\n"
         "   outColor = inColor;\n"
         "   gl_Position = myBufferVals.mvp * pos;\n"
-        "\n"
-        "   // GL->VK conventions\n"
-        "   gl_Position.y = -gl_Position.y;\n"
-        "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
         "}\n";
 
     static const char *fragShaderText =

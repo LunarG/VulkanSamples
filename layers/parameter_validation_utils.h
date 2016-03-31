@@ -29,8 +29,8 @@
  * Author: Dustin Graves <dustin@lunarg.com>
  */
 
-#ifndef PARAM_CHECKER_UTILS_H
-#define PARAM_CHECKER_UTILS_H
+#ifndef PARAMETER_VALIDATION_UTILS_H
+#define PARAMETER_VALIDATION_UTILS_H
 
 #include <algorithm>
 #include <string>
@@ -374,4 +374,4 @@ static VkBool32 validate_struct_pnext(debug_report_data *report_data, const char
     return skipCall;
 }
 
-#endif // PARAM_CHECKER_UTILS_H
+#endif // PARAMETER_VALIDATION_UTILS_H

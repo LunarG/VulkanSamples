@@ -155,6 +155,7 @@ struct sample_info {
     VkSurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;
+    bool save_images;
 
     std::vector<const char *> instance_layer_names;
     std::vector<const char *> instance_extension_names;
@@ -218,6 +219,7 @@ struct sample_info {
     glm::mat4 Projection;
     glm::mat4 View;
     glm::mat4 Model;
+    glm::mat4 Clip;
     glm::mat4 MVP;
 
     VkCommandBuffer cmd; // Buffer for initialization commands
@@ -243,7 +245,8 @@ struct sample_info {
     VkViewport viewport;
     VkRect2D scissor;
 };
-
+void process_command_line_args(struct sample_info &info, int argc,
+                               char *argv[]);
 bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits,
                                  VkFlags requirements_mask,
                                  uint32_t *typeIndex);
@@ -255,6 +258,7 @@ void set_image_layout(struct sample_info &demo, VkImage image,
 
 bool read_ppm(char const *const filename, int &width, int &height,
               uint64_t rowPitch, unsigned char *dataPtr);
+void write_ppm(struct sample_info &info, const char *basename);
 void extract_version(uint32_t version, uint32_t &major, uint32_t &minor,
                      uint32_t &patch);
 bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,

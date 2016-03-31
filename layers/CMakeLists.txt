@@ -20,15 +20,12 @@ macro(run_vk_layer_xml_generate subcmd output)
 		DEPENDS ${PROJECT_SOURCE_DIR}/vk.xml ${PROJECT_SOURCE_DIR}/generator.py ${PROJECT_SOURCE_DIR}/genvk.py ${PROJECT_SOURCE_DIR}/reg.py
 	)
 endmacro()
-# TODO : Remove draw_state and mem_tracker once core_validation fully merged
 set(LAYER_JSON_FILES
     VkLayer_core_validation
-    VkLayer_draw_state
-    VkLayer_mem_tracker
     VkLayer_image
     VkLayer_object_tracker
     VkLayer_unique_objects
-    VkLayer_param_checker
+    VkLayer_parameter_validation
     VkLayer_swapchain
     VkLayer_threading
     VkLayer_device_limits
@@ -138,7 +135,7 @@ add_custom_target(generate_vk_layer_helpers DEPENDS
 run_vk_layer_generate(object_tracker object_tracker.cpp)
 run_vk_layer_xml_generate(Threading thread_check.h)
 run_vk_layer_generate(unique_objects unique_objects.cpp)
-run_vk_layer_xml_generate(ParamChecker param_check.h)
+run_vk_layer_xml_generate(ParamChecker parameter_validation.h)
 
 add_library(layer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
 if (WIN32)
@@ -148,10 +145,7 @@ if (WIN32)
 else()
     install(TARGETS layer_utils DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
 endif()
-# TODO : Remove draw_state and mem_tracker once core_validation fully merged
 add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp)
-add_vk_layer(draw_state draw_state.cpp vk_layer_table.cpp)
-add_vk_layer(mem_tracker mem_tracker.cpp vk_layer_table.cpp)
 add_vk_layer(device_limits device_limits.cpp vk_layer_table.cpp vk_layer_utils.cpp)
 add_vk_layer(image image.cpp vk_layer_table.cpp)
 add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
@@ -159,4 +153,4 @@ add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
 add_vk_layer(object_tracker object_tracker.cpp vk_layer_table.cpp)
 add_vk_layer(threading threading.cpp thread_check.h vk_layer_table.cpp)
 add_vk_layer(unique_objects unique_objects.cpp vk_layer_table.cpp vk_safe_struct.cpp)
-add_vk_layer(param_checker param_checker.cpp param_check.h vk_layer_table.cpp)
+add_vk_layer(parameter_validation parameter_validation.cpp parameter_validation.h vk_layer_table.cpp)
