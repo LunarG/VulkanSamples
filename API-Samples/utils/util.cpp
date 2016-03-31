@@ -51,10 +51,6 @@ samples utility functions
 
 using namespace std;
 
-#if !(defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
-// iOS & OSX: main() implemented externally to allow access to Objective-C components
-int main(int argc, char **argv) { return sample_main(); }
-#endif
 
 void extract_version(uint32_t version, uint32_t &major, uint32_t &minor,
                      uint32_t &patch) {

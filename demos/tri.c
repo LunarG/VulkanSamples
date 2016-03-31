@@ -2132,10 +2132,10 @@ static void demo_init_vk(struct demo *demo) {
     VkPhysicalDeviceFeatures features;
     vkGetPhysicalDeviceFeatures(demo->gpu, &features);
 
-    if (!features.shaderClipDistance) {
-        ERR_EXIT("Required device feature `shaderClipDistance` not supported\n",
-                 "GetPhysicalDeviceFeatures failure");
-    }
+//    if (!features.shaderClipDistance) {
+//        ERR_EXIT("Required device feature `shaderClipDistance` not supported\n",
+//                 "GetPhysicalDeviceFeatures failure");
+//    }
 
     // Graphics queue and MemMgr queue can be separate.
     // TODO: Add support for separate queues, including synchronization,
