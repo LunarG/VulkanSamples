@@ -489,7 +489,6 @@ static void add_mem_obj_info(layer_data *my_data, void *object, const VkDeviceMe
     // TODO:  Update for real hardware, actually process allocation info structures
     my_data->memObjMap[mem].allocInfo.pNext = NULL;
     my_data->memObjMap[mem].object = object;
-    my_data->memObjMap[mem].refCount = 0;
     my_data->memObjMap[mem].mem = mem;
     my_data->memObjMap[mem].image = VK_NULL_HANDLE;
     my_data->memObjMap[mem].memRange.offset = 0;
@@ -563,7 +562,6 @@ static VkBool32 update_cmd_buf_and_mem_references(layer_data *dev_data, const Vk
             // If not present, add to list
             if (found == VK_FALSE) {
                 pMemInfo->pCommandBufferBindings.push_front(cb);
-                pMemInfo->refCount++;
             }
             // Now update CBInfo's Mem reference list
             GLOBAL_CB_NODE *pCBNode = getCBNode(dev_data, cb);
@@ -600,7 +598,6 @@ static void clear_cmd_buf_and_mem_references(layer_data *dev_data, const VkComma
                 DEVICE_MEM_INFO *pInfo = get_mem_obj_info(dev_data, *it);
                 if (pInfo) {
                     pInfo->pCommandBufferBindings.remove(cb);
-                    pInfo->refCount--;
                 }
             }
             pCBNode->pMemObjList.clear();
@@ -723,7 +720,7 @@ static VkBool32 freeMemObjInfo(layer_data *dev_data, void *object, VkDeviceMemor
             }
 
             // Now verify that no references to this mem obj remain and remove bindings
-            if (0 != pInfo->refCount) {
+            if (pInfo->pCommandBufferBindings.size() || pInfo->pObjBindings.size()) {
                 skipCall |= reportMemReferencesAndCleanUp(dev_data, pInfo);
             }
             // Delete mem obj info
@@ -748,8 +745,7 @@ static const char *object_type_to_string(VkDebugReportObjectTypeEXT type) {
 
 // Remove object binding performs 3 tasks:
 // 1. Remove ObjectInfo from MemObjInfo list container of obj bindings & free it
-// 2. Decrement refCount for MemObjInfo
-// 3. Clear mem binding for image/buffer by setting its handle to 0
+// 2. Clear mem binding for image/buffer by setting its handle to 0
 // TODO : This only applied to Buffer, Image, and Swapchain objects now, how should it be updated/customized?
 static VkBool32 clear_object_binding(layer_data *dev_data, void *dispObj, uint64_t handle, VkDebugReportObjectTypeEXT type) {
     // TODO : Need to customize images/buffers/swapchains to track mem binding and clear it here appropriately
@@ -760,13 +756,11 @@ static VkBool32 clear_object_binding(layer_data *dev_data, void *dispObj, uint64
         // TODO : Make sure this is a reasonable way to reset mem binding
         pObjBindInfo->mem = VK_NULL_HANDLE;
         if (pMemObjInfo) {
-            // This obj is bound to a memory object. Remove the reference to this object in that memory object's list, decrement the
-            // memObj's refcount
+            // This obj is bound to a memory object. Remove the reference to this object in that memory object's list,
             // and set the objects memory binding pointer to NULL.
             VkBool32 clearSucceeded = VK_FALSE;
             for (auto it = pMemObjInfo->pObjBindings.begin(); it != pMemObjInfo->pObjBindings.end(); ++it) {
                 if ((it->handle == handle) && (it->type == type)) {
-                    pMemObjInfo->refCount--;
                     pMemObjInfo->pObjBindings.erase(it);
                     clearSucceeded = VK_TRUE;
                     break;
@@ -824,7 +818,6 @@ static VkBool32 set_mem_binding(layer_data *dev_data, void *dispatch_object, VkD
                     oht.handle = handle;
                     oht.type = type;
                     pMemInfo->pObjBindings.push_front(oht);
-                    pMemInfo->refCount++;
                     // For image objects, make sure default memory state is correctly set
                     // TODO : What's the best/correct way to handle this?
                     if (VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT == type) {
@@ -879,7 +872,6 @@ static VkBool32 set_sparse_mem_binding(layer_data *dev_data, void *dispObject, V
                 oht.handle = handle;
                 oht.type = type;
                 pInfo->pObjBindings.push_front(oht);
-                pInfo->refCount++;
             }
             // Need to set mem binding for this object
             pObjBindInfo->mem = mem;
@@ -946,7 +938,8 @@ static void print_mem_list(layer_data *dev_data, void *dispObj) {
         log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
                 __LINE__, MEMTRACK_NONE, "MEM", "    Mem object: %#" PRIxLEAST64, (uint64_t)(pInfo->mem));
         log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                __LINE__, MEMTRACK_NONE, "MEM", "    Ref Count: %u", pInfo->refCount);
+                __LINE__, MEMTRACK_NONE, "MEM", "    Ref Count: " PRINTF_SIZE_T_SPECIFIER,
+                pInfo->pCommandBufferBindings.size() + pInfo->pObjBindings.size());
         if (0 != pInfo->allocInfo.allocationSize) {
             string pAllocInfoMsg = vk_print_vkmemoryallocateinfo(&pInfo->allocInfo, "MEM(INFO):         ");
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
