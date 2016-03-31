@@ -3396,6 +3396,7 @@ static VkSampleCountFlagBits getNumSamples(layer_data *my_data, const VkPipeline
 // Validate state related to the PSO
 static VkBool32 validatePipelineState(layer_data *my_data, const GLOBAL_CB_NODE *pCB, const VkPipelineBindPoint pipelineBindPoint,
                                       const VkPipeline pipeline) {
+    VkBool32 skipCall = VK_FALSE;
     if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
         // Verify that any MSAA request in PSO matches sample# in bound FB
         // Skip the check if rasterization is disabled.
@@ -3410,11 +3411,11 @@ static VkBool32 validatePipelineState(layer_data *my_data, const GLOBAL_CB_NODE 
                 uint32_t i;
 
                 if (pPipeline->cbStateCI.attachmentCount != pSD->colorAttachmentCount) {
-                    return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                                   reinterpret_cast<const uint64_t &>(pipeline), __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                   "Render pass subpass %u mismatch between blend state attachment count %u and "
-                                   "sub-pass color attachment count %u!  These must be the same.",
-                                   pCB->activeSubpass, pPipeline->cbStateCI.attachmentCount, pSD->colorAttachmentCount);
+                    skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                                        reinterpret_cast<const uint64_t &>(pipeline), __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                        "Mismatch between blend state attachment count %u and subpass %u color attachment "
+                                        "count %u!  These must be the same.",
+                                        pPipeline->cbStateCI.attachmentCount, pCB->activeSubpass, pSD->colorAttachmentCount);
                 }
 
                 for (i = 0; i < pSD->colorAttachmentCount; i++) {
@@ -3440,11 +3441,11 @@ static VkBool32 validatePipelineState(layer_data *my_data, const GLOBAL_CB_NODE 
                 }
 
                 if (psoNumSamples != subpassNumSamples) {
-                    return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                                   (uint64_t)pipeline, __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
-                                   "Num samples mismatch! Binding PSO (%#" PRIxLEAST64
-                                   ") with %u samples while current RenderPass (%#" PRIxLEAST64 ") w/ %u samples!",
-                                   (uint64_t)pipeline, psoNumSamples, (uint64_t)pCB->activeRenderPass, subpassNumSamples);
+                    skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                                        (uint64_t)pipeline, __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
+                                        "Num samples mismatch! Binding PSO (%#" PRIxLEAST64
+                                        ") with %u samples while current RenderPass (%#" PRIxLEAST64 ") w/ %u samples!",
+                                        (uint64_t)pipeline, psoNumSamples, (uint64_t)pCB->activeRenderPass, subpassNumSamples);
                 }
             } else {
                 // TODO : I believe it's an error if we reach this point and don't have an activeRenderPass
@@ -3455,7 +3456,7 @@ static VkBool32 validatePipelineState(layer_data *my_data, const GLOBAL_CB_NODE 
     } else {
         // TODO : Validate non-gfx pipeline updates
     }
-    return VK_FALSE;
+    return skipCall;
 }
 
 // Block of code at start here specifically for managing/tracking DSs
