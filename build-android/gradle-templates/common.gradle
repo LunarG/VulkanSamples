@@ -32,6 +32,15 @@ model {
                          "-I${file("../../../../../glslang")}".toString()])
     }
 
+    // Turn on hard float support in armeabi-v7a
+    android.abis {
+        create("armeabi-v7a") {
+            cppFlags.addAll(["-mhard-float", "-D_NDK_MATH_NO_SOFTFP=1", "-mfloat-abi=hard"])
+            ldLibs.add("m_hard")
+            ldFlags.add("-Wl,--no-warn-mismatch")
+        }
+    }
+
     android.sources {
         main {
             jni {
@@ -53,15 +62,6 @@ model {
         }
     }
     android.productFlavors {
-        create ("x86") {
-            ndk.abiFilters.add("x86")
-        }
-        create ("arm7") {
-            ndk.abiFilters.add("armeabi-v7a")
-            ndk.cppFlags.addAll(["-mhard-float", "-D_NDK_MATH_NO_SOFTFP=1", "-mfloat-abi=hard"])
-            ndk.ldLibs.add("m_hard")
-            ndk.ldFlags.add("-Wl,--no-warn-mismatch")
-        }
         create ("all") {
             ndk.abiFilters.addAll(["armeabi-v7a", 'arm64-v8a',
                                    'x86', 'x86_64'])
@@ -69,4 +69,3 @@ model {
     }
 }
 
-// buildDir = new File("../../build/layers");
