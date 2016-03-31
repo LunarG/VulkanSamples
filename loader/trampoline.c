@@ -242,8 +242,6 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
     struct loader_instance *ptr_instance = NULL;
     VkInstance created_instance = VK_NULL_HANDLE;
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
-    VkDebugReportCallbackEXT instance_callback = VK_NULL_HANDLE;
-    void *pNext = (void *)pCreateInfo->pNext;
 
     loader_platform_thread_once(&once_init, loader_initialize);
 
@@ -273,26 +271,38 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
 #endif
 
     /*
-     * Look for a debug report create info structure
-     * and setup a callback if found.
+     * Look for one or more debug report create info structures
+     * and setup a callback(s) for each one found.
      */
-    while (pNext) {
-        if (((VkInstanceCreateInfo *)pNext)->sType ==
-            VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT) {
-            // Use this pNext so that vkCreateInstance has a callback that can
-            // be used to log messages.  Make a copy for use by
-            // vkDestroyInstance as well.
-            memcpy(&ptr_instance->debugReportCreateInfo, pNext,
-                   sizeof(VkDebugReportCallbackCreateInfoEXT));
-            instance_callback = (VkDebugReportCallbackEXT)ptr_instance;
-            if (util_CreateDebugReportCallback(ptr_instance, pNext, NULL,
-                                               instance_callback)) {
-                loader_heap_free(ptr_instance, ptr_instance);
-                loader_platform_thread_unlock_mutex(&loader_lock);
-                return VK_ERROR_OUT_OF_HOST_MEMORY;
-            }
+    ptr_instance->num_tmp_callbacks = 0;
+    ptr_instance->tmp_dbg_create_infos = NULL;
+    ptr_instance->tmp_callbacks = NULL;
+    if (util_CopyDebugReportCreateInfos(pCreateInfo->pNext,
+                                        pAllocator,
+                                        &ptr_instance->num_tmp_callbacks,
+                                        &ptr_instance->tmp_dbg_create_infos,
+                                        &ptr_instance->tmp_callbacks)) {
+        // One or more were found, but allocation failed.  Therefore, clean up
+        // and fail this function:
+        loader_heap_free(ptr_instance, ptr_instance);
+        loader_platform_thread_unlock_mutex(&loader_lock);
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    } else if (ptr_instance->num_tmp_callbacks > 0) {
+        // Setup the temporary callback(s) here to catch early issues:
+        if (util_CreateDebugReportCallbacks(ptr_instance,
+                                            pAllocator,
+                                            ptr_instance->num_tmp_callbacks,
+                                            ptr_instance->tmp_dbg_create_infos,
+                                            ptr_instance->tmp_callbacks)) {
+            // Failure of setting up one or more of the callback.  Therefore,
+            // clean up and fail this function:
+            util_FreeDebugReportCreateInfos(pAllocator,
+                                            ptr_instance->tmp_dbg_create_infos,
+                                            ptr_instance->tmp_callbacks);
+            loader_heap_free(ptr_instance, ptr_instance);
+            loader_platform_thread_unlock_mutex(&loader_lock);
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
-        pNext = (void *)((VkInstanceCreateInfo *)pNext)->pNext;
     }
 
     /* Due to implicit layers need to get layer list even if
@@ -312,8 +322,13 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
                                    pCreateInfo->ppEnabledLayerNames,
                                    &ptr_instance->instance_layer_list);
         if (res != VK_SUCCESS) {
-            util_DestroyDebugReportCallback(ptr_instance, instance_callback,
-                                            NULL);
+            util_DestroyDebugReportCallbacks(ptr_instance,
+                                             pAllocator,
+                                             ptr_instance->num_tmp_callbacks,
+                                             ptr_instance->tmp_callbacks);
+            util_FreeDebugReportCreateInfos(pAllocator,
+                                            ptr_instance->tmp_dbg_create_infos,
+                                            ptr_instance->tmp_callbacks);
             loader_heap_free(ptr_instance, ptr_instance);
             loader_platform_thread_unlock_mutex(&loader_lock);
             return res;
@@ -359,7 +374,13 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
         loader_destroy_generic_list(
             ptr_instance,
             (struct loader_generic_list *)&ptr_instance->ext_list);
-        util_DestroyDebugReportCallback(ptr_instance, instance_callback, NULL);
+        util_DestroyDebugReportCallbacks(ptr_instance,
+                                         pAllocator,
+                                         ptr_instance->num_tmp_callbacks,
+                                         ptr_instance->tmp_callbacks);
+        util_FreeDebugReportCreateInfos(pAllocator,
+                                        ptr_instance->tmp_dbg_create_infos,
+                                        ptr_instance->tmp_callbacks);
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance);
         return res;
@@ -380,7 +401,13 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
         loader_destroy_generic_list(
             ptr_instance,
             (struct loader_generic_list *)&ptr_instance->ext_list);
-        util_DestroyDebugReportCallback(ptr_instance, instance_callback, NULL);
+        util_DestroyDebugReportCallbacks(ptr_instance,
+                                         pAllocator,
+                                         ptr_instance->num_tmp_callbacks,
+                                         ptr_instance->tmp_callbacks);
+        util_FreeDebugReportCreateInfos(pAllocator,
+                                        ptr_instance->tmp_dbg_create_infos,
+                                        ptr_instance->tmp_callbacks);
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -405,7 +432,13 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
             ptr_instance,
             (struct loader_generic_list *)&ptr_instance->ext_list);
         loader.instances = ptr_instance->next;
-        util_DestroyDebugReportCallback(ptr_instance, instance_callback, NULL);
+        util_DestroyDebugReportCallbacks(ptr_instance,
+                                         pAllocator,
+                                         ptr_instance->num_tmp_callbacks,
+                                         ptr_instance->tmp_callbacks);
+        util_FreeDebugReportCreateInfos(pAllocator,
+                                        ptr_instance->tmp_dbg_create_infos,
+                                        ptr_instance->tmp_callbacks);
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance->disp);
         loader_heap_free(ptr_instance, ptr_instance);
@@ -434,7 +467,10 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo,
     }
 
     /* Remove temporary debug_report callback */
-    util_DestroyDebugReportCallback(ptr_instance, instance_callback, NULL);
+    util_DestroyDebugReportCallbacks(ptr_instance,
+                                     pAllocator,
+                                     ptr_instance->num_tmp_callbacks,
+                                     ptr_instance->tmp_callbacks);
     loader_unexpand_inst_layer_names(ptr_instance, saved_layer_count,
                                      saved_layer_names, saved_layer_ptr,
                                      pCreateInfo);
@@ -447,7 +483,6 @@ vkDestroyInstance(VkInstance instance,
                   const VkAllocationCallbacks *pAllocator) {
     const VkLayerInstanceDispatchTable *disp;
     struct loader_instance *ptr_instance = NULL;
-    VkDebugReportCallbackEXT instance_callback = VK_NULL_HANDLE;
     bool callback_setup = false;
 
     disp = loader_get_instance_dispatch(instance);
@@ -456,13 +491,13 @@ vkDestroyInstance(VkInstance instance,
 
     ptr_instance = loader_get_instance(instance);
 
-    if (ptr_instance->debugReportCreateInfo.sType ==
-        VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT) {
-        // Setup a temporary callback here to catch cleanup issues:
-        instance_callback = (VkDebugReportCallbackEXT)ptr_instance;
-        if (!util_CreateDebugReportCallback(ptr_instance,
-                                            &ptr_instance->debugReportCreateInfo,
-                                            NULL, instance_callback)) {
+    if (ptr_instance->num_tmp_callbacks > 0) {
+        // Setup the temporary callback(s) here to catch cleanup issues:
+        if (!util_CreateDebugReportCallbacks(ptr_instance,
+                                            pAllocator,
+                                            ptr_instance->num_tmp_callbacks,
+                                            ptr_instance->tmp_dbg_create_infos,
+                                            ptr_instance->tmp_callbacks)) {
             callback_setup = true;
         }
     }
@@ -473,7 +508,13 @@ vkDestroyInstance(VkInstance instance,
     if (ptr_instance->phys_devs)
         loader_heap_free(ptr_instance, ptr_instance->phys_devs);
     if (callback_setup) {
-        util_DestroyDebugReportCallback(ptr_instance, instance_callback, NULL);
+        util_DestroyDebugReportCallbacks(ptr_instance,
+                                         pAllocator,
+                                         ptr_instance->num_tmp_callbacks,
+                                         ptr_instance->tmp_callbacks);
+        util_FreeDebugReportCreateInfos(pAllocator,
+                                        ptr_instance->tmp_dbg_create_infos,
+                                        ptr_instance->tmp_callbacks);
     }
     loader_heap_free(ptr_instance, ptr_instance->disp);
     loader_heap_free(ptr_instance, ptr_instance);
