@@ -579,9 +579,8 @@ static void clear_cmd_buf_and_mem_references(layer_data *dev_data, const VkComma
 
     if (pCBNode) {
         if (pCBNode->pMemObjList.size() > 0) {
-            list<VkDeviceMemory> mem_obj_list = pCBNode->pMemObjList;
-            for (list<VkDeviceMemory>::iterator it = mem_obj_list.begin(); it != mem_obj_list.end(); ++it) {
-                DEVICE_MEM_INFO *pInfo = get_mem_obj_info(dev_data, *it);
+            for (auto mem : pCBNode->pMemObjList) {
+                DEVICE_MEM_INFO *pInfo = get_mem_obj_info(dev_data, mem);
                 if (pInfo) {
                     pInfo->commandBufferBindings.erase(cb);
                 }
