@@ -6466,13 +6466,13 @@ TEST_F(VkLayerTest, InvalidImageViewAspect) {
     }
 }
 
-TEST_F(VkLayerTest, CopyImageTypeMismatch) {
+TEST_F(VkLayerTest, CopyImageLayerCountMismatch) {
     VkResult err;
     bool pass;
 
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "vkCmdCopyImage called with unmatched source and dest image types");
+        "vkCmdCopyImage: number of layers in source and destination subresources for pRegions");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -6492,7 +6492,7 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch) {
     image_create_info.extent.height = 32;
     image_create_info.extent.depth = 1;
     image_create_info.mipLevels = 1;
-    image_create_info.arrayLayers = 1;
+    image_create_info.arrayLayers = 4;
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
@@ -6501,9 +6501,6 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch) {
     err =
         vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
     ASSERT_VK_SUCCESS(err);
-
-    image_create_info.imageType = VK_IMAGE_TYPE_1D;
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     err =
         vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
@@ -6542,14 +6539,15 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch) {
     copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copyRegion.srcSubresource.mipLevel = 0;
     copyRegion.srcSubresource.baseArrayLayer = 0;
-    copyRegion.srcSubresource.layerCount = 0;
+    copyRegion.srcSubresource.layerCount = 1;
     copyRegion.srcOffset.x = 0;
     copyRegion.srcOffset.y = 0;
     copyRegion.srcOffset.z = 0;
     copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copyRegion.dstSubresource.mipLevel = 0;
     copyRegion.dstSubresource.baseArrayLayer = 0;
-    copyRegion.dstSubresource.layerCount = 0;
+    // Introduce failure by forcing the dst layerCount to differ from src
+    copyRegion.dstSubresource.layerCount = 3;
     copyRegion.dstOffset.x = 0;
     copyRegion.dstOffset.y = 0;
     copyRegion.dstOffset.z = 0;
@@ -6561,8 +6559,8 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch) {
     EndCommandBuffer();
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not receive Error 'vkCmdCopyImage called with unmatched "
-                  "source and dest image types'";
+        FAIL() << "Did not receive Error 'vkCmdCopyImage: number of layers in "
+                  "source and destination subresources for pRegions'";
         m_errorMonitor->DumpFailureMsgs();
     }
 
@@ -6581,9 +6579,10 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
     VkResult err;
     bool pass;
 
+    // Create a color image and a depth/stencil image and try to copy between them
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "vkCmdCopyImage called with unmatched source and dest image types");
+        "vkCmdCopyImage called with unmatched source and dest image depth");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -6613,9 +6612,10 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
         vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
     ASSERT_VK_SUCCESS(err);
 
-    image_create_info.imageType = VK_IMAGE_TYPE_1D;
+    // Introduce failure by creating second image with a depth/stencil format
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    image_create_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    image_create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
     err =
         vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
@@ -6674,7 +6674,7 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
 
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive Error 'vkCmdCopyImage called with unmatched "
-                  "source and dest image types'";
+                  "source and dest image depth/stencil formats'";
         m_errorMonitor->DumpFailureMsgs();
     }
 
