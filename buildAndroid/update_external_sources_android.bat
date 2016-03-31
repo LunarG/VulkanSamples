@@ -65,29 +65,29 @@ if %errorCode% neq 0 (goto:error)
 
 REM Read the target versions from external file, which is shared with Linux script
 
-if not exist %BUILD_DIR%\glslang_revision (
+if not exist %ANDROID_BUILD_DIR%\glslang_revision_android (
    echo.
-   echo Missing glslang_revision file. Place it in %BUILD_DIR%
+   echo Missing glslang_revision_android file. Place it in %ANDROID_BUILD_DIR%
    goto:error
 )
 
-if not exist %BUILD_DIR%\spirv-tools_revision (
+if not exist %ANDROID_BUILD_DIR%\spirv-tools_revision_android (
    echo.
-   echo Missing spirv-tools_revision file. Place it in %BUILD_DIR%
+   echo Missing spirv-tools_revision_android file. Place it in %ANDROID_BUILD_DIR%
    set errorCode=1
    goto:error
 )
 
-if not exist %ANDROID_BUILD_DIR%\shaderc_revision (
+if not exist %ANDROID_BUILD_DIR%\shaderc_revision_android (
    echo.
-   echo Missing shaderc_revision file. Place it in %BUILD_DIR%
+   echo Missing shaderc_revision_android file. Place it in %ANDROID_BUILD_DIR%
    set errorCode=1
    goto:error
 )
 
-set /p GLSLANG_REVISION= < glslang_revision
-set /p SPIRV_TOOLS_REVISION= < spirv-tools_revision
-set /p SHADERC_REVISION= < shaderc_revision
+set /p GLSLANG_REVISION= < glslang_revision_android
+set /p SPIRV_TOOLS_REVISION= < spirv-tools_revision_android
+set /p SHADERC_REVISION= < shaderc_revision_android
 echo GLSLANG_REVISION=%GLSLANG_REVISION%
 echo SPIRV_TOOLS_REVISION=%SPIRV_TOOLS_REVISION%
 echo SHADERC_REVISION=%SHADERC_REVISION%
