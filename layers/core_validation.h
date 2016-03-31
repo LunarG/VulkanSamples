@@ -143,7 +143,7 @@ struct DEVICE_MEM_INFO {
     VkDeviceMemory mem;
     VkMemoryAllocateInfo allocInfo;
     unordered_set<MT_OBJ_HANDLE_TYPE> objBindings; // objects bound to this memory
-    list<VkCommandBuffer> pCommandBufferBindings; // list container of cmd buffers that reference this mem object
+    unordered_set<VkCommandBuffer> commandBufferBindings; // cmd buffers referencing this memory
     vector<MEMORY_RANGE> bufferRanges;
     vector<MEMORY_RANGE> imageRanges;
     VkImage image; // If memory is bound to image, this will have VkImage handle, else VK_NULL_HANDLE
