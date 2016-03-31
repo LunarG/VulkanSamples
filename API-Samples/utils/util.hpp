@@ -38,17 +38,17 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #define NOMINMAX /* Don't let Windows define min() or max() */
 #define APP_NAME_STR_LEN 80
+#else // _WIN32
+#include <unistd.h>
+#endif // _WIN32
 
-#elif defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
+#if defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
 #	define VK_USE_PLATFORM_IOS_MVK
 #	include <MoltenVK/vk_mvk_ios_surface.h>
 #elif defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
 #	define VK_USE_PLATFORM_OSX_MVK
 #	include <MoltenVK/vk_mvk_osx_surface.h>
-
-#else // _WIN32
-#include <unistd.h>
-#endif // _WIN32
+#endif 
 
 #include <vulkan/vulkan.h>
 
