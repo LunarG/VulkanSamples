@@ -156,6 +156,114 @@ void util_DestroyDebugReportCallback(struct loader_instance *inst,
     }
 }
 
+// This utility (used by vkInstanceCreateInfo(), looks at a pNext chain.  It
+// counts any VkDebugReportCallbackCreateInfoEXT structs that it finds.  It
+// then allocates array that can hold that many structs, as well as that many
+// VkDebugReportCallbackEXT handles.  It then copies each
+// VkDebugReportCallbackCreateInfoEXT, and initializes each handle.
+VkResult
+util_CopyDebugReportCreateInfos(const void *pChain,
+                                const VkAllocationCallbacks *pAllocator,
+                                uint32_t *num_callbacks,
+                                VkDebugReportCallbackCreateInfoEXT **infos,
+                                VkDebugReportCallbackEXT **callbacks)
+{
+    uint32_t n = *num_callbacks = 0;
+
+    // NOTE: The loader is not using pAllocator, and so this function doesn't
+    // either.
+
+    const void *pNext = pChain;
+    while (pNext) {
+        // 1st, count the number VkDebugReportCallbackCreateInfoEXT:
+        if (((VkDebugReportCallbackCreateInfoEXT *)pNext)->sType ==
+            VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT) {
+            n++;
+        }
+        pNext = (void *)((VkDebugReportCallbackCreateInfoEXT *)pNext)->pNext;
+    }
+    if (n == 0) {
+        return VK_SUCCESS;
+    }
+
+    // 2nd, allocate memory for each VkDebugReportCallbackCreateInfoEXT:
+    VkDebugReportCallbackCreateInfoEXT *pInfos =
+        *infos = ((VkDebugReportCallbackCreateInfoEXT *)
+                  malloc(n * sizeof(VkDebugReportCallbackCreateInfoEXT)));
+    if (!pInfos) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+    // 3rd, allocate memory for a unique handle for each callback:
+    VkDebugReportCallbackEXT *pCallbacks =
+        *callbacks = ((VkDebugReportCallbackEXT *)
+                      malloc(n * sizeof(VkDebugReportCallbackEXT)));
+    if (!pCallbacks) {
+        free(pInfos);
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+    // 4th, copy each VkDebugReportCallbackCreateInfoEXT for use by
+    // vkDestroyInstance, and assign a unique handle to each callback (just
+    // use the address of the copied VkDebugReportCallbackCreateInfoEXT):
+    pNext = pChain;
+    while (pNext) {
+        if (((VkInstanceCreateInfo *)pNext)->sType ==
+            VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT) {
+            memcpy(pInfos, pNext,
+                   sizeof(VkDebugReportCallbackCreateInfoEXT));
+            *pCallbacks++ = (VkDebugReportCallbackEXT)pInfos++;
+        }
+        pNext = (void *)((VkInstanceCreateInfo *)pNext)->pNext;
+    }
+
+    *num_callbacks = n;
+    return VK_SUCCESS;
+}
+
+void util_FreeDebugReportCreateInfos(const VkAllocationCallbacks *pAllocator,
+                                     VkDebugReportCallbackCreateInfoEXT *infos,
+                                     VkDebugReportCallbackEXT *callbacks)
+{
+    free(infos);
+    free(callbacks);
+}
+
+VkResult
+util_CreateDebugReportCallbacks(struct loader_instance *inst,
+                                const VkAllocationCallbacks *pAllocator,
+                                uint32_t num_callbacks,
+                                VkDebugReportCallbackCreateInfoEXT *infos,
+                                VkDebugReportCallbackEXT *callbacks)
+{
+    VkResult rtn;
+    for (uint32_t i = 0 ; i < num_callbacks ; i++) {
+        rtn = util_CreateDebugReportCallback(inst,
+                                             &infos[i],
+                                             pAllocator,
+                                             callbacks[i]);
+        if (rtn != VK_SUCCESS) {
+            for (uint32_t j = 0 ; j < i ; j++) {
+                util_DestroyDebugReportCallback(inst,
+                                                callbacks[j],
+                                                pAllocator);
+            }
+            return rtn;
+        }
+    }
+    return rtn;
+}
+
+void util_DestroyDebugReportCallbacks(struct loader_instance *inst,
+                                      const VkAllocationCallbacks *pAllocator,
+                                      uint32_t num_callbacks,
+                                      VkDebugReportCallbackEXT *callbacks)
+{
+    for (uint32_t i = 0 ; i < num_callbacks ; i++) {
+                util_DestroyDebugReportCallback(inst,
+                                                callbacks[i],
+                                                pAllocator);
+    }
+}
+
 static VKAPI_ATTR void VKAPI_CALL
 debug_report_DestroyDebugReportCallback(VkInstance instance,
                                         VkDebugReportCallbackEXT callback,
