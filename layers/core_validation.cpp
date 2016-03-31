@@ -2936,6 +2936,31 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
     return result;
 }
 
+// Validate HW line width capabilities prior to setting requested line width.
+static bool verifyLineWidth(layer_data *my_data, DRAW_STATE_ERROR dsError, const uint64_t &target, float lineWidth) {
+    bool skip_call = false;
+
+    // First check to see if the physical device supports wide lines.
+    if ((VK_FALSE == my_data->phys_dev_properties.features.wideLines) && (1.0f != lineWidth)) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, target, __LINE__,
+                             dsError, "DS", "Attempt to set lineWidth to %f but physical device wideLines feature "
+                                            "not supported/enabled so lineWidth must be 1.0f!",
+                             lineWidth);
+    } else {
+        // Otherwise, make sure the width falls in the valid range.
+        if ((my_data->phys_dev_properties.properties.limits.lineWidthRange[0] > lineWidth) ||
+            (my_data->phys_dev_properties.properties.limits.lineWidthRange[1] < lineWidth)) {
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, target,
+                                 __LINE__, dsError, "DS", "Attempt to set lineWidth to %f but physical device limits line width "
+                                                          "to between [%f, %f]!",
+                                 lineWidth, my_data->phys_dev_properties.properties.limits.lineWidthRange[0],
+                                 my_data->phys_dev_properties.properties.limits.lineWidthRange[1]);
+        }
+    }
+
+    return skip_call;
+}
+
 // Verify that create state for a pipeline is valid
 static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device, std::vector<PIPELINE_NODE *> pPipelines,
                                       int pipelineIndex) {
@@ -3091,6 +3116,13 @@ static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device
                                                                                "topology used with patchControlPoints value %u."
                                                                                " patchControlPoints should be >0 and <=32.",
                                 pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints);
+        }
+    }
+    // If a rasterization state is provided, make sure that the line width conforms to the HW.
+    if (pPipeline->graphicsPipelineCI.pRasterizationState) {
+        if (!isDynamic(pPipeline, VK_DYNAMIC_STATE_LINE_WIDTH)) {
+            skipCall |= verifyLineWidth(my_data, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, reinterpret_cast<uint64_t &>(pPipeline),
+                                        pPipeline->graphicsPipelineCI.pRasterizationState->lineWidth);
         }
     }
     // Viewport state must be included if rasterization is enabled.
@@ -6948,16 +6980,26 @@ vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t firstScissor, uint32_t s
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth) {
-    bool skipCall = false;
+    bool skip_call = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
-        skipCall |= addCmd(dev_data, pCB, CMD_SETLINEWIDTHSTATE, "vkCmdSetLineWidth()");
+        skip_call |= addCmd(dev_data, pCB, CMD_SETLINEWIDTHSTATE, "vkCmdSetLineWidth()");
         pCB->status |= CBSTATUS_LINE_WIDTH_SET;
+
+        PIPELINE_NODE *pPipeTrav = getPipeline(dev_data, pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].pipeline);
+        if (pPipeTrav != NULL && !isDynamic(pPipeTrav, VK_DYNAMIC_STATE_LINE_WIDTH)) {
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0,
+                                 reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, DRAWSTATE_INVALID_SET, "DS",
+                                 "vkCmdSetLineWidth called but pipeline was created without VK_DYNAMIC_STATE_LINE_WIDTH"
+                                 "flag.  This is undefined behavior and could be ignored.");
+        } else {
+            skip_call |= verifyLineWidth(dev_data, DRAWSTATE_INVALID_SET, reinterpret_cast<uint64_t &>(commandBuffer), lineWidth);
+        }
     }
     lock.unlock();
-    if (!skipCall)
+    if (!skip_call)
         dev_data->device_dispatch_table->CmdSetLineWidth(commandBuffer, lineWidth);
 }
 
