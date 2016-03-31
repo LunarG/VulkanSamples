@@ -506,7 +506,7 @@ void write_ppm(struct sample_info &info, const char *basename) {
     image_create_info.arrayLayers = 1;
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     image_create_info.queueFamilyIndexCount = 0;
     image_create_info.pQueueFamilyIndices = NULL;
@@ -553,7 +553,7 @@ void write_ppm(struct sample_info &info, const char *basename) {
 
     res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
     set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT,
-                     VK_IMAGE_LAYOUT_PREINITIALIZED,
+                     VK_IMAGE_LAYOUT_UNDEFINED,
                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     set_image_layout(info, info.buffers[info.current_buffer].image,
@@ -650,7 +650,8 @@ void write_ppm(struct sample_info &info, const char *basename) {
         const int *row = (const int *)ptr;
         int swapped;
 
-        if (info.format == VK_FORMAT_B8G8R8A8_UNORM) {
+        if (info.format == VK_FORMAT_B8G8R8A8_UNORM ||
+            info.format == VK_FORMAT_B8G8R8A8_SRGB) {
             for (x = 0; x < info.width; x++) {
                 swapped = (*row & 0xff00ff00) | (*row & 0x000000ff) << 16 |
                           (*row & 0x00ff0000) >> 16;
