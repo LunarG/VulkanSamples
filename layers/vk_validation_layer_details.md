@@ -94,8 +94,10 @@ The Draw State portion of the core validation layer tracks state leading into Dr
 | Verify Semaphores Not In Use | Validate that the semaphores are not used in multiple submit calls at the same time | INVALID_SEMAPHORE | vkQueueSubmit | TBD | None |
 | Verify Events Not In Use | Validate that that events are not used at the time they are destroyed | INVALID_EVENT | vkDestroyEvent | TBD | None |
 | Live Semaphore  | When waiting on a semaphore, need to make sure that the semaphore is live and therefore can be signalled, otherwise queue is stalled and cannot make forward progress. | QUEUE_FORWARD_PROGRESS | vkQueueSubmit vkQueueBindSparse vkQueuePresentKHR vkAcquireNextImageKHR | TODO | Create test |
-| Storage Buffer Alignment  | Storage Buffer offsets in BindDescriptorSets must agree with offset alignment device limit | INVALID_STORAGE_BUFFER_OFFSET | vkCmdBindDescriptorSets | TODO | Create test |
-| Uniform Buffer Alignment  | Uniform Buffer offsets in BindDescriptorSets must agree with offset alignment device limit | INVALID_UNIFORM_BUFFER_OFFSET | vkCmdBindDescriptorSets | TODO | Create test |
+| Buffer Alignment  | Buffer memory offset in BindBufferMemory must agree with VkMemoryRequirements::alignment returned from a call to vkGetBufferMemoryRequirements with buffer | INVALID_BUFFER_MEMORY_OFFSET | vkBindBufferMemory | TODO | Create test |
+| Texel Buffer Alignment  | Storage/Uniform Texel Buffer memory offset in BindBufferMemory must agree with offset alignment device limit | INVALID_TEXEL_BUFFER_OFFSET | vkBindBufferMemory | TODO | Create test |
+| Storage Buffer Alignment  | Storage Buffer offsets in BindBufferMemory, BindDescriptorSets must agree with offset alignment device limit | INVALID_STORAGE_BUFFER_OFFSET | vkBindBufferMemory vkCmdBindDescriptorSets | TODO | Create test |
+| Uniform Buffer Alignment  | Uniform Buffer offsets in BindBufferMemory, BindDescriptorSets must agree with offset alignment device limit | INVALID_UNIFORM_BUFFER_OFFSET | vkBindBufferMemory vkCmdBindDescriptorSets | TODO | Create test |
 | Independent Blending  | If independent blending is not enabled, all elements of pAttachments must be identical | INDEPENDENT_BLEND | vkCreateGraphicsPipelines | TODO | Create test |
 | Enabled Logic Operations  | If logic operations is not enabled, logicOpEnable must be VK_FALSE | DISABLED_LOGIC_OP | vkCreateGraphicsPipelines | TODO | Create test |
 | Valid Logic Operations  | If logicOpEnable is VK_TRUE, logicOp must be a valid VkLogicOp value | INVALID_LOGIC_OP | vkCreateGraphicsPipelines | TODO | Create test |

@@ -5955,6 +5955,48 @@ vkBindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDevic
         skipCall |= validate_buffer_image_aliasing(dev_data, buffer_handle, mem, memoryOffset, memRequirements,
                                                    dev_data->memObjMap[mem].bufferRanges, dev_data->memObjMap[mem].imageRanges,
                                                    VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
+        // Validate memory requirements alignment
+        if (vk_safe_modulo(memoryOffset, memRequirements.alignment) != 0) {
+            skipCall |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
+                        __LINE__, DRAWSTATE_INVALID_BUFFER_MEMORY_OFFSET, "DS",
+                        "vkBindBufferMemory(): memoryOffset is %#" PRIxLEAST64 " but must be an integer multiple of the "
+                        "VkMemoryRequirements::alignment value %#" PRIxLEAST64
+                        ", returned from a call to vkGetBufferMemoryRequirements with buffer",
+                        memoryOffset, memRequirements.alignment);
+        }
+        // Validate device limits alignments
+        VkBufferUsageFlags usage = dev_data->bufferMap[buffer].create_info->usage;
+        if (usage & (VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT)) {
+            if (vk_safe_modulo(memoryOffset, dev_data->physDevProperties.properties.limits.minTexelBufferOffsetAlignment) != 0) {
+                skipCall |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                            0, __LINE__, DRAWSTATE_INVALID_TEXEL_BUFFER_OFFSET, "DS",
+                            "vkBindBufferMemory(): memoryOffset is %#" PRIxLEAST64 " but must be a multiple of "
+                            "device limit minTexelBufferOffsetAlignment %#" PRIxLEAST64,
+                            memoryOffset, dev_data->physDevProperties.properties.limits.minTexelBufferOffsetAlignment);
+            }
+        }
+        if (usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) {
+            if (vk_safe_modulo(memoryOffset, dev_data->physDevProperties.properties.limits.minUniformBufferOffsetAlignment) != 0) {
+                skipCall |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                            0, __LINE__, DRAWSTATE_INVALID_UNIFORM_BUFFER_OFFSET, "DS",
+                            "vkBindBufferMemory(): memoryOffset is %#" PRIxLEAST64 " but must be a multiple of "
+                            "device limit minUniformBufferOffsetAlignment %#" PRIxLEAST64,
+                            memoryOffset, dev_data->physDevProperties.properties.limits.minUniformBufferOffsetAlignment);
+            }
+        }
+        if (usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) {
+            if (vk_safe_modulo(memoryOffset, dev_data->physDevProperties.properties.limits.minStorageBufferOffsetAlignment) != 0) {
+                skipCall |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                            0, __LINE__, DRAWSTATE_INVALID_STORAGE_BUFFER_OFFSET, "DS",
+                            "vkBindBufferMemory(): memoryOffset is %#" PRIxLEAST64 " but must be a multiple of "
+                            "device limit minStorageBufferOffsetAlignment %#" PRIxLEAST64,
+                            memoryOffset, dev_data->physDevProperties.properties.limits.minStorageBufferOffsetAlignment);
+            }
+        }
     }
     print_mem_list(dev_data, device);
     loader_platform_thread_unlock_mutex(&globalLock);
