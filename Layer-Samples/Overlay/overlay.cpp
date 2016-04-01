@@ -90,6 +90,7 @@ struct layer_data {
     VkPhysicalDevice gpu;
     VkDevice dev;
 
+    PFN_vkSetDeviceLoaderData pfn_dev_init;
     std::unordered_map<VkSwapchainKHR, SwapChainData *> *swapChains;
     VkCommandPool pool;
 
@@ -415,8 +416,12 @@ static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
      * When a "normal" application creates a command buffer,
      * the dispatch table is installed by the top-level binding (trampoline.c).
      * But here, we have to do it ourselves. */
-
-    *((const void **)cmd) = *(void **)device;
+    if (!data->pfn_dev_init) {
+        *((const void **)cmd) = *(void **)device;
+    } else {
+        err = data->pfn_dev_init(device, (void *) cmd);
+        assert(!err);
+    }
 
     VkCommandBufferBeginInfo cbbi;
     cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -580,6 +585,14 @@ vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *pCreateInfo,
     my_device_data->device_dispatch_table = new VkLayerDispatchTable;
     layer_init_device_dispatch_table(
         *pDevice, my_device_data->device_dispatch_table, fpGetDeviceProcAddr);
+
+     // store the loader callback for initializing created dispatchable objects
+    chain_info = get_chain_info(pCreateInfo, VK_LOADER_DATA_CALLBACK);
+    if (chain_info) {
+        my_device_data->pfn_dev_init = chain_info->u.pfnSetDeviceLoaderData;
+    } else {
+        my_device_data->pfn_dev_init = NULL;
+    }
 
     after_device_create(gpu, *pDevice, my_device_data);
     return result;
@@ -913,7 +926,12 @@ vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapChain,
              * (trampoline.c).
              * But here, we have to do it ourselves. */
 
-            *((const void **)cmd) = *(void **)device;
+            if (!my_data->pfn_dev_init) {
+                *((const void **)cmd) = *(void **)device;
+            } else {
+                err = my_data->pfn_dev_init(device, (void *) cmd);
+                assert(!err);
+            }
 
             /* Create vertex buffer */
             VkBufferCreateInfo bci;
