@@ -53,6 +53,7 @@
 #define MTMERGE 1
 
 #pragma once
+#include "vk_safe_struct.h"
 #include "vulkan/vk_layer.h"
 #include <atomic>
 #include <vector>
@@ -437,25 +438,11 @@ typedef struct _GENERIC_HEADER {
     const void *pNext;
 } GENERIC_HEADER;
 
-typedef struct _PIPELINE_NODE {
+class PIPELINE_NODE {
+  public:
     VkPipeline pipeline;
-    VkGraphicsPipelineCreateInfo graphicsPipelineCI;
-    VkPipelineVertexInputStateCreateInfo vertexInputCI;
-    VkPipelineInputAssemblyStateCreateInfo iaStateCI;
-    VkPipelineTessellationStateCreateInfo tessStateCI;
-    VkPipelineViewportStateCreateInfo vpStateCI;
-    VkPipelineRasterizationStateCreateInfo rsStateCI;
-    VkPipelineMultisampleStateCreateInfo msStateCI;
-    VkPipelineColorBlendStateCreateInfo cbStateCI;
-    VkPipelineDepthStencilStateCreateInfo dsStateCI;
-    VkPipelineDynamicStateCreateInfo dynStateCI;
-    VkPipelineShaderStageCreateInfo vsCI;
-    VkPipelineShaderStageCreateInfo tcsCI;
-    VkPipelineShaderStageCreateInfo tesCI;
-    VkPipelineShaderStageCreateInfo gsCI;
-    VkPipelineShaderStageCreateInfo fsCI;
-    // Compute shader is include in VkComputePipelineCreateInfo
-    VkComputePipelineCreateInfo computePipelineCI;
+    safe_VkGraphicsPipelineCreateInfo graphicsPipelineCI;
+    safe_VkComputePipelineCreateInfo computePipelineCI;
     // Flag of which shader stages are active for this pipeline
     uint32_t active_shaders;
     // Capture which slots (set#->bindings) are actually used by the shaders of this pipeline
@@ -466,11 +453,78 @@ typedef struct _PIPELINE_NODE {
     std::vector<VkPipelineColorBlendAttachmentState> attachments;
     bool blendConstantsEnabled; // Blend constants enabled for any attachments
     // Default constructor
-    _PIPELINE_NODE()
-        : pipeline{}, graphicsPipelineCI{}, vertexInputCI{}, iaStateCI{}, tessStateCI{}, vpStateCI{}, rsStateCI{}, msStateCI{},
-          cbStateCI{}, dsStateCI{}, dynStateCI{}, vsCI{}, tcsCI{}, tesCI{}, gsCI{}, fsCI{}, computePipelineCI{}, active_shaders(0),
-          active_slots(), vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false) {}
-} PIPELINE_NODE;
+    PIPELINE_NODE()
+        : pipeline{}, graphicsPipelineCI{}, computePipelineCI{}, active_shaders(0), active_slots(), vertexBindingDescriptions(),
+          vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false) {}
+
+    void initGraphicsPipeline(const VkGraphicsPipelineCreateInfo *pCreateInfo) {
+        graphicsPipelineCI.initialize(pCreateInfo);
+        // Make sure compute pipeline is null
+        VkComputePipelineCreateInfo emptyComputeCI = {};
+        computePipelineCI.initialize(&emptyComputeCI);
+        for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
+            const VkPipelineShaderStageCreateInfo *pPSSCI = &pCreateInfo->pStages[i];
+
+            switch (pPSSCI->stage) {
+            case VK_SHADER_STAGE_VERTEX_BIT:
+                this->active_shaders |= VK_SHADER_STAGE_VERTEX_BIT;
+                break;
+            case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
+                this->active_shaders |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+                break;
+            case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
+                this->active_shaders |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+                break;
+            case VK_SHADER_STAGE_GEOMETRY_BIT:
+                this->active_shaders |= VK_SHADER_STAGE_GEOMETRY_BIT;
+                break;
+            case VK_SHADER_STAGE_FRAGMENT_BIT:
+                this->active_shaders |= VK_SHADER_STAGE_FRAGMENT_BIT;
+                break;
+            case VK_SHADER_STAGE_COMPUTE_BIT:
+                // TODO : Flag error, CS is specified through VkComputePipelineCreateInfo
+                this->active_shaders |= VK_SHADER_STAGE_COMPUTE_BIT;
+                break;
+            default:
+                // TODO : Flag error
+                break;
+            }
+        }
+        if (pCreateInfo->pVertexInputState) {
+            const VkPipelineVertexInputStateCreateInfo *pVICI = pCreateInfo->pVertexInputState;
+            if (pVICI->vertexBindingDescriptionCount) {
+                this->vertexBindingDescriptions = std::vector<VkVertexInputBindingDescription>(
+                    pVICI->pVertexBindingDescriptions, pVICI->pVertexBindingDescriptions + pVICI->vertexBindingDescriptionCount);
+            }
+            if (pVICI->vertexAttributeDescriptionCount) {
+                this->vertexAttributeDescriptions = std::vector<VkVertexInputAttributeDescription>(
+                    pVICI->pVertexAttributeDescriptions,
+                    pVICI->pVertexAttributeDescriptions + pVICI->vertexAttributeDescriptionCount);
+            }
+        }
+        if (pCreateInfo->pColorBlendState) {
+            const VkPipelineColorBlendStateCreateInfo *pCBCI = pCreateInfo->pColorBlendState;
+            if (pCBCI->attachmentCount) {
+                this->attachments = std::vector<VkPipelineColorBlendAttachmentState>(pCBCI->pAttachments,
+                                                                                     pCBCI->pAttachments + pCBCI->attachmentCount);
+            }
+        }
+    }
+    void initComputePipeline(const VkComputePipelineCreateInfo *pCreateInfo) {
+        computePipelineCI.initialize(pCreateInfo);
+        // Make sure gfx pipeline is null
+        VkGraphicsPipelineCreateInfo emptyGraphicsCI = {};
+        graphicsPipelineCI.initialize(&emptyGraphicsCI);
+        switch (computePipelineCI.stage.stage) {
+        case VK_SHADER_STAGE_COMPUTE_BIT:
+            this->active_shaders |= VK_SHADER_STAGE_COMPUTE_BIT;
+            break;
+        default:
+            // TODO : Flag error
+            break;
+        }
+    }
+};
 
 class BASE_NODE {
   public:

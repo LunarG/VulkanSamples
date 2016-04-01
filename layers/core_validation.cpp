@@ -2136,12 +2136,13 @@ static VkBool32 validate_draw_state_flags(layer_data *dev_data, GLOBAL_CB_NODE *
                              "Dynamic viewport state not set for this command buffer");
     result |= validate_status(dev_data, pCB, CBSTATUS_SCISSOR_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT, DRAWSTATE_SCISSOR_NOT_BOUND,
                               "Dynamic scissor state not set for this command buffer");
-    if ((pPipe->iaStateCI.topology == VK_PRIMITIVE_TOPOLOGY_LINE_LIST) ||
-        (pPipe->iaStateCI.topology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP)) {
+    if (pPipe->graphicsPipelineCI.pInputAssemblyState &&
+        ((pPipe->graphicsPipelineCI.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_LINE_LIST) ||
+         (pPipe->graphicsPipelineCI.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP))) {
         result |= validate_status(dev_data, pCB, CBSTATUS_LINE_WIDTH_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                   DRAWSTATE_LINE_WIDTH_NOT_BOUND, "Dynamic line width state not set for this command buffer");
     }
-    if (pPipe->rsStateCI.depthBiasEnable) {
+    if (pPipe->graphicsPipelineCI.pRasterizationState && pPipe->graphicsPipelineCI.pRasterizationState->depthBiasEnable) {
         result |= validate_status(dev_data, pCB, CBSTATUS_DEPTH_BIAS_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                   DRAWSTATE_DEPTH_BIAS_NOT_BOUND, "Dynamic depth bias state not set for this command buffer");
     }
@@ -2149,11 +2150,11 @@ static VkBool32 validate_draw_state_flags(layer_data *dev_data, GLOBAL_CB_NODE *
         result |= validate_status(dev_data, pCB, CBSTATUS_BLEND_CONSTANTS_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                   DRAWSTATE_BLEND_NOT_BOUND, "Dynamic blend constants state not set for this command buffer");
     }
-    if (pPipe->dsStateCI.depthBoundsTestEnable) {
+    if (pPipe->graphicsPipelineCI.pDepthStencilState && pPipe->graphicsPipelineCI.pDepthStencilState->depthBoundsTestEnable) {
         result |= validate_status(dev_data, pCB, CBSTATUS_DEPTH_BOUNDS_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                   DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND, "Dynamic depth bounds state not set for this command buffer");
     }
-    if (pPipe->dsStateCI.stencilTestEnable) {
+    if (pPipe->graphicsPipelineCI.pDepthStencilState && pPipe->graphicsPipelineCI.pDepthStencilState->stencilTestEnable) {
         result |= validate_status(dev_data, pCB, CBSTATUS_STENCIL_READ_MASK_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                   DRAWSTATE_STENCIL_NOT_BOUND, "Dynamic stencil read mask state not set for this command buffer");
         result |= validate_status(dev_data, pCB, CBSTATUS_STENCIL_WRITE_MASK_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -2679,7 +2680,7 @@ static VkBool32 validate_pipeline_shader_stage(layer_data *dev_data,
 // Validate that the shaders used by the given pipeline and store the active_slots
 //  that are actually used by the pipeline into pPipeline->active_slots
 static VkBool32 validate_and_capture_pipeline_shader_state(layer_data *my_data, PIPELINE_NODE *pPipeline) {
-    VkGraphicsPipelineCreateInfo const *pCreateInfo = &pPipeline->graphicsPipelineCI;
+    auto pCreateInfo = reinterpret_cast<VkGraphicsPipelineCreateInfo const *>(&pPipeline->graphicsPipelineCI);
     int vertex_stage = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
     int fragment_stage = get_shader_stage_id(VK_SHADER_STAGE_FRAGMENT_BIT);
 
@@ -2693,7 +2694,8 @@ static VkBool32 validate_and_capture_pipeline_shader_state(layer_data *my_data, 
     auto pipelineLayout = pCreateInfo->layout != VK_NULL_HANDLE ? &my_data->pipelineLayoutMap[pCreateInfo->layout] : nullptr;
 
     for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
-        VkPipelineShaderStageCreateInfo const *pStage = &pCreateInfo->pStages[i];
+        VkPipelineShaderStageCreateInfo const *pStage =
+            reinterpret_cast<VkPipelineShaderStageCreateInfo const *>(&pCreateInfo->pStages[i]);
         auto stage_id = get_shader_stage_id(pStage->stage);
         pass &= validate_pipeline_shader_stage(my_data, pStage, pPipeline, pipelineLayout,
                                                &shaders[stage_id], &entrypoints[stage_id]);
@@ -2739,7 +2741,7 @@ static VkBool32 validate_and_capture_pipeline_shader_state(layer_data *my_data, 
 }
 
 static VkBool32 validate_compute_pipeline(layer_data *my_data, PIPELINE_NODE *pPipeline) {
-    VkComputePipelineCreateInfo const *pCreateInfo = &pPipeline->computePipelineCI;
+    auto pCreateInfo = reinterpret_cast<VkComputePipelineCreateInfo const *>(&pPipeline->computePipelineCI);
 
     auto pipelineLayout = pCreateInfo->layout != VK_NULL_HANDLE ? &my_data->pipelineLayoutMap[pCreateInfo->layout] : nullptr;
 
@@ -3139,26 +3141,35 @@ static VkBool32 verifyPipelineCreateState(layer_data *my_data, const VkDevice de
     // VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive topology is only valid for tessellation pipelines.
     // Mismatching primitive topology and tessellation fails graphics pipeline creation.
     if (pPipeline->active_shaders & (VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT) &&
-        (pPipeline->iaStateCI.topology != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST)) {
+        (!pPipeline->graphicsPipelineCI.pInputAssemblyState ||
+         pPipeline->graphicsPipelineCI.pInputAssemblyState->topology != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST)) {
         skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                             DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS", "Invalid Pipeline CreateInfo State: "
                                                                            "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST must be set as IA "
                                                                            "topology for tessellation pipelines");
     }
-    if (pPipeline->iaStateCI.topology == VK_PRIMITIVE_TOPOLOGY_PATCH_LIST) {
+    if (pPipeline->graphicsPipelineCI.pInputAssemblyState &&
+        pPipeline->graphicsPipelineCI.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_PATCH_LIST) {
         if (~pPipeline->active_shaders & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) {
             skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                 DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS", "Invalid Pipeline CreateInfo State: "
                                                                                "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive "
                                                                                "topology is only valid for tessellation pipelines");
         }
-        if (!pPipeline->tessStateCI.patchControlPoints || (pPipeline->tessStateCI.patchControlPoints > 32)) {
+        if (!pPipeline->graphicsPipelineCI.pTessellationState) {
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+                                "Invalid Pipeline CreateInfo State: "
+                                "pTessellationState is NULL when VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive "
+                                "topology used. pTessellationState must not be NULL in this case.");
+        } else if (!pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints ||
+                   (pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints > 32)) {
             skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                 DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS", "Invalid Pipeline CreateInfo State: "
                                                                                "VK_PRIMITIVE_TOPOLOGY_PATCH_LIST primitive "
                                                                                "topology used with patchControlPoints value %u."
                                                                                " patchControlPoints should be >0 and <=32.",
-                                pPipeline->tessStateCI.patchControlPoints);
+                                pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints);
         }
     }
     // Viewport state must be included if rasterization is enabled.
@@ -3176,7 +3187,8 @@ static VkBool32 verifyPipelineCreateState(layer_data *my_data, const VkDevice de
             skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                 DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
                                 "Gfx Pipeline viewport count (%u) must match scissor count (%u).",
-                                pPipeline->vpStateCI.viewportCount, pPipeline->vpStateCI.scissorCount);
+                                pPipeline->graphicsPipelineCI.pViewportState->viewportCount,
+                                pPipeline->graphicsPipelineCI.pViewportState->scissorCount);
         } else {
             // If viewport or scissor are not dynamic, then verify that data is appropriate for count
             VkBool32 dynViewport = isDynamic(pPipeline, VK_DYNAMIC_STATE_VIEWPORT);
@@ -3208,130 +3220,12 @@ static VkBool32 verifyPipelineCreateState(layer_data *my_data, const VkDevice de
     return skipCall;
 }
 
-// Init the pipeline mapping info based on pipeline create info LL tree
-//  Threading note : Calls to this function should wrapped in mutex
-// TODO : this should really just be in the constructor for PIPELINE_NODE
-static PIPELINE_NODE *initGraphicsPipeline(layer_data *dev_data, const VkGraphicsPipelineCreateInfo *pCreateInfo) {
-    PIPELINE_NODE *pPipeline = new PIPELINE_NODE;
-
-    // First init create info
-    memcpy(&pPipeline->graphicsPipelineCI, pCreateInfo, sizeof(VkGraphicsPipelineCreateInfo));
-
-    size_t bufferSize = 0;
-    const VkPipelineVertexInputStateCreateInfo *pVICI = NULL;
-    const VkPipelineColorBlendStateCreateInfo *pCBCI = NULL;
-
-    for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
-        const VkPipelineShaderStageCreateInfo *pPSSCI = &pCreateInfo->pStages[i];
-
-        switch (pPSSCI->stage) {
-        case VK_SHADER_STAGE_VERTEX_BIT:
-            memcpy(&pPipeline->vsCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
-            pPipeline->active_shaders |= VK_SHADER_STAGE_VERTEX_BIT;
-            break;
-        case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-            memcpy(&pPipeline->tcsCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
-            pPipeline->active_shaders |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-            break;
-        case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-            memcpy(&pPipeline->tesCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
-            pPipeline->active_shaders |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-            break;
-        case VK_SHADER_STAGE_GEOMETRY_BIT:
-            memcpy(&pPipeline->gsCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
-            pPipeline->active_shaders |= VK_SHADER_STAGE_GEOMETRY_BIT;
-            break;
-        case VK_SHADER_STAGE_FRAGMENT_BIT:
-            memcpy(&pPipeline->fsCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
-            pPipeline->active_shaders |= VK_SHADER_STAGE_FRAGMENT_BIT;
-            break;
-        case VK_SHADER_STAGE_COMPUTE_BIT:
-            // TODO : Flag error, CS is specified through VkComputePipelineCreateInfo
-            pPipeline->active_shaders |= VK_SHADER_STAGE_COMPUTE_BIT;
-            break;
-        default:
-            // TODO : Flag error
-            break;
-        }
-    }
-    // Copy over GraphicsPipelineCreateInfo structure embedded pointers
-    if (pCreateInfo->stageCount != 0) {
-        pPipeline->graphicsPipelineCI.pStages = new VkPipelineShaderStageCreateInfo[pCreateInfo->stageCount];
-        bufferSize = pCreateInfo->stageCount * sizeof(VkPipelineShaderStageCreateInfo);
-        memcpy((void *)pPipeline->graphicsPipelineCI.pStages, pCreateInfo->pStages, bufferSize);
-    }
-    if (pCreateInfo->pVertexInputState != NULL) {
-        pPipeline->vertexInputCI = *pCreateInfo->pVertexInputState;
-        // Copy embedded ptrs
-        pVICI = pCreateInfo->pVertexInputState;
-        if (pVICI->vertexBindingDescriptionCount) {
-            pPipeline->vertexBindingDescriptions = std::vector<VkVertexInputBindingDescription>(
-                pVICI->pVertexBindingDescriptions, pVICI->pVertexBindingDescriptions + pVICI->vertexBindingDescriptionCount);
-        }
-        if (pVICI->vertexAttributeDescriptionCount) {
-            pPipeline->vertexAttributeDescriptions = std::vector<VkVertexInputAttributeDescription>(
-                pVICI->pVertexAttributeDescriptions, pVICI->pVertexAttributeDescriptions + pVICI->vertexAttributeDescriptionCount);
-        }
-        pPipeline->graphicsPipelineCI.pVertexInputState = &pPipeline->vertexInputCI;
-    }
-    if (pCreateInfo->pInputAssemblyState != NULL) {
-        pPipeline->iaStateCI = *pCreateInfo->pInputAssemblyState;
-        pPipeline->graphicsPipelineCI.pInputAssemblyState = &pPipeline->iaStateCI;
-    }
-    if (pCreateInfo->pTessellationState != NULL) {
-        pPipeline->tessStateCI = *pCreateInfo->pTessellationState;
-        pPipeline->graphicsPipelineCI.pTessellationState = &pPipeline->tessStateCI;
-    }
-    if (pCreateInfo->pViewportState != NULL) {
-        pPipeline->vpStateCI = *pCreateInfo->pViewportState;
-        pPipeline->graphicsPipelineCI.pViewportState = &pPipeline->vpStateCI;
-    }
-    if (pCreateInfo->pRasterizationState != NULL) {
-        pPipeline->rsStateCI = *pCreateInfo->pRasterizationState;
-        pPipeline->graphicsPipelineCI.pRasterizationState = &pPipeline->rsStateCI;
-    }
-    if (pCreateInfo->pMultisampleState != NULL) {
-        pPipeline->msStateCI = *pCreateInfo->pMultisampleState;
-        pPipeline->graphicsPipelineCI.pMultisampleState = &pPipeline->msStateCI;
-    }
-    if (pCreateInfo->pDepthStencilState != NULL) {
-        pPipeline->dsStateCI = *pCreateInfo->pDepthStencilState;
-        pPipeline->graphicsPipelineCI.pDepthStencilState = &pPipeline->dsStateCI;
-    }
-    if (pCreateInfo->pColorBlendState != NULL) {
-        pPipeline->cbStateCI = *pCreateInfo->pColorBlendState;
-        // Copy embedded ptrs
-        pCBCI = pCreateInfo->pColorBlendState;
-        if (pCBCI->attachmentCount) {
-            pPipeline->attachments = std::vector<VkPipelineColorBlendAttachmentState>(
-                pCBCI->pAttachments, pCBCI->pAttachments + pCBCI->attachmentCount);
-        }
-        pPipeline->graphicsPipelineCI.pColorBlendState = &pPipeline->cbStateCI;
-    }
-    if (pCreateInfo->pDynamicState != NULL) {
-        pPipeline->dynStateCI = *pCreateInfo->pDynamicState;
-        if (pPipeline->dynStateCI.dynamicStateCount) {
-            pPipeline->dynStateCI.pDynamicStates = new VkDynamicState[pPipeline->dynStateCI.dynamicStateCount];
-            bufferSize = pPipeline->dynStateCI.dynamicStateCount * sizeof(VkDynamicState);
-            memcpy((void *)pPipeline->dynStateCI.pDynamicStates, pCreateInfo->pDynamicState->pDynamicStates, bufferSize);
-        }
-        pPipeline->graphicsPipelineCI.pDynamicState = &pPipeline->dynStateCI;
-    }
-    return pPipeline;
-}
-
 // Free the Pipeline nodes
 static void deletePipelines(layer_data *my_data) {
     if (my_data->pipelineMap.size() <= 0)
         return;
-    for (auto ii = my_data->pipelineMap.begin(); ii != my_data->pipelineMap.end(); ++ii) {
-        if ((*ii).second->graphicsPipelineCI.stageCount != 0) {
-            delete[](*ii).second->graphicsPipelineCI.pStages;
-        }
-        if ((*ii).second->dynStateCI.dynamicStateCount != 0) {
-            delete[](*ii).second->dynStateCI.pDynamicStates;
-        }
-        delete (*ii).second;
+    for (auto &pipe_map_pair : my_data->pipelineMap) {
+        delete pipe_map_pair.second;
     }
     my_data->pipelineMap.clear();
 }
@@ -3339,8 +3233,9 @@ static void deletePipelines(layer_data *my_data) {
 // For given pipeline, return number of MSAA samples, or one if MSAA disabled
 static VkSampleCountFlagBits getNumSamples(layer_data *my_data, const VkPipeline pipeline) {
     PIPELINE_NODE *pPipe = my_data->pipelineMap[pipeline];
-    if (VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO == pPipe->msStateCI.sType) {
-        return pPipe->msStateCI.rasterizationSamples;
+    if (pPipe->graphicsPipelineCI.pMultisampleState &&
+        (VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO == pPipe->graphicsPipelineCI.pMultisampleState->sType)) {
+        return pPipe->graphicsPipelineCI.pMultisampleState->rasterizationSamples;
     }
     return VK_SAMPLE_COUNT_1_BIT;
 }
@@ -4543,15 +4438,16 @@ static void resetCB(layer_data *my_data, const VkCommandBuffer cb) {
 // Set PSO-related status bits for CB, including dynamic state set via PSO
 static void set_cb_pso_status(GLOBAL_CB_NODE *pCB, const PIPELINE_NODE *pPipe) {
     // Account for any dynamic state not set via this PSO
-    if (!pPipe->dynStateCI.dynamicStateCount) { // All state is static
+    if (!pPipe->graphicsPipelineCI.pDynamicState ||
+        !pPipe->graphicsPipelineCI.pDynamicState->dynamicStateCount) { // All state is static
         pCB->status = CBSTATUS_ALL;
     } else {
         // First consider all state on
         // Then unset any state that's noted as dynamic in PSO
         // Finally OR that into CB statemask
         CBStatusFlags psoDynStateMask = CBSTATUS_ALL;
-        for (uint32_t i = 0; i < pPipe->dynStateCI.dynamicStateCount; i++) {
-            switch (pPipe->dynStateCI.pDynamicStates[i]) {
+        for (uint32_t i = 0; i < pPipe->graphicsPipelineCI.pDynamicState->dynamicStateCount; i++) {
+            switch (pPipe->graphicsPipelineCI.pDynamicState->pDynamicStates[i]) {
             case VK_DYNAMIC_STATE_VIEWPORT:
                 psoDynStateMask &= ~CBSTATUS_VIEWPORT_SET;
                 break;
@@ -4599,7 +4495,9 @@ static VkBool32 printPipeline(layer_data *my_data, const VkCommandBuffer cb) {
         } else {
             skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
                                 __LINE__, DRAWSTATE_NONE, "DS", "%s",
-                                vk_print_vkgraphicspipelinecreateinfo(&pPipeTrav->graphicsPipelineCI, "{DS}").c_str());
+                                vk_print_vkgraphicspipelinecreateinfo(
+                                    reinterpret_cast<const VkGraphicsPipelineCreateInfo *>(&pPipeTrav->graphicsPipelineCI), "{DS}")
+                                    .c_str());
         }
     }
     return skipCall;
@@ -6604,7 +6502,8 @@ vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32
     loader_platform_thread_lock_mutex(&globalLock);
 
     for (i = 0; i < count; i++) {
-        pPipeNode[i] = initGraphicsPipeline(dev_data, &pCreateInfos[i]);
+        pPipeNode[i] = new PIPELINE_NODE;
+        pPipeNode[i]->initGraphicsPipeline(&pCreateInfos[i]);
         skipCall |= verifyPipelineCreateState(dev_data, device, pPipeNode, i);
     }
 
@@ -6646,7 +6545,8 @@ vkCreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_
 
         // Create and initialize internal tracking data structure
         pPipeNode[i] = new PIPELINE_NODE;
-        memcpy(&pPipeNode[i]->computePipelineCI, (const void *)&pCreateInfos[i], sizeof(VkComputePipelineCreateInfo));
+        pPipeNode[i]->initComputePipeline(&pCreateInfos[i]);
+        // memcpy(&pPipeNode[i]->computePipelineCI, (const void *)&pCreateInfos[i], sizeof(VkComputePipelineCreateInfo));
 
         // TODO: Add Compute Pipeline Verification
         // skipCall |= verifyPipelineCreateState(dev_data, device, pPipeNode[i]);
