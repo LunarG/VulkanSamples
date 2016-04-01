@@ -36,10 +36,12 @@
 #include <atomic>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <memory>
 #include <functional>
 
 using std::vector;
+using std::unordered_set;
 
 #if MTMERGE
 // Mem Tracker ERROR codes
@@ -113,6 +115,20 @@ struct MT_OBJ_HANDLE_TYPE {
     VkDebugReportObjectTypeEXT type;
 };
 
+bool operator==(MT_OBJ_HANDLE_TYPE a, MT_OBJ_HANDLE_TYPE b) noexcept {
+    return a.handle == b.handle && a.type == b.type;
+}
+
+namespace std {
+    template<>
+    struct hash<MT_OBJ_HANDLE_TYPE> {
+        size_t operator()(MT_OBJ_HANDLE_TYPE obj) const noexcept {
+            return hash<uint64_t>()(obj.handle) ^
+                   hash<uint32_t>()(obj.type);
+        }
+    };
+}
+
 struct MEMORY_RANGE {
     uint64_t handle;
     VkDeviceMemory memory;
@@ -123,12 +139,11 @@ struct MEMORY_RANGE {
 // Data struct for tracking memory object
 struct DEVICE_MEM_INFO {
     void *object;      // Dispatchable object used to create this memory (device of swapchain)
-    uint32_t refCount; // Count of references (obj bindings or CB use)
     bool valid;        // Stores if the memory has valid data or not
     VkDeviceMemory mem;
     VkMemoryAllocateInfo allocInfo;
-    list<MT_OBJ_HANDLE_TYPE> pObjBindings;        // list container of objects bound to this memory
-    list<VkCommandBuffer> pCommandBufferBindings; // list container of cmd buffers that reference this mem object
+    unordered_set<MT_OBJ_HANDLE_TYPE> objBindings; // objects bound to this memory
+    unordered_set<VkCommandBuffer> commandBufferBindings; // cmd buffers referencing this memory
     vector<MEMORY_RANGE> bufferRanges;
     vector<MEMORY_RANGE> imageRanges;
     VkImage image; // If memory is bound to image, this will have VkImage handle, else VK_NULL_HANDLE
@@ -424,11 +439,12 @@ typedef struct _PIPELINE_NODE {
     std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
     std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions;
     std::vector<VkPipelineColorBlendAttachmentState> attachments;
+    bool blendConstantsEnabled; // Blend constants enabled for any attachments
     // Default constructor
     _PIPELINE_NODE()
         : pipeline{}, graphicsPipelineCI{}, vertexInputCI{}, iaStateCI{}, tessStateCI{}, vpStateCI{}, rsStateCI{}, msStateCI{},
           cbStateCI{}, dsStateCI{}, dynStateCI{}, vsCI{}, tcsCI{}, tesCI{}, gsCI{}, fsCI{}, computePipelineCI{}, active_shaders(0),
-          active_slots(), vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments() {}
+          active_slots(), vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false) {}
 } PIPELINE_NODE;
 
 class BASE_NODE {
@@ -624,7 +640,7 @@ class SET_NODE : public BASE_NODE {
 typedef struct _DESCRIPTOR_POOL_NODE {
     VkDescriptorPool pool;
     uint32_t maxSets;                              // Max descriptor sets allowed in this pool
-    uint32_t availableSets;                        // Available descriptr sets in this pool
+    uint32_t availableSets;                        // Available descriptor sets in this pool
 
     VkDescriptorPoolCreateInfo createInfo;
     SET_NODE *pSets;                               // Head of LL of sets for this Pool
@@ -723,21 +739,20 @@ typedef enum _CB_STATE {
 // CB Status -- used to track status of various bindings on cmd buffer objects
 typedef VkFlags CBStatusFlags;
 typedef enum _CBStatusFlagBits {
-    CBSTATUS_NONE = 0x00000000,                     // No status is set
-    CBSTATUS_VIEWPORT_SET = 0x00000001,             // Viewport has been set
-    CBSTATUS_LINE_WIDTH_SET = 0x00000002,           // Line width has been set
-    CBSTATUS_DEPTH_BIAS_SET = 0x00000004,           // Depth bias has been set
-    CBSTATUS_COLOR_BLEND_WRITE_ENABLE = 0x00000008, // PSO w/ CB Enable set has been set
-    CBSTATUS_BLEND_SET = 0x00000010,                // Blend state object has been set
-    CBSTATUS_DEPTH_WRITE_ENABLE = 0x00000020,       // PSO w/ Depth Enable set has been set
-    CBSTATUS_STENCIL_TEST_ENABLE = 0x00000040,      // PSO w/ Stencil Enable set has been set
-    CBSTATUS_DEPTH_BOUNDS_SET = 0x00000080,         // Depth bounds state object has been set
-    CBSTATUS_STENCIL_READ_MASK_SET = 0x00000100,    // Stencil read mask has been set
-    CBSTATUS_STENCIL_WRITE_MASK_SET = 0x00000200,   // Stencil write mask has been set
-    CBSTATUS_STENCIL_REFERENCE_SET = 0x00000400,    // Stencil reference has been set
-    CBSTATUS_INDEX_BUFFER_BOUND = 0x00000800,       // Index buffer has been set
-    CBSTATUS_SCISSOR_SET = 0x00001000,              // Scissor has been set
-    CBSTATUS_ALL = 0x00001FFF,                      // All dynamic state set
+    // clang-format off
+    CBSTATUS_NONE                   = 0x00000000,   // No status is set
+    CBSTATUS_VIEWPORT_SET           = 0x00000001,   // Viewport has been set
+    CBSTATUS_LINE_WIDTH_SET         = 0x00000002,   // Line width has been set
+    CBSTATUS_DEPTH_BIAS_SET         = 0x00000004,   // Depth bias has been set
+    CBSTATUS_BLEND_CONSTANTS_SET    = 0x00000008,   // Blend constants state has been set
+    CBSTATUS_DEPTH_BOUNDS_SET       = 0x00000010,   // Depth bounds state object has been set
+    CBSTATUS_STENCIL_READ_MASK_SET  = 0x00000020,   // Stencil read mask has been set
+    CBSTATUS_STENCIL_WRITE_MASK_SET = 0x00000040,   // Stencil write mask has been set
+    CBSTATUS_STENCIL_REFERENCE_SET  = 0x00000080,   // Stencil reference has been set
+    CBSTATUS_INDEX_BUFFER_BOUND     = 0x00000100,   // Index buffer has been set
+    CBSTATUS_SCISSOR_SET            = 0x00000200,   // Scissor has been set
+    CBSTATUS_ALL                    = 0x000003FF,   // All dynamic state set
+    // clang-format on
 } CBStatusFlagBits;
 
 typedef struct stencil_data {
@@ -868,13 +883,15 @@ struct GLOBAL_CB_NODE {
     vector<DRAW_DATA> drawData;
     DRAW_DATA currentDrawData;
     VkCommandBuffer primaryCommandBuffer;
+    // Track images and buffers that are updated by this CB at the point of a draw
+    unordered_set<VkImageView> updateImages;
+    unordered_set<VkBuffer> updateBuffers;
     // If cmd buffer is primary, track secondary command buffers pending
     // execution
     std::unordered_set<VkCommandBuffer> secondaryCommandBuffers;
     // MTMTODO : Scrub these data fields and merge active sets w/ lastBound as appropriate
-    vector<VkDescriptorSet> activeDescriptorSets;
     vector<std::function<VkBool32()>> validate_functions;
-    list<VkDeviceMemory> pMemObjList; // List container of Mem objs referenced by this CB
+    std::unordered_set<VkDeviceMemory> memObjs;
     vector<std::function<bool(VkQueue)>> eventUpdates;
 };
 

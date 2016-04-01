@@ -261,6 +261,27 @@ void loader_log(const struct loader_instance *inst, VkFlags msg_type,
     fputc('\n', stderr);
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL vkSetInstanceDispatch(VkInstance instance, void *object) {
+
+    struct loader_instance *inst = loader_get_instance(instance);
+    if (!inst) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+    loader_set_dispatch(object, inst->disp);
+    return VK_SUCCESS;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkSetDeviceDispatch(VkDevice device, void *object) {
+    struct loader_device *dev;
+    struct loader_icd *icd = loader_get_icd_and_device(device, &dev);
+
+    if (!icd) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+    loader_set_dispatch(object, &dev->loader_dispatch);
+    return VK_SUCCESS;
+}
+
 #if defined(WIN32)
 static char *loader_get_next_path(char *path);
 /**
@@ -636,7 +657,7 @@ loader_init_device_extensions(const struct loader_instance *inst,
 }
 
 VkResult loader_add_device_extensions(const struct loader_instance *inst,
-                                      struct loader_icd *icd,
+                                      PFN_vkEnumerateDeviceExtensionProperties fpEnumerateDeviceExtensionProperties,
                                       VkPhysicalDevice physical_device,
                                       const char *lib_name,
                                       struct loader_extension_list *ext_list) {
@@ -644,14 +665,14 @@ VkResult loader_add_device_extensions(const struct loader_instance *inst,
     VkResult res;
     VkExtensionProperties *ext_props;
 
-    res = icd->EnumerateDeviceExtensionProperties(physical_device, NULL, &count,
-                                                  NULL);
+    res = fpEnumerateDeviceExtensionProperties(physical_device, NULL, &count,
+                                               NULL);
     if (res == VK_SUCCESS && count > 0) {
         ext_props = loader_stack_alloc(count * sizeof(VkExtensionProperties));
         if (!ext_props)
             return VK_ERROR_OUT_OF_HOST_MEMORY;
-        res = icd->EnumerateDeviceExtensionProperties(physical_device, NULL,
-                                                      &count, ext_props);
+        res = fpEnumerateDeviceExtensionProperties(physical_device, NULL,
+                                                   &count, ext_props);
         if (res != VK_SUCCESS)
             return res;
         for (i = 0; i < count; i++) {
@@ -1133,8 +1154,7 @@ static void loader_destroy_logical_device(const struct loader_instance *inst,
 }
 
 struct loader_device *
-loader_add_logical_device(const struct loader_instance *inst,
-                          struct loader_device **device_list) {
+loader_create_logical_device(const struct loader_instance *inst) {
     struct loader_device *new_dev;
 
     new_dev = loader_heap_alloc(inst, sizeof(struct loader_device),
@@ -1147,9 +1167,14 @@ loader_add_logical_device(const struct loader_instance *inst,
 
     memset(new_dev, 0, sizeof(struct loader_device));
 
-    new_dev->next = *device_list;
-    *device_list = new_dev;
     return new_dev;
+}
+
+void loader_add_logical_device(const struct loader_instance *inst,
+                               struct loader_icd *icd,
+                               struct loader_device *dev) {
+    dev->next = icd->logical_device_list;
+    icd->logical_device_list = dev;
 }
 
 void loader_remove_logical_device(const struct loader_instance *inst,
@@ -2633,6 +2658,13 @@ loader_gpa_instance_internal(VkInstance inst, const char *pName) {
     return NULL;
 }
 
+static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+loader_gpa_device_internal(VkDevice device, const char* pName) {
+    struct loader_device * dev;
+    struct loader_icd * icd = loader_get_icd_and_device(device, &dev);
+    return icd->GetDeviceProcAddr(device, pName);
+}
+
 /**
  * Initialize device_ext dispatch table entry as follows:
  * If dev == NULL find all logical devices created within this instance and
@@ -3267,19 +3299,16 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
     PFN_vkCreateInstance fpCreateInstance =
         (PFN_vkCreateInstance)nextGIPA(*created_instance, "vkCreateInstance");
     if (fpCreateInstance) {
-        VkLayerInstanceCreateInfo instance_create_info;
+        VkLayerInstanceCreateInfo create_info_disp;
 
-        instance_create_info.sType =
+        create_info_disp.sType =
             VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO;
-        instance_create_info.function = VK_LAYER_INSTANCE_INFO;
+        create_info_disp.function = VK_LOADER_DATA_CALLBACK;
 
-        instance_create_info.u.instanceInfo.instance_info = inst;
-        instance_create_info.u.instanceInfo.pfnNextGetInstanceProcAddr =
-            nextGIPA;
+        create_info_disp.u.pfnSetInstanceLoaderData = vkSetInstanceDispatch;
 
-        instance_create_info.pNext = loader_create_info.pNext;
-        loader_create_info.pNext = &instance_create_info;
-
+        create_info_disp.pNext = loader_create_info.pNext;
+        loader_create_info.pNext = &create_info_disp;
         res =
             fpCreateInstance(&loader_create_info, pAllocator, created_instance);
     } else {
@@ -3307,7 +3336,6 @@ void loader_activate_instance_layer_extensions(struct loader_instance *inst,
 
 VkResult
 loader_enable_device_layers(const struct loader_instance *inst,
-                            struct loader_icd *icd,
                             struct loader_layer_list *activated_layer_list,
                             const VkDeviceCreateInfo *pCreateInfo,
                             const struct loader_layer_list *device_layers)
@@ -3349,24 +3377,19 @@ VkResult loader_create_device_chain(const struct loader_physical_device_tramp *p
                                     const VkDeviceCreateInfo *pCreateInfo,
                                     const VkAllocationCallbacks *pAllocator,
                                     const struct loader_instance *inst,
-                                    struct loader_icd *icd,
                                     struct loader_device *dev) {
     uint32_t activated_layers = 0;
     VkLayerDeviceLink *layer_device_link_info;
     VkLayerDeviceCreateInfo chain_info;
-    VkLayerDeviceCreateInfo device_info;
     VkDeviceCreateInfo loader_create_info;
     VkResult res;
 
-    PFN_vkGetDeviceProcAddr fpGDPA, nextGDPA = icd->GetDeviceProcAddr;
+    PFN_vkGetDeviceProcAddr fpGDPA, nextGDPA = loader_gpa_device_internal;
     PFN_vkGetInstanceProcAddr fpGIPA, nextGIPA = loader_gpa_instance_internal;
 
     memcpy(&loader_create_info, pCreateInfo, sizeof(VkDeviceCreateInfo));
 
-    chain_info.sType = VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO;
-    chain_info.function = VK_LAYER_LINK_INFO;
-    chain_info.u.pLayerInfo = NULL;
-    chain_info.pNext = pCreateInfo->pNext;
+
 
     layer_device_link_info = loader_stack_alloc(
         sizeof(VkLayerDeviceLink) * dev->activated_layer_list.count);
@@ -3376,23 +3399,14 @@ VkResult loader_create_device_chain(const struct loader_physical_device_tramp *p
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
-    /*
-     * This structure is used by loader_create_device_terminator
-     * so that it can intialize the device dispatch table pointer
-     * in the device object returned by the ICD. Without this
-     * structure the code wouldn't know where the loader's device_info
-     * structure is located.
-     */
-    device_info.sType = VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO;
-    device_info.function = VK_LAYER_DEVICE_INFO;
-    device_info.pNext = &chain_info;
-    device_info.u.deviceInfo.device_info = dev;
-    device_info.u.deviceInfo.pfnNextGetInstanceProcAddr =
-        icd->this_icd_lib->GetInstanceProcAddr;
-
-    loader_create_info.pNext = &device_info;
 
     if (dev->activated_layer_list.count > 0) {
+        chain_info.sType = VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO;
+        chain_info.function = VK_LAYER_LINK_INFO;
+        chain_info.u.pLayerInfo = NULL;
+        chain_info.pNext = pCreateInfo->pNext;
+        loader_create_info.pNext = &chain_info;
+
         /* Create instance chain of enabled layers */
         for (int32_t i = dev->activated_layer_list.count - 1; i >= 0; i--) {
             struct loader_layer_properties *layer_prop =
@@ -3459,11 +3473,23 @@ VkResult loader_create_device_chain(const struct loader_physical_device_tramp *p
         }
     }
 
+    VkDevice created_device = (VkDevice) dev;
     PFN_vkCreateDevice fpCreateDevice =
         (PFN_vkCreateDevice)nextGIPA(inst->instance, "vkCreateDevice");
     if (fpCreateDevice) {
+        VkLayerDeviceCreateInfo create_info_disp;
+
+        create_info_disp.sType =
+            VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO;
+        create_info_disp.function = VK_LOADER_DATA_CALLBACK;
+
+        create_info_disp.u.pfnSetDeviceLoaderData = vkSetDeviceDispatch;
+
+        create_info_disp.pNext = loader_create_info.pNext;
+        loader_create_info.pNext = &create_info_disp;
         res = fpCreateDevice(pd->phys_dev, &loader_create_info, pAllocator,
-                             &dev->device);
+                             &created_device);
+        dev->device = created_device;
     } else {
         // Couldn't find CreateDevice function!
         return VK_ERROR_INITIALIZATION_FAILED;
@@ -3571,7 +3597,7 @@ VkResult loader_validate_device_extensions(
         VkStringErrorFlags result = vk_string_validate(
             MaxLoaderStringLength, pCreateInfo->ppEnabledExtensionNames[i]);
         if (result != VK_STRING_ERROR_NONE) {
-            loader_log(phys_dev->this_icd->this_instance,
+            loader_log(phys_dev->this_instance,
                        VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "Loader: Device ppEnabledExtensionNames contains "
                        "string that is too long or is badly formed");
@@ -3622,18 +3648,7 @@ terminator_CreateInstance(const VkInstanceCreateInfo *pCreateInfo,
     VkResult res = VK_SUCCESS;
     bool success = false;
 
-    VkLayerInstanceCreateInfo *chain_info =
-        (VkLayerInstanceCreateInfo *)pCreateInfo->pNext;
-    while (
-        chain_info &&
-        !(chain_info->sType == VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO &&
-          chain_info->function == VK_LAYER_INSTANCE_INFO)) {
-        chain_info = (VkLayerInstanceCreateInfo *)chain_info->pNext;
-    }
-    assert(chain_info != NULL);
-
-    struct loader_instance *ptr_instance =
-        (struct loader_instance *)chain_info->u.instanceInfo.instance_info;
+    struct loader_instance *ptr_instance = (struct loader_instance *) *pInstance;
     memcpy(&icd_create_info, pCreateInfo, sizeof(icd_create_info));
 
     icd_create_info.enabledLayerCount = 0;
@@ -3775,22 +3790,9 @@ terminator_CreateDevice(VkPhysicalDevice physicalDevice,
     struct loader_physical_device *phys_dev;
     phys_dev = (struct loader_physical_device *)physicalDevice;
 
-    VkLayerDeviceCreateInfo *chain_info =
-        (VkLayerDeviceCreateInfo *)pCreateInfo->pNext;
-    while (chain_info &&
-           !(chain_info->sType == VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO &&
-             chain_info->function == VK_LAYER_DEVICE_INFO)) {
-        chain_info = (VkLayerDeviceCreateInfo *)chain_info->pNext;
-    }
-    assert(chain_info != NULL);
+    struct loader_device *dev = (struct loader_device *) *pDevice;
+    PFN_vkCreateDevice fpCreateDevice = phys_dev->this_icd->CreateDevice;
 
-    struct loader_device *dev =
-        (struct loader_device *)chain_info->u.deviceInfo.device_info;
-    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
-        chain_info->u.deviceInfo.pfnNextGetInstanceProcAddr;
-    PFN_vkCreateDevice fpCreateDevice =
-        (PFN_vkCreateDevice)fpGetInstanceProcAddr(phys_dev->this_icd->instance,
-                                                  "vkCreateDevice");
     if (fpCreateDevice == NULL) {
         return VK_ERROR_INITIALIZATION_FAILED;
     }
@@ -3830,7 +3832,7 @@ terminator_CreateDevice(VkPhysicalDevice physicalDevice,
     }
 
     res = loader_add_device_extensions(
-        phys_dev->this_icd->this_instance, phys_dev->this_icd,
+        phys_dev->this_icd->this_instance, phys_dev->this_icd->EnumerateDeviceExtensionProperties,
         phys_dev->phys_dev, phys_dev->this_icd->this_icd_lib->lib_name,
         &icd_exts);
     if (res != VK_SUCCESS) {
@@ -3848,19 +3850,19 @@ terminator_CreateDevice(VkPhysicalDevice physicalDevice,
         }
     }
 
-    VkDevice localDevice;
     // TODO: Why does fpCreateDevice behave differently than
     // this_icd->CreateDevice?
     //    VkResult res = fpCreateDevice(phys_dev->phys_dev, &localCreateInfo,
     //    pAllocator, &localDevice);
     res = phys_dev->this_icd->CreateDevice(phys_dev->phys_dev, &localCreateInfo,
-                                           pAllocator, &localDevice);
+                                           pAllocator, &dev->device);
 
     if (res != VK_SUCCESS) {
         return res;
     }
 
-    *pDevice = localDevice;
+    *pDevice = dev->device;
+    loader_add_logical_device(phys_dev->this_icd->this_instance, phys_dev->this_icd, dev);
 
     /* Init dispatch pointer in new device object */
     loader_init_dispatch(*pDevice, &dev->loader_dispatch);
@@ -3929,7 +3931,6 @@ terminator_EnumeratePhysicalDevices(VkInstance instance,
                      ? inst->total_gpu_count
                      : *pPhysicalDeviceCount;
 
-    // phys_devs_term is used to pass the "this_icd" info to trampoline code
     if (inst->phys_devs_term)
         loader_heap_free(inst, inst->phys_devs_term);
     inst->phys_devs_term = loader_heap_alloc(
@@ -3950,6 +3951,8 @@ terminator_EnumeratePhysicalDevices(VkInstance instance,
         }
     }
     *pPhysicalDeviceCount = copy_count;
+
+    // TODO: Is phys_devs being leaked?
 
     if (copy_count < inst->total_gpu_count) {
         inst->total_gpu_count = copy_count;

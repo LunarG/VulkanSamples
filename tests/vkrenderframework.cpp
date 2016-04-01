@@ -1212,7 +1212,7 @@ void VkPipelineObj::AddColorAttachment(
 }
 
 void VkPipelineObj::SetDepthStencil(
-    VkPipelineDepthStencilStateCreateInfo *ds_state) {
+    const VkPipelineDepthStencilStateCreateInfo *ds_state) {
     m_ds_state.depthTestEnable = ds_state->depthTestEnable;
     m_ds_state.depthWriteEnable = ds_state->depthWriteEnable;
     m_ds_state.depthBoundsTestEnable = ds_state->depthBoundsTestEnable;
@@ -1222,7 +1222,7 @@ void VkPipelineObj::SetDepthStencil(
     m_ds_state.front = ds_state->front;
 }
 
-void VkPipelineObj::SetViewport(vector<VkViewport> viewports) {
+void VkPipelineObj::SetViewport(const vector<VkViewport> viewports) {
     m_viewports = viewports;
     // If we explicitly set a null viewport, pass it through to create info
     // but preserve viewportCount because it musn't change
@@ -1231,7 +1231,7 @@ void VkPipelineObj::SetViewport(vector<VkViewport> viewports) {
     }
 }
 
-void VkPipelineObj::SetScissor(vector<VkRect2D> scissors) {
+void VkPipelineObj::SetScissor(const vector<VkRect2D> scissors) {
     m_scissors = scissors;
     // If we explicitly set a null scissors, pass it through to create info
     // but preserve viewportCount because it musn't change
@@ -1250,8 +1250,21 @@ void VkPipelineObj::MakeDynamic(VkDynamicState state) {
     m_dynamic_state_enables.push_back(state);
 }
 
-void VkPipelineObj::SetMSAA(VkPipelineMultisampleStateCreateInfo *ms_state) {
+void VkPipelineObj::SetMSAA(
+    const VkPipelineMultisampleStateCreateInfo *ms_state) {
     memcpy(&m_ms_state, ms_state, sizeof(VkPipelineMultisampleStateCreateInfo));
+}
+
+void VkPipelineObj::SetInputAssembly(
+    const VkPipelineInputAssemblyStateCreateInfo *ia_state) {
+    memcpy(&m_ia_state, ia_state,
+           sizeof(VkPipelineInputAssemblyStateCreateInfo));
+}
+
+void VkPipelineObj::SetRasterization(
+    const VkPipelineRasterizationStateCreateInfo *rs_state) {
+    memcpy(&m_rs_state, rs_state,
+           sizeof(VkPipelineRasterizationStateCreateInfo));
 }
 
 VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout,

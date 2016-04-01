@@ -380,9 +380,19 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText,
     pipelineobj.AddShader(&ps);
     if (failMask & BsoFailLineWidth) {
         pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_LINE_WIDTH);
+        VkPipelineInputAssemblyStateCreateInfo ia_state = {};
+        ia_state.sType =
+            VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        ia_state.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+        pipelineobj.SetInputAssembly(&ia_state);
     }
     if (failMask & BsoFailDepthBias) {
         pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_DEPTH_BIAS);
+        VkPipelineRasterizationStateCreateInfo rs_state = {};
+        rs_state.sType =
+            VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        rs_state.depthBiasEnable = VK_TRUE;
+        pipelineobj.SetRasterization(&rs_state);
     }
     // Viewport and scissors must stay in synch or other errors will occur than
     // the ones we want
@@ -398,6 +408,10 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText,
     }
     if (failMask & BsoFailBlend) {
         pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
+        VkPipelineColorBlendAttachmentState att_state = {};
+        att_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_CONSTANT_COLOR;
+        att_state.blendEnable = VK_TRUE;
+        pipelineobj.AddColorAttachment(0, &att_state);
     }
     if (failMask & BsoFailDepthBounds) {
         pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_DEPTH_BOUNDS);
@@ -460,6 +474,9 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer,
     ds_ci.depthWriteEnable = VK_TRUE;
     ds_ci.depthCompareOp = VK_COMPARE_OP_NEVER;
     ds_ci.depthBoundsTestEnable = VK_FALSE;
+    if (failMask & BsoFailDepthBounds) {
+        ds_ci.depthBoundsTestEnable = VK_TRUE;
+    }
     ds_ci.stencilTestEnable = VK_TRUE;
     ds_ci.front = stencil;
     ds_ci.back = stencil;
@@ -1215,7 +1232,7 @@ TEST_F(VkLayerTest, ViewportStateNotBound) {
                    BsoFailViewport);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error 'Dynamic scissor state not set for "
+        FAIL() << "Did not receive Error 'Dynamic scissor state not set for "
                   "this command buffer'";
         m_errorMonitor->DumpFailureMsgs();
     }
@@ -1233,7 +1250,7 @@ TEST_F(VkLayerTest, ScissorStateNotBound) {
                    BsoFailScissor);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error ' Expected: 'Dynamic scissor state "
+        FAIL() << "Did not receive Error ' Expected: 'Dynamic scissor state "
                   "not set for this command buffer'";
         m_errorMonitor->DumpFailureMsgs();
     }
@@ -1242,7 +1259,7 @@ TEST_F(VkLayerTest, ScissorStateNotBound) {
 TEST_F(VkLayerTest, BlendStateNotBound) {
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Dynamic blend object state not set for this command buffer");
+        "Dynamic blend constants state not set for this command buffer");
 
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a blend "
                      "state object is not bound beforehand");
@@ -1251,8 +1268,9 @@ TEST_F(VkLayerTest, BlendStateNotBound) {
                    BsoFailBlend);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error 'Dynamic blend object state not set "
-                  "for this command buffer'";
+        FAIL()
+            << "Did not receive Error 'Dynamic blend constants state not set "
+               "for this command buffer'";
         m_errorMonitor->DumpFailureMsgs();
     }
 }
@@ -1661,6 +1679,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     BeginCommandBuffer();
@@ -3196,9 +3215,15 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
     rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rs_ci.pNext = nullptr;
 
+    VkPipelineColorBlendAttachmentState att = {};
+    att.blendEnable = VK_FALSE;
+    att.colorWriteMask = 0xf;
+
     VkPipelineColorBlendStateCreateInfo cb_ci = {};
     cb_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     cb_ci.pNext = nullptr;
+    cb_ci.attachmentCount = 1;
+    cb_ci.pAttachments = &att;
 
     VkGraphicsPipelineCreateInfo gp_ci = {};
     gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -3372,9 +3397,15 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
     rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rs_ci.pNext = nullptr;
 
+    VkPipelineColorBlendAttachmentState att = {};
+    att.blendEnable = VK_FALSE;
+    att.colorWriteMask = 0xf;
+
     VkPipelineColorBlendStateCreateInfo cb_ci = {};
     cb_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     cb_ci.pNext = nullptr;
+    cb_ci.attachmentCount = 1;
+    cb_ci.pAttachments = &att;
 
     VkGraphicsPipelineCreateInfo gp_ci = {};
     gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -4613,6 +4644,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
     pipe.SetMSAA(&pipe_ms_state_ci);
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
@@ -4622,6 +4654,107 @@ TEST_F(VkLayerTest, NumSamplesMismatch) {
 
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not recieve Error 'Num samples mismatch!...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+}
+
+TEST_F(VkLayerTest, NumBlendAttachMismatch) {
+    // Create Pipeline where the number of blend attachments doesn't match the
+    // number of color attachments.  In this case, we don't add any color
+    // blend attachments even though we have a color attachment.
+    VkResult err;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Mismatch between blend state attachment");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    VkDescriptorPoolSize ds_type_count = {};
+    ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    ds_type_count.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ds_pool_ci.pNext = NULL;
+    ds_pool_ci.maxSets = 1;
+    ds_pool_ci.poolSizeCount = 1;
+    ds_pool_ci.pPoolSizes = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err =
+        vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+    dsl_binding.binding = 0;
+    dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding.descriptorCount = 1;
+    dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL,
+        &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info,
+        &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
+    pipe_ms_state_ci.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    pipe_ms_state_ci.pNext = NULL;
+    pipe_ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    pipe_ms_state_ci.sampleShadingEnable = 0;
+    pipe_ms_state_ci.minSampleShading = 1.0;
+    pipe_ms_state_ci.pSampleMask = NULL;
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pNext = NULL;
+    pipeline_layout_ci.setLayoutCount = 1;
+    pipeline_layout_ci.pSetLayouts = &ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
+        &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkShaderObj vs(m_device, bindStateVertShaderText,
+        VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText,
+        VK_SHADER_STAGE_FRAGMENT_BIT,
+        this); //  TODO - We shouldn't need a fragment shader
+               // but add it to be able to run on more devices
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    pipe.SetMSAA(&pipe_ms_state_ci);
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
+
+    BeginCommandBuffer();
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(),
+        VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not recieve Error 'Mismatch between blend state attachment...'";
         m_errorMonitor->DumpFailureMsgs();
     }
 
@@ -4833,6 +4966,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex) {
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
     pipe.SetMSAA(&pipe_ms_state_ci);
     pipe.SetViewport(m_viewports);
     pipe.SetScissor(m_scissors);
@@ -6332,13 +6466,13 @@ TEST_F(VkLayerTest, InvalidImageViewAspect) {
     }
 }
 
-TEST_F(VkLayerTest, CopyImageTypeMismatch) {
+TEST_F(VkLayerTest, CopyImageLayerCountMismatch) {
     VkResult err;
     bool pass;
 
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "vkCmdCopyImage called with unmatched source and dest image types");
+        "vkCmdCopyImage: number of layers in source and destination subresources for pRegions");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -6358,7 +6492,7 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch) {
     image_create_info.extent.height = 32;
     image_create_info.extent.depth = 1;
     image_create_info.mipLevels = 1;
-    image_create_info.arrayLayers = 1;
+    image_create_info.arrayLayers = 4;
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
@@ -6367,9 +6501,6 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch) {
     err =
         vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
     ASSERT_VK_SUCCESS(err);
-
-    image_create_info.imageType = VK_IMAGE_TYPE_1D;
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     err =
         vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
@@ -6408,14 +6539,15 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch) {
     copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copyRegion.srcSubresource.mipLevel = 0;
     copyRegion.srcSubresource.baseArrayLayer = 0;
-    copyRegion.srcSubresource.layerCount = 0;
+    copyRegion.srcSubresource.layerCount = 1;
     copyRegion.srcOffset.x = 0;
     copyRegion.srcOffset.y = 0;
     copyRegion.srcOffset.z = 0;
     copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copyRegion.dstSubresource.mipLevel = 0;
     copyRegion.dstSubresource.baseArrayLayer = 0;
-    copyRegion.dstSubresource.layerCount = 0;
+    // Introduce failure by forcing the dst layerCount to differ from src
+    copyRegion.dstSubresource.layerCount = 3;
     copyRegion.dstOffset.x = 0;
     copyRegion.dstOffset.y = 0;
     copyRegion.dstOffset.z = 0;
@@ -6427,8 +6559,8 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch) {
     EndCommandBuffer();
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not receive Error 'vkCmdCopyImage called with unmatched "
-                  "source and dest image types'";
+        FAIL() << "Did not receive Error 'vkCmdCopyImage: number of layers in "
+                  "source and destination subresources for pRegions'";
         m_errorMonitor->DumpFailureMsgs();
     }
 
@@ -6447,9 +6579,10 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
     VkResult err;
     bool pass;
 
+    // Create a color image and a depth/stencil image and try to copy between them
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "vkCmdCopyImage called with unmatched source and dest image types");
+        "vkCmdCopyImage called with unmatched source and dest image depth");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -6479,9 +6612,10 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
         vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
     ASSERT_VK_SUCCESS(err);
 
-    image_create_info.imageType = VK_IMAGE_TYPE_1D;
+    // Introduce failure by creating second image with a depth/stencil format
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    image_create_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    image_create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
     err =
         vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
@@ -6540,7 +6674,7 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
 
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive Error 'vkCmdCopyImage called with unmatched "
-                  "source and dest image types'";
+                  "source and dest image depth/stencil formats'";
         m_errorMonitor->DumpFailureMsgs();
     }
 
