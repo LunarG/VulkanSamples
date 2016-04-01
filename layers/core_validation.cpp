@@ -2802,66 +2802,76 @@ static VkBool32 validate_and_update_drawtime_descriptor_state(
             uint32_t startIdx = getBindingStartIndex(layout_node, binding);
             uint32_t endIdx = getBindingEndIndex(layout_node, binding);
             for (uint32_t i = startIdx; i <= endIdx; ++i) {
-                // TODO : Flag error here if set_node->pDescriptorUpdates[i] is NULL
-                switch (set_node->pDescriptorUpdates[i]->sType) {
-                case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
-                    pWDS = (VkWriteDescriptorSet *)set_node->pDescriptorUpdates[i];
-                    if ((pWDS->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
-                        (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
-                        for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
-                            bufferSize = dev_data->bufferMap[pWDS->pBufferInfo[j].buffer].create_info->size;
-                            uint32_t dynOffset = pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].dynamicOffsets[dynOffsetIndex];
-                            if (pWDS->pBufferInfo[j].range == VK_WHOLE_SIZE) {
-                                if ((dynOffset + pWDS->pBufferInfo[j].offset) > bufferSize) {
+                // We did check earlier to verify that set was updated, but now make sure given slot was updated
+                // TODO : Would be better to store set# that set is bound to so we can report set.binding[index] not updated
+                if (!set_node->pDescriptorUpdates[i]) {
+                    result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, reinterpret_cast<const uint64_t &>(set_node->set), __LINE__,
+                                        DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
+                                        "DS %#" PRIxLEAST64 " bound and active but it never had binding %u updated. It is now being used to draw so "
+                                                            "this will result in undefined behavior.",
+                                        reinterpret_cast<const uint64_t &>(set_node->set), binding);
+                } else {
+                    switch (set_node->pDescriptorUpdates[i]->sType) {
+                    case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
+                        pWDS = (VkWriteDescriptorSet *)set_node->pDescriptorUpdates[i];
+                        if ((pWDS->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
+                            (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
+                            for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
+                                bufferSize = dev_data->bufferMap[pWDS->pBufferInfo[j].buffer].create_info->size;
+                                uint32_t dynOffset = pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].dynamicOffsets[dynOffsetIndex];
+                                if (pWDS->pBufferInfo[j].range == VK_WHOLE_SIZE) {
+                                    if ((dynOffset + pWDS->pBufferInfo[j].offset) > bufferSize) {
+                                        result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                                          VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                                                          reinterpret_cast<const uint64_t &>(set_node->set), __LINE__,
+                                                          DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, "DS",
+                                                          "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u has range of "
+                                                          "VK_WHOLE_SIZE but dynamic offset %#" PRIxLEAST32 ". "
+                                                          "combined with offset %#" PRIxLEAST64 " oversteps its buffer (%#" PRIxLEAST64
+                                                          ") which has a size of %#" PRIxLEAST64 ".",
+                                                          reinterpret_cast<const uint64_t &>(set_node->set), i, dynOffset,
+                                                          pWDS->pBufferInfo[j].offset,
+                                                          reinterpret_cast<const uint64_t &>(pWDS->pBufferInfo[j].buffer), bufferSize);
+                                    }
+                                } else if ((dynOffset + pWDS->pBufferInfo[j].offset + pWDS->pBufferInfo[j].range) > bufferSize) {
                                     result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                                       VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                                       reinterpret_cast<const uint64_t &>(set_node->set), __LINE__,
                                                       DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, "DS",
-                                                      "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u has range of "
-                                                      "VK_WHOLE_SIZE but dynamic offset %#" PRIxLEAST32 ". "
-                                                      "combined with offset %#" PRIxLEAST64 " oversteps its buffer (%#" PRIxLEAST64
-                                                      ") which has a size of %#" PRIxLEAST64 ".",
+                                                      "VkDescriptorSet (%#" PRIxLEAST64
+                                                      ") bound as set #%u has dynamic offset %#" PRIxLEAST32 ". "
+                                                      "Combined with offset %#" PRIxLEAST64 " and range %#" PRIxLEAST64
+                                                      " from its update, this oversteps its buffer "
+                                                      "(%#" PRIxLEAST64 ") which has a size of %#" PRIxLEAST64 ".",
                                                       reinterpret_cast<const uint64_t &>(set_node->set), i, dynOffset,
-                                                      pWDS->pBufferInfo[j].offset,
+                                                      pWDS->pBufferInfo[j].offset, pWDS->pBufferInfo[j].range,
                                                       reinterpret_cast<const uint64_t &>(pWDS->pBufferInfo[j].buffer), bufferSize);
                                 }
-                            } else if ((dynOffset + pWDS->pBufferInfo[j].offset + pWDS->pBufferInfo[j].range) > bufferSize) {
-                                result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                                  VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                                                  reinterpret_cast<const uint64_t &>(set_node->set), __LINE__,
-                                                  DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, "DS",
-                                                  "VkDescriptorSet (%#" PRIxLEAST64
-                                                  ") bound as set #%u has dynamic offset %#" PRIxLEAST32 ". "
-                                                  "Combined with offset %#" PRIxLEAST64 " and range %#" PRIxLEAST64
-                                                  " from its update, this oversteps its buffer "
-                                                  "(%#" PRIxLEAST64 ") which has a size of %#" PRIxLEAST64 ".",
-                                                  reinterpret_cast<const uint64_t &>(set_node->set), i, dynOffset,
-                                                  pWDS->pBufferInfo[j].offset, pWDS->pBufferInfo[j].range,
-                                                  reinterpret_cast<const uint64_t &>(pWDS->pBufferInfo[j].buffer), bufferSize);
+                                dynOffsetIndex++;
                             }
-                            dynOffsetIndex++;
+                        } else if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
+                            for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
+                                pCB->updateImages.insert(pWDS->pImageInfo[j].imageView);
+                            }
+                        } else if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
+                            for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
+                                assert(dev_data->bufferViewMap.find(pWDS->pTexelBufferView[j]) != dev_data->bufferViewMap.end());
+                                pCB->updateBuffers.insert(dev_data->bufferViewMap[pWDS->pTexelBufferView[j]].buffer);
+                            }
+                        } else if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
+                                   pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+                            for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
+                                pCB->updateBuffers.insert(pWDS->pBufferInfo[j].buffer);
+                            }
                         }
-                    } else if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
-                        for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
-                            pCB->updateImages.insert(pWDS->pImageInfo[j].imageView);
-                        }
-                    } else if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
-                        for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
-                            assert(dev_data->bufferViewMap.find(pWDS->pTexelBufferView[j]) != dev_data->bufferViewMap.end());
-                            pCB->updateBuffers.insert(dev_data->bufferViewMap[pWDS->pTexelBufferView[j]].buffer);
-                        }
-                    } else if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
-                               pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
-                        for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
-                            pCB->updateBuffers.insert(pWDS->pBufferInfo[j].buffer);
-                        }
+                        i += pWDS->descriptorCount; // Advance i to end of this set of descriptors (++i at end of for loop will move 1
+                                                    // index past last of these descriptors)
+                        break;
+                    default: // Currently only shadowing Write update nodes so shouldn't get here
+                        assert(0);
+                        continue;
                     }
-                    i += pWDS->descriptorCount; // Advance i to end of this set of descriptors (++i at end of for loop will move 1
-                                                // index past last of these descriptors)
-                    break;
-                default: // Currently only shadowing Write update nodes so shouldn't get here
-                    assert(0);
-                    continue;
                 }
             }
         }
