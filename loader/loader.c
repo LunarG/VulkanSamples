@@ -2626,6 +2626,59 @@ void loader_layer_scan(const struct loader_instance *inst,
     loader_platform_thread_unlock_mutex(&loader_json_lock);
 }
 
+void loader_implicit_layer_scan(const struct loader_instance *inst,
+                       struct loader_layer_list *instance_layers,
+                       struct loader_layer_list *device_layers) {
+    char *file_str;
+    struct loader_manifest_files manifest_files;
+    cJSON *json;
+    uint32_t i;
+
+    // Pass NULL for environment variable override - implicit layers are not
+    // overridden by LAYERS_PATH_ENV
+    loader_get_manifest_files(inst, NULL, true, DEFAULT_VK_ILAYERS_INFO,
+                              HOME_VK_ILAYERS_INFO, &manifest_files);
+    if (manifest_files.count == 0) {
+        return;
+    }
+
+    /* cleanup any previously scanned libraries */
+    loader_delete_layer_properties(inst, instance_layers);
+    loader_delete_layer_properties(inst, device_layers);
+
+    loader_platform_thread_lock_mutex(&loader_json_lock);
+
+    for (i = 0; i < manifest_files.count; i++) {
+        file_str = manifest_files.filename_list[i];
+        if (file_str == NULL) {
+            continue;
+        }
+
+        // parse file into JSON struct
+        json = loader_get_json(inst, file_str);
+        if (!json) {
+            continue;
+        }
+
+        loader_add_layer_properties(inst, instance_layers, device_layers,
+                                    json, true, file_str);
+
+        loader_heap_free(inst, file_str);
+        cJSON_Delete(json);
+    }
+
+    if (manifest_files.count != 0) {
+        loader_heap_free(inst, manifest_files.filename_list);
+    }
+
+    // add a meta layer for validation if the validation layers are all present
+    loader_add_layer_property_meta(
+        inst, sizeof(std_validation_names) / sizeof(std_validation_names[0]),
+        std_validation_names, instance_layers, device_layers);
+
+    loader_platform_thread_unlock_mutex(&loader_json_lock);
+}
+
 static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
 loader_gpa_instance_internal(VkInstance inst, const char *pName) {
     if (!strcmp(pName, "vkGetInstanceProcAddr"))

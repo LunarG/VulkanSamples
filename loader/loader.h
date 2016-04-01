@@ -498,6 +498,9 @@ void loader_icd_scan(const struct loader_instance *inst,
 void loader_layer_scan(const struct loader_instance *inst,
                        struct loader_layer_list *instance_layers,
                        struct loader_layer_list *device_layers);
+void loader_implicit_layer_scan(const struct loader_instance *inst,
+                       struct loader_layer_list *instance_layers,
+                       struct loader_layer_list *device_layers);
 void loader_get_icd_loader_instance_extensions(
     const struct loader_instance *inst, struct loader_icd_libs *icd_libs,
     struct loader_extension_list *inst_exts);

@@ -137,20 +137,21 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
 
     /* get layer libraries if needed */
     if (pLayerName && strlen(pLayerName) != 0) {
-        if (vk_string_validate(MaxLoaderStringLength, pLayerName) ==
+        if (vk_string_validate(MaxLoaderStringLength, pLayerName) !=
             VK_STRING_ERROR_NONE) {
-            loader_layer_scan(NULL, &instance_layers, NULL);
-            for (uint32_t i = 0; i < instance_layers.count; i++) {
-                struct loader_layer_properties *props =
-                    &instance_layers.list[i];
-                if (strcmp(props->info.layerName, pLayerName) == 0) {
-                    global_ext_list = &props->instance_extension_list;
-                }
-            }
-        } else {
             assert(VK_FALSE && "vkEnumerateInstanceExtensionProperties:  "
                                "pLayerName is too long or is badly formed");
             return VK_ERROR_EXTENSION_NOT_PRESENT;
+        }
+
+        loader_layer_scan(NULL, &instance_layers, NULL);
+        for (uint32_t i = 0; i < instance_layers.count; i++) {
+            struct loader_layer_properties *props =
+                &instance_layers.list[i];
+            if (strcmp(props->info.layerName, pLayerName) == 0) {
+                global_ext_list = &props->instance_extension_list;
+                break;
+            }
         }
     } else {
         /* Scan/discover all ICD libraries */
@@ -160,6 +161,14 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
         loader_get_icd_loader_instance_extensions(NULL, &icd_libs,
                                                   &icd_extensions);
         loader_scanned_icd_clear(NULL, &icd_libs);
+
+        // Append implicit layers.
+        loader_implicit_layer_scan(NULL, &instance_layers, NULL);
+        for (uint32_t i = 0; i < instance_layers.count; i++) {
+            struct loader_extension_list *ext_list = &instance_layers.list[i].instance_extension_list;
+            loader_add_to_ext_list(NULL, &icd_extensions, ext_list->count, ext_list->list);
+        }
+
         global_ext_list = &icd_extensions;
     }
 
