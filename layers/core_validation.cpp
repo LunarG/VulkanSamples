@@ -3372,7 +3372,8 @@ static VkBool32 validatePipelineState(layer_data *my_data, const GLOBAL_CB_NODE 
                         subpassNumSamples = (VkSampleCountFlagBits)-1;
                 }
 
-                if (psoNumSamples != subpassNumSamples) {
+                if ((pSD->colorAttachmentCount > 0 || pSD->pDepthStencilAttachment) &&
+                    psoNumSamples != subpassNumSamples) {
                     skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                                         (uint64_t)pipeline, __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
                                         "Num samples mismatch! Binding PSO (%#" PRIxLEAST64
