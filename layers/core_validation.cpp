@@ -5275,9 +5275,9 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
         vector<VkSemaphore> semaphoreList;
         for (uint32_t i = 0; i < submit->waitSemaphoreCount; ++i) {
             const VkSemaphore &semaphore = submit->pWaitSemaphores[i];
-            semaphoreList.push_back(semaphore);
             if (dev_data->semaphoreMap[semaphore].signaled) {
                 dev_data->semaphoreMap[semaphore].signaled = 0;
+                dev_data->semaphoreMap[semaphore].in_use.fetch_sub(1);
             } else {
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                     VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS,
@@ -10589,6 +10589,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice device, VkSwapchai
                                "vkAcquireNextImageKHR: Semaphore must not be currently signaled or in a wait state");
         }
         dev_data->semaphoreMap[semaphore].state = MEMTRACK_SEMAPHORE_STATE_SIGNALLED;
+        dev_data->semaphoreMap[semaphore].in_use.fetch_add(1);
     }
     auto fence_data = dev_data->fenceMap.find(fence);
     if (fence_data != dev_data->fenceMap.end()) {
