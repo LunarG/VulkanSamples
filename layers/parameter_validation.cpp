@@ -163,75 +163,6 @@ vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCou
     return util_GetLayerProperties(ARRAY_SIZE(pc_global_layers), pc_global_layers, pCount, pProperties);
 }
 
-static std::string EnumeratorString(VkResult const &enumerator) {
-    switch (enumerator) {
-    case VK_RESULT_MAX_ENUM: {
-        return "VK_RESULT_MAX_ENUM";
-        break;
-    }
-    case VK_ERROR_LAYER_NOT_PRESENT: {
-        return "VK_ERROR_LAYER_NOT_PRESENT";
-        break;
-    }
-    case VK_ERROR_INCOMPATIBLE_DRIVER: {
-        return "VK_ERROR_INCOMPATIBLE_DRIVER";
-        break;
-    }
-    case VK_ERROR_MEMORY_MAP_FAILED: {
-        return "VK_ERROR_MEMORY_MAP_FAILED";
-        break;
-    }
-    case VK_INCOMPLETE: {
-        return "VK_INCOMPLETE";
-        break;
-    }
-    case VK_ERROR_OUT_OF_HOST_MEMORY: {
-        return "VK_ERROR_OUT_OF_HOST_MEMORY";
-        break;
-    }
-    case VK_ERROR_INITIALIZATION_FAILED: {
-        return "VK_ERROR_INITIALIZATION_FAILED";
-        break;
-    }
-    case VK_NOT_READY: {
-        return "VK_NOT_READY";
-        break;
-    }
-    case VK_ERROR_OUT_OF_DEVICE_MEMORY: {
-        return "VK_ERROR_OUT_OF_DEVICE_MEMORY";
-        break;
-    }
-    case VK_EVENT_SET: {
-        return "VK_EVENT_SET";
-        break;
-    }
-    case VK_TIMEOUT: {
-        return "VK_TIMEOUT";
-        break;
-    }
-    case VK_EVENT_RESET: {
-        return "VK_EVENT_RESET";
-        break;
-    }
-    case VK_SUCCESS: {
-        return "VK_SUCCESS";
-        break;
-    }
-    case VK_ERROR_EXTENSION_NOT_PRESENT: {
-        return "VK_ERROR_EXTENSION_NOT_PRESENT";
-        break;
-    }
-    case VK_ERROR_DEVICE_LOST: {
-        return "VK_ERROR_DEVICE_LOST";
-        break;
-    }
-    default: {
-        return "unrecognized enumerator";
-        break;
-    }
-    }
-}
-
 static bool ValidateEnumerator(VkFormatFeatureFlagBits const &enumerator) {
     VkFormatFeatureFlagBits allFlags = (VkFormatFeatureFlagBits)(
         VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT | VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT |
@@ -1372,33 +1303,33 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCall
     chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
 
     result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
-    if (result != VK_SUCCESS) {
-        return result;
-    }
 
-    layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
-    assert(my_instance_data != nullptr);
+    if (result == VK_SUCCESS) {
+        layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+        assert(my_instance_data != nullptr);
 
-    VkLayerInstanceDispatchTable *pTable = initInstanceTable(*pInstance, fpGetInstanceProcAddr, pc_instance_table_map);
+        VkLayerInstanceDispatchTable *pTable = initInstanceTable(*pInstance, fpGetInstanceProcAddr, pc_instance_table_map);
 
-    my_instance_data->report_data =
-        debug_report_create_instance(pTable, *pInstance, pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
+        my_instance_data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->enabledExtensionCount,
+                                                                     pCreateInfo->ppEnabledExtensionNames);
 
-    init_parameter_validation(my_instance_data, pAllocator);
+        init_parameter_validation(my_instance_data, pAllocator);
 
-    // Ordinarily we'd check these before calling down the chain, but none of the layer
-    // support is in place until now, if we survive we can report the issue now.
-    parameter_validation_vkCreateInstance(my_instance_data->report_data, pCreateInfo, pAllocator, pInstance);
+        // Ordinarily we'd check these before calling down the chain, but none of the layer
+        // support is in place until now, if we survive we can report the issue now.
+        parameter_validation_vkCreateInstance(my_instance_data->report_data, pCreateInfo, pAllocator, pInstance);
 
-    if (pCreateInfo->pApplicationInfo) {
-        if (pCreateInfo->pApplicationInfo->pApplicationName) {
-            validate_string(my_instance_data->report_data, "vkCreateInstance", "pCreateInfo->VkApplicationInfo->pApplicationName",
-                            pCreateInfo->pApplicationInfo->pApplicationName);
-        }
+        if (pCreateInfo->pApplicationInfo) {
+            if (pCreateInfo->pApplicationInfo->pApplicationName) {
+                validate_string(my_instance_data->report_data, "vkCreateInstance",
+                                "pCreateInfo->VkApplicationInfo->pApplicationName",
+                                pCreateInfo->pApplicationInfo->pApplicationName);
+            }
 
-        if (pCreateInfo->pApplicationInfo->pEngineName) {
-            validate_string(my_instance_data->report_data, "vkCreateInstance", "pCreateInfo->VkApplicationInfo->pEngineName",
-                            pCreateInfo->pApplicationInfo->pEngineName);
+            if (pCreateInfo->pApplicationInfo->pEngineName) {
+                validate_string(my_instance_data->report_data, "vkCreateInstance", "pCreateInfo->VkApplicationInfo->pEngineName",
+                                pCreateInfo->pApplicationInfo->pEngineName);
+            }
         }
     }
 
@@ -1433,18 +1364,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
     }
 }
 
-bool PostEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount, VkPhysicalDevice *pPhysicalDevices,
-                                  VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkEnumeratePhysicalDevices parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mid(instance), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount, VkPhysicalDevice *pPhysicalDevices) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1458,7 +1377,7 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount, 
         result = get_dispatch_table(pc_instance_table_map, instance)
                      ->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
 
-        PostEnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices, result);
+        validate_result(my_data->report_data, "vkEnumeratePhysicalDevices", result);
     }
 
     return result;
@@ -1477,18 +1396,6 @@ vkGetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFea
     }
 }
 
-bool PostGetPhysicalDeviceFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format,
-                                           VkFormatProperties *pFormatProperties) {
-
-    if (format < VK_FORMAT_BEGIN_RANGE || format > VK_FORMAT_END_RANGE) {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkGetPhysicalDeviceFormatProperties parameter, VkFormat format, is an unrecognized enumerator");
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkGetPhysicalDeviceFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties *pFormatProperties) {
     VkBool32 skipCall = VK_FALSE;
@@ -1500,41 +1407,7 @@ vkGetPhysicalDeviceFormatProperties(VkPhysicalDevice physicalDevice, VkFormat fo
     if (skipCall == VK_FALSE) {
         get_dispatch_table(pc_instance_table_map, physicalDevice)
             ->GetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatProperties);
-
-        PostGetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatProperties);
     }
-}
-
-bool PostGetPhysicalDeviceImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type,
-                                                VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags,
-                                                VkImageFormatProperties *pImageFormatProperties, VkResult result) {
-
-    if (format < VK_FORMAT_BEGIN_RANGE || format > VK_FORMAT_END_RANGE) {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkGetPhysicalDeviceImageFormatProperties parameter, VkFormat format, is an unrecognized enumerator");
-        return false;
-    }
-
-    if (type < VK_IMAGE_TYPE_BEGIN_RANGE || type > VK_IMAGE_TYPE_END_RANGE) {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkGetPhysicalDeviceImageFormatProperties parameter, VkImageType type, is an unrecognized enumerator");
-        return false;
-    }
-
-    if (tiling < VK_IMAGE_TILING_BEGIN_RANGE || tiling > VK_IMAGE_TILING_END_RANGE) {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkGetPhysicalDeviceImageFormatProperties parameter, VkImageTiling tiling, is an unrecognized enumerator");
-        return false;
-    }
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkGetPhysicalDeviceImageFormatProperties parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "%s", reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -1554,26 +1427,10 @@ vkGetPhysicalDeviceImageFormatProperties(VkPhysicalDevice physicalDevice, VkForm
                      ->GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags,
                                                               pImageFormatProperties);
 
-        PostGetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties,
-                                                   result);
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceImageFormatProperties", result);
     }
 
     return result;
-}
-
-bool PostGetPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties *pProperties) {
-
-    if (pProperties != nullptr) {
-        if (pProperties->deviceType < VK_PHYSICAL_DEVICE_TYPE_BEGIN_RANGE ||
-            pProperties->deviceType > VK_PHYSICAL_DEVICE_TYPE_END_RANGE) {
-            log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkGetPhysicalDeviceProperties parameter, VkPhysicalDeviceType pProperties->deviceType, is an unrecognized "
-                    "enumerator");
-            return false;
-        }
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
@@ -1586,8 +1443,6 @@ vkGetPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceP
 
     if (skipCall == VK_FALSE) {
         get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceProperties(physicalDevice, pProperties);
-
-        PostGetPhysicalDeviceProperties(physicalDevice, pProperties);
     }
 }
 
@@ -1702,14 +1557,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice p
 
     if (pCreateInfo != NULL) {
         if ((pCreateInfo->enabledLayerCount > 0) && (pCreateInfo->ppEnabledLayerNames != NULL)) {
-            for (auto i = 0; i < pCreateInfo->enabledLayerCount; i++) {
+            for (size_t i = 0; i < pCreateInfo->enabledLayerCount; i++) {
                 skipCall |= validate_string(my_instance_data->report_data, "vkCreateDevice", "pCreateInfo->ppEnabledLayerNames",
                                             pCreateInfo->ppEnabledLayerNames[i]);
             }
         }
 
         if ((pCreateInfo->enabledExtensionCount > 0) && (pCreateInfo->ppEnabledExtensionNames != NULL)) {
-            for (auto i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+            for (size_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
                 skipCall |= validate_string(my_instance_data->report_data, "vkCreateDevice", "pCreateInfo->ppEnabledExtensionNames",
                                             pCreateInfo->ppEnabledExtensionNames[i]);
             }
@@ -1732,25 +1587,26 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice p
         chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
 
         result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
-        if (result != VK_SUCCESS) {
-            return result;
+
+        validate_result(my_instance_data->report_data, "vkCreateDevice", result);
+
+        if (result == VK_SUCCESS) {
+            layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+            assert(my_device_data != nullptr);
+
+            my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
+            initDeviceTable(*pDevice, fpGetDeviceProcAddr, pc_device_table_map);
+
+            uint32_t count;
+            get_dispatch_table(pc_instance_table_map, physicalDevice)
+                ->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, nullptr);
+            std::vector<VkQueueFamilyProperties> properties(count);
+            get_dispatch_table(pc_instance_table_map, physicalDevice)
+                ->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, &properties[0]);
+
+            validateDeviceCreateInfo(physicalDevice, pCreateInfo, properties);
+            storeCreateDeviceData(*pDevice, pCreateInfo);
         }
-
-        layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
-        assert(my_device_data != nullptr);
-
-        my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
-        initDeviceTable(*pDevice, fpGetDeviceProcAddr, pc_device_table_map);
-
-        uint32_t count;
-        get_dispatch_table(pc_instance_table_map, physicalDevice)
-            ->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, nullptr);
-        std::vector<VkQueueFamilyProperties> properties(count);
-        get_dispatch_table(pc_instance_table_map, physicalDevice)
-            ->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, &properties[0]);
-
-        validateDeviceCreateInfo(physicalDevice, pCreateInfo, properties);
-        storeCreateDeviceData(*pDevice, pCreateInfo);
     }
 
     return result;
@@ -1810,17 +1666,6 @@ vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex
     }
 }
 
-bool PostQueueSubmit(VkQueue queue, uint32_t commandBufferCount, VkFence fence, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkQueueSubmit parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, VkFence fence) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1833,61 +1678,32 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, queue)->QueueSubmit(queue, submitCount, pSubmits, fence);
 
-        PostQueueSubmit(queue, submitCount, fence, result);
+        validate_result(my_data->report_data, "vkQueueSubmit", result);
     }
 
     return result;
-}
-
-bool PostQueueWaitIdle(VkQueue queue, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkQueueWaitIdle parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(VkQueue queue) {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
+    assert(my_data != NULL);
+
     VkResult result = get_dispatch_table(pc_device_table_map, queue)->QueueWaitIdle(queue);
 
-    PostQueueWaitIdle(queue, result);
+    validate_result(my_data->report_data, "vkQueueWaitIdle", result);
 
     return result;
-}
-
-bool PostDeviceWaitIdle(VkDevice device, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkDeviceWaitIdle parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDeviceWaitIdle(VkDevice device) {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
     VkResult result = get_dispatch_table(pc_device_table_map, device)->DeviceWaitIdle(device);
 
-    PostDeviceWaitIdle(device, result);
+    validate_result(my_data->report_data, "vkDeviceWaitIdle", result);
 
     return result;
-}
-
-bool PostAllocateMemory(VkDevice device, VkDeviceMemory *pMemory, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkAllocateMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateMemory(VkDevice device, const VkMemoryAllocateInfo *pAllocateInfo,
@@ -1902,7 +1718,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateMemory(VkDevice device,
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, device)->AllocateMemory(device, pAllocateInfo, pAllocator, pMemory);
 
-        PostAllocateMemory(device, pMemory, result);
+        validate_result(my_data->report_data, "vkAllocateMemory", result);
     }
 
     return result;
@@ -1921,18 +1737,6 @@ vkFreeMemory(VkDevice device, VkDeviceMemory memory, const VkAllocationCallbacks
     }
 }
 
-bool PostMapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags,
-                   void **ppData, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkMapMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkMapMemory(VkDevice device, VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void **ppData) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1945,22 +1749,10 @@ vkMapMemory(VkDevice device, VkDeviceMemory memory, VkDeviceSize offset, VkDevic
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, device)->MapMemory(device, memory, offset, size, flags, ppData);
 
-        PostMapMemory(device, memory, offset, size, flags, ppData, result);
+        validate_result(my_data->report_data, "vkMapMemory", result);
     }
 
     return result;
-}
-
-bool PostFlushMappedMemoryRanges(VkDevice device, uint32_t memoryRangeCount, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkFlushMappedMemoryRanges parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -1975,22 +1767,10 @@ vkFlushMappedMemoryRanges(VkDevice device, uint32_t memoryRangeCount, const VkMa
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, device)->FlushMappedMemoryRanges(device, memoryRangeCount, pMemoryRanges);
 
-        PostFlushMappedMemoryRanges(device, memoryRangeCount, result);
+        validate_result(my_data->report_data, "vkFlushMappedMemoryRanges", result);
     }
 
     return result;
-}
-
-bool PostInvalidateMappedMemoryRanges(VkDevice device, uint32_t memoryRangeCount, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkInvalidateMappedMemoryRanges parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -2006,7 +1786,7 @@ vkInvalidateMappedMemoryRanges(VkDevice device, uint32_t memoryRangeCount, const
         result =
             get_dispatch_table(pc_device_table_map, device)->InvalidateMappedMemoryRanges(device, memoryRangeCount, pMemoryRanges);
 
-        PostInvalidateMappedMemoryRanges(device, memoryRangeCount, result);
+        validate_result(my_data->report_data, "vkInvalidateMappedMemoryRanges", result);
     }
 
     return result;
@@ -2025,44 +1805,26 @@ vkGetDeviceMemoryCommitment(VkDevice device, VkDeviceMemory memory, VkDeviceSize
     }
 }
 
-bool PostBindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize memoryOffset, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkBindBufferMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkBindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
     VkResult result = get_dispatch_table(pc_device_table_map, device)->BindBufferMemory(device, buffer, mem, memoryOffset);
 
-    PostBindBufferMemory(device, buffer, mem, memoryOffset, result);
+    validate_result(my_data->report_data, "vkBindBufferMemory", result);
 
     return result;
 }
 
-bool PostBindImageMemory(VkDevice device, VkImage image, VkDeviceMemory mem, VkDeviceSize memoryOffset, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkBindImageMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkBindImageMemory(VkDevice device, VkImage image, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
     VkResult result = get_dispatch_table(pc_device_table_map, device)->BindImageMemory(device, image, mem, memoryOffset);
 
-    PostBindImageMemory(device, image, mem, memoryOffset, result);
+    validate_result(my_data->report_data, "vkBindImageMemory", result);
 
     return result;
 }
@@ -2130,25 +1892,6 @@ vkGetImageSparseMemoryRequirements(VkDevice device, VkImage image, uint32_t *pSp
 bool PostGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type,
                                                       VkSampleCountFlagBits samples, VkImageUsageFlags usage, VkImageTiling tiling,
                                                       uint32_t *pNumProperties, VkSparseImageFormatProperties *pProperties) {
-
-    if (format < VK_FORMAT_BEGIN_RANGE || format > VK_FORMAT_END_RANGE) {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkFormat format, is an unrecognized enumerator");
-        return false;
-    }
-
-    if (type < VK_IMAGE_TYPE_BEGIN_RANGE || type > VK_IMAGE_TYPE_END_RANGE) {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageType type, is an unrecognized enumerator");
-        return false;
-    }
-
-    if (tiling < VK_IMAGE_TILING_BEGIN_RANGE || tiling > VK_IMAGE_TILING_END_RANGE) {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageTiling tiling, is an unrecognized enumerator");
-        return false;
-    }
-
     if (pProperties != nullptr) {
         if ((pProperties->aspectMask & (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT |
                                         VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
@@ -2183,18 +1926,6 @@ vkGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice physicalDevice, 
     }
 }
 
-bool PostQueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *pBindInfo, VkFence fence, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkQueueBindSparse parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkQueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *pBindInfo, VkFence fence) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
@@ -2207,21 +1938,10 @@ vkQueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo 
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, queue)->QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
 
-        PostQueueBindSparse(queue, bindInfoCount, pBindInfo, fence, result);
+        validate_result(my_data->report_data, "vkQueueBindSparse", result);
     }
 
     return result;
-}
-
-bool PostCreateFence(VkDevice device, VkFence *pFence, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateFence parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -2236,7 +1956,7 @@ vkCreateFence(VkDevice device, const VkFenceCreateInfo *pCreateInfo, const VkAll
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, device)->CreateFence(device, pCreateInfo, pAllocator, pFence);
 
-        PostCreateFence(device, pFence, result);
+        validate_result(my_data->report_data, "vkCreateFence", result);
     }
 
     return result;
@@ -2254,18 +1974,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFence(VkDevice device, VkFen
     }
 }
 
-bool PostResetFences(VkDevice device, uint32_t fenceCount, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkResetFences parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     VkBool32 skipCall = VK_FALSE;
@@ -2277,42 +1985,21 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(VkDevice device, ui
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, device)->ResetFences(device, fenceCount, pFences);
 
-        PostResetFences(device, fenceCount, result);
+        validate_result(my_data->report_data, "vkResetFences", result);
     }
 
     return result;
-}
-
-bool PostGetFenceStatus(VkDevice device, VkFence fence, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkGetFenceStatus parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(VkDevice device, VkFence fence) {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
     VkResult result = get_dispatch_table(pc_device_table_map, device)->GetFenceStatus(device, fence);
 
-    PostGetFenceStatus(device, fence, result);
+    validate_result(my_data->report_data, "vkGetFenceStatus", result);
 
     return result;
-}
-
-bool PostWaitForFences(VkDevice device, uint32_t fenceCount, VkBool32 waitAll, uint64_t timeout, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkWaitForFences parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -2327,21 +2014,10 @@ vkWaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, Vk
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, device)->WaitForFences(device, fenceCount, pFences, waitAll, timeout);
 
-        PostWaitForFences(device, fenceCount, waitAll, timeout, result);
+        validate_result(my_data->report_data, "vkWaitForFences", result);
     }
 
     return result;
-}
-
-bool PostCreateSemaphore(VkDevice device, VkSemaphore *pSemaphore, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateSemaphore parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(VkDevice device, const VkSemaphoreCreateInfo *pCreateInfo,
@@ -2356,7 +2032,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(VkDevice device
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, device)->CreateSemaphore(device, pCreateInfo, pAllocator, pSemaphore);
 
-        PostCreateSemaphore(device, pSemaphore, result);
+        validate_result(my_data->report_data, "vkCreateSemaphore", result);
     }
 
     return result;
@@ -2375,17 +2051,6 @@ vkDestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocationCal
     }
 }
 
-bool PostCreateEvent(VkDevice device, VkEvent *pEvent, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateEvent parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkCreateEvent(VkDevice device, const VkEventCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkEvent *pEvent) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
@@ -2398,7 +2063,7 @@ vkCreateEvent(VkDevice device, const VkEventCreateInfo *pCreateInfo, const VkAll
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, device)->CreateEvent(device, pCreateInfo, pAllocator, pEvent);
 
-        PostCreateEvent(device, pEvent, result);
+        validate_result(my_data->report_data, "vkCreateEvent", result);
     }
 
     return result;
@@ -2416,87 +2081,37 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyEvent(VkDevice device, VkEve
     }
 }
 
-bool PostGetEventStatus(VkDevice device, VkEvent event, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkGetEventStatus parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetEventStatus(VkDevice device, VkEvent event) {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
     VkResult result = get_dispatch_table(pc_device_table_map, device)->GetEventStatus(device, event);
 
-    PostGetEventStatus(device, event, result);
+    validate_result(my_data->report_data, "vkGetEventStatus", result);
 
     return result;
-}
-
-bool PostSetEvent(VkDevice device, VkEvent event, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkSetEvent parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkSetEvent(VkDevice device, VkEvent event) {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
     VkResult result = get_dispatch_table(pc_device_table_map, device)->SetEvent(device, event);
 
-    PostSetEvent(device, event, result);
+    validate_result(my_data->report_data, "vkSetEvent", result);
 
     return result;
-}
-
-bool PostResetEvent(VkDevice device, VkEvent event, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkResetEvent parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetEvent(VkDevice device, VkEvent event) {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
     VkResult result = get_dispatch_table(pc_device_table_map, device)->ResetEvent(device, event);
 
-    PostResetEvent(device, event, result);
+    validate_result(my_data->report_data, "vkSetEvent", result);
 
     return result;
-}
-
-bool PreCreateQueryPool(VkDevice device, const VkQueryPoolCreateInfo *pCreateInfo) {
-    if (pCreateInfo != nullptr) {
-        if (pCreateInfo->queryType < VK_QUERY_TYPE_BEGIN_RANGE || pCreateInfo->queryType > VK_QUERY_TYPE_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateQueryPool parameter, VkQueryType pCreateInfo->queryType, is an unrecognized enumerator");
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool PostCreateQueryPool(VkDevice device, VkQueryPool *pQueryPool, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateQueryPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateQueryPool(VkDevice device, const VkQueryPoolCreateInfo *pCreateInfo,
@@ -2509,11 +2124,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateQueryPool(VkDevice device
     skipCall |= parameter_validation_vkCreateQueryPool(my_data->report_data, pCreateInfo, pAllocator, pQueryPool);
 
     if (skipCall == VK_FALSE) {
-        PreCreateQueryPool(device, pCreateInfo);
-
         result = get_dispatch_table(pc_device_table_map, device)->CreateQueryPool(device, pCreateInfo, pAllocator, pQueryPool);
 
-        PostCreateQueryPool(device, pQueryPool, result);
+        validate_result(my_data->report_data, "vkCreateQueryPool", result);
     }
 
     return result;
@@ -2532,18 +2145,6 @@ vkDestroyQueryPool(VkDevice device, VkQueryPool queryPool, const VkAllocationCal
     }
 }
 
-bool PostGetQueryPoolResults(VkDevice device, VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount, size_t dataSize,
-                             void *pData, VkDeviceSize stride, VkQueryResultFlags flags, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkGetQueryPoolResults parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice device, VkQueryPool queryPool, uint32_t firstQuery,
                                                                      uint32_t queryCount, size_t dataSize, void *pData,
                                                                      VkDeviceSize stride, VkQueryResultFlags flags) {
@@ -2559,7 +2160,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice de
         result = get_dispatch_table(pc_device_table_map, device)
                      ->GetQueryPoolResults(device, queryPool, firstQuery, queryCount, dataSize, pData, stride, flags);
 
-        PostGetQueryPoolResults(device, queryPool, firstQuery, queryCount, dataSize, pData, stride, flags, result);
+        validate_result(my_data->report_data, "vkGetQueryPoolResults", result);
     }
 
     return result;
@@ -2567,25 +2168,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice de
 
 bool PreCreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo) {
     if (pCreateInfo != nullptr) {
-        if (pCreateInfo->sharingMode < VK_SHARING_MODE_BEGIN_RANGE || pCreateInfo->sharingMode > VK_SHARING_MODE_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateBuffer parameter, VkSharingMode pCreateInfo->sharingMode, is an unrecognized enumerator");
-            return false;
-        } else if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
+        if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
             validate_queue_family_indices(device, "vkCreateBuffer", pCreateInfo->queueFamilyIndexCount,
                                           pCreateInfo->pQueueFamilyIndices);
         }
-    }
-
-    return true;
-}
-
-bool PostCreateBuffer(VkDevice device, VkBuffer *pBuffer, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
     }
 
     return true;
@@ -2605,7 +2191,7 @@ vkCreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo, const VkA
 
         result = get_dispatch_table(pc_device_table_map, device)->CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
 
-        PostCreateBuffer(device, pBuffer, result);
+        validate_result(my_data->report_data, "vkCreateBuffer", result);
     }
 
     return result;
@@ -2624,29 +2210,6 @@ vkDestroyBuffer(VkDevice device, VkBuffer buffer, const VkAllocationCallbacks *p
     }
 }
 
-bool PreCreateBufferView(VkDevice device, const VkBufferViewCreateInfo *pCreateInfo) {
-    if (pCreateInfo != nullptr) {
-        if (pCreateInfo->format < VK_FORMAT_BEGIN_RANGE || pCreateInfo->format > VK_FORMAT_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateBufferView parameter, VkFormat pCreateInfo->format, is an unrecognized enumerator");
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool PostCreateBufferView(VkDevice device, VkBufferView *pView, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateBufferView parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBufferView(VkDevice device, const VkBufferViewCreateInfo *pCreateInfo,
                                                                   const VkAllocationCallbacks *pAllocator, VkBufferView *pView) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
@@ -2657,11 +2220,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBufferView(VkDevice devic
     skipCall |= parameter_validation_vkCreateBufferView(my_data->report_data, pCreateInfo, pAllocator, pView);
 
     if (skipCall == VK_FALSE) {
-        PreCreateBufferView(device, pCreateInfo);
-
         result = get_dispatch_table(pc_device_table_map, device)->CreateBufferView(device, pCreateInfo, pAllocator, pView);
 
-        PostCreateBufferView(device, pView, result);
+        validate_result(my_data->report_data, "vkCreateBufferView", result);
     }
 
     return result;
@@ -2682,40 +2243,10 @@ vkDestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocation
 
 bool PreCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo) {
     if (pCreateInfo != nullptr) {
-        if (pCreateInfo->imageType < VK_IMAGE_TYPE_BEGIN_RANGE || pCreateInfo->imageType > VK_IMAGE_TYPE_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateImage parameter, VkImageType pCreateInfo->imageType, is an unrecognized enumerator");
-            return false;
-        }
-        if (pCreateInfo->format < VK_FORMAT_BEGIN_RANGE || pCreateInfo->format > VK_FORMAT_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateImage parameter, VkFormat pCreateInfo->format, is an unrecognized enumerator");
-            return false;
-        }
-        if (pCreateInfo->tiling < VK_IMAGE_TILING_BEGIN_RANGE || pCreateInfo->tiling > VK_IMAGE_TILING_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateImage parameter, VkImageTiling pCreateInfo->tiling, is an unrecognized enumerator");
-            return false;
-        }
-        if (pCreateInfo->sharingMode < VK_SHARING_MODE_BEGIN_RANGE || pCreateInfo->sharingMode > VK_SHARING_MODE_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateImage parameter, VkSharingMode pCreateInfo->sharingMode, is an unrecognized enumerator");
-            return false;
-        } else if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
+        if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
             validate_queue_family_indices(device, "vkCreateImage", pCreateInfo->queueFamilyIndexCount,
                                           pCreateInfo->pQueueFamilyIndices);
         }
-    }
-
-    return true;
-}
-
-bool PostCreateImage(VkDevice device, VkImage *pImage, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateImage parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
     }
 
     return true;
@@ -2735,7 +2266,7 @@ vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, const VkAll
 
         result = get_dispatch_table(pc_device_table_map, device)->CreateImage(device, pCreateInfo, pAllocator, pImage);
 
-        PostCreateImage(device, pImage, result);
+        validate_result(my_data->report_data, "vkCreateImage", result);
     }
 
     return result;
@@ -2781,58 +2312,6 @@ vkGetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubreso
     }
 }
 
-bool PreCreateImageView(VkDevice device, const VkImageViewCreateInfo *pCreateInfo) {
-    if (pCreateInfo != nullptr) {
-        if (pCreateInfo->viewType < VK_IMAGE_VIEW_TYPE_BEGIN_RANGE || pCreateInfo->viewType > VK_IMAGE_VIEW_TYPE_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateImageView parameter, VkImageViewType pCreateInfo->viewType, is an unrecognized enumerator");
-            return false;
-        }
-        if (pCreateInfo->format < VK_FORMAT_BEGIN_RANGE || pCreateInfo->format > VK_FORMAT_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateImageView parameter, VkFormat pCreateInfo->format, is an unrecognized enumerator");
-            return false;
-        }
-        if (pCreateInfo->components.r < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
-            pCreateInfo->components.r > VK_COMPONENT_SWIZZLE_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->components.r, is an unrecognized enumerator");
-            return false;
-        }
-        if (pCreateInfo->components.g < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
-            pCreateInfo->components.g > VK_COMPONENT_SWIZZLE_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->components.g, is an unrecognized enumerator");
-            return false;
-        }
-        if (pCreateInfo->components.b < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
-            pCreateInfo->components.b > VK_COMPONENT_SWIZZLE_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->components.b, is an unrecognized enumerator");
-            return false;
-        }
-        if (pCreateInfo->components.a < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
-            pCreateInfo->components.a > VK_COMPONENT_SWIZZLE_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->components.a, is an unrecognized enumerator");
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool PostCreateImageView(VkDevice device, VkImageView *pView, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateImageView parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device, const VkImageViewCreateInfo *pCreateInfo,
                                                                  const VkAllocationCallbacks *pAllocator, VkImageView *pView) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
@@ -2843,11 +2322,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device
     skipCall |= parameter_validation_vkCreateImageView(my_data->report_data, pCreateInfo, pAllocator, pView);
 
     if (skipCall == VK_FALSE) {
-        PreCreateImageView(device, pCreateInfo);
-
         result = get_dispatch_table(pc_device_table_map, device)->CreateImageView(device, pCreateInfo, pAllocator, pView);
 
-        PostCreateImageView(device, pView, result);
+        validate_result(my_data->report_data, "vkCreateImageView", result);
     }
 
     return result;
@@ -2866,17 +2343,6 @@ vkDestroyImageView(VkDevice device, VkImageView imageView, const VkAllocationCal
     }
 }
 
-bool PostCreateShaderModule(VkDevice device, VkShaderModule *pShaderModule, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateShaderModule parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateShaderModule(VkDevice device, const VkShaderModuleCreateInfo *pCreateInfo,
                                                                     const VkAllocationCallbacks *pAllocator,
                                                                     VkShaderModule *pShaderModule) {
@@ -2891,7 +2357,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateShaderModule(VkDevice dev
         result =
             get_dispatch_table(pc_device_table_map, device)->CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
 
-        PostCreateShaderModule(device, pShaderModule, result);
+        validate_result(my_data->report_data, "vkCreateShaderModule", result);
     }
 
     return result;
@@ -2910,17 +2376,6 @@ vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule, const VkAllo
     }
 }
 
-bool PostCreatePipelineCache(VkDevice device, VkPipelineCache *pPipelineCache, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreatePipelineCache parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineCache(VkDevice device, const VkPipelineCacheCreateInfo *pCreateInfo,
                                                                      const VkAllocationCallbacks *pAllocator,
                                                                      VkPipelineCache *pPipelineCache) {
@@ -2935,7 +2390,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineCache(VkDevice de
         result =
             get_dispatch_table(pc_device_table_map, device)->CreatePipelineCache(device, pCreateInfo, pAllocator, pPipelineCache);
 
-        PostCreatePipelineCache(device, pPipelineCache, result);
+        validate_result(my_data->report_data, "vkCreatePipelineCache", result);
     }
 
     return result;
@@ -2954,17 +2409,6 @@ vkDestroyPipelineCache(VkDevice device, VkPipelineCache pipelineCache, const VkA
     }
 }
 
-bool PostGetPipelineCacheData(VkDevice device, VkPipelineCache pipelineCache, size_t *pDataSize, void *pData, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkGetPipelineCacheData parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkGetPipelineCacheData(VkDevice device, VkPipelineCache pipelineCache, size_t *pDataSize, void *pData) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
@@ -2977,22 +2421,10 @@ vkGetPipelineCacheData(VkDevice device, VkPipelineCache pipelineCache, size_t *p
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, device)->GetPipelineCacheData(device, pipelineCache, pDataSize, pData);
 
-        PostGetPipelineCacheData(device, pipelineCache, pDataSize, pData, result);
+        validate_result(my_data->report_data, "vkGetPipelineCacheData", result);
     }
 
     return result;
-}
-
-bool PostMergePipelineCaches(VkDevice device, VkPipelineCache dstCache, uint32_t srcCacheCount, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkMergePipelineCaches parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -3007,7 +2439,7 @@ vkMergePipelineCaches(VkDevice device, VkPipelineCache dstCache, uint32_t srcCac
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, device)->MergePipelineCaches(device, dstCache, srcCacheCount, pSrcCaches);
 
-        PostMergePipelineCaches(device, dstCache, srcCacheCount, result);
+        validate_result(my_data->report_data, "vkMergePipelineCaches", result);
     }
 
     return result;
@@ -3041,119 +2473,10 @@ bool PreCreateGraphicsPipelines(VkDevice device, const VkGraphicsPipelineCreateI
             }
         }
 
-        if (pCreateInfos->pVertexInputState != nullptr) {
-            if (pCreateInfos->pVertexInputState->pVertexBindingDescriptions != nullptr) {
-                if (pCreateInfos->pVertexInputState->pVertexBindingDescriptions->inputRate < VK_VERTEX_INPUT_RATE_BEGIN_RANGE ||
-                    pCreateInfos->pVertexInputState->pVertexBindingDescriptions->inputRate > VK_VERTEX_INPUT_RATE_END_RANGE) {
-                    log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                            "vkCreateGraphicsPipelines parameter, VkVertexInputRate "
-                            "pCreateInfos->pVertexInputState->pVertexBindingDescriptions->inputRate, is an unrecognized "
-                            "enumerator");
-                    return false;
-                }
-            }
-            if (pCreateInfos->pVertexInputState->pVertexAttributeDescriptions != nullptr) {
-                if (pCreateInfos->pVertexInputState->pVertexAttributeDescriptions->format < VK_FORMAT_BEGIN_RANGE ||
-                    pCreateInfos->pVertexInputState->pVertexAttributeDescriptions->format > VK_FORMAT_END_RANGE) {
-                    log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                            "vkCreateGraphicsPipelines parameter, VkFormat "
-                            "pCreateInfos->pVertexInputState->pVertexAttributeDescriptions->format, is an unrecognized enumerator");
-                    return false;
-                }
-            }
-        }
-        if (pCreateInfos->pInputAssemblyState != nullptr) {
-            if (pCreateInfos->pInputAssemblyState->topology < VK_PRIMITIVE_TOPOLOGY_BEGIN_RANGE ||
-                pCreateInfos->pInputAssemblyState->topology > VK_PRIMITIVE_TOPOLOGY_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateGraphicsPipelines parameter, VkPrimitiveTopology pCreateInfos->pInputAssemblyState->topology, is "
-                        "an unrecognized enumerator");
-                return false;
-            }
-        }
         if (pCreateInfos->pRasterizationState != nullptr) {
-            if (pCreateInfos->pRasterizationState->polygonMode < VK_POLYGON_MODE_BEGIN_RANGE ||
-                pCreateInfos->pRasterizationState->polygonMode > VK_POLYGON_MODE_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateGraphicsPipelines parameter, VkPolygonMode pCreateInfos->pRasterizationState->polygonMode, is an "
-                        "unrecognized enumerator");
-                return false;
-            }
             if (pCreateInfos->pRasterizationState->cullMode & ~VK_CULL_MODE_FRONT_AND_BACK) {
                 log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
                         "vkCreateGraphicsPipelines parameter, VkCullMode pCreateInfos->pRasterizationState->cullMode, is an "
-                        "unrecognized enumerator");
-                return false;
-            }
-            if (pCreateInfos->pRasterizationState->frontFace < VK_FRONT_FACE_BEGIN_RANGE ||
-                pCreateInfos->pRasterizationState->frontFace > VK_FRONT_FACE_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateGraphicsPipelines parameter, VkFrontFace pCreateInfos->pRasterizationState->frontFace, is an "
-                        "unrecognized enumerator");
-                return false;
-            }
-        }
-        if (pCreateInfos->pDepthStencilState != nullptr) {
-            if (pCreateInfos->pDepthStencilState->depthCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
-                pCreateInfos->pDepthStencilState->depthCompareOp > VK_COMPARE_OP_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateGraphicsPipelines parameter, VkCompareOp pCreateInfos->pDepthStencilState->depthCompareOp, is an "
-                        "unrecognized enumerator");
-                return false;
-            }
-            if (pCreateInfos->pDepthStencilState->front.failOp < VK_STENCIL_OP_BEGIN_RANGE ||
-                pCreateInfos->pDepthStencilState->front.failOp > VK_STENCIL_OP_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->front.failOp, is an "
-                        "unrecognized enumerator");
-                return false;
-            }
-            if (pCreateInfos->pDepthStencilState->front.passOp < VK_STENCIL_OP_BEGIN_RANGE ||
-                pCreateInfos->pDepthStencilState->front.passOp > VK_STENCIL_OP_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->front.passOp, is an "
-                        "unrecognized enumerator");
-                return false;
-            }
-            if (pCreateInfos->pDepthStencilState->front.depthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-                pCreateInfos->pDepthStencilState->front.depthFailOp > VK_STENCIL_OP_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->front.depthFailOp, is "
-                        "an unrecognized enumerator");
-                return false;
-            }
-            if (pCreateInfos->pDepthStencilState->front.compareOp < VK_COMPARE_OP_BEGIN_RANGE ||
-                pCreateInfos->pDepthStencilState->front.compareOp > VK_COMPARE_OP_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateGraphicsPipelines parameter, VkCompareOp pCreateInfos->pDepthStencilState->front.compareOp, is an "
-                        "unrecognized enumerator");
-                return false;
-            }
-            if (pCreateInfos->pDepthStencilState->back.failOp < VK_STENCIL_OP_BEGIN_RANGE ||
-                pCreateInfos->pDepthStencilState->back.failOp > VK_STENCIL_OP_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->back.failOp, is an "
-                        "unrecognized enumerator");
-                return false;
-            }
-            if (pCreateInfos->pDepthStencilState->back.passOp < VK_STENCIL_OP_BEGIN_RANGE ||
-                pCreateInfos->pDepthStencilState->back.passOp > VK_STENCIL_OP_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->back.passOp, is an "
-                        "unrecognized enumerator");
-                return false;
-            }
-            if (pCreateInfos->pDepthStencilState->back.depthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-                pCreateInfos->pDepthStencilState->back.depthFailOp > VK_STENCIL_OP_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->back.depthFailOp, is "
-                        "an unrecognized enumerator");
-                return false;
-            }
-            if (pCreateInfos->pDepthStencilState->back.compareOp < VK_COMPARE_OP_BEGIN_RANGE ||
-                pCreateInfos->pDepthStencilState->back.compareOp > VK_COMPARE_OP_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateGraphicsPipelines parameter, VkCompareOp pCreateInfos->pDepthStencilState->back.compareOp, is an "
                         "unrecognized enumerator");
                 return false;
             }
@@ -3219,22 +2542,10 @@ bool PreCreateGraphicsPipelines(VkDevice device, const VkGraphicsPipelineCreateI
         }
 
         int i = 0;
-        for (auto j = 0; j < pCreateInfos[i].stageCount; j++) {
+        for (size_t j = 0; j < pCreateInfos[i].stageCount; j++) {
             validate_string(data->report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pStages[j].pName",
                             pCreateInfos[i].pStages[j].pName);
         }
-    }
-
-    return true;
-}
-
-bool PostCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, VkPipeline *pPipelines,
-                                 VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateGraphicsPipelines parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
     }
 
     return true;
@@ -3258,7 +2569,7 @@ vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32
         result = get_dispatch_table(pc_device_table_map, device)
                      ->CreateGraphicsPipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
 
-        PostCreateGraphicsPipelines(device, pipelineCache, createInfoCount, pPipelines, result);
+        validate_result(my_data->report_data, "vkCreateGraphicsPipelines", result);
     }
 
     return result;
@@ -3271,18 +2582,6 @@ bool PreCreateComputePipelines(VkDevice device, const VkComputePipelineCreateInf
         // TODO: Handle count!
         int i = 0;
         validate_string(data->report_data, "vkCreateComputePipelines", "pCreateInfos[i].stage.pName", pCreateInfos[i].stage.pName);
-    }
-
-    return true;
-}
-
-bool PostCreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, VkPipeline *pPipelines,
-                                VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateComputePipelines parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
     }
 
     return true;
@@ -3306,7 +2605,7 @@ vkCreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_
         result = get_dispatch_table(pc_device_table_map, device)
                      ->CreateComputePipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
 
-        PostCreateComputePipelines(device, pipelineCache, createInfoCount, pPipelines, result);
+        validate_result(my_data->report_data, "vkCreateComputePipelines", result);
     }
 
     return result;
@@ -3325,17 +2624,6 @@ vkDestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocationCallba
     }
 }
 
-bool PostCreatePipelineLayout(VkDevice device, VkPipelineLayout *pPipelineLayout, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreatePipelineLayout parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                        VkPipelineLayout *pPipelineLayout) {
@@ -3350,7 +2638,7 @@ vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo *pCreat
         result =
             get_dispatch_table(pc_device_table_map, device)->CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
 
-        PostCreatePipelineLayout(device, pPipelineLayout, result);
+        validate_result(my_data->report_data, "vkCreatePipelineLayout", result);
     }
 
     return result;
@@ -3369,85 +2657,6 @@ vkDestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout, const 
     }
 }
 
-bool PreCreateSampler(VkDevice device, const VkSamplerCreateInfo *pCreateInfo) {
-    if (pCreateInfo != nullptr) {
-        if (pCreateInfo->magFilter < VK_FILTER_BEGIN_RANGE || pCreateInfo->magFilter > VK_FILTER_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateSampler parameter, VkFilter pCreateInfo->magFilter, is an unrecognized enumerator");
-            return false;
-        }
-        if (pCreateInfo->minFilter < VK_FILTER_BEGIN_RANGE || pCreateInfo->minFilter > VK_FILTER_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateSampler parameter, VkFilter pCreateInfo->minFilter, is an unrecognized enumerator");
-            return false;
-        }
-        if (pCreateInfo->mipmapMode < VK_SAMPLER_MIPMAP_MODE_BEGIN_RANGE ||
-            pCreateInfo->mipmapMode > VK_SAMPLER_MIPMAP_MODE_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateSampler parameter, VkSamplerMipmapMode pCreateInfo->mipmapMode, is an unrecognized enumerator");
-            return false;
-        }
-        if (pCreateInfo->addressModeU < VK_SAMPLER_ADDRESS_MODE_BEGIN_RANGE ||
-            pCreateInfo->addressModeU > VK_SAMPLER_ADDRESS_MODE_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeU, is an unrecognized enumerator");
-            return false;
-        }
-        if (pCreateInfo->addressModeV < VK_SAMPLER_ADDRESS_MODE_BEGIN_RANGE ||
-            pCreateInfo->addressModeV > VK_SAMPLER_ADDRESS_MODE_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeV, is an unrecognized enumerator");
-            return false;
-        }
-        if (pCreateInfo->addressModeW < VK_SAMPLER_ADDRESS_MODE_BEGIN_RANGE ||
-            pCreateInfo->addressModeW > VK_SAMPLER_ADDRESS_MODE_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeW, is an unrecognized enumerator");
-            return false;
-        }
-        if (pCreateInfo->anisotropyEnable > VK_TRUE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateSampler parameter, VkBool32 pCreateInfo->anisotropyEnable, is an unrecognized boolean");
-            return false;
-        }
-        if (pCreateInfo->compareEnable > VK_TRUE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateSampler parameter, VkBool32 pCreateInfo->compareEnable, is an unrecognized boolean");
-            return false;
-        }
-        if (pCreateInfo->compareEnable) {
-            if (pCreateInfo->compareOp < VK_COMPARE_OP_BEGIN_RANGE || pCreateInfo->compareOp > VK_COMPARE_OP_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateSampler parameter, VkCompareOp pCreateInfo->compareOp, is an unrecognized enumerator");
-                return false;
-            }
-        }
-        if (pCreateInfo->borderColor < VK_BORDER_COLOR_BEGIN_RANGE || pCreateInfo->borderColor > VK_BORDER_COLOR_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateSampler parameter, VkBorderColor pCreateInfo->borderColor, is an unrecognized enumerator");
-            return false;
-        }
-        if (pCreateInfo->unnormalizedCoordinates > VK_TRUE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkCreateSampler parameter, VkBool32 pCreateInfo->unnormalizedCoordinates, is an unrecognized boolean");
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool PostCreateSampler(VkDevice device, VkSampler *pSampler, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateSampler parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSampler(VkDevice device, const VkSamplerCreateInfo *pCreateInfo,
                                                                const VkAllocationCallbacks *pAllocator, VkSampler *pSampler) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
@@ -3458,11 +2667,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSampler(VkDevice device, 
     skipCall |= parameter_validation_vkCreateSampler(my_data->report_data, pCreateInfo, pAllocator, pSampler);
 
     if (skipCall == VK_FALSE) {
-        PreCreateSampler(device, pCreateInfo);
-
         result = get_dispatch_table(pc_device_table_map, device)->CreateSampler(device, pCreateInfo, pAllocator, pSampler);
 
-        PostCreateSampler(device, pSampler, result);
+        validate_result(my_data->report_data, "vkCreateSampler", result);
     }
 
     return result;
@@ -3481,33 +2688,6 @@ vkDestroySampler(VkDevice device, VkSampler sampler, const VkAllocationCallbacks
     }
 }
 
-bool PreCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo *pCreateInfo) {
-    if (pCreateInfo != nullptr) {
-        if (pCreateInfo->pBindings != nullptr) {
-            if (pCreateInfo->pBindings->descriptorType < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
-                pCreateInfo->pBindings->descriptorType > VK_DESCRIPTOR_TYPE_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateDescriptorSetLayout parameter, VkDescriptorType pCreateInfo->pBindings->descriptorType, is an "
-                        "unrecognized enumerator");
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
-
-bool PostCreateDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout *pSetLayout, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateDescriptorSetLayout parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo *pCreateInfo,
                             const VkAllocationCallbacks *pAllocator, VkDescriptorSetLayout *pSetLayout) {
@@ -3519,12 +2699,10 @@ vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateIn
     skipCall |= parameter_validation_vkCreateDescriptorSetLayout(my_data->report_data, pCreateInfo, pAllocator, pSetLayout);
 
     if (skipCall == VK_FALSE) {
-        PreCreateDescriptorSetLayout(device, pCreateInfo);
-
         result =
             get_dispatch_table(pc_device_table_map, device)->CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
 
-        PostCreateDescriptorSetLayout(device, pSetLayout, result);
+        validate_result(my_data->report_data, "vkCreateDescriptorSetLayout", result);
     }
 
     return result;
@@ -3543,36 +2721,6 @@ vkDestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSe
     }
 }
 
-bool PreCreateDescriptorPool(VkDevice device, const VkDescriptorPoolCreateInfo *pCreateInfo) {
-    if (pCreateInfo != nullptr) {
-        if (pCreateInfo->pPoolSizes != nullptr) {
-            if (pCreateInfo->pPoolSizes->type < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
-                pCreateInfo->pPoolSizes->type > VK_DESCRIPTOR_TYPE_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateDescriptorPool parameter, VkDescriptorType pCreateInfo->pTypeCount->type, is an unrecognized "
-                        "enumerator");
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
-
-bool PostCreateDescriptorPool(VkDevice device, uint32_t maxSets, VkDescriptorPool *pDescriptorPool, VkResult result) {
-
-    /* TODOVV: How do we validate maxSets? Probably belongs in the limits layer? */
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateDescriptorPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkCreateDescriptorPool(VkDevice device, const VkDescriptorPoolCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                        VkDescriptorPool *pDescriptorPool) {
@@ -3583,13 +2731,13 @@ vkCreateDescriptorPool(VkDevice device, const VkDescriptorPoolCreateInfo *pCreat
 
     skipCall |= parameter_validation_vkCreateDescriptorPool(my_data->report_data, pCreateInfo, pAllocator, pDescriptorPool);
 
-    if (skipCall == VK_FALSE) {
-        PreCreateDescriptorPool(device, pCreateInfo);
+    /* TODOVV: How do we validate maxSets? Probably belongs in the limits layer? */
 
+    if (skipCall == VK_FALSE) {
         result =
             get_dispatch_table(pc_device_table_map, device)->CreateDescriptorPool(device, pCreateInfo, pAllocator, pDescriptorPool);
 
-        PostCreateDescriptorPool(device, pCreateInfo->maxSets, pDescriptorPool, result);
+        validate_result(my_data->report_data, "vkCreateDescriptorPool", result);
     }
 
     return result;
@@ -3608,37 +2756,16 @@ vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, const 
     }
 }
 
-bool PostResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkResetDescriptorPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorPoolResetFlags flags) {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
     VkResult result = get_dispatch_table(pc_device_table_map, device)->ResetDescriptorPool(device, descriptorPool, flags);
 
-    PostResetDescriptorPool(device, descriptorPool, result);
+    validate_result(my_data->report_data, "vkResetDescriptorPool", result);
 
     return result;
-}
-
-bool PostAllocateDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, VkDescriptorSet *pDescriptorSets,
-                                VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkAllocateDescriptorSets parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -3653,23 +2780,10 @@ vkAllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAl
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, device)->AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
 
-        PostAllocateDescriptorSets(device, pAllocateInfo->descriptorPool, pAllocateInfo->descriptorSetCount, pDescriptorSets,
-                                   result);
+        validate_result(my_data->report_data, "vkAllocateDescriptorSets", result);
     }
 
     return result;
-}
-
-bool PostFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkFreeDescriptorSets parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool,
@@ -3686,37 +2800,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFreeDescriptorSets(VkDevice dev
         result = get_dispatch_table(pc_device_table_map, device)
                      ->FreeDescriptorSets(device, descriptorPool, descriptorSetCount, pDescriptorSets);
 
-        PostFreeDescriptorSets(device, descriptorPool, descriptorSetCount, result);
+        validate_result(my_data->report_data, "vkFreeDescriptorSets", result);
     }
 
     return result;
-}
-
-bool PreUpdateDescriptorSets(VkDevice device, const VkWriteDescriptorSet *pDescriptorWrites,
-                             const VkCopyDescriptorSet *pDescriptorCopies) {
-    if (pDescriptorWrites != nullptr) {
-        if (pDescriptorWrites->descriptorType < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
-            pDescriptorWrites->descriptorType > VK_DESCRIPTOR_TYPE_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkUpdateDescriptorSets parameter, VkDescriptorType pDescriptorWrites->descriptorType, is an unrecognized "
-                    "enumerator");
-            return false;
-        }
-        /* TODO: Validate other parts of pImageInfo, pBufferInfo, pTexelBufferView? */
-        /* TODO: This test should probably only be done if descriptorType is correct type of descriptor */
-        if (pDescriptorWrites->pImageInfo != nullptr) {
-            if (((pDescriptorWrites->pImageInfo->imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
-                 (pDescriptorWrites->pImageInfo->imageLayout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-                (pDescriptorWrites->pImageInfo->imageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkUpdateDescriptorSets parameter, VkImageLayout pDescriptorWrites->pDescriptors->imageLayout, is an "
-                        "unrecognized enumerator");
-                return false;
-            }
-        }
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
@@ -3730,22 +2817,9 @@ vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkW
                                                    descriptorCopyCount, pDescriptorCopies);
 
     if (skipCall == VK_FALSE) {
-        PreUpdateDescriptorSets(device, pDescriptorWrites, pDescriptorCopies);
-
         get_dispatch_table(pc_device_table_map, device)
             ->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
     }
-}
-
-bool PostCreateFramebuffer(VkDevice device, VkFramebuffer *pFramebuffer, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateFramebuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo *pCreateInfo,
@@ -3761,7 +2835,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(VkDevice devi
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, device)->CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
 
-        PostCreateFramebuffer(device, pFramebuffer, result);
+        validate_result(my_data->report_data, "vkCreateFramebuffer", result);
     }
 
     return result;
@@ -3780,124 +2854,6 @@ vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocat
     }
 }
 
-bool PreCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo) {
-    if (pCreateInfo != nullptr) {
-        if (pCreateInfo->pAttachments != nullptr) {
-            if (pCreateInfo->pAttachments->format < VK_FORMAT_BEGIN_RANGE ||
-                pCreateInfo->pAttachments->format > VK_FORMAT_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateRenderPass parameter, VkFormat pCreateInfo->pAttachments->format, is an unrecognized enumerator");
-                return false;
-            }
-            if (pCreateInfo->pAttachments->loadOp < VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE ||
-                pCreateInfo->pAttachments->loadOp > VK_ATTACHMENT_LOAD_OP_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateRenderPass parameter, VkAttachmentLoadOp pCreateInfo->pAttachments->loadOp, is an unrecognized "
-                        "enumerator");
-                return false;
-            }
-            if (pCreateInfo->pAttachments->storeOp < VK_ATTACHMENT_STORE_OP_BEGIN_RANGE ||
-                pCreateInfo->pAttachments->storeOp > VK_ATTACHMENT_STORE_OP_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->pAttachments->storeOp, is an unrecognized "
-                        "enumerator");
-                return false;
-            }
-            if (pCreateInfo->pAttachments->stencilLoadOp < VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE ||
-                pCreateInfo->pAttachments->stencilLoadOp > VK_ATTACHMENT_LOAD_OP_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateRenderPass parameter, VkAttachmentLoadOp pCreateInfo->pAttachments->stencilLoadOp, is an "
-                        "unrecognized enumerator");
-                return false;
-            }
-            if (pCreateInfo->pAttachments->stencilStoreOp < VK_ATTACHMENT_STORE_OP_BEGIN_RANGE ||
-                pCreateInfo->pAttachments->stencilStoreOp > VK_ATTACHMENT_STORE_OP_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->pAttachments->stencilStoreOp, is an "
-                        "unrecognized enumerator");
-                return false;
-            }
-            if (((pCreateInfo->pAttachments->initialLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
-                 (pCreateInfo->pAttachments->initialLayout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-                (pCreateInfo->pAttachments->initialLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pAttachments->initialLayout, is an unrecognized "
-                        "enumerator");
-                return false;
-            }
-            if (((pCreateInfo->pAttachments->initialLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
-                 (pCreateInfo->pAttachments->initialLayout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-                (pCreateInfo->pAttachments->initialLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pAttachments->finalLayout, is an unrecognized "
-                        "enumerator");
-                return false;
-            }
-        }
-        if (pCreateInfo->pSubpasses != nullptr) {
-            if (pCreateInfo->pSubpasses->pipelineBindPoint < VK_PIPELINE_BIND_POINT_BEGIN_RANGE ||
-                pCreateInfo->pSubpasses->pipelineBindPoint > VK_PIPELINE_BIND_POINT_END_RANGE) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateRenderPass parameter, VkPipelineBindPoint pCreateInfo->pSubpasses->pipelineBindPoint, is an "
-                        "unrecognized enumerator");
-                return false;
-            }
-            if (pCreateInfo->pSubpasses->pInputAttachments != nullptr) {
-                if (((pCreateInfo->pSubpasses->pInputAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
-                     (pCreateInfo->pSubpasses->pInputAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-                    (pCreateInfo->pSubpasses->pInputAttachments->layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-                    log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                            "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pInputAttachments->layout, is an "
-                            "unrecognized enumerator");
-                    return false;
-                }
-            }
-            if (pCreateInfo->pSubpasses->pColorAttachments != nullptr) {
-                if (((pCreateInfo->pSubpasses->pColorAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
-                     (pCreateInfo->pSubpasses->pColorAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-                    (pCreateInfo->pSubpasses->pColorAttachments->layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-                    log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                            "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pColorAttachments->layout, is an "
-                            "unrecognized enumerator");
-                    return false;
-                }
-            }
-            if (pCreateInfo->pSubpasses->pResolveAttachments != nullptr) {
-                if (((pCreateInfo->pSubpasses->pResolveAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
-                     (pCreateInfo->pSubpasses->pResolveAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-                    (pCreateInfo->pSubpasses->pResolveAttachments->layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-                    log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                            "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pResolveAttachments->layout, is "
-                            "an unrecognized enumerator");
-                    return false;
-                }
-            }
-            if (pCreateInfo->pSubpasses->pDepthStencilAttachment &&
-                ((pCreateInfo->pSubpasses->pDepthStencilAttachment->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE) ||
-                 (pCreateInfo->pSubpasses->pDepthStencilAttachment->layout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-                (pCreateInfo->pSubpasses->pDepthStencilAttachment->layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-                log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pDepthStencilAttachment->layout, is "
-                        "an unrecognized enumerator");
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
-
-bool PostCreateRenderPass(VkDevice device, VkRenderPass *pRenderPass, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateRenderPass parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
                                                                   const VkAllocationCallbacks *pAllocator,
                                                                   VkRenderPass *pRenderPass) {
@@ -3909,11 +2865,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
     skipCall |= parameter_validation_vkCreateRenderPass(my_data->report_data, pCreateInfo, pAllocator, pRenderPass);
 
     if (skipCall == VK_FALSE) {
-        PreCreateRenderPass(device, pCreateInfo);
-
         result = get_dispatch_table(pc_device_table_map, device)->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
 
-        PostCreateRenderPass(device, pRenderPass, result);
+        validate_result(my_data->report_data, "vkCreateRenderPass", result);
     }
 
     return result;
@@ -3945,17 +2899,6 @@ vkGetRenderAreaGranularity(VkDevice device, VkRenderPass renderPass, VkExtent2D 
     }
 }
 
-bool PostCreateCommandPool(VkDevice device, VkCommandPool *pCommandPool, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkCreateCommandPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(VkDevice device, const VkCommandPoolCreateInfo *pCreateInfo,
                                                                    const VkAllocationCallbacks *pAllocator,
                                                                    VkCommandPool *pCommandPool) {
@@ -3971,7 +2914,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(VkDevice devi
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, device)->CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
 
-        PostCreateCommandPool(device, pCommandPool, result);
+        validate_result(my_data->report_data, "vkCreateCommandPool", result);
     }
 
     return result;
@@ -3990,48 +2933,16 @@ vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocat
     }
 }
 
-bool PostResetCommandPool(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetFlags flags, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkResetCommandPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkResetCommandPool(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetFlags flags) {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
     VkResult result = get_dispatch_table(pc_device_table_map, device)->ResetCommandPool(device, commandPool, flags);
 
-    PostResetCommandPool(device, commandPool, flags, result);
+    validate_result(my_data->report_data, "vkResetCommandPool", result);
 
     return result;
-}
-
-bool PreCreateCommandBuffer(VkDevice device, const VkCommandBufferAllocateInfo *pCreateInfo) {
-    if (pCreateInfo != nullptr) {
-        if (pCreateInfo->level < VK_COMMAND_BUFFER_LEVEL_BEGIN_RANGE || pCreateInfo->level > VK_COMMAND_BUFFER_LEVEL_END_RANGE) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                    "vkAllocateCommandBuffers parameter, VkCommandBufferLevel pCreateInfo->level, is an unrecognized enumerator");
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool PostCreateCommandBuffer(VkDevice device, VkCommandBuffer *pCommandBuffer, VkResult result) {
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkAllocateCommandBuffers parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK", "%s",
-                reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -4044,11 +2955,9 @@ vkAllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pAl
     skipCall |= parameter_validation_vkAllocateCommandBuffers(my_data->report_data, pAllocateInfo, pCommandBuffers);
 
     if (skipCall == VK_FALSE) {
-        PreCreateCommandBuffer(device, pAllocateInfo);
-
         result = get_dispatch_table(pc_device_table_map, device)->AllocateCommandBuffers(device, pAllocateInfo, pCommandBuffers);
 
-        PostCreateCommandBuffer(device, pCommandBuffers, result);
+        validate_result(my_data->report_data, "vkAllocateCommandBuffers", result);
     }
 
     return result;
@@ -4069,18 +2978,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(VkDevice device,
     }
 }
 
-bool PostBeginCommandBuffer(VkCommandBuffer commandBuffer, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkBeginCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "%s", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo *pBeginInfo) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
@@ -4093,69 +2990,46 @@ vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginIn
     if (skipCall == VK_FALSE) {
         result = get_dispatch_table(pc_device_table_map, commandBuffer)->BeginCommandBuffer(commandBuffer, pBeginInfo);
 
-        PostBeginCommandBuffer(commandBuffer, result);
+        validate_result(my_data->report_data, "vkBeginCommandBuffer", result);
     }
 
     return result;
-}
-
-bool PostEndCommandBuffer(VkCommandBuffer commandBuffer, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkEndCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "%s", reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEndCommandBuffer(VkCommandBuffer commandBuffer) {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    assert(my_data != NULL);
+
     VkResult result = get_dispatch_table(pc_device_table_map, commandBuffer)->EndCommandBuffer(commandBuffer);
 
-    PostEndCommandBuffer(commandBuffer, result);
+    validate_result(my_data->report_data, "vkEndCommandBuffer", result);
 
     return result;
-}
-
-bool PostResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flags, VkResult result) {
-
-    if (result < VK_SUCCESS) {
-        std::string reason = "vkResetCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "%s", reason.c_str());
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flags) {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    assert(my_data != NULL);
+
     VkResult result = get_dispatch_table(pc_device_table_map, commandBuffer)->ResetCommandBuffer(commandBuffer, flags);
 
-    PostResetCommandBuffer(commandBuffer, flags, result);
+    validate_result(my_data->report_data, "vkResetCommandBuffer", result);
 
     return result;
 }
 
-bool PostCmdBindPipeline(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline) {
-
-    if (pipelineBindPoint < VK_PIPELINE_BIND_POINT_BEGIN_RANGE || pipelineBindPoint > VK_PIPELINE_BIND_POINT_END_RANGE) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdBindPipeline parameter, VkPipelineBindPoint pipelineBindPoint, is an unrecognized enumerator");
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdBindPipeline(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline) {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    assert(my_data != NULL);
 
-    PostCmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
+    skipCall |= parameter_validation_vkCmdBindPipeline(my_data->report_data, pipelineBindPoint, pipeline);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
+    }
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
@@ -4227,18 +3101,6 @@ vkCmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceM
     get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilReference(commandBuffer, faceMask, reference);
 }
 
-bool PostCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout,
-                               uint32_t firstSet, uint32_t setCount, uint32_t dynamicOffsetCount) {
-
-    if (pipelineBindPoint < VK_PIPELINE_BIND_POINT_BEGIN_RANGE || pipelineBindPoint > VK_PIPELINE_BIND_POINT_END_RANGE) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdBindDescriptorSets parameter, VkPipelineBindPoint pipelineBindPoint, is an unrecognized enumerator");
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout,
                         uint32_t firstSet, uint32_t descriptorSetCount, const VkDescriptorSet *pDescriptorSets,
@@ -4254,27 +3116,20 @@ vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipel
         get_dispatch_table(pc_device_table_map, commandBuffer)
             ->CmdBindDescriptorSets(commandBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount, pDescriptorSets,
                                     dynamicOffsetCount, pDynamicOffsets);
-
-        PostCmdBindDescriptorSets(commandBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount, dynamicOffsetCount);
     }
-}
-
-bool PostCmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType) {
-
-    if (indexType < VK_INDEX_TYPE_BEGIN_RANGE || indexType > VK_INDEX_TYPE_END_RANGE) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdBindIndexBuffer parameter, VkIndexType indexType, is an unrecognized enumerator");
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType) {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    assert(my_data != NULL);
 
-    PostCmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
+    skipCall |= parameter_validation_vkCmdBindIndexBuffer(my_data->report_data, buffer, offset, indexType);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
+    }
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(VkCommandBuffer commandBuffer, uint32_t firstBinding,
@@ -4380,25 +3235,6 @@ bool PreCmdCopyImage(VkCommandBuffer commandBuffer, const VkImageCopy *pRegions)
     return true;
 }
 
-bool PostCmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage,
-                      VkImageLayout dstImageLayout, uint32_t regionCount) {
-    if (((srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) || (srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-        (srcImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdCopyImage parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
-        return false;
-    }
-
-    if (((dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) || (dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-        (dstImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdCopyImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage,
                VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageCopy *pRegions) {
@@ -4414,8 +3250,6 @@ vkCmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout sr
 
         get_dispatch_table(pc_device_table_map, commandBuffer)
             ->CmdCopyImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
-
-        PostCmdCopyImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount);
     }
 }
 
@@ -4438,32 +3272,6 @@ bool PreCmdBlitImage(VkCommandBuffer commandBuffer, const VkImageBlit *pRegions)
     return true;
 }
 
-bool PostCmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage,
-                      VkImageLayout dstImageLayout, uint32_t regionCount, VkFilter filter) {
-
-    if (((srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) || (srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-        (srcImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdBlitImage parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
-        return false;
-    }
-
-    if (((dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) || (dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-        (dstImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdBlitImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
-        return false;
-    }
-
-    if (filter < VK_FILTER_BEGIN_RANGE || filter > VK_FILTER_END_RANGE) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdBlitImage parameter, VkFilter filter, is an unrecognized enumerator");
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage,
                VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageBlit *pRegions, VkFilter filter) {
@@ -4479,8 +3287,6 @@ vkCmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout sr
 
         get_dispatch_table(pc_device_table_map, commandBuffer)
             ->CmdBlitImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions, filter);
-
-        PostCmdBlitImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, filter);
     }
 }
 
@@ -4493,19 +3299,6 @@ bool PreCmdCopyBufferToImage(VkCommandBuffer commandBuffer, const VkBufferImageC
                     "enumerator");
             return false;
         }
-    }
-
-    return true;
-}
-
-bool PostCmdCopyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout,
-                              uint32_t regionCount) {
-
-    if (((dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) || (dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-        (dstImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdCopyBufferToImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
-        return false;
     }
 
     return true;
@@ -4526,8 +3319,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(VkCommandBuffe
 
         get_dispatch_table(pc_device_table_map, commandBuffer)
             ->CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
-
-        PostCmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount);
     }
 }
 
@@ -4540,19 +3331,6 @@ bool PreCmdCopyImageToBuffer(VkCommandBuffer commandBuffer, const VkBufferImageC
                     "enumerator");
             return false;
         }
-    }
-
-    return true;
-}
-
-bool PostCmdCopyImageToBuffer(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkBuffer dstBuffer,
-                              uint32_t regionCount) {
-
-    if (((srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) || (srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-        (srcImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdCopyImageToBuffer parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
-        return false;
     }
 
     return true;
@@ -4573,8 +3351,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(VkCommandBuffe
 
         get_dispatch_table(pc_device_table_map, commandBuffer)
             ->CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
-
-        PostCmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount);
     }
 }
 
@@ -4597,18 +3373,6 @@ vkCmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize 
     get_dispatch_table(pc_device_table_map, commandBuffer)->CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
 }
 
-bool PostCmdClearColorImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout, uint32_t rangeCount) {
-
-    if (((imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) || (imageLayout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-        (imageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdClearColorImage parameter, VkImageLayout imageLayout, is an unrecognized enumerator");
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(VkCommandBuffer commandBuffer, VkImage image,
                                                                 VkImageLayout imageLayout, const VkClearColorValue *pColor,
                                                                 uint32_t rangeCount, const VkImageSubresourceRange *pRanges) {
@@ -4621,22 +3385,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(VkCommandBuffer 
     if (skipCall == VK_FALSE) {
         get_dispatch_table(pc_device_table_map, commandBuffer)
             ->CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
-
-        PostCmdClearColorImage(commandBuffer, image, imageLayout, rangeCount);
     }
-}
-
-bool PostCmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
-                                   const VkClearDepthStencilValue *pDepthStencil, uint32_t rangeCount) {
-
-    if (((imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) || (imageLayout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-        (imageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdClearDepthStencilImage parameter, VkImageLayout imageLayout, is an unrecognized enumerator");
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
@@ -4653,8 +3402,6 @@ vkCmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImag
     if (skipCall == VK_FALSE) {
         get_dispatch_table(pc_device_table_map, commandBuffer)
             ->CmdClearDepthStencilImage(commandBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
-
-        PostCmdClearDepthStencilImage(commandBuffer, image, imageLayout, pDepthStencil, rangeCount);
     }
 }
 
@@ -4694,26 +3441,6 @@ bool PreCmdResolveImage(VkCommandBuffer commandBuffer, const VkImageResolve *pRe
     return true;
 }
 
-bool PostCmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage,
-                         VkImageLayout dstImageLayout, uint32_t regionCount) {
-
-    if (((srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) || (srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-        (srcImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdResolveImage parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
-        return false;
-    }
-
-    if (((dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE) || (dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)) &&
-        (dstImageLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdResolveImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage,
                   VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageResolve *pRegions) {
@@ -4729,8 +3456,6 @@ vkCmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout
 
         get_dispatch_table(pc_device_table_map, commandBuffer)
             ->CmdResolveImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
-
-        PostCmdResolveImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount);
     }
 }
 
@@ -4835,17 +3560,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPushConstants(VkCommandBuffer co
     }
 }
 
-bool PostCmdBeginRenderPass(VkCommandBuffer commandBuffer, VkSubpassContents contents) {
-
-    if (contents < VK_SUBPASS_CONTENTS_BEGIN_RANGE || contents > VK_SUBPASS_CONTENTS_END_RANGE) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdBeginRenderPass parameter, VkSubpassContents contents, is an unrecognized enumerator");
-        return false;
-    }
-
-    return true;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *pRenderPassBegin, VkSubpassContents contents) {
     VkBool32 skipCall = VK_FALSE;
@@ -4856,26 +3570,19 @@ vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo 
 
     if (skipCall == VK_FALSE) {
         get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBeginRenderPass(commandBuffer, pRenderPassBegin, contents);
-
-        PostCmdBeginRenderPass(commandBuffer, contents);
     }
-}
-
-bool PostCmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpassContents contents) {
-
-    if (contents < VK_SUBPASS_CONTENTS_BEGIN_RANGE || contents > VK_SUBPASS_CONTENTS_END_RANGE) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                "vkCmdNextSubpass parameter, VkSubpassContents contents, is an unrecognized enumerator");
-        return false;
-    }
-
-    return true;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpassContents contents) {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdNextSubpass(commandBuffer, contents);
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    assert(my_data != NULL);
 
-    PostCmdNextSubpass(commandBuffer, contents);
+    skipCall |= parameter_validation_vkCmdNextSubpass(my_data->report_data, contents);
+
+    if (skipCall == VK_FALSE) {
+        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdNextSubpass(commandBuffer, contents);
+    }
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndRenderPass(VkCommandBuffer commandBuffer) {

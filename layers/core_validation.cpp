@@ -3372,7 +3372,8 @@ static VkBool32 validatePipelineState(layer_data *my_data, const GLOBAL_CB_NODE 
                         subpassNumSamples = (VkSampleCountFlagBits)-1;
                 }
 
-                if (psoNumSamples != subpassNumSamples) {
+                if ((pSD->colorAttachmentCount > 0 || pSD->pDepthStencilAttachment) &&
+                    psoNumSamples != subpassNumSamples) {
                     skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                                         (uint64_t)pipeline, __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
                                         "Num samples mismatch! Binding PSO (%#" PRIxLEAST64
@@ -5274,9 +5275,9 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
         vector<VkSemaphore> semaphoreList;
         for (uint32_t i = 0; i < submit->waitSemaphoreCount; ++i) {
             const VkSemaphore &semaphore = submit->pWaitSemaphores[i];
-            semaphoreList.push_back(semaphore);
             if (dev_data->semaphoreMap[semaphore].signaled) {
                 dev_data->semaphoreMap[semaphore].signaled = 0;
+                dev_data->semaphoreMap[semaphore].in_use.fetch_sub(1);
             } else {
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                     VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS,
@@ -9108,8 +9109,10 @@ VkBool32 ValidateDependencies(const layer_data *my_data, const VkRenderPassBegin
         }
     }
     // Find for each attachment the subpasses that use them.
+    unordered_set<uint32_t> attachmentIndices;
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
+        attachmentIndices.clear();
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
             uint32_t attachment = subpass.pInputAttachments[j].attachment;
             input_attachment_to_subpass[attachment].push_back(i);
@@ -9123,12 +9126,21 @@ VkBool32 ValidateDependencies(const layer_data *my_data, const VkRenderPassBegin
             for (auto overlapping_attachment : overlapping_attachments[attachment]) {
                 output_attachment_to_subpass[overlapping_attachment].push_back(i);
             }
+            attachmentIndices.insert(attachment);
         }
         if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
             uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
             output_attachment_to_subpass[attachment].push_back(i);
             for (auto overlapping_attachment : overlapping_attachments[attachment]) {
                 output_attachment_to_subpass[overlapping_attachment].push_back(i);
+            }
+
+            if (attachmentIndices.count(attachment)) {
+                skip_call |=
+                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0,
+                            0, __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                            "Cannot use same attachment (%u) as both color and depth output in same subpass (%u).",
+                            attachment, i);
             }
         }
     }
@@ -10577,6 +10589,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice device, VkSwapchai
                                "vkAcquireNextImageKHR: Semaphore must not be currently signaled or in a wait state");
         }
         dev_data->semaphoreMap[semaphore].state = MEMTRACK_SEMAPHORE_STATE_SIGNALLED;
+        dev_data->semaphoreMap[semaphore].in_use.fetch_add(1);
     }
     auto fence_data = dev_data->fenceMap.find(fence);
     if (fence_data != dev_data->fenceMap.end()) {
