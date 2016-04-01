@@ -28,6 +28,24 @@
  * Author: Mark Lobodzinski <mark@lunarg.com>
  */
 
+// Check for noexcept support
+#if defined(__clang__)
+#if __has_feature(cxx_noexcept)
+#define HAS_NOEXCEPT
+#endif
+#else
+#if defined(__GXX_EXPERIMENTAL_CXX0X__) && __GNUC__ * 10 + __GNUC_MINOR__ >= 46 || \
+    defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 190023026
+#define HAS_NOEXCEPT
+#endif
+#endif
+
+#ifdef HAS_NOEXCEPT
+#define NOEXCEPT noexcept
+#else
+#define NOEXCEPT
+#endif
+
 // Enable mem_tracker merged code
 #define MTMERGE 1
 
@@ -115,14 +133,14 @@ struct MT_OBJ_HANDLE_TYPE {
     VkDebugReportObjectTypeEXT type;
 };
 
-bool operator==(MT_OBJ_HANDLE_TYPE a, MT_OBJ_HANDLE_TYPE b) noexcept {
+bool operator==(MT_OBJ_HANDLE_TYPE a, MT_OBJ_HANDLE_TYPE b) NOEXCEPT{
     return a.handle == b.handle && a.type == b.type;
 }
 
 namespace std {
     template<>
     struct hash<MT_OBJ_HANDLE_TYPE> {
-        size_t operator()(MT_OBJ_HANDLE_TYPE obj) const noexcept {
+        size_t operator()(MT_OBJ_HANDLE_TYPE obj) const NOEXCEPT{
             return hash<uint64_t>()(obj.handle) ^
                    hash<uint32_t>()(obj.type);
         }
