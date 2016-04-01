@@ -3850,19 +3850,18 @@ terminator_CreateDevice(VkPhysicalDevice physicalDevice,
         }
     }
 
-    VkDevice localDevice;
     // TODO: Why does fpCreateDevice behave differently than
     // this_icd->CreateDevice?
     //    VkResult res = fpCreateDevice(phys_dev->phys_dev, &localCreateInfo,
     //    pAllocator, &localDevice);
     res = phys_dev->this_icd->CreateDevice(phys_dev->phys_dev, &localCreateInfo,
-                                           pAllocator, &localDevice);
+                                           pAllocator, &dev->device);
 
     if (res != VK_SUCCESS) {
         return res;
     }
 
-    *pDevice = localDevice;
+    *pDevice = dev->device;
     loader_add_logical_device(phys_dev->this_icd->this_instance, phys_dev->this_icd, dev);
 
     /* Init dispatch pointer in new device object */
