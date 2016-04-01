@@ -5757,51 +5757,52 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice device, VkQueryPoo
         auto queryElement = queriesInFlight.find(query);
         auto queryToStateElement = dev_data->queryToStateMap.find(query);
         if (queryToStateElement != dev_data->queryToStateMap.end()) {
-        }
-        // Available and in flight
-        if (queryElement != queriesInFlight.end() && queryToStateElement != dev_data->queryToStateMap.end() &&
-            queryToStateElement->second) {
-            for (auto cmdBuffer : queryElement->second) {
-                pCB = getCBNode(dev_data, cmdBuffer);
-                auto queryEventElement = pCB->waitedEventsBeforeQueryReset.find(query);
-                if (queryEventElement == pCB->waitedEventsBeforeQueryReset.end()) {
-                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
-                                         "Cannot get query results on queryPool %" PRIu64 " with index %d which is in flight.",
-                                         (uint64_t)(queryPool), firstQuery + i);
-                } else {
-                    for (auto event : queryEventElement->second) {
-                        dev_data->eventMap[event].needsSignaled = true;
+            // Available and in flight
+            if (queryElement != queriesInFlight.end() && queryToStateElement != dev_data->queryToStateMap.end() &&
+                queryToStateElement->second) {
+                for (auto cmdBuffer : queryElement->second) {
+                    pCB = getCBNode(dev_data, cmdBuffer);
+                    auto queryEventElement = pCB->waitedEventsBeforeQueryReset.find(query);
+                    if (queryEventElement == pCB->waitedEventsBeforeQueryReset.end()) {
+                        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
+                                             "Cannot get query results on queryPool %" PRIu64 " with index %d which is in flight.",
+                                             (uint64_t)(queryPool), firstQuery + i);
+                    } else {
+                        for (auto event : queryEventElement->second) {
+                            dev_data->eventMap[event].needsSignaled = true;
+                        }
                     }
                 }
-            }
-            // Unavailable and in flight
-        } else if (queryElement != queriesInFlight.end() && queryToStateElement != dev_data->queryToStateMap.end() &&
-                   !queryToStateElement->second) {
-            // TODO : Can there be the same query in use by multiple command buffers in flight?
-            bool make_available = false;
-            for (auto cmdBuffer : queryElement->second) {
-                pCB = getCBNode(dev_data, cmdBuffer);
-                make_available |= pCB->queryToStateMap[query];
-            }
-            if (!(((flags & VK_QUERY_RESULT_PARTIAL_BIT) || (flags & VK_QUERY_RESULT_WAIT_BIT)) && make_available)) {
+                // Unavailable and in flight
+            } else if (queryElement != queriesInFlight.end() && queryToStateElement != dev_data->queryToStateMap.end() &&
+                       !queryToStateElement->second) {
+                // TODO : Can there be the same query in use by multiple command buffers in flight?
+                bool make_available = false;
+                for (auto cmdBuffer : queryElement->second) {
+                    pCB = getCBNode(dev_data, cmdBuffer);
+                    make_available |= pCB->queryToStateMap[query];
+                }
+                if (!(((flags & VK_QUERY_RESULT_PARTIAL_BIT) || (flags & VK_QUERY_RESULT_WAIT_BIT)) && make_available)) {
+                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
+                                         "Cannot get query results on queryPool %" PRIu64 " with index %d which is unavailable.",
+                                         (uint64_t)(queryPool), firstQuery + i);
+                }
+                // Unavailable
+            } else if (queryToStateElement != dev_data->queryToStateMap.end() && !queryToStateElement->second) {
                 skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                      VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
                                      "Cannot get query results on queryPool %" PRIu64 " with index %d which is unavailable.",
                                      (uint64_t)(queryPool), firstQuery + i);
+                // Unitialized
+            } else if (queryToStateElement == dev_data->queryToStateMap.end()) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                     VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
+                                     "Cannot get query results on queryPool %" PRIu64
+                                     " with index %d as data has not been collected for this index.",
+                                     (uint64_t)(queryPool), firstQuery + i);
             }
-            // Unavailable
-        } else if (queryToStateElement != dev_data->queryToStateMap.end() && !queryToStateElement->second) {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT,
-                                 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
-                                 "Cannot get query results on queryPool %" PRIu64 " with index %d which is unavailable.",
-                                 (uint64_t)(queryPool), firstQuery + i);
-            // Unitialized
-        } else if (queryToStateElement == dev_data->queryToStateMap.end()) {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT,
-                                 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
-                                 "Cannot get query results on queryPool %" PRIu64 " with index %d as data has not been collected for this index.",
-                                 (uint64_t)(queryPool), firstQuery + i);
         }
     }
     loader_platform_thread_unlock_mutex(&globalLock);
