@@ -375,6 +375,10 @@ typedef enum _DRAW_STATE_ERROR {
     DRAWSTATE_OBJECT_INUSE,                  // Destroying or modifying an object in use by a
                                              // command buffer
     DRAWSTATE_QUEUE_FORWARD_PROGRESS,        // Queue cannot guarantee forward progress
+    DRAWSTATE_INVALID_BUFFER_MEMORY_OFFSET,  // Dynamic Buffer Offset
+                                             // violates memory requirements limit
+    DRAWSTATE_INVALID_TEXEL_BUFFER_OFFSET,   // Dynamic Texel Buffer Offsets
+                                             // violate device limit
     DRAWSTATE_INVALID_UNIFORM_BUFFER_OFFSET, // Dynamic Uniform Buffer Offsets
                                              // violate device limit
     DRAWSTATE_INVALID_STORAGE_BUFFER_OFFSET, // Dynamic Storage Buffer Offsets
