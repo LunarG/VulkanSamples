@@ -2129,67 +2129,79 @@ static VkBool32 demo_check_layers(uint32_t check_count, char **check_names,
 
 static void demo_init_vk(struct demo *demo) {
     VkResult err;
-    char *extension_names[64];
     uint32_t instance_extension_count = 0;
     uint32_t instance_layer_count = 0;
     uint32_t device_validation_layer_count = 0;
-    uint32_t enabled_extension_count = 0;
-    uint32_t enabled_layer_count = 0;
+    char **instance_validation_layers = NULL;
+    demo->enabled_extension_count = 0;
+    demo->enabled_layer_count = 0;
 
-    char *instance_validation_layers[] = {
+    char *instance_validation_layers_alt1[] = {
+        "VK_LAYER_LUNARG_standard_validation"
+    };
+
+    char *instance_validation_layers_alt2[] = {
         "VK_LAYER_GOOGLE_threading",     "VK_LAYER_LUNARG_parameter_validation",
         "VK_LAYER_LUNARG_device_limits", "VK_LAYER_LUNARG_object_tracker",
         "VK_LAYER_LUNARG_image",         "VK_LAYER_LUNARG_core_validation",
-        "VK_LAYER_LUNARG_swapchain",
-        "VK_LAYER_GOOGLE_unique_objects"
+        "VK_LAYER_LUNARG_swapchain",     "VK_LAYER_GOOGLE_unique_objects"
     };
-
-    demo->device_validation_layers[0] = "VK_LAYER_GOOGLE_threading";
-    demo->device_validation_layers[1] = "VK_LAYER_LUNARG_parameter_validation";
-    demo->device_validation_layers[2] = "VK_LAYER_LUNARG_device_limits";
-    demo->device_validation_layers[3] = "VK_LAYER_LUNARG_object_tracker";
-    demo->device_validation_layers[4] = "VK_LAYER_LUNARG_image";
-    demo->device_validation_layers[5] = "VK_LAYER_LUNARG_core_validation";
-    demo->device_validation_layers[6] = "VK_LAYER_LUNARG_swapchain";
-    demo->device_validation_layers[7] = "VK_LAYER_GOOGLE_unique_objects";
-    device_validation_layer_count = 8;
 
     /* Look for validation layers */
     VkBool32 validation_found = 0;
-    err = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
-    assert(!err);
+    if (demo->validate) {
 
-    if (instance_layer_count > 0) {
-        VkLayerProperties *instance_layers =
-            malloc(sizeof(VkLayerProperties) * instance_layer_count);
-        err = vkEnumerateInstanceLayerProperties(&instance_layer_count,
-                                                 instance_layers);
+        err = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
         assert(!err);
 
-        if (demo->validate) {
-            validation_found = demo_check_layers(
-                ARRAY_SIZE(instance_validation_layers),
-                instance_validation_layers, instance_layer_count,
-                instance_layers);
+        instance_validation_layers = instance_validation_layers_alt1;
+        if (instance_layer_count > 0) {
+            VkLayerProperties *instance_layers =
+                    malloc(sizeof (VkLayerProperties) * instance_layer_count);
+            err = vkEnumerateInstanceLayerProperties(&instance_layer_count,
+                    instance_layers);
+            assert(!err);
 
-            enabled_layer_count = ARRAY_SIZE(instance_validation_layers);
+
+            validation_found = demo_check_layers(
+                    ARRAY_SIZE(instance_validation_layers_alt1),
+                    instance_validation_layers, instance_layer_count,
+                    instance_layers);
+            if (validation_found) {
+                demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers_alt1);
+                demo->device_validation_layers[0] = "VK_LAYER_LUNARG_standard_validation";
+                device_validation_layer_count = 1;
+            } else {
+                // use alternative set of validation layers
+                instance_validation_layers = instance_validation_layers_alt2;
+                demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers_alt2);
+                validation_found = demo_check_layers(
+                    ARRAY_SIZE(instance_validation_layers_alt2),
+                    instance_validation_layers, instance_layer_count,
+                    instance_layers);
+                device_validation_layer_count =
+                        ARRAY_SIZE(instance_validation_layers_alt2);
+                for (uint32_t i = 0; i < device_validation_layer_count; i++) {
+                    demo->device_validation_layers[i] =
+                            instance_validation_layers[i];
+                }
+            }
+            free(instance_layers);
         }
 
-        free(instance_layers);
-    }
-
-    if (demo->validate && !validation_found) {
-        ERR_EXIT("vkEnumerateInstanceLayerProperties failed to find"
-                 "required validation layer.\n\n"
-                 "Please look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
+        if (!validation_found) {
+            ERR_EXIT("vkEnumerateInstanceLayerProperties failed to find"
+                    "required validation layer.\n\n"
+                    "Please look at the Getting Started guide for additional "
+                    "information.\n",
+                    "vkCreateInstance Failure");
+        }
     }
 
     /* Look for instance extensions */
     VkBool32 surfaceExtFound = 0;
     VkBool32 platformSurfaceExtFound = 0;
-    memset(extension_names, 0, sizeof(extension_names));
+    memset(demo->extension_names, 0, sizeof(demo->extension_names));
 
     err = vkEnumerateInstanceExtensionProperties(
         NULL, &instance_extension_count, NULL);
@@ -2205,32 +2217,32 @@ static void demo_init_vk(struct demo *demo) {
             if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 surfaceExtFound = 1;
-                extension_names[enabled_extension_count++] =
+                demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_SURFACE_EXTENSION_NAME;
             }
 #ifdef _WIN32
             if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
-                extension_names[enabled_extension_count++] =
+                demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
             }
 #else  // _WIN32
             if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
-                extension_names[enabled_extension_count++] =
+                demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_XCB_SURFACE_EXTENSION_NAME;
             }
 #endif // _WIN32
             if (!strcmp(VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 if (demo->validate) {
-                    extension_names[enabled_extension_count++] =
+                    demo->extension_names[demo->enabled_extension_count++] =
                         VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
                 }
             }
-            assert(enabled_extension_count < 64);
+            assert(demo->enabled_extension_count < 64);
         }
 
         free(instance_extensions);
@@ -2277,12 +2289,10 @@ static void demo_init_vk(struct demo *demo) {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
         .pApplicationInfo = &app,
-        .enabledLayerCount = enabled_layer_count,
-        .ppEnabledLayerNames =
-            (const char *const *)((demo->validate) ? instance_validation_layers
-                                                   : NULL),
-        .enabledExtensionCount = enabled_extension_count,
-        .ppEnabledExtensionNames = (const char *const *)extension_names,
+        .enabledLayerCount = demo->enabled_layer_count,
+        .ppEnabledLayerNames = (const char *const *)instance_validation_layers,
+        .enabledExtensionCount = demo->enabled_extension_count,
+        .ppEnabledExtensionNames = (const char *const *)demo->extension_names,
     };
 
     /*
@@ -2377,7 +2387,7 @@ static void demo_init_vk(struct demo *demo) {
     uint32_t device_extension_count = 0;
     VkBool32 swapchainExtFound = 0;
     demo->enabled_extension_count = 0;
-    memset(extension_names, 0, sizeof(extension_names));
+    memset(demo->extension_names, 0, sizeof(demo->extension_names));
 
     err = vkEnumerateDeviceExtensionProperties(demo->gpu, NULL,
                                                &device_extension_count, NULL);
