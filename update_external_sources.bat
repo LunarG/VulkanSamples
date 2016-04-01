@@ -337,7 +337,7 @@ goto:eof
    msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
    
    REM Check for existence of one lib, even though we should check for all results
-   if not exist %SPIRV_TOOLS_BUILD_DIR%\Debug\SPIRV-Tools.lib (
+   if not exist %SPIRV_TOOLS_BUILD_DIR%\source\Debug\SPIRV-Tools.lib (
       echo.
       echo spirv-tools 32-bit Debug build failed!
       set errorCode=1
@@ -347,7 +347,7 @@ goto:eof
    msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
 
    REM Check for existence of one lib, even though we should check for all results
-   if not exist %SPIRV_TOOLS_BUILD_DIR%\Release\SPIRV-Tools.lib (
+   if not exist %SPIRV_TOOLS_BUILD_DIR%\source\Release\SPIRV-Tools.lib (
       echo.
       echo spirv-tools 32-bit Release build failed!
       set errorCode=1
@@ -368,7 +368,7 @@ goto:eof
    msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
    
    REM Check for existence of one lib, even though we should check for all results
-   if not exist %SPIRV_TOOLS_BUILD_DIR%\Debug\SPIRV-Tools.lib (
+   if not exist %SPIRV_TOOLS_BUILD_DIR%\source\Debug\SPIRV-Tools.lib (
       echo.
       echo spirv-tools 64-bit Debug build failed!
       set errorCode=1
@@ -378,7 +378,7 @@ goto:eof
    msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
 
    REM Check for existence of one lib, even though we should check for all results
-   if not exist %SPIRV_TOOLS_BUILD_DIR%\Release\SPIRV-Tools.lib (
+   if not exist %SPIRV_TOOLS_BUILD_DIR%\source\Release\SPIRV-Tools.lib (
       echo.
       echo spirv-tools 64-bit Release build failed!
       set errorCode=1
