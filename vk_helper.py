@@ -1637,7 +1637,7 @@ class StructWrapperGen:
     def _generateSafeStructSourceHeader(self):
         header = []
         header.append("//#includes, #defines, globals and such...\n")
-        header.append('#include "vk_safe_struct.h"')
+        header.append('#include "vk_safe_struct.h"\n#include <string.h>\n\n')
         return "".join(header)
 
     def _generateSafeStructSource(self):
@@ -1650,7 +1650,7 @@ class StructWrapperGen:
             ss_name = self._getSafeStructName(s)
             init_list = '' # list of members in struct constructor initializer
             init_func_txt = '' # Txt for initialize() function that takes struct ptr and inits members
-            construct_txt = ''
+            construct_txt = '' # Body of constuctor as well as body of initialize() func following init_func_txt
             destruct_txt = ''
             # VkWriteDescriptorSet is special case because pointers may be non-null but ignored
             # TODO : This is ugly, figure out better way to do this
@@ -1697,8 +1697,29 @@ class StructWrapperGen:
                 if is_type(m_type, 'struct') and self._hasSafeStruct(m_type):
                     m_type = self._getSafeStructName(m_type)
                 if self.struct_dict[s][m]['ptr'] and 'safe_' not in m_type and not self._typeHasObject(m_type, vulkan.object_non_dispatch_list):# in ['char', 'float', 'uint32_t', 'void', 'VkPhysicalDeviceFeatures']) or 'pp' == self.struct_dict[s][m]['name'][0:1]:
-                    init_list += '\n\t%s(pInStruct->%s),' % (m_name, m_name)
-                    init_func_txt += '    %s = pInStruct->%s;\n' % (m_name, m_name)
+                    # Ptr types w/o a safe_struct, for non-null case need to allocate new ptr and copy data in
+                    if 'KHR' in ss_name or m_type in ['void', 'char']:
+                        # For these exceptions just copy initial value over for now
+                        init_list += '\n\t%s(pInStruct->%s),' % (m_name, m_name)
+                        init_func_txt += '    %s = pInStruct->%s;\n' % (m_name, m_name)
+                    else:
+                        init_list += '\n\t%s(nullptr),' % (m_name)
+                        init_func_txt += '    %s = nullptr;\n' % (m_name)
+                        if 'pNext' != m_name and 'void' not in m_type:
+                            if not self.struct_dict[s][m]['array']:
+                                construct_txt += '    if (pInStruct->%s) {\n' % (m_name)
+                                construct_txt += '        %s = new %s(*pInStruct->%s);\n' % (m_name, m_type, m_name)
+                                construct_txt += '    }\n'
+                                destruct_txt += '    if (%s)\n' % (m_name)
+                                destruct_txt += '        delete %s;\n' % (m_name)
+                            else: # new array and then init each element
+                                construct_txt += '    if (pInStruct->%s) {\n' % (m_name)
+                                construct_txt += '        %s = new %s[pInStruct->%s];\n' % (m_name, m_type, self.struct_dict[s][m]['array_size'])
+                                #construct_txt += '        std::copy (pInStruct->%s, pInStruct->%s+pInStruct->%s, %s);\n' % (m_name, m_name, self.struct_dict[s][m]['array_size'], m_name)
+                                construct_txt += '        memcpy ((void *)%s, (void *)pInStruct->%s, sizeof(%s)*pInStruct->%s);\n' % (m_name, m_name, m_type, self.struct_dict[s][m]['array_size'])
+                                construct_txt += '    }\n'
+                                destruct_txt += '    if (%s)\n' % (m_name)
+                                destruct_txt += '        delete[] %s;\n' % (m_name)
                 elif self.struct_dict[s][m]['array']:
                     # Init array ptr to NULL
                     init_list += '\n\t%s(NULL),' % (m_name)

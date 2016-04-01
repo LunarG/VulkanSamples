@@ -31,6 +31,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := VkLayer_core_validation
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/core_validation.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
+LOCAL_SRC_FILES += $(MY_PATH)/../generated/vk_safe_struct.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(MY_PATH)/../generated \
                     $(SRC_DIR)/loader \
