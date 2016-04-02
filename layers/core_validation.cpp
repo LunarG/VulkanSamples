@@ -1459,7 +1459,7 @@ static void collect_interface_by_location(layer_data *my_data, shader_module con
 
     /* TODO: handle grouped decorations */
     /* TODO: handle index=1 dual source outputs from FS -- two vars will
-     * have the same location, and we DONT want to clobber. */
+     * have the same location, and we DON'T want to clobber. */
 
     /* find the end of the entrypoint's name string. additional zero bytes follow the actual null
        terminator, to fill out the rest of the word - so we only need to look at the last byte in
@@ -1856,7 +1856,7 @@ static void mark_accessible_ids(shader_module const *src, spirv_inst_iter entryp
 
         auto insn = src->get_def(id);
         if (insn == src->end()) {
-            /* id is something we didnt collect in build_def_index. that's OK -- we'll stumble
+            /* id is something we didn't collect in build_def_index. that's OK -- we'll stumble
              * across all kinds of things here that we may not care about. */
             continue;
         }
@@ -9785,7 +9785,7 @@ bool logInvalidAttachmentMessage(layer_data *dev_data, VkCommandBuffer secondary
                    DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
                    "vkCmdExecuteCommands() called w/ invalid Cmd Buffer %p which has a render pass %" PRIx64
                    " that is not compatible with the current render pass %" PRIx64 "."
-                   "Attachment %" PRIu32 " is not compatable with %" PRIu32 ". %s",
+                   "Attachment %" PRIu32 " is not compatible with %" PRIu32 ". %s",
                    (void *)secondaryBuffer, (uint64_t)(secondaryPass), (uint64_t)(primaryPass), primaryAttach, secondaryAttach,
                    msg);
 }
