@@ -1168,7 +1168,7 @@ VkResult vkCreateInstance(
     if (result != VK_SUCCESS)
         return result;
 
-    // Allocate new structure to store peristent data
+    // Allocate new structure to store persistent data
     layer_data *my_data = new layer_data;
 
     // Associate this instance with the newly allocated data
@@ -1227,7 +1227,7 @@ vkCreateDevice(
         return result;
     }
 
-    // Allocate new structure to store peristent data
+    // Allocate new structure to store persistent data
     layer_data *my_data = new layer_data;
 
     // Associate this instance with the newly allocated data
