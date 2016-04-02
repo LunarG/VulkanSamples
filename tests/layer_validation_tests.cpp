@@ -1690,7 +1690,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated) {
                             1, &descriptorSet, 0, NULL);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Warning 'DS <blah> bound but it was never "
+        FAIL() << "Did not receive Warning 'DS <blah> bound but it was never "
                   "updated. You may want to either update it or not bind it.'";
         m_errorMonitor->DumpFailureMsgs();
     }
@@ -2491,7 +2491,7 @@ TEST_F(VkLayerTest, NoBeginCommandBuffer) {
     vkEndCommandBuffer(commandBuffer.GetBufferHandle());
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error 'You must call vkBeginCommandBuffer() "
+        FAIL() << "Did not receive Error 'You must call vkBeginCommandBuffer() "
                   "before this call to vkEndCommandBuffer()'";
         m_errorMonitor->DumpFailureMsgs();
     }
@@ -3252,7 +3252,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
                                     &gp_ci, NULL, &pipeline);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error 'Gfx Pipeline viewportCount is 1, but "
+        FAIL() << "Did not receive Error 'Gfx Pipeline viewportCount is 1, but "
                   "pViewports is NULL...'";
         m_errorMonitor->DumpFailureMsgs();
     }
@@ -3434,7 +3434,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
                                     &gp_ci, NULL, &pipeline);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error 'Gfx Pipeline scissorCount is 1, but "
+        FAIL() << "Did not receive Error 'Gfx Pipeline scissorCount is 1, but "
                   "pScissors is NULL...'";
         m_errorMonitor->DumpFailureMsgs();
     }
@@ -4653,7 +4653,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch) {
                       VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error 'Num samples mismatch!...'";
+        FAIL() << "Did not receive Error 'Num samples mismatch!...'";
         m_errorMonitor->DumpFailureMsgs();
     }
 
@@ -4754,7 +4754,7 @@ TEST_F(VkLayerTest, NumBlendAttachMismatch) {
         VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error 'Mismatch between blend state attachment...'";
+        FAIL() << "Did not receive Error 'Mismatch between blend state attachment...'";
         m_errorMonitor->DumpFailureMsgs();
     }
 
