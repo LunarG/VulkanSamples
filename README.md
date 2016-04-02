@@ -1,7 +1,7 @@
 # Vulkan Ecosystem Components
 *Version 1.0, January 25, 2016*
 
-This project provides Khronos offical ICD loader and validation layers for Vulkan developers on Windows and Linux.
+This project provides Khronos official ICD loader and validation layers for Vulkan developers on Windows and Linux.
 
 ## Introduction
 
