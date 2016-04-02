@@ -538,7 +538,7 @@ static std::string get_result_description(VkResult result) {
                                                        "sharing an image";
         case VK_ERROR_VALIDATION_FAILED_EXT:    return "API validation has detected an invalid use of the API";
         case VK_ERROR_INVALID_SHADER_NV:        return "one or more shaders failed to compile or link";
-        default:                                return "an error has occured";
+        default:                                return "an error has occurred";
     };
     // clang-format on
 }
@@ -559,7 +559,7 @@ static void validate_result(debug_report_data *report_data, const char *apiName,
         if (resultName == UnsupportedResultString) {
             // Unrecognized result code
             log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                    ParameterValidationName, "%s: returned a result code indicating that an error has occured", apiName);
+                    ParameterValidationName, "%s: returned a result code indicating that an error has occurred", apiName);
         } else {
             std::string resultDesc = get_result_description(result);
             log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
