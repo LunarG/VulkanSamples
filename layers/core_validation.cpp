@@ -60,6 +60,7 @@
 #include "vk_layer_data.h"
 #include "vk_layer_extension_utils.h"
 #include "vk_layer_utils.h"
+#include "spirv-tools/libspirv.h"
 
 #if defined __ANDROID__
 #include <android/log.h>
@@ -913,14 +914,6 @@ static spirv_inst_iter find_entrypoint(shader_module *src, char const *name, VkS
     }
 
     return src->end();
-}
-
-bool shader_is_spirv(VkShaderModuleCreateInfo const *pCreateInfo) {
-    uint32_t *words = (uint32_t *)pCreateInfo->pCode;
-    size_t sizeInWords = pCreateInfo->codeSize / sizeof(uint32_t);
-
-    /* Just validate that the header makes sense. */
-    return sizeInWords >= 5 && words[0] == spv::MagicNumber && words[1] == spv::Version;
 }
 
 static char const *storage_class_name(unsigned sc) {
@@ -8904,10 +8897,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateShaderModule(VkDevice dev
                                                                     VkShaderModule *pShaderModule) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skip_call = false;
-    if (!shader_is_spirv(pCreateInfo)) {
-        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                             /* dev */ 0, __LINE__, SHADER_CHECKER_NON_SPIRV_SHADER, "SC", "Shader is not SPIR-V");
+
+    /* Use SPIRV-Tools validator to try and catch any issues with the module itself */
+    spv_context ctx = spvContextCreate(SPV_ENV_VULKAN_1_0);
+    spv_const_binary_t binary { pCreateInfo->pCode, pCreateInfo->codeSize / sizeof(uint32_t) };
+    spv_diagnostic diag = nullptr;
+
+    auto result = spvValidate(ctx, &binary, &diag);
+    if (result != SPV_SUCCESS) {
+        skip_call |= log_msg(my_data->report_data,
+                             result == SPV_WARNING ? VK_DEBUG_REPORT_WARNING_BIT_EXT : VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                             VkDebugReportObjectTypeEXT(0), 0,
+                             __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC", "SPIR-V module not valid: %s",
+                             diag && diag->error ? diag->error : "(no error text)");
     }
+
+    spvDiagnosticDestroy(diag);
+    spvContextDestroy(ctx);
 
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;

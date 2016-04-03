@@ -5795,7 +5795,7 @@ TEST_F(VkLayerTest, ThreadCommandBufferCollision) {
 #if SHADER_CHECKER_TESTS
 TEST_F(VkLayerTest, InvalidSPIRVCodeSize) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Shader is not SPIR-V");
+                                         "Invalid SPIR-V header");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -5820,7 +5820,7 @@ TEST_F(VkLayerTest, InvalidSPIRVCodeSize) {
 
 TEST_F(VkLayerTest, InvalidSPIRVMagic) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Shader is not SPIR-V");
+                                         "Invalid SPIR-V magic number");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -5843,9 +5843,11 @@ TEST_F(VkLayerTest, InvalidSPIRVMagic) {
     m_errorMonitor->VerifyFound();
 }
 
+#if 0
+// Not currently covered by SPIRV-Tools validator
 TEST_F(VkLayerTest, InvalidSPIRVVersion) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Shader is not SPIR-V");
+                                         "Invalid SPIR-V header");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -5868,6 +5870,7 @@ TEST_F(VkLayerTest, InvalidSPIRVVersion) {
 
     m_errorMonitor->VerifyFound();
 }
+#endif
 
 TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
