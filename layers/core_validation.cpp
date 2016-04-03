@@ -1488,7 +1488,7 @@ static void collect_interface_by_location(layer_data *my_data, shader_module con
     /* find the end of the entrypoint's name string. additional zero bytes follow the actual null
        terminator, to fill out the rest of the word - so we only need to look at the last byte in
        the word to determine which word contains the terminator. */
-    auto word = 3;
+    uint32_t word = 3;
     while (entrypoint.word(word) & 0xff000000u) {
         ++word;
     }
@@ -1973,13 +1973,13 @@ static void mark_accessible_ids(shader_module const *src, spirv_inst_iter entryp
                     worklist.insert(insn.word(1)); /* image -- different operand order to above */
                     break;
                 case spv::OpFunctionCall:
-                    for (auto i = 3; i < insn.len(); i++) {
+                    for (uint32_t i = 3; i < insn.len(); i++) {
                         worklist.insert(insn.word(i)); /* fn itself, and all args */
                     }
                     break;
 
                 case spv::OpExtInst:
-                    for (auto i = 5; i < insn.len(); i++) {
+                    for (uint32_t i = 5; i < insn.len(); i++) {
                         worklist.insert(insn.word(i)); /* operands to ext inst */
                     }
                     break;
