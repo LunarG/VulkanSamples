@@ -5070,8 +5070,8 @@ void updateTrackedCommandBuffers(layer_data *dev_data, VkQueue queue, VkQueue ot
     if (queue_data == dev_data->queueMap.end() || other_queue_data == dev_data->queueMap.end()) {
         return;
     }
-    for (auto fence : other_queue_data->second.lastFences) {
-        queue_data->second.lastFences.push_back(fence);
+    for (auto fenceInner : other_queue_data->second.lastFences) {
+        queue_data->second.lastFences.push_back(fenceInner);
     }
     if (fence != VK_NULL_HANDLE) {
         auto fence_data = dev_data->fenceMap.find(fence);
