@@ -1280,14 +1280,8 @@ VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout,
             m_shaderObjs[i]->GetStageCreateInfo();
     }
 
-    if (m_vi_state.vertexAttributeDescriptionCount &&
-        m_vi_state.vertexBindingDescriptionCount) {
-        m_vi_state.sType =
-            VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        info.pVertexInputState = &m_vi_state;
-    } else {
-        info.pVertexInputState = NULL;
-    }
+    m_vi_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    info.pVertexInputState = &m_vi_state;
 
     info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     info.pNext = NULL;
