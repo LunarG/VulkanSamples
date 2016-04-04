@@ -1128,6 +1128,17 @@ void loader_get_icd_loader_instance_extensions(
                                     (struct loader_generic_list *)&icd_exts);
     };
 
+    // TODO REMOVE THIS, HACK ALERT
+    // AMD driver doesn't advertise KHR_surface or KHR_win32_surface, add them
+#ifdef _WIN32
+    VkExtensionProperties props[2];
+    strcpy(props[0].extensionName, VK_KHR_SURFACE_EXTENSION_NAME);
+    props[0].specVersion = VK_KHR_SURFACE_SPEC_VERSION;
+    strcpy(props[1].extensionName, VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    props[1].specVersion = VK_KHR_WIN32_SURFACE_SPEC_VERSION;
+    loader_add_to_ext_list(inst, inst_exts, 2, props);
+
+#endif
     // Traverse loader's extensions, adding non-duplicate extensions to the list
     debug_report_add_instance_extensions(inst, inst_exts);
 }
