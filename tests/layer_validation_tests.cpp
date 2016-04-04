@@ -5164,9 +5164,7 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out float x;\n"
         "out gl_PerVertex {\n"
@@ -5177,9 +5175,7 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed) {
         "   x = 0;\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5214,9 +5210,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex {\n"
         "    vec4 gl_Position;\n"
@@ -5225,9 +5219,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in float x;\n"
         "layout(location=0) out vec4 color;\n"
@@ -5263,9 +5255,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvidedInBlock) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex {\n"
         "    vec4 gl_Position;\n"
@@ -5275,8 +5265,6 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvidedInBlock) {
         "}\n";
     char const *fsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "in block { layout(location=0) float x; } ins;\n"
         "layout(location=0) out vec4 color;\n"
@@ -5314,9 +5302,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out float x[2];\n"
         "out gl_PerVertex {\n"
@@ -5327,9 +5313,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in float x[3];\n"
         "layout(location=0) out vec4 color;\n"
@@ -5367,9 +5351,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out int x;\n"
         "out gl_PerVertex {\n"
@@ -5380,9 +5362,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in float x;\n" /* VS writes int */
         "layout(location=0) out vec4 color;\n"
@@ -5419,8 +5399,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchInBlock) {
 
     char const *vsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "out block { layout(location=0) int x; } outs;\n"
         "out gl_PerVertex {\n"
@@ -5432,8 +5410,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchInBlock) {
         "}\n";
     char const *fsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "in block { layout(location=0) float x; } ins;\n" /* VS writes int */
         "layout(location=0) out vec4 color;\n"
@@ -5470,8 +5446,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByLocation) {
 
     char const *vsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "out block { layout(location=1) float x; } outs;\n"
         "out gl_PerVertex {\n"
@@ -5483,8 +5457,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByLocation) {
         "}\n";
     char const *fsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "in block { layout(location=0) float x; } ins;\n"
         "layout(location=0) out vec4 color;\n"
@@ -5521,8 +5493,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByComponent) {
 
     char const *vsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "out block { layout(location=0, component=0) float x; } outs;\n"
         "out gl_PerVertex {\n"
@@ -5534,8 +5504,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByComponent) {
         "}\n";
     char const *fsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "in block { layout(location=0, component=1) float x; } ins;\n"
         "layout(location=0) out vec4 color;\n"
@@ -5578,9 +5546,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed) {
     input_attrib.format = VK_FORMAT_R32_SFLOAT;
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex {\n"
         "    vec4 gl_Position;\n"
@@ -5589,9 +5555,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5636,9 +5600,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribLocationMismatch) {
     input_attrib.format = VK_FORMAT_R32_SFLOAT;
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=1) in float x;\n"
         "out gl_PerVertex {\n"
@@ -5648,9 +5610,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribLocationMismatch) {
         "   gl_Position = vec4(x);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5689,9 +5649,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in vec4 x;\n" /* not provided */
         "out gl_PerVertex {\n"
@@ -5701,9 +5659,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided) {
         "   gl_Position = x;\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5747,9 +5703,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch) {
     input_attrib.format = VK_FORMAT_R32_SFLOAT;
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in int x;\n" /* attrib provided float */
         "out gl_PerVertex {\n"
@@ -5759,9 +5713,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch) {
         "   gl_Position = vec4(x);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5810,9 +5762,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribMatrixType) {
     }
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in mat2x4 x;\n"
         "out gl_PerVertex {\n"
@@ -5822,9 +5772,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribMatrixType) {
         "   gl_Position = x[0] + x[1];\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5875,9 +5823,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribArrayType)
     }
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in vec4 x[2];\n"
         "out gl_PerVertex {\n"
@@ -5887,9 +5833,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribArrayType)
         "   gl_Position = x[0] + x[1];\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5937,9 +5881,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict) {
     input_attrib.format = VK_FORMAT_R32_SFLOAT;
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in float x;\n" /* attrib provided float */
         "out gl_PerVertex {\n"
@@ -5949,9 +5891,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict) {
         "   gl_Position = vec4(x);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5989,9 +5929,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex {\n"
         "    vec4 gl_Position;\n"
@@ -6000,9 +5938,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "void main(){\n"
         "}\n";
@@ -6039,9 +5975,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed) {
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex {\n"
         "    vec4 gl_Position;\n"
@@ -6050,9 +5984,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 x;\n"
         "layout(location=1) out vec4 y;\n" /* no matching attachment for this */
@@ -6093,9 +6025,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch) {
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex {\n"
         "    vec4 gl_Position;\n"
@@ -6104,9 +6034,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out ivec4 x;\n" /* not UNORM */
         "void main(){\n"
@@ -6143,9 +6071,7 @@ TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided) {
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex {\n"
         "    vec4 gl_Position;\n"
@@ -6154,9 +6080,7 @@ TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 x;\n"
         "layout(set=0) layout(binding=0) uniform foo { int x; int y; } bar;\n"
@@ -6197,8 +6121,6 @@ TEST_F(VkLayerTest, CreatePipelinePushConstantsNotInLayout) {
 
     char const *vsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "layout(push_constant, std430) uniform foo { float x; } consts;\n"
         "out gl_PerVertex {\n"
@@ -6209,8 +6131,6 @@ TEST_F(VkLayerTest, CreatePipelinePushConstantsNotInLayout) {
         "}\n";
     char const *fsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "layout(location=0) out vec4 x;\n"
         "void main(){\n"
