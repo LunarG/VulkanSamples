@@ -4664,7 +4664,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch) {
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
-#ifdef ADD_BACK_IN_WHEN_CHECK_IS_BACK
+#ifdef ADD_BACK_IN_WHEN_CHECK_IS_BACK // TODO : Re-enable when GH256 fixed
 TEST_F(VkLayerTest, NumBlendAttachMismatch) {
     // Create Pipeline where the number of blend attachments doesn't match the
     // number of color attachments.  In this case, we don't add any color
