@@ -1640,7 +1640,7 @@ static bool validate_interface_between_stages(layer_data *my_data, shader_module
             if (a_it->second.is_patch != b_it->second.is_patch) {
                 if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
-                            "Decoration mismatch on location %u.%u: is per-%s in %s stage but"
+                            "Decoration mismatch on location %u.%u: is per-%s in %s stage but "
                             "per-%s in %s stage", a_first.first, a_first.second,
                             a_it->second.is_patch ? "patch" : "vertex", producer_stage->name,
                             b_it->second.is_patch ? "patch" : "vertex", consumer_stage->name)) {
