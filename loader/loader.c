@@ -52,6 +52,12 @@
 #include "cJSON.h"
 #include "murmurhash.h"
 
+#if defined(__GNUC__)
+#    if __GNUC__ < 2 || (__GNUC__ == 2 && __GNUC_MINOR__ < 17)
+#        define secure_getenv __secure_getenv
+#    endif
+#endif
+
 static loader_platform_dl_handle
 loader_add_layer_lib(const struct loader_instance *inst, const char *chain_type,
                      struct loader_layer_properties *layer_prop);
@@ -2237,7 +2243,7 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
 
     if (env_override != NULL && (override = loader_getenv(env_override))) {
 #if !defined(_WIN32)
-        if (geteuid() != getuid()) {
+        if (geteuid() != getuid()  || getegid() != getgid()) {
             /* Don't allow setuid apps to use the env var: */
             loader_free_getenv(override);
             override = NULL;
