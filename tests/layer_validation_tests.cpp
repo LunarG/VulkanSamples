@@ -5918,6 +5918,11 @@ TEST_F(VkLayerTest, CreatePipelineTessPerVertex)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
+    if (!m_device->phy().features().tessellationShader) {
+        printf("Device does not support tessellation shaders; skipped.\n");
+        return;
+    }
+
     char const *vsSource =
         "#version 450\n"
         "void main(){}\n";
@@ -5994,6 +5999,11 @@ TEST_F(VkLayerTest, CreatePipelineTessPatchDecorationMismatch)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    if (!m_device->phy().features().tessellationShader) {
+        printf("Device does not support tessellation shaders; skipped.\n");
+        return;
+    }
 
     char const *vsSource =
         "#version 450\n"
