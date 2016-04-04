@@ -1252,20 +1252,24 @@ void VkPipelineObj::MakeDynamic(VkDynamicState state) {
 
 void VkPipelineObj::SetMSAA(
     const VkPipelineMultisampleStateCreateInfo *ms_state) {
-    memcpy(&m_ms_state, ms_state, sizeof(VkPipelineMultisampleStateCreateInfo));
+    m_ms_state = *ms_state;
 }
 
 void VkPipelineObj::SetInputAssembly(
     const VkPipelineInputAssemblyStateCreateInfo *ia_state) {
-    memcpy(&m_ia_state, ia_state,
-           sizeof(VkPipelineInputAssemblyStateCreateInfo));
+    m_ia_state = *ia_state;
 }
 
 void VkPipelineObj::SetRasterization(
     const VkPipelineRasterizationStateCreateInfo *rs_state) {
-    memcpy(&m_rs_state, rs_state,
-           sizeof(VkPipelineRasterizationStateCreateInfo));
+    m_rs_state = *rs_state;
 }
+
+void VkPipelineObj::SetTessellation(
+    const VkPipelineTessellationStateCreateInfo *te_state) {
+    m_te_state = *te_state;
+}
+
 
 VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout,
                                          VkRenderPass render_pass) {
@@ -1314,13 +1318,20 @@ VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout,
 
     info.renderPass = render_pass;
     info.subpass = 0;
-    info.pTessellationState = NULL;
     info.pInputAssemblyState = &m_ia_state;
     info.pViewportState = &m_vp_state;
     info.pRasterizationState = &m_rs_state;
     info.pMultisampleState = &m_ms_state;
     info.pDepthStencilState = &m_ds_state;
     info.pColorBlendState = &m_cb_state;
+
+    if (m_ia_state.topology == VK_PRIMITIVE_TOPOLOGY_PATCH_LIST) {
+        m_te_state.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+        info.pTessellationState = &m_te_state;
+    }
+    else {
+        info.pTessellationState = nullptr;
+    }
 
     return init_try(*m_device, info);
 }
