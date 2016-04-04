@@ -234,7 +234,7 @@ util_CreateDebugReportCallbacks(struct loader_instance *inst,
                                 VkDebugReportCallbackCreateInfoEXT *infos,
                                 VkDebugReportCallbackEXT *callbacks)
 {
-    VkResult rtn;
+    VkResult rtn = VK_SUCCESS;
     for (uint32_t i = 0 ; i < num_callbacks ; i++) {
         rtn = util_CreateDebugReportCallback(inst,
                                              &infos[i],

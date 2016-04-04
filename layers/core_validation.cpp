@@ -1499,7 +1499,7 @@ static void collect_interface_by_location(layer_data *my_data, shader_module con
         assert(insn != src->end());
         assert(insn.opcode() == spv::OpVariable);
 
-        if (insn.word(3) == sinterface) {
+        if (insn.word(3) == static_cast<uint32_t>(sinterface)) {
             unsigned id = insn.word(2);
             unsigned type = insn.word(1);
 
@@ -3342,7 +3342,6 @@ static uint32_t getUpdateCount(layer_data *my_data, const VkDevice device, const
     default:
         return 0;
     }
-    return 0;
 }
 
 // For given layout and update, return the first overall index of the layout that is updated
@@ -3363,7 +3362,7 @@ static VkBool32 validateUpdateConsistency(layer_data *my_data, const VkDevice de
                                           const GENERIC_HEADER *pUpdateStruct, uint32_t startIndex, uint32_t endIndex) {
     // First get actual type of update
     VkBool32 skipCall = VK_FALSE;
-    VkDescriptorType actualType;
+    VkDescriptorType actualType = VK_DESCRIPTOR_TYPE_MAX_ENUM;
     uint32_t i = 0;
     switch (pUpdateStruct->sType) {
     case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
@@ -4941,7 +4940,8 @@ void decrementResources(layer_data *my_data, uint32_t fenceCount, const VkFence 
             return;
         fence_data->second.needsSignaled = false;
         fence_data->second.in_use.fetch_sub(1);
-        decrementResources(my_data, fence_data->second.priorFences.size(), fence_data->second.priorFences.data());
+        decrementResources(my_data, static_cast<uint32_t>(fence_data->second.priorFences.size()),
+                           fence_data->second.priorFences.data());
         for (auto cmdBuffer : fence_data->second.cmdBuffers) {
             decrementResources(my_data, cmdBuffer);
         }
@@ -4955,7 +4955,8 @@ void decrementResources(layer_data *my_data, VkQueue queue) {
             decrementResources(my_data, cmdBuffer);
         }
         queue_data->second.untrackedCmdBuffers.clear();
-        decrementResources(my_data, queue_data->second.lastFences.size(), queue_data->second.lastFences.data());
+        decrementResources(my_data, static_cast<uint32_t>(queue_data->second.lastFences.size()),
+                           queue_data->second.lastFences.data());
     }
 }
 
@@ -8562,8 +8563,8 @@ VkBool32 ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, uint3
                         funcName);
             }
             auto image_data = dev_data->imageMap.find(mem_barrier->image);
-            VkFormat format;
-            uint32_t arrayLayers, mipLevels;
+            VkFormat format = VK_FORMAT_UNDEFINED;
+            uint32_t arrayLayers = 0, mipLevels = 0;
             bool imageFound = false;
             if (image_data != dev_data->imageMap.end()) {
                 format = image_data->second.createInfo.format;
@@ -8978,7 +8979,7 @@ VkBool32 CheckDependencyExists(const layer_data *my_data, const int subpass, con
     VkBool32 result = VK_TRUE;
     // Loop through all subpasses that share the same attachment and make sure a dependency exists
     for (uint32_t k = 0; k < dependent_subpasses.size(); ++k) {
-        if (subpass == dependent_subpasses[k])
+        if (static_cast<uint32_t>(subpass) == dependent_subpasses[k])
             continue;
         const DAGNode &node = subpass_to_node[subpass];
         // Check for a specified dependency between the two nodes. If one exists we are done.
