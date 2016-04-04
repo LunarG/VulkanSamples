@@ -5958,8 +5958,15 @@ TEST_F(VkLayerTest, CreatePipelineTessPerVertex)
         VK_PRIMITIVE_TOPOLOGY_PATCH_LIST,
         VK_FALSE};
 
+    VkPipelineTessellationStateCreateInfo tsci{
+        VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
+        nullptr,
+        0,
+        3};
+
     VkPipelineObj pipe(m_device);
     pipe.SetInputAssembly(&iasci);
+    pipe.SetTessellation(&tsci);
     pipe.AddColorAttachment();
     pipe.AddShader(&vs);
     pipe.AddShader(&tcs);
