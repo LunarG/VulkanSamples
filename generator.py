@@ -3372,9 +3372,13 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                             checkExpr += '\n' + indent
                         if lenParam:
                             # Need to process all elements in the array
-                            checkExpr += 'for (uint32_t i = 0; i < {}{}; ++i) {{\n'.format(valuePrefix, lenParam.name)
+                            checkExpr += 'if ({}{} != NULL) {{\n'.format(valuePrefix, value.name)
+                            indent = self.incIndent(indent)
+                            checkExpr += indent + 'for (uint32_t i = 0; i < {}{}; ++i) {{\n'.format(valuePrefix, lenParam.name)
                             indent = self.incIndent(indent)
                             checkExpr += indent + 'skipCall |= parameter_validation_{}(report_data, {}, {}, {}, &({}{}[i]));\n'.format(value.type, name, prefix, isInput, valuePrefix, value.name)
+                            indent = self.decIndent(indent)
+                            checkExpr += indent + '}\n'
                             indent = self.decIndent(indent)
                             checkExpr += indent + '}\n'
                         else:
@@ -3383,9 +3387,13 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                         # Validation function does not have an isInput field
                         if lenParam:
                             # Need to process all elements in the array
-                            expr = 'for (uint32_t i = 0; i < {}{}; ++i) {{\n'.format(valuePrefix, lenParam.name)
+                            expr = 'if ({}{} != NULL) {{\n'.format(valuePrefix, value.name)
+                            indent = self.incIndent(indent)
+                            expr += indent + 'for (uint32_t i = 0; i < {}{}; ++i) {{\n'.format(valuePrefix, lenParam.name)
                             indent = self.incIndent(indent)
                             expr += indent + 'skipCall |= parameter_validation_{}(report_data, {}, {}, &({}{}[i]));\n'.format(value.type, name, prefix, valuePrefix, value.name)
+                            indent = self.decIndent(indent)
+                            expr += indent + '}\n'
                             indent = self.decIndent(indent)
                             expr += indent + '}\n'
                         else:
