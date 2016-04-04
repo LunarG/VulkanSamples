@@ -86,14 +86,16 @@ function notNumeric ($x) {
 # We first create an array, with one array element for each vulkan-*dll in
 # C:\Windows\System32 (and C:\Windows\SysWOW64 on 64-bit systems), with each element
 # containing:
-#    <major>=<minor>=<patch>=<buildno>=<prerelease>=<prebuildno>=
+#    <major>=<minor>=<patch>=<buildno>=<prebuildno>=<prerelease>=
 #     filename
 #    @<major>@<minor>@<patch>@<buildno>@<prerelease>@<prebuildno>@
 # [Note that the above three lines are one element in the array.]
 # The build identifiers separated by "=" are suitable for sorting, i.e.
 # expanded to 10 digits with leading 0s. If <prerelease> or <prebuildno> are
 # not specified, "zzzzzzzzzz" is substituted for them, so that they sort
-# to a position after those that do specify them.
+# to a position after those that do specify them. Note that <prerelease>
+# is "less significant" in the sort than <prebuildno>, and that <prerelease> is
+# always treated as an alpha string, even though it may contain numeric characters.
 # The build identifiers separated by "@" are the original values extracted
 # from the file name. They are used later to find the path to the SDK
 # install directory for the given filename.
@@ -206,12 +208,12 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
        $minor = $minor.padleft(10,'0')
        $patch = $patch.padleft(10,'0')
        $buildno = $buildno.padleft(10,'0')
-       $prerelease = $prerelease.padleft(10,'0')
+       $prerelease = $prerelease.padright(10,'z')
        $prebuildno = $prebuildno.padleft(10,'0')
 
        # Add a new element to the $VulkanDllList array
        echo "Adding $_ to Vulkan dll list " >>$log
-       $script:VulkanDllList+="$major=$minor=$patch=$buildno=$prerelease=$prebuildno= $_ @$majorOrig@$minorOrig@$patchOrig@$buildnoOrig@$prereleaseOrig@$prebuildnoOrig@"
+       $script:VulkanDllList+="$major=$minor=$patch=$buildno=$prebuildno=$prerelease= $_ @$majorOrig@$minorOrig@$patchOrig@$buildnoOrig@$prereleaseOrig@$prebuildnoOrig@"
    }
 
     # If $VulkanDllList contains at least one element, there's at least one vulkan*.dll file.
