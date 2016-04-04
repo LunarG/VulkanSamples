@@ -723,13 +723,13 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_header(self):
         header_txt = []
         header_txt.append('%s' % self.lineinfo.get())
+        header_txt.append('#include "vk_loader_platform.h"')
+        header_txt.append('#include "vulkan/vulkan.h"')
+        header_txt.append('')
         header_txt.append('#include <stdio.h>')
         header_txt.append('#include <stdlib.h>')
         header_txt.append('#include <string.h>')
         header_txt.append('#include <inttypes.h>')
-        header_txt.append('')
-        header_txt.append('#include "vulkan/vulkan.h"')
-        header_txt.append('#include "vk_loader_platform.h"')
         header_txt.append('')
         header_txt.append('#include <unordered_map>')
         header_txt.append('using namespace std;')

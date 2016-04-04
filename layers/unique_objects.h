@@ -25,13 +25,13 @@
  * Author: Tobin Ehlis <tobine@google.com>
  */
 
+#include "vk_loader_platform.h"
+#include "vulkan/vulkan.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
-
-#include "vulkan/vulkan.h"
-#include "vk_loader_platform.h"
 
 #include <vector>
 #include <unordered_map>
