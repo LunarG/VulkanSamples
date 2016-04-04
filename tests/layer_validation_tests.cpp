@@ -154,6 +154,9 @@ class ErrorMonitor {
         string errorString(msgString);
         if (msgFlags & m_msgFlags) {
             if (errorString.find(m_desiredMsg) != string::npos) {
+                if (m_msgFound) { /* if multiple matches, don't lose all but the last! */
+                    m_otherMsgs.push_back(m_failureMsg);
+                }
                 m_failureMsg = errorString;
                 m_msgFound = VK_TRUE;
                 result = VK_TRUE;
@@ -2844,7 +2847,7 @@ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive Error 'Invalid Pipeline CreateInfo State:
-VK_PRIMITIVE_TOPOLOGY_PATCH primitive...'";
+VK_PRIMITIVE_TOPOLOGY_PATCHLIST primitive...'";
         m_errorMonitor->DumpFailureMsgs();
     }
 
