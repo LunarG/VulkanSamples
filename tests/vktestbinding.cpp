@@ -121,6 +121,12 @@ VkPhysicalDeviceMemoryProperties PhysicalDevice::memory_properties() const {
     return info;
 }
 
+VkPhysicalDeviceFeatures PhysicalDevice::features() const {
+    VkPhysicalDeviceFeatures features;
+    vkGetPhysicalDeviceFeatures(handle(), &features);
+    return features;
+}
+
 /*
  * Return list of Global layers available
  */
@@ -307,6 +313,10 @@ void Device::init(std::vector<const char *> &layers,
     dev_info.ppEnabledLayerNames = layers.data();
     dev_info.enabledExtensionCount = extensions.size();
     dev_info.ppEnabledExtensionNames = extensions.data();
+
+    // request all supportable features enabled
+    auto features = phy().features();
+    dev_info.pEnabledFeatures = &features;
 
     init(dev_info);
 }

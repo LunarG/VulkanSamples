@@ -124,6 +124,7 @@ class PhysicalDevice : public internal::Handle<VkPhysicalDevice> {
     VkPhysicalDeviceProperties properties() const;
     VkPhysicalDeviceMemoryProperties memory_properties() const;
     std::vector<VkQueueFamilyProperties> queue_properties() const;
+    VkPhysicalDeviceFeatures features() const;
 
     bool set_memory_type(const uint32_t type_bits, VkMemoryAllocateInfo *info,
                          const VkMemoryPropertyFlags properties,
