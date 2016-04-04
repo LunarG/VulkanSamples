@@ -192,7 +192,7 @@ class WinDefFileSubcommand(Subcommand):
         else:
             self.exports = library_exports[self.argv[1]]
 
-        super().run()
+        super(WinDefFileSubcommand, self).run()
 
     def generate_copyright(self):
         return """; THIS FILE IS GENERATED.  DO NOT EDIT.
