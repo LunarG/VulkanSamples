@@ -38,7 +38,8 @@
     }
 
 VkRenderFramework::VkRenderFramework()
-    : m_commandPool(), m_commandBuffer(), m_renderPass(VK_NULL_HANDLE),
+    : inst(VK_NULL_HANDLE), m_device(NULL), m_commandPool(VK_NULL_HANDLE),
+      m_commandBuffer(NULL), m_renderPass(VK_NULL_HANDLE),
       m_framebuffer(VK_NULL_HANDLE), m_width(256.0), // default window width
       m_height(256.0),                               // default window height
       m_render_target_fmt(VK_FORMAT_R8G8B8A8_UNORM),
