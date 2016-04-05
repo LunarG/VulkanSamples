@@ -84,9 +84,9 @@ template <> bool is_extension_added_token(VkSamplerAddressMode value) {
  * @param value Pointer to validate.
  * @return Boolean value indicating that the call should be skipped.
  */
-static VkBool32 validate_required_pointer(debug_report_data *report_data, const char *apiName, const char *parameterName,
-                                          const void *value) {
-    VkBool32 skipCall = VK_FALSE;
+static bool validate_required_pointer(debug_report_data *report_data, const char *apiName, const char *parameterName,
+                                      const void *value) {
+    bool skipCall = false;
 
     if (value == NULL) {
         skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
@@ -117,13 +117,12 @@ static VkBool32 validate_required_pointer(debug_report_data *report_data, const 
  * @return Boolean value indicating that the call should be skipped.
  */
 template <typename T>
-VkBool32 validate_array(debug_report_data *report_data, const char *apiName, const char *countName, const char *arrayName,
-                        const T *count, const void *array, VkBool32 countPtrRequired, VkBool32 countValueRequired,
-                        VkBool32 arrayRequired) {
-    VkBool32 skipCall = VK_FALSE;
+bool validate_array(debug_report_data *report_data, const char *apiName, const char *countName, const char *arrayName,
+                    const T *count, const void *array, bool countPtrRequired, bool countValueRequired, bool arrayRequired) {
+    bool skipCall = false;
 
     if (count == NULL) {
-        if (countPtrRequired == VK_TRUE) {
+        if (countPtrRequired) {
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                                 ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, countName);
         }
@@ -152,19 +151,19 @@ VkBool32 validate_array(debug_report_data *report_data, const char *apiName, con
  * @return Boolean value indicating that the call should be skipped.
  */
 template <typename T>
-VkBool32 validate_array(debug_report_data *report_data, const char *apiName, const char *countName, const char *arrayName, T count,
-                        const void *array, VkBool32 countRequired, VkBool32 arrayRequired) {
-    VkBool32 skipCall = VK_FALSE;
+bool validate_array(debug_report_data *report_data, const char *apiName, const char *countName, const char *arrayName, T count,
+                    const void *array, bool countRequired, bool arrayRequired) {
+    bool skipCall = false;
 
     // Count parameters not tagged as optional cannot be 0
-    if ((count == 0) && (countRequired == VK_TRUE)) {
+    if ((count == 0) && countRequired) {
         skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                             ParameterValidationName, "%s: value of %s must be greater than 0", apiName, countName);
     }
 
     // Array parameters not tagged as optional cannot be NULL,
     // unless the count is 0
-    if ((array == NULL) && (arrayRequired == VK_TRUE) && (count != 0)) {
+    if ((array == NULL) && arrayRequired && (count != 0)) {
         skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                             ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, arrayName);
     }
@@ -185,12 +184,12 @@ VkBool32 validate_array(debug_report_data *report_data, const char *apiName, con
  * @return Boolean value indicating that the call should be skipped.
  */
 template <typename T>
-VkBool32 validate_struct_type(debug_report_data *report_data, const char *apiName, const char *parameterName, const char *sTypeName,
-                              const T *value, VkStructureType sType, VkBool32 required) {
-    VkBool32 skipCall = VK_FALSE;
+bool validate_struct_type(debug_report_data *report_data, const char *apiName, const char *parameterName, const char *sTypeName,
+                          const T *value, VkStructureType sType, bool required) {
+    bool skipCall = false;
 
     if (value == NULL) {
-        if (required == VK_TRUE) {
+        if (required) {
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                                 ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, parameterName);
         }
@@ -224,14 +223,13 @@ VkBool32 validate_struct_type(debug_report_data *report_data, const char *apiNam
  * @return Boolean value indicating that the call should be skipped.
  */
 template <typename T>
-VkBool32 validate_struct_type_array(debug_report_data *report_data, const char *apiName, const char *countName,
-                                    const char *arrayName, const char *sTypeName, const uint32_t *count, const T *array,
-                                    VkStructureType sType, VkBool32 countPtrRequired, VkBool32 countValueRequired,
-                                    VkBool32 arrayRequired) {
-    VkBool32 skipCall = VK_FALSE;
+bool validate_struct_type_array(debug_report_data *report_data, const char *apiName, const char *countName, const char *arrayName,
+                                const char *sTypeName, const uint32_t *count, const T *array, VkStructureType sType,
+                                bool countPtrRequired, bool countValueRequired, bool arrayRequired) {
+    bool skipCall = false;
 
     if (count == NULL) {
-        if (countPtrRequired == VK_TRUE) {
+        if (countPtrRequired) {
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                                 ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, countName);
         }
@@ -263,21 +261,21 @@ VkBool32 validate_struct_type_array(debug_report_data *report_data, const char *
  * @return Boolean value indicating that the call should be skipped.
  */
 template <typename T>
-VkBool32 validate_struct_type_array(debug_report_data *report_data, const char *apiName, const char *countName,
-                                    const char *arrayName, const char *sTypeName, uint32_t count, const T *array,
-                                    VkStructureType sType, VkBool32 countRequired, VkBool32 arrayRequired) {
-    VkBool32 skipCall = VK_FALSE;
+bool validate_struct_type_array(debug_report_data *report_data, const char *apiName, const char *countName, const char *arrayName,
+                                const char *sTypeName, uint32_t count, const T *array, VkStructureType sType, bool countRequired,
+                                bool arrayRequired) {
+    bool skipCall = false;
 
     if ((count == 0) || (array == NULL)) {
         // Count parameters not tagged as optional cannot be 0
-        if ((count == 0) && (countRequired == VK_TRUE)) {
+        if ((count == 0) && countRequired) {
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                                 ParameterValidationName, "%s: parameter %s must be greater than 0", apiName, countName);
         }
 
         // Array parameters not tagged as optional cannot be NULL,
         // unless the count is 0
-        if ((array == NULL) && (arrayRequired == VK_TRUE) && (count != 0)) {
+        if ((array == NULL) && arrayRequired && (count != 0)) {
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                                 ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, arrayName);
         }
@@ -313,21 +311,20 @@ VkBool32 validate_struct_type_array(debug_report_data *report_data, const char *
  * @param arrayRequired The 'array' parameter may not be NULL when true.
  * @return Boolean value indicating that the call should be skipped.
  */
-static VkBool32 validate_string_array(debug_report_data *report_data, const char *apiName, const char *countName,
-                                      const char *arrayName, uint32_t count, const char *const *array, VkBool32 countRequired,
-                                      VkBool32 arrayRequired) {
-    VkBool32 skipCall = VK_FALSE;
+static bool validate_string_array(debug_report_data *report_data, const char *apiName, const char *countName, const char *arrayName,
+                                  uint32_t count, const char *const *array, bool countRequired, bool arrayRequired) {
+    bool skipCall = false;
 
     if ((count == 0) || (array == NULL)) {
         // Count parameters not tagged as optional cannot be 0
-        if ((count == 0) && (countRequired == VK_TRUE)) {
+        if ((count == 0) && countRequired) {
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                                 ParameterValidationName, "%s: parameter %s must be greater than 0", apiName, countName);
         }
 
         // Array parameters not tagged as optional cannot be NULL,
         // unless the count is 0
-        if ((array == NULL) && (arrayRequired == VK_TRUE) && (count != 0)) {
+        if ((array == NULL) && arrayRequired && (count != 0)) {
             skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                                 ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, arrayName);
         }
@@ -361,10 +358,10 @@ static VkBool32 validate_string_array(debug_report_data *report_data, const char
  * @param allowedTypes array of strcuture types allowed for pNext.
  * @return Boolean value indicating that the call should be skipped.
  */
-static VkBool32 validate_struct_pnext(debug_report_data *report_data, const char *apiName, const char *parameterName,
-                                      const char *allowedStructNames, const void *next, size_t allowedTypeCount,
-                                      const VkStructureType *allowedTypes) {
-    VkBool32 skipCall = VK_FALSE;
+static bool validate_struct_pnext(debug_report_data *report_data, const char *apiName, const char *parameterName,
+                                  const char *allowedStructNames, const void *next, size_t allowedTypeCount,
+                                  const VkStructureType *allowedTypes) {
+    bool skipCall = false;
 
     if (next != NULL) {
         if (allowedTypeCount == 0) {
@@ -413,8 +410,8 @@ static VkBool32 validate_struct_pnext(debug_report_data *report_data, const char
 * @param value Boolean value to validate.
 * @return Boolean value indicating that the call should be skipped.
 */
-static VkBool32 validate_bool32(debug_report_data *report_data, const char *apiName, const char *parameterName, VkBool32 value) {
-    VkBool32 skipCall = VK_FALSE;
+static bool validate_bool32(debug_report_data *report_data, const char *apiName, const char *parameterName, VkBool32 value) {
+    bool skipCall = false;
 
     if ((value != VK_TRUE) && (value != VK_FALSE)) {
         skipCall |=
@@ -445,9 +442,9 @@ static VkBool32 validate_bool32(debug_report_data *report_data, const char *apiN
 * @return Boolean value indicating that the call should be skipped.
 */
 template <typename T>
-VkBool32 validate_ranged_enum(debug_report_data *report_data, const char *apiName, const char *parameterName, const char *enumName,
-                              T begin, T end, T value) {
-    VkBool32 skipCall = VK_FALSE;
+bool validate_ranged_enum(debug_report_data *report_data, const char *apiName, const char *parameterName, const char *enumName,
+                          T begin, T end, T value) {
+    bool skipCall = false;
 
     if (((value < begin) || (value > end)) && !is_extension_added_token(value)) {
         skipCall |=
@@ -480,9 +477,9 @@ VkBool32 validate_ranged_enum(debug_report_data *report_data, const char *apiNam
 * @return Boolean value indicating that the call should be skipped.
 */
 template <typename T>
-static VkBool32 validate_ranged_enum_array(debug_report_data *report_data, const char *apiName, const char *parameterName,
-                                           const char *enumName, T begin, T end, uint32_t count, const T *pValues) {
-    VkBool32 skipCall = VK_FALSE;
+static bool validate_ranged_enum_array(debug_report_data *report_data, const char *apiName, const char *parameterName,
+                                       const char *enumName, T begin, T end, uint32_t count, const T *pValues) {
+    bool skipCall = false;
 
     for (uint32_t i = 0; i < count; ++i) {
         if (((pValues[i] < begin) || (pValues[i] > end)) && !is_extension_added_token(pValues[i])) {
