@@ -5911,6 +5911,59 @@ m_errorMonitor->GetFailureMsg();
     }
 }
 
+TEST_F(VkLayerTest, CreatePipelineRelaxedTypeMatch)
+{
+    m_errorMonitor->SetDesiredFailureMsg(~0u, "");
+
+    // VK 1.0.8 Specification, 14.1.3 "Additionally,..." block
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    char const *vsSource =
+        "#version 450\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "layout(location=0) out vec3 x;\n"
+        "layout(location=1) out ivec3 y;\n"
+        "layout(location=2) out vec3 z;\n"
+        "void main(){\n"
+        "   gl_Position = vec4(0);\n"
+        "   x = vec3(0); y = ivec3(0); z = vec3(0);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 450\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "layout(location=0) in float x;\n"
+        "layout(location=1) flat in int y;\n"
+        "layout(location=2) in vec2 z;\n"
+        "void main(){\n"
+        "   color = vec4(1 + x + y + z.x);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    if (m_errorMonitor->DesiredMsgFound()) {
+        m_errorMonitor->DumpFailureMsgs();
+        FAIL() << "Expected to succeed but: " <<
+m_errorMonitor->GetFailureMsg();
+    }
+}
+
 TEST_F(VkLayerTest, CreatePipelineTessPerVertex)
 {
     m_errorMonitor->SetDesiredFailureMsg(~0u, "");
