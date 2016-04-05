@@ -445,6 +445,7 @@ class PIPELINE_NODE {
     safe_VkComputePipelineCreateInfo computePipelineCI;
     // Flag of which shader stages are active for this pipeline
     uint32_t active_shaders;
+    uint32_t duplicate_shaders;
     // Capture which slots (set#->bindings) are actually used by the shaders of this pipeline
     unordered_map<uint32_t, unordered_set<uint32_t>> active_slots;
     // Vtx input info (if any)
@@ -454,7 +455,7 @@ class PIPELINE_NODE {
     bool blendConstantsEnabled; // Blend constants enabled for any attachments
     // Default constructor
     PIPELINE_NODE()
-        : pipeline{}, graphicsPipelineCI{}, computePipelineCI{}, active_shaders(0), active_slots(), vertexBindingDescriptions(),
+        : pipeline{}, graphicsPipelineCI{}, computePipelineCI{}, active_shaders(0), duplicate_shaders(0), active_slots(), vertexBindingDescriptions(),
           vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false) {}
 
     void initGraphicsPipeline(const VkGraphicsPipelineCreateInfo *pCreateInfo) {
@@ -464,31 +465,8 @@ class PIPELINE_NODE {
         computePipelineCI.initialize(&emptyComputeCI);
         for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
             const VkPipelineShaderStageCreateInfo *pPSSCI = &pCreateInfo->pStages[i];
-
-            switch (pPSSCI->stage) {
-            case VK_SHADER_STAGE_VERTEX_BIT:
-                this->active_shaders |= VK_SHADER_STAGE_VERTEX_BIT;
-                break;
-            case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-                this->active_shaders |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-                break;
-            case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-                this->active_shaders |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-                break;
-            case VK_SHADER_STAGE_GEOMETRY_BIT:
-                this->active_shaders |= VK_SHADER_STAGE_GEOMETRY_BIT;
-                break;
-            case VK_SHADER_STAGE_FRAGMENT_BIT:
-                this->active_shaders |= VK_SHADER_STAGE_FRAGMENT_BIT;
-                break;
-            case VK_SHADER_STAGE_COMPUTE_BIT:
-                // TODO : Flag error, CS is specified through VkComputePipelineCreateInfo
-                this->active_shaders |= VK_SHADER_STAGE_COMPUTE_BIT;
-                break;
-            default:
-                // TODO : Flag error
-                break;
-            }
+            this->duplicate_shaders |= this->active_shaders & pPSSCI->stage;
+            this->active_shaders |= pPSSCI->stage;
         }
         if (pCreateInfo->pVertexInputState) {
             const VkPipelineVertexInputStateCreateInfo *pVICI = pCreateInfo->pVertexInputState;
