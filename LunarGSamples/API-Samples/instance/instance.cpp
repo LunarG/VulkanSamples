@@ -32,11 +32,13 @@ create and destroy Vulkan instance
 
 #include <iostream>
 #include <cstdlib>
-#include "util.hpp"
+#include <util_init.hpp>
 
 #define APP_SHORT_NAME "vulkansamples_instance"
 
 int sample_main(int argc, char *argv[]) {
+    struct sample_info info = {};
+    init_global_layer_properties(info);
 
     /* VULKAN_KEY_START */
 

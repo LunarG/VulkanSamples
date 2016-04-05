@@ -282,4 +282,10 @@ ANativeWindow* AndroidGetApplicationWindow();
 FILE* AndroidFopen(const char* fname, const char* mode);
 void AndroidGetWindowSize(int32_t *width, int32_t *height);
 bool AndroidLoadFile(const char* filePath, std::string *data);
+
+#ifndef VK_API_VERSION_1_0
+// On Android, NDK would include slightly older version of headers that is missing the definition.
+#define VK_API_VERSION_1_0 VK_API_VERSION
+#endif
+
 #endif

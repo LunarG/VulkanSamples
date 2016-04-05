@@ -94,7 +94,9 @@ int sample_main(int argc, char *argv[]) {
 #ifdef _WIN32
     info.instance_extension_names.push_back(
         VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#elif !defined(__ANDROID__)
+#elif defined(__ANDROID__)
+    info.instance_extension_names.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+#else
     info.instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #endif
     info.device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);

@@ -34,6 +34,7 @@ enumerate physical devices
 
 int sample_main(int argc, char *argv[]) {
     struct sample_info info = {};
+    init_global_layer_properties(info);
     init_instance(info, "vulkansamples_enumerate");
 
     /* VULKAN_KEY_START */

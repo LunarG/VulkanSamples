@@ -35,11 +35,6 @@ samples "init" utility functions
 #include "util_init.hpp"
 #include "cube_data.h"
 
-#ifdef __ANDROID__
-// In Android, we are shipping slightly older version of headers that is missing some definitions.
-#define VK_API_VERSION_1_0 VK_API_VERSION
-#endif
-
 using namespace std;
 
 /*
