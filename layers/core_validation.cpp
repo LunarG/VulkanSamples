@@ -1245,7 +1245,15 @@ static std::string describe_type(shader_module const *src, unsigned type) {
 }
 
 
-static bool types_match(shader_module const *a, shader_module const *b, unsigned a_type, unsigned b_type, bool a_arrayed, bool b_arrayed) {
+static bool is_narrow_numeric_type(spirv_inst_iter type)
+{
+    if (type.opcode() != spv::OpTypeInt && type.opcode() != spv::OpTypeFloat)
+        return false;
+    return type.word(2) < 64;
+}
+
+
+static bool types_match(shader_module const *a, shader_module const *b, unsigned a_type, unsigned b_type, bool a_arrayed, bool b_arrayed, bool relaxed) {
     /* walk two type trees together, and complain about differences */
     auto a_insn = a->get_def(a_type);
     auto b_insn = b->get_def(b_type);
@@ -1253,12 +1261,16 @@ static bool types_match(shader_module const *a, shader_module const *b, unsigned
     assert(b_insn != b->end());
 
     if (a_arrayed && a_insn.opcode() == spv::OpTypeArray) {
-        return types_match(a, b, a_insn.word(2), b_type, false, b_arrayed);
+        return types_match(a, b, a_insn.word(2), b_type, false, b_arrayed, relaxed);
     }
 
     if (b_arrayed && b_insn.opcode() == spv::OpTypeArray) {
         /* we probably just found the extra level of arrayness in b_type: compare the type inside it to a_type */
-        return types_match(a, b, a_type, b_insn.word(2), a_arrayed, false);
+        return types_match(a, b, a_type, b_insn.word(2), a_arrayed, false, relaxed);
+    }
+
+    if (a_insn.opcode() == spv::OpTypeVector && relaxed && is_narrow_numeric_type(b_insn)) {
+        return types_match(a, b, a_insn.word(2), b_type, a_arrayed, b_arrayed, false);
     }
 
     if (a_insn.opcode() != b_insn.opcode()) {
@@ -1267,7 +1279,7 @@ static bool types_match(shader_module const *a, shader_module const *b, unsigned
 
     if (a_insn.opcode() == spv::OpTypePointer) {
         /* match on pointee type. storage class is expected to differ */
-        return types_match(a, b, a_insn.word(3), b_insn.word(3), a_arrayed, b_arrayed);
+        return types_match(a, b, a_insn.word(3), b_insn.word(3), a_arrayed, b_arrayed, relaxed);
     }
 
     if (a_arrayed || b_arrayed) {
@@ -1285,14 +1297,23 @@ static bool types_match(shader_module const *a, shader_module const *b, unsigned
         /* match on width */
         return a_insn.word(2) == b_insn.word(2);
     case spv::OpTypeVector:
+        /* match on element type, count. */
+        if (!types_match(a, b, a_insn.word(2), b_insn.word(2), a_arrayed, b_arrayed, false))
+            return false;
+        if (relaxed && is_narrow_numeric_type(a->get_def(a_insn.word(2)))) {
+            return a_insn.word(3) >= b_insn.word(3);
+        }
+        else {
+            return a_insn.word(3) == b_insn.word(3);
+        }
     case spv::OpTypeMatrix:
-        /* match on element type, count. these all have the same layout. */
-        return types_match(a, b, a_insn.word(2), b_insn.word(2), a_arrayed, b_arrayed) && a_insn.word(3) == b_insn.word(3);
+        /* match on element type, count. */
+        return types_match(a, b, a_insn.word(2), b_insn.word(2), a_arrayed, b_arrayed, false) && a_insn.word(3) == b_insn.word(3);
     case spv::OpTypeArray:
         /* match on element type, count. these all have the same layout. we don't get here if
          * b_arrayed. This differs from vector & matrix types in that the array size is the id of a constant instruction,
          * not a literal within OpTypeArray */
-        return types_match(a, b, a_insn.word(2), b_insn.word(2), a_arrayed, b_arrayed) &&
+        return types_match(a, b, a_insn.word(2), b_insn.word(2), a_arrayed, b_arrayed, false) &&
                get_constant_value(a, a_insn.word(3)) == get_constant_value(b, b_insn.word(3));
     case spv::OpTypeStruct:
         /* match on all element types */
@@ -1302,7 +1323,7 @@ static bool types_match(shader_module const *a, shader_module const *b, unsigned
             }
 
             for (unsigned i = 2; i < a_insn.len(); i++) {
-                if (!types_match(a, b, a_insn.word(i), b_insn.word(i), a_arrayed, b_arrayed)) {
+                if (!types_match(a, b, a_insn.word(i), b_insn.word(i), a_arrayed, b_arrayed, false)) {
                     return false;
                 }
             }
@@ -1628,7 +1649,8 @@ static bool validate_interface_between_stages(layer_data *my_data, shader_module
         } else {
             if (!types_match(producer, consumer, a_it->second.type_id, b_it->second.type_id,
                              producer_stage->arrayed_output && !a_it->second.is_patch,
-                             consumer_stage->arrayed_input && !b_it->second.is_patch)) {
+                             consumer_stage->arrayed_input && !b_it->second.is_patch,
+                             true)) {
                 if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", "Type mismatch on location %u.%u: '%s' vs '%s'",
                             a_first.first, a_first.second,
