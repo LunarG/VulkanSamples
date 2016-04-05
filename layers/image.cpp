@@ -247,7 +247,7 @@ vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCou
 
 // Returns TRUE if a format is a depth-compatible format
 bool is_depth_format(VkFormat format) {
-    bool result = VK_FALSE;
+    bool result = false;
     switch (format) {
     case VK_FORMAT_D16_UNORM:
     case VK_FORMAT_X8_D24_UNORM_PACK32:
@@ -256,7 +256,7 @@ bool is_depth_format(VkFormat format) {
     case VK_FORMAT_D16_UNORM_S8_UINT:
     case VK_FORMAT_D24_UNORM_S8_UINT:
     case VK_FORMAT_D32_SFLOAT_S8_UINT:
-        result = VK_TRUE;
+        result = true;
         break;
     default:
         break;
@@ -270,7 +270,7 @@ static inline uint32_t validate_VkImageLayoutKHR(VkImageLayout input_value) {
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkImage *pImage) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     VkImageFormatProperties ImageFormatProperties;
 
@@ -353,7 +353,7 @@ vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, const VkAll
                             "VK_IMAGE_LAYOUT_PREINITIALIZED");
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         result = device_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
     }
     if (result == VK_SUCCESS) {
@@ -376,7 +376,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
                                                                   const VkAllocationCallbacks *pAllocator,
                                                                   VkRenderPass *pRenderPass) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
         if (pCreateInfo->pAttachments[i].format != VK_FORMAT_UNDEFINED) {
             VkFormatProperties properties;
@@ -427,12 +427,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
     }
 
     // Any depth buffers specified as attachments?
-    bool depthFormatPresent = VK_FALSE;
+    bool depthFormatPresent = false;
     for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
         depthFormatPresent |= is_depth_format(pCreateInfo->pAttachments[i].format);
     }
 
-    if (depthFormatPresent == VK_FALSE) {
+    if (!depthFormatPresent) {
         // No depth attachment is present, validate that subpasses set depthStencilAttachment to VK_ATTACHMENT_UNUSED;
         for (uint32_t i = 0; i < pCreateInfo->subpassCount; i++) {
             if (pCreateInfo->pSubpasses[i].pDepthStencilAttachment &&
@@ -455,7 +455,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device, const VkImageViewCreateInfo *pCreateInfo,
                                                                  const VkAllocationCallbacks *pAllocator, VkImageView *pView) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     auto imageEntry = device_data->imageMap.find(pCreateInfo->image);
     if (imageEntry != device_data->imageMap.end()) {
@@ -531,7 +531,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device
                     log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             (uint64_t)pCreateInfo->image, __LINE__, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", "%s", ss.str().c_str());
             }
-            if (VK_FALSE == vk_format_is_color(ivciFormat)) {
+            if (!vk_format_is_color(ivciFormat)) {
                 std::stringstream ss;
                 ss << "vkCreateImageView: The image view's format can differ from the parent image's format, but both must be "
                    << "color formats.  ImageFormat is " << string_VkFormat(imageFormat) << " ImageViewFormat is "
@@ -603,7 +603,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(VkCommandBuffer commandBuffer, VkImage image,
                                                                 VkImageLayout imageLayout, const VkClearColorValue *pColor,
                                                                 uint32_t rangeCount, const VkImageSubresourceRange *pRanges) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
 
     if (imageLayout != VK_IMAGE_LAYOUT_GENERAL && imageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
@@ -624,7 +624,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(VkCommandBuffer 
         }
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         device_data->device_dispatch_table->CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
     }
 }
@@ -633,7 +633,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout,
                             const VkClearDepthStencilValue *pDepthStencil, uint32_t rangeCount,
                             const VkImageSubresourceRange *pRanges) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     // For each range, Image aspect must be depth or stencil or both
     for (uint32_t i = 0; i < rangeCount; i++) {
@@ -647,7 +647,7 @@ vkCmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImag
         }
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         device_data->device_dispatch_table->CmdClearDepthStencilImage(commandBuffer, image, imageLayout, pDepthStencil, rangeCount,
                                                                       pRanges);
     }
@@ -698,10 +698,10 @@ static bool exceeds_bounds(const VkOffset3D *offset, const VkExtent3D *extent, I
     return result;
 }
 
-VkBool32 cmd_copy_image_valid_usage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImage dstImage, uint32_t regionCount,
-                                    const VkImageCopy *pRegions) {
+bool cmd_copy_image_valid_usage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImage dstImage, uint32_t regionCount,
+                                const VkImageCopy *pRegions) {
 
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     auto srcImageEntry = device_data->imageMap.find(srcImage);
     auto dstImageEntry = device_data->imageMap.find(dstImage);
@@ -883,12 +883,12 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(VkCommandBuffer comman
                                                           VkImageLayout dstImageLayout, uint32_t regionCount,
                                                           const VkImageCopy *pRegions) {
 
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
 
     skipCall = cmd_copy_image_valid_usage(commandBuffer, srcImage, dstImage, regionCount, pRegions);
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         device_data->device_dispatch_table->CmdCopyImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout,
                                                          regionCount, pRegions);
     }
@@ -897,7 +897,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(VkCommandBuffer comman
 VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(VkCommandBuffer commandBuffer, uint32_t attachmentCount,
                                                  const VkClearAttachment *pAttachments, uint32_t rectCount,
                                                  const VkClearRect *pRects) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     VkImageAspectFlags aspectMask;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     for (uint32_t i = 0; i < attachmentCount; i++) {
@@ -924,7 +924,7 @@ VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(VkCommandBuffer commandBuffer, 
         }
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         device_data->device_dispatch_table->CmdClearAttachments(commandBuffer, attachmentCount, pAttachments, rectCount, pRects);
     }
 }
@@ -932,7 +932,7 @@ VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(VkCommandBuffer commandBuffer, 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(VkCommandBuffer commandBuffer, VkImage srcImage,
                                                                   VkImageLayout srcImageLayout, VkBuffer dstBuffer,
                                                                   uint32_t regionCount, const VkBufferImageCopy *pRegions) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     // For each region, the number of layers in the image subresource should not be zero
     // Image aspect must be ONE OF color, depth, stencil
@@ -955,7 +955,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(VkCommandBuffe
         }
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         device_data->device_dispatch_table->CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount,
                                                                  pRegions);
     }
@@ -964,7 +964,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(VkCommandBuffe
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer srcBuffer,
                                                                   VkImage dstImage, VkImageLayout dstImageLayout,
                                                                   uint32_t regionCount, const VkBufferImageCopy *pRegions) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     // For each region, the number of layers in the image subresource should not be zero
     // Image aspect must be ONE OF color, depth, stencil
@@ -987,7 +987,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(VkCommandBuffe
         }
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         device_data->device_dispatch_table->CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount,
                                                                  pRegions);
     }
@@ -996,7 +996,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(VkCommandBuffe
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage,
                VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageBlit *pRegions, VkFilter filter) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
 
     auto srcImageEntry = device_data->imageMap.find(srcImage);
@@ -1120,7 +1120,7 @@ vkCmdPipelineBarrier(VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStag
                      VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const VkMemoryBarrier *pMemoryBarriers,
                      uint32_t bufferMemoryBarrierCount, const VkBufferMemoryBarrier *pBufferMemoryBarriers,
                      uint32_t imageMemoryBarrierCount, const VkImageMemoryBarrier *pImageMemoryBarriers) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
 
     for (uint32_t i = 0; i < imageMemoryBarrierCount; ++i) {
@@ -1147,7 +1147,7 @@ vkCmdPipelineBarrier(VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStag
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage,
                   VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageResolve *pRegions) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     auto srcImageEntry = device_data->imageMap.find(srcImage);
     auto dstImageEntry = device_data->imageMap.find(dstImage);
@@ -1209,7 +1209,7 @@ vkCmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout
         }
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         device_data->device_dispatch_table->CmdResolveImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout,
                                                             regionCount, pRegions);
     }
@@ -1217,7 +1217,7 @@ vkCmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkGetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubresource *pSubresource, VkSubresourceLayout *pLayout) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkFormat format;
 
@@ -1246,7 +1246,7 @@ vkGetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubreso
         }
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         device_data->device_dispatch_table->GetImageSubresourceLayout(device, image, pSubresource, pLayout);
     }
 }

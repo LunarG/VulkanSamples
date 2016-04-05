@@ -385,7 +385,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkCreateAndroidSurfaceKHR(VkInstance instance, const VkAndroidSurfaceCreateInfoKHR *pCreateInfo,
                           const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     VkResult result = VK_SUCCESS;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
@@ -409,7 +409,7 @@ vkCreateAndroidSurfaceKHR(VkInstance instance, const VkAndroidSurfaceCreateInfoK
         }
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->CreateAndroidSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
@@ -440,7 +440,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkCreateMirSurfaceKHR(VkInstance instance, const VkMirSurfaceCreateInfoKHR *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                       VkSurfaceKHR *pSurface) {
     VkResult result = VK_SUCCESS;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
@@ -464,7 +464,7 @@ vkCreateMirSurfaceKHR(VkInstance instance, const VkMirSurfaceCreateInfoKHR *pCre
         }
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->CreateMirSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
@@ -493,7 +493,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceMirPresentatio
                                                                                             uint32_t queueFamilyIndex,
                                                                                             MirConnection *connection) {
     VkBool32 result = VK_FALSE;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
@@ -512,7 +512,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceMirPresentatio
     }
     loader_platform_thread_unlock_mutex(&globalLock);
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         result = my_data->instance_dispatch_table->GetPhysicalDeviceMirPresentationSupportKHR(physicalDevice, queueFamilyIndex,
                                                                                               connection);
@@ -526,7 +526,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkCreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
                           const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     VkResult result = VK_SUCCESS;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
@@ -550,7 +550,7 @@ vkCreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoK
         }
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->CreateWaylandSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
@@ -579,7 +579,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWaylandPresent
                                                                                                 uint32_t queueFamilyIndex,
                                                                                                 struct wl_display *display) {
     VkBool32 result = VK_FALSE;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
@@ -598,7 +598,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWaylandPresent
     }
     loader_platform_thread_unlock_mutex(&globalLock);
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         result = my_data->instance_dispatch_table->GetPhysicalDeviceWaylandPresentationSupportKHR(physicalDevice, queueFamilyIndex,
                                                                                                   display);
@@ -612,7 +612,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkCreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
                         const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     VkResult result = VK_SUCCESS;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
@@ -636,7 +636,7 @@ vkCreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *
         }
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->CreateWin32SurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
@@ -664,7 +664,7 @@ vkCreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *
 VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL
 vkGetPhysicalDeviceWin32PresentationSupportKHR(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex) {
     VkBool32 result = VK_FALSE;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
@@ -683,7 +683,7 @@ vkGetPhysicalDeviceWin32PresentationSupportKHR(VkPhysicalDevice physicalDevice, 
     }
     loader_platform_thread_unlock_mutex(&globalLock);
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         result = my_data->instance_dispatch_table->GetPhysicalDeviceWin32PresentationSupportKHR(physicalDevice, queueFamilyIndex);
     }
@@ -696,7 +696,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkCreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                       VkSurfaceKHR *pSurface) {
     VkResult result = VK_SUCCESS;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
@@ -720,7 +720,7 @@ vkCreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCre
         }
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->CreateXcbSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
@@ -749,7 +749,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL
 vkGetPhysicalDeviceXcbPresentationSupportKHR(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
                                              xcb_connection_t *connection, xcb_visualid_t visual_id) {
     VkBool32 result = VK_FALSE;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
@@ -768,7 +768,7 @@ vkGetPhysicalDeviceXcbPresentationSupportKHR(VkPhysicalDevice physicalDevice, ui
     }
     loader_platform_thread_unlock_mutex(&globalLock);
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         result = my_data->instance_dispatch_table->GetPhysicalDeviceXcbPresentationSupportKHR(physicalDevice, queueFamilyIndex,
                                                                                               connection, visual_id);
@@ -782,7 +782,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkCreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                        VkSurfaceKHR *pSurface) {
     VkResult result = VK_SUCCESS;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
@@ -806,7 +806,7 @@ vkCreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pC
         }
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->CreateXlibSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
@@ -835,7 +835,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentati
                                                                                              uint32_t queueFamilyIndex,
                                                                                              Display *dpy, VisualID visualID) {
     VkBool32 result = VK_FALSE;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
@@ -854,7 +854,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentati
     }
     loader_platform_thread_unlock_mutex(&globalLock);
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         result = my_data->instance_dispatch_table->GetPhysicalDeviceXlibPresentationSupportKHR(physicalDevice, queueFamilyIndex,
                                                                                                dpy, visualID);
@@ -865,7 +865,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentati
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkDestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface, const VkAllocationCallbacks *pAllocator) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpSurface *pSurface = &my_data->surfaceMap[surface];
@@ -905,7 +905,7 @@ vkDestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface, const VkAllocatio
     }
     loader_platform_thread_unlock_mutex(&globalLock);
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         my_data->instance_dispatch_table->DestroySurfaceKHR(instance, surface, pAllocator);
     }
@@ -1024,7 +1024,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
                                                                                     uint32_t queueFamilyIndex, VkSurfaceKHR surface,
                                                                                     VkBool32 *pSupported) {
     VkResult result = VK_SUCCESS;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
@@ -1051,7 +1051,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pSupported");
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIndex, surface,
@@ -1091,7 +1091,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkGetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
                                           VkSurfaceCapabilitiesKHR *pSurfaceCapabilities) {
     VkResult result = VK_SUCCESS;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
@@ -1107,7 +1107,7 @@ vkGetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkSur
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pSurfaceCapabilities");
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface,
@@ -1133,7 +1133,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkGetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, uint32_t *pSurfaceFormatCount,
                                      VkSurfaceFormatKHR *pSurfaceFormats) {
     VkResult result = VK_SUCCESS;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
@@ -1149,7 +1149,7 @@ vkGetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, VkSurfaceK
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pSurfaceFormatCount");
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, pSurfaceFormatCount,
@@ -1191,7 +1191,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkGetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, uint32_t *pPresentModeCount,
                                           VkPresentModeKHR *pPresentModes) {
     VkResult result = VK_SUCCESS;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
@@ -1207,7 +1207,7 @@ vkGetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, VkSur
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pPresentModeCount");
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface,
@@ -1246,13 +1246,12 @@ vkGetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, VkSur
 }
 
 // This function does the up-front validation work for vkCreateSwapchainKHR(),
-// and returns VK_TRUE if a logging callback indicates that the call down the
+// and returns true if a logging callback indicates that the call down the
 // chain should be skipped:
-static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
-                                           VkSwapchainKHR *pSwapchain) {
+static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo, VkSwapchainKHR *pSwapchain) {
     // TODO: Validate cases of re-creating a swapchain (the current code
     // assumes a new swapchain is being created).
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     char fn[] = "vkCreateSwapchainKHR";
     SwpDevice *pDevice = &my_data->deviceMap[device];
@@ -1573,9 +1572,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(VkDevice dev
     VkResult result = VK_SUCCESS;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-    VkBool32 skipCall = validateCreateSwapchainKHR(device, pCreateInfo, pSwapchain);
+    bool skipCall = validateCreateSwapchainKHR(device, pCreateInfo, pSwapchain);
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->device_dispatch_table->CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
@@ -1617,7 +1616,7 @@ vkDestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocat
     // - Implement a check for validity language that reads: All uses of
     //   presentable images acquired from pname:swapchain and owned by the
     //   application must: have completed execution
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpDevice *pDevice = &my_data->deviceMap[device];
@@ -1658,7 +1657,7 @@ vkDestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocat
     }
     loader_platform_thread_unlock_mutex(&globalLock);
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         my_data->device_dispatch_table->DestroySwapchainKHR(device, swapchain, pAllocator);
     }
@@ -1667,7 +1666,7 @@ vkDestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocat
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSwapchainImageCount, VkImage *pSwapchainImages) {
     VkResult result = VK_SUCCESS;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpDevice *pDevice = &my_data->deviceMap[device];
@@ -1683,7 +1682,7 @@ vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSw
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pSwapchainImageCount");
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->device_dispatch_table->GetSwapchainImagesKHR(device, swapchain, pSwapchainImageCount, pSwapchainImages);
@@ -1732,7 +1731,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice de
     // - Record/update the state of the swapchain, in case an error occurs
     //   (e.g. VK_ERROR_OUT_OF_DATE_KHR).
     VkResult result = VK_SUCCESS;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     SwpDevice *pDevice = &my_data->deviceMap[device];
@@ -1777,7 +1776,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice de
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pImageIndex");
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->device_dispatch_table->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
@@ -1806,7 +1805,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
     // - Record/update the state of the swapchain, in case an error occurs
     //   (e.g. VK_ERROR_OUT_OF_DATE_KHR).
     VkResult result = VK_SUCCESS;
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
 
     if (!pPresentInfo) {
@@ -1878,7 +1877,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
         }
     }
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         loader_platform_thread_unlock_mutex(&globalLock);
         result = my_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
@@ -1904,10 +1903,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue *pQueue) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         // Call down the call chain:
         my_data->device_dispatch_table->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
 

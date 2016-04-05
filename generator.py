@@ -3223,7 +3223,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         # Strip the trailing ';' and split into individual lines
         lines = cmd.cdecl[:-1].split('\n')
         # Replace Vulkan prototype
-        lines[0] = 'static VkBool32 parameter_validation_' + cmd.name + '('
+        lines[0] = 'static bool parameter_validation_' + cmd.name + '('
         # Replace the first argument with debug_report_data, when the first
         # argument is a handle (not vkCreateInstance)
         reportData = '    debug_report_data*'.ljust(self.genOpts.alignFuncParam) + 'report_data,'
@@ -3278,14 +3278,14 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             if (value.ispointer or value.isstaticarray) and not value.iscount:
                 #
                 # Parameters for function argument generation
-                req = 'VK_TRUE'    # Paramerter can be NULL
-                cpReq = 'VK_TRUE'  # Count pointer can be NULL
-                cvReq = 'VK_TRUE'  # Count value can be 0
+                req = 'true'    # Paramerter can be NULL
+                cpReq = 'true'  # Count pointer can be NULL
+                cvReq = 'true'  # Count value can be 0
                 lenDisplayName = None # Name of length parameter to print with validation messages; parameter name with prefix applied
                 #
                 # Generate required/optional parameter strings for the pointer and count values
                 if value.isoptional:
-                    req = 'VK_FALSE'
+                    req = 'false'
                 if value.len:
                     # The parameter is an array with an explicit count parameter
                     lenParam = self.getLenParam(values, value.len)
@@ -3294,15 +3294,15 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                         # Count parameters that are pointers are inout
                         if type(lenParam.isoptional) is list:
                             if lenParam.isoptional[0]:
-                                cpReq = 'VK_FALSE'
+                                cpReq = 'false'
                             if lenParam.isoptional[1]:
-                                cvReq = 'VK_FALSE'
+                                cvReq = 'false'
                         else:
                             if lenParam.isoptional:
-                                cpReq = 'VK_FALSE'
+                                cpReq = 'false'
                     else:
                         if lenParam.isoptional:
-                            cvReq = 'VK_FALSE'
+                            cvReq = 'false'
                 #
                 # If this is a pointer to a struct with an sType field, verify the type
                 if value.type in self.structTypes:
@@ -3335,12 +3335,12 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                         # This is an array
                         if lenParam.ispointer:
                             # If count and array parameters are optional, there will be no validation
-                            if req == 'VK_TRUE' or cpReq == 'VK_TRUE' or cvReq == 'VK_TRUE':
+                            if req == 'true' or cpReq == 'true' or cvReq == 'true':
                                 # When the length parameter is a pointer, there is an extra Boolean parameter in the function call to indicate if it is required
                                 checkExpr = 'skipCall |= validate_array(report_data, {}, {ldn}, {dn}, {pf}{ln}, {pf}{vn}, {}, {}, {});\n'.format(name, cpReq, cvReq, req, ln=lenParam.name, ldn=lenDisplayName, dn=valueDisplayName, vn=value.name, pf=valuePrefix)
                         else:
                             # If count and array parameters are optional, there will be no validation
-                            if req == 'VK_TRUE' or cvReq == 'VK_TRUE':
+                            if req == 'true' or cvReq == 'true':
                                 funcName = 'validate_array' if value.type != 'char' else 'validate_string_array'
                                 checkExpr = 'skipCall |= {}(report_data, {}, {ldn}, {dn}, {pf}{ln}, {pf}{vn}, {}, {});\n'.format(funcName, name, cvReq, req, ln=lenParam.name, ldn=lenDisplayName, dn=valueDisplayName, vn=value.name, pf=valuePrefix)
                     elif not value.isoptional:
@@ -3560,7 +3560,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             # The string returned by genFuncBody will be nested in an if check for a NULL pointer, so needs its indent incremented
             funcBody, unused = self.genFuncBody(self.incIndent(indent), 'pFuncName', struct.members, 'pStruct->', 'pVariableName', struct.name, needConditionCheck)
             if funcBody:
-                cmdDef = 'static VkBool32 parameter_validation_{}(\n'.format(struct.name)
+                cmdDef = 'static bool parameter_validation_{}(\n'.format(struct.name)
                 cmdDef += '    debug_report_data*'.ljust(self.genOpts.alignFuncParam) + ' report_data,\n'
                 cmdDef += '    const char*'.ljust(self.genOpts.alignFuncParam) + ' pFuncName,\n'
                 cmdDef += '    const char*'.ljust(self.genOpts.alignFuncParam) + ' pVariableName,\n'
@@ -3570,7 +3570,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     cmdDef += '    bool'.ljust(self.genOpts.alignFuncParam) + ' isInput,\n'
                 cmdDef += '    const {}*'.format(struct.name).ljust(self.genOpts.alignFuncParam) + ' pStruct)\n'
                 cmdDef += '{\n'
-                cmdDef += indent + 'VkBool32 skipCall = VK_FALSE;\n'
+                cmdDef += indent + 'bool skipCall = false;\n'
                 cmdDef += '\n'
                 cmdDef += indent + 'if (pStruct != NULL) {'
                 cmdDef += funcBody
@@ -3599,7 +3599,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     cmdDef += indent + 'UNUSED_PARAMETER({});\n'.format(name)
                 if len(unused) > 1:
                     cmdDef += '\n'
-                cmdDef += indent + 'VkBool32 skipCall = VK_FALSE;\n'
+                cmdDef += indent + 'bool skipCall = false;\n'
                 cmdDef += cmdBody
                 cmdDef += '\n'
                 cmdDef += indent + 'return skipCall;\n'

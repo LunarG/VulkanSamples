@@ -188,7 +188,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount, VkPhysicalDevice *pPhysicalDevices) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     if (my_data->instanceState) {
         // For this instance, flag when vkEnumeratePhysicalDevices goes to QUERY_COUNT and then QUERY_DETAILS
@@ -268,7 +268,7 @@ vkGetPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceP
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkGetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount,
                                          VkQueueFamilyProperties *pQueueFamilyProperties) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     if (phy_dev_data->physicalDeviceState) {
         if (NULL == pQueueFamilyProperties) {
@@ -334,9 +334,9 @@ vkGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice physicalDevice, 
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t firstViewport, uint32_t viewportCount, const VkViewport *pViewports) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     /* TODO: Verify viewportCount < maxViewports from VkPhysicalDeviceLimits */
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
         my_data->device_dispatch_table->CmdSetViewport(commandBuffer, firstViewport, viewportCount, pViewports);
     }
@@ -344,18 +344,18 @@ vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t firstViewport, uint32_t
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t firstScissor, uint32_t scissorCount, const VkRect2D *pScissors) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     /* TODO: Verify scissorCount < maxViewports from VkPhysicalDeviceLimits */
     /* TODO: viewportCount and scissorCount must match at draw time */
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
         my_data->device_dispatch_table->CmdSetScissor(commandBuffer, firstScissor, scissorCount, pScissors);
     }
 }
 
 // Verify that features have been queried and verify that requested features are available
-static VkBool32 validate_features_request(layer_data *phy_dev_data) {
-    VkBool32 skipCall = VK_FALSE;
+static bool validate_features_request(layer_data *phy_dev_data) {
+    bool skipCall = false;
     // Verify that all of the requested features are available
     // Get ptrs into actual and requested structs and if requested is 1 but actual is 0, request is invalid
     VkBool32 *actual = (VkBool32 *)&(phy_dev_data->actualPhysicalDeviceFeatures);
@@ -388,7 +388,7 @@ static VkBool32 validate_features_request(layer_data *phy_dev_data) {
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *pCreateInfo,
                                                               const VkAllocationCallbacks *pAllocator, VkDevice *pDevice) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
     // First check is app has actually requested queueFamilyProperties
     if (!phy_dev_data->physicalDeviceState) {
@@ -531,7 +531,7 @@ vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginIn
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue *pQueue) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkPhysicalDevice gpu = dev_data->physicalDevice;
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
@@ -547,16 +547,15 @@ vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex
             "Invalid queue request in vkGetDeviceQueue(). QueueFamilyIndex %u only has %u queues, but requested queueIndex is %u.",
             queueFamilyIndex, phy_dev_data->queueFamilyProperties[queueFamilyIndex]->queueCount, queueIndex);
     }
-    if (skipCall)
-        return;
-    dev_data->device_dispatch_table->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
+    if (!skipCall)
+        dev_data->device_dispatch_table->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites,
                        uint32_t descriptorCopyCount, const VkCopyDescriptorSet *pDescriptorCopies) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
 
     for (uint32_t i = 0; i < descriptorWriteCount; i++) {
         if ((pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ||
@@ -587,7 +586,7 @@ vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkW
             }
         }
     }
-    if (skipCall == VK_FALSE) {
+    if (!skipCall) {
         dev_data->device_dispatch_table->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
                                                               pDescriptorCopies);
     }
