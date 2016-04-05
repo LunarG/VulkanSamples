@@ -9397,8 +9397,28 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
             dev_data->renderPassMap[*pRenderPass]->attachment_first_layout;
         for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
             const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
+            for (uint32_t j = 0; j < subpass.preserveAttachmentCount; ++j) {
+                uint32_t attachment = subpass.pPreserveAttachments[j];
+                if (attachment >= pCreateInfo->attachmentCount) {
+                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                         __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                         "Preserve attachment %d cannot be greater than the total number of attachments %d.",
+                                         attachment, pCreateInfo->attachmentCount);
+                }
+            }
             for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
-                uint32_t attachment = subpass.pColorAttachments[j].attachment;
+                uint32_t attachment;
+                if (subpass.pResolveAttachments) {
+                    attachment = subpass.pResolveAttachments[j].attachment;
+                    if (attachment >= pCreateInfo->attachmentCount && attachment != VK_ATTACHMENT_UNUSED) {
+                        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                             __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                             "Color attachment %d cannot be greater than the total number of attachments %d.",
+                                             attachment, pCreateInfo->attachmentCount);
+                        continue;
+                    }
+                }
+                attachment = subpass.pColorAttachments[j].attachment;
                 if (attachment >= pCreateInfo->attachmentCount) {
                     skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
                                          __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
