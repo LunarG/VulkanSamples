@@ -504,12 +504,13 @@ SectionEnd
 !ifdef UNINSTALLER
 Section "uninstall"
 
-    # Turn on logging
-    LogSet on
-
     # Remove contents of temp dir
     SetOutPath "$TEMP\VulkanRT"
     RmDir /R "$TEMP\VulkanRT"
+
+    # Turn on logging
+    StrCpy $INSTDIR $TEMP\VulkanRT
+    LogSet on
 
     # If running on a 64-bit OS machine, disable registry re-direct since we're running as a 32-bit executable.
     ${If} ${RunningX64}
@@ -520,7 +521,6 @@ Section "uninstall"
     ${Endif}
 
     # Look up the install dir and remove files from that directory.
-    # We do this so that the uninstaller can be run from any directory.
     ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallDir"
     StrCpy $IDir $0
 
@@ -657,7 +657,7 @@ Section "uninstall"
 
     # Finish logging and move log file to TEMP dir
     LogSet off
-    Rename "$INSTDIR\install.log" "$TEMP\VulkanRT\Uninstall.log"
+    Rename "$INSTDIR\install.log" "$INSTDIR\Uninstall.log"
 
 SectionEnd
 !endif
