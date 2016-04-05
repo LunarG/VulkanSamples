@@ -2141,7 +2141,8 @@ static bool validate_draw_state_flags(layer_data *dev_data, GLOBAL_CB_NODE *pCB,
         result |= validate_status(dev_data, pCB, CBSTATUS_LINE_WIDTH_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                   DRAWSTATE_LINE_WIDTH_NOT_BOUND, "Dynamic line width state not set for this command buffer");
     }
-    if (pPipe->graphicsPipelineCI.pRasterizationState && pPipe->graphicsPipelineCI.pRasterizationState->depthBiasEnable) {
+    if (pPipe->graphicsPipelineCI.pRasterizationState &&
+        (pPipe->graphicsPipelineCI.pRasterizationState->depthBiasEnable == VK_TRUE)) {
         result |= validate_status(dev_data, pCB, CBSTATUS_DEPTH_BIAS_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                   DRAWSTATE_DEPTH_BIAS_NOT_BOUND, "Dynamic depth bias state not set for this command buffer");
     }
@@ -2149,11 +2150,13 @@ static bool validate_draw_state_flags(layer_data *dev_data, GLOBAL_CB_NODE *pCB,
         result |= validate_status(dev_data, pCB, CBSTATUS_BLEND_CONSTANTS_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                   DRAWSTATE_BLEND_NOT_BOUND, "Dynamic blend constants state not set for this command buffer");
     }
-    if (pPipe->graphicsPipelineCI.pDepthStencilState && pPipe->graphicsPipelineCI.pDepthStencilState->depthBoundsTestEnable) {
+    if (pPipe->graphicsPipelineCI.pDepthStencilState &&
+        (pPipe->graphicsPipelineCI.pDepthStencilState->depthBoundsTestEnable == VK_TRUE)) {
         result |= validate_status(dev_data, pCB, CBSTATUS_DEPTH_BOUNDS_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                   DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND, "Dynamic depth bounds state not set for this command buffer");
     }
-    if (pPipe->graphicsPipelineCI.pDepthStencilState && pPipe->graphicsPipelineCI.pDepthStencilState->stencilTestEnable) {
+    if (pPipe->graphicsPipelineCI.pDepthStencilState &&
+        (pPipe->graphicsPipelineCI.pDepthStencilState->stencilTestEnable == VK_TRUE)) {
         result |= validate_status(dev_data, pCB, CBSTATUS_STENCIL_READ_MASK_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                   DRAWSTATE_STENCIL_NOT_BOUND, "Dynamic stencil read mask state not set for this command buffer");
         result |= validate_status(dev_data, pCB, CBSTATUS_STENCIL_WRITE_MASK_SET, VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -2990,7 +2993,7 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
             // If Viewport or scissors are dynamic, verify that dynamic count matches PSO count.
             // Skip check if rasterization is disabled or there is no viewport.
             if ((!pPipe->graphicsPipelineCI.pRasterizationState ||
-                 !pPipe->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable) &&
+                 (pPipe->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) &&
                 pPipe->graphicsPipelineCI.pViewportState) {
                 bool dynViewport = isDynamic(pPipe, VK_DYNAMIC_STATE_VIEWPORT);
                 bool dynScissor = isDynamic(pPipe, VK_DYNAMIC_STATE_SCISSOR);
@@ -3168,7 +3171,7 @@ static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device
     // If the viewport state is included, the viewport and scissor counts should always match.
     // NOTE : Even if these are flagged as dynamic, counts need to be set correctly for shader compiler
     if (!pPipeline->graphicsPipelineCI.pRasterizationState ||
-        !pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable) {
+        (pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) {
         if (!pPipeline->graphicsPipelineCI.pViewportState) {
             skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                 DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS", "Gfx Pipeline pViewportState is null. Even if viewport "
@@ -3241,7 +3244,7 @@ static bool validatePipelineState(layer_data *my_data, const GLOBAL_CB_NODE *pCB
         // Skip the check if rasterization is disabled.
         PIPELINE_NODE *pPipeline = my_data->pipelineMap[pipeline];
         if (!pPipeline->graphicsPipelineCI.pRasterizationState ||
-            !pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable) {
+            (pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) {
             VkSampleCountFlagBits psoNumSamples = getNumSamples(my_data, pipeline);
             if (pCB->activeRenderPass) {
                 const VkRenderPassCreateInfo *pRPCI = my_data->renderPassMap[pCB->activeRenderPass]->pCreateInfo;
