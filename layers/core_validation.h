@@ -199,7 +199,7 @@ struct MT_FENCE_INFO {
     uint64_t fenceId;         // Sequence number for fence at last submit
     VkQueue queue;            // Queue that this fence is submitted against or NULL
     VkSwapchainKHR swapchain; // Swapchain that this fence is submitted against or NULL
-    VkBool32 firstTimeFlag;   // Fence was created in signaled state, avoid warnings for first use
+    bool firstTimeFlag;       // Fence was created in signaled state, avoid warnings for first use
     VkFenceCreateInfo createInfo;
 };
 
@@ -619,7 +619,7 @@ class FENCE_NODE : public BASE_NODE {
 #if MTMERGE
     uint64_t fenceId;         // Sequence number for fence at last submit
     VkSwapchainKHR swapchain; // Swapchain that this fence is submitted against or NULL
-    VkBool32 firstTimeFlag;   // Fence was created in signaled state, avoid warnings for first use
+    bool firstTimeFlag;       // Fence was created in signaled state, avoid warnings for first use
     VkFenceCreateInfo createInfo;
 #endif
     VkQueue queue;
@@ -968,7 +968,7 @@ struct GLOBAL_CB_NODE {
     // execution
     std::unordered_set<VkCommandBuffer> secondaryCommandBuffers;
     // MTMTODO : Scrub these data fields and merge active sets w/ lastBound as appropriate
-    vector<std::function<VkBool32()>> validate_functions;
+    vector<std::function<bool()>> validate_functions;
     std::unordered_set<VkDeviceMemory> memObjs;
     vector<std::function<bool(VkQueue)>> eventUpdates;
 };
