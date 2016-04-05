@@ -534,12 +534,10 @@ void destroy_window(struct sample_info &info) {
 }
 #elif defined(__ANDROID__)
 // Android implementation.
-void init_window(struct sample_info &info)
-{
+void init_window(struct sample_info &info) {
 }
 
-void destroy_window(struct sample_info &info)
-{
+void destroy_window(struct sample_info &info) {
 }
 #else
 void init_window(struct sample_info &info) {
@@ -1055,7 +1053,13 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
 void init_uniform_buffer(struct sample_info &info) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
-    info.Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
+    float fov = glm::radians(45.0f);
+    if (info.width > info.height) {
+        fov *= static_cast<float>(info.height) / static_cast<float>(info.width);
+    }
+    info.Projection = glm::perspective(fov,
+                                       static_cast<float>(info.width) /
+                                       static_cast<float>(info.height), 0.1f, 100.0f);
     info.View = glm::lookAt(
         glm::vec3(5, 3, 10), // Camera is at (5,3,10), in World Space
         glm::vec3(0, 0, 0),  // and looks at the origin

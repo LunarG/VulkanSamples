@@ -82,24 +82,14 @@ function(sampleWithSingleFile)
             set (SHADERC_LINKAGE "")
 
             # Add extra setting for some samples.
-            # External shader usage.
-            set (SAMPLE_WITH_SPIRV drawcube drawsubpasses drawtexturedcube dynamicuniform
-             immutable_sampler initpipeline initshaders multiple_sets multithreadcmdbuf
-             occlusion_query pipeline_cache pipeline_derivative push_constants secondarycmd
-             separate_image_sampler spirv_assembly spirv_specialization template texelbuffer)
-            if (ANDROID_NO_SHADERC)
-                set (OTHER_FLAGS "cppFlags.add(\"-D ANDROID_NO_SHADERC\")\n        ")
-            else()
-                set (SHADERC_LINKAGE "library \"shaderc\"         linkage \"static\"")
-            endif()
+            set (SHADERC_LINKAGE "library \"shaderc\"         linkage \"static\"")
 
             # Include resource files.
             set (SAMPLE_WITH_RESOURCES
              drawtexturedcube inittexture immutable_sampler multiple_sets pipeline_cache
              pipeline_derivative secondarycmd separate_image_sampler spirv_assembly
              spirv_specialization template)
-            if (";${SAMPLE_WITH_RESOURCES};" MATCHES ";${SAMPLE_NAME};" OR
-                ";${SAMPLE_WITH_SPIRV};" MATCHES ";${SAMPLE_NAME};")
+            if (";${SAMPLE_WITH_RESOURCES};" MATCHES ";${SAMPLE_NAME};")
                 set (ASSET_DIR "srcDir '../../data/'")
             endif()
 

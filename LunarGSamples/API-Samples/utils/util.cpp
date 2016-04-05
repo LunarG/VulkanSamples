@@ -43,12 +43,7 @@ samples utility functions
 
 // Header files.
 #include <android_native_app_glue.h>
-#ifndef ANDROID_NO_SHADERC
 #include "shaderc/shaderc.hpp"
-#else
-bool AndroidFillShaderMap(const char *current_path,
-                          std::unordered_map<std::string, std::string> *map_shaders);
-#endif
 // Static variable that keeps ANativeWindow and asset manager instances.
 static android_app* Android_application = nullptr;
 #else
@@ -418,7 +413,6 @@ void finalize_glslang()
 }
 
 #ifdef __ANDROID__
-#ifndef ANDROID_NO_SHADERC
 // Android specific helper functions for shaderc.
 struct shader_type_mapping {
     VkShaderStageFlagBits vkshader_type;
@@ -458,7 +452,6 @@ shaderc_shader_kind MapShadercType(VkShaderStageFlagBits vkShader) {
     assert(false);
     return shaderc_glsl_infer_from_source;
 }
-#endif
 #endif
 
 //
@@ -502,33 +495,6 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
 
     glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
 #else
-
-#ifdef ANDROID_NO_SHADERC
-    // This one is a temporary workaround when shaderc is not available.
-    static std::unordered_map<std::string, std::string> map_shaders;
-    if (!map_shaders.size()) {
-        // Fill the map.
-        AndroidFillShaderMap("shaders", &map_shaders);
-    }
-
-    // Remove \n to make the lookup more robust.
-    std::string shader = pshader;
-    while (1) {
-        auto ret_pos = shader.find("\n");
-        if (ret_pos == std::string::npos) {
-            break;
-        }
-        shader.erase(ret_pos, 1);
-    }
-
-    auto spirv_file = map_shaders.find(shader);
-    assert (spirv_file != map_shaders.end());
-
-    std::string file;
-    AndroidLoadFile(spirv_file->second.c_str(), &file);
-    spirv.resize(file.size() / sizeof(uint32_t));
-    memcpy(spirv.data(), &file[0], file.size());
-#else
     // On Android, use shaderc instead.
     shaderc::Compiler compiler;
     shaderc::SpvCompilationResult module =
@@ -544,9 +510,9 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
     }
     spirv.assign(module.cbegin(), module.cend());
 #endif
-#endif
     return true;
 }
+
 void wait_seconds(int seconds) {
 #ifdef WIN32
     Sleep(seconds * 1000);
