@@ -22,7 +22,7 @@
 # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
 import io,os,re,string,sys
-from lxml import etree
+import xml.etree.ElementTree as etree
 
 # matchAPIProfile - returns whether an API and profile
 #   being generated matches an element's profile
@@ -77,7 +77,7 @@ def matchAPIProfile(api, profile, elem):
 #   required - should this feature be defined during header generation
 #     (has it been removed by a profile or version)?
 #   declared - has this feature been defined already?
-#   elem - lxml.etree Element for this feature
+#   elem - etree Element for this feature
 #   resetState() - reset required/declared to initial values. Used
 #     prior to generating a new API interface.
 class BaseInfo:

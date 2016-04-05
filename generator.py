@@ -23,7 +23,7 @@
 
 import os,re,sys
 from collections import namedtuple
-from lxml import etree
+import xml.etree.ElementTree as etree
 
 def write( *args, **kwargs ):
     file = kwargs.pop('file',sys.stdout)
@@ -32,7 +32,7 @@ def write( *args, **kwargs ):
     file.write( end )
 
 # noneStr - returns string argument, or "" if argument is None.
-# Used in converting lxml Elements into text.
+# Used in converting etree Elements into text.
 #   str - string to convert
 def noneStr(str):
     if (str):
@@ -679,7 +679,7 @@ class OutputGenerator:
         # For typedefs, add (APIENTRY *<name>) around the name and
         #   use the PFN_cmdnameproc naming convention.
         # Done by walking the tree for <proto> element by element.
-        # lxml.etree has elem.text followed by (elem[i], elem[i].tail)
+        # etree has elem.text followed by (elem[i], elem[i].tail)
         #   for each child element and any following text
         # Leading text
         pdecl += noneStr(proto.text)
@@ -3013,7 +3013,15 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     #if value not in self.stypes:
                     #    print('WARNING: {} is not part of the VkStructureType enumeration [{}]'.format(value, typeName))
                 else:
-                    value = '<ERROR>'
+                    value = typeName
+                    # Remove EXT
+                    value = re.sub('EXT', '', value)
+                    # Add underscore between lowercase then uppercase
+                    value = re.sub('([a-z0-9])([A-Z])', r'\1_\2', value)
+                    # Change to uppercase
+                    value = value.upper()
+                    # Add STRUCTURE_TYPE_
+                    value = re.sub('VK_', 'VK_STRUCTURE_TYPE_', value)
                 # Store the required type value
                 self.structTypes[typeName] = self.StructType(name=name, value=value)
             #

@@ -88,14 +88,6 @@ Windows 7+ with additional required software packages:
   - Ensure the pip module is installed (it should be by default)
   - Need python3.3 or later to get the Windows py.exe launcher that is used to get python3 rather than python2 if both are installed on Windows
   - 32 bit python works
-- Python lxml package must be installed
-  - Download the lxml package from
-        http://www.lfd.uci.edu/~gohlke/pythonlibs/#lxml
-        32-bit latest for Python 3.5 is: lxml-3.5.0-cp35-none-win32.whl
-        64-bit latest for Python 3.5 is: lxml-3.5.0-cp35-none-win_amd64.whl
-  - The package can be installed with pip as follows:
-        pip install lxml-3.5.0-cp35-none-win32.whl
-        If pip is not in your path, you can find it at $PYTHON_HOME\Scripts\pip.exe, where PYTHON_HOME is the folder where you installed Python.
 - Git (from http://git-scm.com/download/win).
   - Note: If you use Cygwin, you can normally use Cygwin's "git.exe".  However, in order to use the "update_external_sources.bat" script, you must have this version.
   - Tell the installer to allow it to be used for "Developer Prompt" as well as "Git Bash".
@@ -175,10 +167,6 @@ export PATH=$HOME/homebrew/bin:$PATH
 brew install cmake
 brew install python
 brew install python3
-pip install --upgrade pip
-pip install lxml
-pip3.5 install --upgrade pip
-pip3.5 install lxml
 ```
 ### Build steps for Android
 Use the following to ensure the Android build works.
