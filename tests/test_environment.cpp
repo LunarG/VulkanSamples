@@ -96,6 +96,13 @@ void Environment::SetUp() {
 
     instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+#ifdef _WIN32
+    instance_extension_names.push_back(
+        VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+#endif
 
     VkBool32 extFound;
 
