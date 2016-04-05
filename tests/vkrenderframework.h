@@ -56,23 +56,8 @@ class VkDeviceObj : public vk_testing::Device {
     VkQueue m_queue;
 };
 
-class VkDepthStencilObj : public vk_testing::Image {
-  public:
-    VkDepthStencilObj();
-    void Init(VkDeviceObj *device, int32_t width, int32_t height,
-              VkFormat format);
-    bool Initialized();
-    VkImageView *BindInfo();
-
-  protected:
-    VkDeviceObj *m_device;
-    bool m_initialized;
-    vk_testing::ImageView m_imageView;
-    VkFormat m_depth_stencil_fmt;
-    VkImageView m_attachmentBindInfo;
-};
-
 class VkCommandBufferObj;
+class VkDepthStencilObj;
 
 class VkRenderFramework : public VkTestFramework {
   public:
@@ -356,6 +341,22 @@ class VkTextureObj : public VkImageObj {
     VkDeviceObj *m_device;
     vk_testing::ImageView m_textureView;
     VkDeviceSize m_rowPitch;
+};
+
+class VkDepthStencilObj : public VkImageObj {
+  public:
+    VkDepthStencilObj(VkDeviceObj *device);
+    void Init(VkDeviceObj *device, int32_t width, int32_t height,
+                       VkFormat format);
+    bool Initialized();
+    VkImageView *BindInfo();
+
+  protected:
+    VkDeviceObj *m_device;
+    bool m_initialized;
+    vk_testing::ImageView m_imageView;
+    VkFormat m_depth_stencil_fmt;
+    VkImageView m_attachmentBindInfo;
 };
 
 class VkSamplerObj : public vk_testing::Sampler {

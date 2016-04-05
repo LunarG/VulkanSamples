@@ -165,8 +165,7 @@ void VkRenderFramework::InitFramework(
         }
     }
     m_device->get_device_queue();
-
-    m_depthStencil = new VkDepthStencilObj();
+    m_depthStencil = new VkDepthStencilObj(m_device);
 }
 
 void VkRenderFramework::ShutdownFramework() {
@@ -647,6 +646,11 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
         dst_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         break;
 
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+        dst_mask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        src_mask = all_cache_outputs;
+        break;
+
     default:
         src_mask = all_cache_outputs;
         dst_mask = all_cache_inputs;
@@ -766,7 +770,8 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image) {
     src_image.SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR_BIT,
                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-    dest_image_layout = this->layout();
+    dest_image_layout = (this->layout() == VK_IMAGE_LAYOUT_UNDEFINED)?
+                    VK_IMAGE_LAYOUT_GENERAL:this->layout();
     this->SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR_BIT,
                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -1659,38 +1664,26 @@ void VkCommandBufferObj::BindVertexBuffer(VkConstantBufferObj *vertexBuffer,
                            &offset);
 }
 
-VkDepthStencilObj::VkDepthStencilObj() { m_initialized = false; }
 bool VkDepthStencilObj::Initialized() { return m_initialized; }
+VkDepthStencilObj::VkDepthStencilObj(VkDeviceObj *device) : VkImageObj(device)  {m_initialized = false;}
 
 VkImageView *VkDepthStencilObj::BindInfo() { return &m_attachmentBindInfo; }
 
 void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
                              VkFormat format) {
-    VkImageCreateInfo image_info = {};
+
     VkImageViewCreateInfo view_info = {};
 
     m_device = device;
     m_initialized = true;
     m_depth_stencil_fmt = format;
 
-    image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_info.pNext = NULL;
-    image_info.imageType = VK_IMAGE_TYPE_2D;
-    image_info.format = m_depth_stencil_fmt;
-    image_info.extent.width = width;
-    image_info.extent.height = height;
-    image_info.extent.depth = 1;
-    image_info.mipLevels = 1;
-    image_info.arrayLayers = 1;
-    image_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    image_info.flags = 0;
-    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    image_info.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    image_info.queueFamilyIndexCount = 0;
-    image_info.pQueueFamilyIndices = NULL;
-    init(*m_device, image_info);
+    /* create image */
+    init(width, height, m_depth_stencil_fmt,
+         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+         VK_IMAGE_TILING_OPTIMAL);
+
+    SetLayout(VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     view_info.pNext = NULL;
