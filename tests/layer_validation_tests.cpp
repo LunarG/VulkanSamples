@@ -5747,6 +5747,52 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch) {
     }
 }
 
+TEST_F(VkLayerTest, CreatePipelineDuplicateStage) {
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Multiple shaders provided for stage VK_SHADER_STAGE_VERTEX_BIT");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    char const *vsSource =
+        "#version 450\n"
+        "\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   gl_Position = vec4(1);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 450\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        m_errorMonitor->DumpFailureMsgs();
+        FAIL() << "Did not receive Error 'Multiple shaders provided for stage VK_SHADER_STAGE_VERTEX_BIT'";
+    }
+}
+
 TEST_F(VkLayerTest, CreatePipelineAttribMatrixType) {
     m_errorMonitor->SetDesiredFailureMsg(~0u, "");
 
