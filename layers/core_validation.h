@@ -173,16 +173,6 @@ struct DEVICE_MEM_INFO {
     void *pData, *pDriverData;
 };
 
-// This only applies to Buffers and Images, which can have memory bound to them
-struct MT_OBJ_BINDING_INFO {
-    VkDeviceMemory mem;
-    bool valid; // If this is a swapchain image backing memory is not a MT_MEM_OBJ_INFO so store it here.
-    union create_info {
-        VkImageCreateInfo image;
-        VkBufferCreateInfo buffer;
-    } create_info;
-};
-
 struct MT_FB_ATTACHMENT_INFO {
     VkImage image;
     VkDeviceMemory mem;
@@ -520,6 +510,7 @@ class IMAGE_NODE : public BASE_NODE {
   public:
     VkImageCreateInfo createInfo;
     VkDeviceMemory mem;
+    bool valid; // If this is a swapchain image backing memory track valid here as it doesn't have DEVICE_MEM_INFO
     VkDeviceSize memOffset;
     VkDeviceSize memSize;
 };
@@ -542,7 +533,8 @@ class IMAGE_CMD_BUF_LAYOUT_NODE {
 class BUFFER_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
-    unique_ptr<VkBufferCreateInfo> create_info;
+    VkDeviceMemory mem;
+    VkBufferCreateInfo createInfo;
 };
 
 // Store the DAG.
