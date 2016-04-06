@@ -1728,8 +1728,9 @@ static bool loader_find_layer_name_array(
  * layer key_name.
  * If not found then simply returns updating nothing.
  * Otherwise, it uses expand_count, expand_names adding them to layer names.
- * Any duplicate (pre-existing) exapand_names in layer names are removed.
- * Expand names are added to the back/end of the list of layer names.
+ * Any duplicate (pre-existing) expand_names in layer names are removed.
+ * Order is otherwise preserved, with the layer key_name being replaced by the
+ * expand_names.
  * @param inst
  * @param layer_count
  * @param ppp_layer_names
@@ -1757,17 +1758,20 @@ void loader_expand_layer_names(
     // expand_names.
     uint32_t src_index, dst_index = 0;
     for (src_index = 0; src_index < *layer_count; src_index++) {
-        if (loader_find_layer_name_array(pp_src_layers[src_index], expand_count, expand_names) ||
-            !strcmp(pp_src_layers[src_index], key_name)) {
+        if (loader_find_layer_name_array(pp_src_layers[src_index], expand_count, expand_names)) {
+            continue;
+        }
+
+        if (!strcmp(pp_src_layers[src_index], key_name)) {
+            // insert all expand_names in place of key_name
+            uint32_t expand_index;
+            for (expand_index = 0; expand_index < expand_count; expand_index++) {
+                pp_dst_layers[dst_index++] = expand_names[expand_index];
+            }
             continue;
         }
 
         pp_dst_layers[dst_index++] = pp_src_layers[src_index];
-    }
-
-    // append expand_names.
-    for (src_index = 0; src_index < expand_count; src_index++) {
-        pp_dst_layers[dst_index++] = expand_names[src_index];
     }
 
     *ppp_layer_names = pp_dst_layers;
