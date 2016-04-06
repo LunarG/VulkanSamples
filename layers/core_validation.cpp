@@ -10196,7 +10196,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(VkDevice device, VkImage image,
     auto image_node = dev_data->imageMap.find(image);
     if (image_node != dev_data->imageMap.end()) {
         // Track objects tied to memory
-        uint64_t image_handle = reinterpret_cast<uint64_t>(image);
+        uint64_t image_handle = reinterpret_cast<uint64_t&>(image);
         skipCall = set_mem_binding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory");
         VkMemoryRequirements memRequirements;
         loader_platform_thread_unlock_mutex(&globalLock);
