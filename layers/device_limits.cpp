@@ -468,6 +468,26 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
     layer_data_map.erase(key);
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
+                                                                  const VkAllocationCallbacks *pAllocator,
+                                                                  VkRenderPass *pRenderPass) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    bool skip_call = false;
+    uint32_t max_color_attachments = dev_data->physicalDeviceProperties.limits.maxColorAttachments;
+    for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
+        if (pCreateInfo->pSubpasses[i].colorAttachmentCount > max_color_attachments) {
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                 reinterpret_cast<uint64_t>(device), __LINE__, DEVLIMITS_INVALID_ATTACHMENT_COUNT, "DL",
+                                 "Cannot create a render pass with %d color attachments. Max is %d.",
+                                 pCreateInfo->pSubpasses[i].colorAttachmentCount, max_color_attachments);
+        }
+    }
+    if (skip_call) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+    return dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(VkDevice device, const VkCommandPoolCreateInfo *pCreateInfo,
                                                                    const VkAllocationCallbacks *pAllocator,
                                                                    VkCommandPool *pCommandPool) {
@@ -676,11 +696,13 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction)vkDestroyDevice;
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (PFN_vkVoidFunction)vkGetDeviceQueue;
-    if (!strcmp(funcName, "CreateCommandPool"))
+    if (!strcmp(funcName, "vkCreateRenderPass"))
+        return (PFN_vkVoidFunction)vkCreateRenderPass;
+    if (!strcmp(funcName, "vkCreateCommandPool"))
         return (PFN_vkVoidFunction)vkCreateCommandPool;
-    if (!strcmp(funcName, "DestroyCommandPool"))
+    if (!strcmp(funcName, "vkDestroyCommandPool"))
         return (PFN_vkVoidFunction)vkDestroyCommandPool;
-    if (!strcmp(funcName, "ResetCommandPool"))
+    if (!strcmp(funcName, "vkResetCommandPool"))
         return (PFN_vkVoidFunction)vkResetCommandPool;
     if (!strcmp(funcName, "vkAllocateCommandBuffers"))
         return (PFN_vkVoidFunction)vkAllocateCommandBuffers;
