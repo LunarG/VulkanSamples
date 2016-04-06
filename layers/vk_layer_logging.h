@@ -49,10 +49,10 @@ template debug_report_data *get_my_data_ptr<debug_report_data>(void *data_key,
                                                                std::unordered_map<void *, debug_report_data *> &data_map);
 
 // Utility function to handle reporting
-static inline VkBool32 debug_report_log_msg(debug_report_data *debug_data, VkFlags msgFlags, VkDebugReportObjectTypeEXT objectType,
-                                            uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix,
-                                            const char *pMsg) {
-    VkBool32 bail = false;
+static inline bool debug_report_log_msg(debug_report_data *debug_data, VkFlags msgFlags, VkDebugReportObjectTypeEXT objectType,
+                                        uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix,
+                                        const char *pMsg) {
+    bool bail = false;
     VkLayerDbgFunctionNode *pTrav = debug_data->g_pDbgFunctionHead;
     while (pTrav) {
         if (pTrav->msgFlags & msgFlags) {
@@ -203,7 +203,7 @@ static inline PFN_vkVoidFunction debug_report_get_instance_proc_addr(debug_repor
  * Allows layer to defer collecting & formating data if the
  * message will be discarded.
  */
-static inline VkBool32 will_log_msg(debug_report_data *debug_data, VkFlags msgFlags) {
+static inline bool will_log_msg(debug_report_data *debug_data, VkFlags msgFlags) {
     if (!debug_data || !(debug_data->active_flags & msgFlags)) {
         /* message is not wanted */
         return false;
@@ -233,13 +233,13 @@ static inline int vasprintf(char **strp, char const *fmt, va_list ap) {
  * is only computed if a message needs to be logged
  */
 #ifndef WIN32
-static inline VkBool32 log_msg(debug_report_data *debug_data, VkFlags msgFlags, VkDebugReportObjectTypeEXT objectType,
-                               uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *format,
-                               ...) __attribute__((format(printf, 8, 9)));
+static inline bool log_msg(debug_report_data *debug_data, VkFlags msgFlags, VkDebugReportObjectTypeEXT objectType,
+                           uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *format, ...)
+    __attribute__((format(printf, 8, 9)));
 #endif
-static inline VkBool32 log_msg(debug_report_data *debug_data, VkFlags msgFlags, VkDebugReportObjectTypeEXT objectType,
-                               uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *format,
-                               ...) {
+static inline bool log_msg(debug_report_data *debug_data, VkFlags msgFlags, VkDebugReportObjectTypeEXT objectType,
+                           uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *format,
+                           ...) {
     if (!debug_data || !(debug_data->active_flags & msgFlags)) {
         /* message is not wanted */
         return false;
@@ -250,7 +250,7 @@ static inline VkBool32 log_msg(debug_report_data *debug_data, VkFlags msgFlags, 
     char *str;
     vasprintf(&str, format, argptr);
     va_end(argptr);
-    VkBool32 result = debug_report_log_msg(debug_data, msgFlags, objectType, srcObject, location, msgCode, pLayerPrefix, str);
+    bool result = debug_report_log_msg(debug_data, msgFlags, objectType, srcObject, location, msgCode, pLayerPrefix, str);
     free(str);
     return result;
 }

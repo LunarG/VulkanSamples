@@ -61,7 +61,7 @@ if (WIN32)
     macro(add_vk_layer target)
 	add_custom_command(OUTPUT VkLayer_${target}.def
 		COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py ${DisplayServer} win-def-file VkLayer_${target} layer > VkLayer_${target}.def
-		DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vk.py
+		DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py
 	)
 	add_library(VkLayer_${target} SHARED ${ARGN} VkLayer_${target}.def)
     target_link_Libraries(VkLayer_${target} layer_utils)
@@ -145,7 +145,7 @@ if (WIN32)
 else()
     install(TARGETS layer_utils DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
 endif()
-add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp)
+add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp vk_safe_struct.cpp)
 add_vk_layer(device_limits device_limits.cpp vk_layer_table.cpp vk_layer_utils.cpp)
 add_vk_layer(image image.cpp vk_layer_table.cpp)
 add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)

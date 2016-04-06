@@ -154,6 +154,9 @@ class ErrorMonitor {
         string errorString(msgString);
         if (msgFlags & m_msgFlags) {
             if (errorString.find(m_desiredMsg) != string::npos) {
+                if (m_msgFound) { /* if multiple matches, don't lose all but the last! */
+                    m_otherMsgs.push_back(m_failureMsg);
+                }
                 m_failureMsg = errorString;
                 m_msgFound = VK_TRUE;
                 result = VK_TRUE;
@@ -1690,7 +1693,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated) {
                             1, &descriptorSet, 0, NULL);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Warning 'DS <blah> bound but it was never "
+        FAIL() << "Did not receive Warning 'DS <blah> bound but it was never "
                   "updated. You may want to either update it or not bind it.'";
         m_errorMonitor->DumpFailureMsgs();
     }
@@ -2491,7 +2494,7 @@ TEST_F(VkLayerTest, NoBeginCommandBuffer) {
     vkEndCommandBuffer(commandBuffer.GetBufferHandle());
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error 'You must call vkBeginCommandBuffer() "
+        FAIL() << "Did not receive Error 'You must call vkBeginCommandBuffer() "
                   "before this call to vkEndCommandBuffer()'";
         m_errorMonitor->DumpFailureMsgs();
     }
@@ -2844,7 +2847,7 @@ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive Error 'Invalid Pipeline CreateInfo State:
-VK_PRIMITIVE_TOPOLOGY_PATCH primitive...'";
+VK_PRIMITIVE_TOPOLOGY_PATCHLIST primitive...'";
         m_errorMonitor->DumpFailureMsgs();
     }
 
@@ -3252,7 +3255,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
                                     &gp_ci, NULL, &pipeline);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error 'Gfx Pipeline viewportCount is 1, but "
+        FAIL() << "Did not receive Error 'Gfx Pipeline viewportCount is 1, but "
                   "pViewports is NULL...'";
         m_errorMonitor->DumpFailureMsgs();
     }
@@ -3434,7 +3437,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
                                     &gp_ci, NULL, &pipeline);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error 'Gfx Pipeline scissorCount is 1, but "
+        FAIL() << "Did not receive Error 'Gfx Pipeline scissorCount is 1, but "
                   "pScissors is NULL...'";
         m_errorMonitor->DumpFailureMsgs();
     }
@@ -4653,7 +4656,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch) {
                       VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error 'Num samples mismatch!...'";
+        FAIL() << "Did not receive Error 'Num samples mismatch!...'";
         m_errorMonitor->DumpFailureMsgs();
     }
 
@@ -4661,7 +4664,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch) {
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
-
+#ifdef ADD_BACK_IN_WHEN_CHECK_IS_BACK // TODO : Re-enable when GH256 fixed
 TEST_F(VkLayerTest, NumBlendAttachMismatch) {
     // Create Pipeline where the number of blend attachments doesn't match the
     // number of color attachments.  In this case, we don't add any color
@@ -4754,7 +4757,7 @@ TEST_F(VkLayerTest, NumBlendAttachMismatch) {
         VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not recieve Error 'Mismatch between blend state attachment...'";
+        FAIL() << "Did not receive Error 'Mismatch between blend state attachment...'";
         m_errorMonitor->DumpFailureMsgs();
     }
 
@@ -4762,7 +4765,7 @@ TEST_F(VkLayerTest, NumBlendAttachMismatch) {
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
-
+#endif //ADD_BACK_IN_WHEN_CHECK_IS_BACK
 TEST_F(VkLayerTest, ClearCmdNoDraw) {
     // Create CommandBuffer where we add ClearCmd for FB Color attachment prior
     // to issuing a Draw
@@ -5164,9 +5167,7 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out float x;\n"
         "out gl_PerVertex {\n"
@@ -5177,9 +5178,7 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed) {
         "   x = 0;\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5214,9 +5213,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex {\n"
         "    vec4 gl_Position;\n"
@@ -5225,9 +5222,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in float x;\n"
         "layout(location=0) out vec4 color;\n"
@@ -5263,9 +5258,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvidedInBlock) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex {\n"
         "    vec4 gl_Position;\n"
@@ -5275,8 +5268,6 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvidedInBlock) {
         "}\n";
     char const *fsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "in block { layout(location=0) float x; } ins;\n"
         "layout(location=0) out vec4 color;\n"
@@ -5314,9 +5305,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out float x[2];\n"
         "out gl_PerVertex {\n"
@@ -5327,9 +5316,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in float x[3];\n"
         "layout(location=0) out vec4 color;\n"
@@ -5367,9 +5354,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out int x;\n"
         "out gl_PerVertex {\n"
@@ -5380,9 +5365,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in float x;\n" /* VS writes int */
         "layout(location=0) out vec4 color;\n"
@@ -5419,8 +5402,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchInBlock) {
 
     char const *vsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "out block { layout(location=0) int x; } outs;\n"
         "out gl_PerVertex {\n"
@@ -5432,8 +5413,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchInBlock) {
         "}\n";
     char const *fsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "in block { layout(location=0) float x; } ins;\n" /* VS writes int */
         "layout(location=0) out vec4 color;\n"
@@ -5470,8 +5449,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByLocation) {
 
     char const *vsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "out block { layout(location=1) float x; } outs;\n"
         "out gl_PerVertex {\n"
@@ -5483,8 +5460,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByLocation) {
         "}\n";
     char const *fsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "in block { layout(location=0) float x; } ins;\n"
         "layout(location=0) out vec4 color;\n"
@@ -5521,8 +5496,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByComponent) {
 
     char const *vsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "out block { layout(location=0, component=0) float x; } outs;\n"
         "out gl_PerVertex {\n"
@@ -5534,8 +5507,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByComponent) {
         "}\n";
     char const *fsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "in block { layout(location=0, component=1) float x; } ins;\n"
         "layout(location=0) out vec4 color;\n"
@@ -5578,9 +5549,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed) {
     input_attrib.format = VK_FORMAT_R32_SFLOAT;
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex {\n"
         "    vec4 gl_Position;\n"
@@ -5589,9 +5558,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5636,9 +5603,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribLocationMismatch) {
     input_attrib.format = VK_FORMAT_R32_SFLOAT;
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=1) in float x;\n"
         "out gl_PerVertex {\n"
@@ -5648,9 +5613,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribLocationMismatch) {
         "   gl_Position = vec4(x);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5689,9 +5652,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in vec4 x;\n" /* not provided */
         "out gl_PerVertex {\n"
@@ -5701,9 +5662,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided) {
         "   gl_Position = x;\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5747,9 +5706,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch) {
     input_attrib.format = VK_FORMAT_R32_SFLOAT;
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in int x;\n" /* attrib provided float */
         "out gl_PerVertex {\n"
@@ -5759,9 +5716,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch) {
         "   gl_Position = vec4(x);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5792,6 +5747,52 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch) {
     }
 }
 
+TEST_F(VkLayerTest, CreatePipelineDuplicateStage) {
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Multiple shaders provided for stage VK_SHADER_STAGE_VERTEX_BIT");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    char const *vsSource =
+        "#version 450\n"
+        "\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   gl_Position = vec4(1);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 450\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        m_errorMonitor->DumpFailureMsgs();
+        FAIL() << "Did not receive Error 'Multiple shaders provided for stage VK_SHADER_STAGE_VERTEX_BIT'";
+    }
+}
+
 TEST_F(VkLayerTest, CreatePipelineAttribMatrixType) {
     m_errorMonitor->SetDesiredFailureMsg(~0u, "");
 
@@ -5810,9 +5811,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribMatrixType) {
     }
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in mat2x4 x;\n"
         "out gl_PerVertex {\n"
@@ -5822,9 +5821,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribMatrixType) {
         "   gl_Position = x[0] + x[1];\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5875,9 +5872,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribArrayType)
     }
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in vec4 x[2];\n"
         "out gl_PerVertex {\n"
@@ -5887,9 +5882,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribArrayType)
         "   gl_Position = x[0] + x[1];\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5920,6 +5913,264 @@ m_errorMonitor->GetFailureMsg();
     }
 }
 
+TEST_F(VkLayerTest, CreatePipelineSimplePositive)
+{
+    m_errorMonitor->SetDesiredFailureMsg(~0u, "");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    char const *vsSource =
+        "#version 450\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   gl_Position = vec4(0);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 450\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    if (m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Expected to succeed but: " <<
+m_errorMonitor->GetFailureMsg();
+        m_errorMonitor->DumpFailureMsgs();
+    }
+}
+
+TEST_F(VkLayerTest, CreatePipelineRelaxedTypeMatch)
+{
+    m_errorMonitor->SetDesiredFailureMsg(~0u, "");
+
+    // VK 1.0.8 Specification, 14.1.3 "Additionally,..." block
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    char const *vsSource =
+        "#version 450\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "layout(location=0) out vec3 x;\n"
+        "layout(location=1) out ivec3 y;\n"
+        "layout(location=2) out vec3 z;\n"
+        "void main(){\n"
+        "   gl_Position = vec4(0);\n"
+        "   x = vec3(0); y = ivec3(0); z = vec3(0);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 450\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "layout(location=0) in float x;\n"
+        "layout(location=1) flat in int y;\n"
+        "layout(location=2) in vec2 z;\n"
+        "void main(){\n"
+        "   color = vec4(1 + x + y + z.x);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    if (m_errorMonitor->DesiredMsgFound()) {
+        m_errorMonitor->DumpFailureMsgs();
+        FAIL() << "Expected to succeed but: " <<
+m_errorMonitor->GetFailureMsg();
+    }
+}
+
+TEST_F(VkLayerTest, CreatePipelineTessPerVertex)
+{
+    m_errorMonitor->SetDesiredFailureMsg(~0u, "");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    if (!m_device->phy().features().tessellationShader) {
+        printf("Device does not support tessellation shaders; skipped.\n");
+        return;
+    }
+
+    char const *vsSource =
+        "#version 450\n"
+        "void main(){}\n";
+    char const *tcsSource =
+        "#version 450\n"
+        "layout(location=0) out int x[];\n"
+        "layout(vertices=3) out;\n"
+        "void main(){\n"
+        "   gl_TessLevelOuter[0] = gl_TessLevelOuter[1] = gl_TessLevelOuter[2] = 1;\n"
+        "   gl_TessLevelInner[0] = 1;\n"
+        "   x[gl_InvocationID] = gl_InvocationID;\n"
+        "}\n";
+    char const *tesSource =
+        "#version 450\n"
+        "layout(triangles, equal_spacing, cw) in;\n"
+        "layout(location=0) in int x[];\n"
+        "out gl_PerVertex { vec4 gl_Position; };\n"
+        "void main(){\n"
+        "   gl_Position.xyz = gl_TessCoord;\n"
+        "   gl_Position.w = x[0] + x[1] + x[2];\n"
+        "}\n";
+    char const *fsSource =
+        "#version 450\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj tcs(m_device, tcsSource, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, this);
+    VkShaderObj tes(m_device, tesSource, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineInputAssemblyStateCreateInfo iasci{
+        VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        nullptr,
+        0,
+        VK_PRIMITIVE_TOPOLOGY_PATCH_LIST,
+        VK_FALSE};
+
+    VkPipelineTessellationStateCreateInfo tsci{
+        VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
+        nullptr,
+        0,
+        3};
+
+    VkPipelineObj pipe(m_device);
+    pipe.SetInputAssembly(&iasci);
+    pipe.SetTessellation(&tsci);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&tcs);
+    pipe.AddShader(&tes);
+    pipe.AddShader(&fs);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    if (m_errorMonitor->DesiredMsgFound()) {
+        m_errorMonitor->DumpFailureMsgs();
+        FAIL() << "Expected to succeed but: " <<
+m_errorMonitor->GetFailureMsg();
+    }
+}
+
+TEST_F(VkLayerTest, CreatePipelineTessPatchDecorationMismatch)
+{
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "is per-vertex in tessellation control shader stage "
+                                         "but per-patch in tessellation evaluation shader stage");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    if (!m_device->phy().features().tessellationShader) {
+        printf("Device does not support tessellation shaders; skipped.\n");
+        return;
+    }
+
+    char const *vsSource =
+        "#version 450\n"
+        "void main(){}\n";
+    char const *tcsSource =
+        "#version 450\n"
+        "layout(location=0) out int x[];\n"
+        "layout(vertices=3) out;\n"
+        "void main(){\n"
+        "   gl_TessLevelOuter[0] = gl_TessLevelOuter[1] = gl_TessLevelOuter[2] = 1;\n"
+        "   gl_TessLevelInner[0] = 1;\n"
+        "   x[gl_InvocationID] = gl_InvocationID;\n"
+        "}\n";
+    char const *tesSource =
+        "#version 450\n"
+        "layout(triangles, equal_spacing, cw) in;\n"
+        "layout(location=0) patch in int x;\n"
+        "out gl_PerVertex { vec4 gl_Position; };\n"
+        "void main(){\n"
+        "   gl_Position.xyz = gl_TessCoord;\n"
+        "   gl_Position.w = x;\n"
+        "}\n";
+    char const *fsSource =
+        "#version 450\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj tcs(m_device, tcsSource, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, this);
+    VkShaderObj tes(m_device, tesSource, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineInputAssemblyStateCreateInfo iasci{
+        VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        nullptr,
+        0,
+        VK_PRIMITIVE_TOPOLOGY_PATCH_LIST,
+        VK_FALSE};
+
+    VkPipelineTessellationStateCreateInfo tsci{
+        VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
+        nullptr,
+        0,
+        3};
+
+    VkPipelineObj pipe(m_device);
+    pipe.SetInputAssembly(&iasci);
+    pipe.SetTessellation(&tsci);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&tcs);
+    pipe.AddShader(&tes);
+    pipe.AddShader(&fs);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        m_errorMonitor->DumpFailureMsgs();
+        FAIL() << "Did not receive Error 'is per-vertex in tessellation control shader stage...'";
+    }
+}
+
 TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict) {
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -5937,9 +6188,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict) {
     input_attrib.format = VK_FORMAT_R32_SFLOAT;
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) in float x;\n" /* attrib provided float */
         "out gl_PerVertex {\n"
@@ -5949,9 +6198,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict) {
         "   gl_Position = vec4(x);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 color;\n"
         "void main(){\n"
@@ -5989,9 +6236,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex {\n"
         "    vec4 gl_Position;\n"
@@ -6000,9 +6245,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "void main(){\n"
         "}\n";
@@ -6039,9 +6282,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed) {
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex {\n"
         "    vec4 gl_Position;\n"
@@ -6050,9 +6291,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 x;\n"
         "layout(location=1) out vec4 y;\n" /* no matching attachment for this */
@@ -6093,9 +6332,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch) {
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex {\n"
         "    vec4 gl_Position;\n"
@@ -6104,9 +6341,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out ivec4 x;\n" /* not UNORM */
         "void main(){\n"
@@ -6143,9 +6378,7 @@ TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided) {
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex {\n"
         "    vec4 gl_Position;\n"
@@ -6154,9 +6387,7 @@ TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 x;\n"
         "layout(set=0) layout(binding=0) uniform foo { int x; int y; } bar;\n"
@@ -6197,8 +6428,6 @@ TEST_F(VkLayerTest, CreatePipelinePushConstantsNotInLayout) {
 
     char const *vsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "layout(push_constant, std430) uniform foo { float x; } consts;\n"
         "out gl_PerVertex {\n"
@@ -6209,8 +6438,6 @@ TEST_F(VkLayerTest, CreatePipelinePushConstantsNotInLayout) {
         "}\n";
     char const *fsSource =
         "#version 450\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
         "\n"
         "layout(location=0) out vec4 x;\n"
         "void main(){\n"

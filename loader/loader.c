@@ -52,6 +52,12 @@
 #include "cJSON.h"
 #include "murmurhash.h"
 
+#if defined(__GNUC__)
+#    if __GNUC__ < 2 || (__GNUC__ == 2 && __GNUC_MINOR__ < 17)
+#        define secure_getenv __secure_getenv
+#    endif
+#endif
+
 static loader_platform_dl_handle
 loader_add_layer_lib(const struct loader_instance *inst, const char *chain_type,
                      struct loader_layer_properties *layer_prop);
@@ -1122,6 +1128,17 @@ void loader_get_icd_loader_instance_extensions(
                                     (struct loader_generic_list *)&icd_exts);
     };
 
+    // TODO REMOVE THIS, HACK ALERT
+    // AMD driver doesn't advertise KHR_surface or KHR_win32_surface, add them
+#ifdef _WIN32
+    VkExtensionProperties props[2];
+    strcpy(props[0].extensionName, VK_KHR_SURFACE_EXTENSION_NAME);
+    props[0].specVersion = VK_KHR_SURFACE_SPEC_VERSION;
+    strcpy(props[1].extensionName, VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    props[1].specVersion = VK_KHR_WIN32_SURFACE_SPEC_VERSION;
+    loader_add_to_ext_list(inst, inst_exts, 2, props);
+
+#endif
     // Traverse loader's extensions, adding non-duplicate extensions to the list
     debug_report_add_instance_extensions(inst, inst_exts);
 }
@@ -2237,7 +2254,7 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
 
     if (env_override != NULL && (override = loader_getenv(env_override))) {
 #if !defined(_WIN32)
-        if (geteuid() != getuid()) {
+        if (geteuid() != getuid()  || getegid() != getgid()) {
             /* Don't allow setuid apps to use the env var: */
             loader_free_getenv(override);
             override = NULL;
@@ -3542,6 +3559,9 @@ VkResult loader_create_device_chain(const struct loader_physical_device_tramp *p
         loader_create_info.pNext = &create_info_disp;
         res = fpCreateDevice(pd->phys_dev, &loader_create_info, pAllocator,
                              &created_device);
+        if (res != VK_SUCCESS) {
+            return res;
+        }
         dev->device = created_device;
     } else {
         // Couldn't find CreateDevice function!

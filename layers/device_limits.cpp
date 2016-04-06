@@ -63,10 +63,10 @@ struct layer_data {
     unique_ptr<PHYSICAL_DEVICE_STATE> physicalDeviceState;
     VkPhysicalDeviceFeatures actualPhysicalDeviceFeatures;
     VkPhysicalDeviceFeatures requestedPhysicalDeviceFeatures;
-    unordered_map<VkDevice, VkPhysicalDeviceProperties> physDevPropertyMap;
 
     // Track physical device per logical device
     VkPhysicalDevice physicalDevice;
+    VkPhysicalDeviceProperties physicalDeviceProperties;
     // Vector indices correspond to queueFamilyIndex
     vector<unique_ptr<VkQueueFamilyProperties>> queueFamilyProperties;
 
@@ -188,7 +188,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount, VkPhysicalDevice *pPhysicalDevices) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     if (my_data->instanceState) {
         // For this instance, flag when vkEnumeratePhysicalDevices goes to QUERY_COUNT and then QUERY_DETAILS
@@ -268,7 +268,7 @@ vkGetPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceP
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkGetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount,
                                          VkQueueFamilyProperties *pQueueFamilyProperties) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     if (phy_dev_data->physicalDeviceState) {
         if (NULL == pQueueFamilyProperties) {
@@ -334,9 +334,9 @@ vkGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice physicalDevice, 
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t firstViewport, uint32_t viewportCount, const VkViewport *pViewports) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     /* TODO: Verify viewportCount < maxViewports from VkPhysicalDeviceLimits */
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
         my_data->device_dispatch_table->CmdSetViewport(commandBuffer, firstViewport, viewportCount, pViewports);
     }
@@ -344,18 +344,18 @@ vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t firstViewport, uint32_t
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t firstScissor, uint32_t scissorCount, const VkRect2D *pScissors) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     /* TODO: Verify scissorCount < maxViewports from VkPhysicalDeviceLimits */
     /* TODO: viewportCount and scissorCount must match at draw time */
-    if (VK_FALSE == skipCall) {
+    if (!skipCall) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
         my_data->device_dispatch_table->CmdSetScissor(commandBuffer, firstScissor, scissorCount, pScissors);
     }
 }
 
 // Verify that features have been queried and verify that requested features are available
-static VkBool32 validate_features_request(layer_data *phy_dev_data) {
-    VkBool32 skipCall = VK_FALSE;
+static bool validate_features_request(layer_data *phy_dev_data) {
+    bool skipCall = false;
     // Verify that all of the requested features are available
     // Get ptrs into actual and requested structs and if requested is 1 but actual is 0, request is invalid
     VkBool32 *actual = (VkBool32 *)&(phy_dev_data->actualPhysicalDeviceFeatures);
@@ -388,7 +388,7 @@ static VkBool32 validate_features_request(layer_data *phy_dev_data) {
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *pCreateInfo,
                                                               const VkAllocationCallbacks *pAllocator, VkDevice *pDevice) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
     // First check is app has actually requested queueFamilyProperties
     if (!phy_dev_data->physicalDeviceState) {
@@ -448,15 +448,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
         return result;
     }
 
-    layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
     my_device_data->device_dispatch_table = new VkLayerDispatchTable;
     layer_init_device_dispatch_table(*pDevice, my_device_data->device_dispatch_table, fpGetDeviceProcAddr);
-    my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
+    my_device_data->report_data = layer_debug_report_create_device(phy_dev_data->report_data, *pDevice);
     my_device_data->physicalDevice = gpu;
 
     // Get physical device properties for this device
-    phy_dev_data->instance_dispatch_table->GetPhysicalDeviceProperties(gpu, &(phy_dev_data->physDevPropertyMap[*pDevice]));
+    phy_dev_data->instance_dispatch_table->GetPhysicalDeviceProperties(gpu, &(my_device_data->physicalDeviceProperties));
     return result;
 }
 
@@ -532,7 +531,7 @@ vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginIn
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue *pQueue) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkPhysicalDevice gpu = dev_data->physicalDevice;
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
@@ -548,42 +547,20 @@ vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex
             "Invalid queue request in vkGetDeviceQueue(). QueueFamilyIndex %u only has %u queues, but requested queueIndex is %u.",
             queueFamilyIndex, phy_dev_data->queueFamilyProperties[queueFamilyIndex]->queueCount, queueIndex);
     }
-    if (skipCall)
-        return;
-    dev_data->device_dispatch_table->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
-vkBindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    VkBool32 skipCall = VK_FALSE;
-
-    VkDeviceSize uniformAlignment = dev_data->physDevPropertyMap[device].limits.minUniformBufferOffsetAlignment;
-    if (vk_safe_modulo(memoryOffset, uniformAlignment) != 0) {
-        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                            0, __LINE__, DEVLIMITS_INVALID_UNIFORM_BUFFER_OFFSET, "DL",
-                            "vkBindBufferMemory(): memoryOffset %#" PRIxLEAST64
-                            " must be a multiple of device limit minUniformBufferOffsetAlignment %#" PRIxLEAST64,
-                            memoryOffset, uniformAlignment);
-    }
-
-    if (VK_FALSE == skipCall) {
-        result = dev_data->device_dispatch_table->BindBufferMemory(device, buffer, mem, memoryOffset);
-    }
-    return result;
+    if (!skipCall)
+        dev_data->device_dispatch_table->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites,
                        uint32_t descriptorCopyCount, const VkCopyDescriptorSet *pDescriptorCopies) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
 
     for (uint32_t i = 0; i < descriptorWriteCount; i++) {
         if ((pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ||
             (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)) {
-            VkDeviceSize uniformAlignment = dev_data->physDevPropertyMap[device].limits.minUniformBufferOffsetAlignment;
+            VkDeviceSize uniformAlignment = dev_data->physicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
             for (uint32_t j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
                 if (vk_safe_modulo(pDescriptorWrites[i].pBufferInfo[j].offset, uniformAlignment) != 0) {
                     skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -596,7 +573,7 @@ vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkW
             }
         } else if ((pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
                    (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
-            VkDeviceSize storageAlignment = dev_data->physDevPropertyMap[device].limits.minStorageBufferOffsetAlignment;
+            VkDeviceSize storageAlignment = dev_data->physicalDeviceProperties.limits.minStorageBufferOffsetAlignment;
             for (uint32_t j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
                 if (vk_safe_modulo(pDescriptorWrites[i].pBufferInfo[j].offset, storageAlignment) != 0) {
                     skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -609,7 +586,7 @@ vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkW
             }
         }
     }
-    if (skipCall == VK_FALSE) {
+    if (!skipCall) {
         dev_data->device_dispatch_table->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
                                                               pDescriptorCopies);
     }
@@ -713,8 +690,6 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction)vkBeginCommandBuffer;
     if (!strcmp(funcName, "vkCmdUpdateBuffer"))
         return (PFN_vkVoidFunction)vkCmdUpdateBuffer;
-    if (!strcmp(funcName, "vkBindBufferMemory"))
-        return (PFN_vkVoidFunction)vkBindBufferMemory;
     if (!strcmp(funcName, "vkUpdateDescriptorSets"))
         return (PFN_vkVoidFunction)vkUpdateDescriptorSets;
     if (!strcmp(funcName, "vkCmdFillBuffer"))

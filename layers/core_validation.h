@@ -34,9 +34,12 @@
 #define HAS_NOEXCEPT
 #endif
 #else
-#if defined(__GXX_EXPERIMENTAL_CXX0X__) && __GNUC__ * 10 + __GNUC_MINOR__ >= 46 || \
-    defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 190023026
+#if defined(__GXX_EXPERIMENTAL_CXX0X__) && __GNUC__ * 10 + __GNUC_MINOR__ >= 46
 #define HAS_NOEXCEPT
+#else
+#if defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 190023026 && defined(_HAS_EXCEPTIONS) && _HAS_EXCEPTIONS
+#define HAS_NOEXCEPT
+#endif
 #endif
 #endif
 
@@ -50,6 +53,7 @@
 #define MTMERGE 1
 
 #pragma once
+#include "vk_safe_struct.h"
 #include "vulkan/vk_layer.h"
 #include <atomic>
 #include <vector>
@@ -169,16 +173,6 @@ struct DEVICE_MEM_INFO {
     void *pData, *pDriverData;
 };
 
-// This only applies to Buffers and Images, which can have memory bound to them
-struct MT_OBJ_BINDING_INFO {
-    VkDeviceMemory mem;
-    bool valid; // If this is a swapchain image backing memory is not a MT_MEM_OBJ_INFO so store it here.
-    union create_info {
-        VkImageCreateInfo image;
-        VkBufferCreateInfo buffer;
-    } create_info;
-};
-
 struct MT_FB_ATTACHMENT_INFO {
     VkImage image;
     VkDeviceMemory mem;
@@ -195,7 +189,7 @@ struct MT_FENCE_INFO {
     uint64_t fenceId;         // Sequence number for fence at last submit
     VkQueue queue;            // Queue that this fence is submitted against or NULL
     VkSwapchainKHR swapchain; // Swapchain that this fence is submitted against or NULL
-    VkBool32 firstTimeFlag;   // Fence was created in signaled state, avoid warnings for first use
+    bool firstTimeFlag;       // Fence was created in signaled state, avoid warnings for first use
     VkFenceCreateInfo createInfo;
 };
 
@@ -375,6 +369,10 @@ typedef enum _DRAW_STATE_ERROR {
     DRAWSTATE_OBJECT_INUSE,                  // Destroying or modifying an object in use by a
                                              // command buffer
     DRAWSTATE_QUEUE_FORWARD_PROGRESS,        // Queue cannot guarantee forward progress
+    DRAWSTATE_INVALID_BUFFER_MEMORY_OFFSET,  // Dynamic Buffer Offset
+                                             // violates memory requirements limit
+    DRAWSTATE_INVALID_TEXEL_BUFFER_OFFSET,   // Dynamic Texel Buffer Offsets
+                                             // violate device limit
     DRAWSTATE_INVALID_UNIFORM_BUFFER_OFFSET, // Dynamic Uniform Buffer Offsets
                                              // violate device limit
     DRAWSTATE_INVALID_STORAGE_BUFFER_OFFSET, // Dynamic Storage Buffer Offsets
@@ -430,27 +428,14 @@ typedef struct _GENERIC_HEADER {
     const void *pNext;
 } GENERIC_HEADER;
 
-typedef struct _PIPELINE_NODE {
+class PIPELINE_NODE {
+  public:
     VkPipeline pipeline;
-    VkGraphicsPipelineCreateInfo graphicsPipelineCI;
-    VkPipelineVertexInputStateCreateInfo vertexInputCI;
-    VkPipelineInputAssemblyStateCreateInfo iaStateCI;
-    VkPipelineTessellationStateCreateInfo tessStateCI;
-    VkPipelineViewportStateCreateInfo vpStateCI;
-    VkPipelineRasterizationStateCreateInfo rsStateCI;
-    VkPipelineMultisampleStateCreateInfo msStateCI;
-    VkPipelineColorBlendStateCreateInfo cbStateCI;
-    VkPipelineDepthStencilStateCreateInfo dsStateCI;
-    VkPipelineDynamicStateCreateInfo dynStateCI;
-    VkPipelineShaderStageCreateInfo vsCI;
-    VkPipelineShaderStageCreateInfo tcsCI;
-    VkPipelineShaderStageCreateInfo tesCI;
-    VkPipelineShaderStageCreateInfo gsCI;
-    VkPipelineShaderStageCreateInfo fsCI;
-    // Compute shader is include in VkComputePipelineCreateInfo
-    VkComputePipelineCreateInfo computePipelineCI;
+    safe_VkGraphicsPipelineCreateInfo graphicsPipelineCI;
+    safe_VkComputePipelineCreateInfo computePipelineCI;
     // Flag of which shader stages are active for this pipeline
     uint32_t active_shaders;
+    uint32_t duplicate_shaders;
     // Capture which slots (set#->bindings) are actually used by the shaders of this pipeline
     unordered_map<uint32_t, unordered_set<uint32_t>> active_slots;
     // Vtx input info (if any)
@@ -459,11 +444,55 @@ typedef struct _PIPELINE_NODE {
     std::vector<VkPipelineColorBlendAttachmentState> attachments;
     bool blendConstantsEnabled; // Blend constants enabled for any attachments
     // Default constructor
-    _PIPELINE_NODE()
-        : pipeline{}, graphicsPipelineCI{}, vertexInputCI{}, iaStateCI{}, tessStateCI{}, vpStateCI{}, rsStateCI{}, msStateCI{},
-          cbStateCI{}, dsStateCI{}, dynStateCI{}, vsCI{}, tcsCI{}, tesCI{}, gsCI{}, fsCI{}, computePipelineCI{}, active_shaders(0),
-          active_slots(), vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false) {}
-} PIPELINE_NODE;
+    PIPELINE_NODE()
+        : pipeline{}, graphicsPipelineCI{}, computePipelineCI{}, active_shaders(0), duplicate_shaders(0), active_slots(), vertexBindingDescriptions(),
+          vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false) {}
+
+    void initGraphicsPipeline(const VkGraphicsPipelineCreateInfo *pCreateInfo) {
+        graphicsPipelineCI.initialize(pCreateInfo);
+        // Make sure compute pipeline is null
+        VkComputePipelineCreateInfo emptyComputeCI = {};
+        computePipelineCI.initialize(&emptyComputeCI);
+        for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
+            const VkPipelineShaderStageCreateInfo *pPSSCI = &pCreateInfo->pStages[i];
+            this->duplicate_shaders |= this->active_shaders & pPSSCI->stage;
+            this->active_shaders |= pPSSCI->stage;
+        }
+        if (pCreateInfo->pVertexInputState) {
+            const VkPipelineVertexInputStateCreateInfo *pVICI = pCreateInfo->pVertexInputState;
+            if (pVICI->vertexBindingDescriptionCount) {
+                this->vertexBindingDescriptions = std::vector<VkVertexInputBindingDescription>(
+                    pVICI->pVertexBindingDescriptions, pVICI->pVertexBindingDescriptions + pVICI->vertexBindingDescriptionCount);
+            }
+            if (pVICI->vertexAttributeDescriptionCount) {
+                this->vertexAttributeDescriptions = std::vector<VkVertexInputAttributeDescription>(
+                    pVICI->pVertexAttributeDescriptions,
+                    pVICI->pVertexAttributeDescriptions + pVICI->vertexAttributeDescriptionCount);
+            }
+        }
+        if (pCreateInfo->pColorBlendState) {
+            const VkPipelineColorBlendStateCreateInfo *pCBCI = pCreateInfo->pColorBlendState;
+            if (pCBCI->attachmentCount) {
+                this->attachments = std::vector<VkPipelineColorBlendAttachmentState>(pCBCI->pAttachments,
+                                                                                     pCBCI->pAttachments + pCBCI->attachmentCount);
+            }
+        }
+    }
+    void initComputePipeline(const VkComputePipelineCreateInfo *pCreateInfo) {
+        computePipelineCI.initialize(pCreateInfo);
+        // Make sure gfx pipeline is null
+        VkGraphicsPipelineCreateInfo emptyGraphicsCI = {};
+        graphicsPipelineCI.initialize(&emptyGraphicsCI);
+        switch (computePipelineCI.stage.stage) {
+        case VK_SHADER_STAGE_COMPUTE_BIT:
+            this->active_shaders |= VK_SHADER_STAGE_COMPUTE_BIT;
+            break;
+        default:
+            // TODO : Flag error
+            break;
+        }
+    }
+};
 
 class BASE_NODE {
   public:
@@ -481,6 +510,7 @@ class IMAGE_NODE : public BASE_NODE {
   public:
     VkImageCreateInfo createInfo;
     VkDeviceMemory mem;
+    bool valid; // If this is a swapchain image backing memory track valid here as it doesn't have DEVICE_MEM_INFO
     VkDeviceSize memOffset;
     VkDeviceSize memSize;
 };
@@ -503,7 +533,8 @@ class IMAGE_CMD_BUF_LAYOUT_NODE {
 class BUFFER_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
-    unique_ptr<VkBufferCreateInfo> create_info;
+    VkDeviceMemory mem;
+    VkBufferCreateInfo createInfo;
 };
 
 // Store the DAG.
@@ -558,7 +589,7 @@ class FENCE_NODE : public BASE_NODE {
 #if MTMERGE
     uint64_t fenceId;         // Sequence number for fence at last submit
     VkSwapchainKHR swapchain; // Swapchain that this fence is submitted against or NULL
-    VkBool32 firstTimeFlag;   // Fence was created in signaled state, avoid warnings for first use
+    bool firstTimeFlag;       // Fence was created in signaled state, avoid warnings for first use
     VkFenceCreateInfo createInfo;
 #endif
     VkQueue queue;
@@ -870,7 +901,6 @@ struct GLOBAL_CB_NODE {
     // Store last bound state for Gfx & Compute pipeline bind points
     LAST_BOUND_STATE lastBound[VK_PIPELINE_BIND_POINT_RANGE_SIZE];
 
-    vector<uint32_t> dynamicOffsets;
     vector<VkViewport> viewports;
     vector<VkRect2D> scissors;
     VkRenderPassBeginInfo activeRenderPassBeginInfo;
@@ -908,7 +938,7 @@ struct GLOBAL_CB_NODE {
     // execution
     std::unordered_set<VkCommandBuffer> secondaryCommandBuffers;
     // MTMTODO : Scrub these data fields and merge active sets w/ lastBound as appropriate
-    vector<std::function<VkBool32()>> validate_functions;
+    vector<std::function<bool()>> validate_functions;
     std::unordered_set<VkDeviceMemory> memObjs;
     vector<std::function<bool(VkQueue)>> eventUpdates;
 };
