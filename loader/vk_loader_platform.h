@@ -106,6 +106,9 @@
     "/" SYSCONFDIR VULKAN_ILAYERCONF_DIR ":"                                   \
     "/usr/" DATADIR VULKAN_ILAYERCONF_DIR
 #define DEFAULT_VK_LAYERS_PATH ""
+#if !defined(LAYERS_SOURCE_PATH)
+#define LAYERS_SOURCE_PATH NULL
+#endif
 #define LAYERS_PATH_ENV "VK_LAYER_PATH"
 #define HOME_VK_DRIVERS_INFO "/.local/share" VULKAN_ICDCONF_DIR
 #define HOME_VK_ELAYERS_INFO "/.local/share" VULKAN_ELAYERCONF_DIR
@@ -250,7 +253,12 @@ using namespace std;
 #define DEFAULT_VK_DRIVERS_PATH ""
 #define DEFAULT_VK_ELAYERS_INFO "SOFTWARE\\Khronos\\Vulkan\\ExplicitLayers"
 #define DEFAULT_VK_ILAYERS_INFO "SOFTWARE\\Khronos\\Vulkan\\ImplicitLayers"
+#if !defined(DEFAULT_VK_LAYERS_PATH)
 #define DEFAULT_VK_LAYERS_PATH ""
+#endif
+#if !defined(LAYERS_SOURCE_PATH)
+#define LAYERS_SOURCE_PATH NULL
+#endif
 #define LAYERS_PATH_ENV "VK_LAYER_PATH"
 #define HOME_VK_DRIVERS_INFO ""
 #define HOME_VK_ELAYERS_INFO ""
