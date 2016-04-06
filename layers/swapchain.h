@@ -64,7 +64,7 @@ typedef enum _SWAPCHAIN_ERROR {
     SWAPCHAIN_CREATE_SWAP_DIFF_SURFACE, // Called vkCreateSwapchainKHR() with pCreateInfo->oldSwapchain that has a different surface
                                         // than pCreateInfo->surface
     SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE, // Called vkDestroySwapchainKHR() with a different VkDevice than vkCreateSwapchainKHR()
-    SWAPCHAIN_APP_OWNS_TOO_MANY_IMAGES, // vkAcquireNextImageKHR() asked for more images than are available
+    SWAPCHAIN_APP_ACQUIRES_TOO_MANY_IMAGES, // vkAcquireNextImageKHR() asked for more images than are available
     SWAPCHAIN_INDEX_TOO_LARGE,          // Index is too large for swapchain
     SWAPCHAIN_INDEX_NOT_IN_USE,         // vkQueuePresentKHR() given index that is not owned by app
     SWAPCHAIN_BAD_BOOL,                 // VkBool32 that doesn't have value of VK_TRUE or VK_FALSE (e.g. is a non-zero form of true)
