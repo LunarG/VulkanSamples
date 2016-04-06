@@ -1722,6 +1722,7 @@ static bool loader_find_layer_name_array(
     return false;
 }
 
+
 /**
  * Searches through an array of layer names (ppp_layer_names) looking for a
  * layer key_name.
@@ -1734,99 +1735,61 @@ static bool loader_find_layer_name_array(
  * @param ppp_layer_names
  */
 void loader_expand_layer_names(
-    const struct loader_instance *inst, const char *key_name,
+    const struct loader_instance *inst,
+    const char *key_name,
     uint32_t expand_count,
     const char expand_names[][VK_MAX_EXTENSION_NAME_SIZE],
-    uint32_t *layer_count, char ***ppp_layer_names) {
-    char **pp_layer_names, **pp_src_layers = *ppp_layer_names;
+    uint32_t *layer_count, char const * const **ppp_layer_names) {
 
-    if (!loader_find_layer_name(key_name, *layer_count,
-                                (const char **)pp_src_layers))
-        return; // didn't find the key_name in the list
+    char const * const *pp_src_layers = *ppp_layer_names;
 
-    // since the total number of layers may expand, allocate new memory for the
-    // array of pointers
-    pp_layer_names =
-        loader_heap_alloc(inst, (expand_count + *layer_count) * sizeof(char *),
-                          VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
+    if (!loader_find_layer_name(key_name, *layer_count, (char const **)pp_src_layers))
+        return; // didn't find the key_name in the list.
 
     loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
                "Found meta layer %s, replacing with actual layer group",
                key_name);
-    // In place removal of any expand_names found in layer_name (remove
-    // duplicates)
-    // Also remove the key_name
-    uint32_t src_idx, dst_idx, cnt = *layer_count;
-    for (src_idx = 0; src_idx < *layer_count; src_idx++) {
-        if (loader_find_layer_name_array(pp_src_layers[src_idx], expand_count,
-                                         expand_names)) {
-            pp_src_layers[src_idx] = NULL;
-            cnt--;
-        } else if (!strcmp(pp_src_layers[src_idx], key_name)) {
-            pp_src_layers[src_idx] = NULL;
-            cnt--;
+
+    char const **pp_dst_layers = loader_heap_alloc(inst, (expand_count + *layer_count - 1) * sizeof(char const *),
+                                                   VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
+
+    // copy layers from src to dst, stripping key_name and anything in
+    // expand_names.
+    uint32_t src_index, dst_index = 0;
+    for (src_index = 0; src_index < *layer_count; src_index++) {
+        if (loader_find_layer_name_array(pp_src_layers[src_index], expand_count, expand_names) ||
+            !strcmp(pp_src_layers[src_index], key_name)) {
+            continue;
         }
-        pp_layer_names[src_idx] = pp_src_layers[src_idx];
-    }
-    for (dst_idx = 0; dst_idx < cnt; dst_idx++) {
-        if (pp_layer_names[dst_idx] == NULL) {
-            src_idx = dst_idx + 1;
-            while (src_idx < *layer_count && pp_src_layers[src_idx] == NULL)
-                src_idx++;
-            if (src_idx < *layer_count && pp_src_layers[src_idx] != NULL)
-                pp_layer_names[dst_idx] = pp_src_layers[src_idx];
-        }
+
+        pp_dst_layers[dst_index++] = pp_src_layers[src_index];
     }
 
-    // Add the expand_names to layer_names
-    src_idx = 0;
-    for (dst_idx = cnt; dst_idx < cnt + expand_count; dst_idx++) {
-        pp_layer_names[dst_idx] = (char *)&expand_names[src_idx++][0];
+    // append expand_names.
+    for (src_index = 0; src_index < expand_count; src_index++) {
+        pp_dst_layers[dst_index++] = expand_names[src_index];
     }
-    *layer_count = expand_count + cnt;
-    *ppp_layer_names = pp_layer_names;
-    return;
+
+    *ppp_layer_names = pp_dst_layers;
+    *layer_count = dst_index;
 }
 
-/**
- * Restores the layer name list and count into the pCreatInfo structure.
- * If is_device == tru then pCreateInfo is a device structure else an instance
- * structure.
- * @param layer_count
- * @param layer_names
- * @param pCreateInfo
- */
-void loader_unexpand_dev_layer_names(const struct loader_instance *inst,
-                                     uint32_t layer_count, char **layer_names,
-                                     char **layer_ptr,
-                                     const VkDeviceCreateInfo *pCreateInfo) {
-    uint32_t *p_cnt = (uint32_t *)&pCreateInfo->enabledLayerCount;
-    *p_cnt = layer_count;
 
-    char ***p_ptr = (char ***)&pCreateInfo->ppEnabledLayerNames;
-    if ((char **)pCreateInfo->ppEnabledLayerNames != layer_ptr)
-        loader_heap_free(inst, (void *)pCreateInfo->ppEnabledLayerNames);
-    *p_ptr = layer_ptr;
-    for (uint32_t i = 0; i < layer_count; i++) {
-        char **pp_str = (char **)&pCreateInfo->ppEnabledLayerNames[i];
-        *pp_str = layer_names[i];
+void loader_delete_shadow_dev_layer_names(const struct loader_instance *inst,
+                                          const VkDeviceCreateInfo *orig,
+                                          VkDeviceCreateInfo *ours) {
+    /* Free the layer names array iff we had to reallocate it */
+    if (orig->ppEnabledLayerNames != ours->ppEnabledLayerNames) {
+        loader_heap_free(inst, (void *)ours->ppEnabledLayerNames);
     }
 }
 
-void loader_unexpand_inst_layer_names(const struct loader_instance *inst,
-                                      uint32_t layer_count, char **layer_names,
-                                      char **layer_ptr,
-                                      const VkInstanceCreateInfo *pCreateInfo) {
-    uint32_t *p_cnt = (uint32_t *)&pCreateInfo->enabledLayerCount;
-    *p_cnt = layer_count;
-
-    char ***p_ptr = (char ***)&pCreateInfo->ppEnabledLayerNames;
-    if ((char **)pCreateInfo->ppEnabledLayerNames != layer_ptr)
-        loader_heap_free(inst, (void *)pCreateInfo->ppEnabledLayerNames);
-    *p_ptr = layer_ptr;
-    for (uint32_t i = 0; i < layer_count; i++) {
-        char **pp_str = (char **)&pCreateInfo->ppEnabledLayerNames[i];
-        *pp_str = layer_names[i];
+void loader_delete_shadow_inst_layer_names(const struct loader_instance *inst,
+                                           const VkInstanceCreateInfo *orig,
+                                           VkInstanceCreateInfo *ours) {
+    /* Free the layer names array iff we had to reallocate it */
+    if (orig->ppEnabledLayerNames != ours->ppEnabledLayerNames) {
+        loader_heap_free(inst, (void *)ours->ppEnabledLayerNames);
     }
 }
 
