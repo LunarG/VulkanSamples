@@ -9306,6 +9306,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
             dev_data->renderPassMap[*pRenderPass]->attachment_first_layout;
         for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
             const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
+            if (subpass.pipelineBindPoint != VK_PIPELINE_BIND_POINT_GRAPHICS) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                     __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                     "Pipeline bind point for subpass %d must be VK_PIPELINE_BIND_POINT_GRAPHICS.", i);
+            }
             for (uint32_t j = 0; j < subpass.preserveAttachmentCount; ++j) {
                 uint32_t attachment = subpass.pPreserveAttachments[j];
                 if (attachment >= pCreateInfo->attachmentCount) {
