@@ -568,14 +568,14 @@ VkDeviceSize vk_safe_modulo(VkDeviceSize dividend, VkDeviceSize divisor) {
     return result;
 }
 
-static const char UTF8_ONE_BYTE_CODE = 0xC0;
-static const char UTF8_ONE_BYTE_MASK = 0xE0;
-static const char UTF8_TWO_BYTE_CODE = 0xE0;
-static const char UTF8_TWO_BYTE_MASK = 0xF0;
-static const char UTF8_THREE_BYTE_CODE = 0xF0;
-static const char UTF8_THREE_BYTE_MASK = 0xF8;
-static const char UTF8_DATA_BYTE_CODE = 0x80;
-static const char UTF8_DATA_BYTE_MASK = 0xC0;
+static const uint8_t UTF8_ONE_BYTE_CODE = 0xC0;
+static const uint8_t UTF8_ONE_BYTE_MASK = 0xE0;
+static const uint8_t UTF8_TWO_BYTE_CODE = 0xE0;
+static const uint8_t UTF8_TWO_BYTE_MASK = 0xF0;
+static const uint8_t UTF8_THREE_BYTE_CODE = 0xF0;
+static const uint8_t UTF8_THREE_BYTE_MASK = 0xF8;
+static const uint8_t UTF8_DATA_BYTE_CODE = 0x80;
+static const uint8_t UTF8_DATA_BYTE_MASK = 0xC0;
 
 VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8) {
     VkStringErrorFlags result = VK_STRING_ERROR_NONE;
