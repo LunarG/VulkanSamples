@@ -1745,31 +1745,36 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice de
     if ((semaphore == VK_NULL_HANDLE) && (fence == VK_NULL_HANDLE)) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_NO_SYNC_FOR_ACQUIRE,
                               "%s() called with both the semaphore and fence parameters set to "
-                              "VK_NULL_HANDLE (at least one should be used).", __FUNCTION__);
+                              "VK_NULL_HANDLE (at least one should be used)\n.", __FUNCTION__);
     }
     SwpSwapchain *pSwapchain = &my_data->swapchainMap[swapchain];
-    if (pSwapchain) {
-        // Look to see if the application is trying to own too many images at
-        // the same time (i.e. not leave any to display):
-        uint32_t imagesOwnedByApp = 0;
+    SwpPhysicalDevice *pPhysicalDevice = pDevice->pPhysicalDevice;
+    if (pSwapchain && pPhysicalDevice && pPhysicalDevice->gotSurfaceCapabilities) {
+        // Look to see if the application has already acquired the maximum
+        // number of images, and this will push it past the spec-defined
+        // limits:
+        uint32_t minImageCount = pPhysicalDevice->surfaceCapabilities.minImageCount;
+        uint32_t imagesAcquiredByApp = 0;
         for (uint32_t i = 0; i < pSwapchain->imageCount; i++) {
             if (pSwapchain->images[i].ownedByApp) {
-                imagesOwnedByApp++;
+                imagesAcquiredByApp++;
             }
         }
-        if (imagesOwnedByApp >= (pSwapchain->imageCount - 1)) {
-            skipCall |= LOG_PERF_WARNING(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, swapchain, "VkSwapchainKHR",
-                                         SWAPCHAIN_APP_OWNS_TOO_MANY_IMAGES, "%s() called when the application "
-                                                                             "already owns all presentable images "
-                                                                             "in this swapchain except for the "
-                                                                             "image currently being displayed.  "
-                                                                             "This call to %s() cannot succeed "
-                                                                             "unless another thread calls the "
-                                                                             "vkQueuePresentKHR() function in "
-                                                                             "order to release ownership of one of "
-                                                                             "the presentable images of this "
-                                                                             "swapchain.",
-                                         __FUNCTION__, __FUNCTION__);
+        if (imagesAcquiredByApp > (pSwapchain->imageCount - minImageCount)) {
+            skipCall |= LOG_ERROR(
+                VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                swapchain, "VkSwapchainKHR",
+                SWAPCHAIN_APP_ACQUIRES_TOO_MANY_IMAGES,
+                "%s() called when it cannot succeed.  The application has "
+                "acquired %d image(s) that have not yet been presented.  The "
+                "maximum number of images that the application can "
+                "simultaneously acquire from this swapchain (including this "
+                "call to %s()) is %d.  That value is derived by subtracting "
+                "VkSurfaceCapabilitiesKHR::minImageCount (%d) from the number "
+                "of images in the swapchain (%d) and adding 1.\n",
+                __FUNCTION__, imagesAcquiredByApp, __FUNCTION__,
+                (pSwapchain->imageCount - minImageCount + 1),
+                minImageCount, pSwapchain->imageCount);
         }
     }
     if (!pImageIndex) {
