@@ -1806,7 +1806,7 @@ static void demo_init_vk(struct demo *demo) {
         }
 
         if (!validation_found) {
-            ERR_EXIT("vkEnumerateInstanceLayerProperties failed to find"
+            ERR_EXIT("vkEnumerateInstanceLayerProperties failed to find "
                     "required validation layer.\n\n"
                     "Please look at the Getting Started guide for additional "
                     "information.\n",
