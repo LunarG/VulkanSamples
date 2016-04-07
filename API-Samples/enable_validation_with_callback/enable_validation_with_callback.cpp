@@ -68,7 +68,7 @@ dbgFunc(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType,
     return false;
 }
 
-int main(int argc, char *argv[]) {
+int sample_main(int argc, char *argv[]) {
     struct sample_info info = {};
     init_global_layer_properties(info);
 

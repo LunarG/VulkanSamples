@@ -260,4 +260,4 @@ typedef unsigned long long timestamp_t;
 timestamp_t get_milliseconds();
 
 // Main entry point of samples
-int sample_main();
+int sample_main(int argc = 0, char **argv = NULL);

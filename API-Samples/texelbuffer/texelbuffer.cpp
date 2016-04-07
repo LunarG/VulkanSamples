@@ -72,7 +72,7 @@ static const char *fragShaderText =
     "   outColor = color;\n"
     "}\n";
 
-int main(int argc, char *argv[]) {
+int sample_main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
     struct sample_info info = {};
