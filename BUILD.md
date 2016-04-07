@@ -178,7 +178,7 @@ brew install python3
 pip install --upgrade pip
 pip install lxml
 pip3.5 install --upgrade pip
-pip3.5 install lxm
+pip3.5 install lxml
 ```
 ### Build steps for Android
 Use the following to ensure the Android build works.
