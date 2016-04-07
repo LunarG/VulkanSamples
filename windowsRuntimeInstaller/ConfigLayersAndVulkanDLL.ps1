@@ -352,22 +352,22 @@ if ($mrVulkanDllInstallDir -eq "") {
 $VulkanSdkDirs+="C:\VulkanSDK\0.9.3"
 $VulkanSdkDirs+="$windrive\VulkanSDK\0.9.3"
 
-# Remove layer registry entries associated with all installed Vulkan SDKs.
+# Remove layer registry values associated with all installed Vulkan SDKs.
 # Note that we remove only those entries created by Vulkan SDKs. If other
 # layers were installed that are not from an SDK, we don't mess with them.
 
-echo "Removing old layer registry entries from HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers" >>$log
+echo "Removing old layer registry values from HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers" >>$log
 Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\ExplicitLayers | Select-Object -ExpandProperty Property |
    ForEach-Object {
        $regval=$_
        ForEach ($sdkdir in $VulkanSdkDirs) {
           if ($regval -like "$sdkdir\*.json") {
               Remove-ItemProperty -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -name $regval
-              echo "Removed registry entry $regval" >>$log
+              echo "Removed registry value $regval" >>$log
           }
        }
    }
-# Remove 32-bit layer registry entries if we're targeting a 64-bit OS
+# Remove 32-bit layer registry value if we're targeting a 64-bit OS
 if ($ossize -eq 64) {
    Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | Select-Object -ExpandProperty Property |
       ForEach-Object {
@@ -375,43 +375,54 @@ if ($ossize -eq 64) {
           ForEach ($sdkdir in $VulkanSdkDirs) {
              if ($regval -like "$sdkdir\*.json") {
                  Remove-ItemProperty -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -name $regval
-                 echo "Removed WOW6432Node registry entry $regval" >>$log
+                 echo "Removed WOW6432Node registry value $regval" >>$log
              }
           }
       }
 }
 
 
-# Create layer registry entries associated with Vulkan SDK from which $mrVulkanDll is from
+# Create layer registry values associated with Vulkan SDK from which $mrVulkanDll is from
 
-echo "Creating new layer registry entries in HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers" >>$log
+echo "Creating new layer registry values" >>$log
 if ($mrVulkanDllInstallDir -ne "") {
+
+    # Create registry keys if they don't exist
+    if (-not (Test-Path -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers)) {
+        echo "Creating new registry key HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers" >>$log
+        New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers | out-null
+    }
+    if ($ossize -eq 64) {
+        if (-not (Test-Path -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers)) {
+            echo "Creating new registry key HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers" >>$log
+            New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | out-null
+       }
+    }
+
+
     if ($ossize -eq 64) {
     
-        # Create registry entires in normal registry location for 64-bit items on a 64-bit OS
-        New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers | out-null
+        # Create registry values in normal registry location for 64-bit items on a 64-bit OS
         Get-ChildItem $mrVulkanDllInstallDir\Bin -Filter VkLayer*json |
            ForEach-Object {
+               echo "Creating registry value $mrVulkanDllInstallDir\Bin\$_" >>$log
                New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin\$_ -PropertyType DWord -Value 0 | out-null
-              echo "Created registry entry for $mrVulkanDllInstallDir\Bin\$_" >>$log
            }
 
-        # Create registry entires for the WOW6432Node registry location for 32-bit items on a 64-bit OS
-        New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | out-null
+        # Create registry values for the WOW6432Node registry location for 32-bit items on a 64-bit OS
         Get-ChildItem $mrVulkanDllInstallDir\Bin32 -Filter VkLayer*json |
            ForEach-Object {
+               echo "Creating WOW6432Node registry value $mrVulkanDllInstallDir\Bin32\$_" >>$log
                New-ItemProperty -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin32\$_ -PropertyType DWord -Value 0 | out-null
-              echo "Created WOW6432Node registry entry for $mrVulkanDllInstallDir\Bin32\$_" >>$log
            }
            
     } else {
     
-        # Create registry entires in normal registry location for 32-bit items on a 32-bit OS
-        New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers | out-null
+        # Create registry values in normal registry location for 32-bit items on a 32-bit OS
         Get-ChildItem $mrVulkanDllInstallDir\Bin32 -Filter VkLayer*json |
            ForEach-Object {
+               echo "Creating registry value $mrVulkanDllInstallDir\Bin\$_" >>$log
                New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin32\$_ -PropertyType DWord -Value 0 | out-null
-               echo "Created registry entry for $mrVulkanDllInstallDir\Bin\$_" >>$log
            }
     
     }
@@ -430,8 +441,8 @@ remove-item $log
 # SIG # Begin signature block
 # MIIcZgYJKoZIhvcNAQcCoIIcVzCCHFMCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUYfsT5QLkaMHYYJPT/dcA2uOb
-# QZKggheVMIIFHjCCBAagAwIBAgIQDmYEpPtQ2iBY4vC2AGq6uzANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUQ4I+TKoMwtXHArekRd5/bX04
+# sreggheVMIIFHjCCBAagAwIBAgIQDmYEpPtQ2iBY4vC2AGq6uzANBgkqhkiG9w0B
 # AQsFADByMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMTEwLwYDVQQDEyhEaWdpQ2VydCBTSEEyIEFz
 # c3VyZWQgSUQgQ29kZSBTaWduaW5nIENBMB4XDTE1MDQzMDAwMDAwMFoXDTE2MDcw
@@ -562,22 +573,22 @@ remove-item $log
 # QTIgQXNzdXJlZCBJRCBDb2RlIFNpZ25pbmcgQ0ECEA5mBKT7UNogWOLwtgBqursw
 # CQYFKw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcN
 # AQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUw
-# IwYJKoZIhvcNAQkEMRYEFGpjhRSfXBNd4ZHr5Mknz86XvFU5MA0GCSqGSIb3DQEB
-# AQUABIIBAB/ZDshNP3Naz8QNijbSEqh/p+N/HALczpsBTNICUVrsmNtMVsrNkkWt
-# B2gu751OsoIOKIsZoD468btUs6kZ2Rde3df4I2v1wfHdRdX/PfBj3GagkmXe7VyO
-# E0AJWW0rjXn/0YZvC3g2EvYHpt1woEjqyvHlPYwrG9oxGqzzDPiOBKLNvAJc76Wi
-# SPdkVnPaUN/0wvNHNtDbDOypHJeoGzdsIP+PgEPu+2vwmCmji15bPVwpRrKCdoFB
-# 7SvZ8UoS2NzLDDX3JIkk7hnGq7iZg+Eaox4I5crVAs8bds5NxIegFC+PjhbQZ6Xa
-# nP5zqo+WCMnNmbgXcx24LXZR5aNyyDOhggIPMIICCwYJKoZIhvcNAQkGMYIB/DCC
+# IwYJKoZIhvcNAQkEMRYEFAoOC46C6ArmxtlmLsUTidSbkN3rMA0GCSqGSIb3DQEB
+# AQUABIIBADXG8YUKEPQHyMUpBvGWwb5VeZ8oWPyiSSE649GXu5tHDn+N2lhDPngR
+# Cksh4FpF56hP4RgTzH/Nmxf2D4kZUzPCrs2Il1S+U0ZoFpoAwrN8dbnvw2Wvf7ns
+# LZHXKG9eIaMYx6r/nn+VV8qvL/25fZ8oNyIFCYy4FYRLmla5g1+Vmtg6anHj89c+
+# EMSIwR8BR5UlAagfhfKJQHYMz4xkdqMrR6ZDsMHvYjbOg3MILrrdgomH2R5JKAHK
+# IaD3EqM+Tgu8LH1MMt/hIf4RS/lgqT12qM88J64dyhquaM1BUzw5dnwb+h3aAF2O
+# ZJ4IhONECJbJf8wVT8rTUA+6uUm/Y6ihggIPMIICCwYJKoZIhvcNAQkGMYIB/DCC
 # AfgCAQEwdjBiMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkw
 # FwYDVQQLExB3d3cuZGlnaWNlcnQuY29tMSEwHwYDVQQDExhEaWdpQ2VydCBBc3N1
 # cmVkIElEIENBLTECEAMBmgI6/1ixa9bV6uYX8GYwCQYFKw4DAhoFAKBdMBgGCSqG
-# SIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTE2MDQwNzE3Mjc1
-# NFowIwYJKoZIhvcNAQkEMRYEFBmn9lMkceYjM9LlCQ8aXz1CphDdMA0GCSqGSIb3
-# DQEBAQUABIIBAErb1GuAanOQcr24KSvVGpHsgZyHVyyYdhWzfMRSGyMYtrZ6uRG/
-# jFNyjQ9M/fkNlonvGVbZ+vpcH8XstRz71UYIGFIrCJ4nV0xVze9M8jV44cFWsowr
-# 1DT9aVildZ68yRDljKGdIEuyCjcx8Ycsv+7Fim8zme3JxDu0HjoqKTXUSWoAB9mE
-# FovggdyylzljZGYpO8Ggb5JV16FtN095vdxCZdGimXuY1RgjOjGPC46g3UXniFT+
-# 5o5ib8NSRJVSoCW8e0plsZwkzcesQ6v+4uwGhx/Zr84tKeoaypfiLCwb0flOBt1K
-# +IyweYliht9H5AHZOtBIzVgc2XTNXNZOKfI=
+# SIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTE2MDQwNzIxNTM0
+# OFowIwYJKoZIhvcNAQkEMRYEFERKj5qmhGjIIeKV/myZFhJ/EUO7MA0GCSqGSIb3
+# DQEBAQUABIIBAJYQytkxzpn/UVwVJ0tsompGzVKSEgjuqAiI2jA0LiQwWM9iBHpG
+# 8ijDH6Dh+Fqa1JSsynyFixF26SuHeDoY/LX14HhRPDEkBa70qt9h9gc/73f9AzUy
+# eSbxwRhlF/UAyk0E3fbK1of431HxfvcdhnvCIDW8orfiG5v7gS0Mub4C70TlMXTp
+# b6XT1orYqnih9j4EVCYWZwv+EsOADRHW7o1RvIC2gI2dzmAkMSEjehk3we6u8KXI
+# xkggPOXy5O8TFgFdjvKU6XaoTTCklKWFIQIRG9r5m//Qj3jwzwN/03gLPphi6zze
+# 8fAJmClDyH+kHivSSfFnFUB7elvajTvasQE=
 # SIG # End signature block
