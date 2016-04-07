@@ -1130,15 +1130,36 @@ void loader_get_icd_loader_instance_extensions(
 
     // TODO REMOVE THIS, HACK ALERT
     // AMD driver doesn't advertise KHR_surface or KHR_win32_surface, add them
-#ifdef _WIN32
-    VkExtensionProperties props[2];
-    strcpy(props[0].extensionName, VK_KHR_SURFACE_EXTENSION_NAME);
-    props[0].specVersion = VK_KHR_SURFACE_SPEC_VERSION;
-    strcpy(props[1].extensionName, VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-    props[1].specVersion = VK_KHR_WIN32_SURFACE_SPEC_VERSION;
-    loader_add_to_ext_list(inst, inst_exts, 2, props);
-
+    VkExtensionProperties props;
+    strcpy(props.extensionName, VK_KHR_SURFACE_EXTENSION_NAME);
+    props.specVersion = VK_KHR_SURFACE_SPEC_VERSION;
+    loader_add_to_ext_list(inst, inst_exts, 1, &props);
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    strcpy(props.extensionName, VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    props.specVersion = VK_KHR_WIN32_SURFACE_SPEC_VERSION;
+    loader_add_to_ext_list(inst, inst_exts, 1, &props);
 #endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    strcpy(props.extensionName, VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+    props.specVersion = VK_KHR_XCB_SURFACE_SPEC_VERSION;
+    loader_add_to_ext_list(inst, inst_exts, 1, &props);
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    strcpy(props.extensionName, VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+    props.specVersion = VK_KHR_XLIB_SURFACE_SPEC_VERSION;
+    loader_add_to_ext_list(inst, inst_exts, 1, &props);
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    strcpy(props.extensionName, VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+    props.specVersion = VK_KHR_WAYLAND_SURFACE_SPEC_VERSION;
+    loader_add_to_ext_list(inst, inst_exts, 1, &props);
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    strcpy(props.extensionName, VK_KHR_MIR_SURFACE_EXTENSION_NAME);
+    props.specVersion = VK_KHR_MIR_SURFACE_SPEC_VERSION;
+    loader_add_to_ext_list(inst, inst_exts, 1, &props);
+#endif
+
     // Traverse loader's extensions, adding non-duplicate extensions to the list
     debug_report_add_instance_extensions(inst, inst_exts);
 }
