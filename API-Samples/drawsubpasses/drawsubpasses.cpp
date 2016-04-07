@@ -325,7 +325,7 @@ int main(int argc, char *argv[]) {
     pipeline.pVertexInputState = &vi;
     pipeline.pInputAssemblyState = &ia;
     pipeline.pRasterizationState = &rs;
-    pipeline.pColorBlendState = &cb;
+    pipeline.pColorBlendState = NULL;
     pipeline.pTessellationState = NULL;
     pipeline.pMultisampleState = &ms;
     pipeline.pDynamicState = &dynamicState;
@@ -371,6 +371,7 @@ int main(int argc, char *argv[]) {
 
     /* this pipeline will run in the second subpass */
     pipeline.subpass = 1;
+    pipeline.pColorBlendState = &cb;
 
     VkPipeline stencil_fullscreen_pipe = VK_NULL_HANDLE;
     res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
