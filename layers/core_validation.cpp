@@ -6094,9 +6094,12 @@ vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocat
     }
     dev_data->commandPoolMap.erase(commandPool);
 
+
+    VkBool32 result = validateCommandBuffersNotInUse(dev_data, commandPool);
+
     loader_platform_thread_unlock_mutex(&globalLock);
 
-    if (validateCommandBuffersNotInUse(dev_data, commandPool))
+    if (result)
         return;
 
     if (!skipCall)
@@ -10196,7 +10199,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(VkDevice device, VkImage image,
     auto image_node = dev_data->imageMap.find(image);
     if (image_node != dev_data->imageMap.end()) {
         // Track objects tied to memory
-        uint64_t image_handle = reinterpret_cast<uint64_t>(image);
+        uint64_t image_handle = reinterpret_cast<uint64_t&>(image);
         skipCall = set_mem_binding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory");
         VkMemoryRequirements memRequirements;
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -10231,6 +10234,15 @@ VKAPI_ATTR VkResult VKAPI_CALL vkSetEvent(VkDevice device, VkEvent event) {
     dev_data->eventMap[event].needsSignaled = false;
     dev_data->eventMap[event].stageMask = VK_PIPELINE_STAGE_HOST_BIT;
     loader_platform_thread_unlock_mutex(&globalLock);
+    // Host setting event is visible to all queues immediately so update stageMask for any queue that's seen this event
+    // TODO : For correctness this needs separate fix to verify that app doesn't make incorrect assumptions about the
+    // ordering of this command in relation to vkCmd[Set|Reset]Events (see GH297)
+    for (auto queue_data : dev_data->queueMap) {
+        auto event_entry = queue_data.second.eventToStageMap.find(event);
+        if (event_entry != queue_data.second.eventToStageMap.end()) {
+            event_entry->second |= VK_PIPELINE_STAGE_HOST_BIT;
+        }
+    }
     VkResult result = dev_data->device_dispatch_table->SetEvent(device, event);
     return result;
 }

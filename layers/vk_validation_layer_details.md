@@ -326,6 +326,7 @@ For the second category of errors, VK_LAYER_LUNARG_device_limits stores its own 
 | Valid instance | If an invalid instance is used, this error will be flagged | INVALID_INSTANCE | vkEnumeratePhysicalDevices | NA | VK_LAYER_LUNARG_object_tracker should also catch this so if we made sure VK_LAYER_LUNARG_object_tracker was always on top, we could avoid this check |
 | Valid physical device | Enum used for informational messages | INVALID_PHYSICAL_DEVICE | vkEnumeratePhysicalDevices | NA | VK_LAYER_LUNARG_object_tracker should also catch this so if we made sure VK_LAYER_LUNARG_object_tracker was always on top, we could avoid this check |
 | Valid inherited query | If an invalid inherited query is used, this error will be flagged | INVALID_INHERITED_QUERY | vkBeginCommandBuffer | NA | None |
+| Valid attachment count | If the number of attachments exceeds the device max, this error will be flagged | INVALID_ATTACHMENT_COUNT | vkCreateRenderPass | NA | None |
 | Querying array counts | For API calls where an array count should be queried with an initial call and a NULL array pointer, verify that such a call was made before making a call with non-null array pointer. | MUST_QUERY_COUNT | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | NA | Create focused test |
 | Array count value | For API calls where an array of details is queried, verify that the size of the requested array matches the size of the array supported by the device. | COUNT_MISMATCH | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | NA | Create focused test |
 | Queue Creation | When creating/requesting queues, make sure that QueueFamilyPropertiesIndex and index/count within that queue family are valid. | INVALID_QUEUE_CREATE_REQUEST | vkGetDeviceQueue vkCreateDevice | NA | Create focused test |
@@ -377,7 +378,7 @@ This layer is a work in progress. VK_LAYER_LUNARG_swapchain layer is intended to
 | vkCreateSwapchainKHR(pCreateInfo->imageSharingMode) | Validates vkCreateSwapchainKHR(pCreateInfo->imageSharingMode) | CREATE_SWAP_BAD_SHARING_VALUES | vkCreateSwapchainKHR | NA | None |
 | vkCreateSwapchainKHR(pCreateInfo->oldSwapchain and pCreateInfo->surface) | pCreateInfo->surface must match pCreateInfo->oldSwapchain's surface | CREATE_SWAP_DIFF_SURFACE | vkCreateSwapchainKHR | NA | None |
 | Use same device for swapchain | Validates that vkDestroySwapchainKHR() called with the same VkDevice as vkCreateSwapchainKHR() | DESTROY_SWAP_DIFF_DEVICE | vkCreateSwapchainKHR vkDestroySwapchainKHR | NA | None |
-| Don't use too many images | Validates that app never tries to own too many swapchain images at a time | APP_OWNS_TOO_MANY_IMAGES | vkAcquireNextImageKHR | NA | None |
+| Don't acquire too many images | Validates that app never tries to acquire too many swapchain images at a time | APP_ACQUIRES_TOO_MANY_IMAGES | vkAcquireNextImageKHR | NA | None |
 | Index too large | Validates that an image index is within the number of images in a swapchain | INDEX_TOO_LARGE | vkQueuePresentKHR | NA | None |
 | Can't present a non-owned image | Validates that application only presents images that it owns | INDEX_NOT_IN_USE | vkQueuePresentKHR | NA | None |
 | A VkBool32 must have values of VK_TRUE or VK_FALSE | Validates that a VkBool32 must have values of VK_TRUE or VK_FALSE | BAD_BOOL | vkCreateSwapchainKHR | NA | None |

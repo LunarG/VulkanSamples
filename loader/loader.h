@@ -478,15 +478,13 @@ void loader_expand_layer_names(
     const struct loader_instance *inst, const char *key_name,
     uint32_t expand_count,
     const char expand_names[][VK_MAX_EXTENSION_NAME_SIZE],
-    uint32_t *layer_count, char ***ppp_layer_names);
-void loader_unexpand_dev_layer_names(const struct loader_instance *inst,
-                                     uint32_t layer_count, char **layer_names,
-                                     char **layer_ptr,
-                                     const VkDeviceCreateInfo *pCreateInfo);
-void loader_unexpand_inst_layer_names(const struct loader_instance *inst,
-                                      uint32_t layer_count, char **layer_names,
-                                      char **layer_ptr,
-                                      const VkInstanceCreateInfo *pCreateInfo);
+    uint32_t *layer_count, char const * const **ppp_layer_names);
+void loader_delete_shadow_dev_layer_names(const struct loader_instance *inst,
+                                          const VkDeviceCreateInfo *orig,
+                                          VkDeviceCreateInfo *ours);
+void loader_delete_shadow_inst_layer_names(const struct loader_instance *inst,
+                                           const VkInstanceCreateInfo *orig,
+                                           VkInstanceCreateInfo *ours);
 void loader_add_to_layer_list(const struct loader_instance *inst,
                               struct loader_layer_list *list,
                               uint32_t prop_list_count,

@@ -617,6 +617,10 @@ properties are obtained from the layer libraries and layer JSON files.
 appropriate layer JSON manifest file refer to the ICD library file.
 - The loader will not call the ICD for
   vkEnumerate\*ExtensionProperties(pLayerName != NULL).
+- ICDs creating new dispatchable objects via device extensions need to initialize
+the created disaptchable object.  The loader has generic trampoline code for unknown
+device extensions.  This generic trampoline code doesn't initialize the dispatch table within
+the newly created object.  See the section [layer link](#creating-new-dispatchable-objects)
 
 #### Android
 
@@ -1168,26 +1172,11 @@ VkResult vkCreateInstance(
     if (result != VK_SUCCESS)
         return result;
 
-    // Allocate new structure to store persistent data
-    layer_data *my_data = new layer_data;
-
-    // Associate this instance with the newly allocated data
-    // layer will store any persistent state it needs for
-    // this instance in the my_data structure
-    layer_data_map[get_dispatch_key(*pInstance)] = my_data;
-
-    // Create layer's dispatch table using GetInstanceProcAddr of
+    // Init layer's dispatch table using GetInstanceProcAddr of
     // next layer in the chain.
-    my_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
+    instance_dispatch_table = new VkLayerInstanceDispatchTable;
     layer_init_instance_dispatch_table(
         *pInstance, my_data->instance_dispatch_table, fpGetInstanceProcAddr);
-
-    // Keep track of any extensions that were enabled for this
-    // instance. In this case check for VK_EXT_debug_report
-    my_data->report_data = debug_report_create_instance(
-        my_data->instance_dispatch_table, *pInstance,
-        pCreateInfo->enabledExtensionCount,
-        pCreateInfo->ppEnabledExtensionNames);
 
     // Other layer initialization
     ...
@@ -1227,22 +1216,10 @@ vkCreateDevice(
         return result;
     }
 
-    // Allocate new structure to store persistent data
-    layer_data *my_data = new layer_data;
-
-    // Associate this instance with the newly allocated data
-    // layer will store any persistent state it needs for
-    // this instance in the my_data structure
-    layer_data_map[get_dispatch_key(*pDevice)] = my_data;
-
-    my_device_data->device_dispatch_table = new VkLayerDispatchTable;
+    // initialize layer's dispatch table
+    device_dispatch_table = new VkLayerDispatchTable;
     layer_init_device_dispatch_table(
-        *pDevice, my_device_data->device_dispatch_table, fpGetDeviceProcAddr);
-
-    // Keep track of any extensions that were enabled for this
-    // instance. In this case check for VK_EXT_debug_report
-    my_data->report_data = debug_report_create_instance(
-        my_instance_data->report_data, *pDevice);
+        *pDevice, device_dispatch_table, fpGetDeviceProcAddr);
 
     // Other layer initialization
     ...
@@ -1252,6 +1229,7 @@ vkCreateDevice(
 ```
 
 #### Special Considerations
+##### Associating private data with Vulkan objects within a layer
 A layer may want to associate it's own private data with one or more Vulkan
 objects.
 Two common methods to do this are hash maps  and object wrapping. The loader
@@ -1286,6 +1264,7 @@ VkDevice or VkInstance object is not a great map key. Instead the layer should
 use the dispatch table pointer within the VkDevice or VkInstance since that
 will be unique for a given VkInstance or VkDevice.
 
+##### Creating new dispatchable objects
 Layers which create dispatchable objects take special care. Remember that loader
 trampoline code normally fills in the dispatch table pointer in the newly
 created object. Thus, the layer must fill in the dispatch table pointer if the
@@ -1297,6 +1276,26 @@ dispatchable object without loader trampoline code is as follows:
 intercept from the application
 - ICDs which add extensions that create dispatchable objects
 
+The Windows/Linux loader provides a callback that can be used for initializing
+a dispatchable object.  The callback is passed as an extension structure via the
+pNext field in VkInstanceCreateInfo and VkDeviceCreateInfo.  The callback prototype
+is defined as follows for instance and device callbacks respectively (see vk_layer.h):
+```
+VKAPI_ATTR VkResult VKAPI_CALL vkSetInstanceLoaderData(VkInstance instance, void *object);
+VKAPI_ATTR VkResult VKAPI_CALL vkSetDeviceLoaderData)(VkDevice device, void *object);
+```
+To obtain these callbacks the layer must search through the list of structures
+pointed to by the "pNext" field in the VkInstanceCreateInfo  and VkDeviceCreateInfo parameters to find any callback structures inserted by the loader. The salient details are as follows:
+- For CreateInstance the callback structure pointed to by "pNext" is VkLayerInstanceCreateInfo as defined in vk_layer.h.
+- A "sType" field in of VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO within VkInstanceCreateInfo parameter indicates a loader structure.
+- Within VkLayerInstanceCreateInfo, the "function" field indicates how the union field "u" should be interpreted.
+- A "function" equal to VK_LOADER_DATA_CALLBACK indicates the "u" field will contain the callback in "pfnSetInstanceLoaderData".
+- For CreateDevice the callback structure pointed to by "pNext" is VkLayerDeviceCreateInfo as defined in include/vulkan/vk_layer.h.
+- A "sType" field in of VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO within VkDeviceCreateInfo parameter indicates a loader structure.
+- Within VkLayerDeviceCreateInfo, the "function" field indicates how the union field "u" should be interpreted.
+- A "function" equal to VK_LOADER_DATA_CALLBACK indicates the "u" field will contain the callback in "pfnSetDeviceLoaderData".
+
+Alternatively, if an older loader is being used that doesn't provide these callbacks, the layer may manually initialize the newly created dispatchable object.
 To fill in the dispatch table pointer in newly created dispatchable object,
 the layer should copy the dispatch pointer, which is always the first entry in the structure, from an existing parent object of the same level (instance versus
 device). For example, if there is a newly created VkCommandBuffer object, then the dispatch pointer from the VkDevice object, which is the parent of the VkCommandBuffer object, should be copied into the newly created object.
