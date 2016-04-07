@@ -754,7 +754,7 @@ class ObjectTrackerSubcommand(Subcommand):
     # for each member of struct_type
     #     add objs in obj_list to obj_set
     #     call self for structs
-        for m in vk_helper.struct_dict[struct_type]:
+        for m in sorted(vk_helper.struct_dict[struct_type]):
             if vk_helper.struct_dict[struct_type][m]['type'] in obj_list:
                 obj_set.add(vk_helper.struct_dict[struct_type][m]['type'])
             elif vk_helper.is_type(vk_helper.struct_dict[struct_type][m]['type'], 'struct'):
@@ -913,8 +913,8 @@ class ObjectTrackerSubcommand(Subcommand):
         #  dispatchable object type, we have a corresponding validate_* function
         #  for that object and all non-dispatchable objects that are used in API
         #  calls with that dispatchable object.
-        procs_txt.append('//%s' % str(obj_use_dict))
-        for do in obj_use_dict:
+        procs_txt.append('//%s' % str(sorted(obj_use_dict)))
+        for do in sorted(obj_use_dict):
             name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', do)
             name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
             # First create validate_* func for disp obj
@@ -930,7 +930,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    return VK_FALSE;')
             procs_txt.append('}')
             procs_txt.append('')
-            for o in obj_use_dict[do]:
+            for o in sorted(obj_use_dict[do]):
                 if o == do: # We already generated this case above so skip here
                     continue
                 name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', o)
@@ -1135,7 +1135,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 full_name = '%s%s' % (prefix, name)
                 null_obj_ok = 'false'
                 # If a valid null param is defined for this func and we have a match, allow NULL
-                if func_name in valid_null_dict and True in [name in pn for pn in valid_null_dict[func_name]]:
+                if func_name in valid_null_dict and True in [name in pn for pn in sorted(valid_null_dict[func_name])]:
                     null_obj_ok = 'true'
                 if (array_index > 0) or '' != array:
                     tmp_pre = self._dereference_conditionally(indent, prefix, type_name, full_name)
@@ -1316,7 +1316,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 if not mutex_unlock:
                     using_line += '%sloader_platform_thread_lock_mutex(&objLock);\n' % (indent)
                     mutex_unlock = True
-                using_line += '// objects to validate: %s\n' % str(struct_uses)
+                using_line += '// objects to validate: %s\n' % str(sorted(struct_uses))
                 using_line += self._gen_obj_validate_code(struct_uses, obj_type_mapping, proto.name, valid_null_object_names, param0_name, '    ', '', 0)
             if mutex_unlock:
                 using_line += '%sloader_platform_thread_unlock_mutex(&objLock);\n' % (indent)
@@ -1564,15 +1564,15 @@ class UniqueObjectsSubcommand(Subcommand):
         (struct_uses, local_decls) = get_object_uses(vulkan.object_non_dispatch_list, proto.params[1:last_param_index])
 
         if len(struct_uses) > 0:
-            pre_call_txt += '// STRUCT USES:%s\n' % struct_uses
+            pre_call_txt += '// STRUCT USES:%s\n' % sorted(struct_uses)
             if len(local_decls) > 0:
-                pre_call_txt += '//LOCAL DECLS:%s\n' % local_decls
+                pre_call_txt += '//LOCAL DECLS:%s\n' % sorted(local_decls)
             if destroy_func: # only one object
-                for del_obj in struct_uses:
+                for del_obj in sorted(struct_uses):
                     pre_call_txt += '%s%s local_%s = %s;\n' % (indent, struct_uses[del_obj], del_obj, del_obj)
             (pre_decl, pre_code, post_code) = self._gen_obj_code(struct_uses, local_decls, '    ', '', 0, set(), True)
             # This is a bit hacky but works for now. Need to decl local versions of top-level structs
-            for ld in local_decls:
+            for ld in sorted(local_decls):
                 init_null_txt = 'NULL';
                 if '*' not in local_decls[ld]:
                     init_null_txt = '{}';
