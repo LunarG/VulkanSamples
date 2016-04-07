@@ -1614,8 +1614,8 @@ vkDestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocat
     // TODOs:
     //
     // - Implement a check for validity language that reads: All uses of
-    //   presentable images acquired from pname:swapchain and owned by the
-    //   application must: have completed execution
+    //   presentable images acquired from pname:swapchain must: have completed
+    //   execution
     bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1705,7 +1705,7 @@ vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSw
                 for (uint32_t i = 0; i < *pSwapchainImageCount; i++) {
                     pSwapchain->images[i].image = pSwapchainImages[i];
                     pSwapchain->images[i].pSwapchain = pSwapchain;
-                    pSwapchain->images[i].ownedByApp = false;
+                    pSwapchain->images[i].acquiredByApp = false;
                 }
             }
         }
@@ -1756,7 +1756,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice de
         uint32_t minImageCount = pPhysicalDevice->surfaceCapabilities.minImageCount;
         uint32_t imagesAcquiredByApp = 0;
         for (uint32_t i = 0; i < pSwapchain->imageCount; i++) {
-            if (pSwapchain->images[i].ownedByApp) {
+            if (pSwapchain->images[i].acquiredByApp) {
                 imagesAcquiredByApp++;
             }
         }
@@ -1790,8 +1790,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice de
         // Obtain this pointer again after locking:
         pSwapchain = &my_data->swapchainMap[swapchain];
         if (((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR)) && pSwapchain) {
-            // Change the state of the image (now owned by the application):
-            pSwapchain->images[*pImageIndex].ownedByApp = true;
+            // Change the state of the image (now acquired by the application):
+            pSwapchain->images[*pImageIndex].acquiredByApp = true;
         }
         loader_platform_thread_unlock_mutex(&globalLock);
         return result;
@@ -1853,10 +1853,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
                                                                  "images in this VkSwapchainKHR.\n",
                                       __FUNCTION__, index, pSwapchain->imageCount);
             } else {
-                if (!pSwapchain->images[index].ownedByApp) {
+                if (!pSwapchain->images[index].acquiredByApp) {
                     skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, pPresentInfo->pSwapchains[i],
                                           "VkSwapchainKHR", SWAPCHAIN_INDEX_NOT_IN_USE, "%s() returned an index (i.e. %d) "
-                                                                                        "for an image that is not owned by "
+                                                                                        "for an image that is not acquired by "
                                                                                         "the application.",
                                           __FUNCTION__, index);
                 }
@@ -1893,9 +1893,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
                 int index = pPresentInfo->pImageIndices[i];
                 SwpSwapchain *pSwapchain = &my_data->swapchainMap[pPresentInfo->pSwapchains[i]];
                 if (pSwapchain) {
-                    // Change the state of the image (no longer owned by the
+                    // Change the state of the image (no longer acquired by the
                     // application):
-                    pSwapchain->images[index].ownedByApp = false;
+                    pSwapchain->images[index].acquiredByApp = false;
                 }
             }
         }
