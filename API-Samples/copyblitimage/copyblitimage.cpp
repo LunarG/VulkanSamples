@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     vkGetPhysicalDeviceFormatProperties(info.gpus[0], info.format,
                                         &formatProps);
     assert(
-        (formatProps.linearTilingFeatures & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) &&
+        (formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) &&
         "Format cannot be used as transfer source");
 
     VkSemaphore presentCompleteSemaphore;
