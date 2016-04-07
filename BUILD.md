@@ -185,7 +185,7 @@ Use the following to ensure the Android build works.
 #### Linux and OSX
 Follow the setup steps for Linux or OSX above, then from your terminal:
 ```
-cd buildAndroid
+cd build-android
 ./update_external_sources_android.sh
 ./android-generate.sh
 ndk-build
@@ -193,7 +193,7 @@ ndk-build
 #### Windows
 Follow the setup steps for Windows above, then from Developer Command Prompt for VS2013:
 ```
-cd buildAndroid
+cd build-android
 update_external_sources_android.bat
 android-generate.bat
 ndk-build
