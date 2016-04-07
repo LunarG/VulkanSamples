@@ -85,9 +85,7 @@ struct vktriangle_vs_uniform {
 };
 
 static const char bindStateVertShaderText[] =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : require\n"
-    "#extension GL_ARB_shading_language_420pack : require\n"
+    "#version 450\n"
     "vec2 vertices[3];\n"
     "out gl_PerVertex {\n"
     "    vec4 gl_Position;\n"
@@ -100,9 +98,7 @@ static const char bindStateVertShaderText[] =
     "}\n";
 
 static const char bindStateFragShaderText[] =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects: require\n"
-    "#extension GL_ARB_shading_language_420pack: require\n"
+    "#version 450\n"
     "\n"
     "layout(location = 0) out vec4 uFragColor;\n"
     "void main(){\n"
@@ -1895,20 +1891,14 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(),
                             VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0,
                             1, &descriptorSet, 2, pDynOff);
-    if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Error received was not 'Attempting to bind 1 descriptorSets "
-                  "with 1 dynamic descriptors, but dynamicOffsetCount is 0...'";
-        m_errorMonitor->DumpFailureMsgs();
-    }
+    m_errorMonitor->VerifyFound();
     // Finally cause error due to dynamicOffset being too big
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         " from its update, this oversteps its buffer (");
     // Create PSO to be used for draw-time errors below
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex { \n"
         "    vec4 gl_Position;\n"
@@ -1917,9 +1907,7 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 x;\n"
         "layout(set=0) layout(binding=0) uniform foo { int x; int y; } bar;\n"
@@ -2295,9 +2283,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
 
     // Create PSO to be used for draw-time errors below
     char const *vsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "out gl_PerVertex {\n"
         "    vec4 gl_Position;\n"
@@ -2306,9 +2292,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
         "   gl_Position = vec4(1);\n"
         "}\n";
     char const *fsSource =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
+        "#version 450\n"
         "\n"
         "layout(location=0) out vec4 x;\n"
         "layout(set=0) layout(binding=0) uniform foo { int x; int y; } bar;\n"
@@ -2859,7 +2843,6 @@ VK_PRIMITIVE_TOPOLOGY_PATCHLIST primitive...'";
 */
 // Set scissor and viewport counts to different numbers
 TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
-    // Attempt to Create Gfx Pipeline w/o a VS
     VkResult err;
 
     m_errorMonitor->SetDesiredFailureMsg(
