@@ -59,6 +59,7 @@ do
 done
 
 # fixup - unique_objects need one more file
+cp  generated/include/vk_safe_struct.cpp ${SRC_ROOT}/core_validation/vk_safe_struct.cpp
 mv  generated/include/vk_safe_struct.cpp ${SRC_ROOT}/unique_objects/vk_safe_struct.cpp
 
 # fixup - remove copied files from generated/include
