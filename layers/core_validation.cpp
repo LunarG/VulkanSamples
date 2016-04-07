@@ -6094,9 +6094,12 @@ vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocat
     }
     dev_data->commandPoolMap.erase(commandPool);
 
+
+    VkBool32 result = validateCommandBuffersNotInUse(dev_data, commandPool);
+
     loader_platform_thread_unlock_mutex(&globalLock);
 
-    if (validateCommandBuffersNotInUse(dev_data, commandPool))
+    if (result)
         return;
 
     if (!skipCall)
