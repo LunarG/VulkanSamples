@@ -126,12 +126,12 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
                                        VkExtensionProperties *pProperties) {
     struct loader_extension_list *global_ext_list = NULL;
     struct loader_layer_list instance_layers;
-    struct loader_extension_list icd_extensions;
+    struct loader_extension_list local_ext_list;
     struct loader_icd_libs icd_libs;
     uint32_t copy_size;
 
     tls_instance = NULL;
-    memset(&icd_extensions, 0, sizeof(icd_extensions));
+    memset(&local_ext_list, 0, sizeof(local_ext_list));
     memset(&instance_layers, 0, sizeof(instance_layers));
     loader_platform_thread_once(&once_init, loader_initialize);
 
@@ -145,12 +145,33 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
         }
 
         loader_layer_scan(NULL, &instance_layers, NULL);
-        for (uint32_t i = 0; i < instance_layers.count; i++) {
-            struct loader_layer_properties *props =
-                &instance_layers.list[i];
-            if (strcmp(props->info.layerName, pLayerName) == 0) {
-                global_ext_list = &props->instance_extension_list;
-                break;
+        if (strcmp(pLayerName, std_validation_str) == 0) {
+            struct loader_layer_list local_list;
+            memset(&local_list, 0, sizeof(local_list));
+            for (uint32_t i = 0; i < sizeof(std_validation_names) /
+                                         sizeof(std_validation_names[0]);
+                 i++) {
+                loader_find_layer_name_add_list(NULL, std_validation_names[i],
+                                                VK_LAYER_TYPE_INSTANCE_EXPLICIT,
+                                                &instance_layers, &local_list);
+            }
+            for (uint32_t i = 0; i < local_list.count; i++) {
+                struct loader_extension_list *ext_list =
+                            &local_list.list[i].instance_extension_list;
+                loader_add_to_ext_list(NULL, &local_ext_list, ext_list->count,
+                                       ext_list->list);
+            }
+            loader_destroy_layer_list(NULL, &local_list);
+            global_ext_list = &local_ext_list;
+
+        } else {
+            for (uint32_t i = 0; i < instance_layers.count; i++) {
+                struct loader_layer_properties *props =
+                    &instance_layers.list[i];
+                if (strcmp(props->info.layerName, pLayerName) == 0) {
+                    global_ext_list = &props->instance_extension_list;
+                    break;
+                }
             }
         }
     } else {
@@ -159,17 +180,17 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
         loader_icd_scan(NULL, &icd_libs);
         /* get extensions from all ICD's, merge so no duplicates */
         loader_get_icd_loader_instance_extensions(NULL, &icd_libs,
-                                                  &icd_extensions);
+                                                  &local_ext_list);
         loader_scanned_icd_clear(NULL, &icd_libs);
 
         // Append implicit layers.
         loader_implicit_layer_scan(NULL, &instance_layers, NULL);
         for (uint32_t i = 0; i < instance_layers.count; i++) {
             struct loader_extension_list *ext_list = &instance_layers.list[i].instance_extension_list;
-            loader_add_to_ext_list(NULL, &icd_extensions, ext_list->count, ext_list->list);
+            loader_add_to_ext_list(NULL, &local_ext_list, ext_list->count, ext_list->list);
         }
 
-        global_ext_list = &icd_extensions;
+        global_ext_list = &local_ext_list;
     }
 
     if (global_ext_list == NULL) {
@@ -181,7 +202,7 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
         *pPropertyCount = global_ext_list->count;
         loader_destroy_layer_list(NULL, &instance_layers);
         loader_destroy_generic_list(
-            NULL, (struct loader_generic_list *)&icd_extensions);
+            NULL, (struct loader_generic_list *)&local_ext_list);
         return VK_SUCCESS;
     }
 
@@ -194,7 +215,7 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
     }
     *pPropertyCount = copy_size;
     loader_destroy_generic_list(NULL,
-                                (struct loader_generic_list *)&icd_extensions);
+                                (struct loader_generic_list *)&local_ext_list);
 
     if (copy_size < global_ext_list->count) {
         loader_destroy_layer_list(NULL, &instance_layers);
@@ -804,20 +825,47 @@ vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
         uint32_t count;
         uint32_t copy_size;
         const struct loader_instance *inst = phys_dev->this_instance;
+        struct loader_device_extension_list *dev_ext_list = NULL;
+        struct loader_device_extension_list local_ext_list;
+        memset(&local_ext_list, 0, sizeof(local_ext_list));
         if (vk_string_validate(MaxLoaderStringLength, pLayerName) ==
             VK_STRING_ERROR_NONE) {
+            if (strcmp(pLayerName, std_validation_str) == 0) {
+                struct loader_layer_list local_list;
+                memset(&local_list, 0, sizeof(local_list));
+                for (uint32_t i = 0; i < sizeof(std_validation_names) /
+                                             sizeof(std_validation_names[0]);
+                     i++) {
+                    loader_find_layer_name_add_list(NULL, std_validation_names[i],
+                                                VK_LAYER_TYPE_DEVICE_EXPLICIT,
+                                                &inst->device_layer_list, &local_list);
+                }
+                for (uint32_t i = 0; i < local_list.count; i++) {
+                    struct loader_device_extension_list *ext_list =
+                                &local_list.list[i].device_extension_list;
+                    for (uint32_t j = 0; j < ext_list->count; j++) {
+                        loader_add_to_dev_ext_list(NULL, &local_ext_list,
+                                                   &ext_list->list[j].props, 0,
+                                                   NULL);
+                    }
+                }
+                dev_ext_list = &local_ext_list;
 
-            struct loader_device_extension_list *dev_ext_list = NULL;
-            for (uint32_t i = 0; i < inst->device_layer_list.count; i++) {
-                struct loader_layer_properties *props =
-                    &inst->device_layer_list.list[i];
-                if (strcmp(props->info.layerName, pLayerName) == 0) {
-                    dev_ext_list = &props->device_extension_list;
+            } else {
+                for (uint32_t i = 0; i < inst->device_layer_list.count; i++) {
+                    struct loader_layer_properties *props =
+                        &inst->device_layer_list.list[i];
+                    if (strcmp(props->info.layerName, pLayerName) == 0) {
+                        dev_ext_list = &props->device_extension_list;
+                    }
                 }
             }
+
             count = (dev_ext_list == NULL) ? 0 : dev_ext_list->count;
             if (pProperties == NULL) {
                 *pPropertyCount = count;
+                loader_destroy_generic_list(inst,
+                        (struct loader_generic_list *) &local_ext_list);
                 loader_platform_thread_unlock_mutex(&loader_lock);
                 return VK_SUCCESS;
             }
@@ -829,6 +877,8 @@ vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
             }
             *pPropertyCount = copy_size;
 
+            loader_destroy_generic_list(inst,
+                        (struct loader_generic_list *) &local_ext_list);
             if (copy_size < count) {
                 loader_platform_thread_unlock_mutex(&loader_lock);
                 return VK_INCOMPLETE;

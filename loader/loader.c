@@ -482,6 +482,18 @@ bool has_vk_extension_property(const VkExtensionProperties *vk_ext_prop,
     return false;
 }
 
+/**
+ * Search the given ext_list for a device extension matching the given ext_prop
+ */
+bool has_vk_dev_ext_property(const VkExtensionProperties *ext_prop,
+                        const struct loader_device_extension_list *ext_list) {
+    for (uint32_t i = 0; i < ext_list->count; i++) {
+        if (compare_vk_extension_properties(&ext_list->list[i].props, ext_prop))
+            return true;
+    }
+    return false;
+}
+
 static inline bool loader_is_layer_type_device(const enum layer_type type) {
     if ((type & VK_LAYER_TYPE_DEVICE_EXPLICIT) ||
         (type & VK_LAYER_TYPE_DEVICE_IMPLICIT))
@@ -781,7 +793,7 @@ VkResult loader_add_to_ext_list(const struct loader_instance *inst,
 
 /*
  * Append one extension property defined in props with entrypoints
- * defined in entrys to the given ext_list.
+ * defined in entrys to the given ext_list. Do not append if a duplicate
  * Return
  *  Vk_SUCCESS on success
  */
@@ -798,6 +810,11 @@ loader_add_to_dev_ext_list(const struct loader_instance *inst,
 
     if (ext_list->list == NULL)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    // look for duplicates
+    if (has_vk_dev_ext_property(props, ext_list)) {
+        return VK_SUCCESS;
+    }
 
     idx = ext_list->count;
     // add to list at end
@@ -1030,7 +1047,7 @@ void loader_add_to_layer_list(const struct loader_instance *inst,
  * Do not add if found loader_layer_properties is already
  * on the found_list.
  */
-static void
+void
 loader_find_layer_name_add_list(const struct loader_instance *inst,
                                 const char *name, const enum layer_type type,
                                 const struct loader_layer_list *search_list,

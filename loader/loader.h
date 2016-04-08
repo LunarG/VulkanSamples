@@ -460,6 +460,10 @@ VkResult loader_add_to_ext_list(const struct loader_instance *inst,
                                 struct loader_extension_list *ext_list,
                                 uint32_t prop_list_count,
                                 const VkExtensionProperties *props);
+VkResult loader_add_to_dev_ext_list(const struct loader_instance *inst,
+                                    struct loader_device_extension_list *ext_list,
+                                    const VkExtensionProperties *props,
+                                    uint32_t entry_count, char **entrys);
 VkResult loader_add_device_extensions(const struct loader_instance *inst,
                                       PFN_vkEnumerateDeviceExtensionProperties fpEnumerateDeviceExtensionProperties,
                                       VkPhysicalDevice physical_device,
@@ -489,6 +493,10 @@ void loader_add_to_layer_list(const struct loader_instance *inst,
                               struct loader_layer_list *list,
                               uint32_t prop_list_count,
                               const struct loader_layer_properties *props);
+void loader_find_layer_name_add_list(const struct loader_instance *inst,
+                                const char *name, const enum layer_type type,
+                                const struct loader_layer_list *search_list,
+                                struct loader_layer_list *found_list);
 void loader_scanned_icd_clear(const struct loader_instance *inst,
                               struct loader_icd_libs *icd_libs);
 void loader_icd_scan(const struct loader_instance *inst,
