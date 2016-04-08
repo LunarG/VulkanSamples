@@ -34,23 +34,23 @@ set(LAYER_JSON_FILES
 set(VK_LAYER_RPATH /usr/lib/x86_64-linux-gnu/vulkan/layer:/usr/lib/i386-linux-gnu/vulkan/layer)
 set(CMAKE_INSTALL_RPATH ${VK_LAYER_RPATH})
 
-if (NOT WIN32)
-    # extra setup for out-of-tree builds
-    if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
-        foreach (config_file ${LAYER_JSON_FILES})
-            add_custom_target(${config_file}-json ALL
-                COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
-                VERBATIM
-                )
-        endforeach(config_file)
-    endif()
-else()
+if (WIN32)
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         foreach (config_file ${LAYER_JSON_FILES})
             FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/windows/${config_file}.json src_json)
             FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/${config_file}.json dst_json)
             add_custom_target(${config_file}-json ALL
                 COMMAND copy ${src_json} ${dst_json}
+                VERBATIM
+                )
+        endforeach(config_file)
+    endif()
+else()
+    # extra setup for out-of-tree builds
+    if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
+        foreach (config_file ${LAYER_JSON_FILES})
+            add_custom_target(${config_file}-json ALL
+                COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/linux/${config_file}.json
                 VERBATIM
                 )
         endforeach(config_file)
@@ -64,15 +64,14 @@ if (WIN32)
         DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py
     )
     add_library(VkLayer_${target} SHARED ${ARGN} VkLayer_${target}.def)
-    target_link_Libraries(VkLayer_${target} layer_utils)
-    add_dependencies(VkLayer_${target} layer_utils_static)
+    target_link_Libraries(VkLayer_${target} VkLayer_utils)
     add_dependencies(VkLayer_${target} generate_vk_layer_helpers)
     set_target_properties(VkLayer_${target} PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_BINARY_DIR}/VkLayer_${target}.def")
     endmacro()
 else()
     macro(add_vk_layer target)
     add_library(VkLayer_${target} SHARED ${ARGN})
-    target_link_Libraries(VkLayer_${target} layer_utils)
+    target_link_Libraries(VkLayer_${target} VkLayer_utils)
     add_dependencies(VkLayer_${target} generate_vk_layer_helpers)
     set_target_properties(VkLayer_${target} PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic")
     install(TARGETS VkLayer_${target} DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
@@ -92,8 +91,7 @@ if (WIN32)
     set (CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} -D_CRT_SECURE_NO_WARNINGS")
     set (CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} -D_CRT_SECURE_NO_WARNINGS /bigobj")
     set (CMAKE_C_FLAGS_DEBUG     "${CMAKE_C_FLAGS_DEBUG} -D_CRT_SECURE_NO_WARNINGS /bigobj")
-endif()
-if (NOT WIN32)
+else()
     set (CMAKE_CXX_FLAGS "-std=c++11")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpointer-arith")
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith")
@@ -137,16 +135,18 @@ run_vk_layer_xml_generate(Threading thread_check.h)
 run_vk_layer_generate(unique_objects unique_objects.cpp)
 run_vk_layer_xml_generate(ParamChecker parameter_validation.h)
 
-add_library(layer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
+# Layer Utils Library
+# For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search
+# path that can't be easily modified to point it to the same directory that contains the layers.
 if (WIN32)
-    add_library(layer_utils_static STATIC vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
-    set_target_properties(layer_utils_static PROPERTIES OUTPUT_NAME layer_utils)
-    target_link_libraries(layer_utils)
+    add_library(VkLayer_utils STATIC vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
 else()
-    install(TARGETS layer_utils DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
+    add_library(VkLayer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
+    install(TARGETS VkLayer_utils DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
 endif()
+
 add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp vk_safe_struct.cpp)
-add_vk_layer(device_limits device_limits.cpp vk_layer_table.cpp vk_layer_utils.cpp)
+add_vk_layer(device_limits device_limits.cpp vk_layer_table.cpp)
 add_vk_layer(image image.cpp vk_layer_table.cpp)
 add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
 # generated
