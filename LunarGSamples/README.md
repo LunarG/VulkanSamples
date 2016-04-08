@@ -52,7 +52,7 @@
 
 #### Android:
   ```
-  $ cmake -DAndroid -DANDROID_ABI=[armeabi-v7a|arm64-v8a| x86|x86_64|all(default)]
+  $ cmake -DANDROID=ON -DANDROID_ABI=[armeabi-v7a|arm64-v8a| x86|x86_64|all(default)]
   ```
 And import VulkanSamples/API-Samples/android/build.gradle in Android Studio.
 

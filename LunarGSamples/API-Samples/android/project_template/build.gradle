@@ -18,10 +18,9 @@ Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
 def ndkDir = properties.getProperty('ndk.dir')
 def shadercLibPath = file(ndkDir).absolutePath + "/sources/third_party/shaderc"
-def validationLayerDir  = file(project.rootProject.projectDir).absolutePath + "/../../../LoaderAndTools/"
 def vulkanWrapperPath = file(project.rootProject.projectDir).absolutePath + "/vulkan_wrapper"
 
-def stlType = "c++_static"
+def stlType = "c++_shared"
 
 model {
     repositories {
@@ -86,6 +85,7 @@ model {
                 dependencies {
                     project ":nativeactivity" linkage "static"
                     @SHADERC_LINKAGE@
+                    @VALIDATIONLAYER_LINKAGE@
                  }
                 source {
                     srcDir 'src/main/jni'

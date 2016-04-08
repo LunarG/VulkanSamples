@@ -34,7 +34,7 @@ reported
 #include <sstream>
 #include <string>
 #include <string.h>
-#include "util.hpp"
+#include "util_init.hpp"
 
 #define APP_SHORT_NAME "Debug Report Callback"
 
@@ -79,6 +79,8 @@ int sample_main(int argc, char *argv[]) {
     VkResult res;
 
     /* VULKAN_KEY_START */
+    struct sample_info info = {};
+    init_global_layer_properties(info);
 
     /*
      * It's possible, though very rare, that the number of

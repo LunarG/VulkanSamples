@@ -80,8 +80,10 @@ function(sampleWithSingleFile)
             set (ASSET_DIR "")
             set (EXTRA_PERMISSIONS "")
             set (SHADERC_LINKAGE "")
+            set (VALIDATIONLAYER_LINKAGE "")
 
             # Add extra setting for some samples.
+            # shaderc usage.
             set (SHADERC_LINKAGE "library \"shaderc\"         linkage \"static\"")
 
             # Include resource files.
@@ -102,7 +104,14 @@ function(sampleWithSingleFile)
             # Add validation layer settings.
             set (SAMPLE_WITH_TOOLS dbgcreatemsgcallback enable_validation_with_callback)
             if (";${SAMPLE_WITH_TOOLS};" MATCHES ";${SAMPLE_NAME};")
-                set (OTHER_FLAGS "${OTHER_FLAGS}cppFlags.add(\"-D USE_DEBUG_EXTENTIONS\")\n        cppFlags.add(\"-I\${validationLayerDir}/include\".toString())")
+                set (VALIDATIONLAYER_LINKAGE "project \":threading\"
+                    project \":parameter_validation\"
+                    project \":object_tracker\"
+                    project \":core_validation\"
+                    project \":device_limits\"
+                    project \":image\"
+                    project \":swapchain\"
+                    project \":unique_objects\"")
             endif()
 
             # Cook template files.

@@ -37,7 +37,7 @@ model {
         moduleName = "native-activity"
         cppFlags.add("-Werror")
         ldLibs.addAll(["log", "android"])
-        stl = "c++_static"
+        stl = "c++_shared"
         ldFlags.add("-c")
     }
     android.sources {
