@@ -231,8 +231,13 @@ VIProductVersion "${PRODUCTVERSION}"
 VIAddVersionKey  "ProductName" "Vulkan Runtime"
 VIAddVersionKey  "FileVersion" "${PRODUCTVERSION}"
 VIAddVersionKey  "ProductVersion" "${PRODUCTVERSION}"
-VIAddVersionKey  "FileDescription" "Vulkan Runtime Installer"
 VIAddVersionKey  "LegalCopyright" ""
+
+!ifdef UNINSTALLER
+    VIAddVersionKey  "FileDescription" "Vulkan Runtime Uninstaller"
+!else
+    VIAddVersionKey  "FileDescription" "Vulkan Runtime Installer"
+!endif
 
 # Start default section
 Section
