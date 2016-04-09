@@ -756,6 +756,7 @@ void init_swapchain_extension(struct sample_info &info) {
         assert(formatCount >= 1);
         info.format = surfFormats[0].format;
     }
+    free(surfFormats);
 }
 
 void init_presentable_image(struct sample_info &info) {
