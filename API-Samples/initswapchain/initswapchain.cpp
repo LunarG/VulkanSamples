@@ -143,6 +143,7 @@ int sample_main(int argc, char *argv[]) {
         assert(formatCount >= 1);
         info.format = surfFormats[0].format;
     }
+    free(surfFormats);
 
     VkSurfaceCapabilitiesKHR surfCapabilities;
 
