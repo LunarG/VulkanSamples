@@ -262,8 +262,8 @@ typedef enum VkLayerDbgAction_ {
 // CreateInstance and CreateDevice support structures
 
 /* Sub type of structure for instance and device loader ext of CreateInfo.
- * When sType == VK_STRUCTURE_TYPE_LAYER_INSTANCE_CREATE_INFO
- * or sType == VK_STRUCTURE_TYPE_LAYER_DEVICE_CREATE_INFO
+ * When sType == VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO
+ * or sType == VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO
  * then VkLayerFunction indicates struct type pointed to by pNext
  */
 typedef enum VkLayerFunction_ {
