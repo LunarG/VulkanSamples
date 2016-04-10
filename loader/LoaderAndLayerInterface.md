@@ -1000,7 +1000,7 @@ Call chains are constructed at both the instance level and the device level by
 the loader with cooperation from the layer libraries. Instance call chains are
 constructed by the loader when layers are enabled at vkCreateInstance. Device
 call chains are constructed by the loader when layers are enabled at
-CreateDevice. A layer can intercept Vulkan instance commands, device commands
+vkCreateDevice. A layer can intercept Vulkan instance commands, device commands
 or both. For a layer to intercept instance commands, it must participate in the
 instance call chain. For a layer to intercept device commands, it must
 participate in the device chain. Layers which participate in intercepting calls
