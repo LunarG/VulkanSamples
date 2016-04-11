@@ -6072,7 +6072,7 @@ TEST_F(VkLayerTest, CreatePipelinePushConstantsNotInLayout) {
 #endif // SHADER_CHECKER_TESTS
 
 #if DEVICE_LIMITS_TESTS
-TEST_F(VkLayerTest, CreateImageLimitsViolationWidth) {
+TEST_F(VkLayerTest, CreateImageLimitsViolationMaxWidth) {
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "CreateImage extents exceed allowable limits for format");
@@ -6103,6 +6103,42 @@ TEST_F(VkLayerTest, CreateImageLimitsViolationWidth) {
 
     // Introduce error by sending down a bogus width extent
     image_create_info.extent.width = 65536;
+    vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
+
+    m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkLayerTest, CreateImageLimitsViolationMinWidth) {
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "CreateImage extents is 0 for at least one required dimension");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Create an image
+    VkImage image;
+
+    const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
+    const int32_t tex_width = 32;
+    const int32_t tex_height = 32;
+
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = tex_format;
+    image_create_info.extent.width = tex_width;
+    image_create_info.extent.height = tex_height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.flags = 0;
+
+    // Introduce error by sending down a bogus width extent
+    image_create_info.extent.width = 0;
     vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
 
     m_errorMonitor->VerifyFound();

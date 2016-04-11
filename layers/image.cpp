@@ -299,6 +299,36 @@ vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, const VkAll
     VkDeviceSize imageGranularity = device_data->physicalDeviceProperties.limits.bufferImageGranularity;
     imageGranularity = imageGranularity == 1 ? 0 : imageGranularity;
 
+    // Make sure all required dimension are non-zero at least.
+    bool failedMinSize = false;
+    switch (pCreateInfo->imageType) {
+    case VK_IMAGE_TYPE_3D:
+        if (pCreateInfo->extent.depth == 0) {
+            failedMinSize = true;
+        }
+    // Intentional fall-through
+    case VK_IMAGE_TYPE_2D:
+        if (pCreateInfo->extent.height == 0) {
+            failedMinSize = true;
+        }
+    // Intentional fall-through
+    case VK_IMAGE_TYPE_1D:
+        if (pCreateInfo->extent.width == 0) {
+            failedMinSize = true;
+        }
+        break;
+    default:
+        break;
+    }
+    if (failedMinSize) {
+        skipCall |=
+            log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                    (uint64_t)pImage, __LINE__, IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
+                    "CreateImage extents is 0 for at least one required dimension for image of type %d: "
+                    "Width = %d Height = %d Depth = %d.",
+                    pCreateInfo->imageType, pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth);
+    }
+
     if ((pCreateInfo->extent.depth > ImageFormatProperties.maxExtent.depth) ||
         (pCreateInfo->extent.width > ImageFormatProperties.maxExtent.width) ||
         (pCreateInfo->extent.height > ImageFormatProperties.maxExtent.height)) {
