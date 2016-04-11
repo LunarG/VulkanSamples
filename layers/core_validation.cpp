@@ -2185,16 +2185,18 @@ static bool verify_renderpass_compatibility(layer_data *my_data, const VkRenderP
                 errorStr << "resolve attachments at index " << cIdx << " of subpass index " << spIndex << " are not compatible.";
                 errorMsg = errorStr.str();
                 return false;
-            } else if (!attachment_references_compatible(cIdx, primaryRPCI->pSubpasses[spIndex].pDepthStencilAttachment,
-                                                         primaryColorCount, primaryRPCI->pAttachments,
-                                                         secondaryRPCI->pSubpasses[spIndex].pDepthStencilAttachment,
-                                                         secondaryColorCount, secondaryRPCI->pAttachments)) {
-                errorStr << "depth/stencil attachments at index " << cIdx << " of subpass index " << spIndex
-                         << " are not compatible.";
-                errorMsg = errorStr.str();
-                return false;
             }
         }
+
+        if (!attachment_references_compatible(0, primaryRPCI->pSubpasses[spIndex].pDepthStencilAttachment,
+                                              1, primaryRPCI->pAttachments,
+                                              secondaryRPCI->pSubpasses[spIndex].pDepthStencilAttachment,
+                                              1, secondaryRPCI->pAttachments)) {
+            errorStr << "depth/stencil attachments of subpass index " << spIndex << " are not compatible.";
+            errorMsg = errorStr.str();
+            return false;
+        }
+
         uint32_t primaryInputCount = primaryRPCI->pSubpasses[spIndex].inputAttachmentCount;
         uint32_t secondaryInputCount = secondaryRPCI->pSubpasses[spIndex].inputAttachmentCount;
         uint32_t inputMax = std::max(primaryInputCount, secondaryInputCount);
