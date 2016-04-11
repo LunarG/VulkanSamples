@@ -39,7 +39,7 @@ model {
         buildToolsVersion = "23.0.2"
 
         defaultConfig.with {
-            applicationId = "@PACKAGE_NAME@"
+            applicationId = "org.khronos.vulkan.samples.uniformbuffer"
             minSdkVersion.apiLevel = 22
             targetSdkVersion.apiLevel = 24
             versionCode = 1
@@ -67,7 +67,7 @@ model {
         cppFlags.add("-I${file("${shadercLibPath}/third_party/spirv-tools/include")}".toString())
         cppFlags.add("-I${file("${shadercLibPath}/third_party/spirv-tools/include/spirv-tools")}".toString())
         cppFlags.add("-D VK_USE_PLATFORM_ANDROID_KHR")
-        @OTHER_FLAGS@
+        
     }
 
     // Turn on hard float support in armeabi-v7a
@@ -84,12 +84,12 @@ model {
             jni {
                 dependencies {
                     project ":nativeactivity" linkage "static"
-                    @SHADERC_LINKAGE@
-                    @VALIDATIONLAYER_LINKAGE@
+                    library "shaderc"         linkage "static"
+                    
                  }
                 source {
                     srcDir 'src/main/jni'
-                    srcDir '../../@SAMPLE_NAME@'
+                    srcDir '../../uniformbuffer'
                     srcDir '../../ext/'
                     srcDir '../../utils'
                     srcDir vulkanWrapperPath
@@ -97,7 +97,7 @@ model {
             }
             assets {
                 source {
-                    @ASSET_DIR@
+                    
                 }
             }
         }
@@ -116,15 +116,19 @@ model {
     android.productFlavors {
         // for detailed abiFilter descriptions, refer to "Supported ABIs" @
         // https://developer.android.com/ndk/guides/abis.html#sa
-        create("@FLAVOR@") {
-            @ABI_FILTER@
+        create("all") {
+            
+            ndk.abiFilters.add("armeabi-v7a")
+            ndk.abiFilters.add("arm64-v8a")
+            ndk.abiFilters.add("x86")
+            ndk.abiFilters.add("x86_64")
         }
     }
 }
 
 task build_shaderc(type:Exec) {
     workingDir "${shadercLibPath}"
-    commandLine "${ndkDir}/ndk-build", "NDK_PROJECT_PATH=.", "APP_BUILD_SCRIPT=Android.mk", "APP_STL:=${stlType}", "APP_ABI=@FLAVOR@", "libshaderc_combined", "-j16"
+    commandLine "${ndkDir}/ndk-build", "NDK_PROJECT_PATH=.", "APP_BUILD_SCRIPT=Android.mk", "APP_STL:=${stlType}", "APP_ABI=all", "libshaderc_combined", "-j16"
 }
 
 tasks.whenTaskAdded { task ->
