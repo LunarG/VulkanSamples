@@ -35,6 +35,7 @@ class VkImageObj;
 #include "vktestframework.h"
 #endif
 
+#include <map>
 #include <vector>
 
 using namespace std;
@@ -384,7 +385,8 @@ class VkDescriptorSetObj : public vk_testing::DescriptorPool {
 
   protected:
     VkDeviceObj *m_device;
-    vector<VkDescriptorPoolSize> m_type_counts;
+    std::vector<VkDescriptorSetLayoutBinding> m_layout_bindings;
+    std::map<VkDescriptorType, int> m_type_counts;
     int m_nextSlot;
 
     vector<VkDescriptorImageInfo> m_imageSamplerDescriptors;

@@ -433,10 +433,15 @@ VkDescriptorSetObj::~VkDescriptorSetObj() {
 
 int VkDescriptorSetObj::AppendDummy() {
     /* request a descriptor but do not update it */
-    VkDescriptorPoolSize tc = {};
-    tc.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    tc.descriptorCount = 1;
-    m_type_counts.push_back(tc);
+    VkDescriptorSetLayoutBinding binding = {};
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    binding.descriptorCount = 1;
+    binding.binding = m_layout_bindings.size();
+    binding.stageFlags = VK_SHADER_STAGE_ALL;
+    binding.pImmutableSamplers = NULL;
+
+    m_layout_bindings.push_back(binding);
+    m_type_counts[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER] += binding.descriptorCount;
 
     return m_nextSlot++;
 }
@@ -447,10 +452,15 @@ int VkDescriptorSetObj::AppendBuffer(VkDescriptorType type,
            type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
            type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
            type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
-    VkDescriptorPoolSize tc = {};
-    tc.type = type;
-    tc.descriptorCount = 1;
-    m_type_counts.push_back(tc);
+    VkDescriptorSetLayoutBinding binding = {};
+    binding.descriptorType = type;
+    binding.descriptorCount = 1;
+    binding.binding = m_layout_bindings.size();
+    binding.stageFlags = VK_SHADER_STAGE_ALL;
+    binding.pImmutableSamplers = NULL;
+
+    m_layout_bindings.push_back(binding);
+    m_type_counts[type] += binding.descriptorCount;
 
     m_writes.push_back(vk_testing::Device::write_descriptor_set(
         vk_testing::DescriptorSet(), m_nextSlot, 0, type, 1,
@@ -461,11 +471,16 @@ int VkDescriptorSetObj::AppendBuffer(VkDescriptorType type,
 
 int VkDescriptorSetObj::AppendSamplerTexture(VkSamplerObj *sampler,
                                              VkTextureObj *texture) {
-    VkDescriptorPoolSize tc = {};
-    tc.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    tc.descriptorCount = 1;
-    m_type_counts.push_back(tc);
+    VkDescriptorSetLayoutBinding binding = {};
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    binding.descriptorCount = 1;
+    binding.binding = m_layout_bindings.size();
+    binding.stageFlags = VK_SHADER_STAGE_ALL;
+    binding.pImmutableSamplers = NULL;
 
+    m_layout_bindings.push_back(binding);
+    m_type_counts[VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER] +=
+        binding.descriptorCount;
     VkDescriptorImageInfo tmp = texture->m_imageInfo;
     tmp.sampler = sampler->handle();
     m_imageSamplerDescriptors.push_back(tmp);
@@ -490,30 +505,26 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(
 
     if ( m_type_counts.size()) {
         // create VkDescriptorPool
+        VkDescriptorPoolSize poolSize;
+        vector<VkDescriptorPoolSize> sizes;
+        for (auto it = m_type_counts.begin(); it != m_type_counts.end(); ++it) {
+            poolSize.descriptorCount = it->second;
+            poolSize.type = it->first;
+            sizes.push_back(poolSize);
+        }
         VkDescriptorPoolCreateInfo pool = {};
         pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        pool.poolSizeCount = m_type_counts.size();
+        pool.poolSizeCount = sizes.size();
         pool.maxSets = 1;
-        pool.pPoolSizes = m_type_counts.data();
+        pool.pPoolSizes = sizes.data();
         init(*m_device, pool);
-    }
-
-    // create VkDescriptorSetLayout
-    vector<VkDescriptorSetLayoutBinding> bindings;
-    bindings.resize(m_type_counts.size());
-    for (size_t i = 0; i < m_type_counts.size(); i++) {
-        bindings[i].binding = i;
-        bindings[i].descriptorType = m_type_counts[i].type;
-        bindings[i].descriptorCount = m_type_counts[i].descriptorCount;
-        bindings[i].stageFlags = VK_SHADER_STAGE_ALL;
-        bindings[i].pImmutableSamplers = NULL;
     }
 
     // create VkDescriptorSetLayout
     VkDescriptorSetLayoutCreateInfo layout = {};
     layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layout.bindingCount = bindings.size();
-    layout.pBindings = bindings.data();
+    layout.bindingCount = m_layout_bindings.size();
+    layout.pBindings = m_layout_bindings.data();
 
     m_layout.init(*m_device, layout);
     vector<const vk_testing::DescriptorSetLayout *> layouts;
