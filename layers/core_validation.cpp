@@ -79,11 +79,10 @@
 using std::unordered_map;
 using std::unordered_set;
 
-#if MTMERGESOURCE
 // WSI Image Objects bypass usual Image Object creation methods.  A special Memory
 // Object value will be used to identify them internally.
 static const VkDeviceMemory MEMTRACKER_SWAP_CHAIN_IMAGE_KEY = (VkDeviceMemory)(-1);
-#endif
+
 // Track command pools and their command buffers
 struct CMD_POOL_INFO {
     VkCommandPoolCreateFlags createFlags;
@@ -100,6 +99,7 @@ struct devExts {
 // fwd decls
 struct shader_module;
 
+// TODO : Split this into separate structs for instance and device level data?
 struct layer_data {
     debug_report_data *report_data;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
@@ -142,12 +142,17 @@ struct layer_data {
     VkDevice device;
 
     // Device specific data
-    PHYS_DEV_PROPERTIES_NODE physDevProperties;
-// MTMERGESOURCE - added a couple of fields to constructor initializer
+    PHYS_DEV_PROPERTIES_NODE phys_dev_properties;
+    VkPhysicalDeviceMemoryProperties phys_dev_mem_props;
+
     layer_data()
         : report_data(nullptr), device_dispatch_table(nullptr), instance_dispatch_table(nullptr), device_extensions(),
-          currentFenceId(1){};
+          currentFenceId(1), renderPassBeginInfo{}, currentSubpass(0), device(VK_NULL_HANDLE), phys_dev_properties{},
+          phys_dev_mem_props{} {};
 };
+
+// TODO : Do we need to guard access to layer_data_map w/ lock?
+static unordered_map<void *, layer_data *> layer_data_map;
 
 static const VkLayerProperties cv_global_layers[] = {{
     "VK_LAYER_LUNARG_core_validation", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
@@ -236,19 +241,12 @@ struct shader_module {
     }
 };
 
-// TODO : Do we need to guard access to layer_data_map w/ lock?
-static unordered_map<void *, layer_data *> layer_data_map;
-
 // TODO : This can be much smarter, using separate locks for separate global data
 static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
 #if MTMERGESOURCE
 // MTMERGESOURCE - start of direct pull
-static VkPhysicalDeviceMemoryProperties memProps;
-
 static void clear_cmd_buf_and_mem_references(layer_data *my_data, const VkCommandBuffer cb);
-
-#define MAX_BINDING 0xFFFFFFFF
 
 static VkDeviceMemory *get_object_mem_binding(layer_data *my_data, uint64_t handle, VkDebugReportObjectTypeEXT type) {
     switch (type) {
@@ -2393,7 +2391,7 @@ static bool require_feature(layer_data *my_data, VkBool32 feature, char const *f
 static bool validate_shader_capabilities(layer_data *my_data, shader_module const *src) {
     bool pass = true;
 
-    auto enabledFeatures = &my_data->physDevProperties.features;
+    auto enabledFeatures = &my_data->phys_dev_properties.features;
 
     for (auto insn : *src) {
         if (insn.opcode() == spv::OpCapability) {
@@ -3003,7 +3001,7 @@ static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device
     }
 
     if (pPipeline->graphicsPipelineCI.pColorBlendState != NULL) {
-        if (!my_data->physDevProperties.features.independentBlend) {
+        if (!my_data->phys_dev_properties.features.independentBlend) {
             if (pPipeline->attachments.size() > 1) {
                 VkPipelineColorBlendAttachmentState *pAttachments = &pPipeline->attachments[0];
                 for (size_t i = 1; i < pPipeline->attachments.size(); i++) {
@@ -3023,7 +3021,7 @@ static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device
                 }
             }
         }
-        if (!my_data->physDevProperties.features.logicOp &&
+        if (!my_data->phys_dev_properties.features.logicOp &&
             (pPipeline->graphicsPipelineCI.pColorBlendState->logicOpEnable != VK_FALSE)) {
             skipCall |=
                 log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
@@ -4255,7 +4253,7 @@ static bool addCmd(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYP
     bool skipCall = false;
     auto pool_data = my_data->commandPoolMap.find(pCB->createInfo.commandPool);
     if (pool_data != my_data->commandPoolMap.end()) {
-        VkQueueFlags flags = my_data->physDevProperties.queue_family_properties[pool_data->second.queueFamilyIndex].queueFlags;
+        VkQueueFlags flags = my_data->phys_dev_properties.queue_family_properties[pool_data->second.queueFamilyIndex].queueFlags;
         switch (cmd) {
         case CMD_BINDPIPELINE:
         case CMD_BINDPIPELINEDELTA:
@@ -4503,18 +4501,14 @@ static bool outsideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, co
     return outside;
 }
 
-static void init_core_validation(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
+static void init_core_validation(layer_data *instance_data, const VkAllocationCallbacks *pAllocator) {
 
-    layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_core_validation");
+    layer_debug_actions(instance_data->report_data, instance_data->logging_callback, pAllocator, "lunarg_core_validation");
 
     if (!globalLockInitialized) {
         loader_platform_thread_create_mutex(&globalLock);
         globalLockInitialized = 1;
     }
-#if MTMERGESOURCE
-    // Zero out memory property data
-    memset(&memProps, 0, sizeof(VkPhysicalDeviceMemoryProperties));
-#endif
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -4534,14 +4528,15 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCall
     if (result != VK_SUCCESS)
         return result;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
-    my_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
-    layer_init_instance_dispatch_table(*pInstance, my_data->instance_dispatch_table, fpGetInstanceProcAddr);
+    layer_data *instance_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+    instance_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
+    layer_init_instance_dispatch_table(*pInstance, instance_data->instance_dispatch_table, fpGetInstanceProcAddr);
 
-    my_data->report_data = debug_report_create_instance(my_data->instance_dispatch_table, *pInstance,
-                                                        pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
+    instance_data->report_data =
+        debug_report_create_instance(instance_data->instance_dispatch_table, *pInstance, pCreateInfo->enabledExtensionCount,
+                                     pCreateInfo->ppEnabledExtensionNames);
 
-    init_core_validation(my_data, pAllocator);
+    init_core_validation(instance_data, pAllocator);
 
     ValidateLayerOrdering(*pCreateInfo);
 
@@ -4630,18 +4625,20 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
     my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
     createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     // Get physical device limits for this device
-    my_instance_data->instance_dispatch_table->GetPhysicalDeviceProperties(gpu, &(my_device_data->physDevProperties.properties));
+    my_instance_data->instance_dispatch_table->GetPhysicalDeviceProperties(gpu, &(my_device_data->phys_dev_properties.properties));
     uint32_t count;
     my_instance_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(gpu, &count, nullptr);
-    my_device_data->physDevProperties.queue_family_properties.resize(count);
+    my_device_data->phys_dev_properties.queue_family_properties.resize(count);
     my_instance_data->instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(
-        gpu, &count, &my_device_data->physDevProperties.queue_family_properties[0]);
+        gpu, &count, &my_device_data->phys_dev_properties.queue_family_properties[0]);
     // TODO: device limits should make sure these are compatible
     if (pCreateInfo->pEnabledFeatures) {
-        my_device_data->physDevProperties.features = *pCreateInfo->pEnabledFeatures;
+        my_device_data->phys_dev_properties.features = *pCreateInfo->pEnabledFeatures;
     } else {
-        memset(&my_device_data->physDevProperties.features, 0, sizeof(VkPhysicalDeviceFeatures));
+        memset(&my_device_data->phys_dev_properties.features, 0, sizeof(VkPhysicalDeviceFeatures));
     }
+    // Store physical device mem limits into device layer_data struct
+    my_instance_data->instance_dispatch_table->GetPhysicalDeviceMemoryProperties(gpu, &my_device_data->phys_dev_mem_props);
     loader_platform_thread_unlock_mutex(&globalLock);
 
     ValidateLayerOrdering(*pCreateInfo);
@@ -4713,16 +4710,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
     delete dev_data->device_dispatch_table;
     layer_data_map.erase(key);
 }
-
-#if MTMERGESOURCE
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
-vkGetPhysicalDeviceMemoryProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties *pMemoryProperties) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-    VkLayerInstanceDispatchTable *pInstanceTable = my_data->instance_dispatch_table;
-    pInstanceTable->GetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperties);
-    memcpy(&memProps, pMemoryProperties, sizeof(VkPhysicalDeviceMemoryProperties));
-}
-#endif
 
 static const VkExtensionProperties instance_extensions[] = {{VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};
 
@@ -5354,12 +5341,12 @@ static bool deleteMemRanges(layer_data *my_data, VkDeviceMemory mem) {
 
 static char NoncoherentMemoryFillValue = 0xb;
 
-static void initializeAndTrackMemory(layer_data *my_data, VkDeviceMemory mem, VkDeviceSize size, void **ppData) {
-    auto mem_element = my_data->memObjMap.find(mem);
-    if (mem_element != my_data->memObjMap.end()) {
+static void initializeAndTrackMemory(layer_data *dev_data, VkDeviceMemory mem, VkDeviceSize size, void **ppData) {
+    auto mem_element = dev_data->memObjMap.find(mem);
+    if (mem_element != dev_data->memObjMap.end()) {
         mem_element->second.pDriverData = *ppData;
         uint32_t index = mem_element->second.allocInfo.memoryTypeIndex;
-        if (memProps.memoryTypes[index].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
+        if (dev_data->phys_dev_mem_props.memoryTypes[index].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
             mem_element->second.pData = 0;
         } else {
             if (size == VK_WHOLE_SIZE) {
@@ -5816,11 +5803,11 @@ static bool validate_memory_range(layer_data *dev_data, const vector<MEMORY_RANG
     bool skip_call = false;
 
     for (auto range : ranges) {
-        if ((range.end & ~(dev_data->physDevProperties.properties.limits.bufferImageGranularity - 1)) <
-            (new_range.start & ~(dev_data->physDevProperties.properties.limits.bufferImageGranularity - 1)))
+        if ((range.end & ~(dev_data->phys_dev_properties.properties.limits.bufferImageGranularity - 1)) <
+            (new_range.start & ~(dev_data->phys_dev_properties.properties.limits.bufferImageGranularity - 1)))
             continue;
-        if ((range.start & ~(dev_data->physDevProperties.properties.limits.bufferImageGranularity - 1)) >
-            (new_range.end & ~(dev_data->physDevProperties.properties.limits.bufferImageGranularity - 1)))
+        if ((range.start & ~(dev_data->phys_dev_properties.properties.limits.bufferImageGranularity - 1)) >
+            (new_range.end & ~(dev_data->phys_dev_properties.properties.limits.bufferImageGranularity - 1)))
             continue;
         skip_call |= print_memory_range_error(dev_data, new_range.handle, range.handle, object_type);
     }
@@ -5869,33 +5856,35 @@ vkBindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDevic
         // Validate device limits alignments
         VkBufferUsageFlags usage = dev_data->bufferMap[buffer].createInfo.usage;
         if (usage & (VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT)) {
-            if (vk_safe_modulo(memoryOffset, dev_data->physDevProperties.properties.limits.minTexelBufferOffsetAlignment) != 0) {
+            if (vk_safe_modulo(memoryOffset, dev_data->phys_dev_properties.properties.limits.minTexelBufferOffsetAlignment) != 0) {
                 skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                             0, __LINE__, DRAWSTATE_INVALID_TEXEL_BUFFER_OFFSET, "DS",
                             "vkBindBufferMemory(): memoryOffset is %#" PRIxLEAST64 " but must be a multiple of "
                             "device limit minTexelBufferOffsetAlignment %#" PRIxLEAST64,
-                            memoryOffset, dev_data->physDevProperties.properties.limits.minTexelBufferOffsetAlignment);
+                            memoryOffset, dev_data->phys_dev_properties.properties.limits.minTexelBufferOffsetAlignment);
             }
         }
         if (usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) {
-            if (vk_safe_modulo(memoryOffset, dev_data->physDevProperties.properties.limits.minUniformBufferOffsetAlignment) != 0) {
+            if (vk_safe_modulo(memoryOffset, dev_data->phys_dev_properties.properties.limits.minUniformBufferOffsetAlignment) !=
+                0) {
                 skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                             0, __LINE__, DRAWSTATE_INVALID_UNIFORM_BUFFER_OFFSET, "DS",
                             "vkBindBufferMemory(): memoryOffset is %#" PRIxLEAST64 " but must be a multiple of "
                             "device limit minUniformBufferOffsetAlignment %#" PRIxLEAST64,
-                            memoryOffset, dev_data->physDevProperties.properties.limits.minUniformBufferOffsetAlignment);
+                            memoryOffset, dev_data->phys_dev_properties.properties.limits.minUniformBufferOffsetAlignment);
             }
         }
         if (usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) {
-            if (vk_safe_modulo(memoryOffset, dev_data->physDevProperties.properties.limits.minStorageBufferOffsetAlignment) != 0) {
+            if (vk_safe_modulo(memoryOffset, dev_data->phys_dev_properties.properties.limits.minStorageBufferOffsetAlignment) !=
+                0) {
                 skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                             0, __LINE__, DRAWSTATE_INVALID_STORAGE_BUFFER_OFFSET, "DS",
                             "vkBindBufferMemory(): memoryOffset is %#" PRIxLEAST64 " but must be a multiple of "
                             "device limit minStorageBufferOffsetAlignment %#" PRIxLEAST64,
-                            memoryOffset, dev_data->physDevProperties.properties.limits.minStorageBufferOffsetAlignment);
+                            memoryOffset, dev_data->phys_dev_properties.properties.limits.minStorageBufferOffsetAlignment);
             }
         }
     }
@@ -6591,11 +6580,11 @@ vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateIn
 static bool validatePushConstantSize(const layer_data *dev_data, const uint32_t offset, const uint32_t size,
                                      const char *caller_name) {
     bool skipCall = false;
-    if ((offset + size) > dev_data->physDevProperties.properties.limits.maxPushConstantsSize) {
+    if ((offset + size) > dev_data->phys_dev_properties.properties.limits.maxPushConstantsSize) {
         skipCall = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                            DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "%s call has push constants with offset %u and size %u that "
                                                                  "exceeds this device's maxPushConstantSize of %u.",
-                           caller_name, offset, size, dev_data->physDevProperties.properties.limits.maxPushConstantsSize);
+                           caller_name, offset, size, dev_data->phys_dev_properties.properties.limits.maxPushConstantsSize);
     }
     return skipCall;
 }
@@ -6912,7 +6901,7 @@ vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginIn
                     }
                 }
                 if ((pInfo->occlusionQueryEnable == VK_FALSE ||
-                     dev_data->physDevProperties.features.occlusionQueryPrecise == VK_FALSE) &&
+                     dev_data->phys_dev_properties.features.occlusionQueryPrecise == VK_FALSE) &&
                     (pInfo->queryFlags & VK_QUERY_CONTROL_PRECISE_BIT)) {
                     skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                         VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer),
@@ -7300,8 +7289,7 @@ vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipel
                                 if (pSet->pLayout->descriptorTypes[d] == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
                                     if (vk_safe_modulo(
                                             pDynamicOffsets[cur_dyn_offset],
-                                            dev_data->physDevProperties.properties.limits.minUniformBufferOffsetAlignment) !=
-                                        0) {
+                                            dev_data->phys_dev_properties.properties.limits.minUniformBufferOffsetAlignment) != 0) {
                                         skipCall |= log_msg(
                                             dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                             VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__,
@@ -7309,14 +7297,13 @@ vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipel
                                             "vkCmdBindDescriptorSets(): pDynamicOffsets[%d] is %d but must be a multiple of "
                                             "device limit minUniformBufferOffsetAlignment %#" PRIxLEAST64,
                                             cur_dyn_offset, pDynamicOffsets[cur_dyn_offset],
-                                            dev_data->physDevProperties.properties.limits.minUniformBufferOffsetAlignment);
+                                            dev_data->phys_dev_properties.properties.limits.minUniformBufferOffsetAlignment);
                                     }
                                     cur_dyn_offset++;
                                 } else if (pSet->pLayout->descriptorTypes[d] == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
                                     if (vk_safe_modulo(
                                             pDynamicOffsets[cur_dyn_offset],
-                                            dev_data->physDevProperties.properties.limits.minStorageBufferOffsetAlignment) !=
-                                        0) {
+                                            dev_data->phys_dev_properties.properties.limits.minStorageBufferOffsetAlignment) != 0) {
                                         skipCall |= log_msg(
                                             dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                             VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__,
@@ -7324,7 +7311,7 @@ vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipel
                                             "vkCmdBindDescriptorSets(): pDynamicOffsets[%d] is %d but must be a multiple of "
                                             "device limit minStorageBufferOffsetAlignment %#" PRIxLEAST64,
                                             cur_dyn_offset, pDynamicOffsets[cur_dyn_offset],
-                                            dev_data->physDevProperties.properties.limits.minStorageBufferOffsetAlignment);
+                                            dev_data->phys_dev_properties.properties.limits.minStorageBufferOffsetAlignment);
                                     }
                                     cur_dyn_offset++;
                                 }
@@ -8467,8 +8454,8 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                                                                      "must be.",
                                 funcName, reinterpret_cast<const uint64_t &>(mem_barrier->image));
                 } else if (((src_q_f_index != VK_QUEUE_FAMILY_IGNORED) && (dst_q_f_index != VK_QUEUE_FAMILY_IGNORED)) &&
-                           ((src_q_f_index >= dev_data->physDevProperties.queue_family_properties.size()) ||
-                            (dst_q_f_index >= dev_data->physDevProperties.queue_family_properties.size()))) {
+                           ((src_q_f_index >= dev_data->phys_dev_properties.queue_family_properties.size()) ||
+                            (dst_q_f_index >= dev_data->phys_dev_properties.queue_family_properties.size()))) {
                     skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
                                          __LINE__, DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
                                          "%s: Image 0x%" PRIx64 " was created with sharingMode "
@@ -8476,7 +8463,7 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                                          " or dstQueueFamilyIndex %d is greater than " PRINTF_SIZE_T_SPECIFIER
                                          "queueFamilies crated for this device.",
                                          funcName, reinterpret_cast<const uint64_t &>(mem_barrier->image), src_q_f_index,
-                                         dst_q_f_index, dev_data->physDevProperties.queue_family_properties.size());
+                                         dst_q_f_index, dev_data->phys_dev_properties.queue_family_properties.size());
                 }
             }
         }
@@ -8560,15 +8547,15 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
 
         // Validate buffer barrier queue family indices
         if ((mem_barrier->srcQueueFamilyIndex != VK_QUEUE_FAMILY_IGNORED &&
-             mem_barrier->srcQueueFamilyIndex >= dev_data->physDevProperties.queue_family_properties.size()) ||
+             mem_barrier->srcQueueFamilyIndex >= dev_data->phys_dev_properties.queue_family_properties.size()) ||
             (mem_barrier->dstQueueFamilyIndex != VK_QUEUE_FAMILY_IGNORED &&
-             mem_barrier->dstQueueFamilyIndex >= dev_data->physDevProperties.queue_family_properties.size())) {
+             mem_barrier->dstQueueFamilyIndex >= dev_data->phys_dev_properties.queue_family_properties.size())) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                  DRAWSTATE_INVALID_QUEUE_INDEX, "DS",
                                  "%s: Buffer Barrier 0x%" PRIx64 " has QueueFamilyIndex greater "
                                  "than the number of QueueFamilies (" PRINTF_SIZE_T_SPECIFIER ") for this device.",
                                  funcName, reinterpret_cast<const uint64_t &>(mem_barrier->buffer),
-                                 dev_data->physDevProperties.queue_family_properties.size());
+                                 dev_data->phys_dev_properties.queue_family_properties.size());
         }
 
         auto buffer_data = dev_data->bufferMap.find(mem_barrier->buffer);
@@ -8821,7 +8808,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPushConstants(VkCommandBuffer co
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdPushConstants()");
         }
     }
-    if ((offset + size) > dev_data->physDevProperties.properties.limits.maxPushConstantsSize) {
+    if ((offset + size) > dev_data->phys_dev_properties.properties.limits.maxPushConstantsSize) {
         skipCall |= validatePushConstantSize(dev_data, offset, size, "vkCmdPushConstants()");
     }
     // TODO : Add warning if push constant update doesn't align with range
@@ -10008,7 +9995,7 @@ vkCmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount
                     pCB->beginInfo.flags &= ~VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
                 }
             }
-            if (!pCB->activeQueries.empty() && !dev_data->physDevProperties.features.inheritedQueries) {
+            if (!pCB->activeQueries.empty() && !dev_data->phys_dev_properties.features.inheritedQueries) {
                 skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             reinterpret_cast<uint64_t>(pCommandBuffers[i]), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
@@ -10061,7 +10048,8 @@ vkMapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSi
     DEVICE_MEM_INFO *pMemObj = get_mem_obj_info(dev_data, mem);
     if (pMemObj) {
         pMemObj->valid = true;
-        if ((memProps.memoryTypes[pMemObj->allocInfo.memoryTypeIndex].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0) {
+        if ((dev_data->phys_dev_mem_props.memoryTypes[pMemObj->allocInfo.memoryTypeIndex].propertyFlags &
+             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0) {
             skip_call =
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                         (uint64_t)mem, __LINE__, MEMTRACK_INVALID_STATE, "MEM",
@@ -10888,10 +10876,6 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
         return (PFN_vkVoidFunction)vkCreateDevice;
     if (!strcmp(funcName, "vkDestroyInstance"))
         return (PFN_vkVoidFunction)vkDestroyInstance;
-#if MTMERGESOURCE
-    if (!strcmp(funcName, "vkGetPhysicalDeviceMemoryProperties"))
-        return (PFN_vkVoidFunction)vkGetPhysicalDeviceMemoryProperties;
-#endif
     if (!strcmp(funcName, "vkEnumerateInstanceLayerProperties"))
         return (PFN_vkVoidFunction)vkEnumerateInstanceLayerProperties;
     if (!strcmp(funcName, "vkEnumerateInstanceExtensionProperties"))
