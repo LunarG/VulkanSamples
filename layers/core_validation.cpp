@@ -246,8 +246,6 @@ static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
 #if MTMERGESOURCE
 // MTMERGESOURCE - start of direct pull
-static void clear_cmd_buf_and_mem_references(layer_data *my_data, const VkCommandBuffer cb);
-
 static VkDeviceMemory *get_object_mem_binding(layer_data *my_data, uint64_t handle, VkDebugReportObjectTypeEXT type) {
     switch (type) {
     case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
@@ -278,14 +276,6 @@ static GLOBAL_CB_NODE *getCBNode(layer_data *, const VkCommandBuffer);
 static void delete_queue_info_list(layer_data *my_data) {
     // Process queue list, cleaning up each entry before deleting
     my_data->queueMap.clear();
-}
-
-// Delete CBInfo from container and clear mem references to CB
-static void delete_cmd_buf_info(layer_data *my_data, VkCommandPool commandPool, const VkCommandBuffer cb) {
-    clear_cmd_buf_and_mem_references(my_data, cb);
-    // Delete the CBInfo info
-    my_data->commandPoolMap[commandPool].commandBuffers.remove(cb);
-    my_data->commandBufferMap.erase(cb);
 }
 
 // Add a fence, creating one if necessary to our list of fences/fenceIds
@@ -491,17 +481,14 @@ static bool update_cmd_buf_and_mem_references(layer_data *dev_data, const VkComm
     }
     return skipCall;
 }
-
-// Free bindings related to CB
-static void clear_cmd_buf_and_mem_references(layer_data *dev_data, const VkCommandBuffer cb) {
-    GLOBAL_CB_NODE *pCBNode = getCBNode(dev_data, cb);
-
+// For every mem obj bound to particular CB, free bindings related to that CB
+static void clear_cmd_buf_and_mem_references(layer_data *dev_data, GLOBAL_CB_NODE *pCBNode) {
     if (pCBNode) {
         if (pCBNode->memObjs.size() > 0) {
             for (auto mem : pCBNode->memObjs) {
                 DEVICE_MEM_INFO *pInfo = get_mem_obj_info(dev_data, mem);
                 if (pInfo) {
-                    pInfo->commandBufferBindings.erase(cb);
+                    pInfo->commandBufferBindings.erase(pCBNode->commandBuffer);
                 }
             }
             pCBNode->memObjs.clear();
@@ -509,13 +496,9 @@ static void clear_cmd_buf_and_mem_references(layer_data *dev_data, const VkComma
         pCBNode->validate_functions.clear();
     }
 }
-
-// Delete the entire CB list
-static void delete_cmd_buf_info_list(layer_data *my_data) {
-    for (auto &cb_node : my_data->commandBufferMap) {
-        clear_cmd_buf_and_mem_references(my_data, cb_node.first);
-    }
-    my_data->commandBufferMap.clear();
+// Overloaded call to above function when GLOBAL_CB_NODE has not already been looked-up
+static void clear_cmd_buf_and_mem_references(layer_data *dev_data, const VkCommandBuffer cb) {
+    clear_cmd_buf_and_mem_references(dev_data, getCBNode(dev_data, cb));
 }
 
 // For given MemObjInfo, report Obj & CB bindings
@@ -4192,7 +4175,7 @@ static GLOBAL_CB_NODE *getCBNode(layer_data *my_data, const VkCommandBuffer cb) 
 // Free all CB Nodes
 // NOTE : Calls to this function should be wrapped in mutex
 static void deleteCommandBuffers(layer_data *my_data) {
-    if (my_data->commandBufferMap.size() <= 0) {
+    if (my_data->commandBufferMap.empty()) {
         return;
     }
     for (auto ii = my_data->commandBufferMap.begin(); ii != my_data->commandBufferMap.end(); ++ii) {
@@ -4324,8 +4307,8 @@ static bool addCmd(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYP
 }
 // Reset the command buffer state
 //  Maintain the createInfo and set state to CB_NEW, but clear all other state
-static void resetCB(layer_data *my_data, const VkCommandBuffer cb) {
-    GLOBAL_CB_NODE *pCB = my_data->commandBufferMap[cb];
+static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
+    GLOBAL_CB_NODE *pCB = dev_data->commandBufferMap[cb];
     if (pCB) {
         pCB->cmds.clear();
         // Reset CB state (note that createInfo is not cleared)
@@ -4342,8 +4325,8 @@ static void resetCB(layer_data *my_data, const VkCommandBuffer cb) {
         for (uint32_t i = 0; i < VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
             // Before clearing lastBoundState, remove any CB bindings from all uniqueBoundSets
             for (auto set : pCB->lastBound[i].uniqueBoundSets) {
-                auto set_node = my_data->setMap.find(set);
-                if (set_node != my_data->setMap.end()) {
+                auto set_node = dev_data->setMap.find(set);
+                if (set_node != dev_data->setMap.end()) {
                     set_node->second->boundCmdBuffers.erase(pCB->commandBuffer);
                 }
             }
@@ -4375,8 +4358,7 @@ static void resetCB(layer_data *my_data, const VkCommandBuffer cb) {
         pCB->secondaryCommandBuffers.clear();
         pCB->updateImages.clear();
         pCB->updateBuffers.clear();
-        pCB->validate_functions.clear();
-        pCB->memObjs.clear();
+        clear_cmd_buf_and_mem_references(dev_data, pCB);
         pCB->eventUpdates.clear();
     }
 }
@@ -4675,10 +4657,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
             (uint64_t)device, __LINE__, MEMTRACK_NONE, "MEM", "================================================");
     print_mem_list(dev_data);
     printCBList(dev_data);
-    delete_cmd_buf_info_list(dev_data);
     // Report any memory leaks
     DEVICE_MEM_INFO *pInfo = NULL;
-    if (dev_data->memObjMap.size() > 0) {
+    if (!dev_data->memObjMap.empty()) {
         for (auto ii = dev_data->memObjMap.begin(); ii != dev_data->memObjMap.end(); ++ii) {
             pInfo = &(*ii).second;
             if (pInfo->allocInfo.allocationSize != 0) {
@@ -5972,9 +5953,6 @@ vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t comman
     bool skip_call = false;
     loader_platform_thread_lock_mutex(&globalLock);
     for (uint32_t i = 0; i < commandBufferCount; i++) {
-#if MTMERGESOURCE
-        clear_cmd_buf_and_mem_references(dev_data, pCommandBuffers[i]);
-#endif
         if (dev_data->globalInFlightCmdBuffers.count(pCommandBuffers[i])) {
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
@@ -6032,7 +6010,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateQueryPool(VkDevice device
     return result;
 }
 
-static bool validateCommandBuffersNotInUse(const layer_data *dev_data, VkCommandPool commandPool) {
+static bool validateCommandBuffersNotInUse(const layer_data *dev_data, VkCommandPool commandPool, const char *action) {
     bool skipCall = false;
     auto pool_data = dev_data->commandPoolMap.find(commandPool);
     if (pool_data != dev_data->commandPoolMap.end()) {
@@ -6041,8 +6019,8 @@ static bool validateCommandBuffersNotInUse(const layer_data *dev_data, VkCommand
                 skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT,
                             (uint64_t)(commandPool), __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
-                            "Cannot reset command pool %" PRIx64 " when allocated command buffer %" PRIx64 " is in use.",
-                            (uint64_t)(commandPool), (uint64_t)(cmdBuffer));
+                            "Cannot %s command pool %" PRIx64 " when allocated command buffer %" PRIx64 " is in use.", action,
+                            reinterpret_cast<const uint64_t &>(commandPool), reinterpret_cast<const uint64_t &>(cmdBuffer));
             }
         }
     }
@@ -6056,26 +6034,13 @@ vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocat
     bool commandBufferComplete = false;
     bool skipCall = false;
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGESOURCE
     // Verify that command buffers in pool are complete (not in-flight)
-    // MTMTODO : Merge this with code below (separate *NotInUse() call)
-    for (auto it = dev_data->commandPoolMap[commandPool].commandBuffers.begin();
-         it != dev_data->commandPoolMap[commandPool].commandBuffers.end(); it++) {
-        commandBufferComplete = false;
-        skipCall = checkCBCompleted(dev_data, *it, &commandBufferComplete);
-        if (!commandBufferComplete) {
-            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                (uint64_t)(*it), __LINE__, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM",
-                                "Destroying Command Pool 0x%" PRIxLEAST64 " before "
-                                "its command buffer (0x%" PRIxLEAST64 ") has completed.",
-                                (uint64_t)(commandPool), reinterpret_cast<uint64_t>(*it));
-        }
-    }
-#endif
+    VkBool32 result = validateCommandBuffersNotInUse(dev_data, commandPool, "destroy");
     // Must remove cmdpool from cmdpoolmap, after removing all cmdbuffers in its list from the commandPoolMap
     if (dev_data->commandPoolMap.find(commandPool) != dev_data->commandPoolMap.end()) {
         for (auto poolCb = dev_data->commandPoolMap[commandPool].commandBuffers.begin();
              poolCb != dev_data->commandPoolMap[commandPool].commandBuffers.end();) {
+            clear_cmd_buf_and_mem_references(dev_data, *poolCb);
             auto del_cb = dev_data->commandBufferMap.find(*poolCb);
             delete (*del_cb).second;                  // delete CB info structure
             dev_data->commandBufferMap.erase(del_cb); // Remove this command buffer
@@ -6085,9 +6050,6 @@ vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocat
     }
     dev_data->commandPoolMap.erase(commandPool);
 
-
-    VkBool32 result = validateCommandBuffersNotInUse(dev_data, commandPool);
-
     loader_platform_thread_unlock_mutex(&globalLock);
 
     if (result)
@@ -6095,17 +6057,6 @@ vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocat
 
     if (!skipCall)
         dev_data->device_dispatch_table->DestroyCommandPool(device, commandPool, pAllocator);
-#if MTMERGESOURCE
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = dev_data->commandPoolMap[commandPool].commandBuffers.begin();
-    // Remove command buffers from command buffer map
-    while (item != dev_data->commandPoolMap[commandPool].commandBuffers.end()) {
-        auto del_item = item++;
-        delete_cmd_buf_info(dev_data, commandPool, *del_item);
-    }
-    dev_data->commandPoolMap.erase(commandPool);
-    loader_platform_thread_unlock_mutex(&globalLock);
-#endif
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -6114,28 +6065,8 @@ vkResetCommandPool(VkDevice device, VkCommandPool commandPool, VkCommandPoolRese
     bool commandBufferComplete = false;
     bool skipCall = false;
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-#if MTMERGESOURCE
-    // MTMTODO : Merge this with *NotInUse() call below
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto it = dev_data->commandPoolMap[commandPool].commandBuffers.begin();
-    // Verify that CB's in pool are complete (not in-flight)
-    while (it != dev_data->commandPoolMap[commandPool].commandBuffers.end()) {
-        skipCall = checkCBCompleted(dev_data, (*it), &commandBufferComplete);
-        if (!commandBufferComplete) {
-            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                (uint64_t)(*it), __LINE__, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM",
-                                "Resetting CB %p before it has completed. You must check CB "
-                                "flag before calling vkResetCommandBuffer().",
-                                (*it));
-        } else {
-            // Clear memory references at this point.
-            clear_cmd_buf_and_mem_references(dev_data, (*it));
-        }
-        ++it;
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-#endif
-    if (validateCommandBuffersNotInUse(dev_data, commandPool))
+
+    if (validateCommandBuffersNotInUse(dev_data, commandPool, "reset"))
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
     if (!skipCall)
@@ -6837,11 +6768,10 @@ vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginIn
     // Validate command buffer level
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
-#if MTMERGESOURCE
         bool commandBufferComplete = false;
-        // MTMTODO : Merge this with code below
         // This implicitly resets the Cmd Buffer so make sure any fence is done and then clear memory references
         skipCall = checkCBCompleted(dev_data, commandBuffer, &commandBufferComplete);
+        clear_cmd_buf_and_mem_references(dev_data, pCB);
 
         if (!commandBufferComplete) {
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
@@ -6850,7 +6780,6 @@ vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginIn
                                 "You must check CB flag before this call.",
                                 commandBuffer);
         }
-#endif
         if (pCB->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
             // Secondary Command Buffer
             const VkCommandBufferInheritanceInfo *pInfo = pBeginInfo->pInheritanceInfo;
@@ -6862,14 +6791,14 @@ vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginIn
                             reinterpret_cast<void *>(commandBuffer));
             } else {
                 if (pBeginInfo->flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
-                    if (!pInfo->renderPass) { // renderpass should NOT be null for an Secondary CB
+                    if (!pInfo->renderPass) { // renderpass should NOT be null for a Secondary CB
                         skipCall |= log_msg(
                             dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
                             "vkBeginCommandBuffer(): Secondary Command Buffers (%p) must specify a valid renderpass parameter.",
                             reinterpret_cast<void *>(commandBuffer));
                     }
-                    if (!pInfo->framebuffer) { // framebuffer may be null for an Secondary CB, but this affects perf
+                    if (!pInfo->framebuffer) { // framebuffer may be null for a Secondary CB, but this affects perf
                         skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
                                             VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                                             reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE,
@@ -6882,9 +6811,7 @@ vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginIn
                         if (fbNode != dev_data->frameBufferMap.end()) {
                             VkRenderPass fbRP = fbNode->second.createInfo.renderPass;
                             if (!verify_renderpass_compatibility(dev_data, fbRP, pInfo->renderPass, errorString)) {
-                                // renderPass that framebuffer was created with
-                                // must
-                                // be compatible with local renderPass
+                                // renderPass that framebuffer was created with must be compatible with local renderPass
                                 skipCall |=
                                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                             VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
@@ -6963,11 +6890,7 @@ vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginIn
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     VkResult result = dev_data->device_dispatch_table->BeginCommandBuffer(commandBuffer, pBeginInfo);
-#if MTMERGESOURCE
-    loader_platform_thread_lock_mutex(&globalLock);
-    clear_cmd_buf_and_mem_references(dev_data, commandBuffer);
-    loader_platform_thread_unlock_mutex(&globalLock);
-#endif
+
     return result;
 }
 
@@ -7010,20 +6933,6 @@ vkResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags fl
     bool skipCall = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-#if MTMERGESOURCE
-    bool commandBufferComplete = false;
-    // Verify that CB is complete (not in-flight)
-    skipCall = checkCBCompleted(dev_data, commandBuffer, &commandBufferComplete);
-    if (!commandBufferComplete) {
-        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            (uint64_t)commandBuffer, __LINE__, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM",
-                            "Resetting CB %p before it has completed. You must check CB "
-                            "flag before calling vkResetCommandBuffer().",
-                            commandBuffer);
-    }
-    // Clear memory references as this point.
-    clear_cmd_buf_and_mem_references(dev_data, commandBuffer);
-#endif
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     VkCommandPool cmdPool = pCB->createInfo.commandPool;
     if (!(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT & dev_data->commandPoolMap[cmdPool].createFlags)) {
