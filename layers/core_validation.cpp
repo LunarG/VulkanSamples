@@ -3225,6 +3225,16 @@ static bool validatePipelineState(layer_data *my_data, const GLOBAL_CB_NODE *pCB
                 VkSampleCountFlagBits subpassNumSamples = (VkSampleCountFlagBits)0;
                 uint32_t i;
 
+                const VkPipelineColorBlendStateCreateInfo *pColorBlendState = pPipeline->graphicsPipelineCI.pColorBlendState;
+                if ((pColorBlendState != NULL) && (pCB->activeSubpass == pPipeline->graphicsPipelineCI.subpass) &&
+                    (pColorBlendState->attachmentCount != pSD->colorAttachmentCount)) {
+                    return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                                   reinterpret_cast<const uint64_t &>(pipeline), __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                   "Render pass subpass %u mismatch with blending state defined  and blend state attachment "
+                                   "count %u but subpass color attachment count %u!  These must be the same.",
+                                   pCB->activeSubpass, pColorBlendState->attachmentCount, pSD->colorAttachmentCount);
+                }
+
                 for (i = 0; i < pSD->colorAttachmentCount; i++) {
                     VkSampleCountFlagBits samples;
 
