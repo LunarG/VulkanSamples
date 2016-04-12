@@ -1233,8 +1233,8 @@ if len(sys.argv) > 3:
         extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface]
         extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, lunarg_debug_report]
     elif sys.platform.startswith('linux') and sys.argv[1] != 'Android':
-        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface]
-        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, lunarg_debug_report]
+        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface]
+        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, lunarg_debug_report]
     else: # android
         extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface]
         extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface, lunarg_debug_report]
@@ -1245,18 +1245,9 @@ else :
     elif sys.argv[1] == 'Android':
         extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface]
         extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface, lunarg_debug_report]
-    elif sys.argv[1] == 'Xcb':
-        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface]
-        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, lunarg_debug_report]
-    elif sys.argv[1] == 'Xlib':
-        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xlib_surface]
-        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xlib_surface, lunarg_debug_report]
-    elif sys.argv[1] == 'Wayland':
-        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_wayland_surface]
-        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_wayland_surface, lunarg_debug_report]
-    elif sys.argv[1] == 'Mir':
-        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_mir_surface]
-        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_mir_surface, lunarg_debug_report]
+    elif sys.argv[1] == 'Xcb' or sys.argv[1] == 'Xlib' or sys.argv[1] == 'Wayland' or sys.argv[1] == 'Mir':
+        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface]
+        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, lunarg_debug_report]
     else:
         print('Error: Undefined DisplayServer')
         extensions = []
