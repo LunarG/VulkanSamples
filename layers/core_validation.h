@@ -88,13 +88,6 @@ typedef enum _MEM_TRACK_ERROR {
     MEMTRACK_INVALID_MAP,                  // Size flag specified at alloc is too small for mapping range
 } MEM_TRACK_ERROR;
 
-// MemTracker Semaphore states
-typedef enum SemaphoreState {
-    MEMTRACK_SEMAPHORE_STATE_UNSET,     // Semaphore is in an undefined state
-    MEMTRACK_SEMAPHORE_STATE_SIGNALLED, // Semaphore has is in signalled state
-    MEMTRACK_SEMAPHORE_STATE_WAIT,      // Semaphore is in wait state
-} SemaphoreState;
-
 struct MemRange {
     VkDeviceSize offset;
     VkDeviceSize size;
@@ -604,8 +597,7 @@ class FENCE_NODE : public BASE_NODE {
 class SEMAPHORE_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
-    uint32_t signaled;
-    SemaphoreState state;
+    bool signaled;
     VkQueue queue;
 };
 
