@@ -563,14 +563,14 @@ vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
         loader_platform_thread_unlock_mutex(&loader_lock);
         return VK_ERROR_INITIALIZATION_FAILED;
     }
-    if (inst->phys_devs)
-        loader_heap_free(inst, inst->phys_devs);
     count = (inst->total_gpu_count < *pPhysicalDeviceCount) ?
 	    inst->total_gpu_count : *pPhysicalDeviceCount;
     *pPhysicalDeviceCount = count;
-    inst->phys_devs = (struct loader_physical_device_tramp *)loader_heap_alloc(
-        inst, count * sizeof(struct loader_physical_device_tramp),
-        VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    if (!inst->phys_devs) {
+        inst->phys_devs = (struct loader_physical_device_tramp *)loader_heap_alloc(
+            inst, inst->total_gpu_count * sizeof(struct loader_physical_device_tramp),
+            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    }
     if (!inst->phys_devs) {
         loader_platform_thread_unlock_mutex(&loader_lock);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
