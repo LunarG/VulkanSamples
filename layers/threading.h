@@ -27,6 +27,8 @@
 
 #ifndef THREADING_H
 #define THREADING_H
+#include <condition_variable>
+#include <mutex>
 #include <vector>
 #include "vk_layer_config.h"
 #include "vk_layer_logging.h"
@@ -53,9 +55,8 @@ struct object_use_data {
 
 struct layer_data;
 
-static int threadingLockInitialized = 0;
-static loader_platform_thread_mutex threadingLock;
-static loader_platform_thread_cond threadingCond;
+static std::mutex global_lock;
+static std::condition_variable global_condition;
 
 template <typename T> class counter {
   public:
@@ -65,7 +66,7 @@ template <typename T> class counter {
     void startWrite(debug_report_data *report_data, T object) {
         bool skipCall = false;
         loader_platform_thread_id tid = loader_platform_get_thread_id();
-        loader_platform_thread_lock_mutex(&threadingLock);
+        std::unique_lock<std::mutex> lock(global_lock);
         if (uses.find(object) == uses.end()) {
             // There is no current use of the object.  Record writer thread.
             struct object_use_data *use_data = &uses[object];
@@ -84,7 +85,7 @@ template <typename T> class counter {
                     if (skipCall) {
                         // Wait for thread-safe access to object instead of skipping call.
                         while (uses.find(object) != uses.end()) {
-                            loader_platform_thread_cond_wait(&threadingCond, &threadingLock);
+                            global_condition.wait(lock);
                         }
                         // There is now no current use of the object.  Record writer thread.
                         struct object_use_data *use_data = &uses[object];
@@ -111,7 +112,7 @@ template <typename T> class counter {
                     if (skipCall) {
                         // Wait for thread-safe access to object instead of skipping call.
                         while (uses.find(object) != uses.end()) {
-                            loader_platform_thread_cond_wait(&threadingCond, &threadingLock);
+                            global_condition.wait(lock);
                         }
                         // There is now no current use of the object.  Record writer thread.
                         struct object_use_data *use_data = &uses[object];
@@ -130,25 +131,24 @@ template <typename T> class counter {
                 }
             }
         }
-        loader_platform_thread_unlock_mutex(&threadingLock);
     }
 
     void finishWrite(T object) {
         // Object is no longer in use
-        loader_platform_thread_lock_mutex(&threadingLock);
+        std::unique_lock<std::mutex> lock(global_lock);
         uses[object].writer_count -= 1;
         if ((uses[object].reader_count == 0) && (uses[object].writer_count == 0)) {
             uses.erase(object);
         }
         // Notify any waiting threads that this object may be safe to use
-        loader_platform_thread_cond_broadcast(&threadingCond);
-        loader_platform_thread_unlock_mutex(&threadingLock);
+        lock.unlock();
+        global_condition.notify_all();
     }
 
     void startRead(debug_report_data *report_data, T object) {
         bool skipCall = false;
         loader_platform_thread_id tid = loader_platform_get_thread_id();
-        loader_platform_thread_lock_mutex(&threadingLock);
+        std::unique_lock<std::mutex> lock(global_lock);
         if (uses.find(object) == uses.end()) {
             // There is no current use of the object.  Record reader count
             struct object_use_data *use_data = &uses[object];
@@ -164,7 +164,7 @@ template <typename T> class counter {
             if (skipCall) {
                 // Wait for thread-safe access to object instead of skipping call.
                 while (uses.find(object) != uses.end()) {
-                    loader_platform_thread_cond_wait(&threadingCond, &threadingLock);
+                    global_condition.wait(lock);
                 }
                 // There is no current use of the object.  Record reader count
                 struct object_use_data *use_data = &uses[object];
@@ -178,17 +178,16 @@ template <typename T> class counter {
             // There are other readers of the object.  Increase reader count
             uses[object].reader_count += 1;
         }
-        loader_platform_thread_unlock_mutex(&threadingLock);
     }
     void finishRead(T object) {
-        loader_platform_thread_lock_mutex(&threadingLock);
+        std::unique_lock<std::mutex> lock(global_lock);
         uses[object].reader_count -= 1;
         if ((uses[object].reader_count == 0) && (uses[object].writer_count == 0)) {
             uses.erase(object);
         }
         // Notify and waiting threads that this object may be safe to use
-        loader_platform_thread_cond_broadcast(&threadingCond);
-        loader_platform_thread_unlock_mutex(&threadingLock);
+        lock.unlock();
+        global_condition.notify_all();
     }
     counter(const char *name = "", VkDebugReportObjectTypeEXT type = VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT) {
         typeName = name;
@@ -307,9 +306,9 @@ static std::unordered_map<VkCommandBuffer, VkCommandPool> command_pool_map;
 // VkCommandBuffer needs check for implicit use of command pool
 static void startWriteObject(struct layer_data *my_data, VkCommandBuffer object, bool lockPool = true) {
     if (lockPool) {
-        loader_platform_thread_lock_mutex(&threadingLock);
+        std::unique_lock<std::mutex> lock(global_lock);
         VkCommandPool pool = command_pool_map[object];
-        loader_platform_thread_unlock_mutex(&threadingLock);
+        lock.unlock();
         startWriteObject(my_data, pool);
     }
     my_data->c_VkCommandBuffer.startWrite(my_data->report_data, object);
@@ -317,24 +316,24 @@ static void startWriteObject(struct layer_data *my_data, VkCommandBuffer object,
 static void finishWriteObject(struct layer_data *my_data, VkCommandBuffer object, bool lockPool = true) {
     my_data->c_VkCommandBuffer.finishWrite(object);
     if (lockPool) {
-        loader_platform_thread_lock_mutex(&threadingLock);
+        std::unique_lock<std::mutex> lock(global_lock);
         VkCommandPool pool = command_pool_map[object];
-        loader_platform_thread_unlock_mutex(&threadingLock);
+        lock.unlock();
         finishWriteObject(my_data, pool);
     }
 }
 static void startReadObject(struct layer_data *my_data, VkCommandBuffer object) {
-    loader_platform_thread_lock_mutex(&threadingLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     VkCommandPool pool = command_pool_map[object];
-    loader_platform_thread_unlock_mutex(&threadingLock);
+    lock.unlock();
     startReadObject(my_data, pool);
     my_data->c_VkCommandBuffer.startRead(my_data->report_data, object);
 }
 static void finishReadObject(struct layer_data *my_data, VkCommandBuffer object) {
     my_data->c_VkCommandBuffer.finishRead(object);
-    loader_platform_thread_lock_mutex(&threadingLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     VkCommandPool pool = command_pool_map[object];
-    loader_platform_thread_unlock_mutex(&threadingLock);
+    lock.unlock();
     finishReadObject(my_data, pool);
 }
 #endif // THREADING_H
