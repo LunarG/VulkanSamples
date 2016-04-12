@@ -49,7 +49,8 @@ Param(
 # Start logging
 $log=$Env:Temp+"\VulkanRT"
 New-Item -ItemType Directory -Force -Path $log | Out-Null
-$log=$log+"\ConfigLayersAndVulkanDLL.log"
+$logascii=$log+"\ConfigLayersAndVulkanDLL.log"
+$log=$log+"\ConfigLayersAndVulkanDLL16.log"
 echo "ConfigLayersAndVulkanDLL.ps1 $majorabi $ossize" >$log
 (Get-Date).ToString() >>$log
 
@@ -85,14 +86,16 @@ function notNumeric ($x) {
 # We first create an array, with one array element for each vulkan-*dll in
 # C:\Windows\System32 (and C:\Windows\SysWOW64 on 64-bit systems), with each element
 # containing:
-#    <major>=<minor>=<patch>=<buildno>=<prerelease>=<prebuildno>=
+#    <major>=<minor>=<patch>=<buildno>=<prebuildno>=<prerelease>=
 #     filename
 #    @<major>@<minor>@<patch>@<buildno>@<prerelease>@<prebuildno>@
 # [Note that the above three lines are one element in the array.]
 # The build identifiers separated by "=" are suitable for sorting, i.e.
 # expanded to 10 digits with leading 0s. If <prerelease> or <prebuildno> are
 # not specified, "zzzzzzzzzz" is substituted for them, so that they sort
-# to a position after those that do specify them.
+# to a position after those that do specify them. Note that <prerelease>
+# is "less significant" in the sort than <prebuildno>, and that <prerelease> is
+# always treated as an alpha string, even though it may contain numeric characters.
 # The build identifiers separated by "@" are the original values extracted
 # from the file name. They are used later to find the path to the SDK
 # install directory for the given filename.
@@ -205,12 +208,12 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
        $minor = $minor.padleft(10,'0')
        $patch = $patch.padleft(10,'0')
        $buildno = $buildno.padleft(10,'0')
-       $prerelease = $prerelease.padleft(10,'0')
+       $prerelease = $prerelease.padright(10,'z')
        $prebuildno = $prebuildno.padleft(10,'0')
 
        # Add a new element to the $VulkanDllList array
        echo "Adding $_ to Vulkan dll list " >>$log
-       $script:VulkanDllList+="$major=$minor=$patch=$buildno=$prerelease=$prebuildno= $_ @$majorOrig@$minorOrig@$patchOrig@$buildnoOrig@$prereleaseOrig@$prebuildnoOrig@"
+       $script:VulkanDllList+="$major=$minor=$patch=$buildno=$prebuildno=$prerelease= $_ @$majorOrig@$minorOrig@$patchOrig@$buildnoOrig@$prereleaseOrig@$prebuildnoOrig@"
    }
 
     # If $VulkanDllList contains at least one element, there's at least one vulkan*.dll file.
@@ -414,16 +417,21 @@ if ($mrVulkanDllInstallDir -ne "") {
     }
 }
 
+# Final log output
 echo "ConfigLayersAndVulkanDLL.ps1 completed" >>$log
 (Get-Date).ToString() >>$log
+
+# Convert logfile to ascii
+cat $log | out-File -encoding ascii -filepath $logascii
+remove-item $log
 
 
 
 # SIG # Begin signature block
 # MIIcZgYJKoZIhvcNAQcCoIIcVzCCHFMCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUXAaVuJRboqiwfHon/TJIXS0m
-# ohqggheVMIIFHjCCBAagAwIBAgIQDmYEpPtQ2iBY4vC2AGq6uzANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUYfsT5QLkaMHYYJPT/dcA2uOb
+# QZKggheVMIIFHjCCBAagAwIBAgIQDmYEpPtQ2iBY4vC2AGq6uzANBgkqhkiG9w0B
 # AQsFADByMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMTEwLwYDVQQDEyhEaWdpQ2VydCBTSEEyIEFz
 # c3VyZWQgSUQgQ29kZSBTaWduaW5nIENBMB4XDTE1MDQzMDAwMDAwMFoXDTE2MDcw
@@ -554,22 +562,22 @@ echo "ConfigLayersAndVulkanDLL.ps1 completed" >>$log
 # QTIgQXNzdXJlZCBJRCBDb2RlIFNpZ25pbmcgQ0ECEA5mBKT7UNogWOLwtgBqursw
 # CQYFKw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcN
 # AQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUw
-# IwYJKoZIhvcNAQkEMRYEFLzB0lbx2Z662b5ESDWLj98ew1UOMA0GCSqGSIb3DQEB
-# AQUABIIBADsR0P8QxSNCPshQFDxK9Ezsrk25HyGM9a0SZOaGrL8ZSSZ6PY8Wz/bQ
-# i2we//wLD31wkdzj/VKBdFHTvheQiA3b094RcC+Ii3VsH4esb6gSBVEnfX0Iu5ZJ
-# o9k1L5CNS9nhJ+ydgKFmDS6R3MUCZi613yZpCe9ZFqsgf9UP/gQiZSC29es7WnaX
-# OtPrz5OAO/JTNFDnTO9d+rg/iYeN4ybDtuSp0j6fKQ/DPesmE/MZpcfD+kiRtY9u
-# x7o8IVv/lq0+5sRTaBogeauXVhEaA37jZdo0IbwESl8YvaHj2zstRBcT8AxMuGBW
-# H/FjShnOONEAPrFyFoPi8CFrXbrqJkahggIPMIICCwYJKoZIhvcNAQkGMYIB/DCC
+# IwYJKoZIhvcNAQkEMRYEFGpjhRSfXBNd4ZHr5Mknz86XvFU5MA0GCSqGSIb3DQEB
+# AQUABIIBAB/ZDshNP3Naz8QNijbSEqh/p+N/HALczpsBTNICUVrsmNtMVsrNkkWt
+# B2gu751OsoIOKIsZoD468btUs6kZ2Rde3df4I2v1wfHdRdX/PfBj3GagkmXe7VyO
+# E0AJWW0rjXn/0YZvC3g2EvYHpt1woEjqyvHlPYwrG9oxGqzzDPiOBKLNvAJc76Wi
+# SPdkVnPaUN/0wvNHNtDbDOypHJeoGzdsIP+PgEPu+2vwmCmji15bPVwpRrKCdoFB
+# 7SvZ8UoS2NzLDDX3JIkk7hnGq7iZg+Eaox4I5crVAs8bds5NxIegFC+PjhbQZ6Xa
+# nP5zqo+WCMnNmbgXcx24LXZR5aNyyDOhggIPMIICCwYJKoZIhvcNAQkGMYIB/DCC
 # AfgCAQEwdjBiMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkw
 # FwYDVQQLExB3d3cuZGlnaWNlcnQuY29tMSEwHwYDVQQDExhEaWdpQ2VydCBBc3N1
 # cmVkIElEIENBLTECEAMBmgI6/1ixa9bV6uYX8GYwCQYFKw4DAhoFAKBdMBgGCSqG
-# SIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTE2MDMyOTE5NDM0
-# NlowIwYJKoZIhvcNAQkEMRYEFBarBhBOgDzXlhQxxNXSfB14mBngMA0GCSqGSIb3
-# DQEBAQUABIIBACWObtn5lJ8laqfd55xT4EfWbvmPGV04c/CkDF6ziecEQxhCxUYi
-# rw8kV8nEhYa79qE5p3EXe+aZflRo70t21sr3s8GNHUW98pc0goIaC5rKzOVT3X0x
-# VH870qjVWdGMRRTUXlryBAQRv3LL93GyMIL1g1Y4uYKEU9PyrC8L26bsrGQggQEy
-# KxL0hopMSUNNE8glc1nbe/FGDylkHyi33qwNaz0buVLr7xCZQTpIecXat1mfvzPn
-# gsSr3+u9086Asz0QEbVmskhzFLSdd6QKpWjwYXWoyeFqrKlPdL4InHhRKFsEA8fQ
-# xV5A7ORVrXHOpPd+ZUrIhaggYDBqFiGWfmA=
+# SIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTE2MDQwNzE3Mjc1
+# NFowIwYJKoZIhvcNAQkEMRYEFBmn9lMkceYjM9LlCQ8aXz1CphDdMA0GCSqGSIb3
+# DQEBAQUABIIBAErb1GuAanOQcr24KSvVGpHsgZyHVyyYdhWzfMRSGyMYtrZ6uRG/
+# jFNyjQ9M/fkNlonvGVbZ+vpcH8XstRz71UYIGFIrCJ4nV0xVze9M8jV44cFWsowr
+# 1DT9aVildZ68yRDljKGdIEuyCjcx8Ycsv+7Fim8zme3JxDu0HjoqKTXUSWoAB9mE
+# FovggdyylzljZGYpO8Ggb5JV16FtN095vdxCZdGimXuY1RgjOjGPC46g3UXniFT+
+# 5o5ib8NSRJVSoCW8e0plsZwkzcesQ6v+4uwGhx/Zr84tKeoaypfiLCwb0flOBt1K
+# +IyweYliht9H5AHZOtBIzVgc2XTNXNZOKfI=
 # SIG # End signature block

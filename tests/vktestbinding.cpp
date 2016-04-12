@@ -121,6 +121,12 @@ VkPhysicalDeviceMemoryProperties PhysicalDevice::memory_properties() const {
     return info;
 }
 
+VkPhysicalDeviceFeatures PhysicalDevice::features() const {
+    VkPhysicalDeviceFeatures features;
+    vkGetPhysicalDeviceFeatures(handle(), &features);
+    return features;
+}
+
 /*
  * Return list of Global layers available
  */
@@ -289,7 +295,7 @@ void Device::init(std::vector<const char *> &layers,
         qi.queueFamilyIndex = i;
         qi.queueCount = queue_props[i].queueCount;
 
-        queue_priorities.emplace_back(qi.queueCount, 0.0);
+        queue_priorities.emplace_back(qi.queueCount, 0.0f);
 
         qi.pQueuePriorities = queue_priorities[i].data();
         if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
@@ -307,6 +313,10 @@ void Device::init(std::vector<const char *> &layers,
     dev_info.ppEnabledLayerNames = layers.data();
     dev_info.enabledExtensionCount = extensions.size();
     dev_info.ppEnabledExtensionNames = extensions.data();
+
+    // request all supportable features enabled
+    auto features = phy().features();
+    dev_info.pEnabledFeatures = &features;
 
     init(dev_info);
 }

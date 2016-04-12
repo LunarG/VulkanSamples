@@ -36,7 +36,7 @@ create and destroy Vulkan instance
 
 #define APP_SHORT_NAME "vulkansamples_instance"
 
-int main(int argc, char *argv[]) {
+int sample_main(int argc, char *argv[]) {
 
     /* VULKAN_KEY_START */
 

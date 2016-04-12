@@ -297,11 +297,8 @@ Simulation::Simulation(int object_count)
         float scale = mesh.scale(type);
 
         objects_.emplace_back(Object{
-            type,
-            glm::vec3(0.5 + 0.5 * (float) i / object_count),
-            color.pick(),
-            Animation(random_dev_(), scale),
-            Path(random_dev_()),
+            type, glm::vec3(0.5f + 0.5f * (float)i / object_count),
+            color.pick(), Animation(random_dev_(), scale), Path(random_dev_()),
         });
     }
 }

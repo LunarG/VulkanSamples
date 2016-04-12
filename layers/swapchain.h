@@ -64,9 +64,9 @@ typedef enum _SWAPCHAIN_ERROR {
     SWAPCHAIN_CREATE_SWAP_DIFF_SURFACE, // Called vkCreateSwapchainKHR() with pCreateInfo->oldSwapchain that has a different surface
                                         // than pCreateInfo->surface
     SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE, // Called vkDestroySwapchainKHR() with a different VkDevice than vkCreateSwapchainKHR()
-    SWAPCHAIN_APP_OWNS_TOO_MANY_IMAGES, // vkAcquireNextImageKHR() asked for more images than are available
+    SWAPCHAIN_APP_ACQUIRES_TOO_MANY_IMAGES, // vkAcquireNextImageKHR() asked for more images than are available
     SWAPCHAIN_INDEX_TOO_LARGE,          // Index is too large for swapchain
-    SWAPCHAIN_INDEX_NOT_IN_USE,         // vkQueuePresentKHR() given index that is not owned by app
+    SWAPCHAIN_INDEX_NOT_IN_USE,         // vkQueuePresentKHR() given index that is not acquired by app
     SWAPCHAIN_BAD_BOOL,                 // VkBool32 that doesn't have value of VK_TRUE or VK_FALSE (e.g. is a non-zero form of true)
     SWAPCHAIN_INVALID_COUNT,            // Second time a query called, the pCount value didn't match first time
     SWAPCHAIN_WRONG_STYPE,              // The sType for a struct has the wrong value
@@ -289,9 +289,9 @@ struct _SwpImage {
     // Corresponding VkSwapchainKHR (and info) to this VkImage:
     SwpSwapchain *pSwapchain;
 
-    // true if application got this image from vkAcquireNextImageKHR(), and
-    // hasn't yet called vkQueuePresentKHR() for it; otherwise false:
-    bool ownedByApp;
+    // true if application acquired this image from vkAcquireNextImageKHR(),
+    // and hasn't yet called vkQueuePresentKHR() for it; otherwise false:
+    bool acquiredByApp;
 };
 
 // Create one of these for each VkSwapchainKHR within a VkDevice:

@@ -116,7 +116,7 @@ public:
 
     uint32_t vertex_count() const
     {
-        return positions_.size();
+        return static_cast<uint32_t>(positions_.size());
     }
 
     VkDeviceSize vertex_buffer_size() const
@@ -142,7 +142,7 @@ public:
 
     uint32_t index_count() const
     {
-        return faces_.size() * 3;
+        return static_cast<uint32_t>(faces_.size()) * 3;
     }
 
     VkDeviceSize index_buffer_size() const

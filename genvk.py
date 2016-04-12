@@ -124,7 +124,7 @@ noVersions      = noExtensions = None
 # Copyright text prefixing all headers (list of strings).
 prefixStrings = [
     '/*',
-    '** Copyright (c) 2015 The Khronos Group Inc.',
+    '** Copyright (c) 2015-2016 The Khronos Group Inc.',
     '**',
     '** Permission is hereby granted, free of charge, to any person obtaining a',
     '** copy of this software and/or associated documentation files (the',
@@ -163,7 +163,8 @@ protectFeature = protect
 protectProto = protect
 
 buildList = [
-    # Vulkan 1.0 - core API + extensions. To generate just the core API,
+    # Vulkan 1.0 - header for core API + extensions.
+    # To generate just the core API,
     # change to 'defaultExtensions = None' below.
     [ COutputGenerator,
       CGeneratorOptions(
@@ -186,10 +187,13 @@ buildList = [
         apientryp         = 'VKAPI_PTR *',
         alignFuncParam    = 48)
     ],
-    # Vulkan 1.0 draft - core API include files for spec
+    # Vulkan 1.0 draft - API include files for spec and ref pages
     # Overwrites include subdirectories in spec source tree
     # The generated include files do not include the calling convention
     # macros (apientry etc.), unlike the header files.
+    # Because the 1.0 core branch includes ref pages for extensions,
+    # all the extension interfaces need to be generated, even though
+    # none are used by the core spec itself.
     [ DocOutputGenerator,
       DocGeneratorOptions(
         filename          = 'vulkan-docs',
@@ -197,9 +201,14 @@ buildList = [
         profile           = None,
         versions          = allVersions,
         emitversions      = allVersions,
-        defaultExtensions = 'vulkan',
-        addExtensions     = None,
-        removeExtensions  = None,
+        defaultExtensions = None,
+        addExtensions     =
+            makeREstring([
+                'VK_KHR_sampler_mirror_clamp_to_edge',
+            ]),
+        removeExtensions  =
+            makeREstring([
+            ]),
         prefixText        = prefixStrings + vkPrefixStrings,
         apicall           = '',
         apientry          = '',
@@ -209,7 +218,6 @@ buildList = [
         expandEnumerants  = False)
     ],
     # Vulkan 1.0 draft - API names to validate man/api spec includes & links
-    #    filename          = 'vkapi.py',
     [ PyOutputGenerator,
       DocGeneratorOptions(
         filename          = '../../doc/specs/vulkan/vkapi.py',
@@ -218,11 +226,16 @@ buildList = [
         versions          = allVersions,
         emitversions      = allVersions,
         defaultExtensions = None,
-        addExtensions     = None,
-        removeExtensions  = None)
+        addExtensions     =
+            makeREstring([
+                'VK_KHR_sampler_mirror_clamp_to_edge',
+            ]),
+        removeExtensions  =
+            makeREstring([
+            ]))
     ],
-    # Vulkan 1.0 draft - core API include files for spec
-    # Overwrites include subdirectories in spec source tree
+    # Vulkan 1.0 draft - core API validity files for spec
+    # Overwrites validity subdirectories in spec source tree
     [ ValidityOutputGenerator,
       DocGeneratorOptions(
         filename          = 'validity',
@@ -231,12 +244,17 @@ buildList = [
         versions          = allVersions,
         emitversions      = allVersions,
         defaultExtensions = None,
-        addExtensions     = None,
-        removeExtensions  = None,
+        addExtensions     =
+            makeREstring([
+                'VK_KHR_sampler_mirror_clamp_to_edge',
+            ]),
+        removeExtensions  =
+            makeREstring([
+            ]),
         genDirectory      = '../../doc/specs/vulkan')
     ],
-    # Vulkan 1.0 draft - core API include files for spec
-    # Overwrites include subdirectories in spec source tree
+    # Vulkan 1.0 draft - core API host sync table files for spec
+    # Overwrites subdirectory in spec source tree
     [ HostSynchronizationOutputGenerator,
       DocGeneratorOptions(
         filename          = 'hostsynctable',
@@ -245,8 +263,13 @@ buildList = [
         versions          = allVersions,
         emitversions      = allVersions,
         defaultExtensions = None,
-        addExtensions     = None,
-        removeExtensions  = None,
+        addExtensions     =
+            makeREstring([
+                'VK_KHR_sampler_mirror_clamp_to_edge',
+            ]),
+        removeExtensions  =
+            makeREstring([
+            ]),
         genDirectory      = '../../doc/specs/vulkan')
     ],
     # Vulkan 1.0 draft - thread checking layer

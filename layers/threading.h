@@ -63,7 +63,7 @@ template <typename T> class counter {
     VkDebugReportObjectTypeEXT objectType;
     std::unordered_map<T, object_use_data> uses;
     void startWrite(debug_report_data *report_data, T object) {
-        VkBool32 skipCall = VK_FALSE;
+        bool skipCall = false;
         loader_platform_thread_id tid = loader_platform_get_thread_id();
         loader_platform_thread_lock_mutex(&threadingLock);
         if (uses.find(object) == uses.end()) {
@@ -146,7 +146,7 @@ template <typename T> class counter {
     }
 
     void startRead(debug_report_data *report_data, T object) {
-        VkBool32 skipCall = VK_FALSE;
+        bool skipCall = false;
         loader_platform_thread_id tid = loader_platform_get_thread_id();
         loader_platform_thread_lock_mutex(&threadingLock);
         if (uses.find(object) == uses.end()) {

@@ -74,7 +74,8 @@ void Smoke::init_workers()
         worker_count = 1;
     }
 
-    const int object_per_worker = sim_.objects().size() / worker_count;
+    const int object_per_worker =
+        static_cast<int>(sim_.objects().size()) / worker_count;
     int object_begin = 0, object_end = 0;
 
     workers_.reserve(worker_count);
@@ -83,7 +84,7 @@ void Smoke::init_workers()
         if (i < worker_count - 1)
             object_end += object_per_worker;
         else
-            object_end = sim_.objects().size();
+            object_end = static_cast<int>(sim_.objects().size());
 
         Worker *worker = new Worker(*this, i, object_begin, object_end);
         workers_.emplace_back(std::unique_ptr<Worker>(worker));
@@ -471,7 +472,7 @@ void Smoke::create_buffers()
         object_data_size += alignment - (object_data_size % alignment);
 
     // update simulation
-    sim_.set_frame_data_size(object_data_size);
+    sim_.set_frame_data_size(static_cast<uint32_t>(object_data_size));
 
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -525,11 +526,11 @@ void Smoke::create_descriptor_sets()
 {
     VkDescriptorPoolSize desc_pool_size = {};
     desc_pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-    desc_pool_size.descriptorCount = frame_data_.size();
+    desc_pool_size.descriptorCount = static_cast<uint32_t>(frame_data_.size());
 
     VkDescriptorPoolCreateInfo desc_pool_info = {};
     desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    desc_pool_info.maxSets = frame_data_.size();
+    desc_pool_info.maxSets = static_cast<uint32_t>(frame_data_.size());
     desc_pool_info.poolSizeCount = 1;
     desc_pool_info.pPoolSizes = &desc_pool_size;
 

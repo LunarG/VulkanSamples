@@ -78,7 +78,7 @@ const char *fragShaderText =
     "   outColor = textureLod(tex, texcoord, 0.0);\n"
     "}\n";
 
-int main(int argc, char *argv[]) {
+int sample_main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Pipeline Derivative";

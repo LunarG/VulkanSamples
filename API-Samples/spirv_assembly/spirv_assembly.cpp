@@ -165,7 +165,7 @@ const std::string fragmentSPIRV =
         "               OpFunctionEnd\n";
 
 // clang-format on
-int main(int argc, char *argv[]) {
+int sample_main(int argc, char *argv[]) {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "SPIR-V Assembly";

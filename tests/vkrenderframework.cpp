@@ -38,7 +38,8 @@
     }
 
 VkRenderFramework::VkRenderFramework()
-    : m_commandPool(), m_commandBuffer(), m_renderPass(VK_NULL_HANDLE),
+    : inst(VK_NULL_HANDLE), m_device(NULL), m_commandPool(VK_NULL_HANDLE),
+      m_commandBuffer(NULL), m_renderPass(VK_NULL_HANDLE),
       m_framebuffer(VK_NULL_HANDLE), m_width(256.0), // default window width
       m_height(256.0),                               // default window height
       m_render_target_fmt(VK_FORMAT_R8G8B8A8_UNORM),
@@ -1212,7 +1213,7 @@ void VkPipelineObj::AddColorAttachment(
 }
 
 void VkPipelineObj::SetDepthStencil(
-    VkPipelineDepthStencilStateCreateInfo *ds_state) {
+    const VkPipelineDepthStencilStateCreateInfo *ds_state) {
     m_ds_state.depthTestEnable = ds_state->depthTestEnable;
     m_ds_state.depthWriteEnable = ds_state->depthWriteEnable;
     m_ds_state.depthBoundsTestEnable = ds_state->depthBoundsTestEnable;
@@ -1222,7 +1223,7 @@ void VkPipelineObj::SetDepthStencil(
     m_ds_state.front = ds_state->front;
 }
 
-void VkPipelineObj::SetViewport(vector<VkViewport> viewports) {
+void VkPipelineObj::SetViewport(const vector<VkViewport> viewports) {
     m_viewports = viewports;
     // If we explicitly set a null viewport, pass it through to create info
     // but preserve viewportCount because it musn't change
@@ -1231,7 +1232,7 @@ void VkPipelineObj::SetViewport(vector<VkViewport> viewports) {
     }
 }
 
-void VkPipelineObj::SetScissor(vector<VkRect2D> scissors) {
+void VkPipelineObj::SetScissor(const vector<VkRect2D> scissors) {
     m_scissors = scissors;
     // If we explicitly set a null scissors, pass it through to create info
     // but preserve viewportCount because it musn't change
@@ -1250,9 +1251,26 @@ void VkPipelineObj::MakeDynamic(VkDynamicState state) {
     m_dynamic_state_enables.push_back(state);
 }
 
-void VkPipelineObj::SetMSAA(VkPipelineMultisampleStateCreateInfo *ms_state) {
-    memcpy(&m_ms_state, ms_state, sizeof(VkPipelineMultisampleStateCreateInfo));
+void VkPipelineObj::SetMSAA(
+    const VkPipelineMultisampleStateCreateInfo *ms_state) {
+    m_ms_state = *ms_state;
 }
+
+void VkPipelineObj::SetInputAssembly(
+    const VkPipelineInputAssemblyStateCreateInfo *ia_state) {
+    m_ia_state = *ia_state;
+}
+
+void VkPipelineObj::SetRasterization(
+    const VkPipelineRasterizationStateCreateInfo *rs_state) {
+    m_rs_state = *rs_state;
+}
+
+void VkPipelineObj::SetTessellation(
+    const VkPipelineTessellationStateCreateInfo *te_state) {
+    m_te_state = *te_state;
+}
+
 
 VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout,
                                          VkRenderPass render_pass) {
@@ -1267,14 +1285,8 @@ VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout,
             m_shaderObjs[i]->GetStageCreateInfo();
     }
 
-    if (m_vi_state.vertexAttributeDescriptionCount &&
-        m_vi_state.vertexBindingDescriptionCount) {
-        m_vi_state.sType =
-            VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        info.pVertexInputState = &m_vi_state;
-    } else {
-        info.pVertexInputState = NULL;
-    }
+    m_vi_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    info.pVertexInputState = &m_vi_state;
 
     info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     info.pNext = NULL;
@@ -1307,13 +1319,20 @@ VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout,
 
     info.renderPass = render_pass;
     info.subpass = 0;
-    info.pTessellationState = NULL;
     info.pInputAssemblyState = &m_ia_state;
     info.pViewportState = &m_vp_state;
     info.pRasterizationState = &m_rs_state;
     info.pMultisampleState = &m_ms_state;
     info.pDepthStencilState = &m_ds_state;
     info.pColorBlendState = &m_cb_state;
+
+    if (m_ia_state.topology == VK_PRIMITIVE_TOPOLOGY_PATCH_LIST) {
+        m_te_state.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+        info.pTessellationState = &m_te_state;
+    }
+    else {
+        info.pTessellationState = nullptr;
+    }
 
     return init_try(*m_device, info);
 }
