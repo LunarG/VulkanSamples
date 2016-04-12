@@ -4374,6 +4374,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->status = 0;
         pCB->viewports.clear();
         pCB->scissors.clear();
+
         for (uint32_t i = 0; i < VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
             // Before clearing lastBoundState, remove any CB bindings from all uniqueBoundSets
             for (auto set : pCB->lastBound[i].uniqueBoundSets) {
@@ -4384,11 +4385,11 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
             }
             pCB->lastBound[i].reset();
         }
+
         memset(&pCB->activeRenderPassBeginInfo, 0, sizeof(pCB->activeRenderPassBeginInfo));
         pCB->activeRenderPass = 0;
         pCB->activeSubpassContents = VK_SUBPASS_CONTENTS_INLINE;
         pCB->activeSubpass = 0;
-        pCB->framebuffer = 0;
         pCB->fenceId = 0;
         pCB->lastSubmittedFence = VK_NULL_HANDLE;
         pCB->lastSubmittedQueue = VK_NULL_HANDLE;
@@ -4416,6 +4417,16 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->updateBuffers.clear();
         clear_cmd_buf_and_mem_references(dev_data, pCB);
         pCB->eventUpdates.clear();
+
+        // Remove this cmdBuffer's reference from each FrameBuffer's CB ref list
+        for (auto framebuffer : pCB->framebuffers) {
+            auto fbNode = dev_data->frameBufferMap.find(framebuffer);
+            if (fbNode != dev_data->frameBufferMap.end()) {
+                fbNode->second.referencingCmdBuffers.erase(pCB->commandBuffer);
+            }
+        }
+        pCB->framebuffers.clear();
+
     }
 }
 
@@ -6951,6 +6962,7 @@ vkResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags fl
     }
     return result;
 }
+
 #if MTMERGESOURCE
 // TODO : For any vkCmdBind* calls that include an object which has mem bound to it,
 //    need to account for that mem now having binding to given commandBuffer
@@ -9494,9 +9506,9 @@ vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo 
             pCB->activeRenderPassBeginInfo = *pRenderPassBegin;
             pCB->activeSubpass = 0;
             pCB->activeSubpassContents = contents;
-            pCB->framebuffer = pRenderPassBegin->framebuffer;
+            pCB->framebuffers.insert(pRenderPassBegin->framebuffer);
             // Connect this framebuffer to this cmdBuffer
-            dev_data->frameBufferMap[pCB->framebuffer].referencingCmdBuffers.insert(pCB->commandBuffer);
+            dev_data->frameBufferMap[pRenderPassBegin->framebuffer].referencingCmdBuffers.insert(pCB->commandBuffer);
         } else {
             skipCall |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
@@ -9734,7 +9746,7 @@ static bool validateFramebuffer(layer_data *dev_data, VkCommandBuffer primaryBuf
     if (!pSubCB->beginInfo.pInheritanceInfo) {
         return skip_call;
     }
-    VkFramebuffer primary_fb = pCB->framebuffer;
+    VkFramebuffer primary_fb = dev_data->renderPassMap[pCB->activeRenderPass]->fb;
     VkFramebuffer secondary_fb = pSubCB->beginInfo.pInheritanceInfo->framebuffer;
     if (secondary_fb != VK_NULL_HANDLE) {
         if (primary_fb != secondary_fb) {

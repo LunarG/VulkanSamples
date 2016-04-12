@@ -903,7 +903,7 @@ struct GLOBAL_CB_NODE {
     VkRenderPass activeRenderPass;
     VkSubpassContents activeSubpassContents;
     uint32_t activeSubpass;
-    VkFramebuffer framebuffer;
+    std::unordered_set<VkFramebuffer> framebuffers;
     // Track descriptor sets that are destroyed or updated while bound to CB
     // TODO : These data structures relate to tracking resources that invalidate
     //  a cmd buffer that references them. Need to unify how we handle these
