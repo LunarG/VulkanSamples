@@ -85,6 +85,17 @@ model {
                 dependencies {
                     project ":nativeactivity" linkage "static"
                     library "shaderc"         linkage "static"
+                 }
+                source {
+                    srcDir 'src/main/jni'
+                    srcDir '../../dbgcreatemsgcallback'
+                    srcDir '../../ext/'
+                    srcDir '../../utils'
+                    srcDir vulkanWrapperPath
+                }
+            }
+            jniLibs {
+                dependencies {
                     project ":threading"
                     project ":parameter_validation"
                     project ":object_tracker"
@@ -93,13 +104,6 @@ model {
                     project ":image"
                     project ":swapchain"
                     project ":unique_objects"
-                 }
-                source {
-                    srcDir 'src/main/jni'
-                    srcDir '../../dbgcreatemsgcallback'
-                    srcDir '../../ext/'
-                    srcDir '../../utils'
-                    srcDir vulkanWrapperPath
                 }
             }
             assets {

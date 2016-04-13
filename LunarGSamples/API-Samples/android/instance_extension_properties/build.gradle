@@ -85,7 +85,6 @@ model {
                 dependencies {
                     project ":nativeactivity" linkage "static"
                     library "shaderc"         linkage "static"
-                    
                  }
                 source {
                     srcDir 'src/main/jni'
@@ -93,6 +92,11 @@ model {
                     srcDir '../../ext/'
                     srcDir '../../utils'
                     srcDir vulkanWrapperPath
+                }
+            }
+            jniLibs {
+                dependencies {
+                    
                 }
             }
             assets {
