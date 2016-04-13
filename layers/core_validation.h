@@ -699,7 +699,7 @@ typedef struct _DESCRIPTOR_POOL_NODE {
             uint32_t i = 0;
             for (i = 0; i < createInfo.poolSizeCount; ++i) {
                 uint32_t typeIndex = static_cast<uint32_t>(createInfo.pPoolSizes[i].type);
-				// Same descriptor types can appear several times
+                // Same descriptor types can appear several times
                 maxDescriptorTypeCount[typeIndex] += createInfo.pPoolSizes[i].descriptorCount;
                 availableDescriptorTypeCount[typeIndex] = maxDescriptorTypeCount[typeIndex];
             }
