@@ -908,8 +908,8 @@ struct GLOBAL_CB_NODE {
     // TODO : These data structures relate to tracking resources that invalidate
     //  a cmd buffer that references them. Need to unify how we handle these
     //  cases so we don't have different tracking data for each type.
-    std::set<VkDescriptorSet> destroyedSets;
-    std::set<VkDescriptorSet> updatedSets;
+    unordered_set<VkDescriptorSet> destroyedSets;
+    unordered_set<VkDescriptorSet> updatedSets;
     unordered_set<VkFramebuffer> destroyedFramebuffers;
     vector<VkEvent> waitedEvents;
     vector<VkSemaphore> semaphores;
