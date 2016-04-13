@@ -136,9 +136,6 @@ struct layer_data {
     unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> imageLayoutMap;
     unordered_map<VkRenderPass, RENDER_PASS_NODE *> renderPassMap;
     unordered_map<VkShaderModule, unique_ptr<shader_module>> shaderModuleMap;
-    // Current render pass
-    VkRenderPassBeginInfo renderPassBeginInfo;
-    uint32_t currentSubpass;
     VkDevice device;
 
     // Device specific data
@@ -147,7 +144,7 @@ struct layer_data {
 
     layer_data()
         : report_data(nullptr), device_dispatch_table(nullptr), instance_dispatch_table(nullptr), device_extensions(),
-          currentFenceId(1), renderPassBeginInfo{}, currentSubpass(0), device(VK_NULL_HANDLE), phys_dev_properties{},
+          currentFenceId(1), device(VK_NULL_HANDLE), phys_dev_properties{},
           phys_dev_mem_props{} {};
 };
 
@@ -9464,11 +9461,6 @@ vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo 
     loader_platform_thread_unlock_mutex(&globalLock);
     if (!skipCall) {
         dev_data->device_dispatch_table->CmdBeginRenderPass(commandBuffer, pRenderPassBegin, contents);
-        loader_platform_thread_lock_mutex(&globalLock);
-        // This is a shallow copy as that is all that is needed for now
-        dev_data->renderPassBeginInfo = *pRenderPassBegin;
-        dev_data->currentSubpass = 0;
-        loader_platform_thread_unlock_mutex(&globalLock);
     }
 }
 
@@ -9477,7 +9469,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdNextSubpass(VkCommandBuffer comm
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
-    TransitionSubpassLayouts(commandBuffer, &dev_data->renderPassBeginInfo, ++dev_data->currentSubpass);
     if (pCB) {
         skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdNextSubpass");
         skipCall |= addCmd(dev_data, pCB, CMD_NEXTSUBPASS, "vkCmdNextSubpass()");
@@ -9529,7 +9520,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndRenderPass(VkCommandBuffer co
     }
 #endif
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
-    TransitionFinalSubpassLayouts(commandBuffer, &dev_data->renderPassBeginInfo);
     if (pCB) {
         skipCall |= outsideRenderPass(dev_data, pCB, "vkCmdEndRenderpass");
         skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdEndRenderPass");
