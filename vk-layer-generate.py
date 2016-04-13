@@ -208,7 +208,7 @@ class Subcommand(object):
  * Copyright (c) 2015-2016 The Khronos Group Inc.
  * Copyright (c) 2015-2016 Valve Corporation
  * Copyright (c) 2015-2016 LunarG, Inc.
- * Copyright (c) 2015 Google, Inc.
+ * Copyright (c) 2015-2016 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and/or associated documentation files (the "Materials"), to
@@ -1435,7 +1435,7 @@ class UniqueObjectsSubcommand(Subcommand):
                 (name, array) = obj.split('[')
                 array = array.strip(']')
             ptr_type = False
-            if 'p' == obj[0] and obj[1] != obj[1].lower(): # TODO : Not idea way to determine ptr
+            if 'p' == obj[0] and obj[1] != obj[1].lower(): # TODO : Not ideal way to determine ptr
                 ptr_type = True
             if isinstance(struct_uses[obj], dict):
                 local_prefix = ''
@@ -1480,7 +1480,7 @@ class UniqueObjectsSubcommand(Subcommand):
             else:
                 if (array_index > 0) or array != '': # TODO : This is not ideal, really want to know if we're anywhere under an array
                     if first_level_param:
-                        pre_code += '%s%s* local_%s = NULL;\n' % (indent, struct_uses[obj], name)
+                        decls += '%s%s* local_%s = NULL;\n' % (indent, struct_uses[obj], name)
                     if array != '' and not first_level_param: # ptrs under structs will have been initialized so use local_*
                         pre_code += '%sif (local_%s%s) {\n' %(indent, prefix, name)
                     else:
@@ -1499,7 +1499,7 @@ class UniqueObjectsSubcommand(Subcommand):
                     pName = 'p%s' % (struct_uses[obj][2:])
                     if name not in vector_name_set:
                         vector_name_set.add(name)
-                    pre_code += '%slocal_%s%s = (%s)((VkUniqueObject*)%s%s)->actualObject;\n' % (indent, prefix, name, struct_uses[obj], prefix, name)
+                    pre_code += '%slocal_%s%s = (%s)my_map_data->unique_id_mapping[reinterpret_cast<uint64_t>(%s%s)];\n' % (indent, prefix, name, struct_uses[obj], prefix, name)
                     if array != '':
                         indent = indent[4:]
                         pre_code += '%s}\n' % (indent)
@@ -1507,18 +1507,13 @@ class UniqueObjectsSubcommand(Subcommand):
                     pre_code += '%s}\n' % (indent)
                 else:
                     pre_code += '%s\n' % (self.lineinfo.get())
-                    pre_code += '%sif (%s%s) {\n' %(indent, prefix, name)
-                    indent += '    '
                     deref_txt = '&'
                     if ptr_type:
                         deref_txt = ''
                     if '->' in prefix: # need to update local struct
-                        pre_code += '%slocal_%s%s = (%s)((VkUniqueObject*)%s%s)->actualObject;\n' % (indent, prefix, name, struct_uses[obj], prefix, name)
+                        pre_code += '%slocal_%s%s = (%s)my_map_data->unique_id_mapping[reinterpret_cast<uint64_t>(%s%s)];\n' % (indent, prefix, name, struct_uses[obj], prefix, name)
                     else:
-                        pre_code += '%s%s* p%s = (%s*)%s%s%s;\n' % (indent, struct_uses[obj], name, struct_uses[obj], deref_txt, prefix, name)
-                        pre_code += '%s*p%s = (%s)((VkUniqueObject*)%s%s)->actualObject;\n' % (indent, name, struct_uses[obj], prefix, name)
-                    indent = indent[4:]
-                    pre_code += '%s}\n' % (indent)
+                        pre_code += '%s%s = (%s)my_map_data->unique_id_mapping[reinterpret_cast<uint64_t>(%s)];\n' % (indent, name, struct_uses[obj], name)
         return decls, pre_code, post_code
 
     def generate_intercept(self, proto, qual):
@@ -1533,8 +1528,11 @@ class UniqueObjectsSubcommand(Subcommand):
         # A few API cases that are manual code
         # TODO : Special case Create*Pipelines funcs to handle creating multiple unique objects
         explicit_object_tracker_functions = ['GetSwapchainImagesKHR',
+                                             'CreateSwapchainKHR',
                                              'CreateInstance',
+                                             'DestroyInstance',
                                              'CreateDevice',
+                                             'DestroyDevice',
                                              'CreateComputePipelines',
                                              'CreateGraphicsPipelines'
                                              ]
@@ -1566,14 +1564,22 @@ class UniqueObjectsSubcommand(Subcommand):
         # First thing we need to do is gather uses of non-dispatchable-objects (ndos)
         (struct_uses, local_decls) = get_object_uses(vulkan.object_non_dispatch_list, proto.params[1:last_param_index])
 
+        dispatch_param = proto.params[0].name
+        if 'CreateInstance' in proto.name:
+           dispatch_param = '*' + proto.params[1].name
+        pre_call_txt += '%slayer_data *my_map_data = get_my_data_ptr(get_dispatch_key(%s), layer_data_map);\n' % (indent, dispatch_param)
         if len(struct_uses) > 0:
             pre_call_txt += '// STRUCT USES:%s\n' % sorted(struct_uses)
             if len(local_decls) > 0:
                 pre_call_txt += '//LOCAL DECLS:%s\n' % sorted(local_decls)
             if destroy_func: # only one object
                 for del_obj in sorted(struct_uses):
-                    pre_call_txt += '%s%s local_%s = %s;\n' % (indent, struct_uses[del_obj], del_obj, del_obj)
-            (pre_decl, pre_code, post_code) = self._gen_obj_code(struct_uses, local_decls, '    ', '', 0, set(), True)
+                    #pre_call_txt += '%s%s local_%s = %s;\n' % (indent, struct_uses[del_obj], del_obj, del_obj)
+                    pre_call_txt += '%suint64_t local_%s = reinterpret_cast<uint64_t>(%s);\n' % (indent, del_obj, del_obj)
+                    pre_call_txt += '%s%s = (%s)my_map_data->unique_id_mapping[local_%s];\n' % (indent, del_obj, struct_uses[del_obj], del_obj)
+                    (pre_decl, pre_code, post_code) = ('', '', '')
+            else:
+                (pre_decl, pre_code, post_code) = self._gen_obj_code(struct_uses, local_decls, '    ', '', 0, set(), True)
             # This is a bit hacky but works for now. Need to decl local versions of top-level structs
             for ld in sorted(local_decls):
                 init_null_txt = 'NULL';
@@ -1581,6 +1587,8 @@ class UniqueObjectsSubcommand(Subcommand):
                     init_null_txt = '{}';
                 if local_decls[ld].strip('*') not in vulkan.object_non_dispatch_list:
                     pre_decl += '    safe_%s local_%s = %s;\n' % (local_decls[ld], ld, init_null_txt)
+            if pre_code != '': # lock around map uses
+                pre_code = '%s{\n%sstd::lock_guard<std::mutex> lock(global_lock);\n%s%s}\n' % (indent, indent, pre_code, indent)
             pre_call_txt += '%s%s' % (pre_decl, pre_code)
             post_call_txt += '%s' % (post_code)
         elif create_func:
@@ -1595,9 +1603,6 @@ class UniqueObjectsSubcommand(Subcommand):
         if proto.ret != "void":
             ret_val = "%s result = " % proto.ret
             ret_stmt = "    return result;\n"
-        dispatch_param = proto.params[0].name
-        if 'CreateInstance' in proto.name:
-           dispatch_param = '*' + proto.params[1].name
         if create_func:
             obj_type = proto.params[-1].ty.strip('*')
             obj_name = proto.params[-1].name
@@ -1605,22 +1610,22 @@ class UniqueObjectsSubcommand(Subcommand):
                 local_name = "unique%s" % obj_type[2:]
                 post_call_txt += '%sif (VK_SUCCESS == result) {\n' % (indent)
                 indent += '    '
+                post_call_txt += '%sstd::lock_guard<std::mutex> lock(global_lock);\n' % (indent)
                 if obj_name in custom_create_dict:
                     post_call_txt += '%s\n' % (self.lineinfo.get())
                     local_name = '%ss' % (local_name) # add 's' to end for vector of many
-                    post_call_txt += '%sstd::vector<VkUniqueObject*> %s = {};\n' % (indent, local_name)
                     post_call_txt += '%sfor (uint32_t i=0; i<%s; ++i) {\n' % (indent, custom_create_dict[obj_name])
                     indent += '    '
-                    post_call_txt += '%s%s.push_back(new VkUniqueObject());\n' % (indent, local_name)
-                    post_call_txt += '%s%s[i]->actualObject = (uint64_t)%s[i];\n' % (indent, local_name, obj_name)
-                    post_call_txt += '%s%s[i] = (%s)%s[i];\n' % (indent, obj_name, obj_type, local_name)
+                    post_call_txt += '%suint64_t unique_id = my_map_data->unique_id++;\n' % (indent)
+                    post_call_txt += '%smy_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t>(%s[i]);\n' % (indent, obj_name)
+                    post_call_txt += '%s%s[i] = reinterpret_cast<%s>(unique_id);\n' % (indent, obj_name, obj_type)
                     indent = indent[4:]
                     post_call_txt += '%s}\n' % (indent)
                 else:
                     post_call_txt += '%s\n' % (self.lineinfo.get())
-                    post_call_txt += '%sVkUniqueObject* %s = new VkUniqueObject();\n' % (indent, local_name)
-                    post_call_txt += '%s%s->actualObject = (uint64_t)*%s;\n' % (indent, local_name, obj_name)
-                    post_call_txt += '%s*%s = (%s)%s;\n' % (indent, obj_name, obj_type, local_name)
+                    post_call_txt += '%suint64_t unique_id = my_map_data->unique_id++;\n' % (indent)
+                    post_call_txt += '%smy_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t>(*%s);\n' % (indent, obj_name)
+                    post_call_txt += '%s*%s = reinterpret_cast<%s>(unique_id);\n' % (indent, obj_name, obj_type)
                 indent = indent[4:]
                 post_call_txt += '%s}\n' % (indent)
         elif destroy_func:
@@ -1635,7 +1640,8 @@ class UniqueObjectsSubcommand(Subcommand):
                 post_call_txt += '%s}\n' % (indent)
             else:
                 post_call_txt += '%s\n' % (self.lineinfo.get())
-                post_call_txt = '%sdelete (VkUniqueObject*)local_%s;\n' % (indent, proto.params[-2].name)
+                post_call_txt += '%sstd::lock_guard<std::mutex> lock(global_lock);\n' % (indent)
+                post_call_txt += '%smy_map_data->unique_id_mapping.erase(local_%s);\n' % (indent, proto.params[-2].name)
 
         call_sig = proto.c_call()
         # Replace default params with any custom local params
