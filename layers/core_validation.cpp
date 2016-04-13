@@ -2113,12 +2113,13 @@ static bool attachment_references_compatible(const uint32_t index, const VkAttac
 // For give primary and secondary RenderPass objects, verify that they're compatible
 static bool verify_renderpass_compatibility(layer_data *my_data, const VkRenderPass primaryRP, const VkRenderPass secondaryRP,
                                             string &errorMsg) {
-    stringstream errorStr;
     if (my_data->renderPassMap.find(primaryRP) == my_data->renderPassMap.end()) {
+        stringstream errorStr;
         errorStr << "invalid VkRenderPass (" << primaryRP << ")";
         errorMsg = errorStr.str();
         return false;
     } else if (my_data->renderPassMap.find(secondaryRP) == my_data->renderPassMap.end()) {
+        stringstream errorStr;
         errorStr << "invalid VkRenderPass (" << secondaryRP << ")";
         errorMsg = errorStr.str();
         return false;
@@ -2130,6 +2131,7 @@ static bool verify_renderpass_compatibility(layer_data *my_data, const VkRenderP
     const VkRenderPassCreateInfo *primaryRPCI = my_data->renderPassMap[primaryRP]->pCreateInfo;
     const VkRenderPassCreateInfo *secondaryRPCI = my_data->renderPassMap[secondaryRP]->pCreateInfo;
     if (primaryRPCI->subpassCount != secondaryRPCI->subpassCount) {
+        stringstream errorStr;
         errorStr << "RenderPass for primary cmdBuffer has " << primaryRPCI->subpassCount
                  << " subpasses but renderPass for secondary cmdBuffer has " << secondaryRPCI->subpassCount << " subpasses.";
         errorMsg = errorStr.str();
@@ -2145,6 +2147,7 @@ static bool verify_renderpass_compatibility(layer_data *my_data, const VkRenderP
             if (!attachment_references_compatible(cIdx, primaryRPCI->pSubpasses[spIndex].pColorAttachments, primaryColorCount,
                                                   primaryRPCI->pAttachments, secondaryRPCI->pSubpasses[spIndex].pColorAttachments,
                                                   secondaryColorCount, secondaryRPCI->pAttachments)) {
+                stringstream errorStr;
                 errorStr << "color attachments at index " << cIdx << " of subpass index " << spIndex << " are not compatible.";
                 errorMsg = errorStr.str();
                 return false;
@@ -2152,6 +2155,7 @@ static bool verify_renderpass_compatibility(layer_data *my_data, const VkRenderP
                                                          primaryColorCount, primaryRPCI->pAttachments,
                                                          secondaryRPCI->pSubpasses[spIndex].pResolveAttachments,
                                                          secondaryColorCount, secondaryRPCI->pAttachments)) {
+                stringstream errorStr;
                 errorStr << "resolve attachments at index " << cIdx << " of subpass index " << spIndex << " are not compatible.";
                 errorMsg = errorStr.str();
                 return false;
@@ -2162,6 +2166,7 @@ static bool verify_renderpass_compatibility(layer_data *my_data, const VkRenderP
                                               1, primaryRPCI->pAttachments,
                                               secondaryRPCI->pSubpasses[spIndex].pDepthStencilAttachment,
                                               1, secondaryRPCI->pAttachments)) {
+            stringstream errorStr;
             errorStr << "depth/stencil attachments of subpass index " << spIndex << " are not compatible.";
             errorMsg = errorStr.str();
             return false;
@@ -2174,6 +2179,7 @@ static bool verify_renderpass_compatibility(layer_data *my_data, const VkRenderP
             if (!attachment_references_compatible(i, primaryRPCI->pSubpasses[spIndex].pInputAttachments, primaryColorCount,
                                                   primaryRPCI->pAttachments, secondaryRPCI->pSubpasses[spIndex].pInputAttachments,
                                                   secondaryColorCount, secondaryRPCI->pAttachments)) {
+                stringstream errorStr;
                 errorStr << "input attachments at index " << i << " of subpass index " << spIndex << " are not compatible.";
                 errorMsg = errorStr.str();
                 return false;
@@ -2186,14 +2192,15 @@ static bool verify_renderpass_compatibility(layer_data *my_data, const VkRenderP
 // For give SET_NODE, verify that its Set is compatible w/ the setLayout corresponding to pipelineLayout[layoutIndex]
 static bool verify_set_layout_compatibility(layer_data *my_data, const SET_NODE *pSet, const VkPipelineLayout layout,
                                             const uint32_t layoutIndex, string &errorMsg) {
-    stringstream errorStr;
     auto pipeline_layout_it = my_data->pipelineLayoutMap.find(layout);
     if (pipeline_layout_it == my_data->pipelineLayoutMap.end()) {
+        stringstream errorStr;
         errorStr << "invalid VkPipelineLayout (" << layout << ")";
         errorMsg = errorStr.str();
         return false;
     }
     if (layoutIndex >= pipeline_layout_it->second.descriptorSetLayouts.size()) {
+        stringstream errorStr;
         errorStr << "VkPipelineLayout (" << layout << ") only contains " << pipeline_layout_it->second.descriptorSetLayouts.size()
                  << " setLayouts corresponding to sets 0-" << pipeline_layout_it->second.descriptorSetLayouts.size() - 1
                  << ", but you're attempting to bind set to index " << layoutIndex;
@@ -2207,6 +2214,7 @@ static bool verify_set_layout_compatibility(layer_data *my_data, const SET_NODE 
     }
     size_t descriptorCount = pLayoutNode->descriptorTypes.size();
     if (descriptorCount != pSet->pLayout->descriptorTypes.size()) {
+        stringstream errorStr;
         errorStr << "setLayout " << layoutIndex << " from pipelineLayout " << layout << " has " << descriptorCount
                  << " descriptors, but corresponding set being bound has " << pSet->pLayout->descriptorTypes.size()
                  << " descriptors.";
@@ -2219,6 +2227,7 @@ static bool verify_set_layout_compatibility(layer_data *my_data, const SET_NODE 
         //  TODO : Is below sufficient? Making sure that types & stageFlags match per descriptor
         //    do we also need to check immutable samplers?
         if (pLayoutNode->descriptorTypes[i] != pSet->pLayout->descriptorTypes[i]) {
+            stringstream errorStr;
             errorStr << "descriptor " << i << " for descriptorSet being bound is type '"
                      << string_VkDescriptorType(pSet->pLayout->descriptorTypes[i])
                      << "' but corresponding descriptor from pipelineLayout is type '"
@@ -2227,6 +2236,7 @@ static bool verify_set_layout_compatibility(layer_data *my_data, const SET_NODE 
             return false;
         }
         if (pLayoutNode->stageFlags[i] != pSet->pLayout->stageFlags[i]) {
+            stringstream errorStr;
             errorStr << "stageFlags " << i << " for descriptorSet being bound is " << pSet->pLayout->stageFlags[i]
                      << "' but corresponding descriptor from pipelineLayout has stageFlags " << pLayoutNode->stageFlags[i];
             errorMsg = errorStr.str();
