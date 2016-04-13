@@ -8184,7 +8184,7 @@ static bool ValidateMaskBits(const layer_data *my_data, VkCommandBuffer cmdBuffe
         }
     } else {
         if (!required_bit) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                  DRAWSTATE_INVALID_BARRIER, "DS", "%s AccessMask %d %s must contain at least one of access bits %d "
                                                                   "%s when layout is %s, unless the app has previously added a "
                                                                   "barrier for this transition.",
@@ -8197,7 +8197,7 @@ static bool ValidateMaskBits(const layer_data *my_data, VkCommandBuffer cmdBuffe
                 ss << optional_bits;
                 opt_bits = "and may have optional bits " + ss.str() + ' ' + string_VkAccessFlags(optional_bits);
             }
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                  DRAWSTATE_INVALID_BARRIER, "DS", "%s AccessMask %d %s must have required access bit %d %s %s when "
                                                                   "layout is %s, unless the app has previously added a barrier for "
                                                                   "this transition.",
