@@ -1,7 +1,0 @@
-status:       PUBLISHED
-technologies: [Android, NDK, Vulkan]
-categories:   [NDK, C++]
-languages:    [C++, Java]
-solutions:    [Mobile]
-github:       googlesamples/vulkan-basic-samples
-license:      apache2
