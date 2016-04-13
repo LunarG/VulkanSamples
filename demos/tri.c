@@ -1258,7 +1258,7 @@ char *demo_read_spv(const char *filename, size_t *psize) {
 
 static VkShaderModule demo_prepare_vs(struct demo *demo) {
     void *vertShaderCode;
-    size_t size;
+    size_t size = 0;
 
     vertShaderCode = demo_read_spv("tri-vert.spv", &size);
 
