@@ -10064,10 +10064,21 @@ VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(VkDevice device, VkImage image,
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkSetEvent(VkDevice device, VkEvent event) {
+    bool skip_call = false;
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-    dev_data->eventMap[event].needsSignaled = false;
-    dev_data->eventMap[event].stageMask = VK_PIPELINE_STAGE_HOST_BIT;
+    auto event_node = dev_data->eventMap.find(event);
+    if (event_node != dev_data->eventMap.end()) {
+        event_node->second.needsSignaled = false;
+        event_node->second.stageMask = VK_PIPELINE_STAGE_HOST_BIT;
+        if (event_node->second.in_use.load()) {
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT,
+                                 reinterpret_cast<const uint64_t &>(event), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                                 "Cannot call vkSetEvent() on event %" PRIxLEAST64 " that is already in use by a command buffer.",
+                                 reinterpret_cast<const uint64_t &>(event));
+        }
+    }
     loader_platform_thread_unlock_mutex(&globalLock);
     // Host setting event is visible to all queues immediately so update stageMask for any queue that's seen this event
     // TODO : For correctness this needs separate fix to verify that app doesn't make incorrect assumptions about the
@@ -10078,7 +10089,8 @@ VKAPI_ATTR VkResult VKAPI_CALL vkSetEvent(VkDevice device, VkEvent event) {
             event_entry->second |= VK_PIPELINE_STAGE_HOST_BIT;
         }
     }
-    VkResult result = dev_data->device_dispatch_table->SetEvent(device, event);
+    if (!skip_call)
+        result = dev_data->device_dispatch_table->SetEvent(device, event);
     return result;
 }
 
