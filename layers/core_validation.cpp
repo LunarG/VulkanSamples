@@ -5043,6 +5043,14 @@ static bool validateCommandBufferSimultaneousUse(layer_data *dev_data, GLOBAL_CB
 
 static bool validateCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *pCB) {
     bool skipCall = false;
+    // Validate ONE_TIME_SUBMIT_BIT CB is not being submitted more than once
+    if ((pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) && (pCB->submitCount > 1)) {
+        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
+                            __LINE__, DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
+                            "CB %#" PRIxLEAST64 " was begun w/ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT "
+                            "set, but has been submitted %#" PRIxLEAST64 " times.",
+                            (uint64_t)(pCB->commandBuffer), pCB->submitCount);
+    }
     // Validate that cmd buffers have been updated
     if (CB_RECORDED != pCB->state) {
         if (CB_INVALID == pCB->state) {
@@ -5128,16 +5136,6 @@ static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NO
                         reinterpret_cast<uint64_t>(pSubCB->primaryCommandBuffer));
             }
         }
-    }
-    // TODO : Verify if this also needs to be checked for secondary command
-    //  buffers. If so, this block of code can move to
-    //   validateCommandBufferState() function. vulkan GL106 filed to clarify
-    if ((pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) && (pCB->submitCount > 1)) {
-        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
-                            __LINE__, DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
-                            "CB %#" PRIxLEAST64 " was begun w/ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT "
-                            "set, but has been submitted %#" PRIxLEAST64 " times.",
-                            (uint64_t)(pCB->commandBuffer), pCB->submitCount);
     }
     skipCall |= validateCommandBufferState(dev_data, pCB);
     // If USAGE_SIMULTANEOUS_USE_BIT not set then CB cannot already be executing
