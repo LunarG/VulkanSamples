@@ -1082,6 +1082,854 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject) {
 #endif // OBJ_TRACKER_TESTS
 
 #if DRAW_STATE_TESTS
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceQWI) {
+
+    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
+        "submitted on separate queues followed by a QueueWaitIdle.");
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkSemaphore semaphore;
+    VkSemaphoreCreateInfo semaphore_create_info{};
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr,
+        &semaphore);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr,
+        &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType =
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info,
+        command_buffer);
+
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_,
+        1, &queue);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0],
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr,
+            0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[0];
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = &semaphore;
+        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    {
+        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[1];
+        submit_info.waitSemaphoreCount = 1;
+        submit_info.pWaitSemaphores = &semaphore;
+        submit_info.pWaitDstStageMask = flags;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+
+    vkQueueWaitIdle(m_device->m_queue);
+
+    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2,
+        &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceQWIFence) {
+
+    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
+                     "submitted on separate queues, the second having a fence"
+                     "followed by a QueueWaitIdle.");
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkFence fence;
+    VkFenceCreateInfo fence_create_info{};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
+
+    VkSemaphore semaphore;
+    VkSemaphoreCreateInfo semaphore_create_info{};
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr,
+                      &semaphore);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr,
+                        &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType =
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info,
+                             command_buffer);
+
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_,
+                     1, &queue);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0],
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr,
+                             0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[0];
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = &semaphore;
+        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    {
+        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[1];
+        submit_info.waitSemaphoreCount = 1;
+        submit_info.pWaitSemaphores = &semaphore;
+        submit_info.pWaitDstStageMask = flags;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
+    }
+
+    vkQueueWaitIdle(m_device->m_queue);
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
+    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2,
+                         &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkLayerTest,
+       TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceTwoWFF) {
+
+    TEST_DESCRIPTION(
+        "Two command buffers, each in a separate QueueSubmit call "
+        "submitted on separate queues, the second having a fence"
+        "followed by two consecutive WaitForFences calls on the same fence.");
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkFence fence;
+    VkFenceCreateInfo fence_create_info{};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
+
+    VkSemaphore semaphore;
+    VkSemaphoreCreateInfo semaphore_create_info{};
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr,
+                      &semaphore);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr,
+                        &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType =
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info,
+                             command_buffer);
+
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_,
+                     1, &queue);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0],
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr,
+                             0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[0];
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = &semaphore;
+        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    {
+        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[1];
+        submit_info.waitSemaphoreCount = 1;
+        submit_info.pWaitSemaphores = &semaphore;
+        submit_info.pWaitDstStageMask = flags;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
+    }
+
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
+    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2,
+                         &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFence) {
+
+    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
+                     "submitted on separate queues, the second having a fence, "
+                     "followed by a WaitForFences call.");
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkFence fence;
+    VkFenceCreateInfo fence_create_info{};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
+
+    VkSemaphore semaphore;
+    VkSemaphoreCreateInfo semaphore_create_info{};
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr,
+                      &semaphore);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr,
+                        &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType =
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info,
+                             command_buffer);
+
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_,
+                     1, &queue);
+
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0],
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr,
+                             0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[0];
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = &semaphore;
+        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    {
+        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[1];
+        submit_info.waitSemaphoreCount = 1;
+        submit_info.pWaitSemaphores = &semaphore;
+        submit_info.pWaitDstStageMask = flags;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
+    }
+
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
+    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2,
+                         &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkLayerTest, TwoQueueSubmitsOneQueueWithSemaphoreAndOneFence) {
+
+    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
+                     "on the same queue, sharing a signal/wait semaphore, the "
+                     "second having a fence, "
+                     "followed by a WaitForFences call.");
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkFence fence;
+    VkFenceCreateInfo fence_create_info{};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
+
+    VkSemaphore semaphore;
+    VkSemaphoreCreateInfo semaphore_create_info{};
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr,
+                      &semaphore);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr,
+                        &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType =
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info,
+                             command_buffer);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0],
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr,
+                             0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[0];
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = &semaphore;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    {
+        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[1];
+        submit_info.waitSemaphoreCount = 1;
+        submit_info.pWaitSemaphores = &semaphore;
+        submit_info.pWaitDstStageMask = flags;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
+    }
+
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
+    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2,
+                         &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkLayerTest, TwoQueueSubmitsOneQueueNullQueueSubmitWithFence) {
+
+    TEST_DESCRIPTION(
+        "Two command buffers, each in a separate QueueSubmit call "
+        "on the same queue, no fences, followed by a third QueueSubmit with NO "
+        "SubmitInfos but with a fence, followed by a WaitForFences call.");
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkFence fence;
+    VkFenceCreateInfo fence_create_info{};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr,
+                        &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType =
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info,
+                             command_buffer);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0],
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr,
+                             0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[0];
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = VK_NULL_HANDLE;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    {
+        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[1];
+        submit_info.waitSemaphoreCount = 0;
+        submit_info.pWaitSemaphores = VK_NULL_HANDLE;
+        submit_info.pWaitDstStageMask = flags;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+
+    vkQueueSubmit(m_device->m_queue, 0, NULL, fence);
+
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2,
+                         &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkLayerTest, TwoQueueSubmitsOneQueueOneFence) {
+
+    TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
+                     "on the same queue, the second having a fence, followed "
+                     "by a WaitForFences call.");
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkFence fence;
+    VkFenceCreateInfo fence_create_info{};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr,
+                        &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType =
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info,
+                             command_buffer);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0],
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr,
+                             0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[0];
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = VK_NULL_HANDLE;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+    {
+        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer[1];
+        submit_info.waitSemaphoreCount = 0;
+        submit_info.pWaitSemaphores = VK_NULL_HANDLE;
+        submit_info.pWaitDstStageMask = flags;
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
+    }
+
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2,
+                         &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
+// This is a positive test.  No errors should be generated.
+TEST_F(VkLayerTest, TwoSubmitInfosWithSemaphoreOneQueueSubmitsOneFence) {
+
+    TEST_DESCRIPTION(
+        "Two command buffers each in a separate SubmitInfo sent in a single "
+        "QueueSubmit call followed by a WaitForFences call.");
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkFence fence;
+    VkFenceCreateInfo fence_create_info{};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFence(m_device->device(), &fence_create_info, nullptr, &fence);
+
+    VkSemaphore semaphore;
+    VkSemaphoreCreateInfo semaphore_create_info{};
+    semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(m_device->device(), &semaphore_create_info, nullptr,
+                      &semaphore);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr,
+                        &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType =
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info,
+                             command_buffer);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdPipelineBarrier(command_buffer[0],
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr,
+                             0, nullptr, 0, nullptr);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[0], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[0]);
+    }
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        VkViewport viewport{};
+        viewport.maxDepth = 1.0f;
+        viewport.minDepth = 0.0f;
+        viewport.width = 512;
+        viewport.height = 512;
+        viewport.x = 0;
+        viewport.y = 0;
+        vkCmdSetViewport(command_buffer[1], 0, 1, &viewport);
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info[2];
+        VkPipelineStageFlags flags[]{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
+
+        submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info[0].pNext = NULL;
+        submit_info[0].commandBufferCount = 1;
+        submit_info[0].pCommandBuffers = &command_buffer[0];
+        submit_info[0].signalSemaphoreCount = 1;
+        submit_info[0].pSignalSemaphores = &semaphore;
+        submit_info[0].waitSemaphoreCount = 0;
+        submit_info[0].pWaitSemaphores = NULL;
+        submit_info[0].pWaitDstStageMask = 0;
+
+        submit_info[1].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info[1].pNext = NULL;
+        submit_info[1].commandBufferCount = 1;
+        submit_info[1].pCommandBuffers = &command_buffer[1];
+        submit_info[1].waitSemaphoreCount = 1;
+        submit_info[1].pWaitSemaphores = &semaphore;
+        submit_info[1].pWaitDstStageMask = flags;
+        submit_info[1].signalSemaphoreCount = 0;
+        submit_info[1].pSignalSemaphores = NULL;
+        vkQueueSubmit(m_device->m_queue, 2, &submit_info[0], fence);
+    }
+
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2,
+                         &command_buffer[0]);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
 TEST_F(VkLayerTest, LineWidthStateNotBound) {
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
