@@ -1,4 +1,3 @@
-<<<<<<< 87a50288ed2bf1bc8a9a07f7ec9a8531a579fc2a
 # Vulkan Samples Kit
   - This repository is a collection of Vulkan C++ sample applications.
   - Run the following script to obtain a short description of all or a 
@@ -18,12 +17,6 @@
   - Windows dependencies include:
     - Vulkan SDK required components
     - cmake
-  - Note that if you have a LoaderAndValidationLayers repository,
-    and/or a glslang repository that are file system peers to VulkanSamplesKit,
-    cmake will look in those repositories for headers and libraries before
-    looking in SDK or system locations.  Build directories in those repositories
-    should be named "build".
-
 
 ## Kit Structure
   - The Vulkan Samples Kit is a set of source and data files in a specific
@@ -48,13 +41,12 @@
 ### Linux:
   ```
   $ cmake -H. -Bbuild
-  $ make -C build
+  $ make -C build 
   ```
-
 #### Android:
-  ```
-  $ cmake -DANDROID=ON -DANDROID_ABI=[armeabi-v7a|arm64-v8a| x86|x86_64|all(default)]
-  ```
+```
+$ cmake -DANDROID=ON -DANDROID_ABI=[armeabi-v7a|arm64-v8a| x86|x86_64|all(default)]
+```
 And import VulkanSamples/API-Samples/android/build.gradle in Android Studio.
 
 ### Windows:
@@ -87,7 +79,7 @@ Next build the Vulkan Samples:
   PS > cmake -G "Visual Studio 12 Win64" ..
   ```
   Open the VULKAN_SAMPLES.sln file in the build folder with Microsoft Visual Studio and build the solution.
-
+  
 #### 32-bit Windows
 
 Perform the same operations as 64-bit Windows above, except with the following adjustments:
@@ -101,50 +93,3 @@ Perform the same operations as 64-bit Windows above, except with the following a
   Refer to the README.contrib file for specific info regarding contributing to
   the Vulkan samples creation effort.
 
-=======
-# Vulkan Ecosystem Components
-*Version 1.0, January 25, 2016*
-
-This project provides Khronos official ICD loader and validation layers for Vulkan developers on Windows and Linux.
-
-## Introduction
-
-Vulkan is an Explicit API, enabling direct control over how GPUs actually work. No (or very little) validation
-or error checking is done inside a Vulkan driver. Applications have full control and responsibility. Any errors in
-how Vulkan is used often result in a crash. This project provides standard validation layers that can be enabled to ease development by 
-helping developers verify their applications correctly use the Vulkan API.
-
-Vulkan supports multiple GPUs and multiple global contexts (VkInstance). The ICD loader is necessary to support multiple GPUs  and the VkInstance level Vulkan commands.  Additionally, the loader manages inserting Vulkan layer libraries,
-including validation layers between the application and the ICD.
-
-The following components are available in this repository:
-- Vulkan header files
-- [*ICD Loader*](loader/)
-- [*Validation Layers*](layers/)
-- Demos and tests for the loader and validation layers
-
-
-## How to Build and Run
-
-[BUILD.md](BUILD.md)
-includes directions for building all the components, running the validation tests and running the demo applications.
-
-Information on how to enable the various Validation layers is in
-[layers/README.md](layers/README.md).
-
-Architecture and interface information for the loader is in
-[loader/LoaderAndLayerInterface.md](loader/LoaderAndLayerInterface.md).
-
-## License
-This work is released as open source under a MIT-style license from Khronos including a Khronos copyright.
-
-See LICENSE.txt for a full list of licenses used in this repository.
-
-## Acknowledgements
-While this project has been developed primarily by LunarG, Inc; there are many other
-companies and individuals making this possible: Valve Corporation, funding
-project development; Google providing significant contributions to the validation layers;
-Khronos providing oversight and hosting of the project.
-
-
->>>>>>> docs: fix spelling mistakes

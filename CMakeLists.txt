@@ -5,15 +5,16 @@ cmake_minimum_required(VERSION 2.8.11)
 project (VULKAN_SAMPLES)
 # set (CMAKE_VERBOSE_MAKEFILE 1)
 
+# The MAJOR number of the version we're building, used in naming
+# vulkan-<major>.dll (and other files).
+set(MAJOR "1")
+find_package(PythonInterp 3 REQUIRED)
+
 # Set CMAKE_SYSTEM_NAME to Android if we're building Android Studio project.
 if(ANDROID)
     set (CMAKE_SYSTEM_NAME Android)
 endif()
 
-# The MAJOR number of the version we're building, used in naming
-# vulkan-<major>.dll (and other files).
-set(MAJOR "1")
-find_package(PythonInterp 3 REQUIRED)
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN)
     set(DisplayServer Win32)
