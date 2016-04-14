@@ -259,6 +259,8 @@ struct loader_icd {
         GetDisplayPlaneCapabilitiesKHR;
     PFN_vkCreateDisplayPlaneSurfaceKHR
         CreateDisplayPlaneSurfaceKHR;
+    PFN_vkDestroySurfaceKHR
+        DestroySurfaceKHR;
     struct loader_icd *next;
 };
 

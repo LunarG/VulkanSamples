@@ -1457,6 +1457,14 @@ static bool loader_icd_init_entrys(struct loader_icd *icd, VkInstance inst,
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceCapabilitiesKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceFormatsKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfacePresentModesKHR, false);
+    LOOKUP_GIPA(GetPhysicalDeviceDisplayPropertiesKHR, false);
+    LOOKUP_GIPA(GetDisplayModePropertiesKHR, false);
+    LOOKUP_GIPA(CreateDisplayPlaneSurfaceKHR, false);
+    LOOKUP_GIPA(GetPhysicalDeviceDisplayPlanePropertiesKHR, false);
+    LOOKUP_GIPA(GetDisplayPlaneSupportedDisplaysKHR, false);
+    LOOKUP_GIPA(CreateDisplayModeKHR, false);
+    LOOKUP_GIPA(GetDisplayPlaneCapabilitiesKHR, false);
+    LOOKUP_GIPA(DestroySurfaceKHR, false);
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     LOOKUP_GIPA(GetPhysicalDeviceWin32PresentationSupportKHR, false);
 #endif

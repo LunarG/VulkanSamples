@@ -1410,6 +1410,13 @@ terminator_CreateDisplayPlaneSurfaceKHR(
     struct loader_instance *inst = loader_get_instance(instance);
     VkIcdSurfaceDisplay *pIcdSurface = NULL;
 
+    if (!inst->wsi_surface_enabled) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                   "VK_KHR_surface extension not enabled.  "
+                   "vkCreateDisplayPlaneSurfaceKHR not executed!\n");
+        return VK_SUCCESS;
+    }
+
     pIcdSurface = loader_heap_alloc(inst, sizeof(VkIcdSurfaceDisplay),
                                     VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (pIcdSurface == NULL) {
