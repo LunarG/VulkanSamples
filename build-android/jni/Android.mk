@@ -157,6 +157,11 @@ LOCAL_SRC_FILES := $(SRC_DIR)/../shaderc/android_test/obj/local/$(TARGET_ARCH_AB
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
+LOCAL_MODULE := HLSL-prebuilt
+LOCAL_SRC_FILES := $(SRC_DIR)/../shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libHLSL.a
+include $(PREBUILT_STATIC_LIBRARY)
+
+include $(CLEAR_VARS)
 LOCAL_MODULE := shaderc_util-prebuilt
 LOCAL_SRC_FILES := $(SRC_DIR)/../shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libshaderc_util.a
 include $(PREBUILT_STATIC_LIBRARY)
@@ -185,7 +190,7 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/../shaderc/libshaderc/include/
 
 LOCAL_STATIC_LIBRARIES := googletest_main layer_utils
-LOCAL_SHARED_LIBRARIES += shaderc-prebuilt glslang-prebuilt OGLCompiler-prebuilt OSDependent-prebuilt shaderc_util-prebuilt SPIRV-prebuilt SPIRV-Tools-prebuilt
+LOCAL_SHARED_LIBRARIES += shaderc-prebuilt glslang-prebuilt OGLCompiler-prebuilt OSDependent-prebuilt HLSL-prebuilt shaderc_util-prebuilt SPIRV-prebuilt SPIRV-Tools-prebuilt
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR --include=$(SRC_DIR)/tests/vulkan_wrapper.h
 LOCAL_LDLIBS := -llog
 include $(BUILD_EXECUTABLE)

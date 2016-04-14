@@ -110,6 +110,7 @@ find_path(SPIRV_TOOLS_INCLUDE_DIR spirv-tools/libspirv.h HINTS "${CMAKE_SOURCE_D
 if (WIN32)
     set (GLSLANG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/glslang/Release"
                              "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/glslang/OSDependent/Windows/Release"
+                             "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/hlsl/Release"
                              "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/OGLCompilersDLL/Release"
                              "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/SPIRV/Release" )
     set (SPIRV_TOOLS_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../spirv-tools/${BUILDTGT_DIR}/source/Release")
@@ -127,6 +128,9 @@ find_library(OGLCompiler_LIB NAMES OGLCompiler
 find_library(OSDependent_LIB NAMES OSDependent
              HINTS ${GLSLANG_SEARCH_PATH} )
 
+find_library(HLSL_LIB NAMES HLSL
+             HINTS ${GLSLANG_SEARCH_PATH} )
+
 find_library(SPIRV_LIB NAMES SPIRV
              HINTS ${GLSLANG_SEARCH_PATH} )
 
@@ -137,6 +141,7 @@ find_library(SPIRV_TOOLS_LIB NAMES SPIRV-Tools
 if (WIN32)
     set (GLSLANG_DEBUG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/glslang/Debug"
                                    "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/glslang/OSDependent/Windows/Debug"
+                                   "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/hlsl/Debug"
                                    "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/OGLCompilersDLL/Debug"
                                    "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/SPIRV/Debug")
     set (SPIRV_TOOLS_DEBUG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../spirv-tools/${BUILDTGT_DIR}/source/Debug")
@@ -144,6 +149,7 @@ if (WIN32)
     add_library(glslang     STATIC IMPORTED)
     add_library(OGLCompiler STATIC IMPORTED)
     add_library(OSDependent STATIC IMPORTED)
+    add_library(HLSL        STATIC IMPORTED)
     add_library(SPIRV       STATIC IMPORTED)
     add_library(Loader      STATIC IMPORTED)
     add_library(SPIRV-Tools STATIC IMPORTED)
@@ -153,6 +159,8 @@ if (WIN32)
     find_library(OGLCompiler_DLIB NAMES OGLCompiler
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
     find_library(OSDependent_DLIB NAMES OSDependent
+                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
+    find_library(HLSL_DLIB NAMES HLSL
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
     find_library(SPIRV_DLIB NAMES SPIRV
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
@@ -168,6 +176,9 @@ if (WIN32)
     set_target_properties(OSDependent PROPERTIES
                          IMPORTED_LOCATION       "${OSDependent_LIB}"
                          IMPORTED_LOCATION_DEBUG "${OSDependent_DLIB}")
+    set_target_properties(HLSL PROPERTIES
+                         IMPORTED_LOCATION       "${HLSL_LIB}"
+                         IMPORTED_LOCATION_DEBUG "${HLSL_DLIB}")
     set_target_properties(SPIRV PROPERTIES
                          IMPORTED_LOCATION       "${SPIRV_LIB}"
                          IMPORTED_LOCATION_DEBUG "${SPIRV_DLIB}")
@@ -175,10 +186,10 @@ if (WIN32)
                          IMPORTED_LOCATION       "${SPIRV_TOOLS_LIB}"
                          IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_DLIB}")
 
-    set (GLSLANG_LIBRARIES glslang OGLCompiler OSDependent SPIRV)
+    set (GLSLANG_LIBRARIES glslang OGLCompiler OSDependent HLSL SPIRV)
     set (SPIRV_TOOLS_LIBRARIES SPIRV-Tools)
 else ()
-    set (GLSLANG_LIBRARIES ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${SPIRV_LIB})
+    set (GLSLANG_LIBRARIES ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${HLSL_LIB} ${SPIRV_LIB})
     set (SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_LIB})
 endif()
 
