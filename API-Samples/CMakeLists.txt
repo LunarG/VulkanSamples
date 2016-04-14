@@ -49,9 +49,83 @@ endfunction(sampleExtSPIRVShaders)
 # function to build a simple single-source-file sample
 #   - assumes S_TARGETS set to list of build targets
 function(sampleWithSingleFile)
+    # Projectwide settings.
+    # Product flavor (ABI).
+    # mips & mips64 does not work with -finline_functions flag.
+    set (SUPPORTED_ABI armeabi-v7a arm64-v8a x86 x86_64)
+    if (";${SUPPORTED_ABI};" MATCHES ";${ANDROID_ABI};")
+        set (FLAVOR "${ANDROID_ABI}")
+        set (ABI_FILTER "ndk.abiFilters.add(\"${ANDROID_ABI}\")")
+    else()
+        set (FLAVOR "all")
+        foreach(ABI ${SUPPORTED_ABI})
+            set (ABI_FILTER
+              "${ABI_FILTER}\n            ndk.abiFilters.add(\"${ABI}\")")
+        endforeach(ABI)
+    endif()
+
     foreach(TARG ${S_TARGETS})
         set(SAMPLE_NAME ${TARG})
-        if(UNIX)
+        if(ANDROID)
+            # Generate AndroidStudio project files.
+            MESSAGE("Generating AndroidStudio project:" ${SAMPLE_NAME})
+            # Replace "-" to "_", which is invalid in a package name.
+            STRING(REPLACE "-" "_" PACKAGE_NAME ${SAMPLE_NAME})
+            set (PACKAGE_NAME org.khronos.vulkan.samples.${PACKAGE_NAME})
+            set (SAMPLE_DESCRIPTION "Vulkan sample: ${SAMPLE_NAME}")
+            file(COPY ./android/project_template/ DESTINATION ./android/${SAMPLE_NAME}/)
+
+            # Clear flags.
+            set (OTHER_FLAGS "")
+            set (ASSET_DIR "")
+            set (EXTRA_PERMISSIONS "")
+            set (SHADERC_LINKAGE "")
+            set (VALIDATIONLAYER_LINKAGE "")
+
+            # Add extra setting for some samples.
+            # shaderc usage.
+            set (SHADERC_LINKAGE "library \"shaderc\"         linkage \"static\"")
+
+            # Include resource files.
+            set (SAMPLE_WITH_RESOURCES
+             drawtexturedcube inittexture immutable_sampler multiple_sets pipeline_cache
+             pipeline_derivative secondarycmd separate_image_sampler spirv_assembly
+             spirv_specialization template)
+            if (";${SAMPLE_WITH_RESOURCES};" MATCHES ";${SAMPLE_NAME};")
+                set (ASSET_DIR "srcDir '../../data/'")
+            endif()
+
+            # Add external storage access permission.
+            set (SAMPLE_WITH_EXTERNALSTORAGEACCESS pipeline_cache)
+            if (";${SAMPLE_WITH_EXTERNALSTORAGEACCESS};" MATCHES ";${SAMPLE_NAME};")
+                set (EXTRA_PERMISSIONS "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>")
+            endif()
+
+            # Add validation layer settings.
+            set (SAMPLE_WITH_TOOLS dbgcreatemsgcallback enable_validation_with_callback)
+            if (";${SAMPLE_WITH_TOOLS};" MATCHES ";${SAMPLE_NAME};")
+                set (VALIDATIONLAYER_LINKAGE "project \":threading\"
+                    project \":parameter_validation\"
+                    project \":object_tracker\"
+                    project \":core_validation\"
+                    project \":device_limits\"
+                    project \":image\"
+                    project \":swapchain\"
+                    project \":unique_objects\"")
+            endif()
+
+            # Cook template files.
+            set (TEMPLATE_FILES
+                android/${SAMPLE_NAME}/src/main/res/values/strings.xml
+                android/${SAMPLE_NAME}/src/main/AndroidManifest.xml
+                android/${SAMPLE_NAME}/build.gradle
+                android/${SAMPLE_NAME}/README.md
+            )
+            foreach(TEMPLATE_FILE ${TEMPLATE_FILES})
+                configure_file(${TEMPLATE_FILE} ${TEMPLATE_FILE} @ONLY)
+            endforeach(TEMPLATE_FILE)
+            SET(SETTINGS_GRADLE "${SETTINGS_GRADLE} ,\n':${SAMPLE_NAME}'")
+        elseif(UNIX)
             add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}/${SAMPLE_NAME}.cpp)
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD} ${SPIRV_TOOLS_LIBRARIES})
         else()
@@ -59,6 +133,11 @@ function(sampleWithSingleFile)
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${VULKAN_LOADER} ${WINLIBS} ${SPIRV_TOOLS_LIBRARIES})
         endif()
     endforeach(TARG)
+
+    if(ANDROID)
+        #generate Settings.gradle
+        configure_file(android/settings.gradle.in android/settings.gradle @ONLY)
+    endif()
 endfunction(sampleWithSingleFile)
 
 # function to build a simple single-source-file sample
@@ -95,7 +174,7 @@ endif()
 
 set (LIBGLM_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/libs)
 
-if(NOT WIN32)
+if(NOT WIN32 AND NOT ANDROID)
     include_directories(
         ${XCB_INCLUDE_DIRS}
     )
@@ -140,6 +219,9 @@ endif()
 #
 # START BUILDING SAMPLES HERE
 #
+
+# Generate Android project.
+option(ANDROID OFF)
 
 # simple one file sample targets, no additional files
 set (S_TARGETS instance device enumerate enumerate-adv

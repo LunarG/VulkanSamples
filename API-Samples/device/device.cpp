@@ -37,6 +37,7 @@ create and destroy a Vulkan physical device
 
 int sample_main(int argc, char *argv[]) {
     struct sample_info info = {};
+    init_global_layer_properties(info);
     init_instance(info, "vulkansamples_device");
 
     init_enumerate_device(info);

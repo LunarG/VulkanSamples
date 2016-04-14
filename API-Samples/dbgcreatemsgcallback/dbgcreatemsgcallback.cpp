@@ -34,7 +34,7 @@ reported
 #include <sstream>
 #include <string>
 #include <string.h>
-#include "util.hpp"
+#include "util_init.hpp"
 
 #define APP_SHORT_NAME "Debug Report Callback"
 
@@ -73,12 +73,14 @@ dbgFunc(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType,
     return false;
 }
 
-int main(int argc, char *argv[]) {
+int sample_main(int argc, char *argv[]) {
     VkExtensionProperties *vk_props = NULL;
     uint32_t instance_extension_count;
     VkResult res;
 
     /* VULKAN_KEY_START */
+    struct sample_info info = {};
+    init_global_layer_properties(info);
 
     /*
      * It's possible, though very rare, that the number of

@@ -37,6 +37,9 @@ int sample_main(int argc, char *argv[]) {
     VkExtensionProperties *vk_props = NULL;
     uint32_t instance_extension_count;
 
+    struct sample_info info = {};
+    init_global_layer_properties(info);
+
     /* VULKAN_KEY_START */
 
     /*
