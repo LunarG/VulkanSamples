@@ -41,6 +41,9 @@ add_library(VKLayer_overlay SHARED overlay.cpp
         overlay.json)
 
 if (WIN32)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
+
     set_target_properties(VKLayer_overlay PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/VkLayer_overlay.def")
     add_custom_command(OUTPUT overlay.json
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/windows/overlay.json $<CONFIGURATION>/overlay.json
