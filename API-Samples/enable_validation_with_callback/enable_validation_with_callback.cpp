@@ -80,7 +80,24 @@ int sample_main(int argc, char *argv[]) {
     info.instance_layer_names.push_back("VK_LAYER_LUNARG_standard_validation");
     if (!demo_check_layers(info.instance_layer_properties,
                            info.instance_layer_names)) {
-        exit(1);
+        /* If standard validation is not present, search instead for the
+         * individual layers that make it up, in the correct order.
+         */
+        info.instance_layer_names.clear();
+        info.instance_layer_names.push_back("VK_LAYER_GOOGLE_threading");
+        info.instance_layer_names.push_back(
+            "VK_LAYER_LUNARG_parameter_validation");
+        info.instance_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
+        info.instance_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
+        info.instance_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
+        info.instance_layer_names.push_back("VK_LAYER_LUNARG_image");
+        info.instance_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
+        info.instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
+
+        if (!demo_check_layers(info.instance_layer_properties,
+                               info.instance_layer_names)) {
+            exit(1);
+        }
     }
 
     /* Enable debug callback extension */
@@ -123,9 +140,26 @@ int sample_main(int argc, char *argv[]) {
 
     if (!demo_check_layers(info.device_layer_properties,
                            info.device_layer_names)) {
-        exit(1);
+        /* If standard validation is not present, search instead for the
+         * individual layers that make it up, in the correct order.
+         */
+        info.device_layer_names.clear();
+        info.device_layer_names.push_back("VK_LAYER_GOOGLE_threading");
+        info.device_layer_names.push_back(
+            "VK_LAYER_LUNARG_parameter_validation");
+        info.device_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
+        info.device_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
+        info.device_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
+        info.device_layer_names.push_back("VK_LAYER_LUNARG_image");
+        info.device_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
+        info.device_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
+
+        if (!demo_check_layers(info.device_layer_properties,
+                               info.device_layer_names)) {
+            exit(1);
+        }
     }
-    float queue_priorities[1] = {0.0};
+    float queue_priorities[1] = { 0.0 };
     VkDeviceQueueCreateInfo queue_info = {};
 
     vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count,

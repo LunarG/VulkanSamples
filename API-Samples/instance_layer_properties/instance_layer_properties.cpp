@@ -38,6 +38,8 @@ int sample_main(int argc, char *argv[]) {
     uint32_t instance_layer_count;
     VkLayerProperties *vk_props = NULL;
 
+    init_global_layer_properties(info);
+
     /* VULKAN_KEY_START */
 
     /*

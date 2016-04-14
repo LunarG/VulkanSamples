@@ -69,12 +69,12 @@ static const char *fullscreenVertShaderText =
     "};\n"
     "void main() {\n"
     "   outColor = vec4(1.0f, 0.1f, 0.1f, 0.5f);\n"
-    "   const vec4 verts[4] = vec4[4](vec4(-1.0, -1.0, 0.5, 1.0),"
-    "                                 vec4( 1.0, -1.0, 0.5, 1.0),"
-    "                                 vec4(-1.0,  1.0, 0.5, 1.0),"
+    "   const vec4 verts[4] = vec4[4](vec4(-1.0, -1.0, 0.5, 1.0),\n"
+    "                                 vec4( 1.0, -1.0, 0.5, 1.0),\n"
+    "                                 vec4(-1.0,  1.0, 0.5, 1.0),\n"
     "                                 vec4( 1.0,  1.0, 0.5, 1.0));\n"
     "\n"
-    "   gl_Position = verts[gl_VertexIndex];"
+    "   gl_Position = verts[gl_VertexIndex];\n"
     "}\n";
 
 static const char *fragShaderText =
@@ -402,7 +402,7 @@ int sample_main(int argc, char *argv[]) {
 
     // Get the index of the next available swapchain image:
     res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
-                                presentCompleteSemaphore, NULL,
+                                presentCompleteSemaphore, VK_NULL_HANDLE,
                                 &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
