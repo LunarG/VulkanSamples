@@ -493,7 +493,7 @@ void process_command_line_args(struct sample_info &info, int argc,
 
 void write_ppm(struct sample_info &info, const char *basename) {
     string filename;
-    uint32_t x, y;
+    int x, y;
     VkResult res;
 
     VkImageCreateInfo image_create_info = {};
