@@ -254,10 +254,10 @@ using namespace std;
 #define DEFAULT_VK_REGISTRY_HIVE HKEY_LOCAL_MACHINE
 #define DEFAULT_VK_DRIVERS_INFO "SOFTWARE\\Khronos\\Vulkan\\Drivers"
 // TODO: Are these the correct paths
-#define DEFAULT_VK_DRIVERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
+#define DEFAULT_VK_DRIVERS_PATH ""
 #define DEFAULT_VK_ELAYERS_INFO "SOFTWARE\\Khronos\\Vulkan\\ExplicitLayers"
 #define DEFAULT_VK_ILAYERS_INFO "SOFTWARE\\Khronos\\Vulkan\\ImplicitLayers"
-#define DEFAULT_VK_LAYERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
+#define DEFAULT_VK_LAYERS_PATH ""
 #define LAYERS_PATH_ENV "VK_LAYER_PATH"
 #define HOME_VK_DRIVERS_INFO ""
 #define HOME_VK_ELAYERS_INFO ""
