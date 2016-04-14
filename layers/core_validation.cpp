@@ -6635,7 +6635,7 @@ vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t 
     // Make sure that no sets being destroyed are in-flight
     loader_platform_thread_lock_mutex(&globalLock);
     for (uint32_t i = 0; i < count; ++i)
-        skipCall |= validateIdleDescriptorSet(dev_data, pDescriptorSets[i], "vkFreeDesriptorSets");
+        skipCall |= validateIdleDescriptorSet(dev_data, pDescriptorSets[i], "vkFreeDescriptorSets");
     DESCRIPTOR_POOL_NODE *pPoolNode = getPoolNode(dev_data, descriptorPool);
     if (pPoolNode && !(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT & pPoolNode->createInfo.flags)) {
         // Can't Free from a NON_FREE pool
