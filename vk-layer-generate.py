@@ -1499,7 +1499,7 @@ class UniqueObjectsSubcommand(Subcommand):
                     pName = 'p%s' % (struct_uses[obj][2:])
                     if name not in vector_name_set:
                         vector_name_set.add(name)
-                    pre_code += '%slocal_%s%s = (%s)my_map_data->unique_id_mapping[reinterpret_cast<uint64_t>(%s%s)];\n' % (indent, prefix, name, struct_uses[obj], prefix, name)
+                    pre_code += '%slocal_%s%s = (%s)my_map_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(%s%s)];\n' % (indent, prefix, name, struct_uses[obj], prefix, name)
                     if array != '':
                         indent = indent[4:]
                         pre_code += '%s}\n' % (indent)
@@ -1511,9 +1511,9 @@ class UniqueObjectsSubcommand(Subcommand):
                     if ptr_type:
                         deref_txt = ''
                     if '->' in prefix: # need to update local struct
-                        pre_code += '%slocal_%s%s = (%s)my_map_data->unique_id_mapping[reinterpret_cast<uint64_t>(%s%s)];\n' % (indent, prefix, name, struct_uses[obj], prefix, name)
+                        pre_code += '%slocal_%s%s = (%s)my_map_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(%s%s)];\n' % (indent, prefix, name, struct_uses[obj], prefix, name)
                     else:
-                        pre_code += '%s%s = (%s)my_map_data->unique_id_mapping[reinterpret_cast<uint64_t>(%s)];\n' % (indent, name, struct_uses[obj], name)
+                        pre_code += '%s%s = (%s)my_map_data->unique_id_mapping[reinterpret_cast<uint64_t &>(%s)];\n' % (indent, name, struct_uses[obj], name)
         return decls, pre_code, post_code
 
     def generate_intercept(self, proto, qual):
@@ -1575,7 +1575,7 @@ class UniqueObjectsSubcommand(Subcommand):
             if destroy_func: # only one object
                 for del_obj in sorted(struct_uses):
                     #pre_call_txt += '%s%s local_%s = %s;\n' % (indent, struct_uses[del_obj], del_obj, del_obj)
-                    pre_call_txt += '%suint64_t local_%s = reinterpret_cast<uint64_t>(%s);\n' % (indent, del_obj, del_obj)
+                    pre_call_txt += '%suint64_t local_%s = reinterpret_cast<uint64_t &>(%s);\n' % (indent, del_obj, del_obj)
                     pre_call_txt += '%s%s = (%s)my_map_data->unique_id_mapping[local_%s];\n' % (indent, del_obj, struct_uses[del_obj], del_obj)
                     (pre_decl, pre_code, post_code) = ('', '', '')
             else:
@@ -1617,15 +1617,15 @@ class UniqueObjectsSubcommand(Subcommand):
                     post_call_txt += '%sfor (uint32_t i=0; i<%s; ++i) {\n' % (indent, custom_create_dict[obj_name])
                     indent += '    '
                     post_call_txt += '%suint64_t unique_id = my_map_data->unique_id++;\n' % (indent)
-                    post_call_txt += '%smy_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t>(%s[i]);\n' % (indent, obj_name)
-                    post_call_txt += '%s%s[i] = reinterpret_cast<%s>(unique_id);\n' % (indent, obj_name, obj_type)
+                    post_call_txt += '%smy_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(%s[i]);\n' % (indent, obj_name)
+                    post_call_txt += '%s%s[i] = reinterpret_cast<%s&>(unique_id);\n' % (indent, obj_name, obj_type)
                     indent = indent[4:]
                     post_call_txt += '%s}\n' % (indent)
                 else:
                     post_call_txt += '%s\n' % (self.lineinfo.get())
                     post_call_txt += '%suint64_t unique_id = my_map_data->unique_id++;\n' % (indent)
-                    post_call_txt += '%smy_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t>(*%s);\n' % (indent, obj_name)
-                    post_call_txt += '%s*%s = reinterpret_cast<%s>(unique_id);\n' % (indent, obj_name, obj_type)
+                    post_call_txt += '%smy_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(*%s);\n' % (indent, obj_name)
+                    post_call_txt += '%s*%s = reinterpret_cast<%s&>(unique_id);\n' % (indent, obj_name, obj_type)
                 indent = indent[4:]
                 post_call_txt += '%s}\n' % (indent)
         elif destroy_func:

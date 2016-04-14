@@ -245,22 +245,24 @@ VkResult explicit_CreateComputePipelines(VkDevice device, VkPipelineCache pipeli
             local_pCreateInfos[idx0].initialize(&pCreateInfos[idx0]);
             if (pCreateInfos[idx0].basePipelineHandle) {
                 local_pCreateInfos[idx0].basePipelineHandle =
-                    (VkPipeline)
-                        my_device_data->unique_id_mapping[reinterpret_cast<uint64_t>(pCreateInfos[idx0].basePipelineHandle)];
+                    (VkPipeline)my_device_data
+                        ->unique_id_mapping[reinterpret_cast<const uint64_t &>(pCreateInfos[idx0].basePipelineHandle)];
             }
             if (pCreateInfos[idx0].layout) {
                 local_pCreateInfos[idx0].layout =
-                    (VkPipelineLayout)my_device_data->unique_id_mapping[reinterpret_cast<uint64_t>(pCreateInfos[idx0].layout)];
+                    (VkPipelineLayout)
+                        my_device_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(pCreateInfos[idx0].layout)];
             }
             if (pCreateInfos[idx0].stage.module) {
                 local_pCreateInfos[idx0].stage.module =
-                    (VkShaderModule)my_device_data->unique_id_mapping[reinterpret_cast<uint64_t>(pCreateInfos[idx0].stage.module)];
+                    (VkShaderModule)
+                        my_device_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(pCreateInfos[idx0].stage.module)];
             }
         }
     }
     if (pipelineCache) {
         std::lock_guard<std::mutex> lock(global_lock);
-        pipelineCache = (VkPipelineCache)my_device_data->unique_id_mapping[reinterpret_cast<uint64_t>(pipelineCache)];
+        pipelineCache = (VkPipelineCache)my_device_data->unique_id_mapping[reinterpret_cast<uint64_t &>(pipelineCache)];
     }
 
     VkResult result = get_dispatch_table(unique_objects_device_table_map, device)
@@ -272,8 +274,8 @@ VkResult explicit_CreateComputePipelines(VkDevice device, VkPipelineCache pipeli
         std::lock_guard<std::mutex> lock(global_lock);
         for (uint32_t i = 0; i < createInfoCount; ++i) {
             unique_id = my_device_data->unique_id++;
-            my_device_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t>(pPipelines[i]);
-            pPipelines[i] = reinterpret_cast<VkPipeline>(unique_id);
+            my_device_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(pPipelines[i]);
+            pPipelines[i] = reinterpret_cast<VkPipeline &>(unique_id);
         }
     }
     return result;
@@ -294,31 +296,33 @@ VkResult explicit_CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipel
             local_pCreateInfos[idx0].initialize(&pCreateInfos[idx0]);
             if (pCreateInfos[idx0].basePipelineHandle) {
                 local_pCreateInfos[idx0].basePipelineHandle =
-                    (VkPipeline)
-                        my_device_data->unique_id_mapping[reinterpret_cast<uint64_t>(pCreateInfos[idx0].basePipelineHandle)];
+                    (VkPipeline)my_device_data
+                        ->unique_id_mapping[reinterpret_cast<const uint64_t &>(pCreateInfos[idx0].basePipelineHandle)];
             }
             if (pCreateInfos[idx0].layout) {
                 local_pCreateInfos[idx0].layout =
-                    (VkPipelineLayout)my_device_data->unique_id_mapping[reinterpret_cast<uint64_t>(pCreateInfos[idx0].layout)];
+                    (VkPipelineLayout)
+                        my_device_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(pCreateInfos[idx0].layout)];
             }
             if (pCreateInfos[idx0].pStages) {
                 for (uint32_t idx1 = 0; idx1 < pCreateInfos[idx0].stageCount; ++idx1) {
                     if (pCreateInfos[idx0].pStages[idx1].module) {
                         local_pCreateInfos[idx0].pStages[idx1].module =
                             (VkShaderModule)my_device_data
-                                ->unique_id_mapping[reinterpret_cast<uint64_t>(pCreateInfos[idx0].pStages[idx1].module)];
+                                ->unique_id_mapping[reinterpret_cast<const uint64_t &>(pCreateInfos[idx0].pStages[idx1].module)];
                     }
                 }
             }
             if (pCreateInfos[idx0].renderPass) {
                 local_pCreateInfos[idx0].renderPass =
-                    (VkRenderPass)my_device_data->unique_id_mapping[reinterpret_cast<uint64_t>(pCreateInfos[idx0].renderPass)];
+                    (VkRenderPass)
+                        my_device_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(pCreateInfos[idx0].renderPass)];
             }
         }
     }
     if (pipelineCache) {
         std::lock_guard<std::mutex> lock(global_lock);
-        pipelineCache = (VkPipelineCache)my_device_data->unique_id_mapping[reinterpret_cast<uint64_t>(pipelineCache)];
+        pipelineCache = (VkPipelineCache)my_device_data->unique_id_mapping[reinterpret_cast<uint64_t &>(pipelineCache)];
     }
 
     VkResult result =
@@ -331,8 +335,8 @@ VkResult explicit_CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipel
         std::lock_guard<std::mutex> lock(global_lock);
         for (uint32_t i = 0; i < createInfoCount; ++i) {
             unique_id = my_device_data->unique_id++;
-            my_device_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t>(pPipelines[i]);
-            pPipelines[i] = reinterpret_cast<VkPipeline>(unique_id);
+            my_device_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(pPipelines[i]);
+            pPipelines[i] = reinterpret_cast<VkPipeline &>(unique_id);
         }
     }
     return result;
@@ -347,11 +351,11 @@ VkResult explicit_CreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInf
         std::lock_guard<std::mutex> lock(global_lock);
         local_pCreateInfo = new safe_VkSwapchainCreateInfoKHR(pCreateInfo);
         local_pCreateInfo->oldSwapchain =
-            (VkSwapchainKHR)my_map_data->unique_id_mapping[reinterpret_cast<uint64_t>(pCreateInfo->oldSwapchain)];
+            (VkSwapchainKHR)my_map_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(pCreateInfo->oldSwapchain)];
         // Need to pull surface mapping from the instance-level map
         layer_data *instance_data = get_my_data_ptr(get_dispatch_key(my_map_data->gpu), layer_data_map);
         local_pCreateInfo->surface =
-            (VkSurfaceKHR)instance_data->unique_id_mapping[reinterpret_cast<uint64_t>(pCreateInfo->surface)];
+            (VkSurfaceKHR)instance_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(pCreateInfo->surface)];
     }
 
     VkResult result = get_dispatch_table(unique_objects_device_table_map, device)
@@ -361,8 +365,8 @@ VkResult explicit_CreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInf
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         uint64_t unique_id = my_map_data->unique_id++;
-        my_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t>(*pSwapchain);
-        *pSwapchain = reinterpret_cast<VkSwapchainKHR>(unique_id);
+        my_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(*pSwapchain);
+        *pSwapchain = reinterpret_cast<VkSwapchainKHR &>(unique_id);
     }
     return result;
 }
@@ -374,7 +378,7 @@ VkResult explicit_GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchai
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     if (VK_NULL_HANDLE != swapchain) {
         std::lock_guard<std::mutex> lock(global_lock);
-        swapchain = (VkSwapchainKHR)my_device_data->unique_id_mapping[reinterpret_cast<uint64_t>(swapchain)];
+        swapchain = (VkSwapchainKHR)my_device_data->unique_id_mapping[reinterpret_cast<uint64_t &>(swapchain)];
     }
     VkResult result = get_dispatch_table(unique_objects_device_table_map, device)
                           ->GetSwapchainImagesKHR(device, swapchain, pSwapchainImageCount, pSwapchainImages);
@@ -385,8 +389,8 @@ VkResult explicit_GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchai
             std::lock_guard<std::mutex> lock(global_lock);
             for (uint32_t i = 0; i < *pSwapchainImageCount; ++i) {
                 unique_id = my_device_data->unique_id++;
-                my_device_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t>(pSwapchainImages[i]);
-                pSwapchainImages[i] = reinterpret_cast<VkImage>(unique_id);
+                my_device_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(pSwapchainImages[i]);
+                pSwapchainImages[i] = reinterpret_cast<VkImage &>(unique_id);
             }
         }
     }
