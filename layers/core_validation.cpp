@@ -10110,6 +10110,14 @@ vkQueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo 
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip_call = false;
     loader_platform_thread_lock_mutex(&globalLock);
+    // First verify that fence is not in use
+    if ((fence != VK_NULL_HANDLE) && (bindInfoCount != 0) && dev_data->fenceMap[fence].in_use.load()) {
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                            reinterpret_cast<uint64_t>(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
+                            "Fence %#" PRIx64 " is already in use by another submission.", reinterpret_cast<uint64_t>(fence));
+    }
+    uint64_t fenceId = 0;
+    skip_call = add_fence_info(dev_data, fence, queue, &fenceId);
     for (uint32_t bindIdx = 0; bindIdx < bindInfoCount; ++bindIdx) {
         const VkBindSparseInfo &bindInfo = pBindInfo[bindIdx];
         // Track objects tied to memory
