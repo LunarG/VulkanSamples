@@ -16,7 +16,7 @@
 Properties properties = new Properties()
 properties.load(file('local.properties').newDataInputStream())
 def ndkDir = properties.getProperty('ndk.dir')
-def layerProjRoot = file(ndkDir).absolutePath + file('/sources/third_party/vulkan/src/build-android/generated/gradle-build')
+def layerProjRoot = file(ndkDir).absolutePath + '/sources/third_party/vulkan/src/build-android/generated/gradle-build'
 String[] layers = ['threading',
                    'parameter_validation',
                    'object_tracker',
