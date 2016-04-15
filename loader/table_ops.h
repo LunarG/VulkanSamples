@@ -627,26 +627,24 @@ static inline void loader_init_instance_extension_dispatch_table(
             inst, "vkGetPhysicalDeviceXlibPresentationSupportKHR");
 #endif
     table->GetPhysicalDeviceDisplayPropertiesKHR =
-        (PFN_vkGetPhysicalDeviceDisplayPropertiesKHR) gpa(inst,
-        "vkGetPhysicalDeviceDisplayPropertiesKHR");
+        (PFN_vkGetPhysicalDeviceDisplayPropertiesKHR)gpa(
+            inst, "vkGetPhysicalDeviceDisplayPropertiesKHR");
     table->GetPhysicalDeviceDisplayPlanePropertiesKHR =
-        (PFN_vkGetPhysicalDeviceDisplayPlanePropertiesKHR) gpa(inst,
-        "vkGetPhysicalDeviceDisplayPlanePropertiesKHR");
+        (PFN_vkGetPhysicalDeviceDisplayPlanePropertiesKHR)gpa(
+            inst, "vkGetPhysicalDeviceDisplayPlanePropertiesKHR");
     table->GetDisplayPlaneSupportedDisplaysKHR =
-        (PFN_vkGetDisplayPlaneSupportedDisplaysKHR) gpa(inst,
-        "vkGetDisplayPlaneSupportedDisplaysKHR");
-    table->GetDisplayModePropertiesKHR =
-        (PFN_vkGetDisplayModePropertiesKHR) gpa(inst,
-        "vkGetDisplayModePropertiesKHR");
+        (PFN_vkGetDisplayPlaneSupportedDisplaysKHR)gpa(
+            inst, "vkGetDisplayPlaneSupportedDisplaysKHR");
+    table->GetDisplayModePropertiesKHR = (PFN_vkGetDisplayModePropertiesKHR)gpa(
+        inst, "vkGetDisplayModePropertiesKHR");
     table->CreateDisplayModeKHR =
-        (PFN_vkCreateDisplayModeKHR) gpa(inst,
-        "vkCreateDisplayModeKHR");
+        (PFN_vkCreateDisplayModeKHR)gpa(inst, "vkCreateDisplayModeKHR");
     table->GetDisplayPlaneCapabilitiesKHR =
-        (PFN_vkGetDisplayPlaneCapabilitiesKHR) gpa(inst,
-        "vkGetDisplayPlaneCapabilitiesKHR");
+        (PFN_vkGetDisplayPlaneCapabilitiesKHR)gpa(
+            inst, "vkGetDisplayPlaneCapabilitiesKHR");
     table->CreateDisplayPlaneSurfaceKHR =
-        (PFN_vkCreateDisplayPlaneSurfaceKHR) gpa(inst,
-        "vkCreateDisplayPlaneSurfaceKHR");
+        (PFN_vkCreateDisplayPlaneSurfaceKHR)gpa(
+            inst, "vkCreateDisplayPlaneSurfaceKHR");
 }
 
 static inline void *

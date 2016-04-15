@@ -142,21 +142,17 @@ void util_DestroyDebugReportCallback(struct loader_instance *inst,
                                      VkDebugReportCallbackEXT callback,
                                      const VkAllocationCallbacks *pAllocator);
 
-VkResult
-util_CopyDebugReportCreateInfos(const void *pChain,
-                                const VkAllocationCallbacks *pAllocator,
-                                uint32_t *num_callbacks,
-                                VkDebugReportCallbackCreateInfoEXT **infos,
-                                VkDebugReportCallbackEXT **callbacks);
+VkResult util_CopyDebugReportCreateInfos(
+    const void *pChain, const VkAllocationCallbacks *pAllocator,
+    uint32_t *num_callbacks, VkDebugReportCallbackCreateInfoEXT **infos,
+    VkDebugReportCallbackEXT **callbacks);
 void util_FreeDebugReportCreateInfos(const VkAllocationCallbacks *pAllocator,
                                      VkDebugReportCallbackCreateInfoEXT *infos,
                                      VkDebugReportCallbackEXT *callbacks);
-VkResult
-util_CreateDebugReportCallbacks(struct loader_instance *inst,
-                                const VkAllocationCallbacks *pAllocator,
-                                uint32_t num_callbacks,
-                                VkDebugReportCallbackCreateInfoEXT *infos,
-                                VkDebugReportCallbackEXT *callbacks);
+VkResult util_CreateDebugReportCallbacks(
+    struct loader_instance *inst, const VkAllocationCallbacks *pAllocator,
+    uint32_t num_callbacks, VkDebugReportCallbackCreateInfoEXT *infos,
+    VkDebugReportCallbackEXT *callbacks);
 
 void util_DestroyDebugReportCallbacks(struct loader_instance *inst,
                                       const VkAllocationCallbacks *pAllocator,
