@@ -74,6 +74,16 @@ VkResult init_global_layer_properties(struct sample_info &info) {
     uint32_t instance_layer_count;
     VkLayerProperties *vk_props = NULL;
     VkResult res;
+#ifdef __ANDROID__
+    // This place is the first place for samples to use Vulkan APIs.
+    // Here, we are going to open Vulkan.so on the device and retrieve function pointers using
+    // vulkan_wrapper helper.
+    if (!InitVulkan()) {
+        LOGE("Failied initializing Vulkan APIs!");
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+    LOGI("Loaded Vulkan APIs.");
+#endif
 
     /*
      * It's possible, though very rare, that the number of
@@ -225,7 +235,9 @@ VkBool32 demo_check_layers(const std::vector<layer_properties> &layer_props,
 
 void init_instance_extension_names(struct sample_info &info) {
     info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-#ifdef _WIN32
+#ifdef __ANDROID__
+    info.instance_extension_names.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+#elif defined(_WIN32)
     info.instance_extension_names.push_back(
         VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #else
@@ -415,7 +427,9 @@ void destroy_debug_report_callback(struct sample_info &info) {
 }
 
 void init_connection(struct sample_info &info) {
-#ifndef _WIN32
+#ifdef __ANDROID__
+    // Do nothing on Android.
+#elif !defined(_WIN32)
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
@@ -432,7 +446,7 @@ void init_connection(struct sample_info &info) {
         xcb_screen_next(&iter);
 
     info.screen = iter.data;
-#endif // _WIN32
+#endif //__Android__
 }
 #ifdef _WIN32
 static void run(struct sample_info *info) {
@@ -513,6 +527,13 @@ void destroy_window(struct sample_info &info) {
     vkDestroySurfaceKHR(info.inst, info.surface, NULL);
     DestroyWindow(info.window);
 }
+#elif defined(__ANDROID__)
+// Android implementation.
+void init_window(struct sample_info &info) {
+}
+
+void destroy_window(struct sample_info &info) {
+}
 #else
 void init_window(struct sample_info &info) {
     assert(info.width > 0);
@@ -573,8 +594,12 @@ void destroy_window(struct sample_info &info) {
 
 void init_window_size(struct sample_info &info, int32_t default_width,
                       int32_t default_height) {
+#ifdef __ANDROID__
+    AndroidGetWindowSize(&info.width, &info.height);
+#else
     info.width = default_width;
     info.height = default_height;
+#endif
 }
 
 void init_depth_buffer(struct sample_info &info) {
@@ -586,8 +611,12 @@ void init_depth_buffer(struct sample_info &info) {
     if (info.depth.format == VK_FORMAT_UNDEFINED)
         info.depth.format = VK_FORMAT_D16_UNORM;
 
+#ifdef __ANDROID__
+    // Depth format needs to be VK_FORMAT_D24_UNORM_S8_UINT on Android.
+    const VkFormat depth_format = VK_FORMAT_D24_UNORM_S8_UINT;
+#else
     const VkFormat depth_format = info.depth.format;
-
+#endif
     VkFormatProperties props;
     vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
     if (props.linearTilingFeatures &
@@ -695,15 +724,26 @@ void init_swapchain_extension(struct sample_info &info) {
     createInfo.pNext = NULL;
     createInfo.hinstance = info.connection;
     createInfo.hwnd = info.window;
-    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo, NULL, &info.surface);
-#else  // _WIN32
+    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo,
+                                  NULL, &info.surface);
+#elif defined(__ANDROID__)
+    GET_INSTANCE_PROC_ADDR(info.inst, CreateAndroidSurfaceKHR);
+
+    VkAndroidSurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = nullptr;
+    createInfo.flags = 0;
+    createInfo.window = AndroidGetApplicationWindow();
+    res = info.fpCreateAndroidSurfaceKHR(info.inst, &createInfo, nullptr, &info.surface);
+#else  // !__ANDROID__ && !_WIN32
     VkXcbSurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
     createInfo.connection = info.connection;
     createInfo.window = info.window;
-    res = vkCreateXcbSurfaceKHR(info.inst, &createInfo, NULL, &info.surface);
-#endif // _WIN32
+    res = vkCreateXcbSurfaceKHR(info.inst, &createInfo,
+                                NULL, &info.surface);
+#endif // __ANDROID__  && _WIN32
     assert(res == VK_SUCCESS);
 
     // Iterate over each queue to learn whether it supports presenting:
@@ -775,7 +815,7 @@ void init_presentable_image(struct sample_info &info) {
 
     // Get the index of the next available swapchain image:
     res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
-                                info.presentCompleteSemaphore, NULL,
+                                info.presentCompleteSemaphore, VK_NULL_HANDLE,
                                 &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
@@ -899,6 +939,10 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
             swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
         }
     }
+#ifdef __ANDROID__
+    // Current driver only support VK_PRESENT_MODE_FIFO_KHR.
+    swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+#endif
 
     // Determine the number of VkImage's to use in the swap chain (we desire to
     // own only 1 image at a time, besides the images being displayed and
@@ -932,7 +976,11 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
     swap_chain.imageArrayLayers = 1;
     swap_chain.presentMode = swapchainPresentMode;
     swap_chain.oldSwapchain = VK_NULL_HANDLE;
+#ifndef __ANDROID__
     swap_chain.clipped = true;
+#else
+    swap_chain.clipped = false;
+#endif
     swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
     swap_chain.imageUsage = usageFlags;
     swap_chain.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -998,7 +1046,13 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
 void init_uniform_buffer(struct sample_info &info) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
-    info.Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
+    float fov = glm::radians(45.0f);
+    if (info.width > info.height) {
+        fov *= static_cast<float>(info.height) / static_cast<float>(info.width);
+    }
+    info.Projection = glm::perspective(fov,
+                                       static_cast<float>(info.width) /
+                                       static_cast<float>(info.height), 0.1f, 100.0f);
     info.View = glm::lookAt(
         glm::vec3(5, 3, 10), // Camera is at (5,3,10), in World Space
         glm::vec3(0, 0, 0),  // and looks at the origin
@@ -1585,6 +1639,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth,
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp.pNext = NULL;
     vp.flags = 0;
+#ifndef __ANDROID__
     vp.viewportCount = NUM_VIEWPORTS;
     dynamicStateEnables[dynamicState.dynamicStateCount++] =
         VK_DYNAMIC_STATE_VIEWPORT;
@@ -1593,7 +1648,26 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth,
         VK_DYNAMIC_STATE_SCISSOR;
     vp.pScissors = NULL;
     vp.pViewports = NULL;
-
+#else
+    // Temporary disabling dynamic viewport on Android because some of drivers doesn't
+    // support the feature.
+    VkViewport viewports;
+    viewports.minDepth = 0.0f;
+    viewports.maxDepth = 1.0f;
+    viewports.x = 0;
+    viewports.y = 0;
+    viewports.width = info.width;
+    viewports.height = info.height;
+    VkRect2D scissor;
+    scissor.extent.width = info.width;
+    scissor.extent.height = info.height;
+    scissor.offset.x = 0;
+    scissor.offset.y = 0;
+    vp.viewportCount = NUM_VIEWPORTS;
+    vp.scissorCount = NUM_SCISSORS;
+    vp.pScissors = &scissor;
+    vp.pViewports = &viewports;
+#endif
     VkPipelineDepthStencilStateCreateInfo ds;
     ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     ds.pNext = NULL;
@@ -1958,6 +2032,10 @@ void init_texture(struct sample_info &info, const char *textureName) {
 }
 
 void init_viewports(struct sample_info &info) {
+#ifdef __ANDROID__
+    // Disable dynamic viewport on Android. Some drive has an issue with the dynamic viewport
+    // feature.
+#else
     info.viewport.height = (float)info.height;
     info.viewport.width = (float)info.width;
     info.viewport.minDepth = (float)0.0f;
@@ -1965,14 +2043,20 @@ void init_viewports(struct sample_info &info) {
     info.viewport.x = 0;
     info.viewport.y = 0;
     vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &info.viewport);
+#endif
 }
 
 void init_scissors(struct sample_info &info) {
+#ifdef __ANDROID__
+    // Disable dynamic viewport on Android. Some drive has an issue with the dynamic scissors
+    // feature.
+#else
     info.scissor.extent.width = info.width;
     info.scissor.extent.height = info.height;
     info.scissor.offset.x = 0;
     info.scissor.offset.y = 0;
     vkCmdSetScissor(info.cmd, 0, NUM_SCISSORS, &info.scissor);
+#endif
 }
 
 void init_fence(struct sample_info &info, VkFence &fence) {

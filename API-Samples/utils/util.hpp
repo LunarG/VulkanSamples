@@ -44,13 +44,18 @@
 #define NOMINMAX /* Don't let Windows define min() or max() */
 #endif
 #define APP_NAME_STR_LEN 80
-#else // _WIN32
+#elif defined(__ANDROID__)
+// Include files for Android
 #include <unistd.h>
+#include <android/log.h>
+#include "vulkan_wrapper.h" // Include Vulkan_wrapper and dynamically load symbols.
+#else //__ANDROID__
+#define VK_USE_PLATFORM_XCB_KHR
+#include <unistd.h>
+#include "vulkan/vk_sdk_platform.h"
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
-
-#include "vulkan/vk_sdk_platform.h"
 
 /* Number of descriptor sets needs to be the same at alloc,       */
 /* pipeline layout creation, and descriptor set layout creation   */
@@ -140,12 +145,14 @@ struct sample_info {
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND window;                 // hWnd - window handle
-#else                            // _WIN32
+#elif defined(__ANDROID__)
+    PFN_vkCreateAndroidSurfaceKHR fpCreateAndroidSurfaceKHR;
+#else  // _WIN32
     xcb_connection_t *connection;
     xcb_screen_t *screen;
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
-#endif                           // _WIN32
+#endif // _WIN32
     VkSurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;
@@ -261,9 +268,30 @@ void init_glslang();
 void finalize_glslang();
 void wait_seconds(int seconds);
 void print_UUID(uint8_t *pipelineCacheUUID);
+std::string get_file_directory();
 
 typedef unsigned long long timestamp_t;
 timestamp_t get_milliseconds();
 
 // Main entry point of samples
-int sample_main(int argc = 0, char **argv = NULL);
+int sample_main(int argc, char *argv[]);
+
+#ifdef __ANDROID__
+// Android specific definitions & helpers.
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "threaded_app", __VA_ARGS__))
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "threaded_app", __VA_ARGS__))
+// Replace printf to logcat output.
+#define printf(...) __android_log_print(ANDROID_LOG_DEBUG, "TAG", __VA_ARGS__);
+
+bool Android_process_command();
+ANativeWindow* AndroidGetApplicationWindow();
+FILE* AndroidFopen(const char* fname, const char* mode);
+void AndroidGetWindowSize(int32_t *width, int32_t *height);
+bool AndroidLoadFile(const char* filePath, std::string *data);
+
+#ifndef VK_API_VERSION_1_0
+// On Android, NDK would include slightly older version of headers that is missing the definition.
+#define VK_API_VERSION_1_0 VK_API_VERSION
+#endif
+
+#endif

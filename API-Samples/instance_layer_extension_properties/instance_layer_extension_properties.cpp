@@ -37,6 +37,9 @@ int sample_main(int argc, char *argv[]) {
     VkLayerProperties *vk_props = NULL;
     std::vector<layer_properties> instance_layer_properties;
 
+    struct sample_info info = {};
+    init_global_layer_properties(info);
+
     /*
      * It's possible, though very rare, that the number of
      * instance layers could change. For example, installing something
