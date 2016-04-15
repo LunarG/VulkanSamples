@@ -1054,6 +1054,54 @@ ext_khr_surface = Extension(
     ],
 )
 
+ext_khr_display = Extension(
+    name="VK_KHR_display",
+    headers=["vulkan/vulkan.h"],
+    objects=['VkSurfaceKHR', 'VkDisplayModeKHR'],
+    protos=[
+        Proto("VkResult", "GetPhysicalDeviceDisplayPropertiesKHR",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("uint32_t*", "pPropertyCount"),
+             Param("VkDisplayPropertiesKHR*", "pProperties")]),
+
+        Proto("VkResult", "GetPhysicalDeviceDisplayPlanePropertiesKHR",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("uint32_t*", "pPropertyCount"),
+             Param("VkDisplayPlanePropertiesKHR*", "pProperties")]),
+
+        Proto("VkResult", "GetDisplayPlaneSupportedDisplaysKHR",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("uint32_t", "planeIndex"),
+             Param("uint32_t*", "pDisplayCount"),
+             Param("VkDisplayKHR*", "pDisplays")]),
+
+        Proto("VkResult", "GetDisplayModePropertiesKHR",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("VkDisplayKHR", "display"),
+             Param("uint32_t*", "pPropertyCount"),
+             Param("VkDisplayModePropertiesKHR*", "pProperties")]),
+
+        Proto("VkResult", "CreateDisplayModeKHR",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("VkDisplayKHR", "display"),
+             Param("const VkDisplayModeCreateInfoKHR*", "pCreateInfo"),
+             Param("const VkAllocationCallbacks*", "pAllocator"),
+             Param("VkDisplayModeKHR*", "pMode")]),
+
+        Proto("VkResult", "GetDisplayPlaneCapabilitiesKHR",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("VkDisplayModeKHR", "mode"),
+             Param("uint32_t", "planeIndex"),
+             Param("VkDisplayPlaneCapabilitiesKHR*", "pCapabilities")]),
+
+        Proto("VkResult", "CreateDisplayPlaneSurfaceKHR",
+            [Param("VkInstance", "instance"),
+             Param("const VkDisplaySurfaceCreateInfoKHR*", "pCreateInfo"),
+             Param("const VkAllocationCallbacks*", "pAllocator"),
+             Param("VkSurfaceKHR*", "pSurface")]),
+    ],
+)
+
 ext_khr_device_swapchain = Extension(
     name="VK_KHR_swapchain",
     headers=["vulkan/vulkan.h"],
@@ -1223,24 +1271,24 @@ import sys
 if len(sys.argv) > 3:
 # TODO : Need to clean this up to more seemlessly handle building different targets than the platform you're on
     if sys.platform.startswith('win32') and sys.argv[1] != 'Android':
-        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface]
-        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, lunarg_debug_report]
+        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, ext_khr_display]
+        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, ext_khr_display, lunarg_debug_report]
     elif sys.platform.startswith('linux') and sys.argv[1] != 'Android':
-        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface]
-        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, lunarg_debug_report]
+        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, ext_khr_display]
+        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, ext_khr_display, lunarg_debug_report]
     else: # android
         extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface]
         extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface, lunarg_debug_report]
 else :
     if sys.argv[1] == 'Win32':
-        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface]
-        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, lunarg_debug_report]
+        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, ext_khr_display]
+        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, ext_khr_display, lunarg_debug_report]
     elif sys.argv[1] == 'Android':
         extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface]
         extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface, lunarg_debug_report]
-    elif sys.argv[1] == 'Xcb' or sys.argv[1] == 'Xlib' or sys.argv[1] == 'Wayland' or sys.argv[1] == 'Mir':
-        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface]
-        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, lunarg_debug_report]
+    elif sys.argv[1] == 'Xcb' or sys.argv[1] == 'Xlib' or sys.argv[1] == 'Wayland' or sys.argv[1] == 'Mir' or sys.argv[1] == 'Display':
+        extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, ext_khr_display]
+        extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, ext_khr_display, lunarg_debug_report]
     else:
         print('Error: Undefined DisplayServer')
         extensions = []

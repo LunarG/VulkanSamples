@@ -129,11 +129,26 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreate
         (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR)gpa(instance, "vkGetPhysicalDeviceSurfaceFormatsKHR");
     pDisp->GetPhysicalDeviceSurfacePresentModesKHR =
         (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)gpa(instance, "vkGetPhysicalDeviceSurfacePresentModesKHR");
+    pDisp->CreateDisplayPlaneSurfaceKHR =
+        (PFN_vkCreateDisplayPlaneSurfaceKHR)gpa(instance, "vkCreateDisplayPlaneSurfaceKHR");
+    pDisp->GetPhysicalDeviceDisplayPropertiesKHR =
+        (PFN_vkGetPhysicalDeviceDisplayPropertiesKHR)gpa(instance, "vkGetPhysicalDeviceDisplayPropertiesKHR");
+    pDisp->GetPhysicalDeviceDisplayPlanePropertiesKHR =
+        (PFN_vkGetPhysicalDeviceDisplayPlanePropertiesKHR)gpa(instance, "vkGetPhysicalDeviceDisplayPlanePropertiesKHR");
+    pDisp->GetDisplayPlaneSupportedDisplaysKHR =
+        (PFN_vkGetDisplayPlaneSupportedDisplaysKHR)gpa(instance, "vkGetDisplayPlaneSupportedDisplaysKHR");
+    pDisp->GetDisplayModePropertiesKHR =
+        (PFN_vkGetDisplayModePropertiesKHR)gpa(instance, "vkGetDisplayModePropertiesKHR");
+    pDisp->CreateDisplayModeKHR =
+        (PFN_vkCreateDisplayModeKHR)gpa(instance, "vkCreateDisplayModeKHR");
+    pDisp->GetDisplayPlaneCapabilitiesKHR =
+        (PFN_vkGetDisplayPlaneCapabilitiesKHR)gpa(instance, "vkGetDisplayPlaneCapabilitiesKHR");
 
     // Remember this instance, and whether the VK_KHR_surface extension
     // was enabled for it:
     my_data->instanceMap[instance].instance = instance;
     my_data->instanceMap[instance].surfaceExtensionEnabled = false;
+    my_data->instanceMap[instance].displayExtensionEnabled = false;
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
     my_data->instanceMap[instance].androidSurfaceExtensionEnabled = false;
 #endif // VK_USE_PLATFORM_ANDROID_KHR
@@ -165,6 +180,10 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreate
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
 
             my_data->instanceMap[instance].surfaceExtensionEnabled = true;
+        }
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
+
+            my_data->instanceMap[instance].displayExtensionEnabled = true;
         }
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0) {
@@ -912,6 +931,294 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXlibPresentationSupportKHR(VkPhy
     return result;
 }
 #endif // VK_USE_PLATFORM_XLIB_KHR
+
+VKAPI_ATTR VkResult VKAPI_CALL 
+GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalDevice physicalDevice, uint32_t *pPropertyCount, VkDisplayPropertiesKHR *pProperties) {
+    VkResult result = VK_SUCCESS;
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    SwpPhysicalDevice *pPhysicalDevice = NULL;
+    {
+        auto it = my_data->physicalDeviceMap.find(physicalDevice);
+        pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
+    }
+
+    if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->displayExtensionEnabled) {
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
+                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
+                              VK_KHR_DISPLAY_EXTENSION_NAME);
+    }
+
+    if (!pPropertyCount) {
+        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pPropertyCount");
+    }
+    lock.unlock();
+
+    if (!skipCall) {
+        result = my_data->instance_dispatch_table->GetPhysicalDeviceDisplayPropertiesKHR(physicalDevice, pPropertyCount, pProperties);
+        return result;
+    }
+    return VK_ERROR_VALIDATION_FAILED_EXT;
+}
+
+static uint32_t gDisplayPlanePropertyCount = 0;
+static bool gDisplayPlanePropertyCountInit = false;
+VKAPI_ATTR VkResult VKAPI_CALL 
+GetPhysicalDeviceDisplayPlanePropertiesKHR(VkPhysicalDevice physicalDevice, uint32_t *pPropertyCount, VkDisplayPlanePropertiesKHR *pProperties) {
+    VkResult result = VK_SUCCESS;
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    SwpPhysicalDevice *pPhysicalDevice = NULL;
+    {
+        auto it = my_data->physicalDeviceMap.find(physicalDevice);
+        pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
+    }
+
+    if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->displayExtensionEnabled) {
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
+                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
+                              VK_KHR_DISPLAY_EXTENSION_NAME);
+    }
+
+    if (!pPropertyCount) {
+        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pPropertyCount");
+    }
+    lock.unlock();
+
+    if (!skipCall) {
+        result = my_data->instance_dispatch_table->GetPhysicalDeviceDisplayPlanePropertiesKHR(physicalDevice, pPropertyCount, pProperties);
+
+        lock.lock();
+        if (!pPhysicalDevice->gotDisplayPlanePropertyCount)
+        {
+            pPhysicalDevice->displayPlanePropertyCount = *pPropertyCount;
+            pPhysicalDevice->gotDisplayPlanePropertyCount = true;
+        }
+        lock.unlock();
+
+        return result;
+    }
+    return VK_ERROR_VALIDATION_FAILED_EXT;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL 
+GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDevice physicalDevice, uint32_t planeIndex, uint32_t* pDisplayCount, VkDisplayKHR* pDisplays) {
+    VkResult result = VK_SUCCESS;
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    SwpPhysicalDevice *pPhysicalDevice = NULL;
+    {
+        auto it = my_data->physicalDeviceMap.find(physicalDevice);
+        pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
+    }
+
+    if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->displayExtensionEnabled) {
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
+                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
+                              VK_KHR_DISPLAY_EXTENSION_NAME);
+    }
+
+    if (!pDisplayCount) {
+        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pDisplayCount");
+    }
+
+    if (!gDisplayPlanePropertyCountInit)
+    {
+        LOG_WARNING(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "planeIndex",
+                SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY,
+                "Potential problem with calling %s() without first querying vkGetPhysicalDeviceDisplayPlanePropertiesKHR.",
+                __FUNCTION__);
+    }
+
+    if (gDisplayPlanePropertyCountInit && planeIndex >= gDisplayPlanePropertyCount)
+    {
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "planeIndex",
+                SWAPCHAIN_PLANE_INDEX_TOO_LARGE,
+                "%s(): %s must be in the range [0, %d] that was returned by vkGetPhysicalDeviceDisplayPlanePropertiesKHR. Do you have the plane index hardcoded?",
+                __FUNCTION__,
+                "planeIndex",
+                gDisplayPlanePropertyCount - 1);
+    }
+    lock.unlock();
+
+    if (!skipCall) {
+        result = my_data->instance_dispatch_table->GetDisplayPlaneSupportedDisplaysKHR(physicalDevice, planeIndex, pDisplayCount, pDisplays);
+
+        return result;
+    }
+    return VK_ERROR_VALIDATION_FAILED_EXT;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL 
+GetDisplayModePropertiesKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR display, uint32_t* pPropertyCount, VkDisplayModePropertiesKHR* pProperties) {
+    VkResult result = VK_SUCCESS;
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    SwpPhysicalDevice *pPhysicalDevice = NULL;
+    {
+        auto it = my_data->physicalDeviceMap.find(physicalDevice);
+        pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
+    }
+
+    if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->displayExtensionEnabled) {
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
+                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
+                              VK_KHR_DISPLAY_EXTENSION_NAME);
+    }
+
+    if (!pPropertyCount) {
+        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pPropertyCount");
+    }
+    lock.unlock();
+
+    if (!skipCall) {
+        result = my_data->instance_dispatch_table->GetDisplayModePropertiesKHR(physicalDevice, display, pPropertyCount, pProperties);
+        return result;
+    }
+    return VK_ERROR_VALIDATION_FAILED_EXT;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL 
+CreateDisplayModeKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR display, const VkDisplayModeCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDisplayModeKHR* pMode) {
+    VkResult result = VK_SUCCESS;
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    SwpPhysicalDevice *pPhysicalDevice = NULL;
+    {
+        auto it = my_data->physicalDeviceMap.find(physicalDevice);
+        pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
+    }
+
+    if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->displayExtensionEnabled) {
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
+                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
+                              VK_KHR_DISPLAY_EXTENSION_NAME);
+    }
+
+    if (!pCreateInfo) {
+        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pCreateInfo");
+    }
+    lock.unlock();
+
+    if (!skipCall) {
+        result = my_data->instance_dispatch_table->CreateDisplayModeKHR(physicalDevice, display, pCreateInfo, pAllocator, pMode);
+        return result;
+    }
+    
+    return VK_ERROR_VALIDATION_FAILED_EXT;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL 
+GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkDisplayModeKHR mode, uint32_t planeIndex, VkDisplayPlaneCapabilitiesKHR* pCapabilities) {
+    VkResult result = VK_SUCCESS;
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    SwpPhysicalDevice *pPhysicalDevice = NULL;
+    {
+        auto it = my_data->physicalDeviceMap.find(physicalDevice);
+        pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
+    }
+
+    if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->displayExtensionEnabled) {
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
+                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
+                              VK_KHR_DISPLAY_EXTENSION_NAME);
+    }
+
+    if (!gDisplayPlanePropertyCountInit)
+    {
+        LOG_WARNING(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "planeIndex",
+                SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY,
+                "Potential problem with calling %s() without first querying vkGetPhysicalDeviceDisplayPlanePropertiesKHR.",
+                __FUNCTION__);
+    }
+
+    if (gDisplayPlanePropertyCountInit && planeIndex >= gDisplayPlanePropertyCount)
+    {
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "planeIndex",
+                SWAPCHAIN_PLANE_INDEX_TOO_LARGE,
+                "%s(): %s must be in the range [0, %d] that was returned by vkGetPhysicalDeviceDisplayPlanePropertiesKHR. Do you have the plane index hardcoded?",
+                __FUNCTION__,
+                "planeIndex",
+                gDisplayPlanePropertyCount - 1);
+    }
+
+    if (!pCapabilities) {
+        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pCapabilities");
+    }
+    lock.unlock();
+
+    if (!skipCall) {
+        result = my_data->instance_dispatch_table->GetDisplayPlaneCapabilitiesKHR(physicalDevice, mode, planeIndex, pCapabilities);
+        return result;
+    }
+
+    return VK_ERROR_VALIDATION_FAILED_EXT;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL
+CreateDisplayPlaneSurfaceKHR(VkInstance instance, const VkDisplaySurfaceCreateInfoKHR *pCreateInfo, const VkAllocationCallbacks *pAllocator,
+                       VkSurfaceKHR *pSurface) {
+    VkResult result = VK_SUCCESS;
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
+
+    // Validate that the platform extension was enabled:
+    if (pInstance && !pInstance->displayExtensionEnabled) {
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pInstance, "VkInstance", SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
+                              VK_KHR_DISPLAY_EXTENSION_NAME);
+    }
+
+    if (!pCreateInfo) {
+        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
+    } else {
+        if (pCreateInfo->sType != VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR) {
+            skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
+                                              "VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR");
+        }
+        if (pCreateInfo->pNext != NULL) {
+            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
+        }
+    }
+
+    if (!skipCall) {
+        // Call down the call chain:
+        lock.unlock();
+        result = my_data->instance_dispatch_table->CreateDisplayPlaneSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+        lock.lock();
+
+        // Obtain this pointer again after locking:
+        pInstance = &(my_data->instanceMap[instance]);
+        if ((result == VK_SUCCESS) && pInstance && pSurface) {
+            // Record the VkSurfaceKHR returned by the ICD:
+            my_data->surfaceMap[*pSurface].surface = *pSurface;
+            my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            my_data->surfaceMap[*pSurface].usedAllocatorToCreate = (pAllocator != NULL);
+            my_data->surfaceMap[*pSurface].numQueueFamilyIndexSupport = 0;
+            my_data->surfaceMap[*pSurface].pQueueFamilyIndexSupport = NULL;
+            // Point to the associated SwpInstance:
+            pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
+        }
+        lock.unlock();
+        return result;
+    }
+    return VK_ERROR_VALIDATION_FAILED_EXT;
+}
 
 VKAPI_ATTR void VKAPI_CALL
 DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface, const VkAllocationCallbacks *pAllocator) {
@@ -2299,6 +2606,13 @@ intercept_khr_surface_command(const char *name, VkInstance instance) {
         { "vkGetPhysicalDeviceSurfaceCapabilitiesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilitiesKHR) },
         { "vkGetPhysicalDeviceSurfaceFormatsKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR) },
         { "vkGetPhysicalDeviceSurfacePresentModesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR) },
+        { "vkGetPhysicalDeviceDisplayPropertiesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceDisplayPropertiesKHR) },
+        { "vkGetPhysicalDeviceDisplayPlanePropertiesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceDisplayPlanePropertiesKHR) },
+        { "vkGetDisplayPlaneSupportedDisplaysKHR", reinterpret_cast<PFN_vkVoidFunction>(GetDisplayPlaneSupportedDisplaysKHR) },
+        { "vkGetDisplayModePropertiesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetDisplayModePropertiesKHR) },
+        { "vkCreateDisplayModeKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayModeKHR) },
+        { "vkGetDisplayPlaneCapabilitiesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetDisplayPlaneCapabilitiesKHR) },
+        { "vkCreateDisplayPlaneSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateDisplayPlaneSurfaceKHR) },
     };
 
     // do not check if VK_KHR_*_surface is enabled (why?)
