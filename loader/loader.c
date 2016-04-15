@@ -2023,7 +2023,6 @@ loader_add_layer_properties(const struct loader_instance *inst,
         strncpy(props->info.layerName, name, sizeof(props->info.layerName));
         props->info.layerName[sizeof(props->info.layerName) - 1] = '\0';
 
-        char *fullpath = props->lib_name;
         char *rel_base;
         if (loader_platform_is_path(library_path)) {
             // a relative or absolute path
@@ -2031,11 +2030,11 @@ loader_add_layer_properties(const struct loader_instance *inst,
             strcpy(name_copy, filename);
             rel_base = loader_platform_dirname(name_copy);
             loader_expand_path(library_path, rel_base, MAX_STRING_SIZE,
-                               fullpath);
+                               props->lib_name);
         } else {
-            // a filename which is assumed in a system directory
-            loader_get_fullpath(library_path, DEFAULT_VK_LAYERS_PATH,
-                                MAX_STRING_SIZE, fullpath);
+            // a filename which will be passed to the OSes library loader
+            strncpy(props->lib_name, library_path, sizeof(props->lib_name));
+            props->lib_name[sizeof(props->lib_name) - 1] = '\0';
         }
         props->info.specVersion = loader_make_version(api_version);
         props->info.implementationVersion = atoi(implementation_version);
@@ -2537,12 +2536,12 @@ void loader_icd_scan(const struct loader_instance *inst,
                     cJSON_Delete(json);
                     continue;
                 }
-                char fullpath[MAX_STRING_SIZE];
+                char fullpath[MAX_STRING_SIZE], *fpath;
                 // Print out the paths being searched if debugging is enabled
                 loader_log(
                     inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
-                    "Searching for ICD drivers named %s default dir %s\n",
-                    library_path, DEFAULT_VK_DRIVERS_PATH);
+                    "Searching for ICD drivers named %s\n",
+                    library_path);
                 if (loader_platform_is_path(library_path)) {
                     // a relative or absolute path
                     char *name_copy = loader_stack_alloc(strlen(file_str) + 1);
@@ -2551,10 +2550,10 @@ void loader_icd_scan(const struct loader_instance *inst,
                     rel_base = loader_platform_dirname(name_copy);
                     loader_expand_path(library_path, rel_base, sizeof(fullpath),
                                        fullpath);
+                    fpath = fullpath;
                 } else {
-                    // a filename which is assumed in a system directory
-                    loader_get_fullpath(library_path, DEFAULT_VK_DRIVERS_PATH,
-                                        sizeof(fullpath), fullpath);
+                    // a filename which will be passed to the OSes library loader
+                    fpath = library_path;
                 }
 
                 uint32_t vers = 0;
@@ -2564,7 +2563,7 @@ void loader_icd_scan(const struct loader_instance *inst,
                     vers = loader_make_version(temp);
                     loader_tls_heap_free(temp);
                 }
-                loader_scanned_icd_add(inst, icds, fullpath, vers);
+                loader_scanned_icd_add(inst, icds, fpath, vers);
             } else
                 loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                            "Can't find \"library_path\" object in ICD JSON "
