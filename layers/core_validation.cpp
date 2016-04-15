@@ -4194,12 +4194,17 @@ static void clearDescriptorPool(layer_data *my_data, const VkDevice device, cons
                 "Unable to find pool node for pool %#" PRIxLEAST64 " specified in vkResetDescriptorPool() call", (uint64_t)pool);
     } else {
         // TODO: validate flags
-        // For every set off of this pool, clear it
+        // For every set off of this pool, clear it, remove from setMap, and free SET_NODE
         SET_NODE *pSet = pPool->pSets;
+        SET_NODE *pFreeSet = pSet;
         while (pSet) {
             clearDescriptorSet(my_data, pSet->set);
+            my_data->setMap.erase(pSet->set);
+            pFreeSet = pSet;
             pSet = pSet->pNext;
+            delete pFreeSet;
         }
+        pPool->pSets = nullptr;
         // Reset available count for each type and available sets for this pool
         for (uint32_t i = 0; i < pPool->availableDescriptorTypeCount.size(); ++i) {
             pPool->availableDescriptorTypeCount[i] = pPool->maxDescriptorTypeCount[i];
