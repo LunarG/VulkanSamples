@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import org.apache.tools.ant.taskdefs.condition.Os
+
 apply plugin: 'com.android.model.application'
 
 Properties properties = new Properties()
@@ -21,6 +23,11 @@ def shadercLibPath = file(ndkDir).absolutePath + "/sources/third_party/shaderc"
 def vulkanWrapperPath = file(project.rootProject.projectDir).absolutePath + "/vulkan_wrapper"
 
 def stlType = "c++_shared"
+
+def ndkbuild = "ndk-build"
+if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+    ndkbuild = "ndk-build.cmd"
+}
 
 model {
     repositories {
@@ -119,7 +126,7 @@ model {
 
 task build_shaderc(type:Exec) {
     workingDir "${shadercLibPath}"
-    commandLine "${ndkDir}/ndk-build", "NDK_PROJECT_PATH=.", "APP_BUILD_SCRIPT=Android.mk", "APP_STL:=${stlType}", "APP_ABI=@FLAVOR@", "libshaderc_combined", "-j16"
+    commandLine "${ndkDir}/${ndkbuild}", "NDK_PROJECT_PATH=.", "APP_BUILD_SCRIPT=Android.mk", "APP_STL:=${stlType}", "APP_ABI=@FLAVOR@", "libshaderc_combined", "-j16"
 }
 
 tasks.whenTaskAdded { task ->
