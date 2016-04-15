@@ -25,12 +25,12 @@ Please see the CONTRIBUTING.md file in this respository for more details.
 The build process uses CMake to generate makefiles for this project.
 The build generates the loader, layers, and tests.
 
-This repo has been built and tested on Ubuntu 14.04.3 LTS, 14.10, 15.04 and 15.10.
+This repo has been built and tested on Ubuntu 14.04.3 LTS, 14.10, 15.04, 15.10, and 16.04 LTS.
 It should be straightforward to use it on other Linux distros.
 
 These packages are needed to build this repository: 
 ```
-sudo apt-get install git cmake build-essential bison libxcb1-dev
+sudo apt-get install git cmake build-essential bison libx11-dev libxcb1-dev
 ```
 
 Example debug build:
