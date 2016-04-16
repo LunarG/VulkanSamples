@@ -2845,6 +2845,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             'vkEnumerateDeviceExtensionsProperties',
             'vkCreateDebugReportCallbackEXT',
             'vkDebugReportMessageEXT']
+        # Validation conditions for some special case struct members that are conditionally validated
+        self.structMemberValidationConditions = { 'VkPipelineColorBlendStateCreateInfo' : { 'logicOp' : '{}logicOpEnable == VK_TRUE' } }
         # Internal state - accumulators for different inner block text
         self.sections = dict([(section, []) for section in self.ALL_SECTIONS])
         self.structNames = []                             # List of Vulkan struct typenames
@@ -2857,7 +2859,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         # Named tuples to store struct and command data
         self.StructType = namedtuple('StructType', ['name', 'value'])
         self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isstaticarray', 'isbool', 'israngedenum',
-                                                        'isconst', 'isoptional', 'iscount', 'len', 'extstructs', 'cdecl'])
+                                                        'isconst', 'isoptional', 'iscount', 'len', 'extstructs', 'condition', 'cdecl'])
         self.CommandData = namedtuple('CommandData', ['name', 'params', 'cdecl'])
         self.StructMemberData = namedtuple('StructMemberData', ['name', 'members'])
     #
@@ -2975,6 +2977,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
     # structs etc.)
     def genStruct(self, typeinfo, typeName):
         OutputGenerator.genStruct(self, typeinfo, typeName)
+        conditions = self.structMemberValidationConditions[typeName] if typeName in self.structMemberValidationConditions else None
         members = typeinfo.elem.findall('.//member')
         #
         # Iterate over members once to get length parameters for arrays
@@ -3040,6 +3043,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                                                 iscount=iscount,
                                                 len=self.getLen(member),
                                                 extstructs=member.attrib.get('validextensionstructs') if name == 'pNext' else None,
+                                                condition=conditions[name] if conditions and name in conditions else None,
                                                 cdecl=cdecl))
         self.structMembers.append(self.StructMemberData(name=typeName, members=membersInfo))
     #
@@ -3099,6 +3103,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                                                     iscount=iscount,
                                                     len=self.getLen(param),
                                                     extstructs=None,
+                                                    condition=None,
                                                     cdecl=cdecl))
             self.commands.append(self.CommandData(name=name, params=paramsInfo, cdecl=self.makeCDecls(cmdinfo.elem)[0]))
     #
@@ -3203,7 +3208,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             if '->' in name:
                 # The count is obtained by dereferencing a member of a struct parameter
                 lenParam = self.CommandParam(name=name, iscount=True, ispointer=False, isbool=False, israngedenum=False, isconst=False,
-                                             isstaticarray=None, isoptional=False, type=None, len=None, extstructs=None, cdecl=None)
+                                             isstaticarray=None, isoptional=False, type=None, len=None, extstructs=None, condition=None, cdecl=None)
             elif 'latexmath' in name:
                 lenName, decoratedName = self.parseLateXMath(name)
                 lenParam = self.getParamByName(params, lenName)
@@ -3212,7 +3217,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 #param = self.getParamByName(params, lenName)
                 #lenParam = self.CommandParam(name=decoratedName, iscount=param.iscount, ispointer=param.ispointer,
                 #                             isoptional=param.isoptional, type=param.type, len=param.len,
-                #                             isstaticarray=param.isstaticarray, extstructs=param.extstructs, cdecl=param.cdecl)
+                #                             isstaticarray=param.isstaticarray, extstructs=param.extstructs,
+                #                             condition=None, cdecl=param.cdecl)
             else:
                 lenParam = self.getParamByName(params, name)
         return lenParam
@@ -3255,6 +3261,20 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             return [checkedExpr]
         # No if statements were required
         return exprs
+    #
+    # Generate code to check for a specific condition before executing validation code
+    def genConditionalCall(self, prefix, condition, exprs):
+        checkedExpr = []
+        localIndent = ''
+        formattedCondition = condition.format(prefix)
+        checkedExpr.append(localIndent + 'if ({})\n'.format(formattedCondition))
+        checkedExpr.append(localIndent + '{\n')
+        localIndent = self.incIndent(localIndent)
+        for expr in exprs:
+            checkedExpr.append(localIndent + expr)
+        localIndent = self.decIndent(localIndent)
+        checkedExpr.append(localIndent + '}\n')
+        return [checkedExpr]
     #
     # Generate the sType check string
     def makeStructTypeCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, lenPtrRequired, funcPrintName, lenPrintName, valuePrintName):
@@ -3446,6 +3466,9 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             #
             # Append the parameter check to the function body for the current command
             if usedLines:
+                # Apply special conditional checks
+                if value.condition:
+                    usedLines = self.genConditionalCall(valuePrefix, value.condition, usedLines)
                 lines += usedLines
             elif not value.iscount:
                 # If no expression was generated for this value, it is unreferenced by the validation function, unless
