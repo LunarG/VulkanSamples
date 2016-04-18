@@ -69,7 +69,7 @@
 #include <android/log.h>
 #define ERR_EXIT(err_msg, err_class)                                           \
     do {                                                                       \
-        ((void)__android_log_print(ANDROID_LOG_INFO, "Tri", err_msg));                                                       \
+        ((void)__android_log_print(ANDROID_LOG_INFO, "Tri", err_msg));         \
         exit(1);                                                               \
     } while (0)
 #else
@@ -2447,7 +2447,7 @@ static void demo_cleanup(struct demo *demo) {
     xcb_destroy_window(demo->connection, demo->window);
     xcb_disconnect(demo->connection);
     free(demo->atom_wm_delete_window);
-#endif // _WIN32
+#endif
 }
 
 static void demo_resize(struct demo *demo) {
