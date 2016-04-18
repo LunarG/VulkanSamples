@@ -291,7 +291,7 @@ of an ICD shared library (".dll") file. For example:
 The "library\_path" specifies either a filename, a relative pathname, or a full
 pathname to an ICD shared library file, which the loader will attempt to load
 using LoadLibrary(). If the ICD is specified via a filename, the shared library
-lives in the system's DLL search path (e.g. in the "C:\\\\Windows\\\\System32"
+lives in the system's DLL search path (e.g. in the "C:\Windows\System32"
 folder). If the ICD is specified via a relative pathname, it is relative to the
 path of the manifest file. Relative pathnames are those that do not start with
 a drive specifier (e.g. "C:"), nor with a directory separator (i.e. the '\\'
@@ -315,18 +315,18 @@ if the registry contains the following values,
 ```
 [HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\Drivers\]
 
-"C:\vendor a\vk\_vendora.json"=dword:00000000
+"C:\vendor a\vk_vendora.json"=dword:00000000
 
-"C:\windows\system32\vendorb\_vk.json"=dword:00000000
+"C:\windows\system32\vendorb_vk.json"=dword:00000000
 
-"C:\windows\system32\vendorc\_icd.json"=dword:00000000
+"C:\windows\system32\vendorc_icd.json"=dword:00000000
 ```
 then the loader will open the following text information files, with the
 specified contents:
 
 | Text File Name | Text File Contents |
 |----------------|--------------------|
-|vk\_vendora.json  | "ICD": { "library\_path": "C:\\\\VENDORA\\\\vk\_vendora.dll", "api_version": "1.0.5" } |
+|vk\_vendora.json  | "ICD": { "library\_path": "C:\VENDOR A\vk_vendora.dll", "api_version": "1.0.5" } |
 | vendorb\_vk.json |  "ICD": { "library\_path": "vendorb\_vk.dll", "api_version": "1.0.5" } |
 |vendorc\_icd.json  | "ICD": { "library\_path": "vedorc\_icd.dll", "api_version": "1.0.5" }|
 
@@ -823,8 +823,8 @@ The Vulkan loader will scan the files in the following Linux directories:
 /usr/share/vulkan/implicit\_layer.d
 /etc/vulkan/explicit\_layer.d
 /etc/vulkan/implicit\_layer.d
-$HOME/.local/share/vulkan/explicit\_layer.d
-$HOME/.local/share/vulkan/implicit\_layer.d
+\$HOME/.local/share/vulkan/explicit\_layer.d
+\$HOME/.local/share/vulkan/implicit\_layer.d
 
 Where $HOME is the current home directory of the application's user id; this
 path will be ignored for suid programs.
