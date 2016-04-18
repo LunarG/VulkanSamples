@@ -101,7 +101,6 @@ struct layer_data {
     VkLayerInstanceDispatchTable *instance_dispatch_table;
 
     devExts device_extensions;
-    uint64_t currentFenceId;
     unordered_set<VkQueue> queues;  // all queues under given device
     // Global set of all cmdBuffers that are inFlight on this device
     unordered_set<VkCommandBuffer> globalInFlightCmdBuffers;
@@ -138,8 +137,7 @@ struct layer_data {
 
     layer_data()
         : report_data(nullptr), device_dispatch_table(nullptr), instance_dispatch_table(nullptr), device_extensions(),
-          currentFenceId(1), device(VK_NULL_HANDLE), phys_dev_properties{},
-          phys_dev_mem_props{} {};
+          device(VK_NULL_HANDLE), phys_dev_properties{}, phys_dev_mem_props{} {};
 };
 
 // TODO : Do we need to guard access to layer_data_map w/ lock?
@@ -263,69 +261,6 @@ template layer_data *get_my_data_ptr<layer_data>(void *data_key, std::unordered_
 static GLOBAL_CB_NODE *getCBNode(layer_data *, const VkCommandBuffer);
 
 #if MTMERGESOURCE
-// Add a fence, creating one if necessary to our list of fences/fenceIds
-static bool add_fence_info(layer_data *my_data, VkFence fence, VkQueue queue, uint64_t *fenceId) {
-    bool skipCall = false;
-    *fenceId = my_data->currentFenceId++;
-
-    // If no fence, create an internal fence to track the submissions
-    if (fence != VK_NULL_HANDLE) {
-        my_data->fenceMap[fence].fenceId = *fenceId;
-        my_data->fenceMap[fence].queue = queue;
-        // Validate that fence is in UNSIGNALED state
-        VkFenceCreateInfo *pFenceCI = &(my_data->fenceMap[fence].createInfo);
-        if (pFenceCI->flags & VK_FENCE_CREATE_SIGNALED_BIT) {
-            skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                               (uint64_t)fence, __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
-                               "Fence %#" PRIxLEAST64 " submitted in SIGNALED state.  Fences must be reset before being submitted",
-                               (uint64_t)fence);
-        }
-    } else {
-        // TODO : Do we need to create an internal fence here for tracking purposes?
-    }
-    // Update most recently submitted fence and fenceId for Queue
-    my_data->queueMap[queue].lastSubmittedId = *fenceId;
-    return skipCall;
-}
-
-// Record information when a fence is known to be signalled
-static void update_fence_tracking(layer_data *my_data, VkFence fence) {
-    auto fence_item = my_data->fenceMap.find(fence);
-    if (fence_item != my_data->fenceMap.end()) {
-        FENCE_NODE *pCurFenceInfo = &(*fence_item).second;
-        VkQueue queue = pCurFenceInfo->queue;
-        auto queue_item = my_data->queueMap.find(queue);
-        if (queue_item != my_data->queueMap.end()) {
-            QUEUE_NODE *pQueueInfo = &(*queue_item).second;
-            if (pQueueInfo->lastRetiredId < pCurFenceInfo->fenceId) {
-                pQueueInfo->lastRetiredId = pCurFenceInfo->fenceId;
-            }
-        }
-    }
-
-    // Update fence state in fenceCreateInfo structure
-    auto pFCI = &(my_data->fenceMap[fence].createInfo);
-    pFCI->flags = static_cast<VkFenceCreateFlags>(pFCI->flags | VK_FENCE_CREATE_SIGNALED_BIT);
-}
-
-// Helper routine that updates the fence list for a specific queue to all-retired
-static void retire_queue_fences(layer_data *my_data, VkQueue queue) {
-    QUEUE_NODE *pQueueInfo = &my_data->queueMap[queue];
-    // Set queue's lastRetired to lastSubmitted indicating all fences completed
-    pQueueInfo->lastRetiredId = pQueueInfo->lastSubmittedId;
-}
-
-// Helper routine that updates all queues to all-retired
-static void retire_device_fences(layer_data *my_data, VkDevice device) {
-    // Process each queue for device
-    // TODO: Add multiple device support
-    for (auto ii = my_data->queueMap.begin(); ii != my_data->queueMap.end(); ++ii) {
-        // Set queue's lastRetired to lastSubmitted indicating all fences completed
-        QUEUE_NODE *pQueueInfo = &(*ii).second;
-        pQueueInfo->lastRetiredId = pQueueInfo->lastSubmittedId;
-    }
-}
-
 // Helper function to validate correct usage bits set for buffers or images
 //  Verify that (actual & desired) flags != 0 or,
 //   if strict is true, verify that (actual & desired) flags == desired
@@ -532,28 +467,6 @@ static bool deleteMemObjInfo(layer_data *my_data, void *object, VkDeviceMemory m
     return skipCall;
 }
 
-// Check if fence for given CB is completed
-static bool checkCBCompleted(layer_data *my_data, const VkCommandBuffer cb, bool *complete) {
-    GLOBAL_CB_NODE *pCBNode = getCBNode(my_data, cb);
-    bool skipCall = false;
-    *complete = true;
-
-    if (pCBNode) {
-        if (pCBNode->lastSubmittedQueue != NULL) {
-            VkQueue queue = pCBNode->lastSubmittedQueue;
-            QUEUE_NODE *pQueueInfo = &my_data->queueMap[queue];
-            if (pCBNode->fenceId > pQueueInfo->lastRetiredId) {
-                skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
-                                   VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)cb, __LINE__, MEMTRACK_NONE, "MEM",
-                                   "fence %#" PRIxLEAST64 " for CB %p has not been checked for completion",
-                                   (uint64_t)pCBNode->lastSubmittedFence, cb);
-                *complete = false;
-            }
-        }
-    }
-    return skipCall;
-}
-
 static bool freeMemObjInfo(layer_data *dev_data, void *object, VkDeviceMemory mem, bool internal) {
     bool skipCall = false;
     // Parse global list to find info w/ mem
@@ -576,9 +489,7 @@ static bool freeMemObjInfo(layer_data *dev_data, void *object, VkDeviceMemory me
             // and probably not needed in practice in c++11
             auto bindings = pInfo->commandBufferBindings;
             for (auto cb : bindings) {
-                bool commandBufferComplete = false;
-                skipCall |= checkCBCompleted(dev_data, cb, &commandBufferComplete);
-                if (commandBufferComplete) {
+                if (!dev_data->globalInFlightCmdBuffers.count(cb)) {
                     clear_cmd_buf_and_mem_references(dev_data, cb);
                 }
             }
@@ -816,8 +727,7 @@ static void printCBList(layer_data *my_data) {
         pCBInfo = cb_node.second;
 
         log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                __LINE__, MEMTRACK_NONE, "MEM", "    CB Info (%p) has CB %p, fenceId %" PRIx64 ", and fence %#" PRIxLEAST64,
-                (void *)pCBInfo, (void *)pCBInfo->commandBuffer, pCBInfo->fenceId, (uint64_t)pCBInfo->lastSubmittedFence);
+                __LINE__, MEMTRACK_NONE, "MEM", "    CB Info (%p) has CB %p", (void *)pCBInfo, (void *)pCBInfo->commandBuffer);
 
         if (pCBInfo->memObjs.size() <= 0)
             continue;
@@ -4433,7 +4343,6 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->activeRenderPass = 0;
         pCB->activeSubpassContents = VK_SUBPASS_CONTENTS_INLINE;
         pCB->activeSubpass = 0;
-        pCB->fenceId = 0;
         pCB->lastSubmittedFence = VK_NULL_HANDLE;
         pCB->lastSubmittedQueue = VK_NULL_HANDLE;
         pCB->destroyedSets.clear();
@@ -4961,7 +4870,8 @@ static void decrementResources(layer_data *my_data, VkCommandBuffer cmdBuffer) {
         my_data->eventMap[eventStagePair.first].stageMask = eventStagePair.second;
     }
 }
-
+// For fenceCount fences in pFences, mark fence signaled, decrement in_use, and call
+//  decrementResources for all priorFences and cmdBuffers associated with fence.
 static void decrementResources(layer_data *my_data, uint32_t fenceCount, const VkFence *pFences) {
     for (uint32_t i = 0; i < fenceCount; ++i) {
         auto fence_data = my_data->fenceMap.find(pFences[i]);
@@ -4976,7 +4886,7 @@ static void decrementResources(layer_data *my_data, uint32_t fenceCount, const V
         }
     }
 }
-
+// Decrement in_use for all outstanding cmd buffers that were submitted on this queue
 static void decrementResources(layer_data *my_data, VkQueue queue) {
     auto queue_data = my_data->queueMap.find(queue);
     if (queue_data != my_data->queueMap.end()) {
@@ -5206,13 +5116,20 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     std::unique_lock<std::mutex> lock(global_lock);
     // First verify that fence is not in use
-    if ((fence != VK_NULL_HANDLE) && (submitCount != 0) && dev_data->fenceMap[fence].in_use.load()) {
-        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                            (uint64_t)(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
-                            "Fence %#" PRIx64 " is already in use by another submission.", (uint64_t)(fence));
+    if (fence != VK_NULL_HANDLE) {
+        dev_data->fenceMap[fence].queue = queue;
+        if ((submitCount != 0) && dev_data->fenceMap[fence].in_use.load()) {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                                (uint64_t)(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
+                                "Fence %#" PRIx64 " is already in use by another submission.", (uint64_t)(fence));
+        }
+        if (!dev_data->fenceMap[fence].needsSignaled) {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                                reinterpret_cast<uint64_t &>(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+                                "Fence %#" PRIxLEAST64 " submitted in SIGNALED state.  Fences must be reset before being submitted",
+                                reinterpret_cast<uint64_t &>(fence));
+        }
     }
-    uint64_t fenceId = 0;
-    skipCall = add_fence_info(dev_data, fence, queue, &fenceId);
     // TODO : Review these old print functions and clean up as appropriate
     print_mem_list(dev_data);
     printCBList(dev_data);
@@ -5265,7 +5182,6 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
             if (pCBNode) {
                 pCBNode->semaphores = semaphoreList;
                 pCBNode->submitCount++; // increment submit count
-                pCBNode->fenceId = fenceId;
                 pCBNode->lastSubmittedFence = fence;
                 pCBNode->lastSubmittedQueue = queue;
                 skipCall |= validatePrimaryCommandBufferState(dev_data, pCBNode);
@@ -5448,14 +5364,16 @@ static inline void removeInFlightCmdBuffer(layer_data *dev_data, VkCommandBuffer
         }
     }
 }
-#if MTMERGESOURCE
-static inline bool verifyFenceStatus(VkDevice device, VkFence fence, const char *apiCall) {
+// Verify that state for fence being waited on is appropriate. That is,
+//  a fence being waited on should not already be signalled and
+//  it should have been submitted on a queue or during acquire next image
+static inline bool verifyWaitFenceState(VkDevice device, VkFence fence, const char *apiCall) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skipCall = false;
     auto pFenceInfo = my_data->fenceMap.find(fence);
     if (pFenceInfo != my_data->fenceMap.end()) {
         if (!pFenceInfo->second.firstTimeFlag) {
-            if ((pFenceInfo->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT) && !pFenceInfo->second.firstTimeFlag) {
+            if (!pFenceInfo->second.needsSignaled) {
                 skipCall |=
                     log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                             (uint64_t)fence, __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
@@ -5474,21 +5392,20 @@ static inline bool verifyFenceStatus(VkDevice device, VkFence fence, const char 
     }
     return skipCall;
 }
-#endif
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkWaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, VkBool32 waitAll, uint64_t timeout) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skip_call = false;
-#if MTMERGESOURCE
     // Verify fence status of submitted fences
     std::unique_lock<std::mutex> lock(global_lock);
     for (uint32_t i = 0; i < fenceCount; i++) {
-        skip_call |= verifyFenceStatus(device, pFences[i], "vkWaitForFences");
+        skip_call |= verifyWaitFenceState(device, pFences[i], "vkWaitForFences");
     }
     lock.unlock();
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
-#endif
+
     VkResult result = dev_data->device_dispatch_table->WaitForFences(device, fenceCount, pFences, waitAll, timeout);
     
     if (result == VK_SUCCESS) {
@@ -5496,11 +5413,9 @@ vkWaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, Vk
         // When we know that all fences are complete we can clean/remove their CBs
         if (waitAll || fenceCount == 1) {
             for (uint32_t i = 0; i < fenceCount; ++i) {
-#if MTMERGESOURCE
-                update_fence_tracking(dev_data, pFences[i]);
-#endif
-                VkQueue fence_queue = dev_data->fenceMap[pFences[i]].queue;
-                for (auto cmdBuffer : dev_data->fenceMap[pFences[i]].cmdBuffers) {
+                auto &fence_node = dev_data->fenceMap[pFences[i]];
+                VkQueue fence_queue = fence_node.queue;
+                for (auto cmdBuffer : fence_node.cmdBuffers) {
                     skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
                     removeInFlightCmdBuffer(dev_data, cmdBuffer, fence_queue);
                 }
@@ -5521,22 +5436,20 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(VkDevice device,
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skipCall = false;
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-#if MTMERGESOURCE
     std::unique_lock<std::mutex> lock(global_lock);
-    skipCall = verifyFenceStatus(device, fence, "vkGetFenceStatus");
+    skipCall = verifyWaitFenceState(device, fence, "vkGetFenceStatus");
     lock.unlock();
+
     if (skipCall)
         return result;
-#endif
+
     result = dev_data->device_dispatch_table->GetFenceStatus(device, fence);
     bool skip_call = false;
     lock.lock();
     if (result == VK_SUCCESS) {
-#if MTMERGESOURCE
-        update_fence_tracking(dev_data, fence);
-#endif
-        auto fence_queue = dev_data->fenceMap[fence].queue;
-        for (auto cmdBuffer : dev_data->fenceMap[fence].cmdBuffers) {
+        auto &fence_node = dev_data->fenceMap[fence];
+        auto fence_queue = fence_node.queue;
+        for (auto cmdBuffer : fence_node.cmdBuffers) {
             skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
             removeInFlightCmdBuffer(dev_data, cmdBuffer, fence_queue);
         }
@@ -5559,10 +5472,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(VkDevice device, uin
     if (result.second == true) {
         QUEUE_NODE *pQNode = &dev_data->queueMap[*pQueue];
         pQNode->device = device;
-#if MTMERGESOURCE
-        pQNode->lastRetiredId = 0;
-        pQNode->lastSubmittedId = 0;
-#endif
     }
 }
 
@@ -5582,13 +5491,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(VkQueue queue) {
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->QueueWaitIdle(queue);
-#if MTMERGESOURCE
-    if (VK_SUCCESS == result) {
-        lock.lock();
-        retire_queue_fences(dev_data, queue);
-        lock.unlock();
-    }
-#endif
     return result;
 }
 
@@ -5611,13 +5513,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDeviceWaitIdle(VkDevice device)
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->DeviceWaitIdle(device);
-#if MTMERGESOURCE
-    if (VK_SUCCESS == result) {
-        lock.lock();
-        retire_device_fences(dev_data, device);
-        lock.unlock();
-    }
-#endif
     return result;
 }
 
@@ -6154,28 +6049,15 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(VkDevice device, ui
     bool skipCall = false;
     std::unique_lock<std::mutex> lock(global_lock);
     for (uint32_t i = 0; i < fenceCount; ++i) {
-#if MTMERGESOURCE
-        // Reset fence state in fenceCreateInfo structure
-        // MTMTODO : Merge with code below
         auto fence_item = dev_data->fenceMap.find(pFences[i]);
         if (fence_item != dev_data->fenceMap.end()) {
-            // Validate fences in SIGNALED state
-            if (!(fence_item->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT)) {
-                // TODO: I don't see a Valid Usage section for ResetFences. This behavior should be documented there.
-                skipCall = log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                                   (uint64_t)pFences[i], __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
-                                   "Fence %#" PRIxLEAST64 " submitted to VkResetFences in UNSIGNALED STATE", (uint64_t)pFences[i]);
-            } else {
-                fence_item->second.createInfo.flags =
-                    static_cast<VkFenceCreateFlags>(fence_item->second.createInfo.flags & ~VK_FENCE_CREATE_SIGNALED_BIT);
+            fence_item->second.needsSignaled = true;
+            if (fence_item->second.in_use.load()) {
+                skipCall |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                            reinterpret_cast<const uint64_t &>(pFences[i]), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
+                            "Fence %#" PRIx64 " is in use by a command buffer.", reinterpret_cast<const uint64_t &>(pFences[i]));
             }
-        }
-#endif
-        if (dev_data->fenceMap[pFences[i]].in_use.load()) {
-            skipCall |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                        reinterpret_cast<const uint64_t &>(pFences[i]), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
-                        "Fence %#" PRIx64 " is in use by a command buffer.", reinterpret_cast<const uint64_t &>(pFences[i]));
         }
     }
     lock.unlock();
@@ -6329,15 +6211,14 @@ vkCreateFence(VkDevice device, const VkFenceCreateInfo *pCreateInfo, const VkAll
     VkResult result = dev_data->device_dispatch_table->CreateFence(device, pCreateInfo, pAllocator, pFence);
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
-        FENCE_NODE *pFN = &dev_data->fenceMap[*pFence];
-#if MTMERGESOURCE
-        memset(pFN, 0, sizeof(MT_FENCE_INFO));
-        memcpy(&(pFN->createInfo), pCreateInfo, sizeof(VkFenceCreateInfo));
+        auto &fence_node = dev_data->fenceMap[*pFence];
+        fence_node.createInfo = *pCreateInfo;
+        fence_node.needsSignaled = true;
         if (pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT) {
-            pFN->firstTimeFlag = true;
+            fence_node.firstTimeFlag = true;
+            fence_node.needsSignaled = false;
         }
-#endif
-        pFN->in_use.store(0);
+        fence_node.in_use.store(0);
     }
     return result;
 }
@@ -6821,18 +6702,16 @@ vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginIn
     // Validate command buffer level
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
-        bool commandBufferComplete = false;
         // This implicitly resets the Cmd Buffer so make sure any fence is done and then clear memory references
-        skipCall = checkCBCompleted(dev_data, commandBuffer, &commandBufferComplete);
-        clear_cmd_buf_and_mem_references(dev_data, pCB);
-
-        if (!commandBufferComplete) {
-            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                (uint64_t)commandBuffer, __LINE__, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM",
-                                "Calling vkBeginCommandBuffer() on active CB %p before it has completed. "
-                                "You must check CB flag before this call.",
-                                commandBuffer);
+        if (dev_data->globalInFlightCmdBuffers.count(commandBuffer)) {
+            skipCall |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        (uint64_t)commandBuffer, __LINE__, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM",
+                        "Calling vkBeginCommandBuffer() on active CB %p before it has completed. "
+                        "You must check CB fence before this call.",
+                        commandBuffer);
         }
+        clear_cmd_buf_and_mem_references(dev_data, pCB);
         if (pCB->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
             // Secondary Command Buffer
             const VkCommandBufferInheritanceInfo *pInfo = pBeginInfo->pInheritanceInfo;
@@ -10203,13 +10082,22 @@ vkQueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo 
     bool skip_call = false;
     std::unique_lock<std::mutex> lock(global_lock);
     // First verify that fence is not in use
-    if ((fence != VK_NULL_HANDLE) && (bindInfoCount != 0) && dev_data->fenceMap[fence].in_use.load()) {
-        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                             reinterpret_cast<uint64_t &>(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
-                             "Fence %#" PRIx64 " is already in use by another submission.", reinterpret_cast<uint64_t &>(fence));
+    if (fence != VK_NULL_HANDLE) {
+        dev_data->fenceMap[fence].queue = queue;
+        if ((bindInfoCount != 0) && dev_data->fenceMap[fence].in_use.load()) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                        reinterpret_cast<uint64_t &>(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
+                        "Fence %#" PRIx64 " is already in use by another submission.", reinterpret_cast<uint64_t &>(fence));
+        }
+        if (!dev_data->fenceMap[fence].needsSignaled) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                        reinterpret_cast<uint64_t &>(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+                        "Fence %#" PRIxLEAST64 " submitted in SIGNALED state.  Fences must be reset before being submitted",
+                        reinterpret_cast<uint64_t &>(fence));
+        }
     }
-    uint64_t fenceId = 0;
-    skip_call = add_fence_info(dev_data, fence, queue, &fenceId);
     for (uint32_t bindIdx = 0; bindIdx < bindInfoCount; ++bindIdx) {
         const VkBindSparseInfo &bindInfo = pBindInfo[bindIdx];
         // Track objects tied to memory

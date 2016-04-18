@@ -797,23 +797,22 @@ TEST_F(VkLayerTest, SubmitSignaledFence) {
 
     m_errorMonitor->VerifyFound();
 }
-
+// This is a positive test. We used to expect error in this case but spec now
+// allows it
 TEST_F(VkLayerTest, ResetUnsignaledFence) {
+    m_errorMonitor->ExpectSuccess();
     vk_testing::Fence testFence;
     VkFenceCreateInfo fenceInfo = {};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.pNext = NULL;
 
-    m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_WARNING_BIT_EXT,
-        "submitted to VkResetFences in UNSIGNALED STATE");
-
     ASSERT_NO_FATAL_FAILURE(InitState());
     testFence.init(*m_device, fenceInfo);
     VkFence fences[1] = {testFence.handle()};
-    vkResetFences(m_device->device(), 1, fences);
+    VkResult result = vkResetFences(m_device->device(), 1, fences);
+    ASSERT_VK_SUCCESS(result);
 
-    m_errorMonitor->VerifyFound();
+    m_errorMonitor->VerifyNotFound();
 }
 
 /* TODO: Update for changes due to bug-14075 tiling across render passes */
