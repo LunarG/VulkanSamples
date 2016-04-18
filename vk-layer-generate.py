@@ -1007,7 +1007,7 @@ class ObjectTrackerSubcommand(Subcommand):
         gedi_txt.append('    }')
         gedi_txt.append('')
         gedi_txt.append('    layer_debug_report_destroy_instance(mid(instance));')
-        gedi_txt.append('    layer_data_map.erase(pInstanceTable);')
+        gedi_txt.append('    layer_data_map.erase(key);')
         gedi_txt.append('')
         gedi_txt.append('    instanceExtMap.erase(pInstanceTable);')
         gedi_txt.append('    lock.unlock();')

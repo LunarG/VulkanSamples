@@ -367,7 +367,6 @@ static VkBool32 validate_pipeline_layout(VkDevice dispatchable_object, VkPipelin
 static VkBool32 validate_pipeline(VkDevice dispatchable_object, VkPipeline object, VkDebugReportObjectTypeEXT objType,
                                   bool null_allowed);
 static void destroy_command_pool(VkDevice dispatchable_object, VkCommandPool object);
-static void destroy_command_buffer(VkCommandBuffer dispatchable_object, VkCommandBuffer object);
 static void destroy_descriptor_pool(VkDevice dispatchable_object, VkDescriptorPool object);
 static void destroy_descriptor_set(VkDevice dispatchable_object, VkDescriptorSet object);
 static void destroy_device_memory(VkDevice dispatchable_object, VkDeviceMemory object);
@@ -924,8 +923,7 @@ void explicit_DestroyCommandPool(VkDevice device, VkCommandPool commandPool, con
         OBJTRACK_NODE *pNode = (*itr).second;
         del_itr = itr++;
         if (pNode->parentObj == (uint64_t)(commandPool)) {
-            destroy_command_buffer(reinterpret_cast<VkCommandBuffer>((*del_itr).first),
-                                   reinterpret_cast<VkCommandBuffer>((*del_itr).first));
+            free_command_buffer(device, commandPool, reinterpret_cast<VkCommandBuffer>((*del_itr).first));
         }
     }
     destroy_command_pool(device, commandPool);
