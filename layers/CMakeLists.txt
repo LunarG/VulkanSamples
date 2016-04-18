@@ -36,14 +36,25 @@ set(CMAKE_INSTALL_RPATH ${VK_LAYER_RPATH})
 
 if (WIN32)
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
-        foreach (config_file ${LAYER_JSON_FILES})
-            FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/windows/${config_file}.json src_json)
-            FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/${config_file}.json dst_json)
-            add_custom_target(${config_file}-json ALL
-                COMMAND copy ${src_json} ${dst_json}
-                VERBATIM
-                )
-        endforeach(config_file)
+        if (CMAKE_GENERATOR MATCHES "^Visual Studio.*")
+            foreach (config_file ${LAYER_JSON_FILES})
+                FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/windows/${config_file}.json src_json)
+                FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/${config_file}.json dst_json)
+                add_custom_target(${config_file}-json ALL
+                    COMMAND copy ${src_json} ${dst_json}
+                    VERBATIM
+                    )
+            endforeach(config_file)
+        else()
+            foreach (config_file ${LAYER_JSON_FILES})
+                FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/windows/${config_file}.json src_json)
+                FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/${config_file}.json dst_json)
+                add_custom_target(${config_file}-json ALL
+                    COMMAND copy ${src_json} ${dst_json}
+                    VERBATIM
+                    )
+            endforeach(config_file)
+        endif()
     endif()
 else()
     # extra setup for out-of-tree builds
