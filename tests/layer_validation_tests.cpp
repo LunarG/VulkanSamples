@@ -696,75 +696,6 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit) {
     vkDestroyImage(m_device->device(), image, NULL);
 }
 
-// TODO : Is this test still valid. Not sure it is with updates to memory
-// binding model
-//  Verify and delete the test of fix the check
-// TEST_F(VkLayerTest, FreeBoundMemory)
-//{
-//    VkResult        err;
-//
-//    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
-//        "Freeing memory object while it still has references");
-//
-//    ASSERT_NO_FATAL_FAILURE(InitState());
-
-//    // Create an image, allocate memory, free it, and then try to bind it
-//    VkImage               image;
-//    VkDeviceMemory        mem;
-//    VkMemoryRequirements  mem_reqs;
-//
-//    const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
-//    const int32_t  tex_width       = 32;
-//    const int32_t  tex_height      = 32;
-//
-//    const VkImageCreateInfo image_create_info = {
-//        .sType           = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-//        .pNext           = NULL,
-//        .imageType       = VK_IMAGE_TYPE_2D,
-//        .format          = tex_format,
-//        .extent          = { tex_width, tex_height, 1 },
-//        .mipLevels       = 1,
-//        .arraySize       = 1,
-//        .samples         = VK_SAMPLE_COUNT_1_BIT,
-//        .tiling          = VK_IMAGE_TILING_LINEAR,
-//        .usage           = VK_IMAGE_USAGE_SAMPLED_BIT,
-//        .flags           = 0,
-//    };
-//    VkMemoryAllocateInfo mem_alloc = {
-//        .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-//        .pNext           = NULL,
-//        .allocationSize  = 0,
-//        .memoryTypeIndex = 0,
-//    };
-//
-//    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
-//    ASSERT_VK_SUCCESS(err);
-//
-//    err = vkGetImageMemoryRequirements(m_device->device(),
-//                          image,
-//                          &mem_reqs);
-//    ASSERT_VK_SUCCESS(err);
-//
-//    mem_alloc.allocationSize = mem_reqs.size;
-//
-//    err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc,
-//    0);
-//    ASSERT_VK_SUCCESS(err);
-//
-//    // allocate memory
-//    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
-//    ASSERT_VK_SUCCESS(err);
-//
-//    // Bind memory to Image object
-//    err = vkBindImageMemory(m_device->device(), image, mem, 0);
-//    ASSERT_VK_SUCCESS(err);
-//
-//    // Introduce validation failure, free memory while still bound to object
-//    vkFreeMemory(m_device->device(), mem, NULL);
-//
-//    m_errorMonitor->VerifyFound();
-//}
-
 TEST_F(VkLayerTest, RebindMemory) {
     VkResult err;
     bool pass;
@@ -886,7 +817,6 @@ TEST_F(VkLayerTest, ResetUnsignaledFence) {
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.pNext = NULL;
 
-    // TODO: verify that this matches layer
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_WARNING_BIT_EXT,
         "submitted to VkResetFences in UNSIGNALED STATE");
@@ -1477,58 +1407,92 @@ TEST_F(VkLayerTest, FreeDescriptorFromOneShotPool) {
 }
 
 TEST_F(VkLayerTest, InvalidDescriptorPool) {
-    // TODO : Simple check for bad object should be added to ObjectTracker to
-    // catch this case
-    //   The DS check for this is after driver has been called to validate DS
-    //   internal data struct
-    // Attempt to clear DS Pool with bad object
-    /*
-        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-            "Unable to find pool node for pool 0xbaad6001 specified in
-       vkResetDescriptorPool() call");
-
-        VkDescriptorPool badPool = (VkDescriptorPool)0xbaad6001;
-        vkResetDescriptorPool(device(), badPool);
-
-        m_errorMonitor->VerifyFound();
-        */
+    // Attempt to clear Descriptor Pool with bad object.
+    // ObjectTracker should catch this.
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Invalid VkDescriptorPool Object 0xbaad6001");
+    VkDescriptorPool badPool = (VkDescriptorPool)0xbaad6001;
+    vkResetDescriptorPool(device(), badPool, 0);
+    m_errorMonitor->VerifyFound();
 }
 
 TEST_F(VkLayerTest, InvalidDescriptorSet) {
-    // TODO : Simple check for bad object should be added to ObjectTracker to
-    // catch this case
-    //   The DS check for this is after driver has been called to validate DS
-    //   internal data struct
+    // Attempt to bind an invalid Descriptor Set to a valid Command Buffer
+    // ObjectTracker should catch this.
     // Create a valid cmd buffer
-    // call vkCmdBindDescriptorSets w/ false DS
+    // call vkCmdBindDescriptorSets w/ false Descriptor Set
+    VkDescriptorSet badSet = (VkDescriptorSet)0xbaad6001;
+    VkResult err;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Invalid VkDescriptorSet Object 0xbaad6001");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkDescriptorSetLayoutBinding layout_bindings[1] = {};
+    layout_bindings[0].binding = 0;
+    layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layout_bindings[0].descriptorCount = 1;
+    layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    layout_bindings[0].pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayout descriptor_set_layout;
+    VkDescriptorSetLayoutCreateInfo dslci = {};
+    dslci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    dslci.pNext = NULL;
+    dslci.bindingCount = 1;
+    dslci.pBindings = layout_bindings;
+    err = vkCreateDescriptorSetLayout(device(), &dslci, NULL, &descriptor_set_layout);
+    assert(!err);
+
+    VkPipelineLayout pipeline_layout;
+    VkPipelineLayoutCreateInfo plci = {};
+    plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    plci.pNext = NULL;
+    plci.setLayoutCount = 1;
+    plci.pSetLayouts = &descriptor_set_layout;
+    err = vkCreatePipelineLayout(device(), &plci, NULL, &pipeline_layout);
+    assert(!err);
+
+    BeginCommandBuffer();
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            pipeline_layout, 0, 1, &badSet, 0, NULL);
+    m_errorMonitor->VerifyFound();
+    EndCommandBuffer();
+    vkDestroyPipelineLayout(device(), pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(device(), descriptor_set_layout, NULL);
 }
 
 TEST_F(VkLayerTest, InvalidDescriptorSetLayout) {
-    // TODO : Simple check for bad object should be added to ObjectTracker to
-    // catch this case
-    //   The DS check for this is after driver has been called to validate DS
-    //   internal data struct
+    // Attempt to create a Pipeline Layout with an invalid Descriptor Set Layout.
+    // ObjectTracker should catch this.
+    VkDescriptorSetLayout bad_layout = (VkDescriptorSetLayout)0xbaad6001;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Invalid VkDescriptorSetLayout Object 0xbaad6001");
+
+    VkPipelineLayout pipeline_layout;
+    VkPipelineLayoutCreateInfo plci = {};
+    plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    plci.pNext = NULL;
+    plci.setLayoutCount = 1;
+    plci.pSetLayouts = &bad_layout;
+    vkCreatePipelineLayout(device(), &plci, NULL, &pipeline_layout);
+
+    m_errorMonitor->VerifyFound();
 }
 
 TEST_F(VkLayerTest, InvalidPipeline) {
-    // TODO : Simple check for bad object should be added to ObjectTracker to
-    // catch this case
-    //   The DS check for this is after driver has been called to validate DS
-    //   internal data struct
+    // Attempt to bind an invalid Pipeline to a valid Command Buffer
+    // ObjectTracker should catch this.
     // Create a valid cmd buffer
     // call vkCmdBindPipeline w/ false Pipeline
-    //
-    //    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-    //        "Attempt to bind Pipeline ");
-    //
-    //    ASSERT_NO_FATAL_FAILURE(InitState());
-    //    VkCommandBufferObj commandBuffer(m_device);
-    //    BeginCommandBuffer();
-    //    VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
-    //    vkCmdBindPipeline(commandBuffer.GetBufferHandle(),
-    //    VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
-    //
-    //    m_errorMonitor->VerifyFound();
+    VkPipeline bad_pipeline = (VkPipeline)0xbaad6001;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Invalid VkPipeline Object 0xbaad6001");
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    BeginCommandBuffer();
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(),
+                      VK_PIPELINE_BIND_POINT_GRAPHICS, bad_pipeline);
+    m_errorMonitor->VerifyFound();
 }
 
 TEST_F(VkLayerTest, DescriptorSetNotUpdated) {
@@ -1536,7 +1500,6 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated) {
     // CommandBuffer
     VkResult err;
 
-    // TODO: verify that this matches layer
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
                                          " bound but it was never updated. ");
 
@@ -1599,7 +1562,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated) {
 
     VkShaderObj vs(m_device, bindStateVertShaderText,
                    VK_SHADER_STAGE_VERTEX_BIT, this);
-    //  TODO - We shouldn't need a fragment shader but add it to be able to run
+    //  We shouldn't need a fragment shader but add it to be able to run
     //  on more devices
     VkShaderObj fs(m_device, bindStateFragShaderText,
                    VK_SHADER_STAGE_FRAGMENT_BIT, this);
@@ -2764,7 +2727,7 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch) {
                    VK_SHADER_STAGE_VERTEX_BIT, this);
     VkShaderObj fs(m_device, bindStateFragShaderText,
                    VK_SHADER_STAGE_FRAGMENT_BIT,
-                   this); // TODO - We shouldn't need a fragment shader
+                   this); // We shouldn't need a fragment shader
                           // but add it to be able to run on more devices
     shaderStages[0] = vs.GetStageCreateInfo();
     shaderStages[1] = fs.GetStageCreateInfo();
@@ -2877,7 +2840,7 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet) {
                    VK_SHADER_STAGE_VERTEX_BIT, this);
     VkShaderObj fs(m_device, bindStateFragShaderText,
                    VK_SHADER_STAGE_FRAGMENT_BIT,
-                   this); // TODO - We shouldn't need a fragment shader
+                   this); // We shouldn't need a fragment shader
                           // but add it to be able to run on more devices
     shaderStages[0] = vs.GetStageCreateInfo();
     shaderStages[1] = fs.GetStageCreateInfo();
@@ -3009,7 +2972,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
                    VK_SHADER_STAGE_VERTEX_BIT, this);
     VkShaderObj fs(m_device, bindStateFragShaderText,
                    VK_SHADER_STAGE_FRAGMENT_BIT,
-                   this); // TODO - We shouldn't need a fragment shader
+                   this); // We shouldn't need a fragment shader
                           // but add it to be able to run on more devices
     shaderStages[0] = vs.GetStageCreateInfo();
     shaderStages[1] = fs.GetStageCreateInfo();
@@ -3183,7 +3146,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
                    VK_SHADER_STAGE_VERTEX_BIT, this);
     VkShaderObj fs(m_device, bindStateFragShaderText,
                    VK_SHADER_STAGE_FRAGMENT_BIT,
-                   this); // TODO - We shouldn't need a fragment shader
+                   this); // We shouldn't need a fragment shader
                           // but add it to be able to run on more devices
     shaderStages[0] = vs.GetStageCreateInfo();
     shaderStages[1] = fs.GetStageCreateInfo();
@@ -3470,15 +3433,6 @@ TEST_F(VkLayerTest, ClearColorAttachmentsOutsideRenderPass) {
                           &color_attachment, 1, &clear_rect);
 
     m_errorMonitor->VerifyFound();
-}
-
-TEST_F(VkLayerTest, InvalidDynamicStateObject) {
-    // Create a valid cmd buffer
-    // call vkCmdBindDynamicStateObject w/ false DS Obj
-    // TODO : Simple check for bad object should be added to ObjectTracker to
-    // catch this case
-    //   The DS check for this is after driver has been called to validate DS
-    //   internal data struct
 }
 
 TEST_F(VkLayerTest, IdxBufferAlignmentError) {
@@ -4360,7 +4314,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch) {
                    VK_SHADER_STAGE_VERTEX_BIT, this);
     VkShaderObj fs(m_device, bindStateFragShaderText,
                    VK_SHADER_STAGE_FRAGMENT_BIT,
-                   this); //  TODO - We shouldn't need a fragment shader
+                   this); // We shouldn't need a fragment shader
                           // but add it to be able to run on more devices
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
@@ -4459,7 +4413,7 @@ TEST_F(VkLayerTest, NumBlendAttachMismatch) {
         VK_SHADER_STAGE_VERTEX_BIT, this);
     VkShaderObj fs(m_device, bindStateFragShaderText,
         VK_SHADER_STAGE_FRAGMENT_BIT,
-        this); //  TODO - We shouldn't need a fragment shader
+        this); // We shouldn't need a fragment shader
                // but add it to be able to run on more devices
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
@@ -4483,7 +4437,6 @@ TEST_F(VkLayerTest, ClearCmdNoDraw) {
     // to issuing a Draw
     VkResult err;
 
-    // TODO: verify that this matches layer
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
         "vkCmdClearAttachments() issued on CB object ");
@@ -4557,7 +4510,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw) {
 
     VkShaderObj vs(m_device, bindStateVertShaderText,
                    VK_SHADER_STAGE_VERTEX_BIT, this);
-    //  TODO - We shouldn't need a fragment shader but add it to be able to run
+    //  We shouldn't need a fragment shader but add it to be able to run
     //  on more devices
     VkShaderObj fs(m_device, bindStateFragShaderText,
                    VK_SHADER_STAGE_FRAGMENT_BIT, this);
@@ -4672,7 +4625,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex) {
                    VK_SHADER_STAGE_VERTEX_BIT, this);
     VkShaderObj fs(m_device, bindStateFragShaderText,
                    VK_SHADER_STAGE_FRAGMENT_BIT,
-                   this); //  TODO - We shouldn't need a fragment shader
+                   this); // We shouldn't need a fragment shader
                           // but add it to be able to run on more devices
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
@@ -5892,7 +5845,6 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed) {
-    // TODO: verify that this matches layer
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_WARNING_BIT_EXT,
         "FS writes to output location 1 with no matching attachment");
@@ -6404,8 +6356,107 @@ TEST_F(VkLayerTest, CopyImageLayerCountMismatch) {
 }
 
 TEST_F(VkLayerTest, CopyImageFormatSizeMismatch) {
-    // TODO : Create two images with different format sizes and vkCmdCopyImage
-    // between them
+    VkResult err;
+    bool pass;
+
+    // Create color images with different format sizes and try to copy between them
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCmdCopyImage called with unmatched source and dest image format sizes");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Create two images of different types and try to copy between them
+    VkImage srcImage;
+    VkImage dstImage;
+    VkDeviceMemory srcMem;
+    VkDeviceMemory destMem;
+    VkMemoryRequirements memReqs;
+
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+    image_create_info.extent.width = 32;
+    image_create_info.extent.height = 32;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    image_create_info.flags = 0;
+
+    err =
+        vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
+    ASSERT_VK_SUCCESS(err);
+
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    // Introduce failure by creating second image with a different-sized format.
+    image_create_info.format = VK_FORMAT_R5G5B5A1_UNORM_PACK16;
+
+    err =
+        vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
+    ASSERT_VK_SUCCESS(err);
+
+    // Allocate memory
+    VkMemoryAllocateInfo memAlloc = {};
+    memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memAlloc.pNext = NULL;
+    memAlloc.allocationSize = 0;
+    memAlloc.memoryTypeIndex = 0;
+
+    vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
+    memAlloc.allocationSize = memReqs.size;
+    pass =
+        m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &srcMem);
+    ASSERT_VK_SUCCESS(err);
+
+    vkGetImageMemoryRequirements(m_device->device(), dstImage, &memReqs);
+    memAlloc.allocationSize = memReqs.size;
+    pass =
+        m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &destMem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkBindImageMemory(m_device->device(), srcImage, srcMem, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), dstImage, destMem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    BeginCommandBuffer();
+    VkImageCopy copyRegion;
+    copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.srcSubresource.mipLevel = 0;
+    copyRegion.srcSubresource.baseArrayLayer = 0;
+    copyRegion.srcSubresource.layerCount = 0;
+    copyRegion.srcOffset.x = 0;
+    copyRegion.srcOffset.y = 0;
+    copyRegion.srcOffset.z = 0;
+    copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.dstSubresource.mipLevel = 0;
+    copyRegion.dstSubresource.baseArrayLayer = 0;
+    copyRegion.dstSubresource.layerCount = 0;
+    copyRegion.dstOffset.x = 0;
+    copyRegion.dstOffset.y = 0;
+    copyRegion.dstOffset.z = 0;
+    copyRegion.extent.width = 1;
+    copyRegion.extent.height = 1;
+    copyRegion.extent.depth = 1;
+    m_commandBuffer->CopyImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, dstImage,
+                               VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    EndCommandBuffer();
+
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyImage(m_device->device(), srcImage, NULL);
+    vkDestroyImage(m_device->device(), dstImage, NULL);
+    vkFreeMemory(m_device->device(), srcMem, NULL);
+    vkFreeMemory(m_device->device(), destMem, NULL);
 }
 
 TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
@@ -6444,6 +6495,8 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch) {
     err =
         vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
     ASSERT_VK_SUCCESS(err);
+
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     // Introduce failure by creating second image with a depth/stencil format
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
