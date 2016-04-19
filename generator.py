@@ -2845,6 +2845,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.structNames = []                             # List of Vulkan struct typenames
         self.stypes = []                                  # Values from the VkStructureType enumeration
         self.structTypes = dict()                         # Map of Vulkan struct typename to required VkStructureType
+        self.handleTypes = set()                          # Set of handle type names
         self.commands = []                                # List of CommandData records for all Vulkan commands
         self.structMembers = []                           # List of StructMemberData records for all Vulkan structs
         self.validatedStructs = dict()                    # Map of structs type names to generated validation code for that struct type
@@ -2852,7 +2853,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         # Named tuples to store struct and command data
         self.StructType = namedtuple('StructType', ['name', 'value'])
         self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isstaticarray', 'isbool', 'israngedenum',
-                                                        'isconst', 'isoptional', 'iscount', 'len', 'extstructs', 'condition', 'cdecl'])
+                                                        'isconst', 'isoptional', 'iscount', 'noautovalidity', 'len', 'extstructs',
+                                                        'condition', 'cdecl'])
         self.CommandData = namedtuple('CommandData', ['name', 'params', 'cdecl'])
         self.StructMemberData = namedtuple('StructMemberData', ['name', 'members'])
     #
@@ -2915,6 +2917,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.structNames = []
         self.stypes = []
         self.structTypes = dict()
+        self.handleTypes = set()
         self.commands = []
         self.structMembers = []
         self.validatedStructs = dict()
@@ -2960,6 +2963,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         if (category == 'struct' or category == 'union'):
             self.structNames.append(name)
             self.genStruct(typeinfo, name)
+        elif (category == 'handle'):
+            self.handleTypes.add(name)
     #
     # Struct parameter check generation.
     # This is a special case of the <type> tag where the contents are
@@ -3034,6 +3039,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                                                 isconst=True if 'const' in cdecl else False,
                                                 isoptional=isoptional,
                                                 iscount=iscount,
+                                                noautovalidity=True if member.attrib.get('noautovalidity') is not None else False,
                                                 len=self.getLen(member),
                                                 extstructs=member.attrib.get('validextensionstructs') if name == 'pNext' else None,
                                                 condition=conditions[name] if conditions and name in conditions else None,
@@ -3094,6 +3100,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                                                     isconst=True if 'const' in cdecl else False,
                                                     isoptional=self.paramIsOptional(param),
                                                     iscount=iscount,
+                                                    noautovalidity=True if param.attrib.get('noautovalidity') is not None else False,
                                                     len=self.getLen(param),
                                                     extstructs=None,
                                                     condition=None,
@@ -3141,6 +3148,20 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                         print('Unrecognized len attribute value',val)
                 isoptional = opts
         return isoptional
+    #
+    # Check if the handle passed in is optional
+    # Uses the same logic as ValidityOutputGenerator.isHandleOptional
+    def isHandleOptional(self, param, lenParam):
+        # Simple, if it's optional, return true
+        if param.isoptional:
+            return True
+        # If no validity is being generated, it usually means that validity is complex and not absolute, so let's say yes.
+        if param.noautovalidity:
+            return True
+        # If the parameter is an array and we haven't already returned, find out if any of the len parameters are optional
+        if lenParam and lenParam.isoptional:
+            return True
+        return False
     #
     # Retrieve the value of the len tag
     def getLen(self, param):
@@ -3201,7 +3222,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             if '->' in name:
                 # The count is obtained by dereferencing a member of a struct parameter
                 lenParam = self.CommandParam(name=name, iscount=True, ispointer=False, isbool=False, israngedenum=False, isconst=False,
-                                             isstaticarray=None, isoptional=False, type=None, len=None, extstructs=None, condition=None, cdecl=None)
+                                             isstaticarray=None, isoptional=False, type=None, noautovalidity=False, len=None, extstructs=None,
+                                             condition=None, cdecl=None)
             elif 'latexmath' in name:
                 lenName, decoratedName = self.parseLateXMath(name)
                 lenParam = self.getParamByName(params, lenName)
@@ -3211,7 +3233,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 #lenParam = self.CommandParam(name=decoratedName, iscount=param.iscount, ispointer=param.ispointer,
                 #                             isoptional=param.isoptional, type=param.type, len=param.len,
                 #                             isstaticarray=param.isstaticarray, extstructs=param.extstructs,
-                #                             condition=None, cdecl=param.cdecl)
+                #                             noautovalidity=True, condition=None, cdecl=param.cdecl)
             else:
                 lenParam = self.getParamByName(params, name)
         return lenParam
@@ -3287,6 +3309,22 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         else:
             checkExpr.append('skipCall |= validate_struct_type(report_data, "{}", "{}", "{sv}", {}{vn}, {sv}, {});\n'.format(
                 funcPrintName, valuePrintName, prefix, valueRequired, vn=value.name, sv=stype.value))
+        return checkExpr
+    #
+    # Generate the sType check string
+    def makeHandleCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, funcPrintName, lenPrintName, valuePrintName):
+        checkExpr = []
+        if lenValue:
+            # This is assumed to be an output array with a pointer to a count value
+            if lenValue.ispointer:
+                raise('Unsupported parameter validation case: Output handle array elements are not NULL checked')
+            # This is an array with an integer count value
+            else:
+                checkExpr.append('skipCall |= validate_handle_array(report_data, "{}", "{ldn}", "{dn}", {pf}{ln}, {pf}{vn}, {}, {});\n'.format(
+                    funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix))
+        # This is assumed to be an output handle pointer
+        else:
+            raise('Unsupported parameter validation case: Output handles are not NULL checked')
         return checkExpr
     #
     # Generate pNext check string
@@ -3431,6 +3469,9 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 # If this is a pointer to a struct with an sType field, verify the type
                 if value.type in self.structTypes:
                     usedLines += self.makeStructTypeCheck(valuePrefix, value, lenParam, req, cvReq, cpReq, funcName, lenDisplayName, valueDisplayName)
+                # If this is an input handle array that is not allowed to contain NULL handles, verify that none of the handles are VK_NULL_HANDLE
+                elif value.type in self.handleTypes and value.isconst and not self.isHandleOptional(value, lenParam):
+                    usedLines += self.makeHandleCheck(valuePrefix, value, lenParam, req, cvReq, funcName, lenDisplayName, valueDisplayName)
                 elif value.name == 'pNext':
                     # We need to ignore VkDeviceCreateInfo and VkInstanceCreateInfo, as the loader manipulates them in a way that is not documented in vk.xml
                     if not structTypeName in ['VkDeviceCreateInfo', 'VkInstanceCreateInfo']:
@@ -3451,6 +3492,9 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 memberNamePrefix = '{}{}.'.format(valuePrefix, value.name)
                 memberDisplayNamePrefix = '{}.'.format(valueDisplayName)
                 usedLines.append(self.expandStructCode(self.validatedStructs[value.type], funcName, memberNamePrefix, memberDisplayNamePrefix, '', []))
+            elif value.type in self.handleTypes:
+                if not self.isHandleOptional(value, None):
+                    usedLines.append('skipCall |= validate_required_handle(report_data, "{}", "{}", {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name))
             elif value.isbool:
                 usedLines.append('skipCall |= validate_bool32(report_data, "{}", "{}", {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name))
             elif value.israngedenum:
@@ -3483,7 +3527,9 @@ class ParamCheckerOutputGenerator(OutputGenerator):
     def processCmdData(self):
         indent = self.incIndent(None)
         for command in self.commands:
-            lines, unused = self.genFuncBody(command.name, command.params, '', '', None)
+            # Skip first parameter if it is a dispatch handle (everything except vkCreateInstance)
+            startIndex = 0 if command.name == 'vkCreateInstance' else 1
+            lines, unused = self.genFuncBody(command.name, command.params[startIndex:], '', '', None)
             if lines:
                 cmdDef = self.getCmdDef(command) + '\n'
                 cmdDef += '{\n'
@@ -3491,10 +3537,9 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 # processed by parameter_validation (except for vkCreateInstance, which does not have a
                 # handle as its first parameter)
                 if unused:
-                    startIndex = 0 if command.name == 'vkCreateInstance' else 1
-                    for name in unused[startIndex:]:
+                    for name in unused:
                         cmdDef += indent + 'UNUSED_PARAMETER({});\n'.format(name)
-                    if len(unused) > startIndex:
+                    if len(unused) > 0:
                         cmdDef += '\n'
                 cmdDef += indent + 'bool skipCall = false;\n'
                 for line in lines:
