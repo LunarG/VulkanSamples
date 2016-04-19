@@ -1,4 +1,4 @@
- This file contains other licenses and their copyrights that appear in this
+This file contains other licenses and their copyrights that appear in this
 repository besides Apache 2.0 license.
 
 ===================================================
