@@ -1,5 +1,12 @@
 # Layer Description and Status
 
+## Layer Library Interface
+
+All layer libraries must support the layer library interface defined in
+[`LoaderAndLayerInterface.md`][].
+
+[`LoaderAndLayerInterface.md`]: ../loader/LoaderAndLayerInterface.md#layer-library-interface
+
 ## Overview
 
 Layer libraries can be written to intercept or hook VK entry points for various
