@@ -94,6 +94,14 @@ int sample_main(int argc, char *argv[]) {
 #ifdef _WIN32
     info.instance_extension_names.push_back(
         VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
+#	define VK_USE_PLATFORM_IOS_MVK
+#	include <MoltenVK/vk_mvk_ios_surface.h>
+    info.instance_extension_names.push_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
+#elif defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
+#	define VK_USE_PLATFORM_OSX_MVK
+#	include <MoltenVK/vk_mvk_osx_surface.h>
+    info.instance_extension_names.push_back(VK_MVK_OSX_SURFACE_EXTENSION_NAME);
 #else
     info.instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #endif
