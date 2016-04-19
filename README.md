@@ -32,7 +32,7 @@ Architecture and interface information for the loader is in
 [loader/LoaderAndLayerInterface.md](loader/LoaderAndLayerInterface.md).
 
 ## License
-This work is released as open source under a MIT-style license from Khronos including a Khronos copyright.
+This work is released as open source under a Apache-style license from Khronos including a Khronos copyright.
 
 See LICENSE.txt for a full list of licenses used in this repository.
 

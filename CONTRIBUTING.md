@@ -81,10 +81,10 @@ You'll be prompted with a "click-through" CLA as part of submitting your pull re
 ### **License and Copyrights**
 
 All contributions made to the Vulkan-LoaderAndValidationLayers repository are Khronos branded and as such,
-any new files need to have the Khronos license (MIT style) and copyright included.
+any new files need to have the Khronos license (Apache 2.0 style) and copyright included.
 Please see an existing file in this repository for an example.
 
-All contributions made to the LunarG repositories are to be made under the MIT license
+All contributions made to the LunarG repositories are to be made under the Apache 2.0 license
 and any new files need to include this license and any applicable copyrights.
 
 You can include your individual copyright after any existing copyrights.
