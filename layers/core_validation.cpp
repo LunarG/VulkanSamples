@@ -2718,7 +2718,12 @@ static bool validate_and_update_drawtime_descriptor_state(
             for (uint32_t i = startIdx; i <= endIdx; ++i) {
                 // We did check earlier to verify that set was updated, but now make sure given slot was updated
                 // TODO : Would be better to store set# that set is bound to so we can report set.binding[index] not updated
-                if (!set_node->pDescriptorUpdates[i]) {
+                // For immutable sampler w/o combined image, don't need to update
+                if ((set_node->pLayout->createInfo.pBindings[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER) &&
+                    (set_node->pLayout->createInfo.pBindings[i].descriptorCount != 0) &&
+                    (set_node->pLayout->createInfo.pBindings[i].pImmutableSamplers)) {
+                    // Nothing to do here
+                } else if (!set_node->pDescriptorUpdates[i]) {
                     result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                         VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, reinterpret_cast<const uint64_t &>(set_node->set), __LINE__,
                                         DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
@@ -2907,10 +2912,10 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
                     // Pull the set node
                     SET_NODE *pSet = my_data->setMap[state.boundDescriptorSets[setIndex]];
                     // Save vector of all active sets to verify dynamicOffsets below
-                    // activeSetNodes.push_back(pSet);
                     activeSetBindingsPairs.push_back(std::make_pair(pSet, setBindingPair.second));
-                    // Make sure set has been updated
-                    if (!pSet->pUpdateStructs) {
+                    // Make sure set has been updated if it has no immutable samplers
+                    //  If it has immutable samplers, we'll flag error later as needed depending on binding
+                    if (!pSet->pUpdateStructs && !pSet->pLayout->immutableSamplerCount) {
                         result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                           VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pSet->set, __LINE__,
                                           DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
@@ -6479,6 +6484,7 @@ vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateIn
                 *ppIS = new VkSampler[pCreateInfo->pBindings[i].descriptorCount];
                 memcpy(*ppIS, pCreateInfo->pBindings[i].pImmutableSamplers,
                        pCreateInfo->pBindings[i].descriptorCount * sizeof(VkSampler));
+                pNewNode->immutableSamplerCount += pCreateInfo->pBindings[i].descriptorCount;
             }
         }
         pNewNode->layout = *pSetLayout;

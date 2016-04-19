@@ -638,6 +638,7 @@ typedef struct _LAYOUT_NODE {
     uint32_t endIndex;                                   // last index of this layout
     uint32_t dynamicDescriptorCount;                     // Total count of dynamic descriptors used
                                                          // by this layout
+    uint32_t immutableSamplerCount;                      // # of immutable samplers in this layout
     vector<VkDescriptorType> descriptorTypes;            // Type per descriptor in this
                                                          // layout to verify correct
                                                          // updates
@@ -646,7 +647,7 @@ typedef struct _LAYOUT_NODE {
     unordered_map<uint32_t, uint32_t> bindingToIndexMap; // map set binding # to
                                                          // createInfo.pBindings index
     // Default constructor
-    _LAYOUT_NODE() : layout{}, createInfo{}, startIndex(0), endIndex(0), dynamicDescriptorCount(0){};
+    _LAYOUT_NODE() : layout{}, createInfo{}, startIndex(0), endIndex(0), dynamicDescriptorCount(0), immutableSamplerCount(0){};
 } LAYOUT_NODE;
 
 // Store layouts and pushconstants for PipelineLayout
@@ -668,7 +669,9 @@ class SET_NODE : public BASE_NODE {
     LAYOUT_NODE *pLayout;           // Layout for this set
     SET_NODE *pNext;
     unordered_set<VkCommandBuffer> boundCmdBuffers; // Cmd buffers that this set has been bound to
-    SET_NODE() : set(VK_NULL_HANDLE), pool(VK_NULL_HANDLE), pUpdateStructs(nullptr), pLayout(nullptr), pNext(nullptr){};
+    SET_NODE()
+        : set(VK_NULL_HANDLE), pool(VK_NULL_HANDLE), pUpdateStructs(nullptr), descriptorCount(0), pLayout(nullptr),
+          pNext(nullptr){};
 };
 
 typedef struct _DESCRIPTOR_POOL_NODE {
