@@ -774,6 +774,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
             VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         prsci.polygonMode = VK_POLYGON_MODE_FILL;
         prsci.cullMode = VK_CULL_MODE_NONE;
+        prsci.lineWidth = 1.0f;
 
         VkPipelineMultisampleStateCreateInfo pmsci;
         memset(&pmsci, 0, sizeof(pmsci));

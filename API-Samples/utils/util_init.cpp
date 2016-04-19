@@ -1611,7 +1611,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth,
     rs.depthBiasConstantFactor = 0;
     rs.depthBiasClamp = 0;
     rs.depthBiasSlopeFactor = 0;
-    rs.lineWidth = 0;
+    rs.lineWidth = 1.0f;
 
     VkPipelineColorBlendStateCreateInfo cb;
     cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
