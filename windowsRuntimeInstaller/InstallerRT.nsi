@@ -297,7 +297,7 @@ Section
     AccessControl::GrantOnFile  $INSTDIR "Everyone" "ReadAttributes"
     File ${ICOFILE}
     File VULKANRT_LICENSE.RTF
-    File /oname=..\COPYRIGHT.txt LICENSE.txt
+    File /oname=LICENSE.txt ..\COPYWRITE.txt
     File ConfigLayersAndVulkanDLL.ps1
     StrCpy $1 15
     Call CheckForError
