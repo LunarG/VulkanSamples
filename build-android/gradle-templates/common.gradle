@@ -1,5 +1,8 @@
 apply plugin: 'com.android.model.native'
 
+// To detect host operating system
+import org.apache.tools.ant.taskdefs.condition.Os
+
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
 def ndkDir = properties.getProperty('ndk.dir')
@@ -19,10 +22,19 @@ model {
 
     android.ndk {
         moduleName = "VkLayer_${project.name}"
-        toolchain = "clang"
+
+        // This is a workaround for clang problems on Windows
+        // http://llvm.org/bugs/show_bug.cgi?id=27396
+        if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+            toolchain = "gcc"
+        } else {
+            toolchain = "clang"
+            cppFlags.addAll(["-Werror"])
+        }
+
         stl = "gnustl_static"
         ldLibs.addAll(["log", "android"])
-        cppFlags.addAll(["-std=c++11", "-DVK_PROTOTYPES", "-Wall", "-Werror",
+        cppFlags.addAll(["-std=c++11", "-DVK_PROTOTYPES", "-Wall",
                          "-Wno-unused-function", "-Wno-unused-const-variable",
                          "-DVK_USE_PLATFORM_ANDROID_KHR"])
         cppFlags.addAll(["-I${file("../../../../layers")}".toString(),
