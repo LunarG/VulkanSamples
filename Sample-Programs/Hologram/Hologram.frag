@@ -2,8 +2,8 @@
 
 precision highp float;
 
-in vec3 color;
-in float alpha;
+layout(location = 0) in vec3 color;
+layout(location = 1) in float alpha;
 
 layout(location = 0) out vec4 fragcolor;
 

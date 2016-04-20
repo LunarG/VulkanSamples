@@ -10,7 +10,7 @@ layout(std140, push_constant) uniform param_block {
 	mat4 view_projection;
 } params;
 
-out vec3 color;
+layout(location = 0) out vec3 color;
 
 void main()
 {
