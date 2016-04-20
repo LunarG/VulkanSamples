@@ -503,7 +503,7 @@ vkDestroyInstance(VkInstance instance,
 
     disp->DestroyInstance(instance, pAllocator);
 
-    loader_deactivate_instance_layers(ptr_instance);
+    loader_deactivate_layers(ptr_instance, &ptr_instance->activated_layer_list);
     if (ptr_instance->phys_devs)
         loader_heap_free(ptr_instance, ptr_instance->phys_devs);
     if (callback_setup) {

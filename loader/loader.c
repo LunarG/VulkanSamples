@@ -52,13 +52,6 @@
 #endif
 #endif
 
-static loader_platform_dl_handle
-loader_add_layer_lib(const struct loader_instance *inst, const char *chain_type,
-                     struct loader_layer_properties *layer_prop);
-
-static void loader_remove_layer_lib(struct loader_instance *inst,
-                                    struct loader_layer_properties *layer_prop);
-
 struct loader_struct loader = {0};
 // TLS for instance for alloc/free callbacks
 THREAD_LOCAL_DECL struct loader_instance *tls_instance;
@@ -900,73 +893,6 @@ void loader_destroy_layer_list(const struct loader_instance *inst,
 }
 
 /*
- * Manage list of layer libraries (loader_lib_info)
- */
-static bool
-loader_init_layer_library_list(const struct loader_instance *inst,
-                               struct loader_layer_library_list *list) {
-    list->capacity = 32 * sizeof(struct loader_lib_info);
-    list->list = loader_heap_alloc(inst, list->capacity,
-                                   VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    if (list->list == NULL) {
-        return false;
-    }
-    memset(list->list, 0, list->capacity);
-    list->count = 0;
-    return true;
-}
-
-void loader_destroy_layer_library_list(const struct loader_instance *inst,
-                                       struct loader_layer_library_list *list) {
-    for (uint32_t i = 0; i < list->count; i++) {
-        loader_heap_free(inst, list->list[i].lib_name);
-    }
-    loader_heap_free(inst, list->list);
-    list->count = 0;
-    list->capacity = 0;
-}
-
-void loader_add_to_layer_library_list(const struct loader_instance *inst,
-                                      struct loader_layer_library_list *list,
-                                      uint32_t item_count,
-                                      const struct loader_lib_info *new_items) {
-    uint32_t i;
-    struct loader_lib_info *item;
-
-    if (list->list == NULL || list->capacity == 0) {
-        loader_init_layer_library_list(inst, list);
-    }
-
-    if (list->list == NULL)
-        return;
-
-    for (i = 0; i < item_count; i++) {
-        item = (struct loader_lib_info *)&new_items[i];
-
-        // look for duplicates
-        for (uint32_t j = 0; j < list->count; j++) {
-            if (strcmp(list->list[i].lib_name, new_items->lib_name) == 0) {
-                continue;
-            }
-        }
-
-        // add to list at end
-        // check for enough capacity
-        if (list->count * sizeof(struct loader_lib_info) >= list->capacity) {
-
-            list->list = loader_heap_realloc(
-                inst, list->list, list->capacity, list->capacity * 2,
-                VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-            // double capacity
-            list->capacity *= 2;
-        }
-
-        memcpy(&list->list[list->count], item, sizeof(struct loader_lib_info));
-        list->count++;
-    }
-}
-
-/*
  * Search the given layer list for a list
  * matching the given VkLayerProperties
  */
@@ -1166,7 +1092,7 @@ struct loader_icd *loader_get_icd_and_device(const VkDevice device,
 static void loader_destroy_logical_device(const struct loader_instance *inst,
                                           struct loader_device *dev) {
     loader_heap_free(inst, dev->app_extension_props);
-    loader_destroy_layer_list(inst, &dev->activated_layer_list);
+    loader_deactivate_layers(inst, &dev->activated_layer_list);
     loader_heap_free(inst, dev);
 }
 
@@ -1293,9 +1219,8 @@ static void loader_scanned_icd_add(const struct loader_instance *inst,
     PFN_vkGetInstanceProcAddr fp_get_proc_addr;
     struct loader_scanned_icds *new_node;
 
-    /* TODO implement ref counting of libraries, for now this function leaves
-       libraries open and the scanned_icd_clear closes them */
-    // Used to call: dlopen(filename, RTLD_LAZY);
+    /* TODO implement smarter opening/closing of libraries. For now this
+     * function leaves libraries open and the scanned_icd_clear closes them */
     handle = loader_platform_open_library(filename);
     if (!handle) {
         loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
@@ -2565,20 +2490,6 @@ void loader_layer_scan(const struct loader_instance *inst,
     if (manifest_files[0].count == 0 && manifest_files[1].count == 0)
         return;
 
-#if 0 // TODO
-    /**
-     * We need a list of the layer libraries, not just a list of
-     * the layer properties (a layer library could expose more than
-     * one layer property). This list of scanned layers would be
-     * used to check for global and physicaldevice layer properties.
-     */
-    if (!loader_init_layer_library_list(&loader.scanned_layer_libraries)) {
-        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "Alloc for layer list failed: %s line: %d", __FILE__, __LINE__);
-        return;
-    }
-#endif
-
     /* cleanup any previously scanned libraries */
     loader_delete_layer_properties(inst, instance_layers);
     loader_delete_layer_properties(inst, device_layers);
@@ -2985,132 +2896,43 @@ struct loader_instance *loader_get_instance(const VkInstance instance) {
 }
 
 static loader_platform_dl_handle
-loader_add_layer_lib(const struct loader_instance *inst, const char *chain_type,
-                     struct loader_layer_properties *layer_prop) {
-    struct loader_lib_info *new_layer_lib_list, *my_lib;
-    size_t new_alloc_size;
-    /*
-     * TODO: We can now track this information in the
-     * scanned_layer_libraries list.
-     */
-    for (uint32_t i = 0; i < loader.loaded_layer_lib_count; i++) {
-        if (strcmp(loader.loaded_layer_lib_list[i].lib_name,
-                   layer_prop->lib_name) == 0) {
-            /* Have already loaded this library, just increment ref count */
-            loader.loaded_layer_lib_list[i].ref_count++;
-            loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
-                       "%s Chain: Increment layer reference count for layer "
-                       "library %s",
-                       chain_type, layer_prop->lib_name);
-            return loader.loaded_layer_lib_list[i].lib_handle;
-        }
-    }
+loader_open_layer_lib(const struct loader_instance *inst, const char *chain_type,
+                     struct loader_layer_properties *prop) {
 
-    /* Haven't seen this library so load it */
-    new_alloc_size = 0;
-    if (loader.loaded_layer_lib_capacity == 0)
-        new_alloc_size = 8 * sizeof(struct loader_lib_info);
-    else if (loader.loaded_layer_lib_capacity <=
-             loader.loaded_layer_lib_count * sizeof(struct loader_lib_info))
-        new_alloc_size = loader.loaded_layer_lib_capacity * 2;
-
-    if (new_alloc_size) {
-        new_layer_lib_list = loader_heap_realloc(
-            inst, loader.loaded_layer_lib_list,
-            loader.loaded_layer_lib_capacity, new_alloc_size,
-            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-        if (!new_layer_lib_list) {
-            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                       "loader: realloc failed in loader_add_layer_lib");
-            return NULL;
-        }
-        loader.loaded_layer_lib_capacity = new_alloc_size;
-        loader.loaded_layer_lib_list = new_layer_lib_list;
-    } else
-        new_layer_lib_list = loader.loaded_layer_lib_list;
-    my_lib = &new_layer_lib_list[loader.loaded_layer_lib_count];
-
-    strncpy(my_lib->lib_name, layer_prop->lib_name, sizeof(my_lib->lib_name));
-    my_lib->lib_name[sizeof(my_lib->lib_name) - 1] = '\0';
-    my_lib->ref_count = 0;
-    my_lib->lib_handle = NULL;
-
-    if ((my_lib->lib_handle = loader_platform_open_library(my_lib->lib_name)) ==
+    if ((prop->lib_handle = loader_platform_open_library(prop->lib_name)) ==
         NULL) {
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   loader_platform_open_library_error(my_lib->lib_name));
-        return NULL;
+                   loader_platform_open_library_error(prop->lib_name));
     } else {
         loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
                    "Chain: %s: Loading layer library %s", chain_type,
-                   layer_prop->lib_name);
+                   prop->lib_name);
     }
-    loader.loaded_layer_lib_count++;
-    my_lib->ref_count++;
 
-    return my_lib->lib_handle;
+    return prop->lib_handle;
 }
 
 static void
-loader_remove_layer_lib(struct loader_instance *inst,
-                        struct loader_layer_properties *layer_prop) {
-    uint32_t idx = loader.loaded_layer_lib_count;
-    struct loader_lib_info *new_layer_lib_list, *my_lib = NULL;
+loader_close_layer_lib(const struct loader_instance *inst,
+                        struct loader_layer_properties *prop) {
 
-    for (uint32_t i = 0; i < loader.loaded_layer_lib_count; i++) {
-        if (strcmp(loader.loaded_layer_lib_list[i].lib_name,
-                   layer_prop->lib_name) == 0) {
-            /* found matching library */
-            idx = i;
-            my_lib = &loader.loaded_layer_lib_list[i];
-            break;
-        }
+    if (prop->lib_handle) {
+        loader_platform_close_library(prop->lib_handle);
+        loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
+                   "Unloading layer library %s", prop->lib_name);
+        prop->lib_handle = NULL;
     }
+}
 
-    if (idx == loader.loaded_layer_lib_count) {
-        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "Unable to unref library %s", layer_prop->lib_name);
-        return;
-    }
+void loader_deactivate_layers(const struct loader_instance *instance,
+                              struct loader_layer_list *list) {
+    /* delete instance list of enabled layers and close any layer libraries */
+    for (uint32_t i = 0; i < list->count; i++) {
+        struct loader_layer_properties *layer_prop = &list->list[i];
 
-    if (my_lib) {
-        my_lib->ref_count--;
-        if (my_lib->ref_count > 0) {
-            loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
-                       "Decrement reference count for layer library %s",
-                       layer_prop->lib_name);
-            return;
-        }
+        loader_close_layer_lib(instance, layer_prop);
     }
-    loader_platform_close_library(my_lib->lib_handle);
-    loader_log(inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
-               "Unloading layer library %s", layer_prop->lib_name);
-
-    /* Need to remove unused library from list */
-    new_layer_lib_list =
-        loader_heap_alloc(inst, loader.loaded_layer_lib_capacity,
-                          VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    if (!new_layer_lib_list) {
-        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                   "loader: heap alloc failed loader_remove_layer_library");
-        return;
-    }
-
-    if (idx > 0) {
-        /* Copy records before idx */
-        memcpy(new_layer_lib_list, &loader.loaded_layer_lib_list[0],
-               sizeof(struct loader_lib_info) * idx);
-    }
-    if (idx < (loader.loaded_layer_lib_count - 1)) {
-        /* Copy records after idx */
-        memcpy(&new_layer_lib_list[idx], &loader.loaded_layer_lib_list[idx + 1],
-               sizeof(struct loader_lib_info) *
-                   (loader.loaded_layer_lib_count - idx - 1));
-    }
-
-    loader_heap_free(inst, loader.loaded_layer_lib_list);
-    loader.loaded_layer_lib_count--;
-    loader.loaded_layer_lib_list = new_layer_lib_list;
+    loader_destroy_layer_list(instance, list);
 }
 
 /**
@@ -3209,17 +3031,6 @@ static void loader_add_layer_env(const struct loader_instance *inst,
     return;
 }
 
-void loader_deactivate_instance_layers(struct loader_instance *instance) {
-    /* Create instance chain of enabled layers */
-    for (uint32_t i = 0; i < instance->activated_layer_list.count; i++) {
-        struct loader_layer_properties *layer_prop =
-            &instance->activated_layer_list.list[i];
-
-        loader_remove_layer_lib(instance, layer_prop);
-    }
-    loader_destroy_layer_list(instance, &instance->activated_layer_list);
-}
-
 VkResult
 loader_enable_instance_layers(struct loader_instance *inst,
                               const VkInstanceCreateInfo *pCreateInfo,
@@ -3306,7 +3117,7 @@ VkResult loader_create_instance_chain(const VkInstanceCreateInfo *pCreateInfo,
                 &inst->activated_layer_list.list[i];
             loader_platform_dl_handle lib_handle;
 
-            lib_handle = loader_add_layer_lib(inst, "instance", layer_prop);
+            lib_handle = loader_open_layer_lib(inst, "instance", layer_prop);
             if (!lib_handle)
                 continue;
             if ((fpGIPA = layer_prop->functions.get_instance_proc_addr) ==
@@ -3460,7 +3271,7 @@ loader_create_device_chain(const struct loader_physical_device_tramp *pd,
                 &dev->activated_layer_list.list[i];
             loader_platform_dl_handle lib_handle;
 
-            lib_handle = loader_add_layer_lib(inst, "device", layer_prop);
+            lib_handle = loader_open_layer_lib(inst, "device", layer_prop);
             if (!lib_handle)
                 continue;
             if ((fpGIPA = layer_prop->functions.get_instance_proc_addr) ==

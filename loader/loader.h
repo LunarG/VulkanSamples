@@ -112,12 +112,6 @@ struct loader_name_value {
     char value[MAX_STRING_SIZE];
 };
 
-struct loader_lib_info {
-    char lib_name[MAX_STRING_SIZE];
-    uint32_t ref_count;
-    loader_platform_dl_handle lib_handle;
-};
-
 struct loader_layer_functions {
     char str_gipa[MAX_STRING_SIZE];
     char str_gdpa[MAX_STRING_SIZE];
@@ -129,6 +123,7 @@ struct loader_layer_properties {
     VkLayerProperties info;
     enum layer_type type;
     char lib_name[MAX_STRING_SIZE];
+    loader_platform_dl_handle lib_handle;
     struct loader_layer_functions functions;
     struct loader_extension_list instance_extension_list;
     struct loader_device_extension_list device_extension_list;
@@ -140,12 +135,6 @@ struct loader_layer_list {
     size_t capacity;
     uint32_t count;
     struct loader_layer_properties *list;
-};
-
-struct loader_layer_library_list {
-    size_t capacity;
-    uint32_t count;
-    struct loader_lib_info *list;
 };
 
 struct loader_dispatch_hash_list {
@@ -341,13 +330,6 @@ struct loader_physical_device {
 
 struct loader_struct {
     struct loader_instance *instances;
-
-    unsigned int loaded_layer_lib_count;
-    size_t loaded_layer_lib_capacity;
-    struct loader_lib_info *loaded_layer_lib_list;
-    // TODO add ref counting of ICD libraries
-    // TODO use this struct loader_layer_library_list scanned_layer_libraries;
-    // TODO add list of icd libraries for ref counting them for closure
 };
 
 struct loader_scanned_icds {
@@ -510,6 +492,8 @@ void loader_init_dispatch_dev_ext(struct loader_instance *inst,
 void *loader_dev_ext_gpa(struct loader_instance *inst, const char *funcName);
 void *loader_get_dev_ext_trampoline(uint32_t index);
 struct loader_instance *loader_get_instance(const VkInstance instance);
+void loader_deactivate_layers(const struct loader_instance *instance,
+                              struct loader_layer_list *list);
 struct loader_device *
 loader_create_logical_device(const struct loader_instance *inst);
 void loader_add_logical_device(const struct loader_instance *inst,
