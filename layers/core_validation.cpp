@@ -4419,6 +4419,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->queryToStateMap.clear();
         pCB->activeQueries.clear();
         pCB->startedQueries.clear();
+        pCB->imageSubresourceMap.clear();
         pCB->imageLayoutMap.clear();
         pCB->eventToStageMap.clear();
         pCB->drawData.clear();
@@ -5002,6 +5003,7 @@ static void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t sub
         if (fence_data == my_data->fenceMap.end()) {
             return;
         }
+        fence_data->second.cmdBuffers.clear();
         if (queue_data != my_data->queueMap.end()) {
             prior_fences = queue_data->second.lastFences;
             queue_data->second.lastFences.clear();
@@ -5011,7 +5013,6 @@ static void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t sub
             }
             queue_data->second.untrackedCmdBuffers.clear();
         }
-        fence_data->second.cmdBuffers.clear();
         fence_data->second.priorFences = prior_fences;
         fence_data->second.needsSignaled = true;
         fence_data->second.queue = queue;
