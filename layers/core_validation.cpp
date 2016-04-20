@@ -1264,6 +1264,7 @@ struct interface_var {
     uint32_t type_id;
     uint32_t offset;
     bool is_patch;
+    bool is_block_member;
     /* TODO: collect the name, too? Isn't required to be present. */
 };
 
@@ -1341,6 +1342,7 @@ static void collect_interface_block_members(layer_data *my_data, shader_module c
                     v.type_id = member_type_id;
                     v.offset = offset;
                     v.is_patch = is_patch;
+                    v.is_block_member = true;
                     out[std::make_pair(location + offset, component)] = v;
                 }
             }
@@ -1430,6 +1432,7 @@ static void collect_interface_by_location(layer_data *my_data, shader_module con
                     v.type_id = type;
                     v.offset = offset;
                     v.is_patch = is_patch;
+                    v.is_block_member = false;
                     out[std::make_pair(location + offset, component)] = v;
                 }
             } else if (builtin == -1) {
@@ -1486,6 +1489,7 @@ static void collect_interface_by_descriptor_slot(layer_data *my_data, shader_mod
             v.type_id = insn.word(1);
             v.offset = 0;
             v.is_patch = false;
+            v.is_block_member = false;
             out[std::make_pair(set, binding)] = v;
         }
     }
@@ -1530,9 +1534,13 @@ static bool validate_interface_between_stages(layer_data *my_data, shader_module
             }
             b_it++;
         } else {
+            // subtleties of arrayed interfaces:
+            // - if is_patch, then the member is not arrayed, even though the interface may be.
+            // - if is_block_member, then the extra array level of an arrayed interface is not
+            //   expressed in the member type -- it's expressed in the block type.
             if (!types_match(producer, consumer, a_it->second.type_id, b_it->second.type_id,
-                             producer_stage->arrayed_output && !a_it->second.is_patch,
-                             consumer_stage->arrayed_input && !b_it->second.is_patch,
+                             producer_stage->arrayed_output && !a_it->second.is_patch && !a_it->second.is_block_member,
+                             consumer_stage->arrayed_input && !b_it->second.is_patch && !b_it->second.is_block_member,
                              true)) {
                 if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", "Type mismatch on location %u.%u: '%s' vs '%s'",
