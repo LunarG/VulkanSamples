@@ -47,104 +47,96 @@ echo Detected Visual Studio Version as %VS_VERSION%
 del /Q /F vsversion.tmp
 
 if %do_cmake%==1 (
-    rmdir /Q /S build
-    rmdir /Q /S build32
-    mkdir build
-    pushd build
-    echo Generating 64-bit CMake files for Visual Studio %VS_VERSION%
-    cmake -G "Visual Studio %VS_VERSION% Win64" ..
-    popd
-    mkdir build32
-    pushd build32
-    echo Generating 32-bit CMake files for Visual Studio %VS_VERSION%
-    cmake -G "Visual Studio %VS_VERSION%" ..
-    popd
+    if %do_64%==1 (
+        rmdir /Q /S build
+        mkdir build
+        pushd build
+        echo Generating 64-bit CMake files for Visual Studio %VS_VERSION%
+        cmake -G "Visual Studio %VS_VERSION% Win64" ..
+        popd
+    )
+    if %do_32%==1 (
+        rmdir /Q /S build32
+        mkdir build32
+        pushd build32
+        echo Generating 32-bit CMake files for Visual Studio %VS_VERSION%
+        cmake -G "Visual Studio %VS_VERSION%" ..
+        popd
+    )
 )
 
 REM *******************************************
 REM 64-bit build
 REM *******************************************
 if %do_64%==1 (
-    rmdir /Q /S build
-    mkdir build
     pushd build
-    echo Generating 64-bit CMake files for Visual Studio %VS_VERSION%
-    cmake -G "Visual Studio %VS_VERSION% Win64" ..
-    echo Building 64-bit Debug 
+
+    echo Building 64-bit Debug  
+    REM msbuild doesn't seem to see the dependency between the Overlay sample and layer_utils
+    pushd layers
+    msbuild generate_vk_layer_helpers.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
+    msbuild VkLayer_utils.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
+    popd
     msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
     if errorlevel 1 (
        echo.
        echo 64-bit Debug build failed!
        popd
        exit /B 1
-    )   
+    )
    
-echo Building 64-bit Debug  
-REM msbuild doesn't seem to see the dependency between the Overlay sample and layer_utils
-cd layers
-msbuild generate_vk_layer_helpers.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
-msbuild layer_utils_static.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
-cd ..
-msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
-if errorlevel 1 (
-   echo.
-   echo 64-bit Debug build failed!
-   popd
-   exit /B 1
+    echo Building 64-bit Release
+    REM msbuild doesn't seem to see the dependency between the Overlay sample and layer_utils
+    pushd layers
+    msbuild generate_vk_layer_helpers.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
+    msbuild VkLayer_utils.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
+    popd
+    msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
+    if errorlevel 1 (
+       echo.
+       echo 64-bit Release build failed!
+       popd
+       exit /B 1
+    )
+
+    popd
 )
-   
-echo Building 64-bit Release
-REM msbuild doesn't seem to see the dependency between the Overlay sample and layer_utils
-cd layers
-msbuild generate_vk_layer_helpers.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
-msbuild layer_utils_static.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
-cd ..
-msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
-if errorlevel 1 (
-   echo.
-   echo 64-bit Release build failed!
-   popd
-   exit /B 1
-)
-popd
  
 REM *******************************************
 REM 32-bit build
 REM *******************************************
-  
-echo Generating 32-bit CMake files for Visual Studio %VS_VERSION%
-cmake -G "Visual Studio %VS_VERSION%" ..
+if %do_32%==1 (
+    pushd build32
+
+    echo Building 32-bit Debug
+    REM msbuild doesn't seem to see the dependency between the Overlay sample and layer_utils
+    pushd layers
+    msbuild generate_vk_layer_helpers.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
+    msbuild VkLayer_utils.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
+    popd
+    msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
+    if errorlevel 1 (
+       echo.
+       echo 32-bit Debug build failed!
+       popd
+       exit /B 1
+    )
    
-echo Building 32-bit Debug
-REM msbuild doesn't seem to see the dependency between the Overlay sample and layer_utils
-cd layers
-msbuild generate_vk_layer_helpers.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
-msbuild layer_utils_static.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
-cd ..
-msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
-if errorlevel 1 (
-   echo.
-   echo 32-bit Debug build failed!
-   popd
-   exit /B 1
-)
-   
-echo Building 32-bit Release
-REM msbuild doesn't seem to see the dependency between the Overlay sample and layer_utils
-cd layers
-msbuild generate_vk_layer_helpers.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
-msbuild layer_utils_static.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
-cd ..
-   
-echo Building 32-bit Release 
-msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
-if errorlevel 1 (
-   echo.
-   echo 32-bit Release build failed!
-   popd
-   exit /B 1
+    echo Building 32-bit Release
+    REM msbuild doesn't seem to see the dependency between the Overlay sample and layer_utils
+    pushd layers
+    msbuild generate_vk_layer_helpers.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
+    msbuild VkLayer_utils.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
+    popd   
+    msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
+    if errorlevel 1 (
+       echo.
+       echo 32-bit Release build failed!
+       popd
+       exit /B 1
+    )
+
+    popd
 )
 
-popd
 exit /b 0
-
