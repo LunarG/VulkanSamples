@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 #
 # VK
 #
@@ -7,24 +7,17 @@
 # Copyright (c) 2015-2016 LunarG, Inc.
 # Copyright (c) 2015-2016 Google Inc.
 #
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and/or associated documentation files (the "Materials"), to
-# deal in the Materials without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Materials, and to permit persons to whom the Materials
-# are furnished to do so, subject to the following conditions:
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# The above copyright notice(s) and this permission notice shall be included
-# in all copies or substantial portions of the Materials.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-#
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-# DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-# OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
-# USE OR OTHER DEALINGS IN THE MATERIALS
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 # Author: Tobin Ehlis <tobine@google.com>
 # Author: Courtney Goeltzenleuchter <courtneygo@google.com>
@@ -208,26 +201,19 @@ class Subcommand(object):
  * Copyright (c) 2015-2016 The Khronos Group Inc.
  * Copyright (c) 2015-2016 Valve Corporation
  * Copyright (c) 2015-2016 LunarG, Inc.
- * Copyright (c) 2015 Google, Inc.
+ * Copyright (c) 2015-2016 Google, Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and/or associated documentation files (the "Materials"), to
- * deal in the Materials without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Materials, and to permit persons to whom the Materials
- * are furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice(s) and this permission notice shall be included
- * in all copies or substantial portions of the Materials.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- *
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
- * USE OR OTHER DEALINGS IN THE MATERIALS
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  * Author: Tobin Ehlis <tobine@google.com>
  * Author: Courtney Goeltzenleuchter <courtneygo@google.com>
@@ -754,7 +740,7 @@ class ObjectTrackerSubcommand(Subcommand):
     # for each member of struct_type
     #     add objs in obj_list to obj_set
     #     call self for structs
-        for m in vk_helper.struct_dict[struct_type]:
+        for m in sorted(vk_helper.struct_dict[struct_type]):
             if vk_helper.struct_dict[struct_type][m]['type'] in obj_list:
                 obj_set.add(vk_helper.struct_dict[struct_type][m]['type'])
             elif vk_helper.is_type(vk_helper.struct_dict[struct_type][m]['type'], 'struct'):
@@ -913,8 +899,8 @@ class ObjectTrackerSubcommand(Subcommand):
         #  dispatchable object type, we have a corresponding validate_* function
         #  for that object and all non-dispatchable objects that are used in API
         #  calls with that dispatchable object.
-        procs_txt.append('//%s' % str(obj_use_dict))
-        for do in obj_use_dict:
+        procs_txt.append('//%s' % str(sorted(obj_use_dict)))
+        for do in sorted(obj_use_dict):
             name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', do)
             name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
             # First create validate_* func for disp obj
@@ -930,7 +916,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    return VK_FALSE;')
             procs_txt.append('}')
             procs_txt.append('')
-            for o in obj_use_dict[do]:
+            for o in sorted(obj_use_dict[do]):
                 if o == do: # We already generated this case above so skip here
                     continue
                 name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', o)
@@ -962,7 +948,7 @@ class ObjectTrackerSubcommand(Subcommand):
         gedi_txt.append('VkInstance instance,')
         gedi_txt.append('const VkAllocationCallbacks* pAllocator)')
         gedi_txt.append('{')
-        gedi_txt.append('    loader_platform_thread_lock_mutex(&objLock);')
+        gedi_txt.append('    std::unique_lock<std::mutex> lock(global_lock);')
         gedi_txt.append('    validate_instance(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false);')
         gedi_txt.append('')
         gedi_txt.append('    destroy_instance(instance, instance);')
@@ -1007,17 +993,12 @@ class ObjectTrackerSubcommand(Subcommand):
         gedi_txt.append('    }')
         gedi_txt.append('')
         gedi_txt.append('    layer_debug_report_destroy_instance(mid(instance));')
-        gedi_txt.append('    layer_data_map.erase(pInstanceTable);')
+        gedi_txt.append('    layer_data_map.erase(key);')
         gedi_txt.append('')
         gedi_txt.append('    instanceExtMap.erase(pInstanceTable);')
-        gedi_txt.append('    loader_platform_thread_unlock_mutex(&objLock);')
+        gedi_txt.append('    lock.unlock();')
         # The loader holds a mutex that protects this from other threads
         gedi_txt.append('    object_tracker_instance_table_map.erase(key);')
-        gedi_txt.append('    if (object_tracker_instance_table_map.empty()) {')
-        gedi_txt.append('        // Release mutex when destroying last instance.')
-        gedi_txt.append('        loader_platform_thread_delete_mutex(&objLock);')
-        gedi_txt.append('        objLockInitialized = 0;')
-        gedi_txt.append('    }')
         gedi_txt.append('}')
         gedi_txt.append('')
         return "\n".join(gedi_txt)
@@ -1029,7 +1010,7 @@ class ObjectTrackerSubcommand(Subcommand):
         gedd_txt.append('VkDevice device,')
         gedd_txt.append('const VkAllocationCallbacks* pAllocator)')
         gedd_txt.append('{')
-        gedd_txt.append('    loader_platform_thread_lock_mutex(&objLock);')
+        gedd_txt.append('    std::unique_lock<std::mutex> lock(global_lock);')
         gedd_txt.append('    validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);')
         gedd_txt.append('')
         gedd_txt.append('    destroy_device(device, device);')
@@ -1053,7 +1034,7 @@ class ObjectTrackerSubcommand(Subcommand):
         gedd_txt.append("    // Clean up Queue's MemRef Linked Lists")
         gedd_txt.append('    destroyQueueMemRefLists();')
         gedd_txt.append('')
-        gedd_txt.append('    loader_platform_thread_unlock_mutex(&objLock);')
+        gedd_txt.append('    lock.unlock();')
         gedd_txt.append('')
         gedd_txt.append('    dispatch_key key = get_dispatch_key(device);')
         gedd_txt.append('    VkLayerDispatchTable *pDisp = get_dispatch_table(object_tracker_device_table_map, device);')
@@ -1135,7 +1116,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 full_name = '%s%s' % (prefix, name)
                 null_obj_ok = 'false'
                 # If a valid null param is defined for this func and we have a match, allow NULL
-                if func_name in valid_null_dict and True in [name in pn for pn in valid_null_dict[func_name]]:
+                if func_name in valid_null_dict and True in [name in pn for pn in sorted(valid_null_dict[func_name])]:
                     null_obj_ok = 'true'
                 if (array_index > 0) or '' != array:
                     tmp_pre = self._dereference_conditionally(indent, prefix, type_name, full_name)
@@ -1287,11 +1268,12 @@ class ObjectTrackerSubcommand(Subcommand):
                 typ = proto.params[-1].ty.strip('*').replace('const ', '');
                 name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', typ)
                 name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
-                create_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
-                create_line += '    if (result == VK_SUCCESS) {\n'
-                create_line += '        create_%s(%s, *%s, %s);\n' % (name, param0_name, proto.params[-1].name, obj_type_mapping[typ])
+                create_line =  '    {\n'
+                create_line += '        std::lock_guard<std::mutex> lock(global_lock);\n'
+                create_line += '        if (result == VK_SUCCESS) {\n'
+                create_line += '            create_%s(%s, *%s, %s);\n' % (name, param0_name, proto.params[-1].name, obj_type_mapping[typ])
+                create_line += '        }\n'
                 create_line += '    }\n'
-                create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
             if 'FreeCommandBuffers' in proto.name:
                 typ = proto.params[-1].ty.strip('*').replace('const ', '');
                 name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', typ)
@@ -1307,19 +1289,23 @@ class ObjectTrackerSubcommand(Subcommand):
                 name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', typ)
                 name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
                 funcs.append('%s\n' % self.lineinfo.get())
-                destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
-                destroy_line += '    destroy_%s(%s, %s);\n' % (name, param0_name, proto.params[-2].name)
-                destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+                destroy_line =  '    {\n'
+                destroy_line += '        std::lock_guard<std::mutex> lock(global_lock);\n'
+                destroy_line += '        destroy_%s(%s, %s);\n' % (name, param0_name, proto.params[-2].name)
+                destroy_line += '    }\n'
             indent = '    '
             if len(struct_uses) > 0:
                 using_line += '%sVkBool32 skipCall = VK_FALSE;\n' % (indent)
                 if not mutex_unlock:
-                    using_line += '%sloader_platform_thread_lock_mutex(&objLock);\n' % (indent)
+                    using_line += '%s{\n' % (indent)
+                    indent += '    '
+                    using_line += '%sstd::lock_guard<std::mutex> lock(global_lock);\n' % (indent)
                     mutex_unlock = True
-                using_line += '// objects to validate: %s\n' % str(struct_uses)
-                using_line += self._gen_obj_validate_code(struct_uses, obj_type_mapping, proto.name, valid_null_object_names, param0_name, '    ', '', 0)
+                using_line += '// objects to validate: %s\n' % str(sorted(struct_uses))
+                using_line += self._gen_obj_validate_code(struct_uses, obj_type_mapping, proto.name, valid_null_object_names, param0_name, indent, '', 0)
             if mutex_unlock:
-                using_line += '%sloader_platform_thread_unlock_mutex(&objLock);\n' % (indent)
+                indent = indent[4:]
+                using_line += '%s}\n' % (indent)
             if len(struct_uses) > 0:
                 using_line += '    if (skipCall)\n'
                 if proto.ret == "VkBool32":
@@ -1435,7 +1421,7 @@ class UniqueObjectsSubcommand(Subcommand):
                 (name, array) = obj.split('[')
                 array = array.strip(']')
             ptr_type = False
-            if 'p' == obj[0] and obj[1] != obj[1].lower(): # TODO : Not idea way to determine ptr
+            if 'p' == obj[0] and obj[1] != obj[1].lower(): # TODO : Not ideal way to determine ptr
                 ptr_type = True
             if isinstance(struct_uses[obj], dict):
                 local_prefix = ''
@@ -1480,7 +1466,7 @@ class UniqueObjectsSubcommand(Subcommand):
             else:
                 if (array_index > 0) or array != '': # TODO : This is not ideal, really want to know if we're anywhere under an array
                     if first_level_param:
-                        pre_code += '%s%s* local_%s = NULL;\n' % (indent, struct_uses[obj], name)
+                        decls += '%s%s* local_%s = NULL;\n' % (indent, struct_uses[obj], name)
                     if array != '' and not first_level_param: # ptrs under structs will have been initialized so use local_*
                         pre_code += '%sif (local_%s%s) {\n' %(indent, prefix, name)
                     else:
@@ -1499,7 +1485,7 @@ class UniqueObjectsSubcommand(Subcommand):
                     pName = 'p%s' % (struct_uses[obj][2:])
                     if name not in vector_name_set:
                         vector_name_set.add(name)
-                    pre_code += '%slocal_%s%s = (%s)((VkUniqueObject*)%s%s)->actualObject;\n' % (indent, prefix, name, struct_uses[obj], prefix, name)
+                    pre_code += '%slocal_%s%s = (%s)my_map_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(%s%s)];\n' % (indent, prefix, name, struct_uses[obj], prefix, name)
                     if array != '':
                         indent = indent[4:]
                         pre_code += '%s}\n' % (indent)
@@ -1507,18 +1493,13 @@ class UniqueObjectsSubcommand(Subcommand):
                     pre_code += '%s}\n' % (indent)
                 else:
                     pre_code += '%s\n' % (self.lineinfo.get())
-                    pre_code += '%sif (%s%s) {\n' %(indent, prefix, name)
-                    indent += '    '
                     deref_txt = '&'
                     if ptr_type:
                         deref_txt = ''
                     if '->' in prefix: # need to update local struct
-                        pre_code += '%slocal_%s%s = (%s)((VkUniqueObject*)%s%s)->actualObject;\n' % (indent, prefix, name, struct_uses[obj], prefix, name)
+                        pre_code += '%slocal_%s%s = (%s)my_map_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(%s%s)];\n' % (indent, prefix, name, struct_uses[obj], prefix, name)
                     else:
-                        pre_code += '%s%s* p%s = (%s*)%s%s%s;\n' % (indent, struct_uses[obj], name, struct_uses[obj], deref_txt, prefix, name)
-                        pre_code += '%s*p%s = (%s)((VkUniqueObject*)%s%s)->actualObject;\n' % (indent, name, struct_uses[obj], prefix, name)
-                    indent = indent[4:]
-                    pre_code += '%s}\n' % (indent)
+                        pre_code += '%s%s = (%s)my_map_data->unique_id_mapping[reinterpret_cast<uint64_t &>(%s)];\n' % (indent, name, struct_uses[obj], name)
         return decls, pre_code, post_code
 
     def generate_intercept(self, proto, qual):
@@ -1533,15 +1514,21 @@ class UniqueObjectsSubcommand(Subcommand):
         # A few API cases that are manual code
         # TODO : Special case Create*Pipelines funcs to handle creating multiple unique objects
         explicit_object_tracker_functions = ['GetSwapchainImagesKHR',
+                                             'CreateSwapchainKHR',
                                              'CreateInstance',
+                                             'DestroyInstance',
                                              'CreateDevice',
+                                             'DestroyDevice',
                                              'CreateComputePipelines',
                                              'CreateGraphicsPipelines'
                                              ]
         # TODO : This is hacky, need to make this a more general-purpose solution for all layers
         ifdef_dict = {'CreateXcbSurfaceKHR': 'VK_USE_PLATFORM_XCB_KHR',
                       'CreateAndroidSurfaceKHR': 'VK_USE_PLATFORM_ANDROID_KHR',
-                      'CreateWin32SurfaceKHR': 'VK_USE_PLATFORM_WIN32_KHR'}
+                      'CreateWin32SurfaceKHR': 'VK_USE_PLATFORM_WIN32_KHR',
+                      'CreateXlibSurfaceKHR': 'VK_USE_PLATFORM_XLIB_KHR',
+                      'CreateWaylandSurfaceKHR': 'VK_USE_PLATFORM_WAYLAND_KHR',
+                      'CreateMirSurfaceKHR': 'VK_USE_PLATFORM_MIR_KHR'}
         # Give special treatment to create functions that return multiple new objects
         # This dict stores array name and size of array
         custom_create_dict = {'pDescriptorSets' : 'pAllocateInfo->descriptorSetCount'}
@@ -1563,21 +1550,31 @@ class UniqueObjectsSubcommand(Subcommand):
         # First thing we need to do is gather uses of non-dispatchable-objects (ndos)
         (struct_uses, local_decls) = get_object_uses(vulkan.object_non_dispatch_list, proto.params[1:last_param_index])
 
+        dispatch_param = proto.params[0].name
+        if 'CreateInstance' in proto.name:
+           dispatch_param = '*' + proto.params[1].name
+        pre_call_txt += '%slayer_data *my_map_data = get_my_data_ptr(get_dispatch_key(%s), layer_data_map);\n' % (indent, dispatch_param)
         if len(struct_uses) > 0:
-            pre_call_txt += '// STRUCT USES:%s\n' % struct_uses
+            pre_call_txt += '// STRUCT USES:%s\n' % sorted(struct_uses)
             if len(local_decls) > 0:
-                pre_call_txt += '//LOCAL DECLS:%s\n' % local_decls
+                pre_call_txt += '//LOCAL DECLS:%s\n' % sorted(local_decls)
             if destroy_func: # only one object
-                for del_obj in struct_uses:
-                    pre_call_txt += '%s%s local_%s = %s;\n' % (indent, struct_uses[del_obj], del_obj, del_obj)
-            (pre_decl, pre_code, post_code) = self._gen_obj_code(struct_uses, local_decls, '    ', '', 0, set(), True)
+                for del_obj in sorted(struct_uses):
+                    #pre_call_txt += '%s%s local_%s = %s;\n' % (indent, struct_uses[del_obj], del_obj, del_obj)
+                    pre_call_txt += '%suint64_t local_%s = reinterpret_cast<uint64_t &>(%s);\n' % (indent, del_obj, del_obj)
+                    pre_call_txt += '%s%s = (%s)my_map_data->unique_id_mapping[local_%s];\n' % (indent, del_obj, struct_uses[del_obj], del_obj)
+                    (pre_decl, pre_code, post_code) = ('', '', '')
+            else:
+                (pre_decl, pre_code, post_code) = self._gen_obj_code(struct_uses, local_decls, '    ', '', 0, set(), True)
             # This is a bit hacky but works for now. Need to decl local versions of top-level structs
-            for ld in local_decls:
+            for ld in sorted(local_decls):
                 init_null_txt = 'NULL';
                 if '*' not in local_decls[ld]:
                     init_null_txt = '{}';
                 if local_decls[ld].strip('*') not in vulkan.object_non_dispatch_list:
                     pre_decl += '    safe_%s local_%s = %s;\n' % (local_decls[ld], ld, init_null_txt)
+            if pre_code != '': # lock around map uses
+                pre_code = '%s{\n%sstd::lock_guard<std::mutex> lock(global_lock);\n%s%s}\n' % (indent, indent, pre_code, indent)
             pre_call_txt += '%s%s' % (pre_decl, pre_code)
             post_call_txt += '%s' % (post_code)
         elif create_func:
@@ -1592,9 +1589,6 @@ class UniqueObjectsSubcommand(Subcommand):
         if proto.ret != "void":
             ret_val = "%s result = " % proto.ret
             ret_stmt = "    return result;\n"
-        dispatch_param = proto.params[0].name
-        if 'CreateInstance' in proto.name:
-           dispatch_param = '*' + proto.params[1].name
         if create_func:
             obj_type = proto.params[-1].ty.strip('*')
             obj_name = proto.params[-1].name
@@ -1602,22 +1596,22 @@ class UniqueObjectsSubcommand(Subcommand):
                 local_name = "unique%s" % obj_type[2:]
                 post_call_txt += '%sif (VK_SUCCESS == result) {\n' % (indent)
                 indent += '    '
+                post_call_txt += '%sstd::lock_guard<std::mutex> lock(global_lock);\n' % (indent)
                 if obj_name in custom_create_dict:
                     post_call_txt += '%s\n' % (self.lineinfo.get())
                     local_name = '%ss' % (local_name) # add 's' to end for vector of many
-                    post_call_txt += '%sstd::vector<VkUniqueObject*> %s = {};\n' % (indent, local_name)
                     post_call_txt += '%sfor (uint32_t i=0; i<%s; ++i) {\n' % (indent, custom_create_dict[obj_name])
                     indent += '    '
-                    post_call_txt += '%s%s.push_back(new VkUniqueObject());\n' % (indent, local_name)
-                    post_call_txt += '%s%s[i]->actualObject = (uint64_t)%s[i];\n' % (indent, local_name, obj_name)
-                    post_call_txt += '%s%s[i] = (%s)%s[i];\n' % (indent, obj_name, obj_type, local_name)
+                    post_call_txt += '%suint64_t unique_id = my_map_data->unique_id++;\n' % (indent)
+                    post_call_txt += '%smy_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(%s[i]);\n' % (indent, obj_name)
+                    post_call_txt += '%s%s[i] = reinterpret_cast<%s&>(unique_id);\n' % (indent, obj_name, obj_type)
                     indent = indent[4:]
                     post_call_txt += '%s}\n' % (indent)
                 else:
                     post_call_txt += '%s\n' % (self.lineinfo.get())
-                    post_call_txt += '%sVkUniqueObject* %s = new VkUniqueObject();\n' % (indent, local_name)
-                    post_call_txt += '%s%s->actualObject = (uint64_t)*%s;\n' % (indent, local_name, obj_name)
-                    post_call_txt += '%s*%s = (%s)%s;\n' % (indent, obj_name, obj_type, local_name)
+                    post_call_txt += '%suint64_t unique_id = my_map_data->unique_id++;\n' % (indent)
+                    post_call_txt += '%smy_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(*%s);\n' % (indent, obj_name)
+                    post_call_txt += '%s*%s = reinterpret_cast<%s&>(unique_id);\n' % (indent, obj_name, obj_type)
                 indent = indent[4:]
                 post_call_txt += '%s}\n' % (indent)
         elif destroy_func:
@@ -1632,7 +1626,8 @@ class UniqueObjectsSubcommand(Subcommand):
                 post_call_txt += '%s}\n' % (indent)
             else:
                 post_call_txt += '%s\n' % (self.lineinfo.get())
-                post_call_txt = '%sdelete (VkUniqueObject*)local_%s;\n' % (indent, proto.params[-2].name)
+                post_call_txt += '%sstd::lock_guard<std::mutex> lock(global_lock);\n' % (indent)
+                post_call_txt += '%smy_map_data->unique_id_mapping.erase(local_%s);\n' % (indent, proto.params[-2].name)
 
         call_sig = proto.c_call()
         # Replace default params with any custom local params

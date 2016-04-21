@@ -3,29 +3,24 @@
  * Copyright (c) 2015-2016 LunarG, Inc.
  * Copyright (C) 2015-2016 Google Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and/or associated documentation files (the "Materials"), to
- * deal in the Materials without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Materials, and to permit persons to whom the Materials
- * are furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice(s) and this permission notice shall be included
- * in all copies or substantial portions of the Materials.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- *
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
- * USE OR OTHER DEALINGS IN THE MATERIALS
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  * Author: Jon Ashburn <jon@lunarg.com>
  * Author: Mark Lobodzinski <mark@lunarg.com>
  * Author: Tobin Ehlis <tobin@lunarg.com>
  */
+
+#include <mutex>
 
 #include "vulkan/vk_layer.h"
 #include "vk_layer_extension_utils.h"
@@ -99,8 +94,7 @@ static instance_table_map object_tracker_instance_table_map;
 static unordered_map<uint64_t, OBJTRACK_NODE *> swapchainImageMap;
 
 static long long unsigned int object_track_index = 0;
-static int objLockInitialized = 0;
-static loader_platform_thread_mutex objLock;
+static std::mutex global_lock;
 
 // Objects stored in a global map w/ struct containing basic info
 // unordered_map<const void*, OBJTRACK_NODE*> objMap;
@@ -330,16 +324,6 @@ validate_status(
 static void init_object_tracker(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
 
     layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_object_tracker");
-
-    if (!objLockInitialized) {
-        // TODO/TBD: Need to delete this mutex sometime.  How???  One
-        // suggestion is to call this during vkCreateInstance(), and then we
-        // can clean it up during vkDestroyInstance().  However, that requires
-        // that the layer have per-instance locks.  We need to come back and
-        // address this soon.
-        loader_platform_thread_create_mutex(&objLock);
-        objLockInitialized = 1;
-    }
 }
 
 //
@@ -376,7 +360,6 @@ static VkBool32 validate_pipeline_layout(VkDevice dispatchable_object, VkPipelin
 static VkBool32 validate_pipeline(VkDevice dispatchable_object, VkPipeline object, VkDebugReportObjectTypeEXT objType,
                                   bool null_allowed);
 static void destroy_command_pool(VkDevice dispatchable_object, VkCommandPool object);
-static void destroy_command_buffer(VkCommandBuffer dispatchable_object, VkCommandBuffer object);
 static void destroy_descriptor_pool(VkDevice dispatchable_object, VkDescriptorPool object);
 static void destroy_descriptor_set(VkDevice dispatchable_object, VkDescriptorSet object);
 static void destroy_device_memory(VkDevice dispatchable_object, VkDeviceMemory object);
@@ -647,15 +630,15 @@ VkResult explicit_CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const 
 void explicit_GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice gpu, uint32_t *pCount, VkQueueFamilyProperties *pProperties) {
     get_dispatch_table(object_tracker_instance_table_map, gpu)->GetPhysicalDeviceQueueFamilyProperties(gpu, pCount, pProperties);
 
-    loader_platform_thread_lock_mutex(&objLock);
-    if (pProperties != NULL)
+    std::lock_guard<std::mutex> lock(global_lock);
+    if (pProperties != NULL) {
         setGpuQueueInfoState(*pCount, pProperties);
-    loader_platform_thread_unlock_mutex(&objLock);
+    }
 }
 
 VkResult explicit_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                                VkDevice *pDevice) {
-    loader_platform_thread_lock_mutex(&objLock);
+    std::lock_guard<std::mutex> lock(global_lock);
     VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
     assert(chain_info->u.pLayerInfo);
@@ -663,7 +646,6 @@ VkResult explicit_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *p
     PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
     PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice)fpGetInstanceProcAddr(NULL, "vkCreateDevice");
     if (fpCreateDevice == NULL) {
-        loader_platform_thread_unlock_mutex(&objLock);
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
@@ -672,7 +654,6 @@ VkResult explicit_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *p
 
     VkResult result = fpCreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
     if (result != VK_SUCCESS) {
-        loader_platform_thread_unlock_mutex(&objLock);
         return result;
     }
 
@@ -689,21 +670,20 @@ VkResult explicit_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *p
         create_device((VkInstance)pNewObjNode->belongsTo, *pDevice, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT);
     }
 
-    loader_platform_thread_unlock_mutex(&objLock);
     return result;
 }
 
 VkResult explicit_EnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
                                            VkPhysicalDevice *pPhysicalDevices) {
     VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_instance(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false);
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = get_dispatch_table(object_tracker_instance_table_map, instance)
                           ->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
-    loader_platform_thread_lock_mutex(&objLock);
+    lock.lock();
     if (result == VK_SUCCESS) {
         if (pPhysicalDevices) {
             for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
@@ -711,30 +691,29 @@ VkResult explicit_EnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysi
             }
         }
     }
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     return result;
 }
 
 void explicit_GetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue *pQueue) {
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
 
     get_dispatch_table(object_tracker_device_table_map, device)->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
 
-    loader_platform_thread_lock_mutex(&objLock);
+    lock.lock();
     addQueueInfo(queueNodeIndex, *pQueue);
     create_queue(device, *pQueue, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT);
-    loader_platform_thread_unlock_mutex(&objLock);
 }
 
 VkResult explicit_MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkFlags flags,
                             void **ppData) {
     VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= set_device_memory_status(device, mem, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, OBJSTATUS_GPU_MEM_MAPPED);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     if (skipCall == VK_TRUE)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
@@ -746,10 +725,10 @@ VkResult explicit_MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize of
 
 void explicit_UnmapMemory(VkDevice device, VkDeviceMemory mem) {
     VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= reset_device_memory_status(device, mem, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, OBJSTATUS_GPU_MEM_MAPPED);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     if (skipCall == VK_TRUE)
         return;
 
@@ -757,7 +736,7 @@ void explicit_UnmapMemory(VkDevice device, VkDeviceMemory mem) {
 }
 
 VkResult explicit_QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *pBindInfo, VkFence fence) {
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     validateQueueFlags(queue, "QueueBindSparse");
 
     for (uint32_t i = 0; i < bindInfoCount; i++) {
@@ -768,8 +747,7 @@ VkResult explicit_QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const V
         for (uint32_t j = 0; j < pBindInfo[i].imageBindCount; j++)
             validate_image(queue, pBindInfo[i].pImageBinds[j].image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, false);
     }
-
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
 
     VkResult result =
         get_dispatch_table(object_tracker_device_table_map, queue)->QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
@@ -779,10 +757,10 @@ VkResult explicit_QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const V
 VkResult explicit_AllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pAllocateInfo,
                                          VkCommandBuffer *pCommandBuffers) {
     VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     skipCall |= validate_command_pool(device, pAllocateInfo->commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, false);
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
 
     if (skipCall) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -791,12 +769,12 @@ VkResult explicit_AllocateCommandBuffers(VkDevice device, const VkCommandBufferA
     VkResult result =
         get_dispatch_table(object_tracker_device_table_map, device)->AllocateCommandBuffers(device, pAllocateInfo, pCommandBuffers);
 
-    loader_platform_thread_lock_mutex(&objLock);
+    lock.lock();
     for (uint32_t i = 0; i < pAllocateInfo->commandBufferCount; i++) {
         alloc_command_buffer(device, pAllocateInfo->commandPool, pCommandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                              pAllocateInfo->level);
     }
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
 
     return result;
 }
@@ -804,7 +782,7 @@ VkResult explicit_AllocateCommandBuffers(VkDevice device, const VkCommandBufferA
 VkResult explicit_AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllocateInfo,
                                          VkDescriptorSet *pDescriptorSets) {
     VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     skipCall |=
         validate_descriptor_pool(device, pAllocateInfo->descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, false);
@@ -812,7 +790,7 @@ VkResult explicit_AllocateDescriptorSets(VkDevice device, const VkDescriptorSetA
         skipCall |= validate_descriptor_set_layout(device, pAllocateInfo->pSetLayouts[i],
                                                    VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, false);
     }
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
@@ -820,12 +798,12 @@ VkResult explicit_AllocateDescriptorSets(VkDevice device, const VkDescriptorSetA
         get_dispatch_table(object_tracker_device_table_map, device)->AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
 
     if (VK_SUCCESS == result) {
-        loader_platform_thread_lock_mutex(&objLock);
+        lock.lock();
         for (uint32_t i = 0; i < pAllocateInfo->descriptorSetCount; i++) {
             alloc_descriptor_set(device, pAllocateInfo->descriptorPool, pDescriptorSets[i],
                                  VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT);
         }
-        loader_platform_thread_unlock_mutex(&objLock);
+        lock.unlock();
     }
 
     return result;
@@ -833,24 +811,23 @@ VkResult explicit_AllocateDescriptorSets(VkDevice device, const VkDescriptorSetA
 
 void explicit_FreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandBufferCount,
                                  const VkCommandBuffer *pCommandBuffers) {
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     validate_command_pool(device, commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, false);
     validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
 
     get_dispatch_table(object_tracker_device_table_map, device)
         ->FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
 
-    loader_platform_thread_lock_mutex(&objLock);
+    lock.lock();
     for (uint32_t i = 0; i < commandBufferCount; i++) {
         free_command_buffer(device, commandPool, *pCommandBuffers);
         pCommandBuffers++;
     }
-    loader_platform_thread_unlock_mutex(&objLock);
 }
 
 void explicit_DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocationCallbacks *pAllocator) {
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     // A swapchain's images are implicitly deleted when the swapchain is deleted.
     // Remove this swapchain's images from our map of such images.
     unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = swapchainImageMap.begin();
@@ -863,52 +840,51 @@ void explicit_DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, con
         }
     }
     destroy_swapchain_khr(device, swapchain);
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
 
     get_dispatch_table(object_tracker_device_table_map, device)->DestroySwapchainKHR(device, swapchain, pAllocator);
 }
 
 void explicit_FreeMemory(VkDevice device, VkDeviceMemory mem, const VkAllocationCallbacks *pAllocator) {
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
 
     get_dispatch_table(object_tracker_device_table_map, device)->FreeMemory(device, mem, pAllocator);
 
-    loader_platform_thread_lock_mutex(&objLock);
+    lock.lock();
     destroy_device_memory(device, mem);
-    loader_platform_thread_unlock_mutex(&objLock);
 }
 
 VkResult explicit_FreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count,
                                      const VkDescriptorSet *pDescriptorSets) {
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     validate_descriptor_pool(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, false);
     validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     VkResult result = get_dispatch_table(object_tracker_device_table_map, device)
                           ->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
 
-    loader_platform_thread_lock_mutex(&objLock);
+    lock.lock();
     for (uint32_t i = 0; i < count; i++) {
         free_descriptor_set(device, descriptorPool, *pDescriptorSets++);
     }
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     return result;
 }
 
 void explicit_DestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, const VkAllocationCallbacks *pAllocator) {
     VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     skipCall |= validate_descriptor_pool(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, false);
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     if (skipCall) {
         return;
     }
     // A DescriptorPool's descriptor sets are implicitly deleted when the pool is deleted.
     // Remove this pool's descriptor sets from our descriptorSet map.
-    loader_platform_thread_lock_mutex(&objLock);
+    lock.lock();
     unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = VkDescriptorSetMap.begin();
     while (itr != VkDescriptorSetMap.end()) {
         OBJTRACK_NODE *pNode = (*itr).second;
@@ -918,20 +894,20 @@ void explicit_DestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptor
         }
     }
     destroy_descriptor_pool(device, descriptorPool);
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     get_dispatch_table(object_tracker_device_table_map, device)->DestroyDescriptorPool(device, descriptorPool, pAllocator);
 }
 
 void explicit_DestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocationCallbacks *pAllocator) {
     VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     skipCall |= validate_command_pool(device, commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, false);
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     if (skipCall) {
         return;
     }
-    loader_platform_thread_lock_mutex(&objLock);
+    lock.lock();
     // A CommandPool's command buffers are implicitly deleted when the pool is deleted.
     // Remove this pool's cmdBuffers from our cmd buffer map.
     unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = VkCommandBufferMap.begin();
@@ -940,20 +916,19 @@ void explicit_DestroyCommandPool(VkDevice device, VkCommandPool commandPool, con
         OBJTRACK_NODE *pNode = (*itr).second;
         del_itr = itr++;
         if (pNode->parentObj == (uint64_t)(commandPool)) {
-            destroy_command_buffer(reinterpret_cast<VkCommandBuffer>((*del_itr).first),
-                                   reinterpret_cast<VkCommandBuffer>((*del_itr).first));
+            free_command_buffer(device, commandPool, reinterpret_cast<VkCommandBuffer>((*del_itr).first));
         }
     }
     destroy_command_pool(device, commandPool);
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     get_dispatch_table(object_tracker_device_table_map, device)->DestroyCommandPool(device, commandPool, pAllocator);
 }
 
 VkResult explicit_GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCount, VkImage *pSwapchainImages) {
     VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
@@ -961,11 +936,11 @@ VkResult explicit_GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchai
                           ->GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
 
     if (pSwapchainImages != NULL) {
-        loader_platform_thread_lock_mutex(&objLock);
+        lock.lock();
         for (uint32_t i = 0; i < *pCount; i++) {
             create_swapchain_image_obj(device, pSwapchainImages[i], swapchain);
         }
-        loader_platform_thread_unlock_mutex(&objLock);
+        lock.unlock();
     }
     return result;
 }
@@ -975,7 +950,7 @@ VkResult explicit_CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipel
                                           const VkGraphicsPipelineCreateInfo *pCreateInfos, const VkAllocationCallbacks *pAllocator,
                                           VkPipeline *pPipelines) {
     VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     if (pCreateInfos) {
         for (uint32_t idx0 = 0; idx0 < createInfoCount; ++idx0) {
@@ -1004,18 +979,18 @@ VkResult explicit_CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipel
     if (pipelineCache) {
         skipCall |= validate_pipeline_cache(device, pipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, false);
     }
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = get_dispatch_table(object_tracker_device_table_map, device)
                           ->CreateGraphicsPipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
-    loader_platform_thread_lock_mutex(&objLock);
+    lock.lock();
     if (result == VK_SUCCESS) {
         for (uint32_t idx2 = 0; idx2 < createInfoCount; ++idx2) {
             create_pipeline(device, pPipelines[idx2], VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT);
         }
     }
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     return result;
 }
 
@@ -1024,7 +999,7 @@ VkResult explicit_CreateComputePipelines(VkDevice device, VkPipelineCache pipeli
                                          const VkComputePipelineCreateInfo *pCreateInfos, const VkAllocationCallbacks *pAllocator,
                                          VkPipeline *pPipelines) {
     VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&objLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     if (pCreateInfos) {
         for (uint32_t idx0 = 0; idx0 < createInfoCount; ++idx0) {
@@ -1045,17 +1020,17 @@ VkResult explicit_CreateComputePipelines(VkDevice device, VkPipelineCache pipeli
     if (pipelineCache) {
         skipCall |= validate_pipeline_cache(device, pipelineCache, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT, false);
     }
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = get_dispatch_table(object_tracker_device_table_map, device)
                           ->CreateComputePipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
-    loader_platform_thread_lock_mutex(&objLock);
+    lock.lock();
     if (result == VK_SUCCESS) {
         for (uint32_t idx1 = 0; idx1 < createInfoCount; ++idx1) {
             create_pipeline(device, pPipelines[idx1], VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT);
         }
     }
-    loader_platform_thread_unlock_mutex(&objLock);
+    lock.unlock();
     return result;
 }

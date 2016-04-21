@@ -11,9 +11,9 @@ buildscript {
 apply plugin: 'com.android.model.application'
 
 def demosDir = "../.."
-def smokeDir = "${demosDir}/demos/Smoke"
+def smokeDir = "${demosDir}/Smoke"
 def glmDir = "${demosDir}/../libs"
-def vulkanDir = "${demosDir}/../Vulkan-Docs/src"
+def vulkanDir = "${demosDir}/../include"
 
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())

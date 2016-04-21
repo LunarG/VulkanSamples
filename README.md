@@ -1,4 +1,4 @@
-# Vulkan Samples Kit
+# Vulkan Samples
   - This repository is a collection of Vulkan C++ sample applications.
   - Run the following script to obtain a short description of all or a 
     specific sample:

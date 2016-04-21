@@ -5,24 +5,17 @@
 # Copyright (c) 2015-2016 LunarG, Inc.
 # Copyright (c) 2015-2016 Google Inc.
 #
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and/or associated documentation files (the "Materials"), to
-# deal in the Materials without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Materials, and to permit persons to whom the Materials
-# are furnished to do so, subject to the following conditions:
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# The above copyright notice(s) and this permission notice shall be included
-# in all copies or substantial portions of the Materials.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-#
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-# DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-# OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
-# USE OR OTHER DEALINGS IN THE MATERIALS
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 # Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
 # Author: Tobin Ehlis <tobin@lunarg.com>
@@ -400,6 +393,36 @@ def get_struct_name_from_struct_type(struct_type):
 
     return struct_name
 
+# Emit an ifdef if incoming func matches a platform identifier
+def add_platform_wrapper_entry(list, func):
+    if (re.match(r'.*Xlib.*', func)):
+        list.append("#ifdef VK_USE_PLATFORM_XLIB_KHR")
+    if (re.match(r'.*Xcb.*', func)):
+        list.append("#ifdef VK_USE_PLATFORM_XCB_KHR")
+    if (re.match(r'.*Wayland.*', func)):
+        list.append("#ifdef VK_USE_PLATFORM_WAYLAND_KHR")
+    if (re.match(r'.*Mir.*', func)):
+        list.append("#ifdef VK_USE_PLATFORM_MIR_KHR")
+    if (re.match(r'.*Android.*', func)):
+        list.append("#ifdef VK_USE_PLATFORM_ANDROID_KHR")
+    if (re.match(r'.*Win32.*', func)):
+        list.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
+
+# Emit an endif if incoming func matches a platform identifier
+def add_platform_wrapper_exit(list, func):
+    if (re.match(r'.*Xlib.*', func)):
+        list.append("#endif //VK_USE_PLATFORM_XLIB_KHR")
+    if (re.match(r'.*Xcb.*', func)):
+        list.append("#endif //VK_USE_PLATFORM_XCB_KHR")
+    if (re.match(r'.*Wayland.*', func)):
+        list.append("#endif //VK_USE_PLATFORM_WAYLAND_KHR")
+    if (re.match(r'.*Mir.*', func)):
+        list.append("#endif //VK_USE_PLATFORM_MIR_KHR")
+    if (re.match(r'.*Android.*', func)):
+        list.append("#endif //VK_USE_PLATFORM_ANDROID_KHR")
+    if (re.match(r'.*Win32.*', func)):
+        list.append("#endif //VK_USE_PLATFORM_WIN32_KHR")
+
 # class for writing common file elements
 # Here's how this class lays out a file:
 #  COPYRIGHT
@@ -577,24 +600,17 @@ class StructWrapperGen:
         copyright.append(' * Copyright (c) 2015-2016 LunarG, Inc.');
         copyright.append(' * Copyright (c) 2015-2016 Google Inc.');
         copyright.append(' *');
-        copyright.append(' * Permission is hereby granted, free of charge, to any person obtaining a');
-        copyright.append(' * copy of this software and associated documentation files (the "Materials"),');
-        copyright.append(' * to deal in the Materials without restriction, including without limitation');
-        copyright.append(' * the rights to use, copy, modify, merge, publish, distribute, sublicense,');
-        copyright.append(' * and/or sell copies of the Materials, and to permit persons to whom the');
-        copyright.append(' * Materials is furnished to do so, subject to the following conditions:');
+        copyright.append(' * Licensed under the Apache License, Version 2.0 (the "License");');
+        copyright.append(' * you may not use this file except in compliance with the License.');
+        copyright.append(' * You may obtain a copy of the License at');
         copyright.append(' *');
-        copyright.append(' * The above copyright notice and this permission notice shall be included');
-        copyright.append(' * in all copies or substantial portions of the Materials.');
+        copyright.append(' *     http://www.apache.org/licenses/LICENSE-2.0');
         copyright.append(' *');
-        copyright.append(' * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR');
-        copyright.append(' * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,');
-        copyright.append(' * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.');
-        copyright.append(' *');
-        copyright.append(' * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,');
-        copyright.append(' * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR');
-        copyright.append(' * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE');
-        copyright.append(' * USE OR OTHER DEALINGS IN THE MATERIALS');
+        copyright.append(' * Unless required by applicable law or agreed to in writing, software');
+        copyright.append(' * distributed under the License is distributed on an "AS IS" BASIS,');
+        copyright.append(' * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.');
+        copyright.append(' * See the License for the specific language governing permissions and');
+        copyright.append(' * limitations under the License.');
         copyright.append(' *');
         copyright.append(' * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>');
         copyright.append(' * Author: Tobin Ehlis <tobin@lunarg.com>');
@@ -865,25 +881,12 @@ class StructWrapperGen:
         # XXX - REMOVE this comment
         lineinfo = sourcelineinfo()
         sh_funcs.append('%s' % lineinfo.get())
-        exclude_struct_list = ['VkAndroidSurfaceCreateInfoKHR',
-                               'VkMirSurfaceCreateInfoKHR',
-                               'VkWaylandSurfaceCreateInfoKHR',
-                               'VkXlibSurfaceCreateInfoKHR']
-        if sys.platform == 'win32':
-            exclude_struct_list.append('VkXcbSurfaceCreateInfoKHR')
-        else:
-            exclude_struct_list.append('VkWin32SurfaceCreateInfoKHR')
         for s in sorted(self.struct_dict):
-            if (typedef_fwd_dict[s] not in exclude_struct_list):
-                if (re.match(r'.*Xcb.*', typedef_fwd_dict[s])):
-                    sh_funcs.append("#ifdef VK_USE_PLATFORM_XCB_KHR")
-                if (re.match(r'.*Win32.*', typedef_fwd_dict[s])):
-                    sh_funcs.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
-                sh_funcs.append('string %s(const %s* pStruct, const string prefix);' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
-                if (re.match(r'.*Win32.*', typedef_fwd_dict[s])):
-                    sh_funcs.append("#endif //VK_USE_PLATFORM_WIN32_KHR")
-                if (re.match(r'.*Xcb.*', typedef_fwd_dict[s])):
-                    sh_funcs.append("#endif //VK_USE_PLATFORM_XCB_KHR")
+            # Wrap this in platform check since it may contain undefined structs or functions
+            add_platform_wrapper_entry(sh_funcs, typedef_fwd_dict[s])
+            sh_funcs.append('string %s(const %s* pStruct, const string prefix);' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
+            add_platform_wrapper_exit(sh_funcs, typedef_fwd_dict[s])
+
         sh_funcs.append('\n')
         sh_funcs.append('%s' % lineinfo.get())
         for s in sorted(self.struct_dict):
@@ -895,13 +898,11 @@ class StructWrapperGen:
                     # TODO: This is a tmp workaround
                     if 'ppActiveLayerNames' not in self.struct_dict[s][m]['name']:
                         stp_list.append(self.struct_dict[s][m])
-            if (typedef_fwd_dict[s] in exclude_struct_list):
-                continue
             sh_funcs.append('%s' % lineinfo.get())
-            if (re.match(r'.*Xcb.*', typedef_fwd_dict[s])):
-                sh_funcs.append("#ifdef VK_USE_PLATFORM_XCB_KHR")
-            if (re.match(r'.*Win32.*', typedef_fwd_dict[s])):
-                sh_funcs.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
+
+            # Wrap this in platform check since it may contain undefined structs or functions
+            add_platform_wrapper_entry(sh_funcs, typedef_fwd_dict[s])
+
             sh_funcs.append('string %s(const %s* pStruct, const string prefix)\n{' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
             sh_funcs.append('%s' % lineinfo.get())
             indent = '    '
@@ -1099,10 +1100,10 @@ class StructWrapperGen:
             sh_funcs.append('%s' % lineinfo.get())
             sh_funcs.append('    final_str = %s;' % final_str)
             sh_funcs.append('    return final_str;\n}')
-            if (re.match(r'.*Win32.*', typedef_fwd_dict[s])):
-                sh_funcs.append("#endif //VK_USE_PLATFORM_WIN32_KHR")
-            if (re.match(r'.*Xcb.*', typedef_fwd_dict[s])):
-                sh_funcs.append("#endif //VK_USE_PLATFORM_XCB_KHR")
+
+            # End of platform wrapped section
+            add_platform_wrapper_exit(sh_funcs, typedef_fwd_dict[s])
+
         # Add function to return a string value for input void*
         sh_funcs.append('%s' % lineinfo.get())
         sh_funcs.append("string string_convert_helper(const void* toString, const string prefix)\n{")
@@ -1296,33 +1297,19 @@ class StructWrapperGen:
     def _generateValidateHelperFunctions(self):
         sh_funcs = []
         # We do two passes, first pass just generates prototypes for all the functsions
-        exclude_struct_list = ['VkAndroidSurfaceCreateInfoKHR',
-                               'VkMirSurfaceCreateInfoKHR',
-                               'VkWaylandSurfaceCreateInfoKHR',
-                               'VkXlibSurfaceCreateInfoKHR']
-        if sys.platform == 'win32':
-            exclude_struct_list.append('VkXcbSurfaceCreateInfoKHR')
-        else:
-            exclude_struct_list.append('VkWin32SurfaceCreateInfoKHR')
         for s in sorted(self.struct_dict):
-            if (typedef_fwd_dict[s] not in exclude_struct_list):
-                if (re.match(r'.*Xcb.*', typedef_fwd_dict[s])):
-                    sh_funcs.append("#ifdef VK_USE_PLATFORM_XCB_KHR")
-                if (re.match(r'.*Win32.*', typedef_fwd_dict[s])):
-                    sh_funcs.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
-                sh_funcs.append('uint32_t %s(const %s* pStruct);' % (self._get_vh_func_name(s), typedef_fwd_dict[s]))
-                if (re.match(r'.*Win32.*', typedef_fwd_dict[s])):
-                    sh_funcs.append("#endif //VK_USE_PLATFORM_WIN32_KHR")
-                if (re.match(r'.*Xcb.*', typedef_fwd_dict[s])):
-                    sh_funcs.append("#endif //VK_USE_PLATFORM_XCB_KHR")
+
+            # Wrap this in platform check since it may contain undefined structs or functions
+            add_platform_wrapper_entry(sh_funcs, typedef_fwd_dict[s])
+            sh_funcs.append('uint32_t %s(const %s* pStruct);' % (self._get_vh_func_name(s), typedef_fwd_dict[s]))
+            add_platform_wrapper_exit(sh_funcs, typedef_fwd_dict[s])
+
         sh_funcs.append('\n')
         for s in sorted(self.struct_dict):
-            if (typedef_fwd_dict[s] in exclude_struct_list):
-                continue
-            if (re.match(r'.*Xcb.*', typedef_fwd_dict[s])):
-                sh_funcs.append("#ifdef VK_USE_PLATFORM_XCB_KHR")
-            if (re.match(r'.*Win32.*', typedef_fwd_dict[s])):
-                sh_funcs.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
+
+            # Wrap this in platform check since it may contain undefined structs or functions
+            add_platform_wrapper_entry(sh_funcs, typedef_fwd_dict[s])
+
             sh_funcs.append('uint32_t %s(const %s* pStruct)\n{' % (self._get_vh_func_name(s), typedef_fwd_dict[s]))
             for m in sorted(self.struct_dict[s]):
                 # TODO : Need to handle arrays of enums like in VkRenderPassCreateInfo struct
@@ -1335,10 +1322,9 @@ class StructWrapperGen:
                     else:
                         sh_funcs.append('    if (!%s((const %s*)&pStruct->%s))\n        return 0;' % (self._get_vh_func_name(self.struct_dict[s][m]['type']), self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name']))
             sh_funcs.append("    return 1;\n}")
-            if (re.match(r'.*Win32.*', typedef_fwd_dict[s])):
-                sh_funcs.append("#endif //VK_USE_PLATFORM_WIN32_KHR")
-            if (re.match(r'.*Xcb.*', typedef_fwd_dict[s])):
-                sh_funcs.append("#endif //VK_USE_PLATFORM_XCB_KHR")
+
+            # End of platform wrapped section
+            add_platform_wrapper_exit(sh_funcs, typedef_fwd_dict[s])
 
         return "\n".join(sh_funcs)
 
@@ -1355,42 +1341,24 @@ class StructWrapperGen:
     def _generateSizeHelperFunctions(self):
         sh_funcs = []
         # just generates prototypes for all the functions
-        exclude_struct_list = ['VkAndroidSurfaceCreateInfoKHR',
-                               'VkMirSurfaceCreateInfoKHR',
-                               'VkWaylandSurfaceCreateInfoKHR',
-                               'VkXlibSurfaceCreateInfoKHR']
-        if sys.platform == 'win32':
-            exclude_struct_list.append('VkXcbSurfaceCreateInfoKHR')
-        else:
-            exclude_struct_list.append('VkWin32SurfaceCreateInfoKHR')
         for s in sorted(self.struct_dict):
-            if (typedef_fwd_dict[s] not in exclude_struct_list):
-                if (re.match(r'.*Xcb.*', typedef_fwd_dict[s])):
-                    sh_funcs.append("#ifdef VK_USE_PLATFORM_XCB_KHR")
-                if (re.match(r'.*Win32.*', typedef_fwd_dict[s])):
-                    sh_funcs.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
-                sh_funcs.append('size_t %s(const %s* pStruct);' % (self._get_size_helper_func_name(s), typedef_fwd_dict[s]))
-                if (re.match(r'.*Win32.*', typedef_fwd_dict[s])):
-                    sh_funcs.append("#endif //VK_USE_PLATFORM_WIN32_KHR")
-                if (re.match(r'.*Xcb.*', typedef_fwd_dict[s])):
-                    sh_funcs.append("#endif //VK_USE_PLATFORM_XCB_KHR")
+
+            # Wrap this in platform check since it may contain undefined structs or functions
+            add_platform_wrapper_entry(sh_funcs, typedef_fwd_dict[s])
+            sh_funcs.append('size_t %s(const %s* pStruct);' % (self._get_size_helper_func_name(s), typedef_fwd_dict[s]))
+            add_platform_wrapper_exit(sh_funcs, typedef_fwd_dict[s])
+
         return "\n".join(sh_funcs)
 
 
     def _generateSizeHelperFunctionsC(self):
         sh_funcs = []
         # generate function definitions
-        exclude_struct_list = ['VkAndroidSurfaceCreateInfoKHR',
-                               'VkMirSurfaceCreateInfoKHR',
-                               'VkWaylandSurfaceCreateInfoKHR',
-                               'VkXlibSurfaceCreateInfoKHR']
-        if sys.platform == 'win32':
-            exclude_struct_list.append('VkXcbSurfaceCreateInfoKHR')
-        else:
-            exclude_struct_list.append('VkWin32SurfaceCreateInfoKHR')
         for s in sorted(self.struct_dict):
-            if (typedef_fwd_dict[s] in exclude_struct_list):
-                continue
+
+            # Wrap this in platform check since it may contain undefined structs or functions
+            add_platform_wrapper_entry(sh_funcs, typedef_fwd_dict[s])
+
             skip_list = [] # Used when struct elements need to be skipped because size already accounted for
             sh_funcs.append('size_t %s(const %s* pStruct)\n{' % (self._get_size_helper_func_name(s), typedef_fwd_dict[s]))
             indent = '    '
@@ -1448,6 +1416,10 @@ class StructWrapperGen:
             indent = '    '
             sh_funcs.append('%s}' % (indent))
             sh_funcs.append("%sreturn structSize;\n}" % (indent))
+
+            # End of platform wrapped section
+            add_platform_wrapper_exit(sh_funcs, typedef_fwd_dict[s])
+
         # Now generate generic functions to loop over entire struct chain (or just handle single generic structs)
         if '_debug_' not in self.header_filename:
             for follow_chain in [True, False]:

@@ -4,24 +4,17 @@
  * Copyright (c) 2015-2016 LunarG, Inc.
  * Copyright (c) 2015-2016 Google, Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and/or associated documentation files (the "Materials"), to
- * deal in the Materials without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Materials, and to permit persons to whom the Materials are
- * furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice(s) and this permission notice shall be included in
- * all copies or substantial portions of the Materials.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- *
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
- * USE OR OTHER DEALINGS IN THE MATERIALS.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
  * Author: Tony Barbour <tony@LunarG.com>
@@ -68,6 +61,13 @@ void VkRenderFramework::InitFramework() {
     std::vector<const char *> device_extension_names;
     instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+#ifdef _WIN32
+    instance_extension_names.push_back(
+        VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+#endif
     InitFramework(instance_layer_names, device_layer_names,
                   instance_extension_names, device_extension_names);
 }
@@ -158,8 +158,7 @@ void VkRenderFramework::InitFramework(
         }
     }
     m_device->get_device_queue();
-
-    m_depthStencil = new VkDepthStencilObj();
+    m_depthStencil = new VkDepthStencilObj(m_device);
 }
 
 void VkRenderFramework::ShutdownFramework() {
@@ -427,10 +426,15 @@ VkDescriptorSetObj::~VkDescriptorSetObj() {
 
 int VkDescriptorSetObj::AppendDummy() {
     /* request a descriptor but do not update it */
-    VkDescriptorPoolSize tc = {};
-    tc.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    tc.descriptorCount = 1;
-    m_type_counts.push_back(tc);
+    VkDescriptorSetLayoutBinding binding = {};
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    binding.descriptorCount = 1;
+    binding.binding = m_layout_bindings.size();
+    binding.stageFlags = VK_SHADER_STAGE_ALL;
+    binding.pImmutableSamplers = NULL;
+
+    m_layout_bindings.push_back(binding);
+    m_type_counts[VK_DESCRIPTOR_TYPE_STORAGE_BUFFER] += binding.descriptorCount;
 
     return m_nextSlot++;
 }
@@ -441,10 +445,15 @@ int VkDescriptorSetObj::AppendBuffer(VkDescriptorType type,
            type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
            type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
            type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
-    VkDescriptorPoolSize tc = {};
-    tc.type = type;
-    tc.descriptorCount = 1;
-    m_type_counts.push_back(tc);
+    VkDescriptorSetLayoutBinding binding = {};
+    binding.descriptorType = type;
+    binding.descriptorCount = 1;
+    binding.binding = m_layout_bindings.size();
+    binding.stageFlags = VK_SHADER_STAGE_ALL;
+    binding.pImmutableSamplers = NULL;
+
+    m_layout_bindings.push_back(binding);
+    m_type_counts[type] += binding.descriptorCount;
 
     m_writes.push_back(vk_testing::Device::write_descriptor_set(
         vk_testing::DescriptorSet(), m_nextSlot, 0, type, 1,
@@ -455,11 +464,16 @@ int VkDescriptorSetObj::AppendBuffer(VkDescriptorType type,
 
 int VkDescriptorSetObj::AppendSamplerTexture(VkSamplerObj *sampler,
                                              VkTextureObj *texture) {
-    VkDescriptorPoolSize tc = {};
-    tc.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    tc.descriptorCount = 1;
-    m_type_counts.push_back(tc);
+    VkDescriptorSetLayoutBinding binding = {};
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    binding.descriptorCount = 1;
+    binding.binding = m_layout_bindings.size();
+    binding.stageFlags = VK_SHADER_STAGE_ALL;
+    binding.pImmutableSamplers = NULL;
 
+    m_layout_bindings.push_back(binding);
+    m_type_counts[VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER] +=
+        binding.descriptorCount;
     VkDescriptorImageInfo tmp = texture->m_imageInfo;
     tmp.sampler = sampler->handle();
     m_imageSamplerDescriptors.push_back(tmp);
@@ -484,30 +498,26 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(
 
     if ( m_type_counts.size()) {
         // create VkDescriptorPool
+        VkDescriptorPoolSize poolSize;
+        vector<VkDescriptorPoolSize> sizes;
+        for (auto it = m_type_counts.begin(); it != m_type_counts.end(); ++it) {
+            poolSize.descriptorCount = it->second;
+            poolSize.type = it->first;
+            sizes.push_back(poolSize);
+        }
         VkDescriptorPoolCreateInfo pool = {};
         pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        pool.poolSizeCount = m_type_counts.size();
+        pool.poolSizeCount = sizes.size();
         pool.maxSets = 1;
-        pool.pPoolSizes = m_type_counts.data();
+        pool.pPoolSizes = sizes.data();
         init(*m_device, pool);
-    }
-
-    // create VkDescriptorSetLayout
-    vector<VkDescriptorSetLayoutBinding> bindings;
-    bindings.resize(m_type_counts.size());
-    for (size_t i = 0; i < m_type_counts.size(); i++) {
-        bindings[i].binding = i;
-        bindings[i].descriptorType = m_type_counts[i].type;
-        bindings[i].descriptorCount = m_type_counts[i].descriptorCount;
-        bindings[i].stageFlags = VK_SHADER_STAGE_ALL;
-        bindings[i].pImmutableSamplers = NULL;
     }
 
     // create VkDescriptorSetLayout
     VkDescriptorSetLayoutCreateInfo layout = {};
     layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layout.bindingCount = bindings.size();
-    layout.pBindings = bindings.data();
+    layout.bindingCount = m_layout_bindings.size();
+    layout.pBindings = m_layout_bindings.data();
 
     m_layout.init(*m_device, layout);
     vector<const vk_testing::DescriptorSetLayout *> layouts;
@@ -640,6 +650,11 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
         dst_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         break;
 
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+        dst_mask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        src_mask = all_cache_outputs;
+        break;
+
     default:
         src_mask = all_cache_outputs;
         dst_mask = all_cache_inputs;
@@ -759,7 +774,8 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image) {
     src_image.SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR_BIT,
                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-    dest_image_layout = this->layout();
+    dest_image_layout = (this->layout() == VK_IMAGE_LAYOUT_UNDEFINED)?
+                    VK_IMAGE_LAYOUT_GENERAL:this->layout();
     this->SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR_BIT,
                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -1652,38 +1668,26 @@ void VkCommandBufferObj::BindVertexBuffer(VkConstantBufferObj *vertexBuffer,
                            &offset);
 }
 
-VkDepthStencilObj::VkDepthStencilObj() { m_initialized = false; }
 bool VkDepthStencilObj::Initialized() { return m_initialized; }
+VkDepthStencilObj::VkDepthStencilObj(VkDeviceObj *device) : VkImageObj(device)  {m_initialized = false;}
 
 VkImageView *VkDepthStencilObj::BindInfo() { return &m_attachmentBindInfo; }
 
 void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
                              VkFormat format) {
-    VkImageCreateInfo image_info = {};
+
     VkImageViewCreateInfo view_info = {};
 
     m_device = device;
     m_initialized = true;
     m_depth_stencil_fmt = format;
 
-    image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_info.pNext = NULL;
-    image_info.imageType = VK_IMAGE_TYPE_2D;
-    image_info.format = m_depth_stencil_fmt;
-    image_info.extent.width = width;
-    image_info.extent.height = height;
-    image_info.extent.depth = 1;
-    image_info.mipLevels = 1;
-    image_info.arrayLayers = 1;
-    image_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    image_info.flags = 0;
-    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    image_info.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    image_info.queueFamilyIndexCount = 0;
-    image_info.pQueueFamilyIndices = NULL;
-    init(*m_device, image_info);
+    /* create image */
+    init(width, height, m_depth_stencil_fmt,
+         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+         VK_IMAGE_TILING_OPTIMAL);
+
+    SetLayout(VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     view_info.pNext = NULL;

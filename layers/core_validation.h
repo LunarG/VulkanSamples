@@ -3,24 +3,17 @@
  * Copyright (c) 2015-2016 LunarG, Inc.
  * Copyright (C) 2015-2016 Google Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and/or associated documentation files (the "Materials"), to
- * deal in the Materials without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Materials, and to permit persons to whom the Materials
- * are furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice(s) and this permission notice shall be included
- * in all copies or substantial portions of the Materials.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- *
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
- * USE OR OTHER DEALINGS IN THE MATERIALS
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  * Author: Courtney Goeltzenleuchter <courtneygo@google.com>
  * Author: Tobin Ehlis <tobine@google.com>
@@ -87,13 +80,6 @@ typedef enum _MEM_TRACK_ERROR {
     MEMTRACK_INVALID_USAGE_FLAG,           // Usage flags specified at image/buffer create conflict w/ use of object
     MEMTRACK_INVALID_MAP,                  // Size flag specified at alloc is too small for mapping range
 } MEM_TRACK_ERROR;
-
-// MemTracker Semaphore states
-typedef enum SemaphoreState {
-    MEMTRACK_SEMAPHORE_STATE_UNSET,     // Semaphore is in an undefined state
-    MEMTRACK_SEMAPHORE_STATE_SIGNALLED, // Semaphore has is in signalled state
-    MEMTRACK_SEMAPHORE_STATE_WAIT,      // Semaphore is in wait state
-} SemaphoreState;
 
 struct MemRange {
     VkDeviceSize offset;
@@ -182,23 +168,6 @@ struct MT_PASS_ATTACHMENT_INFO {
     uint32_t attachment;
     VkAttachmentLoadOp load_op;
     VkAttachmentStoreOp store_op;
-};
-
-// Associate fenceId with a fence object
-struct MT_FENCE_INFO {
-    uint64_t fenceId;         // Sequence number for fence at last submit
-    VkQueue queue;            // Queue that this fence is submitted against or NULL
-    VkSwapchainKHR swapchain; // Swapchain that this fence is submitted against or NULL
-    bool firstTimeFlag;       // Fence was created in signaled state, avoid warnings for first use
-    VkFenceCreateInfo createInfo;
-};
-
-// Track Queue information
-struct MT_QUEUE_INFO {
-    uint64_t lastRetiredId;
-    uint64_t lastSubmittedId;
-    list<VkCommandBuffer> pQueueCommandBuffers;
-    list<VkDeviceMemory> pMemRefList;
 };
 
 struct MT_DESCRIPTOR_SET_INFO {
@@ -586,26 +555,23 @@ class PHYS_DEV_PROPERTIES_NODE {
 class FENCE_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
-#if MTMERGE
-    uint64_t fenceId;         // Sequence number for fence at last submit
+
     VkSwapchainKHR swapchain; // Swapchain that this fence is submitted against or NULL
     bool firstTimeFlag;       // Fence was created in signaled state, avoid warnings for first use
     VkFenceCreateInfo createInfo;
-#endif
     VkQueue queue;
     vector<VkCommandBuffer> cmdBuffers;
     bool needsSignaled;
     vector<VkFence> priorFences;
 
     // Default constructor
-    FENCE_NODE() : queue(NULL), needsSignaled(VK_FALSE){};
+    FENCE_NODE() : queue(VK_NULL_HANDLE), needsSignaled(false){};
 };
 
 class SEMAPHORE_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
-    uint32_t signaled;
-    SemaphoreState state;
+    bool signaled;
     VkQueue queue;
 };
 
@@ -621,8 +587,6 @@ class QUEUE_NODE {
     VkDevice device;
     vector<VkFence> lastFences;
 #if MTMERGE
-    uint64_t lastRetiredId;
-    uint64_t lastSubmittedId;
     // MTMTODO : merge cmd_buffer data structs here
     list<VkCommandBuffer> pQueueCommandBuffers;
     list<VkDeviceMemory> pMemRefList;
@@ -653,6 +617,7 @@ typedef struct _LAYOUT_NODE {
     uint32_t endIndex;                                   // last index of this layout
     uint32_t dynamicDescriptorCount;                     // Total count of dynamic descriptors used
                                                          // by this layout
+    uint32_t immutableSamplerCount;                      // # of immutable samplers in this layout
     vector<VkDescriptorType> descriptorTypes;            // Type per descriptor in this
                                                          // layout to verify correct
                                                          // updates
@@ -661,7 +626,7 @@ typedef struct _LAYOUT_NODE {
     unordered_map<uint32_t, uint32_t> bindingToIndexMap; // map set binding # to
                                                          // createInfo.pBindings index
     // Default constructor
-    _LAYOUT_NODE() : layout{}, createInfo{}, startIndex(0), endIndex(0), dynamicDescriptorCount(0){};
+    _LAYOUT_NODE() : layout{}, createInfo{}, startIndex(0), endIndex(0), dynamicDescriptorCount(0), immutableSamplerCount(0){};
 } LAYOUT_NODE;
 
 // Store layouts and pushconstants for PipelineLayout
@@ -683,7 +648,9 @@ class SET_NODE : public BASE_NODE {
     LAYOUT_NODE *pLayout;           // Layout for this set
     SET_NODE *pNext;
     unordered_set<VkCommandBuffer> boundCmdBuffers; // Cmd buffers that this set has been bound to
-    SET_NODE() : set(VK_NULL_HANDLE), pool(VK_NULL_HANDLE), pUpdateStructs(nullptr), pLayout(nullptr), pNext(nullptr){};
+    SET_NODE()
+        : set(VK_NULL_HANDLE), pool(VK_NULL_HANDLE), pUpdateStructs(nullptr), descriptorCount(0), pLayout(nullptr),
+          pNext(nullptr){};
 };
 
 typedef struct _DESCRIPTOR_POOL_NODE {
@@ -698,7 +665,7 @@ typedef struct _DESCRIPTOR_POOL_NODE {
 
     _DESCRIPTOR_POOL_NODE(const VkDescriptorPool pool, const VkDescriptorPoolCreateInfo *pCreateInfo)
         : pool(pool), maxSets(pCreateInfo->maxSets), availableSets(pCreateInfo->maxSets), createInfo(*pCreateInfo), pSets(NULL),
-          maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE), availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE) {
+          maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0), availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0) {
         if (createInfo.poolSizeCount) { // Shadow type struct from ptr into local struct
             size_t poolSizeCountSize = createInfo.poolSizeCount * sizeof(VkDescriptorPoolSize);
             createInfo.pPoolSizes = new VkDescriptorPoolSize[poolSizeCountSize];
@@ -707,7 +674,8 @@ typedef struct _DESCRIPTOR_POOL_NODE {
             uint32_t i = 0;
             for (i = 0; i < createInfo.poolSizeCount; ++i) {
                 uint32_t typeIndex = static_cast<uint32_t>(createInfo.pPoolSizes[i].type);
-                maxDescriptorTypeCount[typeIndex] = createInfo.pPoolSizes[i].descriptorCount;
+                // Same descriptor types can appear several times
+                maxDescriptorTypeCount[typeIndex] += createInfo.pPoolSizes[i].descriptorCount;
                 availableDescriptorTypeCount[typeIndex] = maxDescriptorTypeCount[typeIndex];
             }
         } else {
@@ -910,13 +878,13 @@ struct GLOBAL_CB_NODE {
     VkRenderPass activeRenderPass;
     VkSubpassContents activeSubpassContents;
     uint32_t activeSubpass;
-    VkFramebuffer framebuffer;
+    std::unordered_set<VkFramebuffer> framebuffers;
     // Track descriptor sets that are destroyed or updated while bound to CB
     // TODO : These data structures relate to tracking resources that invalidate
     //  a cmd buffer that references them. Need to unify how we handle these
     //  cases so we don't have different tracking data for each type.
-    std::set<VkDescriptorSet> destroyedSets;
-    std::set<VkDescriptorSet> updatedSets;
+    unordered_set<VkDescriptorSet> destroyedSets;
+    unordered_set<VkDescriptorSet> updatedSets;
     unordered_set<VkFramebuffer> destroyedFramebuffers;
     vector<VkEvent> waitedEvents;
     vector<VkSemaphore> semaphores;

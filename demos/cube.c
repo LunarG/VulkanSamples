@@ -3,24 +3,17 @@
  * Copyright (c) 2015-2016 Valve Corporation
  * Copyright (c) 2015-2016 LunarG, Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and/or associated documentation files (the "Materials"), to
- * deal in the Materials without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Materials, and to permit persons to whom the Materials are
- * furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice(s) and this permission notice shall be included in
- * all copies or substantial portions of the Materials.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- *
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
- * USE OR OTHER DEALINGS IN THE MATERIALS.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  * Author: Chia-I Wu <olv@lunarg.com>
  * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
@@ -35,6 +28,9 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <signal.h>
+#ifdef __linux__
+#include <X11/Xutil.h>
+#endif
 
 #ifdef _WIN32
 #pragma comment(linker, "/subsystem:windows")
@@ -330,15 +326,19 @@ struct demo {
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND window;                 // hWnd - window handle
-#else                            // _WIN32
+#else
+    Display* display;
+    Window xlib_window;
+    Atom xlib_wm_delete_window;
     xcb_connection_t *connection;
     xcb_screen_t *screen;
-    xcb_window_t window;
+    xcb_window_t xcb_window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
 #endif                           // _WIN32
     VkSurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;
+    bool use_xlib;
 
     VkInstance inst;
     VkPhysicalDevice gpu;
@@ -1836,10 +1836,16 @@ static void demo_cleanup(struct demo *demo) {
     vkDestroyInstance(demo->inst, NULL);
 
 #ifndef _WIN32
-    xcb_destroy_window(demo->connection, demo->window);
-    xcb_disconnect(demo->connection);
+    if (demo->use_xlib) {
+        XDestroyWindow(demo->display, demo->xlib_window);
+        XCloseDisplay(demo->display);
+    } else {
+        xcb_destroy_window(demo->connection, demo->xcb_window);
+        xcb_disconnect(demo->connection);
+    }
     free(demo->atom_wm_delete_window);
 #endif // _WIN32
+
 }
 
 static void demo_resize(struct demo *demo) {
@@ -1986,8 +1992,106 @@ static void demo_create_window(struct demo *demo) {
         exit(1);
     }
 }
-#else  // _WIN32
-static void demo_handle_event(struct demo *demo,
+#else
+static void demo_create_xlib_window(struct demo *demo) {
+
+    demo->display = XOpenDisplay(NULL);
+    long visualMask = VisualScreenMask;
+    int numberOfVisuals;
+    XVisualInfo vInfoTemplate;
+    vInfoTemplate.screen = DefaultScreen(demo->display);
+    XVisualInfo *visualInfo = XGetVisualInfo(demo->display, visualMask,
+                                             &vInfoTemplate, &numberOfVisuals);
+
+    Colormap colormap = XCreateColormap(
+                demo->display, RootWindow(demo->display, vInfoTemplate.screen),
+                visualInfo->visual, AllocNone);
+
+    XSetWindowAttributes windowAttributes;
+    windowAttributes.colormap = colormap;
+    windowAttributes.background_pixel = 0xFFFFFFFF;
+    windowAttributes.border_pixel = 0;
+    windowAttributes.event_mask =
+            KeyPressMask | KeyReleaseMask | StructureNotifyMask | ExposureMask;
+
+    demo->xlib_window = XCreateWindow(
+                demo->display, RootWindow(demo->display, vInfoTemplate.screen), 0, 0,
+                demo->width, demo->height, 0, visualInfo->depth, InputOutput,
+                visualInfo->visual,
+                CWBackPixel | CWBorderPixel | CWEventMask | CWColormap, &windowAttributes);
+
+    XSelectInput(demo->display, demo->xlib_window, ExposureMask | KeyPressMask);
+    XMapWindow(demo->display, demo->xlib_window);
+    XFlush(demo->display);
+    demo->xlib_wm_delete_window =
+            XInternAtom(demo->display, "WM_DELETE_WINDOW", False);
+}
+static void demo_handle_xlib_event(struct demo *demo, const XEvent *event) {
+    switch(event->type) {
+    case ClientMessage:
+        if ((Atom)event->xclient.data.l[0] == demo->xlib_wm_delete_window)
+            demo->quit = true;
+        break;
+    case KeyPress:
+        switch (event->xkey.keycode) {
+        case 0x9: // Escape
+            demo->quit = true;
+            break;
+        case 0x71: // left arrow key
+            demo->spin_angle += demo->spin_increment;
+            break;
+        case 0x72: // right arrow key
+            demo->spin_angle -= demo->spin_increment;
+            break;
+        case 0x41:
+            demo->pause = !demo->pause;
+            break;
+        }
+        break;
+    case ConfigureNotify:
+        if ((demo->width != event->xconfigure.width) ||
+            (demo->height != event->xconfigure.height)) {
+            demo->width = event->xconfigure.width;
+            demo->height = event->xconfigure.height;
+            demo_resize(demo);
+        }
+        break;
+    default:
+        break;
+    }
+
+}
+
+static void demo_run_xlib(struct demo *demo) {
+
+    while (!demo->quit) {
+        XEvent event;
+
+        if (demo->pause) {
+            XNextEvent(demo->display, &event);
+            demo_handle_xlib_event(demo, &event);
+        } else {
+            while (XPending(demo->display) > 0) {
+                XNextEvent(demo->display, &event);
+                demo_handle_xlib_event(demo, &event);
+            }
+        }
+
+        // Wait for work to finish before updating MVP.
+        vkDeviceWaitIdle(demo->device);
+        demo_update_data_buffer(demo);
+
+        demo_draw(demo);
+
+        // Wait for work to finish before updating MVP.
+        vkDeviceWaitIdle(demo->device);
+        demo->curFrame++;
+        if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
+            demo->quit = true;
+    }
+}
+
+static void demo_handle_xcb_event(struct demo *demo,
                               const xcb_generic_event_t *event) {
     uint8_t event_code = event->response_type & 0x7f;
     switch (event_code) {
@@ -2033,7 +2137,7 @@ static void demo_handle_event(struct demo *demo,
     }
 }
 
-static void demo_run(struct demo *demo) {
+static void demo_run_xcb(struct demo *demo) {
     xcb_flush(demo->connection);
 
     while (!demo->quit) {
@@ -2045,7 +2149,7 @@ static void demo_run(struct demo *demo) {
             event = xcb_poll_for_event(demo->connection);
         }
         if (event) {
-            demo_handle_event(demo, event);
+            demo_handle_xcb_event(demo, event);
             free(event);
         }
 
@@ -2063,17 +2167,17 @@ static void demo_run(struct demo *demo) {
     }
 }
 
-static void demo_create_window(struct demo *demo) {
+static void demo_create_xcb_window(struct demo *demo) {
     uint32_t value_mask, value_list[32];
 
-    demo->window = xcb_generate_id(demo->connection);
+    demo->xcb_window = xcb_generate_id(demo->connection);
 
     value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
     value_list[0] = demo->screen->black_pixel;
     value_list[1] = XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE |
                     XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
-    xcb_create_window(demo->connection, XCB_COPY_FROM_PARENT, demo->window,
+    xcb_create_window(demo->connection, XCB_COPY_FROM_PARENT, demo->xcb_window,
                       demo->screen->root, 0, 0, demo->width, demo->height, 0,
                       XCB_WINDOW_CLASS_INPUT_OUTPUT, demo->screen->root_visual,
                       value_mask, value_list);
@@ -2089,17 +2193,17 @@ static void demo_create_window(struct demo *demo) {
     demo->atom_wm_delete_window =
         xcb_intern_atom_reply(demo->connection, cookie2, 0);
 
-    xcb_change_property(demo->connection, XCB_PROP_MODE_REPLACE, demo->window,
+    xcb_change_property(demo->connection, XCB_PROP_MODE_REPLACE, demo->xcb_window,
                         (*reply).atom, 4, 32, 1,
                         &(*demo->atom_wm_delete_window).atom);
     free(reply);
 
-    xcb_map_window(demo->connection, demo->window);
+    xcb_map_window(demo->connection, demo->xcb_window);
 
     // Force the x/y coordinates to 100,100 results are identical in consecutive
     // runs
     const uint32_t coords[] = {100, 100};
-    xcb_configure_window(demo->connection, demo->window,
+    xcb_configure_window(demo->connection, demo->xcb_window,
                          XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
 }
 #endif // _WIN32
@@ -2201,6 +2305,7 @@ static void demo_init_vk(struct demo *demo) {
     /* Look for instance extensions */
     VkBool32 surfaceExtFound = 0;
     VkBool32 platformSurfaceExtFound = 0;
+    VkBool32 xlibSurfaceExtFound = 0;
     memset(demo->extension_names, 0, sizeof(demo->extension_names));
 
     err = vkEnumerateInstanceExtensionProperties(
@@ -2228,6 +2333,13 @@ static void demo_init_vk(struct demo *demo) {
                     VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
             }
 #else  // _WIN32
+            if (!strcmp(VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
+                        instance_extensions[i].extensionName)) {
+                platformSurfaceExtFound = 1;
+                xlibSurfaceExtFound = 1;
+                demo->extension_names[demo->enabled_extension_count++] =
+                    VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
+            }
             if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
@@ -2266,6 +2378,7 @@ static void demo_init_vk(struct demo *demo) {
                  "look at the Getting Started guide for additional "
                  "information.\n",
                  "vkCreateInstance Failure");
+    }
 #else  // _WIN32
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_XCB_SURFACE_EXTENSION_NAME
@@ -2274,8 +2387,17 @@ static void demo_init_vk(struct demo *demo) {
                  "look at the Getting Started guide for additional "
                  "information.\n",
                  "vkCreateInstance Failure");
-#endif // _WIN32
     }
+    if (demo->use_xlib && !xlibSurfaceExtFound) {
+        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
+                 "the " VK_KHR_XLIB_SURFACE_EXTENSION_NAME
+                 " extension.\n\nDo you have a compatible "
+                 "Vulkan installable client driver (ICD) installed?\nPlease "
+                 "look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateInstance Failure");
+    }
+#endif // _WIN32
     const VkApplicationInfo app = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
@@ -2549,17 +2671,31 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 
     err =
         vkCreateWin32SurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
+#else
 
-#else  // _WIN32
-    VkXcbSurfaceCreateInfoKHR createInfo;
-    createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-    createInfo.pNext = NULL;
-    createInfo.flags = 0;
-    createInfo.connection = demo->connection;
-    createInfo.window = demo->window;
+    if (demo->use_xlib) {
+        VkXlibSurfaceCreateInfoKHR createInfo;
+        createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+        createInfo.pNext = NULL;
+        createInfo.flags = 0;
+        createInfo.dpy = demo->display;
+        createInfo.window = demo->xlib_window;
 
-    err = vkCreateXcbSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
+        err = vkCreateXlibSurfaceKHR(demo->inst, &createInfo, NULL,
+                                     &demo->surface);
+    }
+    else {
+        VkXcbSurfaceCreateInfoKHR createInfo;
+        createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+        createInfo.pNext = NULL;
+        createInfo.flags = 0;
+        createInfo.connection = demo->connection;
+        createInfo.window = demo->xcb_window;
+
+        err = vkCreateXcbSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
+    }
 #endif // _WIN32
+    assert(!err);
 
     // Iterate over each queue to learn whether it supports presenting:
     VkBool32 *supportsPresent =
@@ -2700,6 +2836,10 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             demo->validate = true;
             continue;
         }
+        if (strcmp(argv[i], "--xlib") == 0) {
+            demo->use_xlib = true;
+            continue;
+        }
         if (strcmp(argv[i], "--c") == 0 && demo->frameCount == INT32_MAX &&
             i < argc - 1 && sscanf(argv[i + 1], "%d", &demo->frameCount) == 1 &&
             demo->frameCount >= 0) {
@@ -2714,7 +2854,9 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
         exit(1);
     }
 
-    demo_init_connection(demo);
+    if (!demo->use_xlib)
+        demo_init_connection(demo);
+
     demo_init_vk(demo);
 
     demo->width = 500;
@@ -2816,11 +2958,19 @@ int main(int argc, char **argv) {
     struct demo demo;
 
     demo_init(&demo, argc, argv);
-    demo_create_window(&demo);
+    if (demo.use_xlib)
+        demo_create_xlib_window(&demo);
+    else
+        demo_create_xcb_window(&demo);
+
     demo_init_vk_swapchain(&demo);
 
     demo_prepare(&demo);
-    demo_run(&demo);
+
+    if (demo.use_xlib)
+        demo_run_xlib(&demo);
+    else
+        demo_run_xcb(&demo);
 
     demo_cleanup(&demo);
 

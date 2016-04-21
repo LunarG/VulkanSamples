@@ -2,24 +2,17 @@
  * Copyright (c) 2015-2016 Valve Corporation
  * Copyright (c) 2015-2016 LunarG, Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and/or associated documentation files (the "Materials"), to
- * deal in the Materials without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Materials, and to permit persons to whom the Materials
- * are furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice(s) and this permission notice shall be included
- * in all copies or substantial portions of the Materials.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- *
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
- * USE OR OTHER DEALINGS IN THE MATERIALS
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  * Author: Tobin Ehlis <tobin@lunarg.com>
  * Author: Mark Lobodzinski <mark@lunarg.com>
@@ -38,14 +31,13 @@ typedef enum _DEV_LIMITS_ERROR {
     DEVLIMITS_INVALID_INHERITED_QUERY,       // Invalid use of inherited query
     DEVLIMITS_INVALID_ATTACHMENT_COUNT,      // Invalid value for the number of attachments
     DEVLIMITS_MUST_QUERY_COUNT,              // Failed to make initial call to an API to query the count
-    DEVLIMITS_MUST_QUERY_PROPERTIES,         // Failed to make initial call to an API to query properties
     DEVLIMITS_INVALID_CALL_SEQUENCE,         // Flag generic case of an invalid call sequence by the app
     DEVLIMITS_INVALID_FEATURE_REQUESTED,     // App requested a feature not supported by physical device
     DEVLIMITS_COUNT_MISMATCH,                // App requesting a count value different than actual value
     DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST,  // Invalid queue requested based on queue family properties
-    DEVLIMITS_LIMITS_VIOLATION,              // Driver-specified limits/properties were exceeded
     DEVLIMITS_INVALID_UNIFORM_BUFFER_OFFSET, // Uniform buffer offset violates device limit granularity
     DEVLIMITS_INVALID_STORAGE_BUFFER_OFFSET, // Storage buffer offset violates device limit granularity
+    DEVLIMITS_INVALID_BUFFER_UPDATE_ALIGNMENT,  // Alignment requirement for buffer update is violated
 } DEV_LIMITS_ERROR;
 
 typedef enum _CALL_STATE {

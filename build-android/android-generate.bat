@@ -49,14 +49,14 @@ cd ..\..
 xcopy /s gradle-templates\*   generated\gradle-build\
 for %%G in (core_validation device_limits image parameter_validation swapchain threading) Do (
     copy ..\layers\%%G.cpp   generated\layer-src\%%G
-    echo apply from: "../win.template.gradle"  > generated\gradle-build\%%G\build.gradle
+    echo apply from: "../common.gradle"  > generated\gradle-build\%%G\build.gradle
 )
 copy generated\include\object_tracker.cpp   generated\layer-src\object_tracker
-echo apply from: "../win.template.gradle"  > generated\gradle-build\object_tracker\build.gradle
+echo apply from: "../common.gradle"  > generated\gradle-build\object_tracker\build.gradle
 copy generated\include\unique_objects.cpp   generated\layer-src\unique_objects
 copy generated\include\vk_safe_struct.cpp generated\layer-src\core_validation\vk_safe_struct.cpp
 move generated\include\vk_safe_struct.cpp generated\layer-src\unique_objects\vk_safe_struct.cpp
-echo apply from: "../win.template.gradle"  > generated\gradle-build\unique_objects\build.gradle
+echo apply from: "../common.gradle"  > generated\gradle-build\unique_objects\build.gradle
 
 del  /f /q generated\include\object_tracker.cpp
 del  /f /q generated\include\unique_objects.cpp
