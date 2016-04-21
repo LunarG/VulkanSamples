@@ -4463,6 +4463,31 @@ TEST_F(VkLayerTest, ClearColorAttachmentsOutsideRenderPass) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, BufferMemoryBarrierNoBuffer) {
+    // Try to add a buffer memory barrier with no buffer.
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "required parameter pBufferMemoryBarriers[i].buffer specified as VK_NULL_HANDLE");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    BeginCommandBuffer();
+
+    VkBufferMemoryBarrier buf_barrier = {};
+    buf_barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    buf_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+    buf_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    buf_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    buf_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    buf_barrier.buffer = VK_NULL_HANDLE;
+    buf_barrier.offset = 0;
+    buf_barrier.size = VK_WHOLE_SIZE;
+    vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
+            VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+            0, 0, nullptr, 1, &buf_barrier, 0, nullptr);
+
+    m_errorMonitor->VerifyFound();
+}
+
 TEST_F(VkLayerTest, IdxBufferAlignmentError) {
     // Bind a BeginRenderPass within an active RenderPass
     VkResult err;

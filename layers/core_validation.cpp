@@ -8427,10 +8427,10 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
         }
 
         auto buffer_data = dev_data->bufferMap.find(mem_barrier->buffer);
-        VkDeviceSize buffer_size = (buffer_data->second.createInfo.sType == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
-                                       ? buffer_data->second.createInfo.size
-                                       : 0;
         if (buffer_data != dev_data->bufferMap.end()) {
+            VkDeviceSize buffer_size = (buffer_data->second.createInfo.sType == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
+                                           ? buffer_data->second.createInfo.size
+                                           : 0;
             if (mem_barrier->offset >= buffer_size) {
                 skip_call |= log_msg(
                     dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
