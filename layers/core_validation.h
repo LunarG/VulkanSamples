@@ -592,7 +592,6 @@ class QUEUE_NODE {
     list<VkDeviceMemory> pMemRefList;
 #endif
     vector<VkCommandBuffer> untrackedCmdBuffers;
-    unordered_set<VkCommandBuffer> inFlightCmdBuffers;
     unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
 };
 
@@ -845,7 +844,7 @@ struct LAST_BOUND_STATE {
     }
 };
 // Cmd Buffer Wrapper Struct
-struct GLOBAL_CB_NODE {
+struct GLOBAL_CB_NODE : public BASE_NODE {
     VkCommandBuffer commandBuffer;
     VkCommandBufferAllocateInfo createInfo;
     VkCommandBufferBeginInfo beginInfo;

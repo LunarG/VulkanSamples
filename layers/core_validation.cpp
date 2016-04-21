@@ -4315,6 +4315,7 @@ static bool addCmd(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYP
 static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
     GLOBAL_CB_NODE *pCB = dev_data->commandBufferMap[cb];
     if (pCB) {
+        pCB->in_use.store(0);
         pCB->cmds.clear();
         // Reset CB state (note that createInfo is not cleared)
         pCB->commandBuffer = cb;
@@ -4833,6 +4834,36 @@ static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *p
     return skip_call;
 }
 
+// Note: This function assumes that the global lock is held by the calling
+// thread.
+static bool cleanInFlightCmdBuffer(layer_data *my_data, VkCommandBuffer cmdBuffer) {
+    bool skip_call = false;
+    GLOBAL_CB_NODE *pCB = getCBNode(my_data, cmdBuffer);
+    if (pCB) {
+        for (auto queryEventsPair : pCB->waitedEventsBeforeQueryReset) {
+            for (auto event : queryEventsPair.second) {
+                if (my_data->eventMap[event].needsSignaled) {
+                    skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, 0, DRAWSTATE_INVALID_QUERY, "DS",
+                                         "Cannot get query results on queryPool %" PRIu64
+                                         " with index %d which was guarded by unsignaled event %" PRIu64 ".",
+                                         (uint64_t)(queryEventsPair.first.pool), queryEventsPair.first.index, (uint64_t)(event));
+                }
+            }
+        }
+    }
+    return skip_call;
+}
+// Decrement cmd_buffer in_use and if it goes to 0 remove cmd_buffer from globalInFlightCmdBuffers
+static inline void removeInFlightCmdBuffer(layer_data *dev_data, VkCommandBuffer cmd_buffer) {
+    // Pull it off of global list initially, but if we find it in any other queue list, add it back in
+    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, cmd_buffer);
+    pCB->in_use.fetch_sub(1);
+    if (!pCB->in_use.load()) {
+        dev_data->globalInFlightCmdBuffers.erase(cmd_buffer);
+    }
+}
+
 static void decrementResources(layer_data *my_data, VkCommandBuffer cmdBuffer) {
     GLOBAL_CB_NODE *pCB = getCBNode(my_data, cmdBuffer);
     for (auto drawDataElement : pCB->drawData) {
@@ -4872,33 +4903,45 @@ static void decrementResources(layer_data *my_data, VkCommandBuffer cmdBuffer) {
 }
 // For fenceCount fences in pFences, mark fence signaled, decrement in_use, and call
 //  decrementResources for all priorFences and cmdBuffers associated with fence.
-static void decrementResources(layer_data *my_data, uint32_t fenceCount, const VkFence *pFences) {
+static bool decrementResources(layer_data *my_data, uint32_t fenceCount, const VkFence *pFences) {
+    bool skip_call = false;
     for (uint32_t i = 0; i < fenceCount; ++i) {
         auto fence_data = my_data->fenceMap.find(pFences[i]);
         if (fence_data == my_data->fenceMap.end() || !fence_data->second.needsSignaled)
-            return;
+            return skip_call;
         fence_data->second.needsSignaled = false;
         fence_data->second.in_use.fetch_sub(1);
         decrementResources(my_data, static_cast<uint32_t>(fence_data->second.priorFences.size()),
                            fence_data->second.priorFences.data());
         for (auto cmdBuffer : fence_data->second.cmdBuffers) {
             decrementResources(my_data, cmdBuffer);
+            skip_call |= cleanInFlightCmdBuffer(my_data, cmdBuffer);
+            removeInFlightCmdBuffer(my_data, cmdBuffer);
         }
     }
+    return skip_call;
 }
 // Decrement in_use for all outstanding cmd buffers that were submitted on this queue
-static void decrementResources(layer_data *my_data, VkQueue queue) {
+static bool decrementResources(layer_data *my_data, VkQueue queue) {
+    bool skip_call = false;
     auto queue_data = my_data->queueMap.find(queue);
     if (queue_data != my_data->queueMap.end()) {
         for (auto cmdBuffer : queue_data->second.untrackedCmdBuffers) {
             decrementResources(my_data, cmdBuffer);
+            skip_call |= cleanInFlightCmdBuffer(my_data, cmdBuffer);
+            removeInFlightCmdBuffer(my_data, cmdBuffer);
         }
         queue_data->second.untrackedCmdBuffers.clear();
-        decrementResources(my_data, static_cast<uint32_t>(queue_data->second.lastFences.size()),
-                           queue_data->second.lastFences.data());
+        skip_call |= decrementResources(my_data, static_cast<uint32_t>(queue_data->second.lastFences.size()),
+                                        queue_data->second.lastFences.data());
     }
+    return skip_call;
 }
 
+// This function merges command buffer tracking between queues when there is a semaphore dependency
+// between them (see below for details as to how tracking works). When this happens, the prior
+// fences from the signaling queue are merged into the wait queue as well as any untracked command
+// buffers.
 static void updateTrackedCommandBuffers(layer_data *dev_data, VkQueue queue, VkQueue other_queue, VkFence fence) {
     if (queue == other_queue) {
         return;
@@ -4931,6 +4974,14 @@ static void updateTrackedCommandBuffers(layer_data *dev_data, VkQueue queue, VkQ
     }
 }
 
+// This is the core function for tracking command buffers. There are two primary ways command
+// buffers are tracked. When submitted they are stored in the command buffer list associated
+// with a fence or the untracked command buffer list associated with a queue if no fence is used.
+// Each queue also stores the last fence that was submitted onto the queue. This allows us to
+// create a linked list of fences and their associated command buffers so if one fence is
+// waited on, prior fences on that queue are also considered to have been waited on. When a fence is
+// waited on (either via a queue, device or fence), we free the cmd buffers for that fence and
+// recursively call with the prior fences.
 static void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
                                 VkFence fence) {
     auto queue_data = my_data->queueMap.find(queue);
@@ -4976,17 +5027,24 @@ static void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t sub
             }
         }
     }
+}
+
+static void markCommandBuffersInFlight(layer_data *my_data, VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
+                                       VkFence fence) {
+    auto queue_data = my_data->queueMap.find(queue);
     if (queue_data != my_data->queueMap.end()) {
         for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
             const VkSubmitInfo *submit = &pSubmits[submit_idx];
             for (uint32_t i = 0; i < submit->commandBufferCount; ++i) {
-                // Add cmdBuffers to both the global set and queue set
+                // Add cmdBuffers to the global set and increment count
+                GLOBAL_CB_NODE *pCB = getCBNode(my_data, submit->pCommandBuffers[i]);
                 for (auto secondaryCmdBuffer : my_data->commandBufferMap[submit->pCommandBuffers[i]]->secondaryCommandBuffers) {
                     my_data->globalInFlightCmdBuffers.insert(secondaryCmdBuffer);
-                    queue_data->second.inFlightCmdBuffers.insert(secondaryCmdBuffer);
+                    GLOBAL_CB_NODE *pSubCB = getCBNode(my_data, secondaryCmdBuffer);
+                    pSubCB->in_use.fetch_add(1);
                 }
                 my_data->globalInFlightCmdBuffers.insert(submit->pCommandBuffers[i]);
-                queue_data->second.inFlightCmdBuffers.insert(submit->pCommandBuffers[i]);
+                pCB->in_use.fetch_add(1);
             }
         }
     }
@@ -5133,6 +5191,8 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
     // TODO : Review these old print functions and clean up as appropriate
     print_mem_list(dev_data);
     printCBList(dev_data);
+    // Update cmdBuffer-related data structs and mark fence in-use
+    trackCommandBuffers(dev_data, queue, submitCount, pSubmits, fence);
     // Now verify each individual submit
     std::unordered_set<VkQueue> processed_other_queues;
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
@@ -5195,8 +5255,7 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
             }
         }
     }
-    // Update cmdBuffer-related data structs and mark fence in-use
-    trackCommandBuffers(dev_data, queue, submitCount, pSubmits, fence);
+    markCommandBuffersInFlight(dev_data, queue, submitCount, pSubmits, fence);
     lock.unlock();
     if (!skipCall)
         result = dev_data->device_dispatch_table->QueueSubmit(queue, submitCount, pSubmits, fence);
@@ -5324,46 +5383,6 @@ static void initializeAndTrackMemory(layer_data *dev_data, VkDeviceMemory mem, V
     }
 }
 #endif
-// Note: This function assumes that the global lock is held by the calling
-// thread.
-static bool cleanInFlightCmdBuffer(layer_data *my_data, VkCommandBuffer cmdBuffer) {
-    bool skip_call = false;
-    GLOBAL_CB_NODE *pCB = getCBNode(my_data, cmdBuffer);
-    if (pCB) {
-        for (auto queryEventsPair : pCB->waitedEventsBeforeQueryReset) {
-            for (auto event : queryEventsPair.second) {
-                if (my_data->eventMap[event].needsSignaled) {
-                    skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, 0, DRAWSTATE_INVALID_QUERY, "DS",
-                                         "Cannot get query results on queryPool %" PRIu64
-                                         " with index %d which was guarded by unsignaled event %" PRIu64 ".",
-                                         (uint64_t)(queryEventsPair.first.pool), queryEventsPair.first.index, (uint64_t)(event));
-                }
-            }
-        }
-    }
-    return skip_call;
-}
-// Remove given cmd_buffer from the global inFlight set.
-//  Also, if given queue is valid, then remove the cmd_buffer from that queues
-//  inFlightCmdBuffer set. Finally, check all other queues and if given cmd_buffer
-//  is still in flight on another queue, add it back into the global set.
-// Note: This function assumes that the global lock is held by the calling
-// thread.
-static inline void removeInFlightCmdBuffer(layer_data *dev_data, VkCommandBuffer cmd_buffer, VkQueue queue) {
-    // Pull it off of global list initially, but if we find it in any other queue list, add it back in
-    dev_data->globalInFlightCmdBuffers.erase(cmd_buffer);
-    if (dev_data->queueMap.find(queue) != dev_data->queueMap.end()) {
-        dev_data->queueMap[queue].inFlightCmdBuffers.erase(cmd_buffer);
-        for (auto q : dev_data->queues) {
-            if ((q != queue) &&
-                (dev_data->queueMap[q].inFlightCmdBuffers.find(cmd_buffer) != dev_data->queueMap[q].inFlightCmdBuffers.end())) {
-                dev_data->globalInFlightCmdBuffers.insert(cmd_buffer);
-                break;
-            }
-        }
-    }
-}
 // Verify that state for fence being waited on is appropriate. That is,
 //  a fence being waited on should not already be signalled and
 //  it should have been submitted on a queue or during acquire next image
@@ -5412,15 +5431,7 @@ vkWaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, Vk
         lock.lock();
         // When we know that all fences are complete we can clean/remove their CBs
         if (waitAll || fenceCount == 1) {
-            for (uint32_t i = 0; i < fenceCount; ++i) {
-                auto &fence_node = dev_data->fenceMap[pFences[i]];
-                VkQueue fence_queue = fence_node.queue;
-                for (auto cmdBuffer : fence_node.cmdBuffers) {
-                    skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
-                    removeInFlightCmdBuffer(dev_data, cmdBuffer, fence_queue);
-                }
-            }
-            decrementResources(dev_data, fenceCount, pFences);
+            skip_call |= decrementResources(dev_data, fenceCount, pFences);
         }
         // NOTE : Alternate case not handled here is when some fences have completed. In
         //  this case for app to guarantee which fences completed it will have to call
@@ -5447,13 +5458,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(VkDevice device,
     bool skip_call = false;
     lock.lock();
     if (result == VK_SUCCESS) {
-        auto &fence_node = dev_data->fenceMap[fence];
-        auto fence_queue = fence_node.queue;
-        for (auto cmdBuffer : fence_node.cmdBuffers) {
-            skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
-            removeInFlightCmdBuffer(dev_data, cmdBuffer, fence_queue);
-        }
-        decrementResources(dev_data, 1, &fence);
+        skipCall |= decrementResources(dev_data, 1, &fence);
     }
     lock.unlock();
     if (skip_call)
@@ -5477,17 +5482,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(VkDevice device, uin
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(VkQueue queue) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-    decrementResources(dev_data, queue);
     bool skip_call = false;
-    std::unique_lock<std::mutex> lock(global_lock);
-    // Iterate over local set since we erase set members as we go in for loop
-    auto local_cb_set = dev_data->queueMap[queue].inFlightCmdBuffers;
-    for (auto cmdBuffer : local_cb_set) {
-        skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
-        removeInFlightCmdBuffer(dev_data, cmdBuffer, queue);
-    }
-    dev_data->queueMap[queue].inFlightCmdBuffers.clear();
-    lock.unlock();
+    skip_call |= decrementResources(dev_data, queue);
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->QueueWaitIdle(queue);
@@ -5499,14 +5495,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDeviceWaitIdle(VkDevice device)
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     for (auto queue : dev_data->queues) {
-        decrementResources(dev_data, queue);
-        if (dev_data->queueMap.find(queue) != dev_data->queueMap.end()) {
-            // Clear all of the queue inFlightCmdBuffers (global set cleared below)
-            dev_data->queueMap[queue].inFlightCmdBuffers.clear();
-        }
-    }
-    for (auto cmdBuffer : dev_data->globalInFlightCmdBuffers) {
-        skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
+        skip_call |= decrementResources(dev_data, queue);
     }
     dev_data->globalInFlightCmdBuffers.clear();
     lock.unlock();
