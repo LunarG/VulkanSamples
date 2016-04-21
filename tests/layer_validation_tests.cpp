@@ -2277,7 +2277,7 @@ TEST_F(VkLayerTest, InvalidDescriptorSet) {
     dslci.bindingCount = 1;
     dslci.pBindings = layout_bindings;
     err = vkCreateDescriptorSetLayout(device(), &dslci, NULL, &descriptor_set_layout);
-    assert(!err);
+    ASSERT_VK_SUCCESS(err);
 
     VkPipelineLayout pipeline_layout;
     VkPipelineLayoutCreateInfo plci = {};
@@ -2286,7 +2286,7 @@ TEST_F(VkLayerTest, InvalidDescriptorSet) {
     plci.setLayoutCount = 1;
     plci.pSetLayouts = &descriptor_set_layout;
     err = vkCreatePipelineLayout(device(), &plci, NULL, &pipeline_layout);
-    assert(!err);
+    ASSERT_VK_SUCCESS(err);
 
     BeginCommandBuffer();
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS,
