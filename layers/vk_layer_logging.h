@@ -22,15 +22,16 @@
 #ifndef LAYER_LOGGING_H
 #define LAYER_LOGGING_H
 
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <unordered_map>
-#include <inttypes.h>
-#include "vk_loader_platform.h"
-#include "vulkan/vk_layer.h"
+#include "vk_layer_config.h"
 #include "vk_layer_data.h"
 #include "vk_layer_table.h"
+#include "vk_loader_platform.h"
+#include "vulkan/vk_layer.h"
+#include <inttypes.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <unordered_map>
 
 typedef struct _debug_report_data {
     VkLayerDbgFunctionNode *g_pDbgFunctionHead;

@@ -1561,6 +1561,7 @@ class StructWrapperGen:
     def _generateSafeStructHeader(self):
         header = []
         header.append("//#includes, #defines, globals and such...\n")
+        header.append('#pragma once\n')
         header.append('#include "vulkan/vulkan.h"')
         return "".join(header)
 

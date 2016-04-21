@@ -3049,7 +3049,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     // descriptors
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        ", but corresponding set being bound has 5 descriptors.");
+        " has 2 descriptors, but DescriptorSetLayout ");
     vkCmdBindDescriptorSets(
         m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS,
         pipe_layout_one_desc, 0, 1, &descriptorSet[0], 0, NULL);
@@ -3059,7 +3059,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     // 4. same # of descriptors but mismatch in type
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        " descriptor from pipelineLayout is type 'VK_DESCRIPTOR_TYPE_SAMPLER'");
+        " is type 'VK_DESCRIPTOR_TYPE_SAMPLER' but binding ");
     vkCmdBindDescriptorSets(
         m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS,
         pipe_layout_five_samp, 0, 1, &descriptorSet[0], 0, NULL);
@@ -3069,7 +3069,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     // 5. same # of descriptors but mismatch in stageFlags
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        " descriptor from pipelineLayout has stageFlags ");
+        " has stageFlags 16 but binding 0 for DescriptorSetLayout ");
     vkCmdBindDescriptorSets(
         m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS,
         pipe_layout_fs_only, 0, 1, &descriptorSet[0], 0, NULL);
@@ -5159,9 +5159,10 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors) {
     VkResult err;
 
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT, "Copy descriptor update index 0, update "
-                                       "count #1, has src update descriptor "
-                                       "type VK_DESCRIPTOR_TYPE_SAMPLER ");
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Copy descriptor update index 0, has src update descriptor "
+        "type VK_DESCRIPTOR_TYPE_SAMPLER that does not match overlapping "
+        "dest ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     // VkDescriptorSetObj descriptorSet(m_device);
