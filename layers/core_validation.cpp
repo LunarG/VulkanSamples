@@ -1265,6 +1265,20 @@ static unsigned get_locations_consumed_by_type(shader_module const *src, unsigne
     }
 }
 
+static unsigned get_locations_consumed_by_format(VkFormat format) {
+    switch (format) {
+    case VK_FORMAT_R64G64B64A64_SFLOAT:
+    case VK_FORMAT_R64G64B64A64_SINT:
+    case VK_FORMAT_R64G64B64A64_UINT:
+    case VK_FORMAT_R64G64B64_SFLOAT:
+    case VK_FORMAT_R64G64B64_SINT:
+    case VK_FORMAT_R64G64B64_UINT:
+        return 2;
+    default:
+        return 1;
+    }
+}
+
 typedef std::pair<unsigned, unsigned> location_t;
 typedef std::pair<unsigned, unsigned> descriptor_slot_t;
 
@@ -1700,8 +1714,12 @@ static bool validate_vi_against_vs_inputs(layer_data *my_data, VkPipelineVertexI
     /* Build index by location */
     std::map<uint32_t, VkVertexInputAttributeDescription const *> attribs;
     if (vi) {
-        for (unsigned i = 0; i < vi->vertexAttributeDescriptionCount; i++)
-            attribs[vi->pVertexAttributeDescriptions[i].location] = &vi->pVertexAttributeDescriptions[i];
+        for (unsigned i = 0; i < vi->vertexAttributeDescriptionCount; i++) {
+            auto num_locations = get_locations_consumed_by_format(vi->pVertexAttributeDescriptions[i].format);
+            for (auto j = 0u; j < num_locations; j++) {
+                attribs[vi->pVertexAttributeDescriptions[i].location + j] = &vi->pVertexAttributeDescriptions[i];
+            }
+        }
     }
 
     auto it_a = attribs.begin();
