@@ -1207,31 +1207,6 @@ static std::string EnumeratorString(VkImageAspectFlagBits const &enumerator) {
     return enumeratorString;
 }
 
-static bool validate_queue_family_indices(VkDevice device, const char *function_name, const uint32_t count,
-                                          const uint32_t *indices) {
-    bool skipCall = false;
-    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-
-    for (auto i = 0u; i < count; i++) {
-        if (indices[i] == VK_QUEUE_FAMILY_IGNORED) {
-            skipCall |= log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                INVALID_USAGE, "PARAMCHECK",
-                                "%s: the specified queueFamilyIndex cannot be VK_QUEUE_FAMILY_IGNORED.", function_name);
-        } else {
-            const auto &queue_data = my_device_data->queueFamilyIndexMap.find(indices[i]);
-            if (queue_data == my_device_data->queueFamilyIndexMap.end()) {
-                skipCall |= log_msg(
-                    mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, INVALID_USAGE,
-                    "PARAMCHECK",
-                    "VkGetDeviceQueue parameter, uint32_t queueFamilyIndex %d, must have been given when the device was created.",
-                    indices[i]);
-                return false;
-            }
-        }
-    }
-    return skipCall;
-}
-
 static bool ValidateEnumerator(VkQueryControlFlagBits const &enumerator) {
     VkQueryControlFlagBits allFlags = (VkQueryControlFlagBits)(VK_QUERY_CONTROL_PRECISE_BIT);
     if (enumerator & (~allFlags)) {
@@ -1287,6 +1262,57 @@ static bool validate_string(debug_report_data *report_data, const char *apiName,
                     "PARAMCHECK", "%s: string %s contains invalid characters or is badly formed", apiName, stringName);
     }
     return skipCall;
+}
+
+static bool validate_queue_family_index(layer_data *device_data, const char *function_name, const char *parameter_name,
+                                        uint32_t index) {
+    assert(device_data != nullptr);
+    debug_report_data *report_data = device_data->report_data;
+    bool skip_call = false;
+
+    if (index == VK_QUEUE_FAMILY_IGNORED) {
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                             "PARAMCHECK", "%s: %s cannot be VK_QUEUE_FAMILY_IGNORED.", function_name, parameter_name);
+    } else {
+        const auto &queue_data = device_data->queueFamilyIndexMap.find(index);
+        if (queue_data == device_data->queueFamilyIndexMap.end()) {
+            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                 "PARAMCHECK", "%s: %s (%d) must be one of the indices specified when the device was created, via "
+                                               "the VkDeviceQueueCreateInfo structure.",
+                                 function_name, parameter_name, index);
+            return false;
+        }
+    }
+
+    return skip_call;
+}
+
+static bool validate_queue_family_indices(layer_data *device_data, const char *function_name, const char *parameter_name,
+                                          const uint32_t count, const uint32_t *indices) {
+    assert(device_data != nullptr);
+    debug_report_data *report_data = device_data->report_data;
+    bool skip_call = false;
+
+    if (indices != nullptr) {
+        for (uint32_t i = 0; i < count; i++) {
+            if (indices[i] == VK_QUEUE_FAMILY_IGNORED) {
+                skip_call |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
+                            "%s: %s[%d] cannot be VK_QUEUE_FAMILY_IGNORED.", function_name, parameter_name, i);
+            } else {
+                const auto &queue_data = device_data->queueFamilyIndexMap.find(indices[i]);
+                if (queue_data == device_data->queueFamilyIndexMap.end()) {
+                    skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                         "PARAMCHECK", "%s: %s[%d] (%d) must be one of the indices specified when the device was "
+                                                       "created, via the VkDeviceQueueCreateInfo structure.",
+                                         function_name, parameter_name, i, indices[i]);
+                    return false;
+                }
+            }
+        }
+    }
+
+    return skip_call;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -1677,7 +1703,7 @@ bool PreGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queu
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     assert(my_device_data != nullptr);
 
-    validate_queue_family_indices(device, "vkGetDeviceQueue", 1, &queueFamilyIndex);
+    validate_queue_family_index(my_device_data, "vkGetDeviceQueue", "queueFamilyIndex", queueFamilyIndex);
 
     const auto &queue_data = my_device_data->queueFamilyIndexMap.find(queueFamilyIndex);
     if (queue_data->second <= queueIndex) {
@@ -2257,11 +2283,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice de
     return result;
 }
 
-bool PreCreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo) {
+bool PreCreateBuffer(layer_data *device_data, const VkBufferCreateInfo *pCreateInfo) {
     if (pCreateInfo != nullptr) {
         if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
-            validate_queue_family_indices(device, "vkCreateBuffer", pCreateInfo->queueFamilyIndexCount,
-                                          pCreateInfo->pQueueFamilyIndices);
+            validate_queue_family_indices(device_data, "vkCreateBuffer", "pCreateInfo->pQueueFamilyIndices",
+                                          pCreateInfo->queueFamilyIndexCount, pCreateInfo->pQueueFamilyIndices);
         }
     }
 
@@ -2278,7 +2304,7 @@ vkCreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo, const VkA
     skipCall |= parameter_validation_vkCreateBuffer(my_data->report_data, pCreateInfo, pAllocator, pBuffer);
 
     if (!skipCall) {
-        PreCreateBuffer(device, pCreateInfo);
+        PreCreateBuffer(my_data, pCreateInfo);
 
         result = get_dispatch_table(pc_device_table_map, device)->CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
 
@@ -2332,11 +2358,11 @@ vkDestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocation
     }
 }
 
-bool PreCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo) {
+bool PreCreateImage(layer_data *device_data, const VkImageCreateInfo *pCreateInfo) {
     if (pCreateInfo != nullptr) {
         if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
-            validate_queue_family_indices(device, "vkCreateImage", pCreateInfo->queueFamilyIndexCount,
-                                          pCreateInfo->pQueueFamilyIndices);
+            validate_queue_family_indices(device_data, "vkCreateImage", "pCreateInfo->pQueueFamilyIndices",
+                                          pCreateInfo->queueFamilyIndexCount, pCreateInfo->pQueueFamilyIndices);
         }
     }
 
@@ -2353,7 +2379,7 @@ vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, const VkAll
     skipCall |= parameter_validation_vkCreateImage(my_data->report_data, pCreateInfo, pAllocator, pImage);
 
     if (!skipCall) {
-        PreCreateImage(device, pCreateInfo);
+        PreCreateImage(my_data, pCreateInfo);
 
         result = get_dispatch_table(pc_device_table_map, device)->CreateImage(device, pCreateInfo, pAllocator, pImage);
 
@@ -2949,7 +2975,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(VkDevice devi
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
 
-    skipCall |= validate_queue_family_indices(device, "vkCreateCommandPool", 1, &(pCreateInfo->queueFamilyIndex));
+    skipCall |=
+        validate_queue_family_index(my_data, "vkCreateCommandPool", "pCreateInfo->queueFamilyIndex", pCreateInfo->queueFamilyIndex);
 
     skipCall |= parameter_validation_vkCreateCommandPool(my_data->report_data, pCreateInfo, pAllocator, pCommandPool);
 

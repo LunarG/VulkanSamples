@@ -5701,7 +5701,9 @@ TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
     // Create an out-of-range queueFamilyIndex
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "queueFamilyIndex 777, must have been given when the device was created.");
+        "vkCreateBuffer: pCreateInfo->pQueueFamilyIndices[0] (777) must be one "
+        "of the indices specified when the device was created, via the "
+        "VkDeviceQueueCreateInfo structure.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
