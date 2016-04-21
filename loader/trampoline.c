@@ -485,6 +485,10 @@ vkDestroyInstance(VkInstance instance,
     struct loader_instance *ptr_instance = NULL;
     bool callback_setup = false;
 
+    if (instance == VK_NULL_HANDLE) {
+        return;
+    }
+
     disp = loader_get_instance_dispatch(instance);
 
     loader_platform_thread_lock_mutex(&loader_lock);
@@ -771,6 +775,10 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkDestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
     const VkLayerDispatchTable *disp;
     struct loader_device *dev;
+
+    if (device == VK_NULL_HANDLE) {
+        return;
+    }
 
     loader_platform_thread_lock_mutex(&loader_lock);
 

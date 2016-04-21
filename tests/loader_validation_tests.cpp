@@ -25,8 +25,15 @@
  * Author: Jeremy Hayes <jeremy@lunarG.com>
  */
 
+#include <memory>
+
 #include <vulkan/vulkan.h>
 #include "test_common.h"
+
+// Test groups:
+// LX = lunar exchange
+// LVLGH = loader and validation github
+// LVLGL = lodaer and validation gitlab
 
 TEST(LX435, InstanceCreateInfoConst)
 {
@@ -45,6 +52,16 @@ TEST(LX435, InstanceCreateInfoConst)
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(&info, VK_NULL_HANDLE, &instance);
     EXPECT_EQ(result, VK_SUCCESS);
+}
+
+TEST(LX475, DestroyInstanceNullHandle)
+{
+    vkDestroyInstance(VK_NULL_HANDLE, nullptr);
+}
+
+TEST(LX475, DestroyDeviceNullHandle)
+{
+    vkDestroyDevice(VK_NULL_HANDLE, nullptr);
 }
 
 int main(int argc, char **argv)
