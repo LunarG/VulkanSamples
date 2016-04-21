@@ -1247,6 +1247,15 @@ static unsigned get_locations_consumed_by_type(shader_module const *src, unsigne
     case spv::OpTypeMatrix:
         /* num locations is the dimension * element size */
         return insn.word(3) * get_locations_consumed_by_type(src, insn.word(2), false);
+    case spv::OpTypeVector: {
+        auto scalar_type = src->get_def(insn.word(2));
+        auto bit_width = (scalar_type.opcode() == spv::OpTypeInt || scalar_type.opcode() == spv::OpTypeFloat) ?
+            scalar_type.word(2) : 32;
+
+        /* locations are 128-bit wide; 3- and 4-component vectors of 64 bit
+         * types require two. */
+        return (bit_width * insn.word(3) + 127) / 128;
+    }
     default:
         /* everything else is just 1. */
         return 1;
