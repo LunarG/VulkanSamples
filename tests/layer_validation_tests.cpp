@@ -5844,6 +5844,73 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, CreatePipeline64BitAttributesPositive) {
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    if (!m_device->phy().features().tessellationShader) {
+        printf("Device does not support 64bit vertex attributes; skipped.\n");
+        return;
+    }
+
+    VkVertexInputBindingDescription input_bindings[1];
+    memset(input_bindings, 0, sizeof(input_bindings));
+
+    VkVertexInputAttributeDescription input_attribs[4];
+    memset(input_attribs, 0, sizeof(input_attribs));
+    input_attribs[0].location = 0;
+    input_attribs[0].offset = 0;
+    input_attribs[0].format = VK_FORMAT_R64G64B64A64_SFLOAT;
+    input_attribs[1].location = 2;
+    input_attribs[1].offset = 32;
+    input_attribs[1].format = VK_FORMAT_R64G64B64A64_SFLOAT;
+    input_attribs[2].location = 4;
+    input_attribs[2].offset = 64;
+    input_attribs[2].format = VK_FORMAT_R64G64B64A64_SFLOAT;
+    input_attribs[3].location = 6;
+    input_attribs[3].offset = 96;
+    input_attribs[3].format = VK_FORMAT_R64G64B64A64_SFLOAT;
+
+    char const *vsSource =
+        "#version 450\n"
+        "\n"
+        "layout(location=0) in dmat4 x;\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   gl_Position = vec4(x[0][0]);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 450\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    pipe.AddVertexInputBindings(input_bindings, 1);
+    pipe.AddVertexInputAttribs(input_attribs, 4);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    m_errorMonitor->VerifyNotFound();
+}
+
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Attachment 0 not written by FS");
