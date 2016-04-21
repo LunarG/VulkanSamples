@@ -25,10 +25,10 @@ message(STATUS "Cxxflags: ${CMAKE_CXX_FLAGS}")
 
 if (EXISTS "${CMAKE_SOURCE_DIR}/layers")
     set(LAYERS_LOC ${CMAKE_SOURCE_DIR})
-    set(LAYER_UTILS_LIB layer_utils)
+    set(LAYER_UTILS_LIB VkLayer_utils)
 else()
     set(LAYERS_LOC ${CMAKE_SOURCE_DIR}/../source)
-    find_library(LAYER_UTILS_LIB NAMES layer_utils
+    find_library(LAYER_UTILS_LIB NAMES VkLayer_utils
                  HINTS "${CMAKE_SOURCE_DIR}/../bin" )
 endif()
 
