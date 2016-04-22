@@ -1057,19 +1057,8 @@ indirectly from its upper layers.
 When a layer requires host memory, it is free to scope the allocations to
 itself, bypassing the provided allocators entirely.
 
-`vkEnumerateInstanceLayerProperties` must always fail with
-`VK_ERROR_LAYER_NOT_PRESENT`.
-
-`vkEnumerateInstanceExtensionProperties` must always fail with
-`VK_ERROR_LAYER_NOT_PRESENT`, including when `pLayerName` is `NULL`.
-
-`vkEnumerateDeviceLayerProperties` must always fail with
-`VK_ERROR_LAYER_NOT_PRESENT`.
-
-`vkEnumerateDeviceExtensionProperties` must always fail with
-`VK_ERROR_LAYER_NOT_PRESENT`, except when `pLayerName` is `NULL`.  It must
-handle the case where `pLayerName` is `NULL`, usually by chaining to other
-layers.
+`vkEnumerateDeviceExtensionProperties` must handle the case where `pLayerName`
+is `NULL`, usually by chaining to other layers.
 
 `vkGetInstanceProcAddr` can intercept a command by returning a function
 pointer different from what would be returned through chaining.
