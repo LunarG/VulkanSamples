@@ -1090,6 +1090,9 @@ TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceQWI) {
     TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
         "submitted on separate queues followed by a QueueWaitIdle.");
 
+    if (m_device->queue_props->queueCount < 2)
+        return;
+
     m_errorMonitor->ExpectSuccess();
 
     VkSemaphore semaphore;
@@ -1192,6 +1195,9 @@ TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceQWIFenc
     TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
                      "submitted on separate queues, the second having a fence"
                      "followed by a QueueWaitIdle.");
+
+    if (m_device->queue_props->queueCount < 2)
+        return;
 
     m_errorMonitor->ExpectSuccess();
 
@@ -1304,6 +1310,9 @@ TEST_F(VkLayerTest,
         "submitted on separate queues, the second having a fence"
         "followed by two consecutive WaitForFences calls on the same fence.");
 
+    if (m_device->queue_props->queueCount < 2)
+        return;
+
     m_errorMonitor->ExpectSuccess();
 
     VkFence fence;
@@ -1413,6 +1422,9 @@ TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFence) {
     TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
                      "submitted on separate queues, the second having a fence, "
                      "followed by a WaitForFences call.");
+
+    if (m_device->queue_props->queueCount < 2)
+        return;
 
     m_errorMonitor->ExpectSuccess();
 
