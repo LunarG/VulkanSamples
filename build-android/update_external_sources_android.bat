@@ -116,7 +116,7 @@ if %sync-spirv-tools% equ 1 (
    if exist %SPIRV_TOOLS_DIR% (
       rd /S /Q %SPIRV_TOOLS_DIR%
    )
-   if %errorlevel% neq 0 (goto:error)
+   if %ERRORLEVEL% neq 0 (goto:error)
    if not exist %SPIRV_TOOLS_DIR% (
       call:create_spirv-tools
    )
@@ -162,7 +162,7 @@ REM // ======== Functions ======== //
 
 :create_glslang
    echo.
-   echo Creating local glslang repository %GLSLANG_DIR%)
+   echo Creating local glslang repository %GLSLANG_DIR%
    mkdir %GLSLANG_DIR%
    cd %GLSLANG_DIR%
    git clone https://github.com/KhronosGroup/glslang.git .
@@ -179,11 +179,15 @@ goto:eof
    cd %GLSLANG_DIR%
    git fetch --all
    git checkout %GLSLANG_REVISION%
+   if not exist %GLSLANG_DIR%\SPIRV (
+      echo glslang source update failed!
+      set errorCode=1
+   )
 goto:eof
 
 :create_spirv-tools
    echo.
-   echo Creating local spirv-tools repository %SPIRV_TOOLS_DIR%)
+   echo Creating local spirv-tools repository %SPIRV_TOOLS_DIR%
    mkdir %SPIRV_TOOLS_DIR%
    cd %SPIRV_TOOLS_DIR%
    git clone https://github.com/KhronosGroup/SPIRV-Tools.git .
@@ -200,6 +204,10 @@ goto:eof
    cd %SPIRV_TOOLS_DIR%
    git fetch --all
    git checkout %SPIRV_TOOLS_REVISION%
+   if not exist %SPIRV_TOOLS_DIR%\source (
+      echo spirv-tools source update failed!
+      set errorCode=1
+   )
 goto:eof
 
 :create_shaderc
@@ -221,6 +229,10 @@ goto:eof
    cd %SHADERC_DIR%
    git fetch --all
    git checkout %SHADERC_REVISION%
+   if not exist %SHADERC_DIR%\libshaderc (
+      echo shaderc source update failed!
+      set errorCode=1
+   )
 goto:eof
 
 :build_shaderc
