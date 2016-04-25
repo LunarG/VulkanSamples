@@ -79,4 +79,10 @@ set_target_properties(vk_layer_validation_tests
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
 target_link_libraries(vk_layer_validation_tests ${LIBVK} gtest gtest_main VkLayer_utils ${GLSLANG_LIBRARIES})
 
+add_executable(vk_loader_validation_tests loader_validation_tests.cpp ${COMMON_CPP})
+set_target_properties(vk_loader_validation_tests
+   PROPERTIES
+   COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
+target_link_libraries(vk_loader_validation_tests ${LIBVK} gtest gtest_main VkLayer_utils ${GLSLANG_LIBRARIES})
+
 add_subdirectory(gtest-1.7.0)

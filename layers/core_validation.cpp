@@ -2668,121 +2668,124 @@ static bool validate_and_update_drawtime_descriptor_state(
         SET_NODE *set_node = set_bindings_pair.first;
         LAYOUT_NODE *layout_node = set_node->pLayout;
         for (auto binding : set_bindings_pair.second) {
-            uint32_t startIdx = getBindingStartIndex(layout_node, binding);
-            uint32_t endIdx = getBindingEndIndex(layout_node, binding);
-            for (uint32_t i = startIdx; i <= endIdx; ++i) {
-                // We did check earlier to verify that set was updated, but now make sure given slot was updated
-                // TODO : Would be better to store set# that set is bound to so we can report set.binding[index] not updated
-                // For immutable sampler w/o combined image, don't need to update
-                if ((set_node->pLayout->createInfo.pBindings[i].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER) &&
-                    (set_node->pLayout->createInfo.pBindings[i].descriptorCount != 0) &&
-                    (set_node->pLayout->createInfo.pBindings[i].pImmutableSamplers)) {
-                    // Nothing to do here
-                } else if (!set_node->pDescriptorUpdates[i]) {
-                    result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                        VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, reinterpret_cast<const uint64_t &>(set_node->set), __LINE__,
-                                        DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
-                                        "DS %#" PRIxLEAST64 " bound and active but it never had binding %u updated. It is now being used to draw so "
-                                                            "this will result in undefined behavior.",
-                                        reinterpret_cast<const uint64_t &>(set_node->set), binding);
-                } else {
-                    switch (set_node->pDescriptorUpdates[i]->sType) {
-                    case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
-                        pWDS = (VkWriteDescriptorSet *)set_node->pDescriptorUpdates[i];
+            auto binding_index = layout_node->bindingToIndexMap[binding];
+            if ((set_node->pLayout->createInfo.pBindings[binding_index].descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER) &&
+                (set_node->pLayout->createInfo.pBindings[binding_index].descriptorCount != 0) &&
+                (set_node->pLayout->createInfo.pBindings[binding_index].pImmutableSamplers)) {
+                // No work for immutable sampler binding
+            } else {
+                uint32_t startIdx = getBindingStartIndex(layout_node, binding);
+                uint32_t endIdx = getBindingEndIndex(layout_node, binding);
+                for (uint32_t i = startIdx; i <= endIdx; ++i) {
+                    // We did check earlier to verify that set was updated, but now make sure given slot was updated
+                    // TODO : Would be better to store set# that set is bound to so we can report set.binding[index] not updated
+                    // For immutable sampler w/o combined image, don't need to update
+                    if (!set_node->pDescriptorUpdates[i]) {
+                        result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                            VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, reinterpret_cast<const uint64_t &>(set_node->set), __LINE__,
+                                            DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
+                                            "DS %#" PRIxLEAST64 " bound and active but it never had binding %u updated. It is now being used to draw so "
+                                                                "this will result in undefined behavior.",
+                                            reinterpret_cast<const uint64_t &>(set_node->set), binding);
+                    } else {
+                        switch (set_node->pDescriptorUpdates[i]->sType) {
+                        case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
+                            pWDS = (VkWriteDescriptorSet *)set_node->pDescriptorUpdates[i];
 
-                        // Verify uniform and storage buffers actually are bound to valid memory at draw time.
-                        if ((pWDS->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ||
-                            (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
-                            (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
-                            (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
-                            for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
-                                auto buffer_node = dev_data->bufferMap.find(pWDS->pBufferInfo[j].buffer);
-                                if (buffer_node == dev_data->bufferMap.end()) {
-                                    result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                                      VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                                                      reinterpret_cast<const uint64_t &>(set_node->set), __LINE__,
-                                                      DRAWSTATE_INVALID_BUFFER, "DS",
-                                                      "VkDescriptorSet (%#" PRIxLEAST64 ") %s (%#" PRIxLEAST64 ") at index #%u"
-                                                      " is not defined!  Has vkCreateBuffer been called?",
-                                                      reinterpret_cast<const uint64_t &>(set_node->set),
-                                                      string_VkDescriptorType(pWDS->descriptorType),
-                                                      reinterpret_cast<const uint64_t &>(pWDS->pBufferInfo[j].buffer), i);
-                                } else {
-                                    auto mem_entry = dev_data->memObjMap.find(buffer_node->second.mem);
-                                    if (mem_entry == dev_data->memObjMap.end()) {
+                            // Verify uniform and storage buffers actually are bound to valid memory at draw time.
+                            if ((pWDS->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ||
+                                (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
+                                (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
+                                (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
+                                for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
+                                    auto buffer_node = dev_data->bufferMap.find(pWDS->pBufferInfo[j].buffer);
+                                    if (buffer_node == dev_data->bufferMap.end()) {
                                         result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                                           VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                                           reinterpret_cast<const uint64_t &>(set_node->set), __LINE__,
                                                           DRAWSTATE_INVALID_BUFFER, "DS",
-                                                          "VkDescriptorSet (%#" PRIxLEAST64 ") %s (%#" PRIxLEAST64 ") at index"
-                                                          " #%u, has no memory bound to it!",
+                                                          "VkDescriptorSet (%#" PRIxLEAST64 ") %s (%#" PRIxLEAST64 ") at index #%u"
+                                                          " is not defined!  Has vkCreateBuffer been called?",
                                                           reinterpret_cast<const uint64_t &>(set_node->set),
                                                           string_VkDescriptorType(pWDS->descriptorType),
                                                           reinterpret_cast<const uint64_t &>(pWDS->pBufferInfo[j].buffer), i);
-                                    }
-                                }
-                                // If it's a dynamic buffer, make sure the offsets are within the buffer.
-                                if ((pWDS->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
-                                    (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
-                                    bufferSize = dev_data->bufferMap[pWDS->pBufferInfo[j].buffer].createInfo.size;
-                                    uint32_t dynOffset =
-                                        pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].dynamicOffsets[dynOffsetIndex];
-                                    if (pWDS->pBufferInfo[j].range == VK_WHOLE_SIZE) {
-                                        if ((dynOffset + pWDS->pBufferInfo[j].offset) > bufferSize) {
-                                            result |= log_msg(
-                                                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                                VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                                                reinterpret_cast<const uint64_t &>(set_node->set), __LINE__,
-                                                DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, "DS",
-                                                "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u has range of "
-                                                "VK_WHOLE_SIZE but dynamic offset %#" PRIxLEAST32 ". "
-                                                "combined with offset %#" PRIxLEAST64 " oversteps its buffer (%#" PRIxLEAST64
-                                                ") which has a size of %#" PRIxLEAST64 ".",
-                                                reinterpret_cast<const uint64_t &>(set_node->set), i, dynOffset,
-                                                pWDS->pBufferInfo[j].offset,
-                                                reinterpret_cast<const uint64_t &>(pWDS->pBufferInfo[j].buffer), bufferSize);
+                                    } else {
+                                        auto mem_entry = dev_data->memObjMap.find(buffer_node->second.mem);
+                                        if (mem_entry == dev_data->memObjMap.end()) {
+                                            result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                                              VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                                                              reinterpret_cast<const uint64_t &>(set_node->set), __LINE__,
+                                                              DRAWSTATE_INVALID_BUFFER, "DS",
+                                                              "VkDescriptorSet (%#" PRIxLEAST64 ") %s (%#" PRIxLEAST64 ") at index"
+                                                              " #%u, has no memory bound to it!",
+                                                              reinterpret_cast<const uint64_t &>(set_node->set),
+                                                              string_VkDescriptorType(pWDS->descriptorType),
+                                                              reinterpret_cast<const uint64_t &>(pWDS->pBufferInfo[j].buffer), i);
                                         }
-                                    } else if ((dynOffset + pWDS->pBufferInfo[j].offset + pWDS->pBufferInfo[j].range) >
-                                               bufferSize) {
-                                        result |=
-                                            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    }
+                                    // If it's a dynamic buffer, make sure the offsets are within the buffer.
+                                    if ((pWDS->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
+                                        (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
+                                        bufferSize = dev_data->bufferMap[pWDS->pBufferInfo[j].buffer].createInfo.size;
+                                        uint32_t dynOffset =
+                                            pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].dynamicOffsets[dynOffsetIndex];
+                                        if (pWDS->pBufferInfo[j].range == VK_WHOLE_SIZE) {
+                                            if ((dynOffset + pWDS->pBufferInfo[j].offset) > bufferSize) {
+                                                result |= log_msg(
+                                                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                                     VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                                     reinterpret_cast<const uint64_t &>(set_node->set), __LINE__,
                                                     DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, "DS",
-                                                    "VkDescriptorSet (%#" PRIxLEAST64
-                                                    ") bound as set #%u has dynamic offset %#" PRIxLEAST32 ". "
-                                                    "Combined with offset %#" PRIxLEAST64 " and range %#" PRIxLEAST64
-                                                    " from its update, this oversteps its buffer "
-                                                    "(%#" PRIxLEAST64 ") which has a size of %#" PRIxLEAST64 ".",
+                                                    "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u has range of "
+                                                    "VK_WHOLE_SIZE but dynamic offset %#" PRIxLEAST32 ". "
+                                                    "combined with offset %#" PRIxLEAST64 " oversteps its buffer (%#" PRIxLEAST64
+                                                    ") which has a size of %#" PRIxLEAST64 ".",
                                                     reinterpret_cast<const uint64_t &>(set_node->set), i, dynOffset,
-                                                    pWDS->pBufferInfo[j].offset, pWDS->pBufferInfo[j].range,
+                                                    pWDS->pBufferInfo[j].offset,
                                                     reinterpret_cast<const uint64_t &>(pWDS->pBufferInfo[j].buffer), bufferSize);
+                                            }
+                                        } else if ((dynOffset + pWDS->pBufferInfo[j].offset + pWDS->pBufferInfo[j].range) >
+                                                   bufferSize) {
+                                            result |=
+                                                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                                        VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                                                        reinterpret_cast<const uint64_t &>(set_node->set), __LINE__,
+                                                        DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, "DS",
+                                                        "VkDescriptorSet (%#" PRIxLEAST64
+                                                        ") bound as set #%u has dynamic offset %#" PRIxLEAST32 ". "
+                                                        "Combined with offset %#" PRIxLEAST64 " and range %#" PRIxLEAST64
+                                                        " from its update, this oversteps its buffer "
+                                                        "(%#" PRIxLEAST64 ") which has a size of %#" PRIxLEAST64 ".",
+                                                        reinterpret_cast<const uint64_t &>(set_node->set), i, dynOffset,
+                                                        pWDS->pBufferInfo[j].offset, pWDS->pBufferInfo[j].range,
+                                                        reinterpret_cast<const uint64_t &>(pWDS->pBufferInfo[j].buffer), bufferSize);
+                                        }
+                                        dynOffsetIndex++;
                                     }
-                                    dynOffsetIndex++;
                                 }
                             }
+                            if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
+                                for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
+                                    pCB->updateImages.insert(pWDS->pImageInfo[j].imageView);
+                                }
+                            } else if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
+                                for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
+                                    assert(dev_data->bufferViewMap.find(pWDS->pTexelBufferView[j]) != dev_data->bufferViewMap.end());
+                                    pCB->updateBuffers.insert(dev_data->bufferViewMap[pWDS->pTexelBufferView[j]].buffer);
+                                }
+                            } else if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
+                                       pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+                                for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
+                                    pCB->updateBuffers.insert(pWDS->pBufferInfo[j].buffer);
+                                }
+                            }
+                            i += pWDS->descriptorCount; // Advance i to end of this set of descriptors (++i at end of for loop will move 1
+                                                        // index past last of these descriptors)
+                            break;
+                        default: // Currently only shadowing Write update nodes so shouldn't get here
+                            assert(0);
+                            continue;
                         }
-                        if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
-                            for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
-                                pCB->updateImages.insert(pWDS->pImageInfo[j].imageView);
-                            }
-                        } else if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
-                            for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
-                                assert(dev_data->bufferViewMap.find(pWDS->pTexelBufferView[j]) != dev_data->bufferViewMap.end());
-                                pCB->updateBuffers.insert(dev_data->bufferViewMap[pWDS->pTexelBufferView[j]].buffer);
-                            }
-                        } else if (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
-                                   pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
-                            for (uint32_t j = 0; j < pWDS->descriptorCount; ++j) {
-                                pCB->updateBuffers.insert(pWDS->pBufferInfo[j].buffer);
-                            }
-                        }
-                        i += pWDS->descriptorCount; // Advance i to end of this set of descriptors (++i at end of for loop will move 1
-                                                    // index past last of these descriptors)
-                        break;
-                    default: // Currently only shadowing Write update nodes so shouldn't get here
-                        assert(0);
-                        continue;
                     }
                 }
             }
@@ -2934,6 +2937,31 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
         }
     }
     return result;
+}
+
+// Validate HW line width capabilities prior to setting requested line width.
+static bool verifyLineWidth(layer_data *my_data, DRAW_STATE_ERROR dsError, const uint64_t &target, float lineWidth) {
+    bool skip_call = false;
+
+    // First check to see if the physical device supports wide lines.
+    if ((VK_FALSE == my_data->phys_dev_properties.features.wideLines) && (1.0f != lineWidth)) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, target, __LINE__,
+                             dsError, "DS", "Attempt to set lineWidth to %f but physical device wideLines feature "
+                                            "not supported/enabled so lineWidth must be 1.0f!",
+                             lineWidth);
+    } else {
+        // Otherwise, make sure the width falls in the valid range.
+        if ((my_data->phys_dev_properties.properties.limits.lineWidthRange[0] > lineWidth) ||
+            (my_data->phys_dev_properties.properties.limits.lineWidthRange[1] < lineWidth)) {
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, target,
+                                 __LINE__, dsError, "DS", "Attempt to set lineWidth to %f but physical device limits line width "
+                                                          "to between [%f, %f]!",
+                                 lineWidth, my_data->phys_dev_properties.properties.limits.lineWidthRange[0],
+                                 my_data->phys_dev_properties.properties.limits.lineWidthRange[1]);
+        }
+    }
+
+    return skip_call;
 }
 
 // Verify that create state for a pipeline is valid
@@ -3091,6 +3119,13 @@ static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device
                                                                                "topology used with patchControlPoints value %u."
                                                                                " patchControlPoints should be >0 and <=32.",
                                 pPipeline->graphicsPipelineCI.pTessellationState->patchControlPoints);
+        }
+    }
+    // If a rasterization state is provided, make sure that the line width conforms to the HW.
+    if (pPipeline->graphicsPipelineCI.pRasterizationState) {
+        if (!isDynamic(pPipeline, VK_DYNAMIC_STATE_LINE_WIDTH)) {
+            skipCall |= verifyLineWidth(my_data, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, reinterpret_cast<uint64_t &>(pPipeline),
+                                        pPipeline->graphicsPipelineCI.pRasterizationState->lineWidth);
         }
     }
     // Viewport state must be included if rasterization is enabled.
@@ -4315,6 +4350,7 @@ static bool addCmd(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYP
 static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
     GLOBAL_CB_NODE *pCB = dev_data->commandBufferMap[cb];
     if (pCB) {
+        pCB->in_use.store(0);
         pCB->cmds.clear();
         // Reset CB state (note that createInfo is not cleared)
         pCB->commandBuffer = cb;
@@ -4833,6 +4869,36 @@ static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *p
     return skip_call;
 }
 
+// Note: This function assumes that the global lock is held by the calling
+// thread.
+static bool cleanInFlightCmdBuffer(layer_data *my_data, VkCommandBuffer cmdBuffer) {
+    bool skip_call = false;
+    GLOBAL_CB_NODE *pCB = getCBNode(my_data, cmdBuffer);
+    if (pCB) {
+        for (auto queryEventsPair : pCB->waitedEventsBeforeQueryReset) {
+            for (auto event : queryEventsPair.second) {
+                if (my_data->eventMap[event].needsSignaled) {
+                    skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, 0, DRAWSTATE_INVALID_QUERY, "DS",
+                                         "Cannot get query results on queryPool %" PRIu64
+                                         " with index %d which was guarded by unsignaled event %" PRIu64 ".",
+                                         (uint64_t)(queryEventsPair.first.pool), queryEventsPair.first.index, (uint64_t)(event));
+                }
+            }
+        }
+    }
+    return skip_call;
+}
+// Decrement cmd_buffer in_use and if it goes to 0 remove cmd_buffer from globalInFlightCmdBuffers
+static inline void removeInFlightCmdBuffer(layer_data *dev_data, VkCommandBuffer cmd_buffer) {
+    // Pull it off of global list initially, but if we find it in any other queue list, add it back in
+    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, cmd_buffer);
+    pCB->in_use.fetch_sub(1);
+    if (!pCB->in_use.load()) {
+        dev_data->globalInFlightCmdBuffers.erase(cmd_buffer);
+    }
+}
+
 static void decrementResources(layer_data *my_data, VkCommandBuffer cmdBuffer) {
     GLOBAL_CB_NODE *pCB = getCBNode(my_data, cmdBuffer);
     for (auto drawDataElement : pCB->drawData) {
@@ -4872,33 +4938,45 @@ static void decrementResources(layer_data *my_data, VkCommandBuffer cmdBuffer) {
 }
 // For fenceCount fences in pFences, mark fence signaled, decrement in_use, and call
 //  decrementResources for all priorFences and cmdBuffers associated with fence.
-static void decrementResources(layer_data *my_data, uint32_t fenceCount, const VkFence *pFences) {
+static bool decrementResources(layer_data *my_data, uint32_t fenceCount, const VkFence *pFences) {
+    bool skip_call = false;
     for (uint32_t i = 0; i < fenceCount; ++i) {
         auto fence_data = my_data->fenceMap.find(pFences[i]);
         if (fence_data == my_data->fenceMap.end() || !fence_data->second.needsSignaled)
-            return;
+            return skip_call;
         fence_data->second.needsSignaled = false;
         fence_data->second.in_use.fetch_sub(1);
         decrementResources(my_data, static_cast<uint32_t>(fence_data->second.priorFences.size()),
                            fence_data->second.priorFences.data());
         for (auto cmdBuffer : fence_data->second.cmdBuffers) {
             decrementResources(my_data, cmdBuffer);
+            skip_call |= cleanInFlightCmdBuffer(my_data, cmdBuffer);
+            removeInFlightCmdBuffer(my_data, cmdBuffer);
         }
     }
+    return skip_call;
 }
 // Decrement in_use for all outstanding cmd buffers that were submitted on this queue
-static void decrementResources(layer_data *my_data, VkQueue queue) {
+static bool decrementResources(layer_data *my_data, VkQueue queue) {
+    bool skip_call = false;
     auto queue_data = my_data->queueMap.find(queue);
     if (queue_data != my_data->queueMap.end()) {
         for (auto cmdBuffer : queue_data->second.untrackedCmdBuffers) {
             decrementResources(my_data, cmdBuffer);
+            skip_call |= cleanInFlightCmdBuffer(my_data, cmdBuffer);
+            removeInFlightCmdBuffer(my_data, cmdBuffer);
         }
         queue_data->second.untrackedCmdBuffers.clear();
-        decrementResources(my_data, static_cast<uint32_t>(queue_data->second.lastFences.size()),
-                           queue_data->second.lastFences.data());
+        skip_call |= decrementResources(my_data, static_cast<uint32_t>(queue_data->second.lastFences.size()),
+                                        queue_data->second.lastFences.data());
     }
+    return skip_call;
 }
 
+// This function merges command buffer tracking between queues when there is a semaphore dependency
+// between them (see below for details as to how tracking works). When this happens, the prior
+// fences from the signaling queue are merged into the wait queue as well as any untracked command
+// buffers.
 static void updateTrackedCommandBuffers(layer_data *dev_data, VkQueue queue, VkQueue other_queue, VkFence fence) {
     if (queue == other_queue) {
         return;
@@ -4931,6 +5009,14 @@ static void updateTrackedCommandBuffers(layer_data *dev_data, VkQueue queue, VkQ
     }
 }
 
+// This is the core function for tracking command buffers. There are two primary ways command
+// buffers are tracked. When submitted they are stored in the command buffer list associated
+// with a fence or the untracked command buffer list associated with a queue if no fence is used.
+// Each queue also stores the last fence that was submitted onto the queue. This allows us to
+// create a linked list of fences and their associated command buffers so if one fence is
+// waited on, prior fences on that queue are also considered to have been waited on. When a fence is
+// waited on (either via a queue, device or fence), we free the cmd buffers for that fence and
+// recursively call with the prior fences.
 static void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
                                 VkFence fence) {
     auto queue_data = my_data->queueMap.find(queue);
@@ -4976,17 +5062,24 @@ static void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t sub
             }
         }
     }
+}
+
+static void markCommandBuffersInFlight(layer_data *my_data, VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
+                                       VkFence fence) {
+    auto queue_data = my_data->queueMap.find(queue);
     if (queue_data != my_data->queueMap.end()) {
         for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
             const VkSubmitInfo *submit = &pSubmits[submit_idx];
             for (uint32_t i = 0; i < submit->commandBufferCount; ++i) {
-                // Add cmdBuffers to both the global set and queue set
+                // Add cmdBuffers to the global set and increment count
+                GLOBAL_CB_NODE *pCB = getCBNode(my_data, submit->pCommandBuffers[i]);
                 for (auto secondaryCmdBuffer : my_data->commandBufferMap[submit->pCommandBuffers[i]]->secondaryCommandBuffers) {
                     my_data->globalInFlightCmdBuffers.insert(secondaryCmdBuffer);
-                    queue_data->second.inFlightCmdBuffers.insert(secondaryCmdBuffer);
+                    GLOBAL_CB_NODE *pSubCB = getCBNode(my_data, secondaryCmdBuffer);
+                    pSubCB->in_use.fetch_add(1);
                 }
                 my_data->globalInFlightCmdBuffers.insert(submit->pCommandBuffers[i]);
-                queue_data->second.inFlightCmdBuffers.insert(submit->pCommandBuffers[i]);
+                pCB->in_use.fetch_add(1);
             }
         }
     }
@@ -5133,6 +5226,8 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
     // TODO : Review these old print functions and clean up as appropriate
     print_mem_list(dev_data);
     printCBList(dev_data);
+    // Update cmdBuffer-related data structs and mark fence in-use
+    trackCommandBuffers(dev_data, queue, submitCount, pSubmits, fence);
     // Now verify each individual submit
     std::unordered_set<VkQueue> processed_other_queues;
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
@@ -5195,8 +5290,7 @@ vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
             }
         }
     }
-    // Update cmdBuffer-related data structs and mark fence in-use
-    trackCommandBuffers(dev_data, queue, submitCount, pSubmits, fence);
+    markCommandBuffersInFlight(dev_data, queue, submitCount, pSubmits, fence);
     lock.unlock();
     if (!skipCall)
         result = dev_data->device_dispatch_table->QueueSubmit(queue, submitCount, pSubmits, fence);
@@ -5324,46 +5418,6 @@ static void initializeAndTrackMemory(layer_data *dev_data, VkDeviceMemory mem, V
     }
 }
 #endif
-// Note: This function assumes that the global lock is held by the calling
-// thread.
-static bool cleanInFlightCmdBuffer(layer_data *my_data, VkCommandBuffer cmdBuffer) {
-    bool skip_call = false;
-    GLOBAL_CB_NODE *pCB = getCBNode(my_data, cmdBuffer);
-    if (pCB) {
-        for (auto queryEventsPair : pCB->waitedEventsBeforeQueryReset) {
-            for (auto event : queryEventsPair.second) {
-                if (my_data->eventMap[event].needsSignaled) {
-                    skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, 0, DRAWSTATE_INVALID_QUERY, "DS",
-                                         "Cannot get query results on queryPool %" PRIu64
-                                         " with index %d which was guarded by unsignaled event %" PRIu64 ".",
-                                         (uint64_t)(queryEventsPair.first.pool), queryEventsPair.first.index, (uint64_t)(event));
-                }
-            }
-        }
-    }
-    return skip_call;
-}
-// Remove given cmd_buffer from the global inFlight set.
-//  Also, if given queue is valid, then remove the cmd_buffer from that queues
-//  inFlightCmdBuffer set. Finally, check all other queues and if given cmd_buffer
-//  is still in flight on another queue, add it back into the global set.
-// Note: This function assumes that the global lock is held by the calling
-// thread.
-static inline void removeInFlightCmdBuffer(layer_data *dev_data, VkCommandBuffer cmd_buffer, VkQueue queue) {
-    // Pull it off of global list initially, but if we find it in any other queue list, add it back in
-    dev_data->globalInFlightCmdBuffers.erase(cmd_buffer);
-    if (dev_data->queueMap.find(queue) != dev_data->queueMap.end()) {
-        dev_data->queueMap[queue].inFlightCmdBuffers.erase(cmd_buffer);
-        for (auto q : dev_data->queues) {
-            if ((q != queue) &&
-                (dev_data->queueMap[q].inFlightCmdBuffers.find(cmd_buffer) != dev_data->queueMap[q].inFlightCmdBuffers.end())) {
-                dev_data->globalInFlightCmdBuffers.insert(cmd_buffer);
-                break;
-            }
-        }
-    }
-}
 // Verify that state for fence being waited on is appropriate. That is,
 //  a fence being waited on should not already be signalled and
 //  it should have been submitted on a queue or during acquire next image
@@ -5412,15 +5466,7 @@ vkWaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, Vk
         lock.lock();
         // When we know that all fences are complete we can clean/remove their CBs
         if (waitAll || fenceCount == 1) {
-            for (uint32_t i = 0; i < fenceCount; ++i) {
-                auto &fence_node = dev_data->fenceMap[pFences[i]];
-                VkQueue fence_queue = fence_node.queue;
-                for (auto cmdBuffer : fence_node.cmdBuffers) {
-                    skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
-                    removeInFlightCmdBuffer(dev_data, cmdBuffer, fence_queue);
-                }
-            }
-            decrementResources(dev_data, fenceCount, pFences);
+            skip_call |= decrementResources(dev_data, fenceCount, pFences);
         }
         // NOTE : Alternate case not handled here is when some fences have completed. In
         //  this case for app to guarantee which fences completed it will have to call
@@ -5447,13 +5493,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(VkDevice device,
     bool skip_call = false;
     lock.lock();
     if (result == VK_SUCCESS) {
-        auto &fence_node = dev_data->fenceMap[fence];
-        auto fence_queue = fence_node.queue;
-        for (auto cmdBuffer : fence_node.cmdBuffers) {
-            skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
-            removeInFlightCmdBuffer(dev_data, cmdBuffer, fence_queue);
-        }
-        decrementResources(dev_data, 1, &fence);
+        skipCall |= decrementResources(dev_data, 1, &fence);
     }
     lock.unlock();
     if (skip_call)
@@ -5477,17 +5517,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(VkDevice device, uin
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(VkQueue queue) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-    decrementResources(dev_data, queue);
     bool skip_call = false;
-    std::unique_lock<std::mutex> lock(global_lock);
-    // Iterate over local set since we erase set members as we go in for loop
-    auto local_cb_set = dev_data->queueMap[queue].inFlightCmdBuffers;
-    for (auto cmdBuffer : local_cb_set) {
-        skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
-        removeInFlightCmdBuffer(dev_data, cmdBuffer, queue);
-    }
-    dev_data->queueMap[queue].inFlightCmdBuffers.clear();
-    lock.unlock();
+    skip_call |= decrementResources(dev_data, queue);
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->QueueWaitIdle(queue);
@@ -5499,14 +5530,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDeviceWaitIdle(VkDevice device)
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     for (auto queue : dev_data->queues) {
-        decrementResources(dev_data, queue);
-        if (dev_data->queueMap.find(queue) != dev_data->queueMap.end()) {
-            // Clear all of the queue inFlightCmdBuffers (global set cleared below)
-            dev_data->queueMap[queue].inFlightCmdBuffers.clear();
-        }
-    }
-    for (auto cmdBuffer : dev_data->globalInFlightCmdBuffers) {
-        skip_call |= cleanInFlightCmdBuffer(dev_data, cmdBuffer);
+        skip_call |= decrementResources(dev_data, queue);
     }
     dev_data->globalInFlightCmdBuffers.clear();
     lock.unlock();
@@ -6959,16 +6983,26 @@ vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t firstScissor, uint32_t s
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth) {
-    bool skipCall = false;
+    bool skip_call = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
-        skipCall |= addCmd(dev_data, pCB, CMD_SETLINEWIDTHSTATE, "vkCmdSetLineWidth()");
+        skip_call |= addCmd(dev_data, pCB, CMD_SETLINEWIDTHSTATE, "vkCmdSetLineWidth()");
         pCB->status |= CBSTATUS_LINE_WIDTH_SET;
+
+        PIPELINE_NODE *pPipeTrav = getPipeline(dev_data, pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].pipeline);
+        if (pPipeTrav != NULL && !isDynamic(pPipeTrav, VK_DYNAMIC_STATE_LINE_WIDTH)) {
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0,
+                                 reinterpret_cast<uint64_t &>(commandBuffer), __LINE__, DRAWSTATE_INVALID_SET, "DS",
+                                 "vkCmdSetLineWidth called but pipeline was created without VK_DYNAMIC_STATE_LINE_WIDTH"
+                                 "flag.  This is undefined behavior and could be ignored.");
+        } else {
+            skip_call |= verifyLineWidth(dev_data, DRAWSTATE_INVALID_SET, reinterpret_cast<uint64_t &>(commandBuffer), lineWidth);
+        }
     }
     lock.unlock();
-    if (!skipCall)
+    if (!skip_call)
         dev_data->device_dispatch_table->CmdSetLineWidth(commandBuffer, lineWidth);
 }
 
@@ -8396,10 +8430,10 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
         }
 
         auto buffer_data = dev_data->bufferMap.find(mem_barrier->buffer);
-        VkDeviceSize buffer_size = (buffer_data->second.createInfo.sType == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
-                                       ? buffer_data->second.createInfo.size
-                                       : 0;
         if (buffer_data != dev_data->bufferMap.end()) {
+            VkDeviceSize buffer_size = (buffer_data->second.createInfo.sType == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
+                                           ? buffer_data->second.createInfo.size
+                                           : 0;
             if (mem_barrier->offset >= buffer_size) {
                 skip_call |= log_msg(
                     dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,

@@ -26,6 +26,12 @@
 #include "vulkan.h"
 
 /*
+ * Loader-ICD version negotiation API
+ */
+#define CURRENT_LOADER_ICD_INTERFACE_VERSION 2
+#define MIN_SUPPORTED_LOADER_ICD_INTERFACE_VERSION 0
+typedef VkResult (VKAPI_PTR *PFN_vkNegotiateLoaderICDInterfaceVersion)(uint32_t *pVersion);
+/*
  * The ICD must reserve space for a pointer for the loader's dispatch
  * table, at the start of <each object>.
  * The ICD must initialize this variable using the SET_LOADER_MAGIC_VALUE macro.

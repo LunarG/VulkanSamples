@@ -1187,6 +1187,48 @@ loader_icd_add(struct loader_instance *ptr_inst,
 
     return icd;
 }
+/**
+ * Determine the ICD interface version to use.
+ * @param icd
+ * @param pVersion Output parameter indicating which version to use or 0 if
+ * the negotiation API is not supported by the ICD
+ * @return  bool indicating true if the selected interface version is supported
+ *          by the loader, false indicates the version is not supported
+ * version 0   doesn't support vk_icdGetInstanceProcAddr nor
+ *             vk_icdNegotiateLoaderICDInterfaceVersion
+ * version 1   supports vk_icdGetInstanceProcAddr
+ * version 2   supports vk_icdNegotiateLoaderICDInterfaceVersion
+ */
+bool loader_get_icd_interface_version(
+        PFN_vkNegotiateLoaderICDInterfaceVersion fp_negotiate_icd_version,
+        uint32_t *pVersion) {
+
+    if (fp_negotiate_icd_version == NULL) {
+        // ICD does not support the negotiation API, it supports version 0 or 1
+        // calling code must determine if it is version 0 or 1
+        *pVersion = 0;
+    } else {
+        // ICD supports the negotiation API, so call it with the loader's
+        // latest version supported
+        *pVersion = CURRENT_LOADER_ICD_INTERFACE_VERSION;
+        VkResult result = fp_negotiate_icd_version(pVersion);
+
+        if (result == VK_ERROR_INCOMPATIBLE_DRIVER) {
+            // ICD no longer supports the loader's latest interface version so
+            // fail loading the ICD
+            return false;
+        }
+    }
+
+#if MIN_SUPPORTED_LOADER_ICD_INTERFACE_VERSION > 0
+    if (*pVersion < MIN_SUPPORTED_LOADER_ICD_INTERFACE_VERSION) {
+        // Loader no longer supports the ICD's latest interface version so fail
+        // loading the ICD
+        return false;
+    }
+#endif
+    return true;
+}
 
 void loader_scanned_icd_clear(const struct loader_instance *inst,
                               struct loader_icd_libs *icd_libs) {
@@ -1217,7 +1259,9 @@ static void loader_scanned_icd_add(const struct loader_instance *inst,
     PFN_vkCreateInstance fp_create_inst;
     PFN_vkEnumerateInstanceExtensionProperties fp_get_inst_ext_props;
     PFN_vkGetInstanceProcAddr fp_get_proc_addr;
+    PFN_vkNegotiateLoaderICDInterfaceVersion fp_negotiate_icd_version;
     struct loader_scanned_icds *new_node;
+    uint32_t interface_vers;
 
     /* TODO implement smarter opening/closing of libraries. For now this
      * function leaves libraries open and the scanned_icd_clear closes them */
@@ -1228,10 +1272,23 @@ static void loader_scanned_icd_add(const struct loader_instance *inst,
         return;
     }
 
+    // Get and settle on an ICD interface version
+    fp_negotiate_icd_version =
+        loader_platform_get_proc_address(handle, "vk_icdNegotiateLoaderICDInterfaceVersion");
+
+    if (!loader_get_icd_interface_version(fp_negotiate_icd_version,
+            &interface_vers)) {
+                    loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                       "ICD (%s) doesn't support interface version compatible"
+                       "with loader, skip this ICD %s", filename);
+            return;
+    }
+
     fp_get_proc_addr =
         loader_platform_get_proc_address(handle, "vk_icdGetInstanceProcAddr");
     if (!fp_get_proc_addr) {
-        // Use deprecated interface
+        assert(interface_vers == 0);
+        // Use deprecated interface from version 0
         fp_get_proc_addr =
             loader_platform_get_proc_address(handle, "vkGetInstanceProcAddr");
         if (!fp_get_proc_addr) {
@@ -1243,14 +1300,15 @@ static void loader_scanned_icd_add(const struct loader_instance *inst,
             loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "Using deprecated ICD interface of "
                        "vkGetInstanceProcAddr instead of "
-                       "vk_icdGetInstanceProcAddr");
+                       "vk_icdGetInstanceProcAddr for ICD %s", filename);
         }
         fp_create_inst =
             loader_platform_get_proc_address(handle, "vkCreateInstance");
         if (!fp_create_inst) {
             loader_log(
                 inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
-                "Couldn't get vkCreateInstance via dlsym/loadlibrary from ICD");
+                "Couldn't get vkCreateInstance via dlsym/loadlibrary for ICD %s",
+                    filename);
             return;
         }
         fp_get_inst_ext_props = loader_platform_get_proc_address(
@@ -1258,17 +1316,20 @@ static void loader_scanned_icd_add(const struct loader_instance *inst,
         if (!fp_get_inst_ext_props) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "Couldn't get vkEnumerateInstanceExtensionProperties "
-                       "via dlsym/loadlibrary from ICD");
+                       "via dlsym/loadlibrary for ICD %s", filename);
             return;
         }
     } else {
-        // Use newer interface
+        // Use newer interface version 1 or later
+        if (interface_vers == 0)
+            interface_vers = 1;
+
         fp_create_inst =
             (PFN_vkCreateInstance)fp_get_proc_addr(NULL, "vkCreateInstance");
         if (!fp_create_inst) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "Couldn't get vkCreateInstance via "
-                       "vk_icdGetInstanceProcAddr from ICD");
+                       "vk_icdGetInstanceProcAddr for ICD %s", filename);
             return;
         }
         fp_get_inst_ext_props =
@@ -1277,7 +1338,7 @@ static void loader_scanned_icd_add(const struct loader_instance *inst,
         if (!fp_get_inst_ext_props) {
             loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                        "Couldn't get vkEnumerateInstanceExtensionProperties "
-                       "via vk_icdGetInstanceProcAddr from ICD");
+                       "via vk_icdGetInstanceProcAddr for ICD %s", filename);
             return;
         }
     }
@@ -1299,6 +1360,7 @@ static void loader_scanned_icd_add(const struct loader_instance *inst,
     new_node->GetInstanceProcAddr = fp_get_proc_addr;
     new_node->EnumerateInstanceExtensionProperties = fp_get_inst_ext_props;
     new_node->CreateInstance = fp_create_inst;
+    new_node->interface_version = interface_vers;
 
     new_node->lib_name = (char *)loader_heap_alloc(
         inst, strlen(filename) + 1, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);

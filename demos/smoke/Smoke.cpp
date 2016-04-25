@@ -383,17 +383,17 @@ void Smoke::destroy_frame_data()
     if (!use_push_constants_) {
         vk::DestroyDescriptorPool(dev_, desc_pool_, nullptr);
 
-        for (auto cmd_pool : worker_cmd_pools_)
-            vk::DestroyCommandPool(dev_, cmd_pool, nullptr);
-        worker_cmd_pools_.clear();
-        vk::DestroyCommandPool(dev_, primary_cmd_pool_, nullptr);
-
         vk::UnmapMemory(dev_, frame_data_mem_);
         vk::FreeMemory(dev_, frame_data_mem_, nullptr);
 
         for (auto &data : frame_data_)
             vk::DestroyBuffer(dev_, data.buf, nullptr);
     }
+
+    for (auto cmd_pool : worker_cmd_pools_)
+        vk::DestroyCommandPool(dev_, cmd_pool, nullptr);
+    worker_cmd_pools_.clear();
+    vk::DestroyCommandPool(dev_, primary_cmd_pool_, nullptr);
 
     for (auto &data : frame_data_)
         vk::DestroyFence(dev_, data.fence, nullptr);
@@ -777,18 +777,21 @@ void Smoke::on_frame(float frame_pred)
 
     VkResult res = vk::BeginCommandBuffer(data.primary_cmd, &primary_cmd_begin_info_);
 
-    VkBufferMemoryBarrier buf_barrier = {};
-    buf_barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-    buf_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-    buf_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    buf_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    buf_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    buf_barrier.buffer = data.buf;
-    buf_barrier.offset = 0;
-    buf_barrier.size = VK_WHOLE_SIZE;
-    vk::CmdPipelineBarrier(data.primary_cmd,
-            VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-            0, 0, nullptr, 1, &buf_barrier, 0, nullptr);
+    if (!use_push_constants_) {
+        VkBufferMemoryBarrier buf_barrier = {};
+        buf_barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        buf_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+        buf_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        buf_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        buf_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        buf_barrier.buffer = data.buf;
+        buf_barrier.offset = 0;
+        buf_barrier.size = VK_WHOLE_SIZE;
+        vk::CmdPipelineBarrier(data.primary_cmd,
+                               VK_PIPELINE_STAGE_HOST_BIT,
+                               VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+                               0, 0, nullptr, 1, &buf_barrier, 0, nullptr);
+    }
 
     render_pass_begin_info_.framebuffer = framebuffers_[back.image_index];
     render_pass_begin_info_.renderArea.extent = extent_;
