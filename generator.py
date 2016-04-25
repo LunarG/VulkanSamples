@@ -3488,10 +3488,15 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     enumRange = self.enumRanges[value.type]
                     usedLines.append('skipCall |= validate_ranged_enum_array(report_data, "{}", "{}", "{}", {}, {}, {pf}{}, {pf}{});\n'.format(funcName, valueDisplayName, value.type, enumRange[0], enumRange[1], lenParam.name, value.name, pf=valuePrefix))
             # Non-pointer types
-            elif value.type in self.validatedStructs:
-                memberNamePrefix = '{}{}.'.format(valuePrefix, value.name)
-                memberDisplayNamePrefix = '{}.'.format(valueDisplayName)
-                usedLines.append(self.expandStructCode(self.validatedStructs[value.type], funcName, memberNamePrefix, memberDisplayNamePrefix, '', []))
+            elif (value.type in self.structTypes) or (value.type in self.validatedStructs):
+                if value.type in self.structTypes:
+                    stype = self.structTypes[value.type]
+                    usedLines.append('skipCall |= validate_struct_type(report_data, "{}", "{}", "{sv}", &({}{vn}), {sv}, false);\n'.format(
+                        funcName, valueDisplayName, valuePrefix, vn=value.name, sv=stype.value))
+                if value.type in self.validatedStructs:
+                    memberNamePrefix = '{}{}.'.format(valuePrefix, value.name)
+                    memberDisplayNamePrefix = '{}.'.format(valueDisplayName)
+                    usedLines.append(self.expandStructCode(self.validatedStructs[value.type], funcName, memberNamePrefix, memberDisplayNamePrefix, '', []))
             elif value.type in self.handleTypes:
                 if not self.isHandleOptional(value, None):
                     usedLines.append('skipCall |= validate_required_handle(report_data, "{}", "{}", {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name))
