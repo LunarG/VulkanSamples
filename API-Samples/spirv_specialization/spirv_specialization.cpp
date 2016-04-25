@@ -303,7 +303,7 @@ int sample_main(int argc, char *argv[]) {
     if (use_SPIRV_asm) {
 
         // Use the hand edited SPIR-V assembly
-        spv_context spvContext = spvContextCreate();
+        spv_context spvContext = spvContextCreate(SPV_ENV_VULKAN_1_0);
         spv_binary fragmentBinary = {};
         spv_diagnostic fragmentDiag = {};
         spv_result_t fragmentResult = spvTextToBinary(

@@ -190,7 +190,7 @@ int sample_main(int argc, char *argv[]) {
     /* VULKAN_KEY_START */
 
     // Init the assembler context
-    spv_context spvContext = spvContextCreate();
+    spv_context spvContext = spvContextCreate(SPV_ENV_VULKAN_1_0);
 
     // Convert the vertex assembly into binary format
     spv_binary vertexBinary = {};
