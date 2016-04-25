@@ -17,11 +17,16 @@
 #ifndef SHELL_ANDROID_H
 #define SHELL_ANDROID_H
 
+#include <string>
+#include <vector>
+
 #include <android_native_app_glue.h>
 #include "Shell.h"
 
 class ShellAndroid : public Shell {
 public:
+    static std::vector<std::string> get_args(android_app &app);
+
     ShellAndroid(android_app &app, Game &game);
     ~ShellAndroid();
 
