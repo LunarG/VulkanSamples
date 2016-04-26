@@ -1599,9 +1599,11 @@ class StructWrapperGen:
                 else:
                     ss_decls.append("    %s %s;" % (m_type, self.struct_dict[s][m]['name']))
             ss_decls.append("    %s(const %s* pInStruct);" % (ss_name, s))
-            ss_decls.append("    %s();" % (ss_name))
+            ss_decls.append("    %s(const %s& src);" % (ss_name, ss_name)) # Copy constructor
+            ss_decls.append("    %s();" % (ss_name)) # Default constructor
             ss_decls.append("    ~%s();" % (ss_name))
             ss_decls.append("    void initialize(const %s* pInStruct);" % (s))
+            ss_decls.append("    void initialize(const %s* src);" % (ss_name))
             ss_decls.append("    %s *ptr() { return reinterpret_cast<%s *>(this); }" % (s, s))
             ss_decls.append("    %s const *ptr() const { return reinterpret_cast<%s const *>(this); }" % (s, s))
             ss_decls.append("};")
@@ -1732,8 +1734,18 @@ class StructWrapperGen:
                 construct_txt = custom_construct_txt[s]
             ss_src.append("\n%s::%s(const %s* pInStruct) : %s\n{\n%s}" % (ss_name, ss_name, s, init_list, construct_txt))
             ss_src.append("\n%s::%s() {}" % (ss_name, ss_name))
+            # Create slight variation of init and construct txt for copy constructor that takes a src object reference vs. struct ptr
+            copy_construct_init = init_func_txt.replace('pInStruct->', 'src.')
+            copy_construct_txt = construct_txt.replace(' (pInStruct->', ' (src.') # Exclude 'if' blocks from next line
+            copy_construct_txt = copy_construct_txt.replace('(pInStruct->', '(*src.') # Pass object to copy constructors
+            copy_construct_txt = copy_construct_txt.replace('pInStruct->', 'src.') # Modify remaining struct refs for src object
+            ss_src.append("\n%s::%s(const %s& src)\n{\n%s%s}" % (ss_name, ss_name, ss_name, copy_construct_init, copy_construct_txt)) # Copy constructor
             ss_src.append("\n%s::~%s()\n{\n%s}" % (ss_name, ss_name, destruct_txt))
             ss_src.append("\nvoid %s::initialize(const %s* pInStruct)\n{\n%s%s}" % (ss_name, s, init_func_txt, construct_txt))
+            # Copy initializer uses same txt as copy constructor but has a ptr and not a reference
+            init_copy = copy_construct_init.replace('src.', 'src->')
+            init_construct = copy_construct_txt.replace('src.', 'src->')
+            ss_src.append("\nvoid %s::initialize(const %s* src)\n{\n%s%s}" % (ss_name, ss_name, init_copy, init_construct))
             if s in ifdef_dict:
                 ss_src.append('#endif')
         return "\n".join(ss_src)
