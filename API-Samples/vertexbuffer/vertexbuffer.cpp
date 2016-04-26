@@ -137,6 +137,28 @@ int sample_main(int argc, char *argv[]) {
     clear_values[1].depthStencil.depth = 1.0f;
     clear_values[1].depthStencil.stencil = 0;
 
+    VkSemaphore presentCompleteSemaphore;
+    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
+    presentCompleteSemaphoreCreateInfo.sType =
+        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    presentCompleteSemaphoreCreateInfo.pNext = NULL;
+    presentCompleteSemaphoreCreateInfo.flags = 0;
+
+    res = vkCreateSemaphore(info.device, &presentCompleteSemaphoreCreateInfo,
+                            NULL, &presentCompleteSemaphore);
+    assert(res == VK_SUCCESS);
+
+    // Get the index of the next available swapchain image:
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
+                                presentCompleteSemaphore, VK_NULL_HANDLE,
+                                &info.current_buffer);
+    // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
+    // return codes
+    assert(res == VK_SUCCESS);
+    set_image_layout(info, info.buffers[info.current_buffer].image,
+                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
     VkRenderPassBeginInfo rp_begin = {};
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     rp_begin.pNext = NULL;
@@ -161,6 +183,7 @@ int sample_main(int argc, char *argv[]) {
     execute_queue_command_buffer(info);
     /* VULKAN_KEY_END */
 
+    vkDestroySemaphore(info.device, presentCompleteSemaphore, NULL);
     vkDestroyBuffer(info.device, info.vertex_buffer.buf, NULL);
     vkFreeMemory(info.device, info.vertex_buffer.mem, NULL);
     destroy_framebuffers(info);

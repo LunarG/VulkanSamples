@@ -99,6 +99,10 @@ int sample_main(int argc, char *argv[]) {
     // return codes
     assert(res == VK_SUCCESS);
 
+    set_image_layout(info, info.buffers[info.current_buffer].image,
+                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
     // Create an image, map it, and write some values to the image
 
     image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;

@@ -814,6 +814,10 @@ void init_presentable_image(struct sample_info &info) {
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
     assert(!res);
+
+    set_image_layout(info, info.buffers[info.current_buffer].image,
+                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 }
 
 void execute_queue_cmdbuf(struct sample_info &info,
@@ -1017,10 +1021,6 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
         color_image_view.flags = 0;
 
         sc_buffer.image = swapchainImages[i];
-
-        set_image_layout(info, sc_buffer.image, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_UNDEFINED,
-                         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
         color_image_view.image = sc_buffer.image;
 

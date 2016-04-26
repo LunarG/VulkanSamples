@@ -210,6 +210,10 @@ int sample_main(int argc, char *argv[]) {
     // return codes
     assert(res == VK_SUCCESS);
 
+    set_image_layout(info, info.buffers[info.current_buffer].image,
+                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
     const VkDeviceSize offsets[1] = {0};
 
     VkViewport viewport;
