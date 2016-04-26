@@ -116,18 +116,18 @@ class DescriptorSetLayout {
     unordered_map<uint32_t, uint32_t> binding_to_index_map_;
     unordered_map<uint32_t, uint32_t> binding_to_global_start_index_map_;
     unordered_map<uint32_t, uint32_t> binding_to_global_end_index_map_;
-    VkDescriptorSetLayoutCreateFlags flags_;
+    //VkDescriptorSetLayoutCreateFlags flags_;
     uint32_t binding_count_; // # of bindings in this layout
     vector<safe_VkDescriptorSetLayoutBinding *> bindings_;
     uint32_t descriptor_count_; // total # descriptors in this layout
     uint32_t dynamic_descriptor_count_;
 };
 DescriptorSetLayout::DescriptorSetLayout()
-    : layout_(VK_NULL_HANDLE), flags_(0), binding_count_(0), descriptor_count_(0), dynamic_descriptor_count_(0) {}
+    : layout_(VK_NULL_HANDLE), /*flags_(0),*/ binding_count_(0), descriptor_count_(0), dynamic_descriptor_count_(0) {}
 // Construct DescriptorSetLayout instance from given create info
 DescriptorSetLayout::DescriptorSetLayout(debug_report_data *report_data, const VkDescriptorSetLayoutCreateInfo *p_create_info,
                                          const VkDescriptorSetLayout layout)
-    : layout_(layout), flags_(p_create_info->flags), binding_count_(p_create_info->bindingCount), descriptor_count_(0),
+    : layout_(layout), /*flags_(p_create_info->flags),*/ binding_count_(p_create_info->bindingCount), descriptor_count_(0),
       dynamic_descriptor_count_(0) {
     uint32_t global_index = 0;
     for (uint32_t i = 0; i < binding_count_; ++i) {
@@ -202,6 +202,7 @@ VkDescriptorType DescriptorSetLayout::GetTypeFromGlobalIndex(const uint32_t inde
             return binding->descriptorType;
     }
     assert(0); // requested global index is out of bounds
+    return VK_DESCRIPTOR_TYPE_MAX_ENUM;
 }
 // For the given binding, return stageFlags
 VkShaderStageFlags DescriptorSetLayout::GetStageFlagsFromBinding(const uint32_t binding) {
