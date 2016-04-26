@@ -80,6 +80,9 @@ find_library(OGLCompiler_LIB NAMES OGLCompiler
 find_library(OSDependent_LIB NAMES OSDependent
              HINTS ${GLSLANG_SEARCH_PATH} )
 
+find_library(HLSL_LIB NAMES HLSL 
+             HINTS ${GLSLANG_SEARCH_PATH} )
+
 find_library(SPIRV_LIB NAMES SPIRV
              HINTS ${GLSLANG_SEARCH_PATH} )
 
@@ -131,7 +134,7 @@ if (WIN32)
     set (GLSLANG_LIBRARIES glslang OGLCompiler OSDependent SPIRV)
     set (SPIRV_TOOLS_LIBRARIES SPIRV-Tools)
 else ()
-    set (GLSLANG_LIBRARIES ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${SPIRV_LIB})
+    set (GLSLANG_LIBRARIES ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${HLSL_LIB} ${SPIRV_LIB})
     set (SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_LIB})
 endif()
 
