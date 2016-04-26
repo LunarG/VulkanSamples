@@ -147,11 +147,10 @@ bool validate_array(debug_report_data *report_data, const char *apiName, const c
     // Count parameters not tagged as optional cannot be 0
     if ((count == 0) && countRequired) {
         skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                            ParameterValidationName, "%s: value of %s must be greater than 0", apiName, countName);
+                            ParameterValidationName, "%s: parameter %s must be greater than 0", apiName, countName);
     }
 
-    // Array parameters not tagged as optional cannot be NULL,
-    // unless the count is 0
+    // Array parameters not tagged as optional cannot be NULL, unless the count is 0
     if ((array == NULL) && arrayRequired && (count != 0)) {
         skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                             ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, arrayName);
@@ -260,18 +259,7 @@ bool validate_struct_type_array(debug_report_data *report_data, const char *apiN
     bool skipCall = false;
 
     if ((count == 0) || (array == NULL)) {
-        // Count parameters not tagged as optional cannot be 0
-        if ((count == 0) && countRequired) {
-            skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                ParameterValidationName, "%s: parameter %s must be greater than 0", apiName, countName);
-        }
-
-        // Array parameters not tagged as optional cannot be NULL,
-        // unless the count is 0
-        if ((array == NULL) && arrayRequired && (count != 0)) {
-            skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, arrayName);
-        }
+        skipCall |= validate_array(report_data, apiName, countName, arrayName, count, array, countRequired, arrayRequired);
     } else {
         // Verify that all structs in the array have the correct type
         for (uint32_t i = 0; i < count; ++i) {
@@ -338,17 +326,7 @@ bool validate_handle_array(debug_report_data *report_data, const char *api_name,
     bool skip_call = false;
 
     if ((count == 0) || (array == NULL)) {
-        // Count parameters not tagged as optional cannot be 0
-        if ((count == 0) && count_required) {
-            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                 ParameterValidationName, "%s: parameter %s must be greater than 0", api_name, count_name);
-        }
-
-        // Array parameters not tagged as optional cannot be NULL, unless the count is 0
-        if ((array == NULL) && array_required && (count != 0)) {
-            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                 ParameterValidationName, "%s: required parameter %s specified as NULL", api_name, array_name);
-        }
+        skip_call |= validate_array(report_data, api_name, count_name, array_name, count, array, count_required, array_required);
     } else {
         // Verify that no handles in the array are VK_NULL_HANDLE
         for (uint32_t i = 0; i < count; ++i) {
@@ -386,20 +364,9 @@ static bool validate_string_array(debug_report_data *report_data, const char *ap
     bool skipCall = false;
 
     if ((count == 0) || (array == NULL)) {
-        // Count parameters not tagged as optional cannot be 0
-        if ((count == 0) && countRequired) {
-            skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                ParameterValidationName, "%s: parameter %s must be greater than 0", apiName, countName);
-        }
-
-        // Array parameters not tagged as optional cannot be NULL,
-        // unless the count is 0
-        if ((array == NULL) && arrayRequired && (count != 0)) {
-            skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, arrayName);
-        }
+        skipCall |= validate_array(report_data, apiName, countName, arrayName, count, array, countRequired, arrayRequired);
     } else {
-        // Verify that strings in the array not NULL
+        // Verify that strings in the array are not NULL
         for (uint32_t i = 0; i < count; ++i) {
             if (array[i] == NULL) {
                 skipCall |=
@@ -539,25 +506,34 @@ bool validate_ranged_enum(debug_report_data *report_data, const char *apiName, c
 *
 * @param report_data debug_report_data object for routing validation messages.
 * @param apiName Name of API call being validated.
-* @param parameterName Name of parameter being validated.
+* @param countName Name of count parameter.
+* @param arrayName Name of array parameter.
 * @param enumName Name of the enumeration being validated.
 * @param begin The begin range value for the enumeration.
 * @param end The end range value for the enumeration.
-* @param value Boolean value to validate.
+* @param count Number of enumeration values in the array.
+* @param array Array of enumeration values to validate.
+* @param countRequired The 'count' parameter may not be 0 when true.
+* @param arrayRequired The 'array' parameter may not be NULL when true.
 * @return Boolean value indicating that the call should be skipped.
 */
 template <typename T>
-static bool validate_ranged_enum_array(debug_report_data *report_data, const char *apiName, const char *parameterName,
-                                       const char *enumName, T begin, T end, uint32_t count, const T *pValues) {
+static bool validate_ranged_enum_array(debug_report_data *report_data, const char *apiName, const char *countName,
+                                       const char *arrayName, const char *enumName, T begin, T end, uint32_t count, const T *array,
+                                       bool countRequired, bool arrayRequired) {
     bool skipCall = false;
 
-    for (uint32_t i = 0; i < count; ++i) {
-        if (((pValues[i] < begin) || (pValues[i] > end)) && !is_extension_added_token(pValues[i])) {
-            skipCall |=
-                log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                ParameterValidationName, "%s: value of %s[%d] (%d) does not fall within the begin..end range of the core %s "
-                "enumeration tokens and is not an extension added token",
-                apiName, parameterName, i, pValues[i], enumName);
+    if ((count == 0) || (array == NULL)) {
+        skipCall |= validate_array(report_data, apiName, countName, arrayName, count, array, countRequired, arrayRequired);
+    } else {
+        for (uint32_t i = 0; i < count; ++i) {
+            if (((array[i] < begin) || (array[i] > end)) && !is_extension_added_token(array[i])) {
+                skipCall |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                    ParameterValidationName,
+                                    "%s: value of %s[%d] (%d) does not fall within the begin..end range of the core %s "
+                                    "enumeration tokens and is not an extension added token",
+                                    apiName, arrayName, i, array[i], enumName);
+            }
         }
     }
 

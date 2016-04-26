@@ -3472,6 +3472,11 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 # If this is an input handle array that is not allowed to contain NULL handles, verify that none of the handles are VK_NULL_HANDLE
                 elif value.type in self.handleTypes and value.isconst and not self.isHandleOptional(value, lenParam):
                     usedLines += self.makeHandleCheck(valuePrefix, value, lenParam, req, cvReq, funcName, lenDisplayName, valueDisplayName)
+                elif value.isbool and value.isconst:
+                    usedLines.append('skipCall |= validate_bool32_array(report_data, "{}", "{}", "{}", {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, lenParam.name, value.name, cvReq, req, pf=valuePrefix))
+                elif value.israngedenum and value.isconst:
+                    enumRange = self.enumRanges[value.type]
+                    usedLines.append('skipCall |= validate_ranged_enum_array(report_data, "{}", "{}", "{}", "{}", {}, {}, {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, value.type, enumRange[0], enumRange[1], lenParam.name, value.name, cvReq, req, pf=valuePrefix))
                 elif value.name == 'pNext':
                     # We need to ignore VkDeviceCreateInfo and VkInstanceCreateInfo, as the loader manipulates them in a way that is not documented in vk.xml
                     if not structTypeName in ['VkDeviceCreateInfo', 'VkInstanceCreateInfo']:
@@ -3482,11 +3487,6 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 # If this is a pointer to a struct (input), see if it contains members that need to be checked
                 if value.type in self.validatedStructs and value.isconst:
                     usedLines.append(self.expandStructPointerCode(valuePrefix, value, lenParam, funcName, valueDisplayName))
-                elif value.isbool and value.isconst:
-                    usedLines.append('skipCall |= validate_bool32_array(report_data, "{}", "{}", {pf}{}, {pf}{});\n'.format(funcName, valueDisplayName, lenParam.name, value.name, pf=valuePrefix))
-                elif value.israngedenum and value.isconst:
-                    enumRange = self.enumRanges[value.type]
-                    usedLines.append('skipCall |= validate_ranged_enum_array(report_data, "{}", "{}", "{}", {}, {}, {pf}{}, {pf}{});\n'.format(funcName, valueDisplayName, value.type, enumRange[0], enumRange[1], lenParam.name, value.name, pf=valuePrefix))
             # Non-pointer types
             elif (value.type in self.structTypes) or (value.type in self.validatedStructs):
                 if value.type in self.structTypes:
