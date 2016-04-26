@@ -112,7 +112,7 @@ struct layer_data {
     unordered_map<VkCommandPool, CMD_POOL_INFO> commandPoolMap;
     unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> descriptorPoolMap;
     unordered_map<VkDescriptorSet, SET_NODE *> setMap;
-    unordered_map<VkDescriptorSetLayout, DescriptorSetLayout> descriptorSetLayoutMap;
+    unordered_map<VkDescriptorSetLayout, DescriptorSetLayout *> descriptorSetLayoutMap;
     unordered_map<VkPipelineLayout, PIPELINE_LAYOUT_NODE> pipelineLayoutMap;
     unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> memObjMap;
     unordered_map<VkFence, FENCE_NODE> fenceMap;
@@ -1929,9 +1929,8 @@ static VkDescriptorSetLayoutBinding const * get_descriptor_binding(layer_data *m
     if (slot.first >= pipelineLayout->descriptorSetLayouts.size())
         return nullptr;
 
-    auto &layout_node = my_data->descriptorSetLayoutMap[pipelineLayout->descriptorSetLayouts[slot.first]];
-
-    return layout_node.GetDescriptorSetLayoutBindingPtrFromBinding(slot.second);
+    const auto & layout_node = my_data->descriptorSetLayoutMap[pipelineLayout->descriptorSetLayouts[slot.first]];
+    return layout_node->GetDescriptorSetLayoutBindingPtrFromBinding(slot.second);
 }
 
 // Block of code at start here for managing/tracking Pipeline state that this layer cares about
@@ -2149,7 +2148,7 @@ static bool verify_set_layout_compatibility(layer_data *my_data, const SET_NODE 
         return false;
     }
     auto layout_node = my_data->descriptorSetLayoutMap[pipeline_layout_it->second.descriptorSetLayouts[layoutIndex]];
-    return layout_node.IsCompatible(pSet->p_layout, &errorMsg);
+    return layout_node->IsCompatible(pSet->p_layout, &errorMsg);
 }
 
 // Validate that data for each specialization entry is fully contained within the buffer.
@@ -2454,7 +2453,7 @@ static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShade
         pipeline->active_slots[use.first.first].insert(use.first.second);
 
         /* verify given pipelineLayout has requested setLayout with requested binding */
-        auto binding = get_descriptor_binding(dev_data, pipelineLayout, use.first);
+        const auto & binding = get_descriptor_binding(dev_data, pipelineLayout, use.first);
         unsigned required_descriptor_count;
 
         if (!binding) {
@@ -3830,7 +3829,7 @@ static bool dsUpdate(layer_data *my_data, VkDevice device, uint32_t descriptorWr
                 uint32_t startIndex;
                 startIndex = getUpdateStartIndex(my_data, device, layout_node->GetGlobalStartIndexFromBinding(binding),
                                                  pWDS[i].dstArrayElement, pUpdate);
-                auto layout_binding = layout_node->GetDescriptorSetLayoutBindingPtrFromBinding(binding);
+                const auto & layout_binding = layout_node->GetDescriptorSetLayoutBindingPtrFromBinding(binding);
                 // Layout bindings match w/ update, now verify that update type & stageFlags are the same for entire update
                 if ((skipCall = validateUpdateConsistency(my_data, device, layout_binding->descriptorType, pUpdate, startIndex,
                                                           endIndex)) == false) {
@@ -3974,9 +3973,9 @@ static bool validate_descriptor_availability_in_pool(layer_data *dev_data, DESCR
                         (uint64_t)pSetLayouts[i]);
         } else {
             uint32_t typeIndex = 0, poolSizeCount = 0;
-            auto layout_node = layout_pair->second;
-            for (j = 0; j < layout_node.GetBindingCount(); ++j) {
-                auto binding_layout = layout_node.GetDescriptorSetLayoutBindingPtrFromIndex(j);
+            auto &layout_node = layout_pair->second;
+            for (j = 0; j < layout_node->GetBindingCount(); ++j) {
+                const auto &binding_layout = layout_node->GetDescriptorSetLayoutBindingPtrFromIndex(j);
                 typeIndex = static_cast<uint32_t>(binding_layout->descriptorType);
                 poolSizeCount = binding_layout->descriptorCount;
                 if (poolSizeCount > pPoolNode->availableDescriptorTypeCount[typeIndex]) {
@@ -4586,6 +4585,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
     deleteRenderPasses(dev_data);
     deleteCommandBuffers(dev_data);
     deletePools(dev_data);
+    for (auto del_layout : dev_data->descriptorSetLayoutMap) {
+        delete del_layout.second;
+    }
     dev_data->descriptorSetLayoutMap.clear();
     dev_data->imageViewMap.clear();
     dev_data->imageMap.clear();
@@ -6305,7 +6307,7 @@ vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateIn
     if (VK_SUCCESS == result) {
         // TODOSC : Capture layout bindings set
         std::lock_guard<std::mutex> lock(global_lock);
-        dev_data->descriptorSetLayoutMap[*pSetLayout] = DescriptorSetLayout(dev_data->report_data, pCreateInfo, *pSetLayout);
+        dev_data->descriptorSetLayoutMap[*pSetLayout] = new DescriptorSetLayout(dev_data->report_data, pCreateInfo, *pSetLayout);
     }
     return result;
 }
@@ -6458,10 +6460,10 @@ vkAllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAl
                             return VK_ERROR_VALIDATION_FAILED_EXT;
                         }
                     }
-                    pNewNode->p_layout = &layout_pair->second;
+                    pNewNode->p_layout = layout_pair->second;
                     pNewNode->pool = pAllocateInfo->descriptorPool;
                     pNewNode->set = pDescriptorSets[i];
-                    pNewNode->descriptorCount = layout_pair->second.GetTotalDescriptorCount();
+                    pNewNode->descriptorCount = layout_pair->second->GetTotalDescriptorCount();
                     if (pNewNode->descriptorCount) {
                         pNewNode->pDescriptorUpdates.resize(pNewNode->descriptorCount);
                     }

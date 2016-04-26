@@ -117,7 +117,7 @@ class DescriptorSetLayout {
     unordered_map<uint32_t, uint32_t> binding_to_global_end_index_map_;
     VkDescriptorSetLayoutCreateFlags flags_;
     uint32_t binding_count_; // # of bindings in this layout
-    vector<safe_VkDescriptorSetLayoutBinding> bindings_;
+    vector<safe_VkDescriptorSetLayoutBinding *> bindings_;
     uint32_t descriptor_count_; // total # descriptors in this layout
     uint32_t dynamic_descriptor_count_;
 };
@@ -141,12 +141,12 @@ DescriptorSetLayout::DescriptorSetLayout(debug_report_data *report_data, const V
         global_index += p_create_info->pBindings[i].descriptorCount ? p_create_info->pBindings[i].descriptorCount - 1 : 0;
         binding_to_global_end_index_map_[p_create_info->pBindings[i].binding] = global_index;
         global_index++;
-        bindings_.push_back(safe_VkDescriptorSetLayoutBinding(&p_create_info->pBindings[i]));
+        bindings_.push_back(new safe_VkDescriptorSetLayoutBinding(&p_create_info->pBindings[i]));
         // In cases where we should ignore pImmutableSamplers make sure it's NULL
         if ((p_create_info->pBindings[i].pImmutableSamplers) &&
             ((p_create_info->pBindings[i].descriptorType != VK_DESCRIPTOR_TYPE_SAMPLER) &&
              (p_create_info->pBindings[i].descriptorType != VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER))) {
-            bindings_.back().pImmutableSamplers = nullptr;
+            bindings_.back()->pImmutableSamplers = nullptr;
         }
         if (p_create_info->pBindings[i].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
             p_create_info->pBindings[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
@@ -155,47 +155,46 @@ DescriptorSetLayout::DescriptorSetLayout(debug_report_data *report_data, const V
     }
 }
 DescriptorSetLayout::~DescriptorSetLayout() {
-    for (auto binding : bindings_) {
-        if (binding.pImmutableSamplers)
-            delete[] binding.pImmutableSamplers;
-    }
-}
+    for (auto binding : bindings_)
+        delete binding;
+};
+
 VkDescriptorSetLayoutBinding const *DescriptorSetLayout::GetDescriptorSetLayoutBindingPtrFromBinding(const uint32_t binding) {
     if (!binding_to_index_map_.count(binding))
         return nullptr;
-    return reinterpret_cast<VkDescriptorSetLayoutBinding const *>(&bindings_[binding_to_index_map_[binding]]);
+    return reinterpret_cast<VkDescriptorSetLayoutBinding const *>(bindings_[binding_to_index_map_[binding]]);
 }
 VkDescriptorSetLayoutBinding const *DescriptorSetLayout::GetDescriptorSetLayoutBindingPtrFromIndex(const uint32_t index) {
     if (index >= bindings_.size())
         return nullptr;
-    return reinterpret_cast<VkDescriptorSetLayoutBinding const *>(&bindings_[index]);
+    return reinterpret_cast<VkDescriptorSetLayoutBinding const *>(bindings_[index]);
 }
 // Return descriptorCount for given binding, 0 if index is unavailable
 uint32_t DescriptorSetLayout::GetDescriptorCountFromBinding(const uint32_t binding) {
     if (!binding_to_index_map_.count(binding))
         return 0;
-    return bindings_[binding_to_index_map_[binding]].descriptorCount;
+    return bindings_[binding_to_index_map_[binding]]->descriptorCount;
 }
 // Return descriptorCount for given index, 0 if index is unavailable
 uint32_t DescriptorSetLayout::GetDescriptorCountFromIndex(const uint32_t index) {
     if (index >= bindings_.size())
         return 0;
-    return bindings_[index].descriptorCount;
+    return bindings_[index]->descriptorCount;
 }
 // For the given binding, return descriptorType
 VkDescriptorType DescriptorSetLayout::GetTypeFromBinding(const uint32_t binding) {
     assert(binding_to_index_map_.count(binding));
-    return bindings_[binding_to_index_map_[binding]].descriptorType;
+    return bindings_[binding_to_index_map_[binding]]->descriptorType;
 }
 // For the given index, return descriptorType
 VkDescriptorType DescriptorSetLayout::GetTypeFromIndex(const uint32_t index) {
     assert(index < bindings_.size());
-    return bindings_[index].descriptorType;
+    return bindings_[index]->descriptorType;
 }
 // For the given binding, return stageFlags
 VkShaderStageFlags DescriptorSetLayout::GetStageFlagsFromBinding(const uint32_t binding) {
     assert(binding_to_index_map_.count(binding));
-    return bindings_[binding_to_index_map_[binding]].stageFlags;
+    return bindings_[binding_to_index_map_[binding]]->stageFlags;
 }
 // For the given binding, return start index
 uint32_t DescriptorSetLayout::GetGlobalStartIndexFromBinding(const uint32_t binding) {
@@ -210,7 +209,7 @@ uint32_t DescriptorSetLayout::GetGlobalEndIndexFromBinding(const uint32_t bindin
 //
 VkSampler const *DescriptorSetLayout::GetImmutableSamplerPtrFromBinding(const uint32_t binding) {
     assert(binding_to_index_map_.count(binding));
-    return bindings_[binding_to_index_map_[binding]].pImmutableSamplers;
+    return bindings_[binding_to_index_map_[binding]]->pImmutableSamplers;
 }
 // If our layout is compatible with rh_sd_layout, return true,
 //  else return false and fill in error_msg will description of what causes incompatibility
@@ -230,29 +229,29 @@ bool DescriptorSetLayout::IsCompatible(DescriptorSetLayout *rh_ds_layout, string
     for (auto binding : bindings_) {
         // TODO : Do we also need to check immutable samplers?
         // VkDescriptorSetLayoutBinding *rh_binding;
-        // rh_ds_layout->FillDescriptorSetLayoutBindingStructFromBinding(binding.binding, rh_binding);
-        if (binding.descriptorCount != rh_ds_layout->GetTotalDescriptorCount()) {
+        // rh_ds_layout->FillDescriptorSetLayoutBindingStructFromBinding(binding->binding, rh_binding);
+        if (binding->descriptorCount != rh_ds_layout->GetTotalDescriptorCount()) {
             stringstream error_str;
-            error_str << "Binding " << binding.binding << " for DescriptorSetLayout " << layout_ << " has a descriptorCount of "
-                      << binding.descriptorCount << " but binding " << binding.binding << " for DescriptorSetLayout "
+            error_str << "Binding " << binding->binding << " for DescriptorSetLayout " << layout_ << " has a descriptorCount of "
+                      << binding->descriptorCount << " but binding " << binding->binding << " for DescriptorSetLayout "
                       << rh_ds_layout->GetDescriptorSetLayout() << " has a descriptorCount of "
                       << rh_ds_layout->GetTotalDescriptorCount();
             *error_msg = error_str.str();
             return false;
-        } else if (binding.descriptorType != rh_ds_layout->GetTypeFromBinding(binding.binding)) {
+        } else if (binding->descriptorType != rh_ds_layout->GetTypeFromBinding(binding->binding)) {
             stringstream error_str;
-            error_str << "Binding " << binding.binding << " for DescriptorSetLayout " << layout_ << " is type '"
-                      << string_VkDescriptorType(binding.descriptorType) << "' but binding " << binding.binding
+            error_str << "Binding " << binding->binding << " for DescriptorSetLayout " << layout_ << " is type '"
+                      << string_VkDescriptorType(binding->descriptorType) << "' but binding " << binding->binding
                       << " for DescriptorSetLayout " << rh_ds_layout->GetDescriptorSetLayout() << " is type '"
-                      << string_VkDescriptorType(rh_ds_layout->GetTypeFromBinding(binding.binding)) << "'";
+                      << string_VkDescriptorType(rh_ds_layout->GetTypeFromBinding(binding->binding)) << "'";
             *error_msg = error_str.str();
             return false;
-        } else if (binding.stageFlags != rh_ds_layout->GetStageFlagsFromBinding(binding.binding)) {
+        } else if (binding->stageFlags != rh_ds_layout->GetStageFlagsFromBinding(binding->binding)) {
             stringstream error_str;
-            error_str << "Binding " << binding.binding << " for DescriptorSetLayout " << layout_ << " has stageFlags "
-                      << binding.stageFlags << " but binding " << binding.binding << " for DescriptorSetLayout "
+            error_str << "Binding " << binding->binding << " for DescriptorSetLayout " << layout_ << " has stageFlags "
+                      << binding->stageFlags << " but binding " << binding->binding << " for DescriptorSetLayout "
                       << rh_ds_layout->GetDescriptorSetLayout() << " has stageFlags "
-                      << rh_ds_layout->GetStageFlagsFromBinding(binding.binding);
+                      << rh_ds_layout->GetStageFlagsFromBinding(binding->binding);
             *error_msg = error_str.str();
             return false;
         }
