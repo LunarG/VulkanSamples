@@ -7001,7 +7001,7 @@ vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipel
                             // Validate Dynamic Offset Minimums
                             uint32_t cur_dyn_offset = totalDynamicDescriptors;
                             for (uint32_t d = 0; d < pSet->descriptorCount; d++) {
-                                if (pSet->p_layout->GetTypeFromIndex(d) == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
+                                if (pSet->p_layout->GetTypeFromGlobalIndex(d) == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
                                     if (vk_safe_modulo(
                                             pDynamicOffsets[cur_dyn_offset],
                                             dev_data->phys_dev_properties.properties.limits.minUniformBufferOffsetAlignment) != 0) {
@@ -7015,7 +7015,7 @@ vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipel
                                             dev_data->phys_dev_properties.properties.limits.minUniformBufferOffsetAlignment);
                                     }
                                     cur_dyn_offset++;
-                                } else if (pSet->p_layout->GetTypeFromIndex(d) == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+                                } else if (pSet->p_layout->GetTypeFromGlobalIndex(d) == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
                                     if (vk_safe_modulo(
                                             pDynamicOffsets[cur_dyn_offset],
                                             dev_data->phys_dev_properties.properties.limits.minStorageBufferOffsetAlignment) != 0) {

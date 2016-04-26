@@ -104,6 +104,7 @@ class DescriptorSetLayout {
     uint32_t GetDescriptorCountFromIndex(const uint32_t);
     VkDescriptorType GetTypeFromBinding(const uint32_t);
     VkDescriptorType GetTypeFromIndex(const uint32_t);
+    VkDescriptorType GetTypeFromGlobalIndex(const uint32_t);
     VkShaderStageFlags GetStageFlagsFromBinding(const uint32_t);
     VkSampler const *GetImmutableSamplerPtrFromBinding(const uint32_t);
     // For a particular binding, get the global index
@@ -190,6 +191,17 @@ VkDescriptorType DescriptorSetLayout::GetTypeFromBinding(const uint32_t binding)
 VkDescriptorType DescriptorSetLayout::GetTypeFromIndex(const uint32_t index) {
     assert(index < bindings_.size());
     return bindings_[index]->descriptorType;
+}
+// For the given global index, return descriptorType
+//  Currently just counting up through bindings_, may improve this in future
+VkDescriptorType DescriptorSetLayout::GetTypeFromGlobalIndex(const uint32_t index) {
+    auto global_offset = 0;
+    for (auto binding : bindings_) {
+        global_offset += binding->descriptorCount;
+        if (index < global_offset)
+            return binding->descriptorType;
+    }
+    assert(0); // requested global index is out of bounds
 }
 // For the given binding, return stageFlags
 VkShaderStageFlags DescriptorSetLayout::GetStageFlagsFromBinding(const uint32_t binding) {
