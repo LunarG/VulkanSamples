@@ -2850,6 +2850,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.structMembers = []                           # List of StructMemberData records for all Vulkan structs
         self.validatedStructs = dict()                    # Map of structs type names to generated validation code for that struct type
         self.enumRanges = dict()                          # Map of enum name to BEGIN/END range values
+        self.flags = dict()                               # Map of flags typenames to a Boolean value indicating that validation code is generated for a value of this type
+        self.flagBits = dict()                            # Map of flag bits typename to list of values
         # Named tuples to store struct and command data
         self.StructType = namedtuple('StructType', ['name', 'value'])
         self.CommandParam = namedtuple('CommandParam', ['type', 'name', 'ispointer', 'isstaticarray', 'isbool', 'israngedenum',
@@ -2922,6 +2924,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         self.structMembers = []
         self.validatedStructs = dict()
         self.enumRanges = dict()
+        self.flags = dict()
+        self.flagBits = dict()
     def endFeature(self):
         # C-specific
         # Actually write the interface to the output file.
@@ -2936,6 +2940,18 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             self.processStructMemberData()
             # Generate the command parameter checking code from the captured data
             self.processCmdData()
+            # Write the declarations for the VkFlags values combining all flag bits
+            for flag in sorted(self.flags):
+                if self.flags[flag]:
+                    flagBits = flag.replace('Flags', 'FlagBits')
+                    bits = self.flagBits[flagBits]
+                    decl = 'const {} All{} = {}'.format(flag, flagBits, bits[0])
+                    for bit in bits[1:]:
+                        decl += '|' + bit
+                    decl += ';'
+                    write(decl, file=self.outFile)
+            self.newline()
+            # Write the parameter validation code to the file
             if (self.sections['command']):
                 if (self.genOpts.protectProto):
                     write(self.genOpts.protectProto,
@@ -2965,6 +2981,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             self.genStruct(typeinfo, name)
         elif (category == 'handle'):
             self.handleTypes.add(name)
+        elif (category == 'bitmask'):
+            self.flags[name] = False
     #
     # Struct parameter check generation.
     # This is a special case of the <type> tag where the contents are
@@ -3057,6 +3075,12 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         if groupName == 'VkStructureType':
             for elem in groupElem.findall('enum'):
                 self.stypes.append(elem.get('name'))
+        elif 'FlagBits' in groupName:
+            bits = []
+            for elem in groupElem.findall('enum'):
+                bits.append(elem.get('name'))
+            if bits:
+                self.flagBits[groupName] = bits
         else:
             # Determine if begin/end ranges are needed (we don't do this for VkStructureType, which has a more finely grained check)
             expandName = re.sub(r'([0-9a-z_])([A-Z0-9][^A-Z0-9]?)',r'\1_\2',groupName).upper()
@@ -3311,20 +3335,32 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 funcPrintName, valuePrintName, prefix, valueRequired, vn=value.name, sv=stype.value))
         return checkExpr
     #
-    # Generate the sType check string
+    # Generate the handle check string
     def makeHandleCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, funcPrintName, lenPrintName, valuePrintName):
         checkExpr = []
         if lenValue:
-            # This is assumed to be an output array with a pointer to a count value
             if lenValue.ispointer:
+                # This is assumed to be an output array with a pointer to a count value
                 raise('Unsupported parameter validation case: Output handle array elements are not NULL checked')
-            # This is an array with an integer count value
             else:
+                # This is an array with an integer count value
                 checkExpr.append('skipCall |= validate_handle_array(report_data, "{}", "{ldn}", "{dn}", {pf}{ln}, {pf}{vn}, {}, {});\n'.format(
                     funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix))
-        # This is assumed to be an output handle pointer
         else:
+            # This is assumed to be an output handle pointer
             raise('Unsupported parameter validation case: Output handles are not NULL checked')
+        return checkExpr
+    #
+    # Generate check string for an array of VkFlags values
+    def makeFlagsArrayCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, funcPrintName, lenPrintName, valuePrintName):
+        checkExpr = []
+        flagBitsName = value.type.replace('Flags', 'FlagBits')
+        if not flagBitsName in self.flagBits:
+            raise('Unsupported parameter validation case: array of reserved VkFlags')
+        else:
+            allFlags = 'All' + flagBitsName
+            checkExpr.append('skipCall |= validate_flags_array(report_data, "{}", "{}", "{}", "{}", {}, {pf}{}, {pf}{}, {}, {});\n'.format(funcPrintName, lenPrintName, valuePrintName, flagBitsName, allFlags, lenValue.name, value.name, lenValueRequired, valueRequired, pf=prefix))
+            self.flags[value.type] = True
         return checkExpr
     #
     # Generate pNext check string
@@ -3472,6 +3508,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 # If this is an input handle array that is not allowed to contain NULL handles, verify that none of the handles are VK_NULL_HANDLE
                 elif value.type in self.handleTypes and value.isconst and not self.isHandleOptional(value, lenParam):
                     usedLines += self.makeHandleCheck(valuePrefix, value, lenParam, req, cvReq, funcName, lenDisplayName, valueDisplayName)
+                elif value.type in self.flags and value.isconst:
+                    usedLines += self.makeFlagsArrayCheck(valuePrefix, value, lenParam, req, cvReq, funcName, lenDisplayName, valueDisplayName)
                 elif value.isbool and value.isconst:
                     usedLines.append('skipCall |= validate_bool32_array(report_data, "{}", "{}", "{}", {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, lenParam.name, value.name, cvReq, req, pf=valuePrefix))
                 elif value.israngedenum and value.isconst:
@@ -3500,6 +3538,15 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             elif value.type in self.handleTypes:
                 if not self.isHandleOptional(value, None):
                     usedLines.append('skipCall |= validate_required_handle(report_data, "{}", "{}", {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name))
+            elif value.type in self.flags:
+                flagBitsName = value.type.replace('Flags', 'FlagBits')
+                if not flagBitsName in self.flagBits:
+                    usedLines.append('skipCall |= validate_reserved(report_data, "{}", "{}", {pf}{});\n'.format(funcName, valueDisplayName, value.name, pf=valuePrefix))
+                else:
+                    flagsRequired = 'false' if value.isoptional else 'true'
+                    allFlagsName = 'All' + flagBitsName
+                    usedLines.append('skipCall |= validate_flags(report_data, "{}", "{}", "{}", {}, {pf}{}, {});\n'.format(funcName, valueDisplayName, flagBitsName, allFlagsName, value.name, flagsRequired, pf=valuePrefix))
+                    self.flags[value.type] = True
             elif value.isbool:
                 usedLines.append('skipCall |= validate_bool32(report_data, "{}", "{}", {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name))
             elif value.israngedenum:
