@@ -602,13 +602,30 @@ static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf) {
     err = vkBeginCommandBuffer(cmd_buf, &cmd_buf_info);
     assert(!err);
 
+    // We can use LAYOUT_UNDEFINED as a wildcard here because we don't care what
+    // happens to the previous contents of the image
+    VkImageMemoryBarrier image_memory_barrier = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .pNext = NULL,
+        .srcAccessMask = 0,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = demo->buffers[demo->current_buffer].image,
+        .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+
+    vkCmdPipelineBarrier(cmd_buf, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0,
+                         NULL, 1, &image_memory_barrier);
+
     vkCmdBeginRenderPass(cmd_buf, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, demo->pipeline);
     vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             demo->pipeline_layout, 0, 1, &demo->desc_set, 0,
                             NULL);
-
     VkViewport viewport;
     memset(&viewport, 0, sizeof(viewport));
     viewport.height = (float)demo->height;
@@ -624,7 +641,6 @@ static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf) {
     scissor.offset.x = 0;
     scissor.offset.y = 0;
     vkCmdSetScissor(cmd_buf, 0, 1, &scissor);
-
     vkCmdDraw(cmd_buf, 12 * 3, 1, 0, 0);
     vkCmdEndRenderPass(cmd_buf);
 
@@ -706,13 +722,6 @@ static void demo_draw(struct demo *demo) {
         assert(!err);
     }
 
-    // Assume the command buffer has been run on current_buffer before so
-    // we need to set the image layout back to COLOR_ATTACHMENT_OPTIMAL
-    demo_set_image_layout(demo, demo->buffers[demo->current_buffer].image,
-                          VK_IMAGE_ASPECT_COLOR_BIT,
-                          VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                          0);
     demo_flush_init_cmd(demo);
 
     // Wait for the present complete semaphore to be signaled to ensure
@@ -720,7 +729,6 @@ static void demo_draw(struct demo *demo) {
     // engine has fully released ownership to the application, and it is
     // okay to render to the image.
 
-    // FIXME/TODO: DEAL WITH VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
     VkPipelineStageFlags pipe_stage_flags =
         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     VkSubmitInfo submit_info = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -908,15 +916,6 @@ static void demo_prepare_buffers(struct demo *demo) {
         };
 
         demo->buffers[i].image = swapchainImages[i];
-
-        // Render loop will expect image to have been used before and in
-        // VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-        // layout and will change to COLOR_ATTACHMENT_OPTIMAL, so init the image
-        // to that state
-        demo_set_image_layout(
-            demo, demo->buffers[i].image, VK_IMAGE_ASPECT_COLOR_BIT,
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-            0);
 
         color_image_view.image = demo->buffers[i].image;
 
