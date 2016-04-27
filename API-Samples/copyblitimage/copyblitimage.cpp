@@ -85,7 +85,7 @@ int sample_main(int argc, char *argv[]) {
     presentCompleteSemaphoreCreateInfo.sType =
         VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     presentCompleteSemaphoreCreateInfo.pNext = NULL;
-    presentCompleteSemaphoreCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    presentCompleteSemaphoreCreateInfo.flags = 0;
 
     res = vkCreateSemaphore(info.device, &presentCompleteSemaphoreCreateInfo,
                             NULL, &presentCompleteSemaphore);
