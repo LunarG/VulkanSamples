@@ -2501,7 +2501,7 @@ static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShade
 // Validate that the shaders used by the given pipeline and store the active_slots
 //  that are actually used by the pipeline into pPipeline->active_slots
 static bool validate_and_capture_pipeline_shader_state(layer_data *my_data, PIPELINE_NODE *pPipeline) {
-    auto pCreateInfo = reinterpret_cast<VkGraphicsPipelineCreateInfo const *>(&pPipeline->graphicsPipelineCI);
+    auto pCreateInfo = pPipeline->graphicsPipelineCI.ptr();
     int vertex_stage = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
     int fragment_stage = get_shader_stage_id(VK_SHADER_STAGE_FRAGMENT_BIT);
 
@@ -2515,8 +2515,7 @@ static bool validate_and_capture_pipeline_shader_state(layer_data *my_data, PIPE
     auto pipelineLayout = pCreateInfo->layout != VK_NULL_HANDLE ? &my_data->pipelineLayoutMap[pCreateInfo->layout] : nullptr;
 
     for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
-        VkPipelineShaderStageCreateInfo const *pStage =
-            reinterpret_cast<VkPipelineShaderStageCreateInfo const *>(&pCreateInfo->pStages[i]);
+        auto pStage = &pCreateInfo->pStages[i];
         auto stage_id = get_shader_stage_id(pStage->stage);
         pass &= validate_pipeline_shader_stage(my_data, pStage, pPipeline, pipelineLayout,
                                                &shaders[stage_id], &entrypoints[stage_id]);
@@ -2562,7 +2561,7 @@ static bool validate_and_capture_pipeline_shader_state(layer_data *my_data, PIPE
 }
 
 static bool validate_compute_pipeline(layer_data *my_data, PIPELINE_NODE *pPipeline) {
-    auto pCreateInfo = reinterpret_cast<VkComputePipelineCreateInfo const *>(&pPipeline->computePipelineCI);
+    auto pCreateInfo = pPipeline->computePipelineCI.ptr();
 
     auto pipelineLayout = pCreateInfo->layout != VK_NULL_HANDLE ? &my_data->pipelineLayoutMap[pCreateInfo->layout] : nullptr;
 

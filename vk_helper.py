@@ -1602,6 +1602,8 @@ class StructWrapperGen:
             ss_decls.append("    %s();" % (ss_name))
             ss_decls.append("    ~%s();" % (ss_name))
             ss_decls.append("    void initialize(const %s* pInStruct);" % (s))
+            ss_decls.append("    %s *ptr() { return reinterpret_cast<%s *>(this); }" % (s, s))
+            ss_decls.append("    %s const *ptr() const { return reinterpret_cast<%s const *>(this); }" % (s, s))
             ss_decls.append("};")
             if s in ifdef_dict:
                 ss_decls.append('#endif')

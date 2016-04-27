@@ -163,12 +163,12 @@ DescriptorSetLayout::~DescriptorSetLayout() {
 VkDescriptorSetLayoutBinding const *DescriptorSetLayout::GetDescriptorSetLayoutBindingPtrFromBinding(const uint32_t binding) {
     if (!binding_to_index_map_.count(binding))
         return nullptr;
-    return reinterpret_cast<VkDescriptorSetLayoutBinding const *>(bindings_[binding_to_index_map_[binding]]);
+    return bindings_[binding_to_index_map_[binding]]->ptr();
 }
 VkDescriptorSetLayoutBinding const *DescriptorSetLayout::GetDescriptorSetLayoutBindingPtrFromIndex(const uint32_t index) {
     if (index >= bindings_.size())
         return nullptr;
-    return reinterpret_cast<VkDescriptorSetLayoutBinding const *>(bindings_[index]);
+    return bindings_[index]->ptr();
 }
 // Return descriptorCount for given binding, 0 if index is unavailable
 uint32_t DescriptorSetLayout::GetDescriptorCountFromBinding(const uint32_t binding) {
