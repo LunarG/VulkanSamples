@@ -37,8 +37,9 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/layers \
                     $(LAYER_DIR)/include \
                     $(SRC_DIR)/loader \
-                    $(SRC_DIR)/../glslang
-LOCAL_STATIC_LIBRARIES += layer_utils
+                    $(SRC_DIR)/../glslang \
+		    $(SRC_DIR)/../spirv-tools/include
+LOCAL_STATIC_LIBRARIES += layer_utils SPIRV-Tools-prebuilt
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
