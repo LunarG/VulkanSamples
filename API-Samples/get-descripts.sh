@@ -12,15 +12,21 @@
 # save command directory
 CMDDIR="$(dirname "$(readlink -f ${BASH_SOURCE[0]})")"
 
+SAMPS=`find "$CMDDIR" -name *.cpp -not -path "*util*"`
+
 # read all source .cpp files and display the long description
-for f in $CMDDIR/*.cpp
+IFS=$(echo -en "\n\b")
+for f in $SAMPS
 do
-#   DESCRIPT=`sed -n '/VULKAN_SAMPLE_DESCRIPTION_START/,/VULKAN_SAMPLE_DESCRIPTION_END/p' $f`
-   DESCRIPT=`sed -n '/^VULKAN_SAMPLE_DESCRIPTION_START$/,/^VULKAN_SAMPLE_DESCRIPTION_END$/{ /^VULKAN_SAMPLE_DESCRIPTION_START/d; /^VULKAN_SAMPLE_DESCRIPTION_END/d; p; }' $f`
+   DESCRIPT=`sed -n '/^VULKAN_SAMPLE_DESCRIPTION_START$/,/^VULKAN_SAMPLE_DESCRIPTION_END$/{ /^VULKAN_SAMPLE_DESCRIPTION_START/d; /^VULKAN_SAMPLE_DESCRIPTION_END/d; p; }' "$f"`
+   BNAME=`basename $f`
    if [ ! -z "$DESCRIPT" ]; then
-       BNAME=`basename $f`
        echo "$BNAME:"
        echo "$DESCRIPT"
+       echo ""
+   else
+       echo "$BNAME:"
+       echo No Description
        echo ""
    fi
 done

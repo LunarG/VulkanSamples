@@ -39,14 +39,15 @@ fi
 CMDDIR="$(dirname "$(readlink -f ${BASH_SOURCE[0]})")"
 
 # get the list of built samples to run
-SAMP2RUN=`find $CMDDIR -name *.cpp -not -path "*util*"`
+SAMP2RUN=`find "$CMDDIR" -name *.cpp -not -path "*util*"`
 #echo "SAMP2RUN is $SAMP2RUN"
 
 # display short description of the sample and run it
+IFS=$(echo -en "\n\b")
 for f in $SAMP2RUN
 do
    # get short description of the sample source file
-   DESCRIPT=`$CMDDIR/get-short-descripts.sh --nofname --sampfname $f`
+   DESCRIPT=`"$CMDDIR/get-short-descripts.sh" --nofname --sampfname "$f"`
    BNAME=$(basename $f)
    echo "RUNNING SAMPLE:  $BNAME"
    echo "  ** $DESCRIPT"

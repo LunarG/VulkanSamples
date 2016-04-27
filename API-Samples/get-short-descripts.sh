@@ -15,7 +15,7 @@ NOFNAME=""
 CMDDIR="$(dirname "$(readlink -f ${BASH_SOURCE[0]})")"
 
 # default to displaying short descriptions of all samples
-SAMP2DISP="$CMDDIR/*.cpp"
+SAMP2DISP=`find "$CMDDIR" -name *.cpp -not -path "*util*"`
 
 
 # parse the arguments
@@ -34,6 +34,7 @@ while test $# -gt 0; do
 done
 
 # read all identified .cpp file(s) and display the short description
+IFS=$(echo -en "\n\b")
 for f in $SAMP2DISP
 do
    SHORT_DESCRIPT=`sed -n '/VULKAN_SAMPLE_SHORT_DESCRIPTION/{n;p}' $f`
