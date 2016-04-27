@@ -2501,13 +2501,57 @@ vkGetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubreso
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device, const VkImageViewCreateInfo *pCreateInfo,
                                                                  const VkAllocationCallbacks *pAllocator, VkImageView *pView) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    bool skipCall = false;
+    bool skip_call = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     assert(my_data != NULL);
+    debug_report_data *report_data = my_data->report_data;
 
-    skipCall |= parameter_validation_vkCreateImageView(my_data->report_data, pCreateInfo, pAllocator, pView);
+    skip_call |= parameter_validation_vkCreateImageView(report_data, pCreateInfo, pAllocator, pView);
 
-    if (!skipCall) {
+    if (pCreateInfo != nullptr) {
+        if ((pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_1D) || (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_2D)) {
+            if (pCreateInfo->subresourceRange.layerCount != 1) {
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                     LayerName, "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_%dD, "
+                                                "pCreateInfo->subresourceRange.layerCount must be 1",
+                                     ((pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_1D) ? 1 : 2));
+            }
+        } else if ((pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_1D_ARRAY) ||
+                   (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_1D_ARRAY)) {
+            if (pCreateInfo->subresourceRange.layerCount < 1) {
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                     LayerName, "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_%dD_ARRAY, "
+                                                "pCreateInfo->subresourceRange.layerCount must be >= 1",
+                                     ((pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_1D_ARRAY) ? 1 : 2));
+            }
+        } else if (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_CUBE) {
+            if (pCreateInfo->subresourceRange.layerCount != 6) {
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                     LayerName, "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_CUBE, "
+                                                "pCreateInfo->subresourceRange.layerCount must be 6");
+            }
+        } else if (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) {
+            if ((pCreateInfo->subresourceRange.layerCount == 0) || ((pCreateInfo->subresourceRange.layerCount % 6) != 0)) {
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                     LayerName, "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_CUBE_ARRAY, "
+                                                "pCreateInfo->subresourceRange.layerCount must be a multiple of 6");
+            }
+        } else if (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_3D) {
+            if (pCreateInfo->subresourceRange.baseArrayLayer != 0) {
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                     LayerName, "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_3D, "
+                                                "pCreateInfo->subresourceRange.baseArrayLayer must be 0");
+            }
+
+            if (pCreateInfo->subresourceRange.layerCount != 1) {
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                     LayerName, "vkCreateImageView: if pCreateInfo->viewType is VK_IMAGE_TYPE_3D, "
+                                                "pCreateInfo->subresourceRange.layerCount must be 1");
+            }
+        }
+    }
+
+    if (!skip_call) {
         result = get_dispatch_table(pc_device_table_map, device)->CreateImageView(device, pCreateInfo, pAllocator, pView);
 
         validate_result(my_data->report_data, "vkCreateImageView", result);
