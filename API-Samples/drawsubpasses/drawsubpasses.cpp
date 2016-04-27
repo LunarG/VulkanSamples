@@ -223,6 +223,7 @@ int sample_main(int argc, char *argv[]) {
     VkPipelineVertexInputStateCreateInfo vi;
     vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vi.pNext = NULL;
+    vi.flags = 0;
     vi.vertexBindingDescriptionCount = 1;
     vi.pVertexBindingDescriptions = &info.vi_binding;
     vi.vertexAttributeDescriptionCount = 2;
@@ -231,12 +232,14 @@ int sample_main(int argc, char *argv[]) {
     VkPipelineInputAssemblyStateCreateInfo ia;
     ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     ia.pNext = NULL;
+    ia.flags = 0;
     ia.primitiveRestartEnable = VK_FALSE;
     ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     VkPipelineRasterizationStateCreateInfo rs;
     rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rs.pNext = NULL;
+    rs.flags = 0;
     rs.polygonMode = VK_POLYGON_MODE_FILL;
     rs.cullMode = VK_CULL_MODE_BACK_BIT;
     rs.frontFace = VK_FRONT_FACE_CLOCKWISE;
@@ -251,6 +254,7 @@ int sample_main(int argc, char *argv[]) {
     VkPipelineColorBlendStateCreateInfo cb;
     cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     cb.pNext = NULL;
+    cb.flags = 0;
     VkPipelineColorBlendAttachmentState att_state[1];
     att_state[0].colorWriteMask = 0xf;
     att_state[0].blendEnable = VK_FALSE;
@@ -282,6 +286,7 @@ int sample_main(int argc, char *argv[]) {
     VkPipelineDepthStencilStateCreateInfo ds;
     ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     ds.pNext = NULL;
+    ds.flags = 0;
     ds.depthTestEnable = VK_TRUE;
     ds.depthWriteEnable = VK_TRUE;
     ds.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
@@ -302,6 +307,7 @@ int sample_main(int argc, char *argv[]) {
     VkPipelineMultisampleStateCreateInfo ms;
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pNext = NULL;
+    ms.flags = 0;
     ms.pSampleMask = NULL;
     ms.rasterizationSamples = NUM_SAMPLES;
     ms.sampleShadingEnable = VK_FALSE;
