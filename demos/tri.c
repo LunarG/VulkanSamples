@@ -44,7 +44,11 @@
 #define APP_NAME_STR_LEN 80
 #endif // _WIN32
 
+#ifdef ANDROID
+#include "vulkan_wrapper.h"
+#else
 #include <vulkan/vulkan.h>
+#endif
 
 #define DEMO_TEXTURE_COUNT 1
 #define VERTEX_BUFFER_BIND_ID 0
@@ -2621,9 +2625,17 @@ static void processCommand(struct android_app* app, int32_t cmd) {
     }
 }
 
+
+
 void android_main(struct android_app *app)
 {
     app_dummy();
+
+#ifdef ANDROID
+    int vulkanSupport = InitVulkan();
+    if (vulkanSupport == 0)
+        return;
+#endif
 
     app->onAppCmd = processCommand;
     app->onInputEvent = processInput;
