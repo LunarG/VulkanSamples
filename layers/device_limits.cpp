@@ -680,37 +680,16 @@ EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
     return my_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(physicalDevice, pLayerName, pCount, pProperties);
 }
 
+static PFN_vkVoidFunction
+intercept_core_device_command(const char *name);
+
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
 GetDeviceProcAddr(VkDevice dev, const char *funcName) {
-    if (!strcmp(funcName, "vkGetDeviceProcAddr"))
-        return (PFN_vkVoidFunction)GetDeviceProcAddr;
-    if (!strcmp(funcName, "vkDestroyDevice"))
-        return (PFN_vkVoidFunction)DestroyDevice;
-    if (!strcmp(funcName, "vkGetDeviceQueue"))
-        return (PFN_vkVoidFunction)GetDeviceQueue;
-    if (!strcmp(funcName, "vkCreateRenderPass"))
-        return (PFN_vkVoidFunction)CreateRenderPass;
-    if (!strcmp(funcName, "vkCreateCommandPool"))
-        return (PFN_vkVoidFunction)CreateCommandPool;
-    if (!strcmp(funcName, "vkDestroyCommandPool"))
-        return (PFN_vkVoidFunction)DestroyCommandPool;
-    if (!strcmp(funcName, "vkResetCommandPool"))
-        return (PFN_vkVoidFunction)ResetCommandPool;
-    if (!strcmp(funcName, "vkAllocateCommandBuffers"))
-        return (PFN_vkVoidFunction)AllocateCommandBuffers;
-    if (!strcmp(funcName, "vkFreeCommandBuffers"))
-        return (PFN_vkVoidFunction)FreeCommandBuffers;
-    if (!strcmp(funcName, "vkBeginCommandBuffer"))
-        return (PFN_vkVoidFunction)BeginCommandBuffer;
-    if (!strcmp(funcName, "vkCmdUpdateBuffer"))
-        return (PFN_vkVoidFunction)CmdUpdateBuffer;
-    if (!strcmp(funcName, "vkUpdateDescriptorSets"))
-        return (PFN_vkVoidFunction)UpdateDescriptorSets;
-    if (!strcmp(funcName, "vkCmdFillBuffer"))
-        return (PFN_vkVoidFunction)CmdFillBuffer;
+    PFN_vkVoidFunction proc = intercept_core_device_command(funcName);
+    if (proc)
+        return proc;
 
-    if (dev == NULL)
-        return NULL;
+    assert(dev);
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
@@ -776,6 +755,35 @@ GetInstanceProcAddr(VkInstance instance, const char *funcName) {
             return NULL;
         return pTable->GetInstanceProcAddr(instance, funcName);
     }
+}
+
+static PFN_vkVoidFunction
+intercept_core_device_command(const char *name) {
+    static const struct {
+        const char *name;
+        PFN_vkVoidFunction proc;
+    } core_device_commands[] = {
+        { "vkGetDeviceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceProcAddr) },
+        { "vkDestroyDevice", reinterpret_cast<PFN_vkVoidFunction>(DestroyDevice) },
+        { "vkGetDeviceQueue", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceQueue) },
+        { "vkCreateRenderPass", reinterpret_cast<PFN_vkVoidFunction>(CreateRenderPass) },
+        { "vkCreateCommandPool", reinterpret_cast<PFN_vkVoidFunction>(CreateCommandPool) },
+        { "vkDestroyCommandPool", reinterpret_cast<PFN_vkVoidFunction>(DestroyCommandPool) },
+        { "vkResetCommandPool", reinterpret_cast<PFN_vkVoidFunction>(ResetCommandPool) },
+        { "vkAllocateCommandBuffers", reinterpret_cast<PFN_vkVoidFunction>(AllocateCommandBuffers) },
+        { "vkFreeCommandBuffers", reinterpret_cast<PFN_vkVoidFunction>(FreeCommandBuffers) },
+        { "vkBeginCommandBuffer", reinterpret_cast<PFN_vkVoidFunction>(BeginCommandBuffer) },
+        { "vkCmdUpdateBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdUpdateBuffer) },
+        { "vkUpdateDescriptorSets", reinterpret_cast<PFN_vkVoidFunction>(UpdateDescriptorSets) },
+        { "vkCmdFillBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdFillBuffer) },
+    };
+
+    for (size_t i = 0; i < ARRAY_SIZE(core_device_commands); i++) {
+        if (!strcmp(core_device_commands[i].name, name))
+            return core_device_commands[i].proc;
+    }
+
+    return nullptr;
 }
 
 } // namespace device_limits
