@@ -193,39 +193,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
 
 static const VkExtensionProperties instance_extensions[] = {{VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
-vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount, VkExtensionProperties *pProperties) {
-    return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);
-}
-
 static const VkLayerProperties pc_global_layers[] = {{
     "VK_LAYER_LUNARG_image", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
 }};
-
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
-vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
-    return util_GetLayerProperties(ARRAY_SIZE(pc_global_layers), pc_global_layers, pCount, pProperties);
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
-                                                                                    const char *pLayerName, uint32_t *pCount,
-                                                                                    VkExtensionProperties *pProperties) {
-    // Image does not have any physical device extensions
-    if (pLayerName == NULL) {
-        dispatch_key key = get_dispatch_key(physicalDevice);
-        layer_data *my_data = get_my_data_ptr(key, layer_data_map);
-        VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
-        return pTable->EnumerateDeviceExtensionProperties(physicalDevice, NULL, pCount, pProperties);
-    } else {
-        return util_GetExtensionProperties(0, NULL, pCount, pProperties);
-    }
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
-vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties *pProperties) {
-    // ParamChecker's physical device layers are the same as global
-    return util_GetLayerProperties(ARRAY_SIZE(pc_global_layers), pc_global_layers, pCount, pProperties);
-}
 
 // Start of the Image layer proper
 
@@ -1270,6 +1240,20 @@ vkGetPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceP
     phy_dev_data->instance_dispatch_table->GetPhysicalDeviceProperties(physicalDevice, pProperties);
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
+                                                                                    const char *pLayerName, uint32_t *pCount,
+                                                                                    VkExtensionProperties *pProperties) {
+    // Image does not have any physical device extensions
+    if (pLayerName == NULL) {
+        dispatch_key key = get_dispatch_key(physicalDevice);
+        layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+        VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
+        return pTable->EnumerateDeviceExtensionProperties(physicalDevice, NULL, pCount, pProperties);
+    } else {
+        return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+    }
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char *funcName) {
     if (!strcmp(funcName, "vkGetDeviceProcAddr"))
         return (PFN_vkVoidFunction)vkGetDeviceProcAddr;
@@ -1352,4 +1336,20 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
     if (pTable->GetInstanceProcAddr == NULL)
         return NULL;
     return pTable->GetInstanceProcAddr(instance, funcName);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount, VkExtensionProperties *pProperties) {
+    return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
+    return util_GetLayerProperties(ARRAY_SIZE(pc_global_layers), pc_global_layers, pCount, pProperties);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties *pProperties) {
+    // ParamChecker's physical device layers are the same as global
+    return util_GetLayerProperties(ARRAY_SIZE(pc_global_layers), pc_global_layers, pCount, pProperties);
 }
