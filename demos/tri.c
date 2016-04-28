@@ -939,20 +939,22 @@ static void demo_prepare_textures(struct demo *demo) {
              VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) &&
             !demo->use_staging_buffer) {
             /* Device can texture using linear textures */
-            demo_prepare_texture_image(demo, tex_colors[i], &demo->textures[i],
-                                       VK_IMAGE_TILING_LINEAR,
-                                       VK_IMAGE_USAGE_SAMPLED_BIT,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            demo_prepare_texture_image(
+                demo, tex_colors[i], &demo->textures[i], VK_IMAGE_TILING_LINEAR,
+                VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         } else if (props.optimalTilingFeatures &
                    VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) {
             /* Must use staging buffer to copy linear texture to optimized */
             struct texture_object staging_texture;
 
             memset(&staging_texture, 0, sizeof(staging_texture));
-            demo_prepare_texture_image(demo, tex_colors[i], &staging_texture,
-                                       VK_IMAGE_TILING_LINEAR,
-                                       VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            demo_prepare_texture_image(
+                demo, tex_colors[i], &staging_texture, VK_IMAGE_TILING_LINEAR,
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
             demo_prepare_texture_image(
                 demo, tex_colors[i], &demo->textures[i],
@@ -1082,7 +1084,8 @@ static void demo_prepare_vertices(struct demo *demo) {
 
     mem_alloc.allocationSize = mem_reqs.size;
     pass = memory_type_from_properties(demo, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &mem_alloc.memoryTypeIndex);
     assert(pass);
 

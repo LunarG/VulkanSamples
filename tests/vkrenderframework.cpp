@@ -819,7 +819,8 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     void *data;
     uint32_t x, y;
     VkImageObj stagingImage(device);
-    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
     stagingImage.init(16, 16, tex_format, VK_IMAGE_USAGE_TRANSFER_DST_BIT |
                                               VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
@@ -924,7 +925,8 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
     m_numVertices = constantCount;
     m_stride = constantSize;
 
-    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     const size_t allocationSize = constantCount * constantSize;
     init_as_src_and_dst(*m_device, allocationSize, reqs);
 
@@ -1054,7 +1056,8 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes,
     }
 
     const size_t allocationSize = numIndexes * m_stride;
-    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     init_as_src_and_dst(*m_device, allocationSize, reqs);
 
     void *pData = memory().map();
