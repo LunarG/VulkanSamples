@@ -291,7 +291,7 @@ static bool memory_type_from_properties(struct demo *demo, uint32_t typeBits,
                                         VkFlags requirements_mask,
                                         uint32_t *typeIndex) {
     // Search memtypes to find first index with those properties
-    for (uint32_t i = 0; i < 32; i++) {
+    for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
         if ((typeBits & 1) == 1) {
             // Type is available, does it match user properties?
             if ((demo->memory_properties.memoryTypes[i].propertyFlags &
