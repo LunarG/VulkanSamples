@@ -242,9 +242,13 @@ static inline bool log_msg(debug_report_data *debug_data, VkFlags msgFlags, VkDe
     va_list argptr;
     va_start(argptr, format);
     char *str;
-    vasprintf(&str, format, argptr);
+    if (-1 == vasprintf(&str, format, argptr)) {
+        /* on failure, glibc vasprintf leaves str undefined */
+        str = nullptr;
+    }
     va_end(argptr);
-    bool result = debug_report_log_msg(debug_data, msgFlags, objectType, srcObject, location, msgCode, pLayerPrefix, str);
+    bool result = debug_report_log_msg(debug_data, msgFlags, objectType, srcObject, location, msgCode, pLayerPrefix,
+                                       str ? str : "Allocation failure");
     free(str);
     return result;
 }
