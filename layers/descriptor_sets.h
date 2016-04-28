@@ -91,7 +91,7 @@ class DescriptorSetLayout {
     uint32_t GetDynamicDescriptorCount() { return dynamic_descriptor_count_; };
     uint32_t GetBindingCount() { return binding_count_; };
     // Return true if given binding is present in this layout
-    bool HasBinding(const uint32_t binding) { return binding_to_index_map_.count(binding); };
+    bool HasBinding(const uint32_t binding) { return binding_to_index_map_.count(binding) > 0; };
     // Return true if this layout is compatible with passed in layout,
     //   else return false and update error_msg with description of incompatibility
     bool IsCompatible(DescriptorSetLayout *, string *error_msg);
@@ -195,7 +195,7 @@ VkDescriptorType DescriptorSetLayout::GetTypeFromIndex(const uint32_t index) {
 // For the given global index, return descriptorType
 //  Currently just counting up through bindings_, may improve this in future
 VkDescriptorType DescriptorSetLayout::GetTypeFromGlobalIndex(const uint32_t index) {
-    auto global_offset = 0;
+    uint32_t global_offset = 0;
     for (auto binding : bindings_) {
         global_offset += binding->descriptorCount;
         if (index < global_offset)
