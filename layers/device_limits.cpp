@@ -93,9 +93,9 @@ static void init_device_limits(layer_data *my_data, const VkAllocationCallbacks 
 
 static const VkExtensionProperties instance_extensions[] = {{VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};
 
-static const VkLayerProperties dl_global_layers[] = {{
+static const VkLayerProperties global_layer = {
     "VK_LAYER_LUNARG_device_limits", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
-}};
+};
 
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkInstance *pInstance) {
@@ -804,12 +804,12 @@ vkDebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags, VkDebu
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
-    return util_GetLayerProperties(ARRAY_SIZE(device_limits::dl_global_layers), device_limits::dl_global_layers, pCount, pProperties);
+    return util_GetLayerProperties(1, &device_limits::global_layer, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties *pProperties) {
-    return util_GetLayerProperties(ARRAY_SIZE(device_limits::dl_global_layers), device_limits::dl_global_layers, pCount, pProperties);
+    return util_GetLayerProperties(1, &device_limits::global_layer, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
