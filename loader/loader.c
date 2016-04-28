@@ -1008,24 +1008,6 @@ get_dev_extension_property(const char *name,
     return NULL;
 }
 
-/*
- * This function will return the pNext pointer of any
- * CreateInfo extensions that are not loader extensions.
- * This is used to skip past the loader extensions prepended
- * to the list during CreateInstance and CreateDevice.
- */
-void *loader_strip_create_extensions(const void *pNext) {
-    VkLayerInstanceCreateInfo *create_info = (VkLayerInstanceCreateInfo *)pNext;
-
-    while (
-        create_info &&
-        (create_info->sType == VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO ||
-         create_info->sType == VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO)) {
-        create_info = (VkLayerInstanceCreateInfo *)create_info->pNext;
-    }
-
-    return create_info;
-}
 
 /*
  * For Instance extensions implemented within the loader (i.e. DEBUG_REPORT
@@ -3575,9 +3557,6 @@ terminator_CreateInstance(const VkInstanceCreateInfo *pCreateInfo,
     icd_create_info.enabledLayerCount = 0;
     icd_create_info.ppEnabledLayerNames = NULL;
 
-    // strip off the VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO entries
-    icd_create_info.pNext = loader_strip_create_extensions(pCreateInfo->pNext);
-
     /*
      * NOTE: Need to filter the extensions to only those
      * supported by the ICD.
@@ -3720,7 +3699,6 @@ terminator_CreateDevice(VkPhysicalDevice physicalDevice,
 
     VkDeviceCreateInfo localCreateInfo;
     memcpy(&localCreateInfo, pCreateInfo, sizeof(localCreateInfo));
-    localCreateInfo.pNext = loader_strip_create_extensions(pCreateInfo->pNext);
 
     /*
      * NOTE: Need to filter the extensions to only those
