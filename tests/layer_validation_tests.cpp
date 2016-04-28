@@ -612,6 +612,182 @@ TEST_F(VkLayerTest, CallBeginCommandBufferBeforeCompletion)
 }
 #endif
 
+TEST_F(VkLayerTest, EnableWsiBeforeUse) {
+    VkResult err;
+    bool pass;
+
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+    VkSwapchainCreateInfoKHR swapchain_create_info = {};
+    uint32_t swapchain_image_count = 0;
+//    VkImage swapchain_images[1] = {VK_NULL_HANDLE};
+    uint32_t image_index = 0;
+//    VkPresentInfoKHR present_info = {};
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+#if defined(VK_USE_PLATFORM_XCB_KHR)
+    // Use the functions from the VK_KHR_xcb_surface extension without enabling
+    // that extension:
+
+    // Create a surface:
+    VkXcbSurfaceCreateInfoKHR xcb_create_info = {};
+#if 0
+#endif
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    err = vkCreateXcbSurfaceKHR(instance(), &xcb_create_info, NULL, &surface);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Tell whether an xcb_visualid_t supports presentation:
+    xcb_connection_t *connection = NULL;
+    xcb_visualid_t visual_id = 0;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    vkGetPhysicalDeviceXcbPresentationSupportKHR(gpu(), 0, connection,
+        visual_id);
+    m_errorMonitor->VerifyFound();
+#endif // VK_USE_PLATFORM_XCB_KHR
+
+
+    // Use the functions from the VK_KHR_surface extension without enabling
+    // that extension:
+
+    // Destroy a surface:
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    vkDestroySurfaceKHR(instance(), surface, NULL);
+    m_errorMonitor->VerifyFound();
+
+    // Check if surface supports presentation:
+    VkBool32 supported = false;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    err = vkGetPhysicalDeviceSurfaceSupportKHR(gpu(), 0, surface, &supported);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Check surface capabilities:
+    VkSurfaceCapabilitiesKHR capabilities = {};
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu(), surface,
+        &capabilities);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Check surface formats:
+    uint32_t format_count = 0;
+    VkSurfaceFormatKHR *formats = NULL;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    err = vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface,
+        &format_count, formats);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Check surface present modes:
+    uint32_t present_mode_count = 0;
+    VkSurfaceFormatKHR *present_modes = NULL;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    err = vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface,
+        &present_mode_count, present_modes);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+
+    // Use the functions from the VK_KHR_swapchain extension without enabling
+    // that extension:
+
+    // Create a swapchain:
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchain_create_info.pNext = NULL;
+#if 0
+    swapchain_create_info.flags = 0;
+    swapchain_create_info.surface = 0;
+    swapchain_create_info.minImageCount = 0;
+    swapchain_create_info.imageFormat = 0;
+    swapchain_create_info.imageColorSpace = 0;
+    swapchain_create_info.imageExtent.width = 0;
+    swapchain_create_info.imageExtent.height = 0;
+    swapchain_create_info.imageArrayLayers = 0;
+    swapchain_create_info.imageUsage = 0;
+    swapchain_create_info.imageSharingMode = 0;
+    swapchain_create_info.queueFamilyIndexCount = 0;
+    swapchain_create_info.preTransform = 0;
+    swapchain_create_info.compositeAlpha = 0;
+    swapchain_create_info.presentMode = 0;
+    swapchain_create_info.clipped = 0;
+    swapchain_create_info.oldSwapchain = NULL;
+#endif
+    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info,
+                               NULL, &swapchain);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Get the images from the swapchain:
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    err = vkGetSwapchainImagesKHR(m_device->device(), swapchain,
+                                  &swapchain_image_count, NULL);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Try to acquire an image:
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    err = vkAcquireNextImageKHR(m_device->device(), swapchain, 0,
+                                VK_NULL_HANDLE, VK_NULL_HANDLE, &image_index);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Try to present an image:
+#if 0   // NOTE: Currently can't test this because a real swapchain is needed
+        // (as opposed to the fake one we created) in order for the layer to
+        // lookup the VkDevice used to enable the extension:
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.pNext = NULL;
+#if 0
+#endif
+    err = vkQueuePresentKHR(m_device->m_queue, &present_info);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+#endif
+
+    // Destroy the swapchain:
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    vkDestroySwapchainKHR(m_device->device(), swapchain, NULL);
+    m_errorMonitor->VerifyFound();
+}
+
 TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit) {
     VkResult err;
     bool pass;

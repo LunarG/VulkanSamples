@@ -58,6 +58,7 @@ class VkRenderFramework : public VkTestFramework {
     VkRenderFramework();
     ~VkRenderFramework();
 
+    VkInstance instance() { return inst; }
     VkDevice device() { return m_device->device(); }
     VkPhysicalDevice gpu() { return objs[0]; }
     VkRenderPass renderPass() { return m_renderPass; }
