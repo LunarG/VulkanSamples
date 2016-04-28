@@ -2133,15 +2133,15 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevi
     return my_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(physicalDevice, NULL, pCount, pProperties);
 }
 
-VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
-    if (!strcmp("vkGetDeviceProcAddr", funcName))
-        return (PFN_vkVoidFunction)GetDeviceProcAddr;
-    if (!strcmp(funcName, "vkDestroyDevice"))
-        return (PFN_vkVoidFunction)DestroyDevice;
+static PFN_vkVoidFunction
+intercept_core_device_command(const char *name);
 
-    if (device == VK_NULL_HANDLE) {
-        return NULL;
-    }
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
+    PFN_vkVoidFunction proc = intercept_core_device_command(funcName);
+    if (proc)
+        return proc;
+
+    assert(device);
 
     layer_data *my_data;
 
@@ -2157,8 +2157,6 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, cons
         return reinterpret_cast<PFN_vkVoidFunction>(AcquireNextImageKHR);
     if (!strcmp("vkQueuePresentKHR", funcName))
         return reinterpret_cast<PFN_vkVoidFunction>(QueuePresentKHR);
-    if (!strcmp("vkGetDeviceQueue", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetDeviceQueue);
 
     if (pDisp->GetDeviceProcAddr == NULL)
         return NULL;
@@ -2249,6 +2247,25 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
     if (pTable->GetInstanceProcAddr == NULL)
         return NULL;
     return pTable->GetInstanceProcAddr(instance, funcName);
+}
+
+static PFN_vkVoidFunction
+intercept_core_device_command(const char *name) {
+    static const struct {
+        const char *name;
+        PFN_vkVoidFunction proc;
+    } core_device_commands[] = {
+        { "vkGetDeviceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceProcAddr) },
+        { "vkDestroyDevice", reinterpret_cast<PFN_vkVoidFunction>(DestroyDevice) },
+        { "vkGetDeviceQueue", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceQueue) },
+    };
+
+    for (size_t i = 0; i < ARRAY_SIZE(core_device_commands); i++) {
+        if (!strcmp(core_device_commands[i].name, name))
+            return core_device_commands[i].proc;
+    }
+
+    return nullptr;
 }
 
 } // namespace swapchain
