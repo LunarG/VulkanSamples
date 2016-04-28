@@ -622,10 +622,11 @@ void write_ppm(struct sample_info &info, const char *basename) {
     mem_alloc.allocationSize = mem_reqs.size;
 
     /* Find the memory type that is host mappable */
-    bool pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-                                            &mem_alloc.memoryTypeIndex);
-    assert(pass);
+    bool pass = memory_type_from_properties(
+        info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                           &mem_alloc.memoryTypeIndex);
+    assert(pass && "No mappable, coherent memory");
 
     /* allocate memory */
     res = vkAllocateMemory(info.device, &mem_alloc, NULL, &(mappableMemory));

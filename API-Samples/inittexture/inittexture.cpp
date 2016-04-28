@@ -125,9 +125,10 @@ int sample_main(int argc, char *argv[]) {
 
     /* Find the memory type that is host mappable */
     pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &mem_alloc.memoryTypeIndex);
-    assert(pass);
+    assert(pass && "No mappable, coherent memory");
 
     /* allocate memory */
     res = vkAllocateMemory(info.device, &mem_alloc, NULL, &(mappableMemory));

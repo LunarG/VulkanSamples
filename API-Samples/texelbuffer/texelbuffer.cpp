@@ -129,9 +129,10 @@ int sample_main(int argc, char *argv[]) {
 
     alloc_info.allocationSize = mem_reqs.size;
     pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &alloc_info.memoryTypeIndex);
-    assert(pass);
+    assert(pass && "No mappable, coherent memory");
 
     VkDeviceMemory texelMem;
     res = vkAllocateMemory(info.device, &alloc_info, NULL, &texelMem);

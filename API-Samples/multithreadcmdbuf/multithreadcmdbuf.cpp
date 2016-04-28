@@ -385,9 +385,10 @@ static void *per_thread_code(void *arg) {
     alloc_info.allocationSize = mem_reqs.size;
     bool pass;
     pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &alloc_info.memoryTypeIndex);
-    assert(pass);
+    assert(pass && "No mappable, coherent memory");
 
     res = vkAllocateMemory(info.device, &alloc_info, NULL,
                            &(vertex_buffer[threadNum].mem));

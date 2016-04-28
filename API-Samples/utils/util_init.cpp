@@ -1085,9 +1085,10 @@ void init_uniform_buffer(struct sample_info &info) {
 
     alloc_info.allocationSize = mem_reqs.size;
     pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &alloc_info.memoryTypeIndex);
-    assert(pass);
+    assert(pass && "No mappable, coherent memory");
 
     res = vkAllocateMemory(info.device, &alloc_info, NULL,
                            &(info.uniform_data.mem));
@@ -1382,7 +1383,7 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData,
                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &alloc_info.memoryTypeIndex);
-    assert(pass);
+    assert(pass && "No mappable, coherent memory");
 
     res = vkAllocateMemory(info.device, &alloc_info, NULL,
                            &(info.vertex_buffer.mem));
@@ -1816,9 +1817,10 @@ void init_image(struct sample_info &info, texture_object &texObj,
 
     /* Find the memory type that is host mappable */
     pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &mem_alloc.memoryTypeIndex);
-    assert(pass);
+    assert(pass && "No mappable, coherent memory");
 
     /* allocate memory */
     res = vkAllocateMemory(info.device, &mem_alloc, NULL, &(mappableMemory));

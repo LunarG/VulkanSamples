@@ -195,7 +195,7 @@ static bool compile_shader(VkDevice device, char const *filename,
 }
 
 static uint32_t choose_memory_type(VkPhysicalDevice gpu, uint32_t typeBits,
-                                   VkMemoryPropertyFlagBits properties) {
+                                   VkMemoryPropertyFlags properties) {
     layer_data *my_data =
         get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
 
@@ -334,7 +334,8 @@ static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
     mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     mem_alloc.allocationSize = mem_reqs.size;
     mem_alloc.memoryTypeIndex = choose_memory_type(
-        gpu, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        gpu, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     err = pTable->AllocateMemory(device, &mem_alloc, nullptr,
                                  &data->fontGlyphsMemory);
@@ -949,7 +950,8 @@ vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapChain,
             mem_alloc.allocationSize = mem_reqs.size;
             mem_alloc.memoryTypeIndex =
                 choose_memory_type(my_data->gpu, mem_reqs.memoryTypeBits,
-                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
             VkDeviceMemory mem;
             err = pTable->AllocateMemory(device, &mem_alloc, nullptr, &mem);
