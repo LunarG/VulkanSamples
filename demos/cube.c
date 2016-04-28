@@ -336,11 +336,11 @@ struct demo {
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND window;                 // hWnd - window handle
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+#elif defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
     Display* display;
     Window xlib_window;
     Atom xlib_wm_delete_window;
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
+
     xcb_connection_t *connection;
     xcb_screen_t *screen;
     xcb_window_t xcb_window;
@@ -2064,8 +2064,7 @@ static void demo_create_window(struct demo *demo) {
         exit(1);
     }
 }
-<<<<<<< 0d3f96c9766e309ab81b36fc908cdfde2ac6915a
-#else
+#elif defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
 static void demo_create_xlib_window(struct demo *demo) {
 
     demo->display = XOpenDisplay(NULL);
@@ -2164,7 +2163,6 @@ static void demo_run_xlib(struct demo *demo) {
     }
 }
 
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
 static void demo_handle_xcb_event(struct demo *demo,
                               const xcb_generic_event_t *event) {
     uint8_t event_code = event->response_type & 0x7f;
@@ -2395,7 +2393,9 @@ static void demo_init_vk(struct demo *demo) {
     /* Look for instance extensions */
     VkBool32 surfaceExtFound = 0;
     VkBool32 platformSurfaceExtFound = 0;
+#if defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
     VkBool32 xlibSurfaceExtFound = 0;
+#endif
     memset(demo->extension_names, 0, sizeof(demo->extension_names));
 
     err = vkEnumerateInstanceExtensionProperties(
@@ -2422,7 +2422,7 @@ static void demo_init_vk(struct demo *demo) {
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
             }
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
+#elif defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
             if (!strcmp(VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
@@ -2430,7 +2430,7 @@ static void demo_init_vk(struct demo *demo) {
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
             }
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
+
             if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
@@ -2494,7 +2494,7 @@ static void demo_init_vk(struct demo *demo) {
                  "vkCreateInstance Failure");
 #endif
     }
-#if defined(VK_USE_PLATOFMR_XLIB_KHR)
+#if defined(VK_USE_PLATFORM_XLIB_KHR)
     if (demo->use_xlib && !xlibSurfaceExtFound) {
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_XLIB_SURFACE_EXTENSION_NAME
@@ -2788,7 +2788,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     err = vkCreateAndroidSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
 #endif
     if (demo->use_xlib) {
-#if defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(VK_USE_PLATFORM_XLIB_KHR)
         VkXlibSurfaceCreateInfoKHR createInfo;
         createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
         createInfo.pNext = NULL;
@@ -2801,7 +2801,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 #endif
     }
     else {
-#if defined(VK_USE_PLATOFORM_X11_KHR)
+#if defined(VK_USE_PLATFORM_XCB_KHR)
         VkXcbSurfaceCreateInfoKHR createInfo;
         createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
         createInfo.pNext = NULL;
@@ -3136,7 +3136,7 @@ void android_main(struct android_app *app)
     }
 
 }
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
+#else
 int main(int argc, char **argv) {
     struct demo demo;
 
