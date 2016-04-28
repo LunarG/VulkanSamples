@@ -36,10 +36,10 @@ that might arise with Vulkan-LoaderAndValidationLayers components if they were o
     * A sample git workflow may look like:
 
 >        # Make changes to the source.
->        $ git add .
->        $ clang-format -style=file -i < list of changed code files >
+>        $ git add -u .
+>        $ git clang-format --style=file
 >        # Check to see if clang-format made any changes and if they are OK.
->        $ git add .
+>        $ git add -u .
 >        $ git commit
 
 #### **Testing**
