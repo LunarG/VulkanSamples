@@ -2134,6 +2134,12 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevi
 }
 
 static PFN_vkVoidFunction
+intercept_core_instance_command(const char *name);
+
+static PFN_vkVoidFunction
+intercept_khr_surface_command(const char *name, VkInstance instance);
+
+static PFN_vkVoidFunction
 intercept_core_device_command(const char *name);
 
 static PFN_vkVoidFunction
@@ -2161,26 +2167,9 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, cons
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName) {
-    if (!strcmp("vkGetInstanceProcAddr", funcName))
-        return (PFN_vkVoidFunction)GetInstanceProcAddr;
-    if (!strcmp(funcName, "vkCreateInstance"))
-        return (PFN_vkVoidFunction)CreateInstance;
-    if (!strcmp(funcName, "vkDestroyInstance"))
-        return (PFN_vkVoidFunction)DestroyInstance;
-    if (!strcmp(funcName, "vkCreateDevice"))
-        return (PFN_vkVoidFunction)CreateDevice;
-    if (!strcmp(funcName, "vkEnumeratePhysicalDevices"))
-        return (PFN_vkVoidFunction)EnumeratePhysicalDevices;
-    if (!strcmp(funcName, "vkEnumerateInstanceLayerProperties"))
-        return (PFN_vkVoidFunction)vkEnumerateInstanceLayerProperties;
-    if (!strcmp(funcName, "vkEnumerateDeviceLayerProperties"))
-        return (PFN_vkVoidFunction)vkEnumerateDeviceLayerProperties;
-    if (!strcmp(funcName, "vkEnumerateInstanceExtensionProperties"))
-        return (PFN_vkVoidFunction)vkEnumerateInstanceExtensionProperties;
-    if (!strcmp(funcName, "vkEnumerateDeviceExtensionProperties"))
-        return (PFN_vkVoidFunction)EnumerateDeviceExtensionProperties;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceQueueFamilyProperties"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceQueueFamilyProperties;
+    PFN_vkVoidFunction proc = intercept_core_instance_command(funcName);
+    if (proc)
+        return proc;
 
     if (instance == VK_NULL_HANDLE) {
         return NULL;
@@ -2196,54 +2185,85 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
         return addr;
     }
 
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-    if (!strcmp("vkCreateAndroidSurfaceKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateAndroidSurfaceKHR);
-#endif // VK_USE_PLATFORM_ANDROID_KHR
-#ifdef VK_USE_PLATFORM_MIR_KHR
-    if (!strcmp("vkCreateMirSurfaceKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateMirSurfaceKHR);
-    if (!strcmp("vkGetPhysicalDeviceMirPresentationSupportKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceMirPresentationSupportKHR);
-#endif // VK_USE_PLATFORM_MIR_KHR
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    if (!strcmp("vkCreateWaylandSurfaceKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR);
-    if (!strcmp("vkGetPhysicalDeviceWaylandPresentationSupportKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWaylandPresentationSupportKHR);
-#endif // VK_USE_PLATFORM_WAYLAND_KHR
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    if (!strcmp("vkCreateWin32SurfaceKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateWin32SurfaceKHR);
-    if (!strcmp("vkGetPhysicalDeviceWin32PresentationSupportKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWin32PresentationSupportKHR);
-#endif // VK_USE_PLATFORM_WIN32_KHR
-#ifdef VK_USE_PLATFORM_XCB_KHR
-    if (!strcmp("vkCreateXcbSurfaceKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateXcbSurfaceKHR);
-    if (!strcmp("vkGetPhysicalDeviceXcbPresentationSupportKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXcbPresentationSupportKHR);
-#endif // VK_USE_PLATFORM_XCB_KHR
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-    if (!strcmp("vkCreateXlibSurfaceKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR);
-    if (!strcmp("vkGetPhysicalDeviceXlibPresentationSupportKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXlibPresentationSupportKHR);
-#endif // VK_USE_PLATFORM_XLIB_KHR
-    if (!strcmp("vkDestroySurfaceKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR);
-    if (!strcmp("vkGetPhysicalDeviceSurfaceSupportKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR);
-    if (!strcmp("vkGetPhysicalDeviceSurfaceCapabilitiesKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilitiesKHR);
-    if (!strcmp("vkGetPhysicalDeviceSurfaceFormatsKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR);
-    if (!strcmp("vkGetPhysicalDeviceSurfacePresentModesKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR);
+    proc = intercept_khr_surface_command(funcName, instance);
+    if (proc)
+        return proc;
 
     if (pTable->GetInstanceProcAddr == NULL)
         return NULL;
     return pTable->GetInstanceProcAddr(instance, funcName);
+}
+
+static PFN_vkVoidFunction
+intercept_core_instance_command(const char *name) {
+    static const struct {
+        const char *name;
+        PFN_vkVoidFunction proc;
+    } core_instance_commands[] = {
+        { "vkGetInstanceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetInstanceProcAddr) },
+        { "vkCreateInstance", reinterpret_cast<PFN_vkVoidFunction>(CreateInstance) },
+        { "vkDestroyInstance", reinterpret_cast<PFN_vkVoidFunction>(DestroyInstance) },
+        { "vkCreateDevice", reinterpret_cast<PFN_vkVoidFunction>(CreateDevice) },
+        { "vkEnumeratePhysicalDevices", reinterpret_cast<PFN_vkVoidFunction>(EnumeratePhysicalDevices) },
+        { "vkEnumerateInstanceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceLayerProperties) },
+        { "vkEnumerateDeviceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateDeviceLayerProperties) },
+        { "vkEnumerateInstanceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceExtensionProperties) },
+        { "vkEnumerateDeviceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceExtensionProperties) },
+        { "vkGetPhysicalDeviceQueueFamilyProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceQueueFamilyProperties) },
+    };
+
+    for (size_t i = 0; i < ARRAY_SIZE(core_instance_commands); i++) {
+        if (!strcmp(core_instance_commands[i].name, name))
+            return core_instance_commands[i].proc;
+    }
+
+    return nullptr;
+}
+
+static PFN_vkVoidFunction
+intercept_khr_surface_command(const char *name, VkInstance instance) {
+    static const struct {
+        const char *name;
+        PFN_vkVoidFunction proc;
+    } khr_surface_commands[] = {
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+        { "vkCreateAndroidSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateAndroidSurfaceKHR) },
+#endif // VK_USE_PLATFORM_ANDROID_KHR
+#ifdef VK_USE_PLATFORM_MIR_KHR
+        { "vkCreateMirSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateMirSurfaceKHR) },
+        { "vkGetPhysicalDeviceMirPresentationSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceMirPresentationSupportKHR) },
+#endif // VK_USE_PLATFORM_MIR_KHR
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+        { "vkCreateWaylandSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR) },
+        { "vkGetPhysicalDeviceWaylandPresentationSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWaylandPresentationSupportKHR) },
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+        { "vkCreateWin32SurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateWin32SurfaceKHR) },
+        { "vkGetPhysicalDeviceWin32PresentationSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWin32PresentationSupportKHR) },
+#endif // VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_XCB_KHR
+        { "vkCreateXcbSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXcbSurfaceKHR) },
+        { "vkGetPhysicalDeviceXcbPresentationSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXcbPresentationSupportKHR) },
+#endif // VK_USE_PLATFORM_XCB_KHR
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+        { "vkCreateXlibSurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR) },
+        { "vkGetPhysicalDeviceXlibPresentationSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXlibPresentationSupportKHR) },
+#endif // VK_USE_PLATFORM_XLIB_KHR
+        { "vkDestroySurfaceKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR) },
+        { "vkGetPhysicalDeviceSurfaceSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR) },
+        { "vkGetPhysicalDeviceSurfaceCapabilitiesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilitiesKHR) },
+        { "vkGetPhysicalDeviceSurfaceFormatsKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR) },
+        { "vkGetPhysicalDeviceSurfacePresentModesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR) },
+    };
+
+    // do not check if VK_KHR_*_surface is enabled (why?)
+
+    for (size_t i = 0; i < ARRAY_SIZE(khr_surface_commands); i++) {
+        if (!strcmp(khr_surface_commands[i].name, name))
+            return khr_surface_commands[i].proc;
+    }
+
+    return nullptr;
 }
 
 static PFN_vkVoidFunction
