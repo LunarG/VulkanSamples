@@ -195,9 +195,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
 
 static const VkExtensionProperties instance_extensions[] = {{VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};
 
-static const VkLayerProperties pc_global_layers[] = {{
+static const VkLayerProperties global_layer = {
     "VK_LAYER_LUNARG_image", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
-}};
+};
 
 // Start of the Image layer proper
 
@@ -1372,13 +1372,12 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
-    return util_GetLayerProperties(ARRAY_SIZE(image::pc_global_layers), image::pc_global_layers, pCount, pProperties);
+    return util_GetLayerProperties(1, &image::global_layer, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties *pProperties) {
-    // ParamChecker's physical device layers are the same as global
-    return util_GetLayerProperties(ARRAY_SIZE(image::pc_global_layers), image::pc_global_layers, pCount, pProperties);
+    return util_GetLayerProperties(1, &image::global_layer, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
