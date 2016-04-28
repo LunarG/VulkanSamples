@@ -681,6 +681,9 @@ EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
 }
 
 static PFN_vkVoidFunction
+intercept_core_instance_command(const char *name);
+
+static PFN_vkVoidFunction
 intercept_core_device_command(const char *name);
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
@@ -702,43 +705,13 @@ GetDeviceProcAddr(VkDevice dev, const char *funcName) {
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
 GetInstanceProcAddr(VkInstance instance, const char *funcName) {
+    PFN_vkVoidFunction proc = intercept_core_instance_command(funcName);
+    if (proc)
+        return proc;
+
     PFN_vkVoidFunction fptr;
 
     layer_data *my_data;
-    if (!strcmp(funcName, "vkGetInstanceProcAddr"))
-        return (PFN_vkVoidFunction)GetInstanceProcAddr;
-    if (!strcmp(funcName, "vkGetDeviceProcAddr"))
-        return (PFN_vkVoidFunction)GetDeviceProcAddr;
-    if (!strcmp(funcName, "vkCreateInstance"))
-        return (PFN_vkVoidFunction)CreateInstance;
-    if (!strcmp(funcName, "vkDestroyInstance"))
-        return (PFN_vkVoidFunction)DestroyInstance;
-    if (!strcmp(funcName, "vkCreateDevice"))
-        return (PFN_vkVoidFunction)CreateDevice;
-    if (!strcmp(funcName, "vkEnumeratePhysicalDevices"))
-        return (PFN_vkVoidFunction)EnumeratePhysicalDevices;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceFeatures"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceFeatures;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceFormatProperties"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceFormatProperties;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceImageFormatProperties"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceImageFormatProperties;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceProperties"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceProperties;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceQueueFamilyProperties"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceQueueFamilyProperties;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceMemoryProperties"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceMemoryProperties;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceSparseImageFormatProperties"))
-        return (PFN_vkVoidFunction)GetPhysicalDeviceSparseImageFormatProperties;
-    if (!strcmp(funcName, "vkEnumerateInstanceLayerProperties"))
-        return (PFN_vkVoidFunction)vkEnumerateInstanceLayerProperties;
-    if (!strcmp(funcName, "vkEnumerateDeviceLayerProperties"))
-        return (PFN_vkVoidFunction)vkEnumerateDeviceLayerProperties;
-    if (!strcmp(funcName, "vkEnumerateInstanceExtensionProperties"))
-        return (PFN_vkVoidFunction)vkEnumerateInstanceExtensionProperties;
-    if (!strcmp(funcName, "vkEnumerateInstanceDeviceProperties"))
-        return (PFN_vkVoidFunction)EnumerateDeviceExtensionProperties;
 
     if (!instance)
         return NULL;
@@ -755,6 +728,39 @@ GetInstanceProcAddr(VkInstance instance, const char *funcName) {
             return NULL;
         return pTable->GetInstanceProcAddr(instance, funcName);
     }
+}
+
+static PFN_vkVoidFunction
+intercept_core_instance_command(const char *name) {
+    static const struct {
+        const char *name;
+        PFN_vkVoidFunction proc;
+    } core_instance_commands[] = {
+        { "vkGetInstanceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetInstanceProcAddr) },
+        { "vkGetDeviceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceProcAddr) },
+        { "vkCreateInstance", reinterpret_cast<PFN_vkVoidFunction>(CreateInstance) },
+        { "vkDestroyInstance", reinterpret_cast<PFN_vkVoidFunction>(DestroyInstance) },
+        { "vkCreateDevice", reinterpret_cast<PFN_vkVoidFunction>(CreateDevice) },
+        { "vkEnumeratePhysicalDevices", reinterpret_cast<PFN_vkVoidFunction>(EnumeratePhysicalDevices) },
+        { "vkGetPhysicalDeviceFeatures", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceFeatures) },
+        { "vkGetPhysicalDeviceFormatProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceFormatProperties) },
+        { "vkGetPhysicalDeviceImageFormatProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceImageFormatProperties) },
+        { "vkGetPhysicalDeviceProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceProperties) },
+        { "vkGetPhysicalDeviceQueueFamilyProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceQueueFamilyProperties) },
+        { "vkGetPhysicalDeviceMemoryProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceMemoryProperties) },
+        { "vkGetPhysicalDeviceSparseImageFormatProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSparseImageFormatProperties) },
+        { "vkEnumerateInstanceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceLayerProperties) },
+        { "vkEnumerateDeviceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateDeviceLayerProperties) },
+        { "vkEnumerateInstanceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceExtensionProperties) },
+        { "vkEnumerateInstanceDeviceProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceExtensionProperties) },
+    };
+
+    for (size_t i = 0; i < ARRAY_SIZE(core_instance_commands); i++) {
+        if (!strcmp(core_instance_commands[i].name, name))
+            return core_instance_commands[i].proc;
+    }
+
+    return nullptr;
 }
 
 static PFN_vkVoidFunction
