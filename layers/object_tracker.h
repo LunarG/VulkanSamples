@@ -72,15 +72,15 @@ typedef uint64_t (*OBJ_TRACK_GET_OBJECTS_OF_TYPE_COUNT)(VkDevice, VkDebugReportO
 
 struct layer_data {
     debug_report_data *report_data;
+    // TODO: put instance data here
+    std::vector<VkDebugReportCallbackEXT> logging_callback;
+    bool wsi_enabled;
+    bool objtrack_extensions_enabled;
     // The following are for keeping track of the temporary callbacks that can
     // be used in vkCreateInstance and vkDestroyInstance:
     uint32_t num_tmp_callbacks;
     VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos;
     VkDebugReportCallbackEXT *tmp_callbacks;
-    // TODO: put instance data here
-    std::vector<VkDebugReportCallbackEXT> logging_callback;
-    bool wsi_enabled;
-    bool objtrack_extensions_enabled;
 
     layer_data()
         : report_data(nullptr), wsi_enabled(false), objtrack_extensions_enabled(false), num_tmp_callbacks(0),
