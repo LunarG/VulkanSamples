@@ -39,13 +39,15 @@
 #include "vk_safe_struct.h"
 #include "vk_layer_utils.h"
 
+// All increments must be guarded by global_lock
+static uint64_t global_unique_id = 1;
+
 struct layer_data {
     bool wsi_enabled;
-    uint64_t unique_id; // All increments are guarded by global_lock
     std::unordered_map<uint64_t, uint64_t> unique_id_mapping; // Map uniqueID to actual object handle
     VkPhysicalDevice gpu;
 
-    layer_data() : wsi_enabled(false), unique_id(1), gpu(VK_NULL_HANDLE){};
+    layer_data() : wsi_enabled(false), gpu(VK_NULL_HANDLE){};
 };
 
 struct instExts {
@@ -268,7 +270,7 @@ VkResult explicit_CreateComputePipelines(VkDevice device, VkPipelineCache pipeli
         uint64_t unique_id = 0;
         std::lock_guard<std::mutex> lock(global_lock);
         for (uint32_t i = 0; i < createInfoCount; ++i) {
-            unique_id = my_device_data->unique_id++;
+            unique_id = global_unique_id++;
             my_device_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(pPipelines[i]);
             pPipelines[i] = reinterpret_cast<VkPipeline &>(unique_id);
         }
@@ -329,7 +331,7 @@ VkResult explicit_CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipel
         uint64_t unique_id = 0;
         std::lock_guard<std::mutex> lock(global_lock);
         for (uint32_t i = 0; i < createInfoCount; ++i) {
-            unique_id = my_device_data->unique_id++;
+            unique_id = global_unique_id++;
             my_device_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(pPipelines[i]);
             pPipelines[i] = reinterpret_cast<VkPipeline &>(unique_id);
         }
@@ -359,7 +361,7 @@ VkResult explicit_CreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInf
         delete local_pCreateInfo;
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
-        uint64_t unique_id = my_map_data->unique_id++;
+        uint64_t unique_id =global_unique_id++;
         my_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(*pSwapchain);
         *pSwapchain = reinterpret_cast<VkSwapchainKHR &>(unique_id);
     }
@@ -383,7 +385,7 @@ VkResult explicit_GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchai
             uint64_t unique_id = 0;
             std::lock_guard<std::mutex> lock(global_lock);
             for (uint32_t i = 0; i < *pSwapchainImageCount; ++i) {
-                unique_id = my_device_data->unique_id++;
+                unique_id = global_unique_id++;
                 my_device_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(pSwapchainImages[i]);
                 pSwapchainImages[i] = reinterpret_cast<VkImage &>(unique_id);
             }

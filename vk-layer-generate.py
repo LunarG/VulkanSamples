@@ -1628,14 +1628,14 @@ class UniqueObjectsSubcommand(Subcommand):
                     local_name = '%ss' % (local_name) # add 's' to end for vector of many
                     post_call_txt += '%sfor (uint32_t i=0; i<%s; ++i) {\n' % (indent, custom_create_dict[obj_name])
                     indent += '    '
-                    post_call_txt += '%suint64_t unique_id = my_map_data->unique_id++;\n' % (indent)
+                    post_call_txt += '%suint64_t unique_id = global_unique_id++;\n' % (indent)
                     post_call_txt += '%smy_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(%s[i]);\n' % (indent, obj_name)
                     post_call_txt += '%s%s[i] = reinterpret_cast<%s&>(unique_id);\n' % (indent, obj_name, obj_type)
                     indent = indent[4:]
                     post_call_txt += '%s}\n' % (indent)
                 else:
                     post_call_txt += '%s\n' % (self.lineinfo.get())
-                    post_call_txt += '%suint64_t unique_id = my_map_data->unique_id++;\n' % (indent)
+                    post_call_txt += '%suint64_t unique_id = global_unique_id++;\n' % (indent)
                     post_call_txt += '%smy_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(*%s);\n' % (indent, obj_name)
                     post_call_txt += '%s*%s = reinterpret_cast<%s&>(unique_id);\n' % (indent, obj_name, obj_type)
                 indent = indent[4:]
