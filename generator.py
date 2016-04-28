@@ -3541,7 +3541,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             elif value.type in self.flags:
                 flagBitsName = value.type.replace('Flags', 'FlagBits')
                 if not flagBitsName in self.flagBits:
-                    usedLines.append('skipCall |= validate_reserved(report_data, "{}", "{}", {pf}{});\n'.format(funcName, valueDisplayName, value.name, pf=valuePrefix))
+                    usedLines.append('skipCall |= validate_reserved_flags(report_data, "{}", "{}", {pf}{});\n'.format(funcName, valueDisplayName, value.name, pf=valuePrefix))
                 else:
                     flagsRequired = 'false' if value.isoptional else 'true'
                     allFlagsName = 'All' + flagBitsName

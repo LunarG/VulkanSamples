@@ -24,7 +24,6 @@
 #include <algorithm>
 #include <cstdlib>
 #include <string>
-#include <type_traits>
 
 #include "vulkan/vulkan.h"
 #include "vk_enum_string_helper.h"
@@ -61,31 +60,6 @@ template <typename T> bool is_extension_added_token(T value) {
 template <> bool is_extension_added_token(VkSamplerAddressMode value) {
     bool result = (std::abs(static_cast<int32_t>(value)) >= ExtEnumBaseValue);
     return (result || (value == VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE));
-}
-
-/**
-* Verify that a reserved value is zero.
-*
-* Verify that the specified value is zero.  Primarily intended to check VkFlags values that are reserved for
-* future use.
-*
-* @param report_data debug_report_data object for routing validation messages.
-* @param api_name Name of API call being validated.
-* @param parameter_name Name of parameter being validated.
-* @param value Value to validate.
-* @return Boolean value indicating that the call should be skipped.
-*/
-template <typename T>
-bool validate_reserved(debug_report_data *report_data, const char *api_name, const char *parameter_name, T value) {
-    static_assert(std::is_integral<T>::value, "validate_reserved is only designed to process integer types");
-    bool skip_call = false;
-
-    if (value != 0) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                             ParameterValidationName, "%s: parameter %s must be 0", api_name, parameter_name);
-    }
-
-    return skip_call;
 }
 
 /**
@@ -567,6 +541,30 @@ static bool validate_ranged_enum_array(debug_report_data *report_data, const cha
 }
 
 /**
+* Verify that a reserved VkFlags value is zero.
+*
+* Verify that the specified value is zero, to check VkFlags values that are reserved for
+* future use.
+*
+* @param report_data debug_report_data object for routing validation messages.
+* @param api_name Name of API call being validated.
+* @param parameter_name Name of parameter being validated.
+* @param value Value to validate.
+* @return Boolean value indicating that the call should be skipped.
+*/
+static bool validate_reserved_flags(debug_report_data *report_data, const char *api_name, const char *parameter_name,
+                                    VkFlags value) {
+    bool skip_call = false;
+
+    if (value != 0) {
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                             ParameterValidationName, "%s: parameter %s must be 0", api_name, parameter_name);
+    }
+
+    return skip_call;
+}
+
+/**
 * Validate a Vulkan bitmask value.
 *
 * Generate a warning if a value with a VkFlags derived type does not contain valid flag bits
@@ -581,9 +579,8 @@ static bool validate_ranged_enum_array(debug_report_data *report_data, const cha
 * @param flags_required The 'value' parameter may not be 0 when true.
 * @return Boolean value indicating that the call should be skipped.
 */
-template <typename T>
-bool validate_flags(debug_report_data *report_data, const char *api_name, const char *parameter_name, const char *flag_bits_name,
-                    T all_flags, T value, bool flags_required) {
+static bool validate_flags(debug_report_data *report_data, const char *api_name, const char *parameter_name,
+                           const char *flag_bits_name, VkFlags all_flags, VkFlags value, bool flags_required) {
     bool skip_call = false;
 
     if (value == 0) {
@@ -618,10 +615,9 @@ bool validate_flags(debug_report_data *report_data, const char *api_name, const 
 * @param array_required The 'array' parameter may not be NULL when true.
 * @return Boolean value indicating that the call should be skipped.
 */
-template <typename T>
-bool validate_flags_array(debug_report_data *report_data, const char *api_name, const char *count_name, const char *array_name,
-                          const char *flag_bits_name, T all_flags, uint32_t count, const T *array, bool count_required,
-                          bool array_required) {
+static bool validate_flags_array(debug_report_data *report_data, const char *api_name, const char *count_name,
+                                 const char *array_name, const char *flag_bits_name, VkFlags all_flags, uint32_t count,
+                                 const VkFlags *array, bool count_required, bool array_required) {
     bool skip_call = false;
 
     if ((count == 0) || (array == NULL)) {
@@ -629,7 +625,14 @@ bool validate_flags_array(debug_report_data *report_data, const char *api_name, 
     } else {
         // Verify that all VkFlags values in the array
         for (uint32_t i = 0; i < count; ++i) {
-            if ((array[i] & (~all_flags)) != 0) {
+            if (array[i] == 0) {
+                // Current XML registry logic for validity generation uses the array parameter's optional tag to determine if
+                // elements in the array are allowed be 0
+                if (array_required) {
+                    skip_call |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                         1, ParameterValidationName, "%s: value of %s[%d] must not be 0", api_name, array_name, i);
+                }
+            } else if ((array[i] & (~all_flags)) != 0) {
                 skip_call |=
                     log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                             ParameterValidationName, "%s: value of %s[%d] contains flag bits that are not recognized members of %s",
