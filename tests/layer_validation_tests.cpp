@@ -626,6 +626,110 @@ TEST_F(VkLayerTest, EnableWsiBeforeUse) {
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
+#ifdef NEED_TO_TEST_THIS_ON_PLATFORM
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+    // Use the functions from the VK_KHR_android_surface extension without
+    // enabling that extension:
+
+    // Create a surface:
+    VkAndroidSurfaceCreateInfoKHR android_create_info = {};
+#if 0
+#endif
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    err = vkCreateAndroidSurfaceKHR(instance(), &android_create_info, NULL,
+        &surface);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+#endif // VK_USE_PLATFORM_ANDROID_KHR
+
+
+#if defined(VK_USE_PLATFORM_MIR_KHR)
+    // Use the functions from the VK_KHR_mir_surface extension without enabling
+    // that extension:
+
+    // Create a surface:
+    VkMirSurfaceCreateInfoKHR mir_create_info = {};
+#if 0
+#endif
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    err = vkCreateMirSurfaceKHR(instance(), &mir_create_info, NULL, &surface);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Tell whether an mir_connection supports presentation:
+    MirConnection *mir_connection = NULL;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    vkGetPhysicalDeviceMirPresentationSupportKHR(gpu(), 0, mir_connection,
+        visual_id);
+    m_errorMonitor->VerifyFound();
+#endif // VK_USE_PLATFORM_MIR_KHR
+
+
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    // Use the functions from the VK_KHR_wayland_surface extension without
+    // enabling that extension:
+
+    // Create a surface:
+    VkWaylandSurfaceCreateInfoKHR wayland_create_info = {};
+#if 0
+#endif
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    err = vkCreateWaylandSurfaceKHR(instance(), &wayland_create_info, NULL,
+                                    &surface);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Tell whether an wayland_display supports presentation:
+    struct wl_display wayland_display = {};
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    vkGetPhysicalDeviceWaylandPresentationSupportKHR(gpu(), 0,
+                                                     &wayland_display);
+    m_errorMonitor->VerifyFound();
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+
+
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+    // Use the functions from the VK_KHR_win32_surface extension without
+    // enabling that extension:
+
+    // Create a surface:
+    VkWin32SurfaceCreateInfoKHR win32_create_info = {};
+#if 0
+#endif
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    err = vkCreateWin32SurfaceKHR(instance(), &win32_create_info, NULL,
+                                  &surface);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Tell whether win32 supports presentation:
+    struct wl_display win32_display = {};
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    vkGetPhysicalDeviceWin32PresentationSupportKHR(gpu(), 0,
+                                                     &win32_display);
+    m_errorMonitor->VerifyFound();
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#endif // NEED_TO_TEST_THIS_ON_PLATFORM
+
+
 #if defined(VK_USE_PLATFORM_XCB_KHR)
     // Use the functions from the VK_KHR_xcb_surface extension without enabling
     // that extension:
@@ -643,12 +747,12 @@ TEST_F(VkLayerTest, EnableWsiBeforeUse) {
     m_errorMonitor->VerifyFound();
 
     // Tell whether an xcb_visualid_t supports presentation:
-    xcb_connection_t *connection = NULL;
+    xcb_connection_t *xcb_connection = NULL;
     xcb_visualid_t visual_id = 0;
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "extension was not enabled for this");
-    vkGetPhysicalDeviceXcbPresentationSupportKHR(gpu(), 0, connection,
+    vkGetPhysicalDeviceXcbPresentationSupportKHR(gpu(), 0, xcb_connection,
         visual_id);
     m_errorMonitor->VerifyFound();
 #endif // VK_USE_PLATFORM_XCB_KHR
