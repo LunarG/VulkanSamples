@@ -6971,11 +6971,11 @@ vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipel
                     // Verify that set being bound is compatible with overlapping setLayout of pipelineLayout
                     if (!verify_set_layout_compatibility(dev_data, pSet, layout, i + firstSet, errorString)) {
                         skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                            VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pDescriptorSets[i],
-                                            __LINE__, DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, "DS",
-                                            "descriptorSet #%u being bound is not compatible with overlapping layout in "
-                                            "pipelineLayout due to: %s",
-                                            i, errorString.c_str());
+                                            VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pDescriptorSets[i], __LINE__,
+                                            DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, "DS",
+                                            "descriptorSet #%u being bound is not compatible with overlapping descriptorSetLayout "
+                                            "at index %u of pipelineLayout %#" PRIxLEAST64 " due to: %s",
+                                            i, i + firstSet, reinterpret_cast<uint64_t &>(layout), errorString.c_str());
                     }
                     if (pSet->p_layout->GetDynamicDescriptorCount()) {
                         // First make sure we won't overstep bounds of pDynamicOffsets array
