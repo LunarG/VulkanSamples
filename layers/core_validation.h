@@ -321,9 +321,13 @@ struct RENDER_PASS_NODE {
             color_formats.reserve(subpass->colorAttachmentCount);
             for (j = 0; j < subpass->colorAttachmentCount; j++) {
                 const uint32_t att = subpass->pColorAttachments[j].attachment;
-                const VkFormat format = pCreateInfo->pAttachments[att].format;
 
-                color_formats.push_back(format);
+                if (att != VK_ATTACHMENT_UNUSED) {
+                    color_formats.push_back(pCreateInfo->pAttachments[att].format);
+                }
+                else {
+                    color_formats.push_back(VK_FORMAT_UNDEFINED);
+                }
             }
 
             subpassColorFormats.push_back(color_formats);
