@@ -1673,51 +1673,59 @@ static bool validate_fs_outputs_against_render_pass(layer_data *my_data, shader_
                                                     spirv_inst_iter entrypoint, RENDER_PASS_NODE const *rp, uint32_t subpass) {
     const std::vector<VkFormat> &color_formats = rp->subpassColorFormats[subpass];
     std::map<location_t, interface_var> outputs;
+    std::map<uint32_t, VkFormat> color_attachments;
+    for (auto i = 0u; i < rp->subpassColorFormats[subpass].size(); i++) {
+        if (rp->subpassColorFormats[subpass][i] != VK_FORMAT_UNDEFINED) {
+            color_attachments[i] = rp->subpassColorFormats[subpass][i];
+        }
+    }
+
     bool pass = true;
 
     /* TODO: dual source blend index (spv::DecIndex, zero if not provided) */
 
     collect_interface_by_location(my_data, fs, entrypoint, spv::StorageClassOutput, outputs, false);
 
-    auto it = outputs.begin();
-    uint32_t attachment = 0;
+    auto it_a = outputs.begin();
+    auto it_b = color_attachments.begin();
 
-    /* Walk attachment list and outputs together -- this is a little overpowered since attachments
-     * are currently dense, but the parallel with matching between shader stages is nice.
-     */
+    /* Walk attachment list and outputs together */
 
-    while ((outputs.size() > 0 && it != outputs.end()) || attachment < color_formats.size()) {
-        if (attachment == color_formats.size() || (it != outputs.end() && it->first.first < attachment)) {
+    while ((outputs.size() > 0 && it_a != outputs.end()) || (color_attachments.size() > 0 && it_b != color_attachments.end())) {
+        bool a_at_end = outputs.size() == 0 || it_a == outputs.end();
+        bool b_at_end = color_attachments.size() == 0 || it_b == color_attachments.end();
+
+        if (!a_at_end && (b_at_end || it_a->first.first < it_b->first)) {
             if (log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
-                        "FS writes to output location %d with no matching attachment", it->first.first)) {
+                        "FS writes to output location %d with no matching attachment", it_a->first.first)) {
                 pass = false;
             }
-            it++;
-        } else if (it == outputs.end() || it->first.first > attachment) {
+            it_a++;
+        } else if (!b_at_end && (a_at_end || it_a->first.first > it_b->first)) {
             if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
-                        __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", "Attachment %d not written by FS", attachment)) {
+                        __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", "Attachment %d not written by FS", it_b->first)) {
                 pass = false;
             }
-            attachment++;
+            it_b++;
         } else {
-            unsigned output_type = get_fundamental_type(fs, it->second.type_id);
-            unsigned att_type = get_format_type(color_formats[attachment]);
+            unsigned output_type = get_fundamental_type(fs, it_a->second.type_id);
+            unsigned att_type = get_format_type(it_b->second);
 
             /* type checking */
             if (att_type != FORMAT_TYPE_UNDEFINED && output_type != FORMAT_TYPE_UNDEFINED && att_type != output_type) {
                 if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
-                            "Attachment %d of type `%s` does not match FS output type of `%s`", attachment,
-                            string_VkFormat(color_formats[attachment]),
-                            describe_type(fs, it->second.type_id).c_str())) {
+                            "Attachment %d of type `%s` does not match FS output type of `%s`", it_b->first,
+                            string_VkFormat(it_b->second),
+                            describe_type(fs, it_a->second.type_id).c_str())) {
                     pass = false;
                 }
             }
 
             /* OK! */
-            it++;
-            attachment++;
+            it_a++;
+            it_b++;
         }
     }
 
