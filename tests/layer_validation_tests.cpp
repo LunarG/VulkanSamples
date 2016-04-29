@@ -117,6 +117,8 @@ class ErrorMonitor {
         test_platform_thread_unlock_mutex(&m_mutex);
     }
 
+    ~ErrorMonitor() { test_platform_thread_delete_mutex(&m_mutex); }
+
     void SetDesiredFailureMsg(VkFlags msgFlags, const char *msgString) {
         // also discard all collected messages to this point
         test_platform_thread_lock_mutex(&m_mutex);
@@ -1090,7 +1092,8 @@ TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceQWI) {
     TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
         "submitted on separate queues followed by a QueueWaitIdle.");
 
-    if (m_device->queue_props->queueCount < 2)
+    if ((m_device->queue_props.empty()) ||
+        (m_device->queue_props[0].queueCount < 2))
         return;
 
     m_errorMonitor->ExpectSuccess();
@@ -1196,7 +1199,8 @@ TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceQWIFenc
                      "submitted on separate queues, the second having a fence"
                      "followed by a QueueWaitIdle.");
 
-    if (m_device->queue_props->queueCount < 2)
+    if ((m_device->queue_props.empty()) ||
+        (m_device->queue_props[0].queueCount < 2))
         return;
 
     m_errorMonitor->ExpectSuccess();
@@ -1310,7 +1314,8 @@ TEST_F(VkLayerTest,
         "submitted on separate queues, the second having a fence"
         "followed by two consecutive WaitForFences calls on the same fence.");
 
-    if (m_device->queue_props->queueCount < 2)
+    if ((m_device->queue_props.empty()) ||
+        (m_device->queue_props[0].queueCount < 2))
         return;
 
     m_errorMonitor->ExpectSuccess();
@@ -1423,7 +1428,8 @@ TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFence) {
                      "submitted on separate queues, the second having a fence, "
                      "followed by a WaitForFences call.");
 
-    if (m_device->queue_props->queueCount < 2)
+    if ((m_device->queue_props.empty()) ||
+        (m_device->queue_props[0].queueCount < 2))
         return;
 
     m_errorMonitor->ExpectSuccess();

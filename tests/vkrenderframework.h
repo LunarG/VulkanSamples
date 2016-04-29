@@ -45,7 +45,7 @@ class VkDeviceObj : public vk_testing::Device {
 
     uint32_t id;
     VkPhysicalDeviceProperties props;
-    const VkQueueFamilyProperties *queue_props;
+    std::vector<VkQueueFamilyProperties> queue_props;
 
     VkQueue m_queue;
 };

@@ -397,7 +397,7 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj)
     init();
 
     props = phy().properties();
-    queue_props = phy().queue_properties().data();
+    queue_props = phy().queue_properties();
 }
 
 VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj,
@@ -407,7 +407,7 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj,
     init(layer_names, extension_names);
 
     props = phy().properties();
-    queue_props = phy().queue_properties().data();
+    queue_props = phy().queue_properties();
 }
 
 void VkDeviceObj::get_device_queue() {
