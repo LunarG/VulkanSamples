@@ -9966,14 +9966,15 @@ vkQueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo 
     std::unique_lock<std::mutex> lock(global_lock);
     // First verify that fence is not in use
     if (fence != VK_NULL_HANDLE) {
-        dev_data->fenceMap[fence].queue = queue;
-        if ((bindInfoCount != 0) && dev_data->fenceMap[fence].in_use.load()) {
+        trackCommandBuffers(dev_data, queue, 0, nullptr, fence);
+        auto fence_data = dev_data->fenceMap.find(fence);
+        if ((bindInfoCount != 0) && fence_data->second.in_use.load()) {
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                         reinterpret_cast<uint64_t &>(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
                         "Fence %#" PRIx64 " is already in use by another submission.", reinterpret_cast<uint64_t &>(fence));
         }
-        if (!dev_data->fenceMap[fence].needsSignaled) {
+        if (!fence_data->second.needsSignaled) {
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                         reinterpret_cast<uint64_t &>(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
