@@ -166,8 +166,9 @@ VkResult explicit_CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const 
 }
 
 void explicit_DestroyInstance(VkInstance instance, const VkAllocationCallbacks *pAllocator) {
+    dispatch_key key = get_dispatch_key(instance);
     get_dispatch_table(unique_objects_instance_table_map, instance)->DestroyInstance(instance, pAllocator);
-    layer_data_map.erase(get_dispatch_key(instance));
+    layer_data_map.erase(key);
 }
 
 // Handle CreateDevice
@@ -219,8 +220,9 @@ VkResult explicit_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *p
 }
 
 void explicit_DestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
+    dispatch_key key = get_dispatch_key(device);
     get_dispatch_table(unique_objects_device_table_map, device)->DestroyDevice(device, pAllocator);
-    layer_data_map.erase(get_dispatch_key(device));
+    layer_data_map.erase(key);
 }
 
 VkResult explicit_CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount,
