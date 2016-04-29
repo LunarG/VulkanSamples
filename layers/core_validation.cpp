@@ -4834,18 +4834,31 @@ static void decrementResources(layer_data *my_data, VkCommandBuffer cmdBuffer) {
 //  decrementResources for all priorFences and cmdBuffers associated with fence.
 static bool decrementResources(layer_data *my_data, uint32_t fenceCount, const VkFence *pFences) {
     bool skip_call = false;
+    std::vector<VkFence> fences;
     for (uint32_t i = 0; i < fenceCount; ++i) {
         auto fence_data = my_data->fenceMap.find(pFences[i]);
         if (fence_data == my_data->fenceMap.end() || !fence_data->second.needsSignaled)
             return skip_call;
         fence_data->second.needsSignaled = false;
-        fence_data->second.in_use.fetch_sub(1);
+        if (fence_data->second.in_use.load()) {
+            fences.push_back(pFences[i]);
+            fence_data->second.in_use.fetch_sub(1);
+        }
         decrementResources(my_data, static_cast<uint32_t>(fence_data->second.priorFences.size()),
                            fence_data->second.priorFences.data());
         for (auto cmdBuffer : fence_data->second.cmdBuffers) {
             decrementResources(my_data, cmdBuffer);
             skip_call |= cleanInFlightCmdBuffer(my_data, cmdBuffer);
             removeInFlightCmdBuffer(my_data, cmdBuffer);
+        }
+    }
+    for (auto fence : fences) {
+        for (auto queue_data : my_data->queueMap) {
+            auto last_fence_data = std::find(queue_data.second.lastFences.begin(), queue_data.second.lastFences.end(), fence);
+            if (last_fence_data != queue_data.second.lastFences.end()) {
+                queue_data.second.lastFences.erase(last_fence_data);
+                break;
+            }
         }
     }
     return skip_call;
