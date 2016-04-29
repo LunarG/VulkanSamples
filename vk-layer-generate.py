@@ -1584,11 +1584,12 @@ class UniqueObjectsSubcommand(Subcommand):
             if len(local_decls) > 0:
                 pre_call_txt += '//LOCAL DECLS:%s\n' % sorted(local_decls)
             if destroy_func: # only one object
+                pre_call_txt += '%sstd::unique_lock<std::mutex> lock(global_lock);\n' % (indent)
                 for del_obj in sorted(struct_uses):
-                    #pre_call_txt += '%s%s local_%s = %s;\n' % (indent, struct_uses[del_obj], del_obj, del_obj)
                     pre_call_txt += '%suint64_t local_%s = reinterpret_cast<uint64_t &>(%s);\n' % (indent, del_obj, del_obj)
                     pre_call_txt += '%s%s = (%s)my_map_data->unique_id_mapping[local_%s];\n' % (indent, del_obj, struct_uses[del_obj], del_obj)
-                    (pre_decl, pre_code, post_code) = ('', '', '')
+                pre_call_txt += '%slock.unlock();\n' % (indent)
+                (pre_decl, pre_code, post_code) = ('', '', '')
             else:
                 (pre_decl, pre_code, post_code) = self._gen_obj_code(struct_uses, local_decls, '    ', '', 0, set(), True)
             # This is a bit hacky but works for now. Need to decl local versions of top-level structs
@@ -1651,7 +1652,7 @@ class UniqueObjectsSubcommand(Subcommand):
                 post_call_txt += '%s}\n' % (indent)
             else:
                 post_call_txt += '%s\n' % (self.lineinfo.get())
-                post_call_txt += '%sstd::lock_guard<std::mutex> lock(global_lock);\n' % (indent)
+                post_call_txt += '%slock.lock();\n' % (indent)
                 post_call_txt += '%smy_map_data->unique_id_mapping.erase(local_%s);\n' % (indent, proto.params[-2].name)
 
         call_sig = proto.c_call()
