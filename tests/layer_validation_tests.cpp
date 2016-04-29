@@ -654,6 +654,33 @@ TEST_F(VkLayerTest, EnableWsiBeforeUse) {
 #endif // VK_USE_PLATFORM_XCB_KHR
 
 
+#if defined(VK_USE_PLATFORM_XLIB_KHR)
+    // Use the functions from the VK_KHR_xlib_surface extension without enabling
+    // that extension:
+
+    // Create a surface:
+    VkXlibSurfaceCreateInfoKHR xlib_create_info = {};
+#if 0
+#endif
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    err = vkCreateXlibSurfaceKHR(instance(), &xlib_create_info, NULL, &surface);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Tell whether an Xlib VisualID supports presentation:
+    Display *dpy = NULL;
+    VisualID visual = 0;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "extension was not enabled for this");
+    vkGetPhysicalDeviceXlibPresentationSupportKHR(gpu(), 0, dpy, visual);
+    m_errorMonitor->VerifyFound();
+#endif // VK_USE_PLATFORM_XLIB_KHR
+
+
     // Use the functions from the VK_KHR_surface extension without enabling
     // that extension:
 
