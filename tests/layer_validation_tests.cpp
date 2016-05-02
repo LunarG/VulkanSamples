@@ -1329,8 +1329,213 @@ TEST_F(VkLayerTest, InvalidUsageBits)
 #endif // MEM_TRACKER_TESTS
 
 #if OBJ_TRACKER_TESTS
+
+TEST_F(VkLayerTest, LeakAnObject) {
+    VkResult err;
+
+    TEST_DESCRIPTION(
+        "Create a fence and destroy its device without first destroying the fence.");
+
+    // Note that we have to create a new device since destroying the
+    // framework's device causes Teardown() to fail and just calling Teardown
+    // will destroy the errorMonitor.
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "OBJ ERROR : VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT object");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    const std::vector<VkQueueFamilyProperties> queue_props =
+        m_device->queue_props;
+    std::vector<VkDeviceQueueCreateInfo> queue_info;
+    queue_info.reserve(queue_props.size());
+    std::vector<std::vector<float>> queue_priorities;
+    for (uint32_t i = 0; i < (uint32_t)queue_props.size(); i++) {
+        VkDeviceQueueCreateInfo qi = {};
+        qi.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        qi.pNext = NULL;
+        qi.queueFamilyIndex = i;
+        qi.queueCount = queue_props[i].queueCount;
+        queue_priorities.emplace_back(qi.queueCount, 0.0f);
+        qi.pQueuePriorities = queue_priorities[i].data();
+        queue_info.push_back(qi);
+    }
+
+    std::vector<const char *> device_layer_names;
+    std::vector<const char *> device_extension_names;
+    device_layer_names.push_back("VK_LAYER_GOOGLE_threading");
+    device_layer_names.push_back("VK_LAYER_LUNARG_parameter_validation");
+    device_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
+    device_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
+    device_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
+    device_layer_names.push_back("VK_LAYER_LUNARG_image");
+    device_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
+
+    // The sacrificial device object
+    VkDevice testDevice;
+    VkDeviceCreateInfo device_create_info = {};
+    auto features = m_device->phy().features();
+    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_create_info.pNext = NULL;
+    device_create_info.queueCreateInfoCount = queue_info.size();
+    device_create_info.pQueueCreateInfos = queue_info.data();
+    device_create_info.enabledLayerCount = device_layer_names.size();
+    device_create_info.ppEnabledLayerNames = device_layer_names.data();
+    device_create_info.pEnabledFeatures = &features;
+    err = vkCreateDevice(gpu(), &device_create_info, NULL, &testDevice);
+    ASSERT_VK_SUCCESS(err);
+
+    VkFence fence;
+    VkFenceCreateInfo fence_create_info = {};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_create_info.pNext = NULL;
+    fence_create_info.flags = 0;
+    err = vkCreateFence(testDevice, &fence_create_info, NULL, &fence);
+    ASSERT_VK_SUCCESS(err);
+
+    // Induce failure by not calling vkDestroyFence
+    vkDestroyDevice(testDevice, NULL);
+    m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkLayerTest, InvalidCommandPoolConsistency) {
+
+    TEST_DESCRIPTION("Allocate command buffers from one command pool and "
+                     "attempt to delete them from another.");
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "FreeCommandBuffers is attempting to free Command Buffer");
+
+    VkCommandPool command_pool_one;
+    VkCommandPool command_pool_two;
+
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr,
+        &command_pool_one);
+
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr,
+        &command_pool_two);
+
+    VkCommandBuffer command_buffer[9];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType =
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool_one;
+    command_buffer_allocate_info.commandBufferCount = 9;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info,
+        command_buffer);
+
+    vkFreeCommandBuffers(m_device->device(), command_pool_two, 4,
+        &command_buffer[3]);
+
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyCommandPool(m_device->device(), command_pool_one, NULL);
+    vkDestroyCommandPool(m_device->device(), command_pool_two, NULL);
+}
+
+TEST_F(VkLayerTest, InvalidDescriptorPoolConsistency) {
+    VkResult err;
+
+    TEST_DESCRIPTION("Allocate descriptor sets from one DS pool and "
+        "attempt to delete them from another.");
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "FreeDescriptorSets is attempting to free descriptorSet");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkDescriptorPoolSize ds_type_count = {};
+    ds_type_count.type = VK_DESCRIPTOR_TYPE_SAMPLER;
+    ds_type_count.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ds_pool_ci.pNext = NULL;
+    ds_pool_ci.flags = 0;
+    ds_pool_ci.maxSets = 1;
+    ds_pool_ci.poolSizeCount = 1;
+    ds_pool_ci.pPoolSizes = &ds_type_count;
+
+    VkDescriptorPool ds_pool_one;
+    err =
+        vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool_one);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create a second descriptor pool
+    VkDescriptorPool ds_pool_two;
+    err =
+        vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool_two);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+    dsl_binding.binding = 0;
+    dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    dsl_binding.descriptorCount = 1;
+    dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL,
+        &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.descriptorPool = ds_pool_one;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info,
+        &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool_two, 1, &descriptorSet);
+
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool_one, NULL);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool_two, NULL);
+}
+
+TEST_F(VkLayerTest, CreateUnknownObject) {
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Invalid VkImage Object ");
+
+    TEST_DESCRIPTION(
+        "Pass an invalid image object handle into a Vulkan API call.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Pass bogus handle into GetImageMemoryRequirements
+    VkMemoryRequirements mem_reqs;
+    uint64_t fakeImageHandle = 0xCADECADE;
+    VkImage fauxImage = reinterpret_cast<VkImage &>(fakeImageHandle);
+
+    vkGetImageMemoryRequirements(m_device->device(), fauxImage, &mem_reqs);
+
+    m_errorMonitor->VerifyFound();
+}
+
 TEST_F(VkLayerTest, PipelineNotBound) {
     VkResult err;
+
+    TEST_DESCRIPTION(
+        "Pass in an invalid pipeline object handle into a Vulkan API call.");
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Invalid VkPipeline Object ");
