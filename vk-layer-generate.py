@@ -718,7 +718,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('#include <inttypes.h>')
         header_txt.append('')
         header_txt.append('#include <unordered_map>')
-        header_txt.append('using namespace std;')
+        header_txt.append('')
         header_txt.append('#include "vulkan/vk_layer.h"')
         header_txt.append('#include "vk_layer_config.h"')
         header_txt.append('#include "vk_layer_table.h"')
@@ -733,7 +733,7 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_maps(self):
         maps_txt = []
         for o in vulkan.object_type_list:
-            maps_txt.append('unordered_map<uint64_t, OBJTRACK_NODE*> %sMap;' % (o))
+            maps_txt.append('std::unordered_map<uint64_t, OBJTRACK_NODE*> %sMap;' % (o))
         return "\n".join(maps_txt)
 
     def _gather_object_uses(self, obj_list, struct_type, obj_set):

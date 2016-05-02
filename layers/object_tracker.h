@@ -98,13 +98,10 @@ static instance_table_map object_tracker_instance_table_map;
 
 // We need additionally validate image usage using a separate map
 // of swapchain-created images
-static unordered_map<uint64_t, OBJTRACK_NODE *> swapchainImageMap;
+static std::unordered_map<uint64_t, OBJTRACK_NODE *> swapchainImageMap;
 
 static long long unsigned int object_track_index = 0;
 static std::mutex global_lock;
-
-// Objects stored in a global map w/ struct containing basic info
-// unordered_map<const void*, OBJTRACK_NODE*> objMap;
 
 #define NUM_OBJECT_TYPES (VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT + 1)
 
@@ -380,18 +377,18 @@ static VkBool32 validate_status(VkDevice dispatchable_object, VkFence object, Vk
     ObjectStatusFlags status_mask, ObjectStatusFlags status_flag, VkFlags msg_flags, OBJECT_TRACK_ERROR  error_code,
     const char         *fail_msg);
 #endif
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkPhysicalDeviceMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkDeviceMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkImageMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkQueueMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkDescriptorSetMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkBufferMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkFenceMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkSemaphoreMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkCommandPoolMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkCommandBufferMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkSwapchainKHRMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkSurfaceKHRMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkPhysicalDeviceMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkDeviceMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkImageMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkQueueMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkDescriptorSetMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkBufferMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkFenceMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkSemaphoreMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkCommandPoolMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkCommandBufferMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkSwapchainKHRMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkSurfaceKHRMap;
 
 static void create_physical_device(VkInstance dispatchable_object, VkPhysicalDevice vkObj, VkDebugReportObjectTypeEXT objType) {
     log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), __LINE__,
@@ -842,7 +839,7 @@ void explicit_DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, con
     std::unique_lock<std::mutex> lock(global_lock);
     // A swapchain's images are implicitly deleted when the swapchain is deleted.
     // Remove this swapchain's images from our map of such images.
-    unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = swapchainImageMap.begin();
+    std::unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = swapchainImageMap.begin();
     while (itr != swapchainImageMap.end()) {
         OBJTRACK_NODE *pNode = (*itr).second;
         if (pNode->parentObj == (uint64_t)(swapchain)) {
@@ -897,7 +894,7 @@ void explicit_DestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptor
     // A DescriptorPool's descriptor sets are implicitly deleted when the pool is deleted.
     // Remove this pool's descriptor sets from our descriptorSet map.
     lock.lock();
-    unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = VkDescriptorSetMap.begin();
+    std::unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = VkDescriptorSetMap.begin();
     while (itr != VkDescriptorSetMap.end()) {
         OBJTRACK_NODE *pNode = (*itr).second;
         auto del_itr = itr++;
@@ -922,8 +919,8 @@ void explicit_DestroyCommandPool(VkDevice device, VkCommandPool commandPool, con
     lock.lock();
     // A CommandPool's command buffers are implicitly deleted when the pool is deleted.
     // Remove this pool's cmdBuffers from our cmd buffer map.
-    unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = VkCommandBufferMap.begin();
-    unordered_map<uint64_t, OBJTRACK_NODE *>::iterator del_itr;
+    std::unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = VkCommandBufferMap.begin();
+    std::unordered_map<uint64_t, OBJTRACK_NODE *>::iterator del_itr;
     while (itr != VkCommandBufferMap.end()) {
         OBJTRACK_NODE *pNode = (*itr).second;
         del_itr = itr++;
