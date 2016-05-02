@@ -9,7 +9,7 @@ echo "GLSLANG_REVISION=$GLSLANG_REVISION"
 echo "SPIRV_TOOLS_REVISION=$SPIRV_TOOLS_REVISION"
 
 BUILDDIR=$PWD
-BASEDIR=$BUILDDIR/..
+BASEDIR=$BUILDDIR/external
 
 function create_glslang () {
    rm -rf $BASEDIR/glslang

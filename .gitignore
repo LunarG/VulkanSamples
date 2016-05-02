@@ -30,3 +30,4 @@ libs/Win32/Debug/*
 build
 build32
 dbuild
+external
