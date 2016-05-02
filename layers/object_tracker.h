@@ -288,41 +288,6 @@ static void validateQueueFlags(VkQueue queue, const char *function) {
     }
 }
 
-/* TODO: Port to new type safety */
-#if 0
-// Check object status for selected flag state
-static VkBool32
-validate_status(
-    VkObject            dispatchable_object,
-    VkObject            vkObj,
-    VkObjectType        objType,
-    ObjectStatusFlags   status_mask,
-    ObjectStatusFlags   status_flag,
-    VkFlags             msg_flags,
-    OBJECT_TRACK_ERROR  error_code,
-    const char         *fail_msg)
-{
-    if (objMap.find(vkObj) != objMap.end()) {
-        OBJTRACK_NODE* pNode = objMap[vkObj];
-        if ((pNode->status & status_mask) != status_flag) {
-            char str[1024];
-            log_msg(mdd(dispatchable_object), msg_flags, pNode->objType, vkObj, __LINE__, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
-                "OBJECT VALIDATION WARNING: %s object 0x%" PRIxLEAST64 ": %s", string_VkObjectType(objType),
-                static_cast<uint64_t>(vkObj), fail_msg);
-            return VK_FALSE;
-        }
-        return VK_TRUE;
-    }
-    else {
-        // If we do not find it print an error
-        log_msg(mdd(dispatchable_object), msg_flags, (VkObjectType) 0, vkObj, __LINE__, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
-            "Unable to obtain status for non-existent object 0x%" PRIxLEAST64 " of %s type",
-            static_cast<uint64_t>(vkObj), string_VkObjectType(objType));
-        return VK_FALSE;
-    }
-}
-#endif
-
 #include "vk_dispatch_table_helper.h"
 
 static void init_object_tracker(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
@@ -372,11 +337,6 @@ static VkBool32 set_device_memory_status(VkDevice dispatchable_object, VkDeviceM
                                          ObjectStatusFlags status_flag);
 static VkBool32 reset_device_memory_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDebugReportObjectTypeEXT objType,
                                            ObjectStatusFlags status_flag);
-#if 0
-static VkBool32 validate_status(VkDevice dispatchable_object, VkFence object, VkDebugReportObjectTypeEXT objType,
-    ObjectStatusFlags status_mask, ObjectStatusFlags status_flag, VkFlags msg_flags, OBJECT_TRACK_ERROR  error_code,
-    const char         *fail_msg);
-#endif
 extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkPhysicalDeviceMap;
 extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkDeviceMap;
 extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkImageMap;
@@ -720,7 +680,6 @@ VkResult explicit_MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize of
                             void **ppData) {
     VkBool32 skipCall = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skipCall |= set_device_memory_status(device, mem, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, OBJSTATUS_GPU_MEM_MAPPED);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     lock.unlock();
     if (skipCall == VK_TRUE)
@@ -735,7 +694,6 @@ VkResult explicit_MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize of
 void explicit_UnmapMemory(VkDevice device, VkDeviceMemory mem) {
     VkBool32 skipCall = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skipCall |= reset_device_memory_status(device, mem, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, OBJSTATUS_GPU_MEM_MAPPED);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     lock.unlock();
     if (skipCall == VK_TRUE)
