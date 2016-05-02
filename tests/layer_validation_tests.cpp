@@ -4400,7 +4400,7 @@ TEST_F(VkLayerTest, PSOLineWidthInvalid) {
     VkResult err;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Attempt to set lineWidth to 0");
+                                         "Attempt to set lineWidth to -1");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -4500,8 +4500,8 @@ TEST_F(VkLayerTest, PSOLineWidthInvalid) {
     rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rs_ci.pNext = nullptr;
 
-    // Check too low (line width of 0.0f).
-    rs_ci.lineWidth = 0.0f;
+    // Check too low (line width of -1.0f).
+    rs_ci.lineWidth = -1.0f;
 
     VkPipelineColorBlendAttachmentState att = {};
     att.blendEnable = VK_FALSE;
@@ -4556,7 +4556,7 @@ TEST_F(VkLayerTest, PSOLineWidthInvalid) {
     m_errorMonitor->VerifyFound();
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Attempt to set lineWidth to 0");
+                                         "Attempt to set lineWidth to -1");
 
     dyn_state_ci.dynamicStateCount = 3;
 
@@ -4572,7 +4572,7 @@ TEST_F(VkLayerTest, PSOLineWidthInvalid) {
                       VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
     // Check too low with dynamic setting.
-    vkCmdSetLineWidth(m_commandBuffer->GetBufferHandle(), 0.0f);
+    vkCmdSetLineWidth(m_commandBuffer->GetBufferHandle(), -1.0f);
     m_errorMonitor->VerifyFound();
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
