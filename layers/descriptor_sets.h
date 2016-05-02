@@ -224,7 +224,7 @@ VkSampler const *DescriptorSetLayout::GetImmutableSamplerPtrFromBinding(const ui
     assert(binding_to_index_map_.count(binding));
     return bindings_[binding_to_index_map_[binding]]->pImmutableSamplers;
 }
-// If our layout is compatible with rh_sd_layout, return true,
+// If our layout is compatible with rh_ds_layout, return true,
 //  else return false and fill in error_msg will description of what causes incompatibility
 bool DescriptorSetLayout::IsCompatible(DescriptorSetLayout *rh_ds_layout, string *error_msg) {
     // Trivial case
@@ -241,14 +241,12 @@ bool DescriptorSetLayout::IsCompatible(DescriptorSetLayout *rh_ds_layout, string
     //  and verify that type and stageFlags match
     for (auto binding : bindings_) {
         // TODO : Do we also need to check immutable samplers?
-        // VkDescriptorSetLayoutBinding *rh_binding;
-        // rh_ds_layout->FillDescriptorSetLayoutBindingStructFromBinding(binding->binding, rh_binding);
-        if (binding->descriptorCount != rh_ds_layout->GetTotalDescriptorCount()) {
+        if (binding->descriptorCount != rh_ds_layout->GetDescriptorCountFromBinding(binding->binding)) {
             stringstream error_str;
             error_str << "Binding " << binding->binding << " for DescriptorSetLayout " << layout_ << " has a descriptorCount of "
                       << binding->descriptorCount << " but binding " << binding->binding << " for DescriptorSetLayout "
                       << rh_ds_layout->GetDescriptorSetLayout() << " has a descriptorCount of "
-                      << rh_ds_layout->GetTotalDescriptorCount();
+                      << rh_ds_layout->GetDescriptorCountFromBinding(binding->binding);
             *error_msg = error_str.str();
             return false;
         } else if (binding->descriptorType != rh_ds_layout->GetTypeFromBinding(binding->binding)) {
