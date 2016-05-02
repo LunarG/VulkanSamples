@@ -602,9 +602,6 @@ int sample_main(int argc, char *argv[]) {
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       blend_fullscreen_pipe);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
-                            info.desc_set.data(), 0, NULL);
 
     /* Adjust the viewport to be a square in the centre, just overlapping the
      * cube */
