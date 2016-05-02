@@ -12,36 +12,35 @@ To build the Vulkan Runtime Installer:
 
    1a. Note that the NSIS binary version available at
        http://nsis.sourceforge.net/Download is not built with
-       NSIS_CONFIG_LOG=yes and NSIS_MAX_STRLEN=8192 set, so you may have
-       to build NSIS from source with these flags set.  The source for
-       NSIS 3.0.b3 is available from
+       NSIS_CONFIG_LOG=yes and NSIS_MAX_STRLEN=8192 set. Also, changes to need
+       to be made to NSIS to increase the security of the Runtime Installer.
+
+       The source for NSIS 3.0.b3 can be downloaded from
        https://sourceforge.net/projects/nsis/files/NSIS%203%20Pre-release/3.0b3/nsis-3.0b3-src.tar.bz2/download
 
        Instructions for building NSIS are available at
        http://nsis//sourceforge.net/Docs/AppendixG.html.
 
-       To increase the security of the Runtime Installer - specifically
-       enabling buffer overrun security checks and enabling address space
-       layout randomization (ASLR), these changes should be made to the NSIS source file
-       nsis-3.0b3-src/SCons/Config/ms:
+       The security changes to NSIS involve adding the /DYMANICBASE and /GS options
+       to the NSIS compile/link steps, so that the Runtime Installer and Uninstaller
+       are built with address space layout randomization and buffer overrun checks.
 
-           - comment out the line enabling the /FIXED linker option
-           - change the line that sets the /GS- compile option to instead set the /GS compile option
-           - comment out the line that sets the NODEFLIBS_FLAG to /NODEFAULTLIB
+       The security changes to NSIS can be made by applying the patch in the
+       NSIS_Security.patch file in this folder.
 
-       The command to build NSIS from source:
+       After you have applied the security patch, build NSIS with this command:
 
            scons SKIPUTILS="NSIS Menu","MakeLangId" UNICODE=yes \
                  ZLIB_W32=<path_to_zlib>\zlib-1.2.7-win32-x86 NSIS_MAX_STRLEN=8192 \
                  NSIS_CONFIG_LOG=yes NSIS_CONFIG_LOG_TIMESTAMP=yes \
                  APPEND_CCFLAGS="/DYNAMICBASE /Zi" APPEND_LINKFLAGS="/DYNAMICBASE \
                  /DEBUG /OPT:REF /OPT:ICF" SKIPDOC=all dist-zip
-       
+
        This will create a zip file in the nsis-3.0.b3-src directory.  Unpack
        the zip file anywhere on your system. The resulting tree will contain a
-       Plugins directory. Install the NSIS AccessControl plugin in this
-       directory. Add the Bin directory to your PATH enviroment variable so that
-       the CreateInstaller.sh script below will use your custom-built version of
+       Plugins directory. Install the NSIS AccessControl plugin in this directory.
+       Add the Bin directory to your PATH enviroment variable so that the
+       CreateInstaller.sh step below will use your custom-built version of
        NSIS.
 
        Before using NSIS and creating the installer, make sure that all shared

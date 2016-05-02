@@ -1,0 +1,47 @@
+diff --git a/nsis-3.0b3-src/SCons/Config/ms b/nsis-3.0b3-src/SCons/Config/ms
+index 32d3d33..d2c4d25 100644
+--- a/nsis-3.0b3-src/SCons/Config/ms
++++ b/nsis-3.0b3-src/SCons/Config/ms
+@@ -16,7 +16,7 @@ def entry(x,u):
+ 
+ defenv['ENTRY_FLAG'] = entry
+ defenv['MAP_FLAG'] = '/map'
+-defenv['NODEFLIBS_FLAG'] = '/NODEFAULTLIB'
++#defenv['NODEFLIBS_FLAG'] = '/NODEFAULTLIB'
+ defenv['C_FLAG'] = '/TC'
+ defenv['CPP_FLAG'] = '/TP'
+ defenv['CPP_REQUIRES_STDLIB'] = 0
+@@ -29,7 +29,7 @@ defenv['STDCALL'] = '__stdcall'
+ msvs_version = float(defenv['MSVS_VERSION'].replace('Exp',''))
+ if msvs_version >= 8.0:
+ 	defenv['EXCEPTION_FLAG'] = '/EHsc'
+-	defenv.Append(CCFLAGS = ['/GS-'])
++	defenv.Append(CCFLAGS = ['/GS'])
+ 	defenv.Append(CPPDEFINES = ['_CRT_SECURE_NO_WARNINGS', '_CRT_NONSTDC_NO_WARNINGS', '_CRT_SECURE_NO_DEPRECATE', '_CRT_NON_CONFORMING_SWPRINTFS'])
+ 	defenv['MSVCRT_FLAG'] = '/MT' # Avoid msvcr?0.dll dependency
+ else:
+@@ -143,9 +143,9 @@ stub_env.Append(CCFLAGS = ['/Fa${TARGET}.lst'])    # listing file name
+ stub_env.Append(LINKFLAGS = ['$NODEFLIBS_FLAG'])   # no default libraries
+ stub_env.Append(LINKFLAGS = ['$MAP_FLAG'])         # generate map file
+ 
+-if msvs_version >= 10.0:
+-	# no relocations that our resource editor ignores
+-	stub_env.Append(LINKFLAGS = ['/FIXED'])
++#if msvs_version >= 10.0:
++#	# no relocations that our resource editor ignores
++#	stub_env.Append(LINKFLAGS = ['/FIXED'])
+ 
+ stub_uenv = stub_env.Clone()
+ stub_uenv.Append(CPPDEFINES = ['_UNICODE', 'UNICODE'])
+diff --git a/nsis-3.0b3-src/Source/exehead/Main.c b/nsis-3.0b3-src/Source/exehead/Main.c
+index eb231e7..e4642ce 100644
+--- a/nsis-3.0b3-src/Source/exehead/Main.c
++++ b/nsis-3.0b3-src/Source/exehead/Main.c
+@@ -84,6 +84,7 @@ void *g_SHGetFolderPath;
+ NSIS_ENTRYPOINT_GUINOCRT
+ EXTERN_C void NSISWinMainNOCRT()
+ {
++  __security_init_cookie();
+   int ret = 0;
+   const TCHAR *m_Err = _LANG_ERRORWRITINGTEMP;
+ 
