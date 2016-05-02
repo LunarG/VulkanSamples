@@ -1127,55 +1127,70 @@ TEST_F(VkLayerTest, ResetUnsignaledFence) {
     m_errorMonitor->VerifyNotFound();
 }
 
-/* TODO: Update for changes due to bug-14075 tiling across render passes */
-#if 0
 TEST_F(VkLayerTest, InvalidUsageBits)
 {
-    // Initiate Draw w/o a PSO bound
-
+    TEST_DESCRIPTION(
+        "Specify wrong usage for image then create conflictiong view of image "
+        "Initialize buffer with wrong usage then perform copy expecting errors "
+        "from both the image and the buffer (2 calls)");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Invalid usage flag for image ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
-    VkCommandBufferObj commandBuffer(m_device);
-    BeginCommandBuffer();
+    VkImageObj image(m_device);
+    // Initialize image with USAGE_INPUT_ATTACHMENT
+    image.init(128, 128, VK_FORMAT_D32_SFLOAT_S8_UINT,
+               VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, VK_IMAGE_TILING_LINEAR, 0);
 
-    const VkExtent3D e3d = {
-        .width = 128,
-        .height = 128,
-        .depth = 1,
-    };
-    const VkImageCreateInfo ici = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .pNext = NULL,
-        .imageType = VK_IMAGE_TYPE_2D,
-        .format = VK_FORMAT_D32_SFLOAT_S8_UINT,
-        .extent = e3d,
-        .mipLevels = 1,
-        .arraySize = 1,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .tiling = VK_IMAGE_TILING_LINEAR,
-        .usage = 0, // Not setting VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
-        .flags = 0,
-    };
+    VkImageView dsv;
+    VkImageViewCreateInfo dsvci = {};
+    dsvci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    dsvci.image = image.handle();
+    dsvci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    dsvci.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
+    dsvci.subresourceRange.layerCount = 1;
+    dsvci.subresourceRange.baseMipLevel = 0;
+    dsvci.subresourceRange.levelCount = 1;
+    dsvci.subresourceRange.aspectMask =
+        VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 
-    VkImage dsi;
-    vkCreateImage(m_device->device(), &ici, NULL, &dsi);
-    VkDepthStencilView dsv;
-    const VkDepthStencilViewCreateInfo dsvci = {
-        .sType = VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO,
-        .pNext = NULL,
-        .image = dsi,
-        .mipLevel = 0,
-        .baseArrayLayer = 0,
-        .arraySize = 1,
-        .flags = 0,
-    };
-    vkCreateDepthStencilView(m_device->device(), &dsvci, NULL, &dsv);
+    // Create a view with depth / stencil aspect for image with different usage
+    vkCreateImageView(m_device->device(), &dsvci, NULL, &dsv);
 
     m_errorMonitor->VerifyFound();
+
+    // Initialize buffer with TRANSFER_DST usage
+    vk_testing::Buffer buffer;
+    VkMemoryPropertyFlags reqs = 0;
+    buffer.init_as_dst(*m_device, 128 * 128, reqs);
+    VkBufferImageCopy region = {};
+    region.bufferRowLength = 128;
+    region.bufferImageHeight = 128;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.layerCount = 1;
+    region.imageExtent.height = 16;
+    region.imageExtent.width = 16;
+    region.imageExtent.depth = 1;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Invalid usage flag for buffer ");
+    // Buffer usage not set to TRANSFER_SRC and image usage not set to
+    // TRANSFER_DST
+    BeginCommandBuffer();
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(),
+                           image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           1, &region);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Invalid usage flag for image ");
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(),
+                           image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           1, &region);
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyImageView(m_device->device(), dsv, NULL);
 }
-#endif // 0
 #endif // MEM_TRACKER_TESTS
 
 #if OBJ_TRACKER_TESTS
