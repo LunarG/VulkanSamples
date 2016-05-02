@@ -33,9 +33,7 @@ typedef enum _OBJECT_TRACK_ERROR {
     OBJTRACK_NONE,                     // Used for INFO & other non-error messages
     OBJTRACK_UNKNOWN_OBJECT,           // Updating uses of object that's not in global object list
     OBJTRACK_INTERNAL_ERROR,           // Bug with data tracking within the layer
-    OBJTRACK_DESTROY_OBJECT_FAILED,    // Couldn't find object to be destroyed
     OBJTRACK_OBJECT_LEAK,              // OBJECT was not correctly freed/destroyed
-    OBJTRACK_OBJCOUNT_MAX_EXCEEDED,    // Request for Object data in excess of max obj count
     OBJTRACK_INVALID_OBJECT,           // Object used that has never been created
     OBJTRACK_DESCRIPTOR_POOL_MISMATCH, // Descriptor Pools specified incorrectly
     OBJTRACK_COMMAND_POOL_MISMATCH,    // Command Pools specified incorrectly
