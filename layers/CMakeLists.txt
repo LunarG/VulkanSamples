@@ -155,7 +155,7 @@ else()
     install(TARGETS VkLayer_utils DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
 endif()
 
-add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp vk_safe_struct.cpp)
+add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp vk_safe_struct.cpp descriptor_sets.cpp)
 add_vk_layer(device_limits device_limits.cpp vk_layer_table.cpp)
 add_vk_layer(image image.cpp vk_layer_table.cpp)
 add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)

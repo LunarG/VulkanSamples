@@ -2857,8 +2857,8 @@ TEST_F(VkLayerTest, InvalidBufferViewObject) {
     VkResult err;
 
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Attempt to update descriptor with invalid bufferView ");
+        VK_DEBUG_REPORT_ERROR_BIT_EXT, "Attempted write update to texel buffer "
+                                       "descriptor with invalid buffer view");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     VkDescriptorPoolSize ds_type_count = {};
@@ -3005,6 +3005,18 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
     VkBuffer dyub;
     err = vkCreateBuffer(m_device->device(), &buffCI, NULL, &dyub);
     ASSERT_VK_SUCCESS(err);
+    // Allocate memory and bind to buffer so we can make it to the appropriate
+    // error
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 1024;
+    mem_alloc.memoryTypeIndex = 1;
+    VkDeviceMemory mem;
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindBufferMemory(m_device->device(), dyub, mem, 0);
+    ASSERT_VK_SUCCESS(err);
     // Correctly update descriptor to avoid "NOT_UPDATED" error
     VkDescriptorBufferInfo buffInfo = {};
     buffInfo.buffer = dyub;
@@ -3037,9 +3049,10 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
                             1, &descriptorSet, 2, pDynOff);
     m_errorMonitor->VerifyFound();
     // Finally cause error due to dynamicOffset being too big
-    m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        " from its update, this oversteps its buffer (");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " dynamic offset 512 combined with "
+                                         "offset 0 and range 1024 that "
+                                         "oversteps the buffer size of 1024");
     // Create PSO to be used for draw-time errors below
     char const *vsSource =
         "#version 450\n"
@@ -3075,6 +3088,9 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
                             1, &descriptorSet, 1, pDynOff);
     Draw(1, 0, 0, 0);
     m_errorMonitor->VerifyFound();
+
+    vkFreeMemory(m_device->device(), mem, NULL);
+    vkDestroyBuffer(m_device->device(), dyub, NULL);
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
@@ -5141,9 +5157,9 @@ TEST_F(VkLayerTest, DSTypeMismatch) {
     VkResult err;
 
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT, "Write descriptor update has descriptor "
-                                       "type VK_DESCRIPTOR_TYPE_SAMPLER that "
-                                       "does not match ");
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        " binding #0 with type VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER but update "
+        "type is VK_DESCRIPTOR_TYPE_SAMPLER");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     // VkDescriptorSetObj descriptorSet(m_device);
@@ -5190,31 +5206,12 @@ TEST_F(VkLayerTest, DSTypeMismatch) {
                                    &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
-    VkSamplerCreateInfo sampler_ci = {};
-    sampler_ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sampler_ci.pNext = NULL;
-    sampler_ci.magFilter = VK_FILTER_NEAREST;
-    sampler_ci.minFilter = VK_FILTER_NEAREST;
-    sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-    sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampler_ci.mipLodBias = 1.0;
-    sampler_ci.anisotropyEnable = VK_FALSE;
-    sampler_ci.maxAnisotropy = 1;
-    sampler_ci.compareEnable = VK_FALSE;
-    sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
-    sampler_ci.minLod = 1.0;
-    sampler_ci.maxLod = 1.0;
-    sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-    sampler_ci.unnormalizedCoordinates = VK_FALSE;
-
-    VkSampler sampler;
-    err = vkCreateSampler(m_device->device(), &sampler_ci, NULL, &sampler);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorImageInfo info = {};
-    info.sampler = sampler;
+    // Correctly update descriptor to avoid "NOT_UPDATED" error
+    VkDescriptorBufferInfo buff_info = {};
+    buff_info.buffer =
+        VkBuffer(0); // Don't care about buffer handle for this test
+    buff_info.offset = 0;
+    buff_info.range = 1024;
 
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
@@ -5239,9 +5236,10 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds) {
     VkResult err;
 
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT, "Descriptor update type of "
-                                       "VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET "
-                                       "is out of bounds for matching binding");
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        " binding #0 with 1 total descriptors but update of 1 descriptors "
+        "starting at binding offset of 0 combined with update array element "
+        "offset of 1 oversteps the size of this descriptor set.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     // VkDescriptorSetObj descriptorSet(m_device);
@@ -5322,15 +5320,13 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds) {
     descriptor_write.dstArrayElement =
         1; /* This index out of bounds for the update */
     descriptor_write.descriptorCount = 1;
-    // This is the wrong type, but out of bounds will be flagged first
-    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-    descriptor_write.pImageInfo = &info;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptor_write.pBufferInfo = &buff_info;
 
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
     m_errorMonitor->VerifyFound();
 
-    vkDestroySampler(m_device->device(), sampler, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
@@ -5340,9 +5336,8 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex) {
     // index 2
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        " does not have binding to match update binding ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " does not have binding 2.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     // VkDescriptorSetObj descriptorSet(m_device);
@@ -5537,7 +5532,7 @@ TEST_F(VkLayerTest, SampleDescriptorUpdateError) {
 
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Attempt to update descriptor with invalid sampler 0xbaadbeef");
+        "Attempted write update to sampler descriptor with invalid sampler");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     // TODO : Farm Descriptor setup code to helper function(s) to reduce copied
@@ -5614,9 +5609,10 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError) {
     // imageView
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Attempt to update descriptor with invalid imageView 0xbaadbeef");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Attempted write update to combined "
+                                         "image sampler descriptor failed due "
+                                         "to: Invalid VkImageView: 0xbaadbeef");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     VkDescriptorPoolSize ds_type_count = {};
@@ -5716,11 +5712,10 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors) {
     // into the other
     VkResult err;
 
-    m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Copy descriptor update index 0, has src update descriptor "
-        "type VK_DESCRIPTOR_TYPE_SAMPLER that does not match overlapping "
-        "dest ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " binding #1 with type "
+                                         "VK_DESCRIPTOR_TYPE_SAMPLER. Types do "
+                                         "not match.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     // VkDescriptorSetObj descriptorSet(m_device);
@@ -5825,7 +5820,7 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors) {
     // Now perform a copy update that fails due to binding out of bounds
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Copy descriptor update 0 has srcBinding 3 which is out of bounds ");
+        " does not have copy update src binding of 3.");
     memset(&copy_ds_update, 0, sizeof(VkCopyDescriptorSet));
     copy_ds_update.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
     copy_ds_update.srcSet = descriptorSet;
@@ -5840,8 +5835,10 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors) {
 
     // Now perform a copy update that fails due to binding out of bounds
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Copy descriptor src update is out of bounds for matching binding 1 ");
+        VK_DEBUG_REPORT_ERROR_BIT_EXT, " binding#1 with offset index of 1 plus "
+                                       "update array offset of 0 and update of "
+                                       "5 descriptors oversteps total number "
+                                       "of descriptors in set: 2.");
 
     memset(&copy_ds_update, 0, sizeof(VkCopyDescriptorSet));
     copy_ds_update.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;

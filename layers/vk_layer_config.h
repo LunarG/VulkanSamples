@@ -17,7 +17,9 @@
  * Author: Jon Ashburn <jon@lunarg.com>
  **************************************************************************/
 #pragma once
+#include "vulkan/vulkan.h"
 #include <stdbool.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
