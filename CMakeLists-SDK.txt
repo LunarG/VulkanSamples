@@ -53,12 +53,12 @@ find_program(GLSLANG_VALIDATOR NAMES glslangValidator
 
 find_path(GLSLANG_SPIRV_INCLUDE_DIR SPIRV/spirv.hpp HINTS "${CMAKE_SOURCE_DIR}/../source/glslang/"
                                                           "${CMAKE_SOURCE_DIR}/../glslang"
-							 DOC "Path to SPIRV/spirv.hpp")
+                                                          DOC "Path to SPIRV/spirv.hpp")
 find_path(SPIRV_TOOLS_INCLUDE_DIR spirv-tools/libspirv.h HINTS "${CMAKE_SOURCE_DIR}/../spirv-tools/include"
                                                                "${CMAKE_SOURCE_DIR}/../source/spirv-tools/include"
                                                                "${CMAKE_SOURCE_DIR}/../spirv-tools/external/include"
                                                                "${CMAKE_SOURCE_DIR}/../source/spirv-tools/external/include"
-                                                         DOC "Path to spirv-tools/libspirv.h")
+                                                               DOC "Path to spirv-tools/libspirv.h")
 
 if (WIN32)
     set (GLSLANG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/${BUILDTGT_DIR}/glslang/Release"
