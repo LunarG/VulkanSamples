@@ -4784,6 +4784,146 @@ TEST_F(VkLayerTest, BufferMemoryBarrierNoBuffer) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, InvalidBarriers) {
+    TEST_DESCRIPTION("A variety of ways to get VK_INVALID_BARRIER ");
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT, "Barriers cannot be set during subpass");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkMemoryBarrier mem_barrier = {};
+    mem_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    mem_barrier.pNext = NULL;
+    mem_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+    mem_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    BeginCommandBuffer();
+    // BeginCommandBuffer() starts a render pass
+    vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
+                         VK_PIPELINE_STAGE_HOST_BIT,
+                         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 1,
+                         &mem_barrier, 0, nullptr, 0, nullptr);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Image Layout cannot be transitioned to UNDEFINED");
+    VkImageObj image(m_device);
+    image.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM,
+               VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+    VkImageMemoryBarrier img_barrier = {};
+    img_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    img_barrier.pNext = NULL;
+    img_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+    img_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    // New layout can't be UNDEFINED
+    img_barrier.newLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    img_barrier.image = image.handle();
+    img_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    img_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    img_barrier.subresourceRange.baseArrayLayer = 0;
+    img_barrier.subresourceRange.baseMipLevel = 0;
+    img_barrier.subresourceRange.layerCount = 1;
+    img_barrier.subresourceRange.levelCount = 1;
+    vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
+                         VK_PIPELINE_STAGE_HOST_BIT,
+                         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0,
+                         nullptr, 1, &img_barrier);
+    m_errorMonitor->VerifyFound();
+    img_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Subresource must have the sum of the "
+                                         "baseArrayLayer");
+    // baseArrayLayer + layerCount must be <= image's arrayLayers
+    img_barrier.subresourceRange.baseArrayLayer = 1;
+    vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
+                         VK_PIPELINE_STAGE_HOST_BIT,
+                         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0,
+                         nullptr, 1, &img_barrier);
+    m_errorMonitor->VerifyFound();
+    img_barrier.subresourceRange.baseArrayLayer = 0;
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Subresource must have the sum of the baseMipLevel");
+    // baseMipLevel + levelCount must be <= image's mipLevels
+    img_barrier.subresourceRange.baseMipLevel = 1;
+    vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
+                         VK_PIPELINE_STAGE_HOST_BIT,
+                         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0,
+                         nullptr, 1, &img_barrier);
+    m_errorMonitor->VerifyFound();
+    img_barrier.subresourceRange.baseMipLevel = 0;
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Buffer Barriers cannot be used during a render pass");
+    vk_testing::Buffer buffer;
+    buffer.init(*m_device, 256);
+    VkBufferMemoryBarrier buf_barrier = {};
+    buf_barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    buf_barrier.pNext = NULL;
+    buf_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+    buf_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    buf_barrier.buffer = buffer.handle();
+    buf_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    buf_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    buf_barrier.offset = 0;
+    buf_barrier.size = VK_WHOLE_SIZE;
+    // Can't send buffer barrier during a render pass
+    vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
+                         VK_PIPELINE_STAGE_HOST_BIT,
+                         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 1,
+                         &buf_barrier, 0, nullptr);
+    m_errorMonitor->VerifyFound();
+    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "which is not less than total size");
+    buf_barrier.offset = 257;
+    // Offset greater than total size
+    vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
+                         VK_PIPELINE_STAGE_HOST_BIT,
+                         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 1,
+                         &buf_barrier, 0, nullptr);
+    m_errorMonitor->VerifyFound();
+    buf_barrier.offset = 0;
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT, "whose sum is greater than total size");
+    buf_barrier.size = 257;
+    // Size greater than total size
+    vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
+                         VK_PIPELINE_STAGE_HOST_BIT,
+                         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 1,
+                         &buf_barrier, 0, nullptr);
+    m_errorMonitor->VerifyFound();
+    buf_barrier.size = VK_WHOLE_SIZE;
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Image is a depth and stencil format and thus must "
+        "have both VK_IMAGE_ASPECT_DEPTH_BIT and "
+        "VK_IMAGE_ASPECT_STENCIL_BIT set.");
+    VkDepthStencilObj ds_image(m_device);
+    ds_image.Init(m_device, 128, 128, VK_FORMAT_D24_UNORM_S8_UINT);
+    ASSERT_TRUE(ds_image.initialized());
+    img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    img_barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    img_barrier.image = ds_image.handle();
+    // Leave aspectMask at COLOR on purpose
+    vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
+                         VK_PIPELINE_STAGE_HOST_BIT,
+                         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0,
+                         nullptr, 1, &img_barrier);
+    m_errorMonitor->VerifyFound();
+}
+
 TEST_F(VkLayerTest, IdxBufferAlignmentError) {
     // Bind a BeginRenderPass within an active RenderPass
     VkResult err;
