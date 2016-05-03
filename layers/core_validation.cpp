@@ -5613,65 +5613,15 @@ static bool validateIdleBuffer(const layer_data *my_data, VkBuffer buffer) {
     return skip_call;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
-vkDestroyBuffer(VkDevice device, VkBuffer buffer, const VkAllocationCallbacks *pAllocator) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skipCall = false;
-    std::unique_lock<std::mutex> lock(global_lock);
-    if (!validateIdleBuffer(dev_data, buffer) && !skipCall) {
-        lock.unlock();
-        dev_data->device_dispatch_table->DestroyBuffer(device, buffer, pAllocator);
-        lock.lock();
-    }
-    dev_data->bufferMap.erase(buffer);
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
-vkDestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCallbacks *pAllocator) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_dispatch_table->DestroyBufferView(device, bufferView, pAllocator);
-    std::lock_guard<std::mutex> lock(global_lock);
-    auto item = dev_data->bufferViewMap.find(bufferView);
-    if (item != dev_data->bufferViewMap.end()) {
-        dev_data->bufferViewMap.erase(item);
-    }
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks *pAllocator) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skipCall = false;
-    if (!skipCall)
-        dev_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
-
-    std::lock_guard<std::mutex> lock(global_lock);
-    const auto& entry = dev_data->imageMap.find(image);
-    if (entry != dev_data->imageMap.end()) {
-        // Clear any memory mapping for this image
-        auto mem_entry = dev_data->memObjMap.find(entry->second.mem);
-        if (mem_entry != dev_data->memObjMap.end())
-            mem_entry->second.image = VK_NULL_HANDLE;
-
-        // Remove image from imageMap
-        dev_data->imageMap.erase(entry);
-    }
-    const auto& subEntry = dev_data->imageSubresourceMap.find(image);
-    if (subEntry != dev_data->imageSubresourceMap.end()) {
-        for (const auto& pair : subEntry->second) {
-            dev_data->imageLayoutMap.erase(pair);
-        }
-        dev_data->imageSubresourceMap.erase(subEntry);
-    }
-}
-#if MTMERGESOURCE
 static bool print_memory_range_error(layer_data *dev_data, const uint64_t object_handle, const uint64_t other_handle,
                                      VkDebugReportObjectTypeEXT object_type) {
     if (object_type == VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT) {
         return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, 0,
-                       MEMTRACK_INVALID_ALIASING, "MEM", "Buffer %" PRIx64 " is alised with image %" PRIx64, object_handle,
+                       MEMTRACK_INVALID_ALIASING, "MEM", "Buffer %" PRIx64 " is aliased with image %" PRIx64, object_handle,
                        other_handle);
     } else {
         return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, 0,
-                       MEMTRACK_INVALID_ALIASING, "MEM", "Image %" PRIx64 " is alised with buffer %" PRIx64, object_handle,
+                       MEMTRACK_INVALID_ALIASING, "MEM", "Image %" PRIx64 " is aliased with buffer %" PRIx64, object_handle,
                        other_handle);
     }
 }
@@ -5692,18 +5642,89 @@ static bool validate_memory_range(layer_data *dev_data, const vector<MEMORY_RANG
     return skip_call;
 }
 
-static bool validate_buffer_image_aliasing(layer_data *dev_data, uint64_t handle, VkDeviceMemory mem, VkDeviceSize memoryOffset,
-                                           VkMemoryRequirements memRequirements, vector<MEMORY_RANGE> &ranges,
-                                           const vector<MEMORY_RANGE> &other_ranges, VkDebugReportObjectTypeEXT object_type) {
+static MEMORY_RANGE insert_memory_ranges(uint64_t handle, VkDeviceMemory mem, VkDeviceSize memoryOffset,
+                                         VkMemoryRequirements memRequirements, vector<MEMORY_RANGE> &ranges) {
     MEMORY_RANGE range;
     range.handle = handle;
     range.memory = mem;
     range.start = memoryOffset;
     range.end = memoryOffset + memRequirements.size - 1;
     ranges.push_back(range);
-    return validate_memory_range(dev_data, other_ranges, range, object_type);
+    return range;
 }
 
+static void remove_memory_ranges(uint64_t handle, VkDeviceMemory mem, vector<MEMORY_RANGE> &ranges) {
+    for (uint32_t item = 0; item < ranges.size(); item++) {
+        if ((ranges[item].handle == handle) && (ranges[item].memory == mem)) {
+            ranges.erase(ranges.begin() + item);
+            break;
+        }
+    }
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyBuffer(VkDevice device, VkBuffer buffer,
+                                                           const VkAllocationCallbacks *pAllocator) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    bool skipCall = false;
+    std::unique_lock<std::mutex> lock(global_lock);
+    if (!validateIdleBuffer(dev_data, buffer) && !skipCall) {
+        lock.unlock();
+        dev_data->device_dispatch_table->DestroyBuffer(device, buffer, pAllocator);
+        lock.lock();
+    }
+    // Clean up memory binding and range information for buffer
+    const auto &bufferEntry = dev_data->bufferMap.find(buffer);
+    if (bufferEntry != dev_data->bufferMap.end()) {
+        const auto &memEntry = dev_data->memObjMap.find(bufferEntry->second.mem);
+        if (memEntry != dev_data->memObjMap.end()) {
+            remove_memory_ranges(reinterpret_cast<uint64_t &>(buffer), bufferEntry->second.mem, memEntry->second.bufferRanges);
+        }
+        clear_object_binding(dev_data, reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
+        dev_data->bufferMap.erase(bufferEntry);
+    }
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
+vkDestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCallbacks *pAllocator) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    dev_data->device_dispatch_table->DestroyBufferView(device, bufferView, pAllocator);
+    std::lock_guard<std::mutex> lock(global_lock);
+    auto item = dev_data->bufferViewMap.find(bufferView);
+    if (item != dev_data->bufferViewMap.end()) {
+        dev_data->bufferViewMap.erase(item);
+    }
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks *pAllocator) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    bool skipCall = false;
+    if (!skipCall) {
+        dev_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
+    }
+
+    std::lock_guard<std::mutex> lock(global_lock);
+    const auto &imageEntry = dev_data->imageMap.find(image);
+    if (imageEntry != dev_data->imageMap.end()) {
+        // Clean up memory mapping, bindings and range references for image
+        auto memEntry = dev_data->memObjMap.find(imageEntry->second.mem);
+        if (memEntry != dev_data->memObjMap.end()) {
+            remove_memory_ranges(reinterpret_cast<uint64_t &>(image), imageEntry->second.mem, memEntry->second.imageRanges);
+            clear_object_binding(dev_data, reinterpret_cast<uint64_t &>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
+            memEntry->second.image = VK_NULL_HANDLE;
+        }
+        // Remove image from imageMap
+        dev_data->imageMap.erase(imageEntry);
+    }
+    const auto& subEntry = dev_data->imageSubresourceMap.find(image);
+    if (subEntry != dev_data->imageSubresourceMap.end()) {
+        for (const auto& pair : subEntry->second) {
+            dev_data->imageLayoutMap.erase(pair);
+        }
+        dev_data->imageSubresourceMap.erase(subEntry);
+    }
+}
+
+#if MTMERGESOURCE
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkBindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -5718,9 +5739,16 @@ vkBindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDevic
         buffer_node->second.mem = mem;
         VkMemoryRequirements memRequirements;
         dev_data->device_dispatch_table->GetBufferMemoryRequirements(device, buffer, &memRequirements);
-        skipCall |= validate_buffer_image_aliasing(dev_data, buffer_handle, mem, memoryOffset, memRequirements,
-                                                   dev_data->memObjMap[mem].bufferRanges, dev_data->memObjMap[mem].imageRanges,
-                                                   VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
+
+        // Track and validate bound memory range information
+        const auto &memEntry = dev_data->memObjMap.find(mem);
+        if (memEntry != dev_data->memObjMap.end()) {
+            const MEMORY_RANGE range =
+                insert_memory_ranges(buffer_handle, mem, memoryOffset, memRequirements, memEntry->second.bufferRanges);
+            skipCall |=
+                validate_memory_range(dev_data, memEntry->second.imageRanges, range, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
+        }
+
         // Validate memory requirements alignment
         if (vk_safe_modulo(memoryOffset, memRequirements.alignment) != 0) {
             skipCall |=
@@ -9921,15 +9949,22 @@ VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(VkDevice device, VkImage image,
     auto image_node = dev_data->imageMap.find(image);
     if (image_node != dev_data->imageMap.end()) {
         // Track objects tied to memory
-        uint64_t image_handle = reinterpret_cast<uint64_t&>(image);
+        uint64_t image_handle = reinterpret_cast<uint64_t &>(image);
         skipCall = set_mem_binding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory");
         VkMemoryRequirements memRequirements;
         lock.unlock();
         dev_data->device_dispatch_table->GetImageMemoryRequirements(device, image, &memRequirements);
         lock.lock();
-        skipCall |= validate_buffer_image_aliasing(dev_data, image_handle, mem, memoryOffset, memRequirements,
-                                                   dev_data->memObjMap[mem].imageRanges, dev_data->memObjMap[mem].bufferRanges,
-                                                   VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
+
+        // Track and validate bound memory range information
+        const auto &memEntry = dev_data->memObjMap.find(mem);
+        if (memEntry != dev_data->memObjMap.end()) {
+            const MEMORY_RANGE range =
+                insert_memory_ranges(image_handle, mem, memoryOffset, memRequirements, memEntry->second.imageRanges);
+            skipCall |=
+                validate_memory_range(dev_data, memEntry->second.bufferRanges, range, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
+        }
+
         print_mem_list(dev_data);
         lock.unlock();
         if (!skipCall) {
