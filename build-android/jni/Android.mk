@@ -37,8 +37,8 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/layers \
                     $(LAYER_DIR)/include \
                     $(SRC_DIR)/loader \
-                    $(SRC_DIR)/../glslang \
-		    $(SRC_DIR)/../spirv-tools/include
+                    $(SRC_DIR)/external/glslang \
+                    $(SRC_DIR)/external/spirv-tools/include
 LOCAL_STATIC_LIBRARIES += layer_utils SPIRV-Tools-prebuilt
 LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
 LOCAL_LDLIBS    := -llog
@@ -139,42 +139,42 @@ include $(BUILD_SHARED_LIBRARY)
 # Pull in prebuilt shaderc
 include $(CLEAR_VARS)
 LOCAL_MODULE := shaderc-prebuilt
-LOCAL_SRC_FILES := $(SRC_DIR)/../shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libshaderc.a
+LOCAL_SRC_FILES := $(SRC_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libshaderc.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := glslang-prebuilt
-LOCAL_SRC_FILES := $(SRC_DIR)/../shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libglslang.a
+LOCAL_SRC_FILES := $(SRC_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libglslang.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := OGLCompiler-prebuilt
-LOCAL_SRC_FILES := $(SRC_DIR)/../shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libOGLCompiler.a
+LOCAL_SRC_FILES := $(SRC_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libOGLCompiler.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := OSDependent-prebuilt
-LOCAL_SRC_FILES := $(SRC_DIR)/../shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libOSDependent.a
+LOCAL_SRC_FILES := $(SRC_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libOSDependent.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := HLSL-prebuilt
-LOCAL_SRC_FILES := $(SRC_DIR)/../shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libHLSL.a
+LOCAL_SRC_FILES := $(SRC_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libHLSL.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := shaderc_util-prebuilt
-LOCAL_SRC_FILES := $(SRC_DIR)/../shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libshaderc_util.a
+LOCAL_SRC_FILES := $(SRC_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libshaderc_util.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := SPIRV-prebuilt
-LOCAL_SRC_FILES := $(SRC_DIR)/../shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libSPIRV.a
+LOCAL_SRC_FILES := $(SRC_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libSPIRV.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := SPIRV-Tools-prebuilt
-LOCAL_SRC_FILES := $(SRC_DIR)/../shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libSPIRV-Tools.a
+LOCAL_SRC_FILES := $(SRC_DIR)/external/shaderc/android_test/obj/local/$(TARGET_ARCH_ABI)/libSPIRV-Tools.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -189,7 +189,7 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/libs \
                     $(SRC_DIR)/common \
                     $(SRC_DIR)/icd/common \
-                    $(SRC_DIR)/../shaderc/libshaderc/include/
+                    $(SRC_DIR)/external/shaderc/libshaderc/include
 
 LOCAL_STATIC_LIBRARIES := googletest_main layer_utils
 LOCAL_SHARED_LIBRARIES += shaderc-prebuilt glslang-prebuilt OGLCompiler-prebuilt OSDependent-prebuilt HLSL-prebuilt shaderc_util-prebuilt SPIRV-prebuilt SPIRV-Tools-prebuilt
