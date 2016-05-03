@@ -2274,135 +2274,71 @@ TEST_F(VkLayerTest, TwoSubmitInfosWithSemaphoreOneQueueSubmitsOneFence) {
     m_errorMonitor->VerifyNotFound();
 }
 
-TEST_F(VkLayerTest, LineWidthStateNotBound) {
+TEST_F(VkLayerTest, DynamicStatesNotBound) {
+    TEST_DESCRIPTION(
+        "Run a series of simple draw calls to validate all the different "
+        "failure cases that can occur when dynamic state is required but not "
+        "correctly bound."
+        "Here are the different dynamic state cases verified by this test:\n"
+        "-Line Width\n-Depth Bias\n-Viewport State\n-Scissor State\n-Blend "
+        "State\n-Depth Bounds\n-Stencil Read Mask\n-Stencil Write "
+        "Mask\n-Stencil Reference");
+
+    // Dynamic line width
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Dynamic line width state not set for this command buffer");
-
-    TEST_DESCRIPTION("Simple Draw Call that validates failure when a line "
-                     "width state object is not bound beforehand");
-
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText,
                    BsoFailLineWidth);
-
     m_errorMonitor->VerifyFound();
-}
-
-TEST_F(VkLayerTest, DepthBiasStateNotBound) {
+    // Dynamic depth bias
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Dynamic depth bias state not set for this command buffer");
-
-    TEST_DESCRIPTION("Simple Draw Call that validates failure when a depth "
-                     "bias state object is not bound beforehand");
-
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText,
                    BsoFailDepthBias);
-
     m_errorMonitor->VerifyFound();
-}
-
-// Disable these two tests until we can sort out how to track multiple layer
-// errors
-TEST_F(VkLayerTest, ViewportStateNotBound) {
+    // Dynamic viewport state
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Dynamic viewport state not set for this command buffer");
-
-    TEST_DESCRIPTION("Simple Draw Call that validates failure when a viewport "
-                     "state object is not bound beforehand");
-
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText,
                    BsoFailViewport);
-
     m_errorMonitor->VerifyFound();
-}
-
-TEST_F(VkLayerTest, ScissorStateNotBound) {
+    // Dynamic scissor state
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Dynamic scissor state not set for this command buffer");
-
-    TEST_DESCRIPTION("Simple Draw Call that validates failure when a viewport "
-                     "state object is not bound beforehand");
-
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText,
                    BsoFailScissor);
-
     m_errorMonitor->VerifyFound();
-}
-
-TEST_F(VkLayerTest, BlendStateNotBound) {
-    m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Dynamic blend constants state not set for this command buffer");
-
-    TEST_DESCRIPTION("Simple Draw Call that validates failure when a blend "
-                     "state object is not bound beforehand");
-
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText,
-                   BsoFailBlend);
-
-    m_errorMonitor->VerifyFound();
-}
-
-TEST_F(VkLayerTest, DepthBoundsStateNotBound) {
+    // Dynamic blend state
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Dynamic depth bounds state not set for this command buffer");
-
-    TEST_DESCRIPTION("Simple Draw Call that validates failure when a depth "
-                     "bounds state object is not bound beforehand");
-
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText,
                    BsoFailDepthBounds);
-
     m_errorMonitor->VerifyFound();
-}
-
-TEST_F(VkLayerTest, StencilReadMaskNotSet) {
+    // Dynamic stencil read mask
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Dynamic stencil read mask state not set for this command buffer");
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    TEST_DESCRIPTION("Simple Draw Call that validates failure when a stencil "
-                     "read mask is not set beforehand");
-
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText,
                    BsoFailStencilReadMask);
-
     m_errorMonitor->VerifyFound();
-}
-
-TEST_F(VkLayerTest, StencilWriteMaskNotSet) {
+    // Dynamic stencil write mask
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Dynamic stencil write mask state not set for this command buffer");
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    TEST_DESCRIPTION("Simple Draw Call that validates failure when a stencil "
-                     "write mask is not set beforehand");
-
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText,
                    BsoFailStencilWriteMask);
-
     m_errorMonitor->VerifyFound();
-}
-
-TEST_F(VkLayerTest, StencilReferenceNotSet) {
+    // Dynamic stencil reference
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Dynamic stencil reference state not set for this command buffer");
-
-    TEST_DESCRIPTION("Simple Draw Call that validates failure when a stencil "
-                     "reference is not set beforehand");
-
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText,
                    BsoFailStencilReference);
-
     m_errorMonitor->VerifyFound();
 }
 
