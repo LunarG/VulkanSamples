@@ -75,7 +75,7 @@ debug_report_data *mid(VkInstance object) {
     dispatch_key key = get_dispatch_key(object);
     layer_data *data = get_my_data_ptr(key, layer_data_map);
 #if DISPATCH_MAP_DEBUG
-    fprintf(stderr, "MID: map: %p, object: %p, key: %p, data: %p\n", &layer_data_map, object, key, data);
+    fprintf(stderr, "MID: map:  0x%p, object:  0x%p, key:  0x%p, data:  0x%p\n", &layer_data_map, object, key, data);
 #endif
     assert(data != NULL);
 
@@ -87,7 +87,7 @@ debug_report_data *mdd(void *object) {
     dispatch_key key = get_dispatch_key(object);
     layer_data *data = get_my_data_ptr(key, layer_data_map);
 #if DISPATCH_MAP_DEBUG
-    fprintf(stderr, "MDD: map: %p, object: %p, key: %p, data: %p\n", &layer_data_map, object, key, data);
+    fprintf(stderr, "MDD: map:  0x%p, object:  0x%p, key:  0x%p, data:  0x%p\n", &layer_data_map, object, key, data);
 #endif
     assert(data != NULL);
     return data->report_data;
@@ -1664,7 +1664,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
         layer_debug_report_destroy_device(device);
 
 #if DISPATCH_MAP_DEBUG
-        fprintf(stderr, "Device: %p, key: %p\n", device, key);
+        fprintf(stderr, "Device:  0x%p, key:  0x%p\n", device, key);
 #endif
 
         get_dispatch_table(pc_device_table_map, device)->DestroyDevice(device, pAllocator);

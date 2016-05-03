@@ -48,6 +48,8 @@
 #include "vk_layer_utils.h"
 #include "vk_layer_logging.h"
 
+using namespace std;
+
 namespace image {
 
 struct layer_data {
@@ -310,7 +312,7 @@ CreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, const VkAlloc
         skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                             (uint64_t)pImage, __LINE__, IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
                             "CreateImage resource size exceeds allowable maximum "
-                            "Image resource size = %#" PRIxLEAST64 ", maximum resource size = %#" PRIxLEAST64 " ",
+                            "Image resource size = 0x%" PRIxLEAST64 ", maximum resource size = 0x%" PRIxLEAST64 " ",
                             totalSize, ImageFormatProperties.maxResourceSize);
     }
 

@@ -703,13 +703,16 @@ class StructWrapperGen:
             print_array = False
         elif struct_member['array'] and not print_array:
             # Just print base address of array when not full print_array
+            print_delimiter = "0x%"
             cast_type = "(void*)"
         elif is_type(struct_member['type'], 'enum'):
             cast_type = "string_%s" % struct_member['type']
             if struct_member['ptr']:
                 struct_var_name = "*" + struct_var_name
+                print_delimiter = "0x%"
             print_type = "s"
         elif is_type(struct_member['type'], 'struct'): # print struct address for now
+            print_delimiter = "0x%"
             cast_type = "(void*)"
             if not struct_member['ptr']:
                 cast_type = "(void*)&"
@@ -730,9 +733,11 @@ class StructWrapperGen:
         elif 'int' in struct_member['type']:
             print_type = "i"
         elif struct_member['ptr']:
+            print_delimiter = "0x%"
             pass
         else:
             #print("Unhandled struct type: %s" % struct_member['type'])
+            print_delimiter = "0x%"
             cast_type = "(void*)"
         if print_array and struct_member['array']:
             member_print_post = "[%u]"
@@ -791,7 +796,7 @@ class StructWrapperGen:
                             if self.no_addr:
                                 sh_funcs.append('        snprintf(stp_strs[%i], len, " %%spNext (addr)\\n%%s", prefix, tmpStr);' % index)
                             else:
-                                sh_funcs.append('        snprintf(stp_strs[%i], len, " %%spNext (%%p)\\n%%s", prefix, (void*)pStruct->pNext, tmpStr);' % index)
+                                sh_funcs.append('        snprintf(stp_strs[%i], len, " %%spNext (0x%%p)\\n%%s", prefix, (void*)pStruct->pNext, tmpStr);' % index)
                             sh_funcs.append('        free(tmpStr);')
                         else:
                             if stp_list[index]['name'] in ['pImageViews', 'pBufferViews']:
@@ -804,7 +809,7 @@ class StructWrapperGen:
                             if self.no_addr:
                                 sh_funcs.append('        snprintf(stp_strs[%i], len, " %%s%s (addr)\\n%%s", prefix, tmpStr);' % (index, stp_list[index]['name']))
                             else:
-                                sh_funcs.append('        snprintf(stp_strs[%i], len, " %%s%s (%%p)\\n%%s", prefix, (void*)pStruct->%s, tmpStr);' % (index, stp_list[index]['name'], stp_list[index]['name']))
+                                sh_funcs.append('        snprintf(stp_strs[%i], len, " %%s%s (0x%%p)\\n%%s", prefix, (void*)pStruct->%s, tmpStr);' % (index, stp_list[index]['name'], stp_list[index]['name']))
                         sh_funcs.append('    }')
                         sh_funcs.append("    else\n        stp_strs[%i] = \"\";" % (index))
                     elif stp_list[index]['array']:
@@ -814,7 +819,7 @@ class StructWrapperGen:
                         if self.no_addr:
                             sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s[0] (addr)\\n%%s", prefix, tmpStr);' % (index, stp_list[index]['name']))
                         else:
-                            sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s[0] (%%p)\\n%%s", prefix, (void*)&pStruct->%s[0], tmpStr);' % (index, stp_list[index]['name'], stp_list[index]['name']))
+                            sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s[0] (0x%%p)\\n%%s", prefix, (void*)&pStruct->%s[0], tmpStr);' % (index, stp_list[index]['name'], stp_list[index]['name']))
                     else:
                         sh_funcs.append('    tmpStr = %s(&pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         sh_funcs.append('    len = 256+strlen(tmpStr);')
@@ -822,7 +827,7 @@ class StructWrapperGen:
                         if self.no_addr:
                             sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s (addr)\\n%%s", prefix, tmpStr);' % (index, stp_list[index]['name']))
                         else:
-                            sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s (%%p)\\n%%s", prefix, (void*)&pStruct->%s, tmpStr);' % (index, stp_list[index]['name'], stp_list[index]['name']))
+                            sh_funcs.append('    snprintf(stp_strs[%i], len, " %%s%s (0x%%p)\\n%%s", prefix, (void*)&pStruct->%s, tmpStr);' % (index, stp_list[index]['name'], stp_list[index]['name']))
                     total_strlen_str += 'strlen(stp_strs[%i]) + ' % index
             sh_funcs.append('    len = %ssizeof(char)*1024;' % (total_strlen_str))
             sh_funcs.append('    str = (char*)malloc(len);')
@@ -884,7 +889,7 @@ class StructWrapperGen:
         for s in sorted(self.struct_dict):
             # Wrap this in platform check since it may contain undefined structs or functions
             add_platform_wrapper_entry(sh_funcs, typedef_fwd_dict[s])
-            sh_funcs.append('string %s(const %s* pStruct, const string prefix);' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
+            sh_funcs.append('std::string %s(const %s* pStruct, const std::string prefix);' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
             add_platform_wrapper_exit(sh_funcs, typedef_fwd_dict[s])
 
         sh_funcs.append('\n')
@@ -903,10 +908,11 @@ class StructWrapperGen:
             # Wrap this in platform check since it may contain undefined structs or functions
             add_platform_wrapper_entry(sh_funcs, typedef_fwd_dict[s])
 
-            sh_funcs.append('string %s(const %s* pStruct, const string prefix)\n{' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
+            sh_funcs.append('std::string %s(const %s* pStruct, const std::string prefix)\n{' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
             sh_funcs.append('%s' % lineinfo.get())
             indent = '    '
             sh_funcs.append('%susing namespace StreamControl;' % (indent))
+            sh_funcs.append('%susing namespace std;' % (indent))
             sh_funcs.append('%sstring final_str;' % (indent))
             sh_funcs.append('%sstring tmp_str;' % (indent))
             sh_funcs.append('%sstring extra_indent = "  " + prefix;' % (indent))
@@ -971,7 +977,7 @@ class StructWrapperGen:
                             sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] = " + ss[%u].str() + "\\n";' % (indent, index, stp_list[index]['name'], index))
                         elif is_type(stp_list[index]['type'], 'struct'):
                             sh_funcs.append('%s' % lineinfo.get())
-                            sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
+                            sh_funcs.append('%sss[%u] << "0x" << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
                             sh_funcs.append('%stmp_str = %s(%spStruct->%s[i], extra_indent);' % (indent, self._get_sh_func_name(stp_list[index]['type']), addr_char, stp_list[index]['name']))
                             if self.no_addr:
                                 sh_funcs.append('%s' % lineinfo.get())
@@ -982,7 +988,10 @@ class StructWrapperGen:
                         else:
                             sh_funcs.append('%s' % lineinfo.get())
                             addr_char = ''
-                            sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
+                            if stp_list[index]['ptr'] or 'UUID' in stp_list[index]['name']:
+                                sh_funcs.append('%sss[%u] << "0x" << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
+                            else:
+                                sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
                             if stp_list[index]['type'] in vulkan.core.objects:
                                 sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "].handle = " + ss[%u].str() + "\\n";' % (indent, index, stp_list[index]['name'], index))
                             else:
@@ -1013,7 +1022,7 @@ class StructWrapperGen:
                             else:
                                 sh_funcs.append('%s' % lineinfo.get())
                                 sh_funcs.append('        tmp_str = %s(pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
-                        sh_funcs.append('        ss[%u] << %spStruct->%s;' % (index, addr_char, stp_list[index]['name']))
+                        sh_funcs.append('        ss[%u] << "0x" << %spStruct->%s;' % (index, addr_char, stp_list[index]['name']))
                         if self.no_addr:
                             sh_funcs.append('%s' % lineinfo.get())
                             sh_funcs.append('        stp_strs[%u] = " " + prefix + "%s (addr)\\n" + tmp_str;' % (index, stp_list[index]['name']))
@@ -1027,7 +1036,7 @@ class StructWrapperGen:
                     else:
                         sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('    tmp_str = %s(&pStruct->%s, extra_indent);' % (self._get_sh_func_name(stp_list[index]['type']), stp_list[index]['name']))
-                        sh_funcs.append('    ss[%u] << %spStruct->%s;' % (index, addr_char, stp_list[index]['name']))
+                        sh_funcs.append('    ss[%u] << "0x" << %spStruct->%s;' % (index, addr_char, stp_list[index]['name']))
                         if self.no_addr:
                             sh_funcs.append('    stp_strs[%u] = " " + prefix + "%s (addr)\\n" + tmp_str;' % (index, stp_list[index]['name']))
                             sh_funcs.append('%s' % lineinfo.get())
@@ -1046,10 +1055,10 @@ class StructWrapperGen:
                             sh_funcs.append('    ss[%u].str("addr");' % (index))
                         else:
                             sh_funcs.append('%s' % lineinfo.get())
-                            sh_funcs.append('    ss[%u] << &pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
+                            sh_funcs.append('    ss[%u] << "0x" << &pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
                     elif self.struct_dict[s][m]['array']:
                         sh_funcs.append('%s' % lineinfo.get())
-                        sh_funcs.append('    ss[%u] << (void*)pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
+                        sh_funcs.append('    ss[%u] << "0x" << (void*)pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
                     elif 'bool' in self.struct_dict[s][m]['type'].lower():
                         sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('    ss[%u].str(pStruct->%s ? "TRUE" : "FALSE");' % (index, self.struct_dict[s][m]['name']))
@@ -1059,7 +1068,7 @@ class StructWrapperGen:
                     elif 'void' in self.struct_dict[s][m]['type'].lower() and self.struct_dict[s][m]['ptr']:
                         sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('    if (StreamControl::writeAddress)')
-                        sh_funcs.append('        ss[%u] << pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
+                        sh_funcs.append('        ss[%u] << "0x" << pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
                         sh_funcs.append('    else')
                         sh_funcs.append('        ss[%u].str("address");' % (index))
                     elif 'char' in self.struct_dict[s][m]['type'].lower() and self.struct_dict[s][m]['ptr']:
@@ -1070,13 +1079,17 @@ class StructWrapperGen:
                         sh_funcs.append('        ss[%u] << "";' % index)
                         sh_funcs.append('     }')
                     else:
-                        sh_funcs.append('%s' % lineinfo.get())
-                        (po, pa) = self._get_struct_print_formatted(self.struct_dict[s][m])
-                        if "addr" in po: # or self.struct_dict[s][m]['ptr']:
-                            sh_funcs.append('    ss[%u].str("addr");' % (index))
-                        elif not self.struct_dict[s][m]['ptr'] and self.struct_dict[s][m]['type'] in vulkan.core.objects:
-                            sh_funcs.append('    ss[%u] << pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
+                        if self.struct_dict[s][m]['ptr'] or \
+                           'Vk' in self.struct_dict[s][m]['full_type'] or \
+                           'PFN_vk' in self.struct_dict[s][m]['full_type']:
+                            sh_funcs.append('%s' % lineinfo.get())
+                            sh_funcs.append('    ss[%u] << "0x" << pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
+                        elif any (x in self.struct_dict[s][m]['name'].lower() for x in ("flag", "bit", "offset", "handle", "buffer", "object", "mask")) or \
+                             'ID' in self.struct_dict[s][m]['name']:
+                            sh_funcs.append('%s: NB: Edit here to choose hex vs dec output by variable name' % lineinfo.get())
+                            sh_funcs.append('    ss[%u] << "0x" << pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
                         else:
+                            sh_funcs.append('%s: NB Edit this section to choose hex vs dec output by variable name' % lineinfo.get())
                             sh_funcs.append('    ss[%u] << pStruct->%s;' % (index, self.struct_dict[s][m]['name']))
                     value_print = 'ss[%u].str()' % index
                     index += 1
@@ -1085,7 +1098,7 @@ class StructWrapperGen:
                     if self.struct_dict[s][m]['ptr']:
                         sh_funcs.append('%s' % lineinfo.get())
                         sh_funcs.append('    if (pStruct->%s)' % (self.struct_dict[s][m]['name']))
-                        sh_funcs.append('        ss[%u] << pStruct->%s << " (See individual array values below)";' % (index, self.struct_dict[s][m]['name']))
+                        sh_funcs.append('        ss[%u] << "0x" << pStruct->%s << " (See individual array values below)";' % (index, self.struct_dict[s][m]['name']))
                         sh_funcs.append('    else')
                         sh_funcs.append('        ss[%u].str("NULL");' % (index))
                         value_print = 'ss[%u].str()' % index
@@ -1106,8 +1119,9 @@ class StructWrapperGen:
 
         # Add function to return a string value for input void*
         sh_funcs.append('%s' % lineinfo.get())
-        sh_funcs.append("string string_convert_helper(const void* toString, const string prefix)\n{")
+        sh_funcs.append("std::string string_convert_helper(const void* toString, const std::string prefix)\n{")
         sh_funcs.append("    using namespace StreamControl;")
+        sh_funcs.append("    using namespace std;")
         sh_funcs.append("    stringstream ss;")
         sh_funcs.append('    ss << toString;')
         sh_funcs.append('    string final_str = prefix + ss.str();')
@@ -1115,8 +1129,9 @@ class StructWrapperGen:
         sh_funcs.append("}")
         sh_funcs.append('%s' % lineinfo.get())
         # Add function to return a string value for input uint64_t
-        sh_funcs.append("string string_convert_helper(const uint64_t toString, const string prefix)\n{")
+        sh_funcs.append("std::string string_convert_helper(const uint64_t toString, const std::string prefix)\n{")
         sh_funcs.append("    using namespace StreamControl;")
+        sh_funcs.append("    using namespace std;")
         sh_funcs.append("    stringstream ss;")
         sh_funcs.append('    ss << toString;')
         sh_funcs.append('    string final_str = prefix + ss.str();')
@@ -1124,13 +1139,15 @@ class StructWrapperGen:
         sh_funcs.append("}")
         sh_funcs.append('%s' % lineinfo.get())
         # Add function to return a string value for input VkSurfaceFormatKHR*
-        sh_funcs.append("string string_convert_helper(VkSurfaceFormatKHR toString, const string prefix)\n{")
+        sh_funcs.append("std::string string_convert_helper(VkSurfaceFormatKHR toString, const std::string prefix)\n{")
+        sh_funcs.append("    using namespace std;")
         sh_funcs.append('    string final_str = prefix + "format = " + string_VkFormat(toString.format) + "format = " + string_VkColorSpaceKHR(toString.colorSpace);')
         sh_funcs.append("    return final_str;")
         sh_funcs.append("}")
         sh_funcs.append('%s' % lineinfo.get())
         # Add function to dynamically print out unknown struct
-        sh_funcs.append("string dynamic_display(const void* pStruct, const string prefix)\n{")
+        sh_funcs.append("std::string dynamic_display(const void* pStruct, const std::string prefix)\n{")
+        sh_funcs.append("    using namespace std;")
         sh_funcs.append("    // Cast to APP_INFO ptr initially just to pull sType off struct")
         sh_funcs.append("    if (pStruct == NULL) {\n")
         sh_funcs.append("        return string();")
@@ -1177,7 +1194,7 @@ class StructWrapperGen:
         # Single-line struct print function
         disp_def.append("// Output 'structname = struct_address' on a single line")
         disp_def.append("void %s::display_single_txt()\n{" % self.get_class_name(s))
-        disp_def.append('    printf(" %%*s%s = %%p", m_indent, "", (void*)m_origStructAddr);' % typedef_fwd_dict[s])
+        disp_def.append('    printf(" %%*s%s = 0x%%p", m_indent, "", (void*)m_origStructAddr);' % typedef_fwd_dict[s])
         disp_def.append("}\n")
         # Private helper function to print struct members
         disp_def.append("// Private helper function that displays the members of the wrapped struct")
@@ -1205,13 +1222,13 @@ class StructWrapperGen:
         # Basic print function to display struct members
         disp_def.append("// Output all struct elements, each on their own line")
         disp_def.append("void %s::display_txt()\n{" % self.get_class_name(s))
-        disp_def.append('    printf("%%*s%s struct contents at %%p:\\n", m_indent, "", (void*)m_origStructAddr);' % typedef_fwd_dict[s])
+        disp_def.append('    printf("%%*s%s struct contents at 0x%%p:\\n", m_indent, "", (void*)m_origStructAddr);' % typedef_fwd_dict[s])
         disp_def.append('    this->display_struct_members();')
         disp_def.append("}\n")
         # Advanced print function to display current struct and contents of any pointed-to structs
         disp_def.append("// Output all struct elements, and for any structs pointed to, print complete contents")
         disp_def.append("void %s::display_full_txt()\n{" % self.get_class_name(s))
-        disp_def.append('    printf("%%*s%s struct contents at %%p:\\n", m_indent, "", (void*)m_origStructAddr);' % typedef_fwd_dict[s])
+        disp_def.append('    printf("%%*s%s struct contents at 0x%%p:\\n", m_indent, "", (void*)m_origStructAddr);' % typedef_fwd_dict[s])
         disp_def.append('    this->display_struct_members();')
         class_num = 0
         # TODO : Need to handle arrays of structs here
@@ -1267,8 +1284,6 @@ class StructWrapperGen:
             if 'vk_enum_string_helper' not in f:
                 header.append("#include <%s>\n" % f)
         header.append('#include "vk_enum_string_helper.h"\n')
-        header.append('using namespace std;\n\n// Function Prototypes\n')
-        header.append('\n')
         header.append('namespace StreamControl\n')
         header.append('{\n')
         header.append('bool writeAddress = true;\n')
@@ -1291,7 +1306,7 @@ class StructWrapperGen:
         header.append('}\n')
         header.append('}\n')
         header.append('\n')
-        header.append("string dynamic_display(const void* pStruct, const string prefix);\n")
+        header.append("std::string dynamic_display(const void* pStruct, const std::string prefix);\n")
         return "".join(header)
 
     def _generateValidateHelperFunctions(self):
@@ -1893,10 +1908,12 @@ class GraphVizGen:
         elif is_type(struct_member['type'], 'enum'):
             if struct_member['ptr']:
                 struct_var_name = "*" + struct_var_name
+                print_delimiter = "0x%"
             cast_type = "string_%s" % struct_member['type']
             print_type = "s"
         elif is_type(struct_member['type'], 'struct'): # print struct address for now
             cast_type = "(void*)"
+            print_delimiter = "0x%"
             if not struct_member['ptr']:
                 cast_type = "(void*)&"
         elif 'bool' in struct_member['type'].lower():
@@ -1916,9 +1933,11 @@ class GraphVizGen:
         elif 'int' in struct_member['type']:
             print_type = "i"
         elif struct_member['ptr']:
+            print_delimiter = "0x%"
             pass
         else:
             #print("Unhandled struct type: %s" % struct_member['type'])
+            print_delimiter = "0x%"
             cast_type = "(void*)"
         if print_array and struct_member['array']:
             member_print_post = "[%u]"
@@ -1974,13 +1993,13 @@ class GraphVizGen:
                         else:
                             gv_funcs.append('    if (pStruct->%s) {\n' % stp_list[index]['name'])
                         if 'pNext' == stp_list[index]['name']:
-                            gv_funcs.append('        sprintf(nodeName, "pNext_%p", (void*)pStruct->pNext);\n')
+                            gv_funcs.append('        sprintf(nodeName, "pNext_0x%p", (void*)pStruct->pNext);\n')
                             gv_funcs.append('        tmpStr = dynamic_gv_display((void*)pStruct->pNext, nodeName);\n')
                             gv_funcs.append('        stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % index)
                             gv_funcs.append('        sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":pNext -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % index)
                             gv_funcs.append('        free(tmpStr);\n')
                         else:
-                            gv_funcs.append('        sprintf(nodeName, "%s_%%p", (void*)pStruct->%s);\n' % (stp_list[index]['name'], stp_list[index]['name']))
+                            gv_funcs.append('        sprintf(nodeName, "%s_0x%%p", (void*)pStruct->%s);\n' % (stp_list[index]['name'], stp_list[index]['name']))
                             if stp_list[index]['name'] in ['pTypeCount', 'pSamplerImageViews']:
                                 gv_funcs.append('        tmpStr = %s_array(pStruct->count, pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
                             else:
@@ -1990,18 +2009,18 @@ class GraphVizGen:
                         gv_funcs.append('    }\n')
                         gv_funcs.append("    else\n        stp_strs[%i] = \"\";\n" % (index))
                     elif stp_list[index]['array']: # TODO : For now just printing first element of array
-                        gv_funcs.append('    sprintf(nodeName, "%s_%%p", (void*)&pStruct->%s[0]);\n' % (stp_list[index]['name'], stp_list[index]['name']))
+                        gv_funcs.append('    sprintf(nodeName, "%s_0x%%p", (void*)&pStruct->%s[0]);\n' % (stp_list[index]['name'], stp_list[index]['name']))
                         gv_funcs.append('    tmpStr = %s(&pStruct->%s[0], nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         gv_funcs.append('    stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % (index))
                         gv_funcs.append('    sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":struct%i -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % (index, index))
                     else:
-                        gv_funcs.append('    sprintf(nodeName, "%s_%%p", (void*)&pStruct->%s);\n' % (stp_list[index]['name'], stp_list[index]['name']))
+                        gv_funcs.append('    sprintf(nodeName, "%s_0x%%p", (void*)&pStruct->%s);\n' % (stp_list[index]['name'], stp_list[index]['name']))
                         gv_funcs.append('    tmpStr = %s(&pStruct->%s, nodeName);\n' % (self._get_gv_func_name(stp_list[index]['type']), stp_list[index]['name']))
                         gv_funcs.append('    stp_strs[%i] = (char*)malloc(256+strlen(tmpStr)+strlen(nodeName)+strlen(myNodeName));\n' % (index))
                         gv_funcs.append('    sprintf(stp_strs[%i], "%%s\\n\\"%%s\\":struct%i -> \\"%%s\\" [];\\n", tmpStr, myNodeName, nodeName);\n' % (index, index))
                     total_strlen_str += 'strlen(stp_strs[%i]) + ' % index
             gv_funcs.append('    str = (char*)malloc(%ssizeof(char)*2048);\n' % (total_strlen_str))
-            gv_funcs.append('    sprintf(str, "\\"%s\\" [\\nlabel = <<TABLE BORDER=\\"0\\" CELLBORDER=\\"1\\" CELLSPACING=\\"0\\"><TR><TD COLSPAN=\\"2\\">%s (%p)</TD></TR>')
+            gv_funcs.append('    sprintf(str, "\\"%s\\" [\\nlabel = <<TABLE BORDER=\\"0\\" CELLBORDER=\\"1\\" CELLSPACING=\\"0\\"><TR><TD COLSPAN=\\"2\\">%s (0x%p)</TD></TR>')
             p_args = ", myNodeName, myNodeName, pStruct"
             for m in sorted(self.struct_dict[s]):
                 plabel = ""
@@ -2030,7 +2049,7 @@ class GraphVizGen:
                 else:
                     gv_funcs.append('char* %s_array(uint32_t count, const %s* pStruct, const char* myNodeName)\n{\n    char* str;\n    char tmpStr[1024];\n' % (self._get_gv_func_name(s), typedef_fwd_dict[s]))
                 gv_funcs.append('    str = (char*)malloc(sizeof(char)*1024*count);\n')
-                gv_funcs.append('    sprintf(str, "\\"%s\\" [\\nlabel = <<TABLE BORDER=\\"0\\" CELLBORDER=\\"1\\" CELLSPACING=\\"0\\"><TR><TD COLSPAN=\\"3\\">%s (%p)</TD></TR>", myNodeName, myNodeName, pStruct);\n')
+                gv_funcs.append('    sprintf(str, "\\"%s\\" [\\nlabel = <<TABLE BORDER=\\"0\\" CELLBORDER=\\"1\\" CELLSPACING=\\"0\\"><TR><TD COLSPAN=\\"3\\">%s (0x%p)</TD></TR>", myNodeName, myNodeName, pStruct);\n')
                 gv_funcs.append('    for (uint32_t i=0; i < count; i++) {\n')
                 gv_funcs.append('        sprintf(tmpStr, "');
                 p_args = ""

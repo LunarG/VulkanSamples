@@ -392,7 +392,7 @@ static void destroy_surface_khr(VkInstance dispatchable_object, VkSurfaceKHR obj
         numObjs[objIndex]--;
         log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, pNode->objType, object_handle, __LINE__,
                 OBJTRACK_NONE, "OBJTRACK",
-                "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
+                "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (0x%" PRIx64 " total objs remain & 0x%" PRIx64 " %s objs).",
                 string_VkDebugReportObjectTypeEXT(pNode->objType), (uint64_t)(object), numTotalObjs, numObjs[objIndex],
                 string_VkDebugReportObjectTypeEXT(pNode->objType));
         delete pNode;
