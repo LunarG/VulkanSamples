@@ -43,8 +43,8 @@ For complete details of current validation layers, including all of the validati
 ### Standard Validation
 This is a meta-layer managed by the loader. (name = VK_LAYER_LUNARG_standard_validation) - specifying this layer name will cause the loader to load the all of the standard validation layers (listed below) in the following optimal order:  VK_LAYER_GOOGLE_threading, VK_LAYER_LUNARG_parameter_validation, VK_LAYER_LUNARG_device_limits, VK_LAYER_LUNARG_object_tracker, VK_LAYER_LUNARG_image, VK_LAYER_LUNARG_core_validation, VK_LAYER_LUNARG_swapchain, and VK_LAYER_GOOGLE_unique_objects. Other layers can be specified and the loader will remove duplicates.
 
-### Print Object Stats
-(build dir)/layers/object_tracker.cpp (name=VK_LAYER_LUNARG_object_tracker) - Track object creation, use, and destruction. As objects are created, they're stored in a map. As objects are used, the layer verifies they exist in the map, flagging errors for unknown objects. As objects are destroyed, they're removed from the map. At vkDestroyDevice() and vkDestroyInstance() times, if any objects have not been destroyed, they are reported as leaked objects. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+### Object Validation and Statistics
+(build dir)/layers/object_tracker.cpp (name=VK_LAYER_LUNARG_object_tracker) - Track object creation, use, and destruction. As objects are created they are stored in a map. As objects are used the layer verifies they exist in the map, flagging errors for unknown objects. As objects are destroyed they are removed from the map. At vkDestroyDevice() and vkDestroyInstance() times, if any objects have not been destroyed they are reported as leaked objects. If a Dbg callback function is registered this layer will use callback function(s) for reporting, otherwise it will use stdout.
 
 ### Validate API State and Shaders
 layers/core\_validation.cpp (name=VK\_LAYER\_LUNARG\_core\_validation) - The core\_validation layer does the bulk of the API validation that requires storing state. Some of the state it tracks includes the Descriptor Set, Pipeline State, Shaders, and dynamic state, and memory objects and bindings. It performs some point validation as states are created and used, and further validation Draw call and QueueSubmit time. Of primary interest is making sure that the resources bound to Descriptor Sets correctly align with the layout specified for the Set. Also, all of the image and buffer layouts are validated to make sure explicit layout transitions are properly managed. Related to memory, core\_validation includes tracking object bindings, memory hazards, and memory object lifetimes. It also validates several other hazard-related issues related to command buffers, fences, and memory mapping. Additionally core\_validation include shader validation (formerly separate shader\_checker layer) that inspects the SPIR-V shader images and fixed function pipeline stages at PSO creation time. It flags errors when inconsistencies are found across interfaces between shader stages. The exact behavior of the checks depends on the pair of pipeline stages involved. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
@@ -52,7 +52,7 @@ layers/core\_validation.cpp (name=VK\_LAYER\_LUNARG\_core\_validation) - The cor
 ### Check parameters
 layers/parameter_validation.cpp (name=VK_LAYER_LUNARG_parameter_validation) - Check the input parameters to API calls for validity. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
-### Image parameters
+### Image Validity
 layers/image.cpp (name=VK_LAYER_LUNARG_image) - The image layer is intended to validate image parameters, formats, and correct use. Images are a significant enough area that they were given a separate layer. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ### Check threading
@@ -84,8 +84,8 @@ layers/device_limits.cpp (name=VK_LAYER_LUNARG_device_limits) - This layer is in
 4. Specify which Layers to activate by using
 vkCreateDevice and/or vkCreateInstance or environment variables.
 
-    export VK\_INSTANCE\_LAYERS=VK\_LAYER\_LUNARG\_param\_checker:VK\_LAYER\_LUNARG\_core\_validation
-    export VK\_DEVICE\_LAYERS=VK\_LAYER\_LUNARG\_param\_checker:VK\_LAYER\_LUNARG\_core\_validation
+    export VK\_INSTANCE\_LAYERS=VK\_LAYER\_LUNARG\_parameter\_validation:VK\_LAYER\_LUNARG\_core\_validation
+    export VK\_DEVICE\_LAYERS=VK\_LAYER\_LUNARG\_parameter\_validation:VK\_LAYER\_LUNARG\_core\_validation
     cd build/tests; ./vkinfo
 
 

@@ -69,6 +69,11 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCall
     my_data->report_data = debug_report_create_instance(my_data->instance_dispatch_table, *pInstance,
                                                         pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
     initThreading(my_data, pAllocator);
+
+    // Look for one or more debug report create info structures, and copy the
+    // callback(s) for each one found (for use by vkDestroyInstance)
+    layer_copy_tmp_callbacks(pCreateInfo->pNext, &my_data->num_tmp_callbacks, &my_data->tmp_dbg_create_infos,
+                             &my_data->tmp_callbacks);
     return result;
 }
 
@@ -76,9 +81,28 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
     dispatch_key key = get_dispatch_key(instance);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
+
+    // Enable the temporary callback(s) here to catch cleanup issues:
+    bool callback_setup = false;
+    if (my_data->num_tmp_callbacks > 0) {
+        if (!layer_enable_tmp_callbacks(my_data->report_data, my_data->num_tmp_callbacks, my_data->tmp_dbg_create_infos,
+                                        my_data->tmp_callbacks)) {
+            callback_setup = true;
+        }
+    }
+
     startWriteObject(my_data, instance);
     pTable->DestroyInstance(instance, pAllocator);
     finishWriteObject(my_data, instance);
+
+    // Disable and cleanup the temporary callback(s):
+    if (callback_setup) {
+        layer_disable_tmp_callbacks(my_data->report_data, my_data->num_tmp_callbacks, my_data->tmp_callbacks);
+    }
+    if (my_data->num_tmp_callbacks > 0) {
+        layer_free_tmp_callbacks(my_data->tmp_dbg_create_infos, my_data->tmp_callbacks);
+        my_data->num_tmp_callbacks = 0;
+    }
 
     // Clean up logging callback, if any
     while (my_data->logging_callback.size() > 0) {

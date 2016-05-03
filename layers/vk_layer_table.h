@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "vulkan/vk_layer.h"
 #include "vulkan/vulkan.h"
 #include <unordered_map>
 

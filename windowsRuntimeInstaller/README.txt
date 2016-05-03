@@ -3,22 +3,54 @@ Runtime Installer Package.
 
 To build the Vulkan Runtime Installer:
 
-    1. Install Nullsoft Install System (NSIS) version 3.0b1 or greater. The
+   1.  Install Nullsoft Install System (NSIS) version 3.0b3. The
        version of NSIS needed for building the Vulkan Runtime Installer
        must support logging (i.e. must have been built with NSIS_CONFIG_LOG=yes
        set), and must support long strings (i.e. NSIS_MAX_STRLEN=8192 must be
-       set).  Note that the NSIS binary version available at
-       http://nsis.sourceforge.net/Download does not have these enabled. You
-       may have to build NSIS yourself with these flags set - see
-       http://nsis//sourceforge.net/Docs/AppendixG.html for information on
-       building NSIS.
+       set). The NSIS AccessControl plug-in should also be installed. (Available
+       from http://nsis.sourceforge.net/AccessControl_plug-in.)
 
-    2. Install the NSIS AccessControl plug-in. (Available from
-       http://nsis.sourceforge.net/AccessControl_plug-in.)
+   1a. Note that the NSIS binary version available at
+       http://nsis.sourceforge.net/Download is not built with
+       NSIS_CONFIG_LOG=yes and NSIS_MAX_STRLEN=8192 set. Also, changes to need
+       to be made to NSIS to increase the security of the Runtime Installer.
 
-    3. Build Vulkan-LoaderAndValidationLayers as described in ../BUILD.md.
+       The source for NSIS 3.0.b3 can be downloaded from
+       https://sourceforge.net/projects/nsis/files/NSIS%203%20Pre-release/3.0b3/nsis-3.0b3-src.tar.bz2/download
 
-    4. Edit the InstallerRT.nsi file in this folder and modify the following
+       Instructions for building NSIS are available at
+       http://nsis//sourceforge.net/Docs/AppendixG.html.
+
+       The security changes to NSIS involve adding the /DYMANICBASE and /GS options
+       to the NSIS compile/link steps, so that the Runtime Installer and Uninstaller
+       are built with address space layout randomization and buffer overrun checks.
+
+       The security changes to NSIS can be made by applying the patch in the
+       NSIS_Security.patch file in this folder.
+
+       After you have applied the security patch, build NSIS with this command:
+
+           scons SKIPUTILS="NSIS Menu","MakeLangId" UNICODE=yes \
+                 ZLIB_W32=<path_to_zlib>\zlib-1.2.7-win32-x86 NSIS_MAX_STRLEN=8192 \
+                 NSIS_CONFIG_LOG=yes NSIS_CONFIG_LOG_TIMESTAMP=yes \
+                 APPEND_CCFLAGS="/DYNAMICBASE /Zi" APPEND_LINKFLAGS="/DYNAMICBASE \
+                 /DEBUG /OPT:REF /OPT:ICF" SKIPDOC=all dist-zip
+
+       This will create a zip file in the nsis-3.0.b3-src directory.  Unpack
+       the zip file anywhere on your system. The resulting tree will contain a
+       Plugins directory. Install the NSIS AccessControl plugin in this directory.
+       Add the Bin directory to your PATH enviroment variable so that the
+       CreateInstaller.sh step below will use your custom-built version of
+       NSIS.
+
+       Before using NSIS and creating the installer, make sure that all shared
+       libraries in your custom-built version of NSIS have the DYNAMIC_BASE and NX_COMPAT
+       flags set. If they are not set, you will have to rebuild those libraries with
+       those options enabled.
+
+   2.  Build Vulkan-LoaderAndValidationLayers as described in ../BUILD.md.
+
+   3.  Edit the InstallerRT.nsi file in this folder and modify the following
        lines to match the version of the Windows Vulkan Runtime you wish to
        build:
 
@@ -29,14 +61,14 @@ To build the Vulkan Runtime Installer:
           !define VERSION_BUILDNO
           !define PUBLISHER
 
-    5. Edit the CreateInstaller.sh file and replace SIGNFILE with your
+   4.  Edit the CreateInstaller.sh file and replace SIGNFILE with your
        command and necessary args for signing an executable. If you don't
        wish to sign the uninstaller, you can comment out that line.
 
-    6. Run the CreateInstaller.sh script from a Cygwin bash command prompt.
+   5.  Run the CreateInstaller.sh script from a Cygwin bash command prompt.
        The Cygwin bash shell must be running as Administrator.  The Windows
-       Vulkan Runtime Installer package file will be created in this folder.
-       The name of the installer file is VulkanRT-<version>-Installer.exe.
+       Vulkan Runtime Installer will be created in this folder.  The name
+       of the installer file is VulkanRT-<version>-Installer.exe.
 
 
 Some notes on the behavior of the Windows Vulkan Runtime Installer:
@@ -76,20 +108,21 @@ Some notes on the behavior of the Windows Vulkan Runtime Installer:
       VulkanRT<version>\UninstallString
 
    o  The Vulkan Runtime Installer installs the Vulkan loader as
-      C:\Windows\System32\vulkan-<version>.dll. It then compares all
+      C:\Windows\System32\vulkan-<version>.dll. It then runs the
+      Powershell script ConfigLayersAndVulkanDLL.ps1, that compares
       versions of the loader in C:\Windows\System32 that have the
-      same VERSION_ABI_MAJOR as the version being installed. It selects
-      the most recent one of these loader files and copies it to
-      C:\Windows\System32\vulkan-<VERSION_ABI_MAJOR>.dll.  For example,
-      during the install of Vulkan Runtime version 2.0.1.1, the
-      following files might be present in C:\Windows\System32:
+      same VERSION_ABI_MAJOR as the version being installed. The
+      script selects the most recent one of these loader files and
+      copies it to C:\Windows\System32\vulkan-<VERSION_ABI_MAJOR>.dll.
+      For example, during the install of Vulkan Runtime version 2.0.1.1,
+      the following files might be present in C:\Windows\System32:
 
            vulkan-1-1-0-2-3.dll
            vulkan-1-2-0-1-0.dll
            vulkan-1-2-0-1-1.dll
 
      [Note that the first "1" in the above files is VERSION_ABI_MAJOR.
-     The other numbers identify the release version.] The installer
+     The other numbers identify the release version.] The script
      will copy the most recent one of these files (in this case
      vulkan-1-2-0-1-1.dll) to vulkan-1.dll. This is repeated for
      C:\Windows\SYSWOW64 on 64-bit Windows systems to set up the
@@ -109,7 +142,7 @@ Some notes on the behavior of the Windows Vulkan Runtime Installer:
      uninstaller for the Vulkan Runtime in the Windows registry.
      This ProductVersion should always be identical to <version> in:
 
-       HKLM\Software\Microsoft\Windows\CurrentVersion\Uininstall\VulkanRT<version>\UinstalString
+       HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\VulkanRT<version>\UninstallString
 
    o The Installer and Uninstaller create log files, which can be
      found in the VulkanrRT folder in the current TEMP folder.

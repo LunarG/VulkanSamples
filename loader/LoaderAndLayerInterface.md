@@ -1115,9 +1115,6 @@ command to wrap the objects created by its lower layers, it must make sure its
 lower layers never see the wrapping objects, directly from itself or
 indirectly from its upper layers.
 
-When a layer requires host memory, it is free to scope the allocations to
-itself, bypassing the provided allocators entirely.
-
 `vkEnumerateDeviceExtensionProperties` must handle the case where `pLayerName`
 is `NULL`, usually by chaining to other layers.
 

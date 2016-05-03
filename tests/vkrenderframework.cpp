@@ -397,7 +397,7 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj)
     init();
 
     props = phy().properties();
-    queue_props = phy().queue_properties().data();
+    queue_props = phy().queue_properties();
 }
 
 VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj,
@@ -407,7 +407,7 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj,
     init(layer_names, extension_names);
 
     props = phy().properties();
-    queue_props = phy().queue_properties().data();
+    queue_props = phy().queue_properties();
 }
 
 void VkDeviceObj::get_device_queue() {
@@ -819,7 +819,8 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     void *data;
     uint32_t x, y;
     VkImageObj stagingImage(device);
-    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
     stagingImage.init(16, 16, tex_format, VK_IMAGE_USAGE_TRANSFER_DST_BIT |
                                               VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
@@ -924,7 +925,8 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
     m_numVertices = constantCount;
     m_stride = constantSize;
 
-    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     const size_t allocationSize = constantCount * constantSize;
     init_as_src_and_dst(*m_device, allocationSize, reqs);
 
@@ -1054,7 +1056,8 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes,
     }
 
     const size_t allocationSize = numIndexes * m_stride;
-    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     init_as_src_and_dst(*m_device, allocationSize, reqs);
 
     void *pData = memory().map();
@@ -1132,6 +1135,7 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
     m_device = device;
 
     m_vi_state.pNext = VK_NULL_HANDLE;
+    m_vi_state.flags = 0;
     m_vi_state.vertexBindingDescriptionCount = 0;
     m_vi_state.pVertexBindingDescriptions = VK_NULL_HANDLE;
     m_vi_state.vertexAttributeDescriptionCount = 0;
@@ -1142,12 +1146,14 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
     m_ia_state.sType =
         VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     m_ia_state.pNext = VK_NULL_HANDLE;
+    m_ia_state.flags = 0;
     m_ia_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     m_ia_state.primitiveRestartEnable = VK_FALSE;
 
     m_rs_state.sType =
         VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     m_rs_state.pNext = VK_NULL_HANDLE;
+    m_rs_state.flags = 0;
     m_rs_state.depthClampEnable = VK_TRUE;
     m_rs_state.rasterizerDiscardEnable = VK_FALSE;
     m_rs_state.polygonMode = VK_POLYGON_MODE_FILL;
@@ -1170,6 +1176,7 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
 
     m_ms_state.pNext = VK_NULL_HANDLE;
     m_ms_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    m_ms_state.flags = 0;
     m_ms_state.pSampleMask = NULL;
     m_ms_state.alphaToCoverageEnable = VK_FALSE;
     m_ms_state.alphaToOneEnable = VK_FALSE;
@@ -1179,6 +1186,7 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
 
     m_vp_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     m_vp_state.pNext = VK_NULL_HANDLE;
+    m_vp_state.flags = 0;
     m_vp_state.viewportCount = 1;
     m_vp_state.scissorCount = 1;
     m_vp_state.pViewports = NULL;
@@ -1187,6 +1195,7 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
     m_ds_state.sType =
         VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     m_ds_state.pNext = VK_NULL_HANDLE, m_ds_state.depthTestEnable = VK_FALSE;
+    m_ds_state.flags = 0;
     m_ds_state.depthWriteEnable = VK_FALSE;
     m_ds_state.depthBoundsTestEnable = VK_FALSE;
     m_ds_state.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;

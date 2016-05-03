@@ -176,6 +176,11 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreate
     my_data->instanceMap[instance].xlibSurfaceExtensionEnabled = false;
 #endif // VK_USE_PLATFORM_XLIB_KHR
 
+    // Look for one or more debug report create info structures, and copy the
+    // callback(s) for each one found (for use by vkDestroyInstance)
+    layer_copy_tmp_callbacks(pCreateInfo->pNext, &my_data->num_tmp_callbacks, &my_data->tmp_dbg_create_infos,
+                             &my_data->tmp_callbacks);
+
     // Record whether the WSI instance extension was enabled for this
     // VkInstance.  No need to check if the extension was advertised by
     // vkEnumerateInstanceExtensionProperties(), since the loader handles that.
@@ -292,6 +297,15 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
 
     std::lock_guard<std::mutex> lock(global_lock);
 
+    // Enable the temporary callback(s) here to catch cleanup issues:
+    bool callback_setup = false;
+    if (my_data->num_tmp_callbacks > 0) {
+        if (!layer_enable_tmp_callbacks(my_data->report_data, my_data->num_tmp_callbacks, my_data->tmp_dbg_create_infos,
+                                        my_data->tmp_callbacks)) {
+            callback_setup = true;
+        }
+    }
+
     // Do additional internal cleanup:
     if (pInstance) {
         // Delete all of the SwpPhysicalDevice's, SwpSurface's, and the
@@ -327,6 +341,15 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
             }
         }
         my_data->instanceMap.erase(instance);
+    }
+
+    // Disable and cleanup the temporary callback(s):
+    if (callback_setup) {
+        layer_disable_tmp_callbacks(my_data->report_data, my_data->num_tmp_callbacks, my_data->tmp_callbacks);
+    }
+    if (my_data->num_tmp_callbacks > 0) {
+        layer_free_tmp_callbacks(my_data->tmp_dbg_create_infos, my_data->tmp_callbacks);
+        my_data->num_tmp_callbacks = 0;
     }
 
     // Clean up logging callback, if any
@@ -836,6 +859,14 @@ vkDestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface, const VkAllocatio
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     SwpSurface *pSurface = &my_data->surfaceMap[surface];
+    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
+
+    // Validate that the platform extension was enabled:
+    if (pInstance && !pInstance->surfaceExtensionEnabled) {
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pInstance, "VkInstance", SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
+                              VK_KHR_SURFACE_EXTENSION_NAME);
+    }
 
     // Regardless of skipCall value, do some internal cleanup:
     if (pSurface) {

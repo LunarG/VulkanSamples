@@ -17,6 +17,10 @@
 #ifndef VULKAN_WRAPPER_H
 #define VULKAN_WRAPPER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define VK_NO_PROTOTYPES 1
 #include <vulkan/vulkan.h>
 
@@ -228,5 +232,8 @@ extern PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR vkGetPhysicalDeviceWin
 // VK_KHR_sampler_mirror_clamp_to_edge
 
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif // VULKAN_WRAPPER_H

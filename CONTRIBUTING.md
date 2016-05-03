@@ -36,10 +36,10 @@ that might arise with Vulkan-LoaderAndValidationLayers components if they were o
     * A sample git workflow may look like:
 
 >        # Make changes to the source.
->        $ git add .
->        $ clang-format -style=file -i < list of changed code files >
+>        $ git add -u .
+>        $ git clang-format --style=file
 >        # Check to see if clang-format made any changes and if they are OK.
->        $ git add .
+>        $ git add -u .
 >        $ git commit
 
 #### **Testing**
@@ -65,6 +65,17 @@ that might arise with Vulkan-LoaderAndValidationLayers components if they were o
   The idea here is that your changes shouldn't change the test results, unless that was the intent of your changes.
 * Run tests that explicitly exercise your changes.
 * Feel free to subject your code changes to other tests as well!
+
+#### **Special Considerations for Validation Layers**
+If you are submitting a change that adds a new validation check, you should also construct a "negative" test function.
+The negative test function purposely violates the validation rule that the new validation check is looking for.
+The test should cause your new validation check to identify the violation and issue a validation error report.
+And finally, the test should check that the validation error report is generated and consider the test as "passing"
+if the report is received.  Otherwise, the test should indicate "failure".
+This new test should be added to the validation layer test program in the `tests` directory and contributed
+at the same time as the new validation check itself.
+There are many existing validation tests in this directory that can be used as a starting point.
+
 
 ### **Contributor License Agreement (CLA)**
 

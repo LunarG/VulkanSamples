@@ -50,12 +50,18 @@ struct layer_data {
     debug_report_data *report_data;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
 
+    // The following are for keeping track of the temporary callbacks that can
+    // be used in vkCreateInstance and vkDestroyInstance:
+    uint32_t num_tmp_callbacks;
+    VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos;
+    VkDebugReportCallbackEXT *tmp_callbacks;
+
     // TODO: Split instance/device structs
     // Device Data
     // Map for queue family index to queue count
     std::unordered_map<uint32_t, uint32_t> queueFamilyIndexMap;
 
-    layer_data() : report_data(nullptr){};
+    layer_data() : report_data(nullptr), num_tmp_callbacks(0), tmp_dbg_create_infos(nullptr), tmp_callbacks(nullptr){};
 };
 
 static std::unordered_map<void *, layer_data *> layer_data_map;
@@ -1306,6 +1312,22 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCall
         my_instance_data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->enabledExtensionCount,
                                                                      pCreateInfo->ppEnabledExtensionNames);
 
+        // Look for one or more debug report create info structures
+        // and setup a callback(s) for each one found.
+        if (!layer_copy_tmp_callbacks(pCreateInfo->pNext, &my_instance_data->num_tmp_callbacks,
+                                      &my_instance_data->tmp_dbg_create_infos, &my_instance_data->tmp_callbacks)) {
+            if (my_instance_data->num_tmp_callbacks > 0) {
+                // Setup the temporary callback(s) here to catch early issues:
+                if (layer_enable_tmp_callbacks(my_instance_data->report_data, my_instance_data->num_tmp_callbacks,
+                                               my_instance_data->tmp_dbg_create_infos, my_instance_data->tmp_callbacks)) {
+                    // Failure of setting up one or more of the callback.
+                    // Therefore, clean up and don't use those callbacks:
+                    layer_free_tmp_callbacks(my_instance_data->tmp_dbg_create_infos, my_instance_data->tmp_callbacks);
+                    my_instance_data->num_tmp_callbacks = 0;
+                }
+            }
+        }
+
         init_parameter_validation(my_instance_data, pAllocator);
 
         // Ordinarily we'd check these before calling down the chain, but none of the layer
@@ -1324,6 +1346,12 @@ vkCreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCall
                                 pCreateInfo->pApplicationInfo->pEngineName);
             }
         }
+
+        // Disable the tmp callbacks:
+        if (my_instance_data->num_tmp_callbacks > 0) {
+            layer_disable_tmp_callbacks(my_instance_data->report_data, my_instance_data->num_tmp_callbacks,
+                                        my_instance_data->tmp_callbacks);
+        }
     }
 
     return result;
@@ -1336,7 +1364,25 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     assert(my_data != NULL);
 
+    // Enable the temporary callback(s) here to catch vkDestroyInstance issues:
+    bool callback_setup = false;
+    if (my_data->num_tmp_callbacks > 0) {
+        if (!layer_enable_tmp_callbacks(my_data->report_data, my_data->num_tmp_callbacks, my_data->tmp_dbg_create_infos,
+                                        my_data->tmp_callbacks)) {
+            callback_setup = true;
+        }
+    }
+
     skipCall |= parameter_validation_vkDestroyInstance(my_data->report_data, pAllocator);
+
+    // Disable and cleanup the temporary callback(s):
+    if (callback_setup) {
+        layer_disable_tmp_callbacks(my_data->report_data, my_data->num_tmp_callbacks, my_data->tmp_callbacks);
+    }
+    if (my_data->num_tmp_callbacks > 0) {
+        layer_free_tmp_callbacks(my_data->tmp_dbg_create_infos, my_data->tmp_callbacks);
+        my_data->num_tmp_callbacks = 0;
+    }
 
     if (!skipCall) {
         VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, instance);

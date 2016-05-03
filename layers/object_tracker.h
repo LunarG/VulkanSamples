@@ -76,8 +76,15 @@ struct layer_data {
     std::vector<VkDebugReportCallbackEXT> logging_callback;
     bool wsi_enabled;
     bool objtrack_extensions_enabled;
+    // The following are for keeping track of the temporary callbacks that can
+    // be used in vkCreateInstance and vkDestroyInstance:
+    uint32_t num_tmp_callbacks;
+    VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos;
+    VkDebugReportCallbackEXT *tmp_callbacks;
 
-    layer_data() : report_data(nullptr), wsi_enabled(false), objtrack_extensions_enabled(false){};
+    layer_data()
+        : report_data(nullptr), wsi_enabled(false), objtrack_extensions_enabled(false), num_tmp_callbacks(0),
+          tmp_dbg_create_infos(nullptr), tmp_callbacks(nullptr){};
 };
 
 struct instExts {
@@ -615,6 +622,11 @@ VkResult explicit_CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     initInstanceTable(*pInstance, fpGetInstanceProcAddr, object_tracker_instance_table_map);
     VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(object_tracker_instance_table_map, *pInstance);
+
+    // Look for one or more debug report create info structures, and copy the
+    // callback(s) for each one found (for use by vkDestroyInstance)
+    layer_copy_tmp_callbacks(pCreateInfo->pNext, &my_data->num_tmp_callbacks, &my_data->tmp_dbg_create_infos,
+                             &my_data->tmp_callbacks);
 
     my_data->report_data = debug_report_create_instance(pInstanceTable, *pInstance, pCreateInfo->enabledExtensionCount,
                                                         pCreateInfo->ppEnabledExtensionNames);

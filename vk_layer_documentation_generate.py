@@ -49,15 +49,15 @@ import platform
 # TODO : Need list of known validation layers to use as default input
 #  Just a couple of flat lists right now, but may need to make this input file
 #  or at least a more dynamic data structure
-layer_inputs = { 'draw_state' : {'header' : 'layers/core_validation.h',
+layer_inputs = { 'draw_state' : {'header' : 'layers/core_validation_error_enums.h',
                                  'source' : 'layers/core_validation.cpp',
                                  'generated' : False,
                                  'error_enum' : 'DRAW_STATE_ERROR'},
-                 'shader_checker' : {'header' : 'layers/core_validation.h',
+                 'shader_checker' : {'header' : 'layers/core_validation_error_enums.h',
                                  'source' : 'layers/core_validation.cpp',
                                  'generated' : False,
                                  'error_enum' : 'SHADER_CHECKER_ERROR'},
-                 'mem_tracker' : {'header' : 'layers/core_validation.h',
+                 'mem_tracker' : {'header' : 'layers/core_validation_error_enums.h',
                                   'source' : 'layers/core_validation.cpp',
                                   'generated' : False,
                                   'error_enum' : 'MEM_TRACK_ERROR'},

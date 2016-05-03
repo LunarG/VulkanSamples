@@ -44,7 +44,11 @@
 #define APP_NAME_STR_LEN 80
 #endif // _WIN32
 
+#ifdef ANDROID
+#include "vulkan_wrapper.h"
+#else
 #include <vulkan/vulkan.h>
+#endif
 
 #define DEMO_TEXTURE_COUNT 1
 #define VERTEX_BUFFER_BIND_ID 0
@@ -65,15 +69,21 @@
         MessageBox(NULL, err_msg, err_class, MB_OK);                           \
         exit(1);                                                               \
     } while (0)
-#else // _WIN32
-
+#elif defined __ANDROID__
+#include <android/log.h>
+#define ERR_EXIT(err_msg, err_class)                                           \
+    do {                                                                       \
+        ((void)__android_log_print(ANDROID_LOG_INFO, "Tri", err_msg));         \
+        exit(1);                                                               \
+    } while (0)
+#else
 #define ERR_EXIT(err_msg, err_class)                                           \
     do {                                                                       \
         printf(err_msg);                                                       \
         fflush(stdout);                                                        \
         exit(1);                                                               \
     } while (0)
-#endif // _WIN32
+#endif
 
 #define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                               \
     {                                                                          \
@@ -167,17 +177,19 @@ typedef struct _SwapchainBuffers {
 } SwapchainBuffers;
 
 struct demo {
-#ifdef _WIN32
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
 #define APP_NAME_STR_LEN 80
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND window;                 // hWnd - window handle
-#else                            // _WIN32
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
     xcb_connection_t *connection;
     xcb_screen_t *screen;
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
-#endif                           // _WIN32
+#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
+    ANativeWindow* window;
+#endif
     VkSurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;
@@ -279,7 +291,7 @@ static bool memory_type_from_properties(struct demo *demo, uint32_t typeBits,
                                         VkFlags requirements_mask,
                                         uint32_t *typeIndex) {
     // Search memtypes to find first index with those properties
-    for (uint32_t i = 0; i < 32; i++) {
+    for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
         if ((typeBits & 1) == 1) {
             // Type is available, does it match user properties?
             if ((demo->memory_properties.memoryTypes[i].propertyFlags &
@@ -443,6 +455,23 @@ static void demo_draw_build_cmd(struct demo *demo) {
     err = vkBeginCommandBuffer(demo->draw_cmd, &cmd_buf_info);
     assert(!err);
 
+    // We can use LAYOUT_UNDEFINED as a wildcard here because we don't care what
+    // happens to the previous contents of the image
+    VkImageMemoryBarrier image_memory_barrier = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .pNext = NULL,
+        .srcAccessMask = 0,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = demo->buffers[demo->current_buffer].image,
+        .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
+
+    vkCmdPipelineBarrier(demo->draw_cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0,
+                         NULL, 1, &image_memory_barrier);
     vkCmdBeginRenderPass(demo->draw_cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(demo->draw_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       demo->pipeline);
@@ -526,13 +555,6 @@ static void demo_draw(struct demo *demo) {
         assert(!err);
     }
 
-    // Assume the command buffer has been run on current_buffer before so
-    // we need to set the image layout back to COLOR_ATTACHMENT_OPTIMAL
-    demo_set_image_layout(demo, demo->buffers[demo->current_buffer].image,
-                          VK_IMAGE_ASPECT_COLOR_BIT,
-                          VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                          0);
     demo_flush_init_cmd(demo);
 
     // Wait for the present complete semaphore to be signaled to ensure
@@ -540,7 +562,6 @@ static void demo_draw(struct demo *demo) {
     // engine has fully released ownership to the application, and it is
     // okay to render to the image.
 
-    // FIXME/TODO: DEAL WITH VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
     demo_draw_build_cmd(demo);
     VkFence nullFence = VK_NULL_HANDLE;
     VkPipelineStageFlags pipe_stage_flags =
@@ -715,15 +736,6 @@ static void demo_prepare_buffers(struct demo *demo) {
         };
 
         demo->buffers[i].image = swapchainImages[i];
-
-        // Render loop will expect image to have been used before and in
-        // VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-        // layout and will change to COLOR_ATTACHMENT_OPTIMAL, so init the image
-        // to that state
-        demo_set_image_layout(
-            demo, demo->buffers[i].image, VK_IMAGE_ASPECT_COLOR_BIT,
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-            0);
 
         color_attachment_view.image = demo->buffers[i].image;
 
@@ -927,20 +939,22 @@ static void demo_prepare_textures(struct demo *demo) {
              VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) &&
             !demo->use_staging_buffer) {
             /* Device can texture using linear textures */
-            demo_prepare_texture_image(demo, tex_colors[i], &demo->textures[i],
-                                       VK_IMAGE_TILING_LINEAR,
-                                       VK_IMAGE_USAGE_SAMPLED_BIT,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            demo_prepare_texture_image(
+                demo, tex_colors[i], &demo->textures[i], VK_IMAGE_TILING_LINEAR,
+                VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         } else if (props.optimalTilingFeatures &
                    VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) {
             /* Must use staging buffer to copy linear texture to optimized */
             struct texture_object staging_texture;
 
             memset(&staging_texture, 0, sizeof(staging_texture));
-            demo_prepare_texture_image(demo, tex_colors[i], &staging_texture,
-                                       VK_IMAGE_TILING_LINEAR,
-                                       VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            demo_prepare_texture_image(
+                demo, tex_colors[i], &staging_texture, VK_IMAGE_TILING_LINEAR,
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
             demo_prepare_texture_image(
                 demo, tex_colors[i], &demo->textures[i],
@@ -1070,7 +1084,8 @@ static void demo_prepare_vertices(struct demo *demo) {
 
     mem_alloc.allocationSize = mem_reqs.size;
     pass = memory_type_from_properties(demo, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &mem_alloc.memoryTypeIndex);
     assert(pass);
 
@@ -1206,6 +1221,8 @@ static void demo_prepare_render_pass(struct demo *demo) {
     assert(!err);
 }
 
+//TODO: Merge shader reading
+#ifndef __ANDROID__
 static VkShaderModule
 demo_prepare_shader_module(struct demo *demo, const void *code, size_t size) {
     VkShaderModuleCreateInfo moduleCreateInfo;
@@ -1248,8 +1265,19 @@ char *demo_read_spv(const char *filename, size_t *psize) {
     fclose(fp);
     return shader_code;
 }
+#endif
 
 static VkShaderModule demo_prepare_vs(struct demo *demo) {
+#ifdef __ANDROID__
+    VkShaderModuleCreateInfo sh_info = {};
+    sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+
+#include "tri.vert.h"
+    sh_info.codeSize = sizeof(tri_vert);
+    sh_info.pCode = tri_vert;
+    VkResult U_ASSERT_ONLY err = vkCreateShaderModule(demo->device, &sh_info, NULL, &demo->vert_shader_module);
+    assert(!err);
+#else
     void *vertShaderCode;
     size_t size = 0;
 
@@ -1259,11 +1287,22 @@ static VkShaderModule demo_prepare_vs(struct demo *demo) {
         demo_prepare_shader_module(demo, vertShaderCode, size);
 
     free(vertShaderCode);
+#endif
 
     return demo->vert_shader_module;
 }
 
 static VkShaderModule demo_prepare_fs(struct demo *demo) {
+#ifdef __ANDROID__
+    VkShaderModuleCreateInfo sh_info = {};
+    sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+
+#include "tri.frag.h"
+    sh_info.codeSize = sizeof(tri_frag);
+    sh_info.pCode = tri_frag;
+    VkResult U_ASSERT_ONLY err = vkCreateShaderModule(demo->device, &sh_info, NULL, &demo->frag_shader_module);
+    assert(!err);
+#else
     void *fragShaderCode;
     size_t size;
 
@@ -1273,6 +1312,7 @@ static VkShaderModule demo_prepare_fs(struct demo *demo) {
         demo_prepare_shader_module(demo, fragShaderCode, size);
 
     free(fragShaderCode);
+#endif
 
     return demo->frag_shader_module;
 }
@@ -1514,7 +1554,7 @@ static void demo_prepare(struct demo *demo) {
     demo->prepared = true;
 }
 
-#ifdef _WIN32
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
 static void demo_run(struct demo *demo) {
     if (!demo->prepared)
         return;
@@ -1612,8 +1652,7 @@ static void demo_create_window(struct demo *demo) {
         exit(1);
     }
 }
-#else  // _WIN32
-
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
 static void demo_handle_event(struct demo *demo,
                               const xcb_generic_event_t *event) {
     switch (event->response_type & 0x7f) {
@@ -1712,7 +1751,22 @@ static void demo_create_window(struct demo *demo) {
 
     xcb_map_window(demo->connection, demo->window);
 }
-#endif // _WIN32
+#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
+static void demo_run(struct demo *demo) {
+    if (!demo->prepared)
+        return;
+    demo_draw(demo);
+
+    if (demo->depthStencil > 0.99f)
+        demo->depthIncrement = -0.001f;
+    if (demo->depthStencil < 0.8f)
+        demo->depthIncrement = 0.001f;
+
+    demo->depthStencil += demo->depthIncrement;
+
+    demo->curFrame++;
+}
+#endif
 
 /*
  * Return 1 (true) if all layer names specified in check_names
@@ -1830,21 +1884,28 @@ static void demo_init_vk(struct demo *demo) {
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_SURFACE_EXTENSION_NAME;
             }
-#ifdef _WIN32
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
             if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
             }
-#else  // _WIN32
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
             if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_XCB_SURFACE_EXTENSION_NAME;
             }
-#endif // _WIN32
+#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
+            if (!strcmp(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
+                        instance_extensions[i].extensionName)) {
+                platformSurfaceExtFound = 1;
+                demo->extension_names[demo->enabled_extension_count++] =
+                    VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;
+            }
+#endif
             if (!strcmp(VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 if (demo->validate) {
@@ -1868,7 +1929,7 @@ static void demo_init_vk(struct demo *demo) {
                  "vkCreateInstance Failure");
     }
     if (!platformSurfaceExtFound) {
-#ifdef _WIN32
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_WIN32_SURFACE_EXTENSION_NAME
                  " extension.\n\nDo you have a compatible "
@@ -1876,7 +1937,7 @@ static void demo_init_vk(struct demo *demo) {
                  "look at the Getting Started guide for additional "
                  "information.\n",
                  "vkCreateInstance Failure");
-#else  // _WIN32
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_XCB_SURFACE_EXTENSION_NAME
                  " extension.\n\nDo you have a compatible "
@@ -1884,7 +1945,15 @@ static void demo_init_vk(struct demo *demo) {
                  "look at the Getting Started guide for additional "
                  "information.\n",
                  "vkCreateInstance Failure");
-#endif // _WIN32
+#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
+        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
+                 "the " VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
+                 " extension.\n\nDo you have a compatible "
+                 "Vulkan installable client driver (ICD) installed?\nPlease "
+                 "look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateInstance Failure");
+#endif
     }
     const VkApplicationInfo app = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -2095,11 +2164,6 @@ static void demo_init_vk(struct demo *demo) {
     VkPhysicalDeviceFeatures features;
     vkGetPhysicalDeviceFeatures(demo->gpu, &features);
 
-    if (!features.shaderClipDistance) {
-        ERR_EXIT("Required device feature `shaderClipDistance` not supported\n",
-                 "GetPhysicalDeviceFeatures failure");
-    }
-
     // Graphics queue and MemMgr queue can be separate.
     // TODO: Add support for separate queues, including synchronization,
     //       and appropriate tracking for QueueSubmit
@@ -2144,7 +2208,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     uint32_t i;
 
 // Create a WSI surface for the window:
-#ifdef _WIN32
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
     VkWin32SurfaceCreateInfoKHR createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
@@ -2154,8 +2218,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 
     err =
         vkCreateWin32SurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
-
-#else  // _WIN32
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
     VkXcbSurfaceCreateInfoKHR createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
@@ -2164,7 +2227,15 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     createInfo.window = demo->window;
 
     err = vkCreateXcbSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
-#endif // _WIN32
+#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
+    VkAndroidSurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.flags = 0;
+    createInfo.window = (ANativeWindow*)(demo->window);
+
+    err = vkCreateAndroidSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
+#endif
 
     // Iterate over each queue to learn whether it supports presenting:
     VkBool32 *supportsPresent =
@@ -2256,7 +2327,7 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 }
 
 static void demo_init_connection(struct demo *demo) {
-#ifndef _WIN32
+#if defined(VK_USE_PLATFORM_XCB_KHR)
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
@@ -2371,11 +2442,11 @@ static void demo_cleanup(struct demo *demo) {
 
     free(demo->queue_props);
 
-#ifndef _WIN32
+#if defined(VK_USE_PLATFORM_XCB_KHR)
     xcb_destroy_window(demo->connection, demo->window);
     xcb_disconnect(demo->connection);
     free(demo->atom_wm_delete_window);
-#endif // _WIN32
+#endif
 }
 
 static void demo_resize(struct demo *demo) {
@@ -2433,7 +2504,7 @@ static void demo_resize(struct demo *demo) {
     demo_prepare(demo);
 }
 
-#ifdef _WIN32
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
 // Include header required for parsing the command line options.
 #include <shellapi.h>
 
@@ -2513,7 +2584,79 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
     return (int)msg.wParam;
 }
-#else  // _WIN32
+
+#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
+
+#include <android/log.h>
+#include <android_native_app_glue.h>
+static bool initialized = false;
+static bool active = false;
+struct demo demo;
+
+static int32_t processInput(struct android_app* app, AInputEvent* event) {
+    return 0;
+}
+
+static void processCommand(struct android_app* app, int32_t cmd) {
+    switch(cmd) {
+        case APP_CMD_INIT_WINDOW: {
+            if (app->window) {
+                demo_init(&demo, 0, NULL);
+                demo.window = (void*)app->window;
+                demo_init_vk_swapchain(&demo);
+                demo_prepare(&demo);
+                initialized = true;
+            }
+            break;
+        }
+        case APP_CMD_GAINED_FOCUS: {
+            active = true;
+            break;
+        }
+        case APP_CMD_LOST_FOCUS: {
+            active = false;
+            break;
+        }
+    }
+}
+
+
+
+void android_main(struct android_app *app)
+{
+    app_dummy();
+
+#ifdef ANDROID
+    int vulkanSupport = InitVulkan();
+    if (vulkanSupport == 0)
+        return;
+#endif
+
+    app->onAppCmd = processCommand;
+    app->onInputEvent = processInput;
+
+    while(1) {
+        int events;
+        struct android_poll_source* source;
+        while (ALooper_pollAll(active ? 0 : -1, NULL, &events, (void**)&source) >= 0) {
+            if (source) {
+                source->process(app, source);
+            }
+
+            if (app->destroyRequested != 0) {
+                demo_cleanup(&demo);
+                return;
+            }
+        }
+        if (initialized && active) {
+            demo_run(&demo);
+        }
+    }
+
+}
+
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+
 int main(const int argc, const char *argv[]) {
     struct demo demo;
 
@@ -2528,4 +2671,5 @@ int main(const int argc, const char *argv[]) {
 
     return validation_error;
 }
-#endif // _WIN32
+
+#endif
