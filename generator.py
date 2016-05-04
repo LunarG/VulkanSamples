@@ -2906,10 +2906,16 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         write('#ifndef UNUSED_PARAMETER', file=self.outFile)
         write('#define UNUSED_PARAMETER(x) (void)(x)', file=self.outFile)
         write('#endif // UNUSED_PARAMETER', file=self.outFile)
+        #
+        # Namespace
+        self.newline()
+        write('namespace parameter_validation {', file = self.outFile)
     def endFile(self):
         # C-specific
-        # Finish C++ wrapper and multiple inclusion protection
         self.newline()
+        # Namespace
+        write('} // namespace parameter_validation', file = self.outFile)
+        # Finish C++ wrapper and multiple inclusion protection
         if (self.genOpts.protectFile and self.genOpts.filename):
             self.newline()
             write('#endif', file=self.outFile)

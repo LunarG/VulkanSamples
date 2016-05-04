@@ -46,6 +46,8 @@
 
 #include "parameter_validation.h"
 
+using namespace parameter_validation;
+
 struct layer_data {
     debug_report_data *report_data;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
