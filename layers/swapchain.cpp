@@ -1728,7 +1728,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice de
     if ((semaphore == VK_NULL_HANDLE) && (fence == VK_NULL_HANDLE)) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_NO_SYNC_FOR_ACQUIRE,
                               "%s() called with both the semaphore and fence parameters set to "
-                              "VK_NULL_HANDLE (at least one should be used)\n.", __FUNCTION__);
+                              "VK_NULL_HANDLE (at least one should be used).", __FUNCTION__);
     }
     SwpSwapchain *pSwapchain = &my_data->swapchainMap[swapchain];
     SwpPhysicalDevice *pPhysicalDevice = pDevice->pPhysicalDevice;
