@@ -5810,7 +5810,7 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors) {
     memset(&copy_ds_update, 0, sizeof(VkCopyDescriptorSet));
     copy_ds_update.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
     copy_ds_update.srcSet = descriptorSet;
-    copy_ds_update.srcBinding = 1; // copy from SAMPLER binding
+    copy_ds_update.srcBinding = 1; // Copy from SAMPLER binding
     copy_ds_update.dstSet = descriptorSet;
     copy_ds_update.dstBinding = 0;      // ERROR : copy to UNIFORM binding
     copy_ds_update.descriptorCount = 1; // copy 1 descriptor
@@ -5828,7 +5828,7 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors) {
         3; // ERROR : Invalid binding for matching layout
     copy_ds_update.dstSet = descriptorSet;
     copy_ds_update.dstBinding = 0;
-    copy_ds_update.descriptorCount = 1; // copy 1 descriptor
+    copy_ds_update.descriptorCount = 1; // Copy 1 descriptor
     vkUpdateDescriptorSets(m_device->device(), 0, NULL, 1, &copy_ds_update);
 
     m_errorMonitor->VerifyFound();
@@ -5948,13 +5948,19 @@ TEST_F(VkLayerTest, NumSamplesMismatch) {
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(),
                       VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
 
+    // Render triangle (the error should trigger on the attempt to draw).
+    Draw(3, 1, 0, 0);
+
+    // Finalize recording of the command buffer
+    EndCommandBuffer();
+
     m_errorMonitor->VerifyFound();
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
-#ifdef ADD_BACK_IN_WHEN_CHECK_IS_BACK // TODO : Re-enable when GH256 fixed
+
 TEST_F(VkLayerTest, NumBlendAttachMismatch) {
     // Create Pipeline where the number of blend attachments doesn't match the
     // number of color attachments.  In this case, we don't add any color
@@ -5962,7 +5968,7 @@ TEST_F(VkLayerTest, NumBlendAttachMismatch) {
     VkResult err;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Mismatch between blend state attachment");
+        "Render pass subpass 0 mismatch with blending state defined and blend state attachment");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -6046,13 +6052,19 @@ TEST_F(VkLayerTest, NumBlendAttachMismatch) {
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(),
         VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
 
+    // Render triangle (the error should trigger on the attempt to draw).
+    Draw(3, 1, 0, 0);
+
+    // Finalize recording of the command buffer
+    EndCommandBuffer();
+
     m_errorMonitor->VerifyFound();
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
-#endif //ADD_BACK_IN_WHEN_CHECK_IS_BACK
+
 TEST_F(VkLayerTest, ClearCmdNoDraw) {
     // Create CommandBuffer where we add ClearCmd for FB Color attachment prior
     // to issuing a Draw
