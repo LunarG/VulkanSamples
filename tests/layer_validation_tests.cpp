@@ -6498,6 +6498,177 @@ TEST_F(VkLayerTest, VtxBufferBadIndex) {
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
+// INVALID_IMAGE_LAYOUT tests (one other case is hit by MapMemWithoutHostVisibleBit and not here)
+TEST_F(VkLayerTest, InvalidImageLayout) {
+    TEST_DESCRIPTION("Hit all possible validation checks associated with the "
+            "DRAWSTATE_INVALID_IMAGE_LAYOUT enum. Generally these involve having"
+            "images in the wrong layout when they're copied or transitioned.");
+    // 3 in ValidateCmdBufImageLayouts
+    // *  -1 Attempt to submit cmd buf w/ deleted image
+    // *  -2 Cmd buf submit of image w/ layout not matching first use w/ subresource
+    // *  -3 Cmd buf submit of image w/ layout not matching first use w/o subresource
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+        "Layout for input image should be TRANSFER_SRC_OPTIMAL instead of GENERAL.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    // Create src & dst images to use for copy operations
+    VkImage src_image;
+    VkImage dst_image;
+
+    const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
+    const int32_t tex_width = 32;
+    const int32_t tex_height = 32;
+
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = tex_format;
+    image_create_info.extent.width = tex_width;
+    image_create_info.extent.height = tex_height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 4;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    image_create_info.flags = 0;
+
+    VkResult err = vkCreateImage(m_device->device(), &image_create_info, NULL, &src_image);
+    ASSERT_VK_SUCCESS(err);
+    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dst_image);
+    ASSERT_VK_SUCCESS(err);
+
+    BeginCommandBuffer();
+    VkImageCopy copyRegion;
+    copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.srcSubresource.mipLevel = 0;
+    copyRegion.srcSubresource.baseArrayLayer = 0;
+    copyRegion.srcSubresource.layerCount = 1;
+    copyRegion.srcOffset.x = 0;
+    copyRegion.srcOffset.y = 0;
+    copyRegion.srcOffset.z = 0;
+    copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.dstSubresource.mipLevel = 0;
+    copyRegion.dstSubresource.baseArrayLayer = 0;
+    copyRegion.dstSubresource.layerCount = 1;
+    copyRegion.dstOffset.x = 0;
+    copyRegion.dstOffset.y = 0;
+    copyRegion.dstOffset.z = 0;
+    copyRegion.extent.width = 1;
+    copyRegion.extent.height = 1;
+    copyRegion.extent.depth = 1;
+    m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_GENERAL, dst_image, VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    m_errorMonitor->VerifyFound();
+    // Now cause error due to src image layout changing
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Cannot copy from an image whose source layout is VK_IMAGE_LAYOUT_UNDEFINED and doesn't match the current layout VK_IMAGE_LAYOUT_GENERAL.");
+    m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_UNDEFINED, dst_image, VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    m_errorMonitor->VerifyFound();
+    // Final src error is due to bad layout type
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Layout for input image is VK_IMAGE_LAYOUT_UNDEFINED but can only be TRANSFER_SRC_OPTIMAL or GENERAL.");
+    m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_UNDEFINED, dst_image, VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    m_errorMonitor->VerifyFound();
+    // Now verify same checks for dst
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+        "Layout for output image should be TRANSFER_DST_OPTIMAL instead of GENERAL.");
+    m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_GENERAL, dst_image, VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    m_errorMonitor->VerifyFound();
+    // Now cause error due to src image layout changing
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Cannot copy from an image whose dest layout is VK_IMAGE_LAYOUT_UNDEFINED and doesn't match the current layout VK_IMAGE_LAYOUT_GENERAL.");
+    m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_GENERAL, dst_image, VK_IMAGE_LAYOUT_UNDEFINED, 1, &copyRegion);
+    m_errorMonitor->VerifyFound();
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Layout for output image is VK_IMAGE_LAYOUT_UNDEFINED but can only be TRANSFER_DST_OPTIMAL or GENERAL.");
+    m_commandBuffer->CopyImage(src_image, VK_IMAGE_LAYOUT_GENERAL, dst_image, VK_IMAGE_LAYOUT_UNDEFINED, 1, &copyRegion);
+    m_errorMonitor->VerifyFound();
+    // Now cause error due to bad image layout transition in PipelineBarrier
+    VkImageMemoryBarrier image_barrier[1] = {};
+    image_barrier[0].oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    image_barrier[0].image = src_image;
+    image_barrier[0].subresourceRange.layerCount = 2;
+    image_barrier[0].subresourceRange.levelCount = 2;
+    image_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "You cannot transition the layout from VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL when current layout is VK_IMAGE_LAYOUT_GENERAL.");
+    vkCmdPipelineBarrier(m_commandBuffer->handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, NULL, 0, NULL, 1, image_barrier);
+    m_errorMonitor->VerifyFound();
+
+    // Finally some layout errors at RenderPass create time
+    // Just hacking in specific state to get to the errors we want so don't copy this unless you know what you're doing.
+    VkAttachmentReference attach = {};
+    // perf warning for GENERAL layout w/ non-DS input attachment
+    attach.layout = VK_IMAGE_LAYOUT_GENERAL;
+    VkSubpassDescription subpass = {};
+    subpass.inputAttachmentCount = 1;
+    subpass.pInputAttachments = &attach;
+    VkRenderPassCreateInfo rpci = {};
+    rpci.subpassCount = 1;
+    rpci.pSubpasses = &subpass;
+    rpci.attachmentCount = 1;
+    VkAttachmentDescription attach_desc = {};
+    attach_desc.format = VK_FORMAT_UNDEFINED;
+    rpci.pAttachments = &attach_desc;
+    VkRenderPass rp;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+        "Layout for input attachment is GENERAL but should be READ_ONLY_OPTIMAL.");
+    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    m_errorMonitor->VerifyFound();
+    // error w/ non-general layout
+    attach.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Layout for input attachment is VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL but can only be READ_ONLY_OPTIMAL or GENERAL.");
+    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    m_errorMonitor->VerifyFound();
+    subpass.inputAttachmentCount = 0;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &attach;
+    attach.layout = VK_IMAGE_LAYOUT_GENERAL;
+    // perf warning for GENERAL layout on color attachment
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+        "Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.");
+    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    m_errorMonitor->VerifyFound();
+    // error w/ non-color opt or GENERAL layout for color attachment
+    attach.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Layout for color attachment is VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL but can only be COLOR_ATTACHMENT_OPTIMAL or GENERAL.");
+    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    m_errorMonitor->VerifyFound();
+    subpass.colorAttachmentCount = 0;
+    subpass.pDepthStencilAttachment = &attach;
+    attach.layout = VK_IMAGE_LAYOUT_GENERAL;
+    // perf warning for GENERAL layout on DS attachment
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+        "Layout for depth attachment is GENERAL but should be DEPTH_STENCIL_ATTACHMENT_OPTIMAL.");
+    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    m_errorMonitor->VerifyFound();
+    // error w/ non-ds opt or GENERAL layout for color attachment
+    attach.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Layout for depth attachment is VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL but can only be DEPTH_STENCIL_ATTACHMENT_OPTIMAL or GENERAL.");
+    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyImage(m_device->device(), src_image, NULL);
+    vkDestroyImage(m_device->device(), dst_image, NULL);
+}
 #endif // DRAW_STATE_TESTS
 
 #if THREADING_TESTS
