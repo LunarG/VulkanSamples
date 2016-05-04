@@ -47,7 +47,7 @@ REM // ======== Parameter parsing ======== //
          goto:parameterLoop
       )
 
-	  if "%1" == "--sync-spirv-tools" (
+      if "%1" == "--sync-spirv-tools" (
          set sync-spirv-tools=1
          shift
          goto:parameterLoop
@@ -61,9 +61,9 @@ REM // ======== Parameter parsing ======== //
          goto:parameterLoop
       )
 
-	  if "%1" == "--build-spirv-tools" (
+      if "%1" == "--build-spirv-tools" (
          set sync-spirv-tools=1
-		 REM glslang has the same needs as spirv-tools
+         REM glslang has the same needs as spirv-tools
          set check-glslang-build-dependencies=1
          set build-spirv-tools=1
          shift

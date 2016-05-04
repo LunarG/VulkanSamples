@@ -1037,19 +1037,19 @@ ext_khr_surface = Extension(
 
         Proto("VkResult", "GetPhysicalDeviceSurfaceCapabilitiesKHR",
             [Param("VkPhysicalDevice", "physicalDevice"),
-	     Param("VkSurfaceKHR", "surface"),
+             Param("VkSurfaceKHR", "surface"),
              Param("VkSurfaceCapabilitiesKHR*", "pSurfaceCapabilities")]),
 
         Proto("VkResult", "GetPhysicalDeviceSurfaceFormatsKHR",
             [Param("VkPhysicalDevice", "physicalDevice"),
-	     Param("VkSurfaceKHR", "surface"),
-	     Param("uint32_t*", "pSurfaceFormatCount"),
+             Param("VkSurfaceKHR", "surface"),
+             Param("uint32_t*", "pSurfaceFormatCount"),
              Param("VkSurfaceFormatKHR*", "pSurfaceFormats")]),
 
         Proto("VkResult", "GetPhysicalDeviceSurfacePresentModesKHR",
             [Param("VkPhysicalDevice", "physicalDevice"),
-	     Param("VkSurfaceKHR", "surface"),
-	     Param("uint32_t*", "pPresentModeCount"),
+             Param("VkSurfaceKHR", "surface"),
+             Param("uint32_t*", "pPresentModeCount"),
              Param("VkPresentModeKHR*", "pPresentModes")]),
     ],
 )
@@ -1072,8 +1072,8 @@ ext_khr_device_swapchain = Extension(
 
         Proto("VkResult", "GetSwapchainImagesKHR",
             [Param("VkDevice", "device"),
-	     Param("VkSwapchainKHR", "swapchain"),
-	     Param("uint32_t*", "pSwapchainImageCount"),
+         Param("VkSwapchainKHR", "swapchain"),
+         Param("uint32_t*", "pSwapchainImageCount"),
              Param("VkImage*", "pSwapchainImages")]),
 
         Proto("VkResult", "AcquireNextImageKHR",
