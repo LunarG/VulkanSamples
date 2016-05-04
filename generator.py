@@ -322,7 +322,8 @@ class ThreadGeneratorOptions(GeneratorOptions):
                  apientryp = '',
                  indentFuncProto = True,
                  indentFuncPointer = False,
-                 alignFuncParam = 0):
+                 alignFuncParam = 0,
+                 genDirectory = None):
         GeneratorOptions.__init__(self, filename, apiname, profile,
                                   versions, emitversions, defaultExtensions,
                                   addExtensions, removeExtensions, sortProcedure)
@@ -338,6 +339,7 @@ class ThreadGeneratorOptions(GeneratorOptions):
         self.indentFuncProto = indentFuncProto
         self.indentFuncPointer = indentFuncPointer
         self.alignFuncParam  = alignFuncParam
+        self.genDirectory    = genDirectory
 
 
 # ParamCheckerGeneratorOptions - subclass of GeneratorOptions.
@@ -396,7 +398,8 @@ class ParamCheckerGeneratorOptions(GeneratorOptions):
                  apientryp = '',
                  indentFuncProto = True,
                  indentFuncPointer = False,
-                 alignFuncParam = 0):
+                 alignFuncParam = 0,
+                 genDirectory = None):
         GeneratorOptions.__init__(self, filename, apiname, profile,
                                   versions, emitversions, defaultExtensions,
                                   addExtensions, removeExtensions, sortProcedure)
@@ -412,6 +415,7 @@ class ParamCheckerGeneratorOptions(GeneratorOptions):
         self.indentFuncProto = indentFuncProto
         self.indentFuncPointer = indentFuncPointer
         self.alignFuncParam  = alignFuncParam
+        self.genDirectory    = genDirectory
 
 
 # OutputGenerator - base class for generating API interfaces.
@@ -561,7 +565,10 @@ class OutputGenerator:
         # Open specified output file. Not done in constructor since a
         # Generator can be used without writing to a file.
         if (self.genOpts.filename != None):
-            self.outFile = open(self.genOpts.filename, 'w')
+            if (self.genOpts.genDirectory != None):
+                self.outFile = open(os.path.join(self.genOpts.genDirectory, self.genOpts.filename), 'w')
+            else:
+                self.outFile = open(self.genOpts.filename, 'w')
         else:
             self.outFile = sys.stdout
     def endFile(self):
