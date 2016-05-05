@@ -1504,7 +1504,7 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
         if ((pCreateInfo->queueFamilyIndexCount <= 1) || !pCreateInfo->pQueueFamilyIndices) {
             skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                                   SWAPCHAIN_CREATE_SWAP_BAD_SHARING_VALUES, "%s() called with a supported "
-                                                                            "pCreateInfo->sharingMode of (i.e. %s),"
+                                                                            "pCreateInfo->sharingMode of (i.e. %s), "
                                                                             "but with a bad value(s) for "
                                                                             "pCreateInfo->queueFamilyIndexCount or "
                                                                             "pCreateInfo->pQueueFamilyIndices).",
