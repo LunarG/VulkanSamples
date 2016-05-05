@@ -117,6 +117,9 @@ class DescriptorSetLayout {
     // For a particular binding, get the global index
     uint32_t GetGlobalStartIndexFromBinding(const uint32_t) const;
     uint32_t GetGlobalEndIndexFromBinding(const uint32_t) const;
+    // For a particular binding starting at offset and having update_count descriptors
+    //  updated, verify that for any binding boundaries crossed, the update is consistent
+    bool VerifyUpdateConsistency(uint32_t, uint32_t, uint32_t, const char *, const VkDescriptorSet, std::string *) const;
 
   private:
     VkDescriptorSetLayout layout_;
@@ -319,6 +322,7 @@ class DescriptorSet : public BASE_NODE {
     // Perform copy update, using 'this' set as the dest and the passed-in DescriptorSet as the src
     bool CopyUpdate(debug_report_data *, const VkCopyDescriptorSet *, const DescriptorSet *, std::string *);
 
+    const DescriptorSetLayout *GetLayout() const { return p_layout_; };
     VkDescriptorSet GetSet() const { return set_; };
     // Return unordered_set of all command buffers that this set is bound to
     std::unordered_set<VkCommandBuffer> GetBoundCmdBuffers() const { return bound_cmd_buffers_; }
@@ -341,7 +345,6 @@ class DescriptorSet : public BASE_NODE {
 
   private:
     bool ValidateUpdate(const VkWriteDescriptorSet *, const uint32_t, std::string *) const;
-    bool VerifyUpdateConsistency(uint32_t, uint32_t, uint32_t, const char *, std::string *) const;
     bool some_update_; // has any part of the set ever been updated?
     VkDescriptorSet set_;
     uint32_t descriptor_count_; // Count of all descriptors in this set

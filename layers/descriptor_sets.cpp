@@ -223,6 +223,41 @@ bool cvdescriptorset::DescriptorSetLayout::IsNextBindingConsistent(const uint32_
     }
     return false;
 }
+// Starting at offset descriptor of given binding, parse over update_count
+//  descriptor updates and verify that for any binding boundaries that are crossed, the next binding(s) are all consistent
+//  Consistency means that their type, stage flags, and whether or not they use immutable samplers matches
+//  If so, return true. If not, fill in error_msg and return false
+bool cvdescriptorset::DescriptorSetLayout::VerifyUpdateConsistency(uint32_t current_binding, uint32_t offset, uint32_t update_count,
+                                                                   const char *type, const VkDescriptorSet set,
+                                                                   std::string *error_msg) const {
+    // Verify consecutive bindings match (if needed)
+    auto orig_binding = current_binding;
+    // Track count of descriptors in the current_bindings that are remaining to be updated
+    auto binding_remaining = GetDescriptorCountFromBinding(current_binding);
+    // First, it's legal to offset beyond your own binding so handle that case
+    //  Really this is just searching for the binding in which the update begins and adjusting offset accordingly
+    while (offset >= binding_remaining) {
+        // Advance to next binding, decrement offset by binding size
+        offset -= binding_remaining;
+        binding_remaining = GetDescriptorCountFromBinding(++current_binding);
+    }
+    binding_remaining -= offset;
+    while (update_count > binding_remaining) { // While our updates overstep current binding
+        // Verify next consecutive binding matches type, stage flags & immutable sampler use
+        if (!IsNextBindingConsistent(current_binding++)) {
+            std::stringstream error_str;
+            error_str << "Attempting " << type << " descriptor set " << set << " binding #" << orig_binding << " with #"
+                      << update_count << " descriptors being updated but this update oversteps the bounds of this binding and the "
+                                         "next binding is not consistent with current binding so this update is invalid.";
+            *error_msg = error_str.str();
+            return false;
+        }
+        // For sake of this check consider the bindings updated and grab count for next binding
+        update_count -= binding_remaining;
+        binding_remaining = GetDescriptorCountFromBinding(current_binding);
+    }
+    return true;
+}
 
 cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const DescriptorSetLayout *layout,
                                               const std::unordered_map<VkBuffer, BUFFER_NODE> *buffer_map,
@@ -416,31 +451,6 @@ uint32_t cvdescriptorset::DescriptorSet::GetAllStorageUpdates(std::unordered_set
     p_layout_->FillBindingSet(&binding_set);
     return GetStorageUpdates(binding_set, buffer_set, image_set);
 }
-// Starting at given current_binding with binding_remaining descriptors, parse over update_count
-//  descriptor updates and verify that for any binding boundaries that are crossed, the next binding(s) are all consistent
-//  Consistency means that their type, stage flags, and whether or not they use immutable samplers matches
-//  If so, return true. If not, fill in error_msg and return false
-bool cvdescriptorset::DescriptorSet::VerifyUpdateConsistency(uint32_t current_binding, uint32_t binding_remaining,
-                                                             uint32_t update_count, const char *type,
-                                                             std::string *error_msg) const {
-    // Verify consecutive bindings match (if needed)
-    auto orig_binding = current_binding;
-    while (update_count > binding_remaining) { // While our updates overstep current binding
-        // Verify next consecutive binding matches type, stage flags & immutable sampler use
-        if (!p_layout_->IsNextBindingConsistent(current_binding++)) {
-            std::stringstream error_str;
-            error_str << "Attempting " << type << " descriptor set " << set_ << " binding #" << orig_binding << " with #"
-                      << update_count << " descriptors being updated but this update oversteps the bounds of this binding and then "
-                                         "next binding is not consistent with current binding so this update is invalid.";
-            *error_msg = error_str.str();
-            return false;
-        }
-        // For sake of this check consider the bindings updated and advance to next binding
-        update_count -= binding_remaining;
-        binding_remaining = p_layout_->GetDescriptorCountFromBinding(current_binding);
-    }
-    return true;
-}
 // Perform write update in given update struct
 //  If an error occurs, return false and fill in details in error_msg string
 bool cvdescriptorset::DescriptorSet::WriteUpdate(debug_report_data *report_data, const VkWriteDescriptorSet *update,
@@ -475,8 +485,8 @@ bool cvdescriptorset::DescriptorSet::WriteUpdate(debug_report_data *report_data,
             return false;
         }
         // Verify consecutive bindings match (if needed)
-        auto binding_remaining = p_layout_->GetDescriptorCountFromBinding(update->dstBinding) - update->dstArrayElement;
-        if (!VerifyUpdateConsistency(update->dstBinding, binding_remaining, update->descriptorCount, "write update to", error_msg))
+        if (!p_layout_->VerifyUpdateConsistency(update->dstBinding, update->dstArrayElement, update->descriptorCount,
+                                                "write update to", set_, error_msg))
             return false;
         // Update is within bounds and consistent so perform update
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
@@ -549,10 +559,10 @@ bool cvdescriptorset::DescriptorSet::CopyUpdate(debug_report_data *report_data, 
         return false;
     }
     // Verify consistency of src & dst bindings if update crosses binding boundaries
-    auto src_binding_remaining = src_set->GetDescriptorCountFromBinding(update->srcBinding) - update->srcArrayElement;
-    auto dst_binding_remaining = p_layout_->GetDescriptorCountFromBinding(update->dstBinding) - update->dstArrayElement;
-    if ((!VerifyUpdateConsistency(update->srcBinding, src_binding_remaining, update->descriptorCount, "copy update from", error)) ||
-        (!VerifyUpdateConsistency(update->dstBinding, dst_binding_remaining, update->descriptorCount, "copy update to", error))) {
+    if ((!src_set->GetLayout()->VerifyUpdateConsistency(update->srcBinding, update->srcArrayElement, update->descriptorCount,
+                                                        "copy update from", src_set->GetSet(), error)) ||
+        (!p_layout_->VerifyUpdateConsistency(update->dstBinding, update->dstArrayElement, update->descriptorCount, "copy update to",
+                                             set_, error))) {
         return false;
     }
     // Update parameters all look good so perform update
