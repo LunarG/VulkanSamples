@@ -5953,7 +5953,7 @@ vkAllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAl
                         return VK_ERROR_VALIDATION_FAILED_EXT;
                     }
                 }
-                // Create new set node and add to head of pool nodes
+                // Create new DescriptorSet instance and add to the pool's unordered_set of DescriptorSets
                 cvdescriptorset::DescriptorSet *pNewNode = new cvdescriptorset::DescriptorSet(
                     pDescriptorSets[i], layout_pair->second, &dev_data->bufferMap, &dev_data->memObjMap, &dev_data->bufferViewMap,
                     &dev_data->samplerMap, &dev_data->imageViewMap, &dev_data->imageMap,
@@ -5967,9 +5967,6 @@ vkAllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAl
                         return VK_ERROR_VALIDATION_FAILED_EXT;
                     }
                 } else {
-                    // TODO : Pool should store a total count of each type of Descriptor available
-                    //  When descriptors are allocated, decrement the count and validate here
-                    //  that the count doesn't go below 0. One reset/free need to bump count back up.
                     // Insert set into this pool
                     pPoolNode->sets.insert(pNewNode);
                     pNewNode->in_use.store(0);
