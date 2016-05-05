@@ -1099,8 +1099,10 @@ CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
         }
     }
 
-    device_data->device_dispatch_table->CmdBlitImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount,
-                                                     pRegions, filter);
+    if (!skipCall) {
+        device_data->device_dispatch_table->CmdBlitImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount,
+                                                         pRegions, filter);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL
