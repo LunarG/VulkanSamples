@@ -41,22 +41,18 @@ cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(debug_report_data *rep
         global_index += p_create_info->pBindings[i].descriptorCount ? p_create_info->pBindings[i].descriptorCount - 1 : 0;
         binding_to_global_end_index_map_[p_create_info->pBindings[i].binding] = global_index;
         global_index++;
-        bindings_.push_back(new safe_VkDescriptorSetLayoutBinding(&p_create_info->pBindings[i]));
+        bindings_.push_back(safe_VkDescriptorSetLayoutBinding(&p_create_info->pBindings[i]));
         // In cases where we should ignore pImmutableSamplers make sure it's NULL
         if ((p_create_info->pBindings[i].pImmutableSamplers) &&
             ((p_create_info->pBindings[i].descriptorType != VK_DESCRIPTOR_TYPE_SAMPLER) &&
              (p_create_info->pBindings[i].descriptorType != VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER))) {
-            bindings_.back()->pImmutableSamplers = nullptr;
+            bindings_.back().pImmutableSamplers = nullptr;
         }
         if (p_create_info->pBindings[i].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
             p_create_info->pBindings[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
             dynamic_descriptor_count_++;
         }
     }
-}
-cvdescriptorset::DescriptorSetLayout::~DescriptorSetLayout() {
-    for (auto binding : bindings_)
-        delete binding;
 }
 // put all bindings into the given set
 void cvdescriptorset::DescriptorSetLayout::FillBindingSet(std::unordered_set<uint32_t> *binding_set) const {
@@ -67,7 +63,7 @@ VkDescriptorSetLayoutBinding const *
 cvdescriptorset::DescriptorSetLayout::GetDescriptorSetLayoutBindingPtrFromBinding(const uint32_t binding) const {
     const auto &bi_itr = binding_to_index_map_.find(binding);
     if (bi_itr != binding_to_index_map_.end()) {
-        return bindings_[bi_itr->second]->ptr();
+        return bindings_[bi_itr->second].ptr();
     }
     return nullptr;
 }
@@ -75,13 +71,13 @@ VkDescriptorSetLayoutBinding const *
 cvdescriptorset::DescriptorSetLayout::GetDescriptorSetLayoutBindingPtrFromIndex(const uint32_t index) const {
     if (index >= bindings_.size())
         return nullptr;
-    return bindings_[index]->ptr();
+    return bindings_[index].ptr();
 }
 // Return descriptorCount for given binding, 0 if index is unavailable
 uint32_t cvdescriptorset::DescriptorSetLayout::GetDescriptorCountFromBinding(const uint32_t binding) const {
     const auto &bi_itr = binding_to_index_map_.find(binding);
     if (bi_itr != binding_to_index_map_.end()) {
-        return bindings_[bi_itr->second]->descriptorCount;
+        return bindings_[bi_itr->second].descriptorCount;
     }
     return 0;
 }
@@ -89,30 +85,30 @@ uint32_t cvdescriptorset::DescriptorSetLayout::GetDescriptorCountFromBinding(con
 uint32_t cvdescriptorset::DescriptorSetLayout::GetDescriptorCountFromIndex(const uint32_t index) const {
     if (index >= bindings_.size())
         return 0;
-    return bindings_[index]->descriptorCount;
+    return bindings_[index].descriptorCount;
 }
 // For the given binding, return descriptorType
 VkDescriptorType cvdescriptorset::DescriptorSetLayout::GetTypeFromBinding(const uint32_t binding) const {
     assert(binding_to_index_map_.count(binding));
     const auto &bi_itr = binding_to_index_map_.find(binding);
     if (bi_itr != binding_to_index_map_.end()) {
-        return bindings_[bi_itr->second]->descriptorType;
+        return bindings_[bi_itr->second].descriptorType;
     }
     return VK_DESCRIPTOR_TYPE_MAX_ENUM;
 }
 // For the given index, return descriptorType
 VkDescriptorType cvdescriptorset::DescriptorSetLayout::GetTypeFromIndex(const uint32_t index) const {
     assert(index < bindings_.size());
-    return bindings_[index]->descriptorType;
+    return bindings_[index].descriptorType;
 }
 // For the given global index, return descriptorType
 //  Currently just counting up through bindings_, may improve this in future
 VkDescriptorType cvdescriptorset::DescriptorSetLayout::GetTypeFromGlobalIndex(const uint32_t index) const {
     uint32_t global_offset = 0;
     for (auto binding : bindings_) {
-        global_offset += binding->descriptorCount;
+        global_offset += binding.descriptorCount;
         if (index < global_offset)
-            return binding->descriptorType;
+            return binding.descriptorType;
     }
     assert(0); // requested global index is out of bounds
     return VK_DESCRIPTOR_TYPE_MAX_ENUM;
@@ -122,7 +118,7 @@ VkShaderStageFlags cvdescriptorset::DescriptorSetLayout::GetStageFlagsFromBindin
     assert(binding_to_index_map_.count(binding));
     const auto &bi_itr = binding_to_index_map_.find(binding);
     if (bi_itr != binding_to_index_map_.end()) {
-        return bindings_[bi_itr->second]->stageFlags;
+        return bindings_[bi_itr->second].stageFlags;
     }
     return VkShaderStageFlags(0);
 }
@@ -151,14 +147,14 @@ VkSampler const *cvdescriptorset::DescriptorSetLayout::GetImmutableSamplerPtrFro
     assert(binding_to_index_map_.count(binding));
     const auto &bi_itr = binding_to_index_map_.find(binding);
     if (bi_itr != binding_to_index_map_.end()) {
-        return bindings_[bi_itr->second]->pImmutableSamplers;
+        return bindings_[bi_itr->second].pImmutableSamplers;
     }
     return nullptr;
 }
 // For given index, return ptr to ImmutableSampler array
 VkSampler const *cvdescriptorset::DescriptorSetLayout::GetImmutableSamplerPtrFromIndex(const uint32_t index) const {
     assert(index < bindings_.size());
-    return bindings_[index]->pImmutableSamplers;
+    return bindings_[index].pImmutableSamplers;
 }
 // If our layout is compatible with rh_ds_layout, return true,
 //  else return false and fill in error_msg will description of what causes incompatibility
@@ -178,29 +174,28 @@ bool cvdescriptorset::DescriptorSetLayout::IsCompatible(const DescriptorSetLayou
     for (auto binding : bindings_) {
         // TODO : Do we also need to check immutable samplers?
         // VkDescriptorSetLayoutBinding *rh_binding;
-        // rh_ds_layout->FillDescriptorSetLayoutBindingStructFromBinding(binding->binding, rh_binding);
-        if (binding->descriptorCount != rh_ds_layout->GetDescriptorCountFromBinding(binding->binding)) {
+        if (binding.descriptorCount != rh_ds_layout->GetDescriptorCountFromBinding(binding.binding)) {
             std::stringstream error_str;
-            error_str << "Binding " << binding->binding << " for DescriptorSetLayout " << layout_ << " has a descriptorCount of "
-                      << binding->descriptorCount << " but binding " << binding->binding << " for DescriptorSetLayout "
+            error_str << "Binding " << binding.binding << " for DescriptorSetLayout " << layout_ << " has a descriptorCount of "
+                      << binding.descriptorCount << " but binding " << binding.binding << " for DescriptorSetLayout "
                       << rh_ds_layout->GetDescriptorSetLayout() << " has a descriptorCount of "
-                      << rh_ds_layout->GetDescriptorCountFromBinding(binding->binding);
+                      << rh_ds_layout->GetDescriptorCountFromBinding(binding.binding);
             *error_msg = error_str.str();
             return false;
-        } else if (binding->descriptorType != rh_ds_layout->GetTypeFromBinding(binding->binding)) {
+        } else if (binding.descriptorType != rh_ds_layout->GetTypeFromBinding(binding.binding)) {
             std::stringstream error_str;
-            error_str << "Binding " << binding->binding << " for DescriptorSetLayout " << layout_ << " is type '"
-                      << string_VkDescriptorType(binding->descriptorType) << "' but binding " << binding->binding
+            error_str << "Binding " << binding.binding << " for DescriptorSetLayout " << layout_ << " is type '"
+                      << string_VkDescriptorType(binding.descriptorType) << "' but binding " << binding.binding
                       << " for DescriptorSetLayout " << rh_ds_layout->GetDescriptorSetLayout() << " is type '"
-                      << string_VkDescriptorType(rh_ds_layout->GetTypeFromBinding(binding->binding)) << "'";
+                      << string_VkDescriptorType(rh_ds_layout->GetTypeFromBinding(binding.binding)) << "'";
             *error_msg = error_str.str();
             return false;
-        } else if (binding->stageFlags != rh_ds_layout->GetStageFlagsFromBinding(binding->binding)) {
+        } else if (binding.stageFlags != rh_ds_layout->GetStageFlagsFromBinding(binding.binding)) {
             std::stringstream error_str;
-            error_str << "Binding " << binding->binding << " for DescriptorSetLayout " << layout_ << " has stageFlags "
-                      << binding->stageFlags << " but binding " << binding->binding << " for DescriptorSetLayout "
+            error_str << "Binding " << binding.binding << " for DescriptorSetLayout " << layout_ << " has stageFlags "
+                      << binding.stageFlags << " but binding " << binding.binding << " for DescriptorSetLayout "
                       << rh_ds_layout->GetDescriptorSetLayout() << " has stageFlags "
-                      << rh_ds_layout->GetStageFlagsFromBinding(binding->binding);
+                      << rh_ds_layout->GetStageFlagsFromBinding(binding.binding);
             *error_msg = error_str.str();
             return false;
         }
@@ -215,12 +210,12 @@ bool cvdescriptorset::DescriptorSetLayout::IsNextBindingConsistent(const uint32_
     if (bi_itr != binding_to_index_map_.end()) {
         const auto &next_bi_itr = binding_to_index_map_.find(binding + 1);
         if (next_bi_itr != binding_to_index_map_.end()) {
-            auto type = bindings_[bi_itr->second]->descriptorType;
-            auto stage_flags = bindings_[bi_itr->second]->stageFlags;
-            auto immut_samp = bindings_[bi_itr->second]->pImmutableSamplers ? true : false;
-            if ((type != bindings_[next_bi_itr->second]->descriptorType) ||
-                (stage_flags != bindings_[next_bi_itr->second]->stageFlags) ||
-                (immut_samp != (bindings_[next_bi_itr->second]->pImmutableSamplers ? true : false))) {
+            auto type = bindings_[bi_itr->second].descriptorType;
+            auto stage_flags = bindings_[bi_itr->second].stageFlags;
+            auto immut_samp = bindings_[bi_itr->second].pImmutableSamplers ? true : false;
+            if ((type != bindings_[next_bi_itr->second].descriptorType) ||
+                (stage_flags != bindings_[next_bi_itr->second].stageFlags) ||
+                (immut_samp != (bindings_[next_bi_itr->second].pImmutableSamplers ? true : false))) {
                 return false;
             }
             return true;

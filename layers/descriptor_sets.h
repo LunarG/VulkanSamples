@@ -87,7 +87,6 @@ class DescriptorSetLayout {
     // Constructors and destructor
     DescriptorSetLayout(debug_report_data *report_data, const VkDescriptorSetLayoutCreateInfo *p_create_info,
                         const VkDescriptorSetLayout layout);
-    ~DescriptorSetLayout();
     // Straightforward Get functions
     VkDescriptorSetLayout GetDescriptorSetLayout() const { return layout_; };
     uint32_t GetTotalDescriptorCount() const { return descriptor_count_; };
@@ -126,7 +125,7 @@ class DescriptorSetLayout {
     std::unordered_map<uint32_t, uint32_t> binding_to_global_end_index_map_;
     // VkDescriptorSetLayoutCreateFlags flags_;
     uint32_t binding_count_; // # of bindings in this layout
-    std::vector<safe_VkDescriptorSetLayoutBinding *> bindings_;
+    std::vector<safe_VkDescriptorSetLayoutBinding> bindings_;
     uint32_t descriptor_count_; // total # descriptors in this layout
     uint32_t dynamic_descriptor_count_;
 };
