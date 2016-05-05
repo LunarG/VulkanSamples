@@ -1138,6 +1138,23 @@ vkGetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, VkSurfaceK
     }
     if (!pSurfaceFormatCount) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pSurfaceFormatCount");
+    } else if (pPhysicalDevice && pSurfaceFormats) {
+        // Compare the preliminary value of *pSurfaceFormatCount with the
+        // value this time:
+        if (pPhysicalDevice->surfaceFormatCount == 0) {
+            // Since we haven't recorded a preliminary value of
+            // *pSurfaceFormatCount, that likely means that the application
+            // didn't previously call this function with a NULL value of
+            // pSurfaceFormats:
+            skipCall |= LOG_ERROR_ZERO_PRIOR_COUNT(
+                VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                physicalDevice, "pSurfaceFormatCount", "pSurfaceFormats");
+        } else if (*pSurfaceFormatCount > pPhysicalDevice->surfaceFormatCount) {
+            skipCall |= LOG_ERROR_INVALID_COUNT(
+                VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                physicalDevice, "pSurfaceFormatCount", "pSurfaceFormats",
+                *pSurfaceFormatCount, pPhysicalDevice->surfaceFormatCount);
+        }
     }
 
     if (!skipCall) {
@@ -1152,23 +1169,18 @@ vkGetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, VkSurfaceK
         if ((result == VK_SUCCESS) && pPhysicalDevice && !pSurfaceFormats && pSurfaceFormatCount) {
             // Record the result of this preliminary query:
             pPhysicalDevice->surfaceFormatCount = *pSurfaceFormatCount;
-        } else if ((result == VK_SUCCESS) && pPhysicalDevice && pSurfaceFormats && pSurfaceFormatCount) {
-            // Compare the preliminary value of *pSurfaceFormatCount with the
-            // value this time:
-            if (*pSurfaceFormatCount > pPhysicalDevice->surfaceFormatCount) {
-                LOG_ERROR_INVALID_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pSurfaceFormatCount",
-                                        "pSurfaceFormats", *pSurfaceFormatCount, pPhysicalDevice->surfaceFormatCount);
-            } else if (*pSurfaceFormatCount > 0) {
-                // Record the result of this query:
-                pPhysicalDevice->surfaceFormatCount = *pSurfaceFormatCount;
-                pPhysicalDevice->pSurfaceFormats = (VkSurfaceFormatKHR *)malloc(*pSurfaceFormatCount * sizeof(VkSurfaceFormatKHR));
-                if (pPhysicalDevice->pSurfaceFormats) {
-                    for (uint32_t i = 0; i < *pSurfaceFormatCount; i++) {
-                        pPhysicalDevice->pSurfaceFormats[i] = pSurfaceFormats[i];
-                    }
-                } else {
-                    pPhysicalDevice->surfaceFormatCount = 0;
+        } else if ((result == VK_SUCCESS) && pPhysicalDevice &&
+                   pSurfaceFormats && pSurfaceFormatCount &&
+                   (*pSurfaceFormatCount > 0)) {
+            // Record the result of this query:
+            pPhysicalDevice->surfaceFormatCount = *pSurfaceFormatCount;
+            pPhysicalDevice->pSurfaceFormats = (VkSurfaceFormatKHR *)malloc(*pSurfaceFormatCount * sizeof(VkSurfaceFormatKHR));
+            if (pPhysicalDevice->pSurfaceFormats) {
+                for (uint32_t i = 0; i < *pSurfaceFormatCount; i++) {
+                    pPhysicalDevice->pSurfaceFormats[i] = pSurfaceFormats[i];
                 }
+            } else {
+                pPhysicalDevice->surfaceFormatCount = 0;
             }
         }
         return result;
@@ -1194,6 +1206,23 @@ vkGetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, VkSur
     }
     if (!pPresentModeCount) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pPresentModeCount");
+    } else if (pPhysicalDevice && pPresentModes) {
+        // Compare the preliminary value of *pPresentModeCount with the
+        // value this time:
+        if (pPhysicalDevice->presentModeCount == 0) {
+            // Since we haven't recorded a preliminary value of
+            // *pPresentModeCount, that likely means that the application
+            // didn't previously call this function with a NULL value of
+            // pPresentModes:
+            skipCall |= LOG_ERROR_ZERO_PRIOR_COUNT(
+                VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                physicalDevice, "pPresentModeCount", "pPresentModes");
+        } else if (*pPresentModeCount > pPhysicalDevice->presentModeCount) {
+            skipCall |= LOG_ERROR_INVALID_COUNT(
+                VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                physicalDevice, "pPresentModeCount", "pPresentModes",
+                *pPresentModeCount, pPhysicalDevice->presentModeCount);
+        }
     }
 
     if (!skipCall) {
@@ -1208,23 +1237,18 @@ vkGetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, VkSur
         if ((result == VK_SUCCESS) && pPhysicalDevice && !pPresentModes && pPresentModeCount) {
             // Record the result of this preliminary query:
             pPhysicalDevice->presentModeCount = *pPresentModeCount;
-        } else if ((result == VK_SUCCESS) && pPhysicalDevice && pPresentModes && pPresentModeCount) {
-            // Compare the preliminary value of *pPresentModeCount with the
-            // value this time:
-            if (*pPresentModeCount > pPhysicalDevice->presentModeCount) {
-                LOG_ERROR_INVALID_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pPresentModeCount",
-                                        "pPresentModes", *pPresentModeCount, pPhysicalDevice->presentModeCount);
-            } else if (*pPresentModeCount > 0) {
-                // Record the result of this query:
-                pPhysicalDevice->presentModeCount = *pPresentModeCount;
-                pPhysicalDevice->pPresentModes = (VkPresentModeKHR *)malloc(*pPresentModeCount * sizeof(VkPresentModeKHR));
-                if (pPhysicalDevice->pPresentModes) {
-                    for (uint32_t i = 0; i < *pPresentModeCount; i++) {
-                        pPhysicalDevice->pPresentModes[i] = pPresentModes[i];
-                    }
-                } else {
-                    pPhysicalDevice->presentModeCount = 0;
+        } else if ((result == VK_SUCCESS) && pPhysicalDevice &&
+                   pPresentModes && pPresentModeCount &&
+                   (*pPresentModeCount > 0)) {
+            // Record the result of this query:
+            pPhysicalDevice->presentModeCount = *pPresentModeCount;
+            pPhysicalDevice->pPresentModes = (VkPresentModeKHR *)malloc(*pPresentModeCount * sizeof(VkPresentModeKHR));
+            if (pPhysicalDevice->pPresentModes) {
+                for (uint32_t i = 0; i < *pPresentModeCount; i++) {
+                    pPhysicalDevice->pPresentModes[i] = pPresentModes[i];
                 }
+            } else {
+                pPhysicalDevice->presentModeCount = 0;
             }
         }
         return result;
@@ -1665,6 +1689,23 @@ vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSw
     SwpSwapchain *pSwapchain = &my_data->swapchainMap[swapchain];
     if (!pSwapchainImageCount) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pSwapchainImageCount");
+    } else if (pSwapchain && pSwapchainImages) {
+        // Compare the preliminary value of *pSwapchainImageCount with the
+        // value this time:
+        if (pSwapchain->imageCount == 0) {
+            // Since we haven't recorded a preliminary value of
+            // *pSwapchainImageCount, that likely means that the application
+            // didn't previously call this function with a NULL value of
+            // pSwapchainImages:
+            skipCall |= LOG_ERROR_ZERO_PRIOR_COUNT(
+                VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                device, "pSwapchainImageCount", "pSwapchainImages");
+        } else if (*pSwapchainImageCount > pSwapchain->imageCount) {
+            skipCall |= LOG_ERROR_INVALID_COUNT(
+                VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                device, "pSwapchainImageCount", "pSwapchainImages",
+                *pSwapchainImageCount, pSwapchain->imageCount);
+        }
     }
 
     if (!skipCall) {
@@ -1678,20 +1719,14 @@ vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSw
         if ((result == VK_SUCCESS) && pSwapchain && !pSwapchainImages && pSwapchainImageCount) {
             // Record the result of this preliminary query:
             pSwapchain->imageCount = *pSwapchainImageCount;
-        } else if ((result == VK_SUCCESS) && pSwapchain && pSwapchainImages && pSwapchainImageCount) {
-            // Compare the preliminary value of *pSwapchainImageCount with the
-            // value this time:
-            if (*pSwapchainImageCount > pSwapchain->imageCount) {
-                LOG_ERROR_INVALID_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pSwapchainImageCount", "pSwapchainImages",
-                                        *pSwapchainImageCount, pSwapchain->imageCount);
-            } else if (*pSwapchainImageCount > 0) {
-                // Record the images and their state:
-                pSwapchain->imageCount = *pSwapchainImageCount;
-                for (uint32_t i = 0; i < *pSwapchainImageCount; i++) {
-                    pSwapchain->images[i].image = pSwapchainImages[i];
-                    pSwapchain->images[i].pSwapchain = pSwapchain;
-                    pSwapchain->images[i].acquiredByApp = false;
-                }
+        } else if ((result == VK_SUCCESS) && pSwapchain && pSwapchainImages &&
+                   pSwapchainImageCount && (*pSwapchainImageCount > 0)) {
+            // Record the images and their state:
+            pSwapchain->imageCount = *pSwapchainImageCount;
+            for (uint32_t i = 0; i < *pSwapchainImageCount; i++) {
+                pSwapchain->images[i].image = pSwapchainImages[i];
+                pSwapchain->images[i].pSwapchain = pSwapchain;
+                pSwapchain->images[i].acquiredByApp = false;
             }
         }
         return result;
