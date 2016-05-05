@@ -1,5 +1,4 @@
 # Vulkan Ecosystem Components
-*Version 1.0, January 25, 2016*
 
 This project provides Khronos official ICD loader and validation layers for Vulkan developers on Windows and Linux.
 
@@ -19,6 +18,11 @@ The following components are available in this repository:
 - [*Validation Layers*](layers/)
 - Demos and tests for the loader and validation layers
 
+## Contributing
+
+If you intend to contribute, the preferred work flow is for you to develop your contribution
+in a fork of this repo in your GitHub account and then submit a pull request.
+Please see the [CONTRIBUTING](CONTRIBUTING.md) file in this respository for more details
 
 ## How to Build and Run
 
