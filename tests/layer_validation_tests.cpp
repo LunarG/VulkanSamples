@@ -5206,12 +5206,30 @@ TEST_F(VkLayerTest, DSTypeMismatch) {
                                    &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
-    // Correctly update descriptor to avoid "NOT_UPDATED" error
-    VkDescriptorBufferInfo buff_info = {};
-    buff_info.buffer =
-        VkBuffer(0); // Don't care about buffer handle for this test
-    buff_info.offset = 0;
-    buff_info.range = 1024;
+    VkSamplerCreateInfo sampler_ci = {};
+    sampler_ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_ci.pNext = NULL;
+    sampler_ci.magFilter = VK_FILTER_NEAREST;
+    sampler_ci.minFilter = VK_FILTER_NEAREST;
+    sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_ci.mipLodBias = 1.0;
+    sampler_ci.anisotropyEnable = VK_FALSE;
+    sampler_ci.maxAnisotropy = 1;
+    sampler_ci.compareEnable = VK_FALSE;
+    sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
+    sampler_ci.minLod = 1.0;
+    sampler_ci.maxLod = 1.0;
+    sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    sampler_ci.unnormalizedCoordinates = VK_FALSE;
+    VkSampler sampler;
+    err = vkCreateSampler(m_device->device(), &sampler_ci, NULL, &sampler);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorImageInfo info = {};
+    info.sampler = sampler;
 
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
@@ -5287,31 +5305,12 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds) {
                                    &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
-    VkSamplerCreateInfo sampler_ci = {};
-    sampler_ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sampler_ci.pNext = NULL;
-    sampler_ci.magFilter = VK_FILTER_NEAREST;
-    sampler_ci.minFilter = VK_FILTER_NEAREST;
-    sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-    sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampler_ci.mipLodBias = 1.0;
-    sampler_ci.anisotropyEnable = VK_FALSE;
-    sampler_ci.maxAnisotropy = 1;
-    sampler_ci.compareEnable = VK_FALSE;
-    sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
-    sampler_ci.minLod = 1.0;
-    sampler_ci.maxLod = 1.0;
-    sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-    sampler_ci.unnormalizedCoordinates = VK_FALSE;
-
-    VkSampler sampler;
-    err = vkCreateSampler(m_device->device(), &sampler_ci, NULL, &sampler);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorImageInfo info = {};
-    info.sampler = sampler;
+    // Correctly update descriptor to avoid "NOT_UPDATED" error
+    VkDescriptorBufferInfo buff_info = {};
+    buff_info.buffer =
+        VkBuffer(0); // Don't care about buffer handle for this test
+    buff_info.offset = 0;
+    buff_info.range = 1024;
 
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
