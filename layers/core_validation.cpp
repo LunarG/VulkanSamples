@@ -3472,7 +3472,12 @@ static bool validate_descriptor_availability_in_pool(layer_data *dev_data, DESCR
     }
     return skipCall;
 }
-
+// Free the descriptor set, remove it from setMap and invalidate any cmd buffers that it was bound to
+static void freeDescriptorSet(layer_data *dev_data, cvdescriptorset::DescriptorSet *descriptor_set) {
+    invalidateBoundCmdBuffers(dev_data, descriptor_set);
+    dev_data->setMap.erase(descriptor_set->GetSet());
+    delete descriptor_set;
+}
 // Free all DS Pools including their Sets & related sub-structs
 // NOTE : Calls to this function should be wrapped in mutex
 static void deletePools(layer_data *my_data) {
@@ -3481,8 +3486,7 @@ static void deletePools(layer_data *my_data) {
     for (auto ii = my_data->descriptorPoolMap.begin(); ii != my_data->descriptorPoolMap.end(); ++ii) {
         // Remove this pools' sets from setMap and delete them
         for (auto ds : (*ii).second->sets) {
-            my_data->setMap.erase(ds->GetSet());
-            delete ds;
+            freeDescriptorSet(my_data, ds);
         }
     }
     my_data->descriptorPoolMap.clear();
@@ -3499,9 +3503,7 @@ static void clearDescriptorPool(layer_data *my_data, const VkDevice device, cons
         // TODO: validate flags
         // For every set off of this pool, clear it, remove from setMap, and free cvdescriptorset::DescriptorSet
         for (auto ds : pPool->sets) {
-            // Remove this pools' sets from setMap and delete them
-            my_data->setMap.erase(ds->GetSet());
-            delete ds;
+            freeDescriptorSet(my_data, ds);
         }
         // Reset available count for each type and available sets for this pool
         for (uint32_t i = 0; i < pPool->availableDescriptorTypeCount.size(); ++i) {
@@ -5951,15 +5953,13 @@ vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t 
         // For each freed descriptor add its resources back into the pool as available and remove from setMap
         for (uint32_t i = 0; i < count; ++i) {
             cvdescriptorset::DescriptorSet *pSet = dev_data->setMap[pDescriptorSets[i]]; // getSetNode() without locking
-            invalidateBoundCmdBuffers(dev_data, pSet);
             uint32_t typeIndex = 0, poolSizeCount = 0;
             for (uint32_t j = 0; j < pSet->GetBindingCount(); ++j) {
                 typeIndex = static_cast<uint32_t>(pSet->GetTypeFromIndex(j));
                 poolSizeCount = pSet->GetDescriptorCountFromIndex(j);
                 pPoolNode->availableDescriptorTypeCount[typeIndex] += poolSizeCount;
             }
-            delete pSet;
-            dev_data->setMap.erase(pDescriptorSets[i]);
+            freeDescriptorSet(dev_data, pSet);
         }
         lock.unlock();
     }
