@@ -3089,8 +3089,8 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
     Draw(1, 0, 0, 0);
     m_errorMonitor->VerifyFound();
 
-    vkFreeMemory(m_device->device(), mem, NULL);
     vkDestroyBuffer(m_device->device(), dyub, NULL);
+    vkFreeMemory(m_device->device(), mem, NULL);
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
