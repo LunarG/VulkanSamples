@@ -293,12 +293,6 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
         }
     }
 }
-// For given global_index return bool of whether or not the underlying descriptor has been updated
-bool cvdescriptorset::DescriptorSet::IsUpdated(const uint32_t global_index) const {
-    if (global_index >= descriptors_.size())
-        return false;
-    return descriptors_[global_index]->updated;
-}
 // Is this sets underlying layout compatible with passed in layout according to "Pipeline Layout Compatibility" in spec?
 bool cvdescriptorset::DescriptorSet::IsCompatible(const DescriptorSetLayout *layout, std::string *error) const {
     return layout->IsCompatible(p_layout_, error);

@@ -339,8 +339,6 @@ class DescriptorSet : public BASE_NODE {
     };
     // Return true if any part of set has ever been updated
     bool IsUpdated() const { return some_update_; };
-    // Return true if the binding at the given global index has been updated
-    bool IsUpdated(const uint32_t global_index) const;
 
   private:
     bool ValidateUpdate(const VkWriteDescriptorSet *, const uint32_t, std::string *) const;
