@@ -238,7 +238,7 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
                                               const std::unordered_map<VkImage, IMAGE_NODE> *image_map,
                                               const std::unordered_map<VkImage, VkSwapchainKHR> *image_to_swapchain_map,
                                               const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *swapchain_map)
-    : some_update_(false), full_update_(false), set_(set), p_layout_(layout), buffer_map_(buffer_map), memory_map_(memory_map),
+    : some_update_(false), set_(set), p_layout_(layout), buffer_map_(buffer_map), memory_map_(memory_map),
       buffer_view_map_(buffer_view_map), sampler_map_(sampler_map), image_view_map_(image_view_map), image_map_(image_map),
       image_to_swapchain_map_(image_to_swapchain_map), swapchain_map_(swapchain_map) {
     // Foreach binding, create default descriptors of given type
@@ -505,7 +505,6 @@ bool cvdescriptorset::DescriptorSet::WriteUpdate(debug_report_data *report_data,
     }
     if (num_updates != 0) {
         some_update_ = true;
-        full_update_ = (descriptors_.size() == num_updates);
     }
     return true;
 }
@@ -575,7 +574,6 @@ bool cvdescriptorset::DescriptorSet::CopyUpdate(debug_report_data *report_data, 
     }
     if (num_updates != 0) {
         some_update_ = true;
-        full_update_ = (descriptors_.size() == num_updates);
     }
     return true;
 }

@@ -346,7 +346,6 @@ class DescriptorSet : public BASE_NODE {
     bool ValidateUpdate(const VkWriteDescriptorSet *, const uint32_t, std::string *) const;
     bool VerifyUpdateConsistency(uint32_t, uint32_t, uint32_t, const char *, std::string *) const;
     bool some_update_; // has any part of the set ever been updated?
-    bool full_update_; // has every descriptor in the set been updated?
     VkDescriptorSet set_;
     uint32_t descriptor_count_; // Count of all descriptors in this set
     const DescriptorSetLayout *p_layout_;
