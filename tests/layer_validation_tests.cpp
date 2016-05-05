@@ -667,7 +667,7 @@ TEST_F(VkLayerTest, TestAliasedMemoryTracking) {
                       (void **)&pData);
     ASSERT_VK_SUCCESS(err);
 
-    memset(pData, 0xCADECADE, mem_reqs.size);
+    memset(pData, 0xCADECADE, static_cast<size_t>(mem_reqs.size));
 
     vkUnmapMemory(m_device->device(), mem);
 

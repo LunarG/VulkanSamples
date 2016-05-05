@@ -829,15 +829,15 @@ class ObjectTrackerSubcommand(Subcommand):
             name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
             # First create validate_* func for disp obj
             procs_txt.append('%s' % self.lineinfo.get())
-            procs_txt.append('static VkBool32 validate_%s(%s dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, bool null_allowed)' % (name, do, do))
+            procs_txt.append('static bool validate_%s(%s dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, bool null_allowed)' % (name, do, do))
             procs_txt.append('{')
             procs_txt.append('    if (null_allowed && (object == VK_NULL_HANDLE))')
-            procs_txt.append('        return VK_FALSE;')
+            procs_txt.append('        return false;')
             procs_txt.append('    if (%sMap.find((uint64_t)object) == %sMap.end()) {' % (do, do))
             procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, objType, (uint64_t)(object), __LINE__, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
             procs_txt.append('            "Invalid %s Object 0x%%" PRIx64 ,(uint64_t)(object));' % do)
             procs_txt.append('    }')
-            procs_txt.append('    return VK_FALSE;')
+            procs_txt.append('    return false;')
             procs_txt.append('}')
             procs_txt.append('')
             for o in sorted(obj_use_dict[do]):
@@ -846,10 +846,10 @@ class ObjectTrackerSubcommand(Subcommand):
                 name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', o)
                 name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
                 procs_txt.append('%s' % self.lineinfo.get())
-                procs_txt.append('static VkBool32 validate_%s(%s dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, bool null_allowed)' % (name, do, o))
+                procs_txt.append('static bool validate_%s(%s dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, bool null_allowed)' % (name, do, o))
                 procs_txt.append('{')
                 procs_txt.append('    if (null_allowed && (object == VK_NULL_HANDLE))')
-                procs_txt.append('        return VK_FALSE;')
+                procs_txt.append('        return false;')
                 if o == "VkImage":
                     procs_txt.append('    // We need to validate normal image objects and those from the swapchain')
                     procs_txt.append('    if ((%sMap.find((uint64_t)object) == %sMap.end()) &&' % (o, o))
@@ -859,7 +859,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, objType, (uint64_t)(object), __LINE__, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Invalid %s Object 0x%%" PRIx64, (uint64_t)(object));' % o)
                 procs_txt.append('    }')
-                procs_txt.append('    return VK_FALSE;')
+                procs_txt.append('    return false;')
                 procs_txt.append('}')
             procs_txt.append('')
         procs_txt.append('')
@@ -1244,7 +1244,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 destroy_line += '    }\n'
             indent = '    '
             if len(struct_uses) > 0:
-                using_line += '%sVkBool32 skipCall = VK_FALSE;\n' % (indent)
+                using_line += '%sbool skipCall = false;\n' % (indent)
                 if not mutex_unlock:
                     using_line += '%s{\n' % (indent)
                     indent += '    '
@@ -1257,8 +1257,8 @@ class ObjectTrackerSubcommand(Subcommand):
                 using_line += '%s}\n' % (indent)
             if len(struct_uses) > 0:
                 using_line += '    if (skipCall)\n'
-                if proto.ret == "VkBool32":
-                    using_line += '        return VK_FALSE;\n'
+                if proto.ret == "bool":
+                    using_line += '        return false;\n'
                 elif proto.ret != "void":
                     using_line += '        return VK_ERROR_VALIDATION_FAILED_EXT;\n'
                 else:
