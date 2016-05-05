@@ -65,9 +65,11 @@ void cvdescriptorset::DescriptorSetLayout::FillBindingSet(std::unordered_set<uin
 }
 VkDescriptorSetLayoutBinding const *
 cvdescriptorset::DescriptorSetLayout::GetDescriptorSetLayoutBindingPtrFromBinding(const uint32_t binding) const {
-    if (!binding_to_index_map_.count(binding))
-        return nullptr;
-    return bindings_.at(binding_to_index_map_.at(binding))->ptr();
+    const auto &bi_itr = binding_to_index_map_.find(binding);
+    if (bi_itr != binding_to_index_map_.end()) {
+        return bindings_[bi_itr->second]->ptr();
+    }
+    return nullptr;
 }
 VkDescriptorSetLayoutBinding const *
 cvdescriptorset::DescriptorSetLayout::GetDescriptorSetLayoutBindingPtrFromIndex(const uint32_t index) const {
@@ -77,9 +79,11 @@ cvdescriptorset::DescriptorSetLayout::GetDescriptorSetLayoutBindingPtrFromIndex(
 }
 // Return descriptorCount for given binding, 0 if index is unavailable
 uint32_t cvdescriptorset::DescriptorSetLayout::GetDescriptorCountFromBinding(const uint32_t binding) const {
-    if (!binding_to_index_map_.count(binding))
-        return 0;
-    return bindings_.at(binding_to_index_map_.at(binding))->descriptorCount;
+    const auto &bi_itr = binding_to_index_map_.find(binding);
+    if (bi_itr != binding_to_index_map_.end()) {
+        return bindings_[bi_itr->second]->descriptorCount;
+    }
+    return 0;
 }
 // Return descriptorCount for given index, 0 if index is unavailable
 uint32_t cvdescriptorset::DescriptorSetLayout::GetDescriptorCountFromIndex(const uint32_t index) const {
@@ -90,7 +94,11 @@ uint32_t cvdescriptorset::DescriptorSetLayout::GetDescriptorCountFromIndex(const
 // For the given binding, return descriptorType
 VkDescriptorType cvdescriptorset::DescriptorSetLayout::GetTypeFromBinding(const uint32_t binding) const {
     assert(binding_to_index_map_.count(binding));
-    return bindings_.at(binding_to_index_map_.at(binding))->descriptorType;
+    const auto &bi_itr = binding_to_index_map_.find(binding);
+    if (bi_itr != binding_to_index_map_.end()) {
+        return bindings_[bi_itr->second]->descriptorType;
+    }
+    return VK_DESCRIPTOR_TYPE_MAX_ENUM;
 }
 // For the given index, return descriptorType
 VkDescriptorType cvdescriptorset::DescriptorSetLayout::GetTypeFromIndex(const uint32_t index) const {
@@ -112,22 +120,40 @@ VkDescriptorType cvdescriptorset::DescriptorSetLayout::GetTypeFromGlobalIndex(co
 // For the given binding, return stageFlags
 VkShaderStageFlags cvdescriptorset::DescriptorSetLayout::GetStageFlagsFromBinding(const uint32_t binding) const {
     assert(binding_to_index_map_.count(binding));
-    return bindings_.at(binding_to_index_map_.at(binding))->stageFlags;
+    const auto &bi_itr = binding_to_index_map_.find(binding);
+    if (bi_itr != binding_to_index_map_.end()) {
+        return bindings_[bi_itr->second]->stageFlags;
+    }
+    return VkShaderStageFlags(0);
 }
 // For the given binding, return start index
 uint32_t cvdescriptorset::DescriptorSetLayout::GetGlobalStartIndexFromBinding(const uint32_t binding) const {
     assert(binding_to_global_start_index_map_.count(binding));
-    return binding_to_global_start_index_map_.at(binding);
+    const auto &btgsi_itr = binding_to_global_start_index_map_.find(binding);
+    if (btgsi_itr != binding_to_global_start_index_map_.end()) {
+        return btgsi_itr->second;
+    }
+    // In error case max uint32_t so index is out of bounds to break ASAP
+    return 0xFFFFFFFF;
 }
 // For the given binding, return end index
 uint32_t cvdescriptorset::DescriptorSetLayout::GetGlobalEndIndexFromBinding(const uint32_t binding) const {
     assert(binding_to_global_end_index_map_.count(binding));
-    return binding_to_global_end_index_map_.at(binding);
+    const auto &btgei_itr = binding_to_global_end_index_map_.find(binding);
+    if (btgei_itr != binding_to_global_end_index_map_.end()) {
+        return btgei_itr->second;
+    }
+    // In error case max uint32_t so index is out of bounds to break ASAP
+    return 0xFFFFFFFF;
 }
 // For given binding, return ptr to ImmutableSampler array
 VkSampler const *cvdescriptorset::DescriptorSetLayout::GetImmutableSamplerPtrFromBinding(const uint32_t binding) const {
     assert(binding_to_index_map_.count(binding));
-    return bindings_.at(binding_to_index_map_.at(binding))->pImmutableSamplers;
+    const auto &bi_itr = binding_to_index_map_.find(binding);
+    if (bi_itr != binding_to_index_map_.end()) {
+        return bindings_[bi_itr->second]->pImmutableSamplers;
+    }
+    return nullptr;
 }
 // For given index, return ptr to ImmutableSampler array
 VkSampler const *cvdescriptorset::DescriptorSetLayout::GetImmutableSamplerPtrFromIndex(const uint32_t index) const {
@@ -185,15 +211,22 @@ bool cvdescriptorset::DescriptorSetLayout::IsCompatible(const DescriptorSetLayou
 bool cvdescriptorset::DescriptorSetLayout::IsNextBindingConsistent(const uint32_t binding) const {
     if (!binding_to_index_map_.count(binding + 1))
         return false;
-    auto type = bindings_.at(binding_to_index_map_.at(binding))->descriptorType;
-    auto stage_flags = bindings_.at(binding_to_index_map_.at(binding))->stageFlags;
-    auto immut_samp = bindings_.at(binding_to_index_map_.at(binding))->pImmutableSamplers ? true : false;
-    if ((type != bindings_.at(binding_to_index_map_.at(binding + 1))->descriptorType) ||
-        (stage_flags != bindings_.at(binding_to_index_map_.at(binding + 1))->stageFlags) ||
-        (immut_samp != (bindings_.at(binding_to_index_map_.at(binding + 1))->pImmutableSamplers ? true : false))) {
-        return false;
+    auto const &bi_itr = binding_to_index_map_.find(binding);
+    if (bi_itr != binding_to_index_map_.end()) {
+        const auto &next_bi_itr = binding_to_index_map_.find(binding + 1);
+        if (next_bi_itr != binding_to_index_map_.end()) {
+            auto type = bindings_[bi_itr->second]->descriptorType;
+            auto stage_flags = bindings_[bi_itr->second]->stageFlags;
+            auto immut_samp = bindings_[bi_itr->second]->pImmutableSamplers ? true : false;
+            if ((type != bindings_[next_bi_itr->second]->descriptorType) ||
+                (stage_flags != bindings_[next_bi_itr->second]->stageFlags) ||
+                (immut_samp != (bindings_[next_bi_itr->second]->pImmutableSamplers ? true : false))) {
+                return false;
+            }
+            return true;
+        }
     }
-    return true;
+    return false;
 }
 
 cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const DescriptorSetLayout *layout,
@@ -367,9 +400,11 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::unordered_
                 for (uint32_t i = 0; i < p_layout_->GetDescriptorCountFromBinding(binding); ++i) {
                     if (descriptors_[start_idx + i]->updated) {
                         auto bufferview = static_cast<TexelDescriptor *>(descriptors_[start_idx + i].get())->GetBufferView();
-                        auto buffer = buffer_view_map_->at(bufferview).buffer;
-                        buffer_set->insert(buffer);
-                        num_updates++;
+                        const auto &buff_pair = buffer_view_map_->find(bufferview);
+                        if (buff_pair != buffer_view_map_->end()) {
+                            buffer_set->insert(buff_pair->second.buffer);
+                            num_updates++;
+                        }
                     }
                 }
             } else if (GeneralBuffer == descriptors_[start_idx]->descriptor_class) {
