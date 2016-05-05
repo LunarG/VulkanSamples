@@ -4870,6 +4870,8 @@ static bool decrementResources(layer_data *my_data, uint32_t fenceCount, const V
             skip_call |= cleanInFlightCmdBuffer(my_data, cmdBuffer);
             removeInFlightCmdBuffer(my_data, cmdBuffer);
         }
+        fence_data->second.cmdBuffers.clear();
+        fence_data->second.priorFences.clear();
     }
     for (auto fence : fences) {
         for (auto queue_data : my_data->queueMap) {
