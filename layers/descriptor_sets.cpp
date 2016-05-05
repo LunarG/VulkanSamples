@@ -216,9 +216,9 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
             auto immut_sampler = p_layout_->GetImmutableSamplerPtrFromIndex(i);
             for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di) {
                 if (immut_sampler)
-                    descriptors_.push_back(std::unique_ptr<Descriptor>(new SamplerDescriptor(immut_sampler + di, sampler_map_)));
+                    descriptors_.emplace_back(std::unique_ptr<Descriptor>(new SamplerDescriptor(immut_sampler + di, sampler_map_)));
                 else
-                    descriptors_.push_back(std::unique_ptr<Descriptor>(new SamplerDescriptor(sampler_map_)));
+                    descriptors_.emplace_back(std::unique_ptr<Descriptor>(new SamplerDescriptor(sampler_map_)));
             }
             break;
         }
@@ -226,10 +226,10 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
             auto immut = p_layout_->GetImmutableSamplerPtrFromIndex(i);
             for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di) {
                 if (immut)
-                    descriptors_.push_back(std::unique_ptr<Descriptor>(new ImageSamplerDescriptor(
+                    descriptors_.emplace_back(std::unique_ptr<Descriptor>(new ImageSamplerDescriptor(
                         immut + di, image_view_map_, image_map_, image_to_swapchain_map_, swapchain_map_, sampler_map_)));
                 else
-                    descriptors_.push_back(std::unique_ptr<Descriptor>(new ImageSamplerDescriptor(
+                    descriptors_.emplace_back(std::unique_ptr<Descriptor>(new ImageSamplerDescriptor(
                         image_view_map_, image_map_, image_to_swapchain_map_, swapchain_map_, sampler_map_)));
             }
             break;
@@ -239,31 +239,32 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
         case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
         case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
             for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di)
-                descriptors_.push_back(std::unique_ptr<Descriptor>(
+                descriptors_.emplace_back(std::unique_ptr<Descriptor>(
                     new ImageDescriptor(type, image_view_map_, image_map_, image_to_swapchain_map_, swapchain_map_)));
             break;
         case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
         case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
             for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di)
-                descriptors_.push_back(std::unique_ptr<Descriptor>(new TexelDescriptor(type, buffer_view_map_)));
+                descriptors_.emplace_back(std::unique_ptr<Descriptor>(new TexelDescriptor(type, buffer_view_map_)));
             break;
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
         case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
         case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
             for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di)
-                descriptors_.push_back(std::unique_ptr<Descriptor>(new BufferDescriptor(type, buffer_map_)));
+                descriptors_.emplace_back(std::unique_ptr<Descriptor>(new BufferDescriptor(type, buffer_map_)));
             break;
         default:
+            assert(0); // Bad descriptor type specified
             break;
         }
     }
 }
 // For given global_index return bool of whether or not the underlying descriptor has been updated
 bool cvdescriptorset::DescriptorSet::IsUpdated(const uint32_t global_index) const {
-    if (global_index >= descriptors_.size() || !descriptors_.at(global_index))
+    if (global_index >= descriptors_.size())
         return false;
-    return descriptors_.at(global_index)->updated;
+    return descriptors_[global_index]->updated;
 }
 // Is this sets underlying layout compatible with passed in layout according to "Pipeline Layout Compatibility" in spec?
 bool cvdescriptorset::DescriptorSet::IsCompatible(const DescriptorSetLayout *layout, std::string *error) const {
@@ -277,22 +278,22 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::unordered_set<
                                                        const std::vector<uint32_t> &dynamic_offsets, std::string *error) const {
     for (auto binding : bindings) {
         auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
-        if (descriptors_.at(start_idx)->IsImmutableSampler()) {
+        if (descriptors_[start_idx]->IsImmutableSampler()) {
             // Nothing to do for strictly immutable sampler
         } else {
             auto end_idx = p_layout_->GetGlobalEndIndexFromBinding(binding);
             auto dyn_offset_index = 0;
             for (uint32_t i = start_idx; i <= end_idx; ++i) {
-                if (!descriptors_.at(i)->updated) {
+                if (!descriptors_[i]->updated) {
                     std::stringstream error_str;
                     error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
                               << " is being used in draw but has not been updated.";
                     *error = error_str.str();
                     return false;
                 } else {
-                    if (GeneralBuffer == descriptors_.at(i)->GetClass()) {
+                    if (GeneralBuffer == descriptors_[i]->GetClass()) {
                         // Verify that buffers are valid
-                        auto buffer = static_cast<BufferDescriptor *>(descriptors_.at(i).get())->GetBuffer();
+                        auto buffer = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetBuffer();
                         auto buffer_node = buffer_map_->find(buffer);
                         if (buffer_node == buffer_map_->end()) {
                             std::stringstream error_str;
@@ -311,11 +312,11 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::unordered_set<
                                 return false;
                             }
                         }
-                        if (descriptors_.at(i)->IsDynamic()) {
+                        if (descriptors_[i]->IsDynamic()) {
                             // Validate that dynamic offsets are within the buffer
                             auto buffer_size = buffer_node->second.createInfo.size;
-                            auto range = static_cast<BufferDescriptor *>(descriptors_.at(i).get())->GetRange();
-                            auto desc_offset = static_cast<BufferDescriptor *>(descriptors_.at(i).get())->GetOffset();
+                            auto range = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetRange();
+                            auto desc_offset = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetOffset();
                             auto dyn_offset = dynamic_offsets[dyn_offset_index++];
                             if (VK_WHOLE_SIZE == range) {
                                 if ((dyn_offset + desc_offset) > buffer_size) {
@@ -354,27 +355,27 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::unordered_
     auto num_updates = 0;
     for (auto binding : bindings) {
         auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
-        if (descriptors_.at(start_idx)->IsStorage()) {
-            if (Image == descriptors_.at(start_idx)->descriptor_class) {
+        if (descriptors_[start_idx]->IsStorage()) {
+            if (Image == descriptors_[start_idx]->descriptor_class) {
                 for (uint32_t i = 0; i < p_layout_->GetDescriptorCountFromBinding(binding); ++i) {
-                    if (descriptors_.at(start_idx + i)->updated) {
-                        image_set->insert(static_cast<ImageDescriptor *>(descriptors_.at(start_idx + i).get())->GetImageView());
+                    if (descriptors_[start_idx + i]->updated) {
+                        image_set->insert(static_cast<ImageDescriptor *>(descriptors_[start_idx + i].get())->GetImageView());
                         num_updates++;
                     }
                 }
-            } else if (TexelBuffer == descriptors_.at(start_idx)->descriptor_class) {
+            } else if (TexelBuffer == descriptors_[start_idx]->descriptor_class) {
                 for (uint32_t i = 0; i < p_layout_->GetDescriptorCountFromBinding(binding); ++i) {
-                    if (descriptors_.at(start_idx + i)->updated) {
-                        auto bufferview = static_cast<TexelDescriptor *>(descriptors_.at(start_idx + i).get())->GetBufferView();
+                    if (descriptors_[start_idx + i]->updated) {
+                        auto bufferview = static_cast<TexelDescriptor *>(descriptors_[start_idx + i].get())->GetBufferView();
                         auto buffer = buffer_view_map_->at(bufferview).buffer;
                         buffer_set->insert(buffer);
                         num_updates++;
                     }
                 }
-            } else if (GeneralBuffer == descriptors_.at(start_idx)->descriptor_class) {
+            } else if (GeneralBuffer == descriptors_[start_idx]->descriptor_class) {
                 for (uint32_t i = 0; i < p_layout_->GetDescriptorCountFromBinding(binding); ++i) {
-                    if (descriptors_.at(start_idx + i)->updated) {
-                        buffer_set->insert(static_cast<BufferDescriptor *>(descriptors_.at(start_idx + i).get())->GetBuffer());
+                    if (descriptors_[start_idx + i]->updated) {
+                        buffer_set->insert(static_cast<BufferDescriptor *>(descriptors_[start_idx + i].get())->GetBuffer());
                         num_updates++;
                     }
                 }
@@ -455,6 +456,8 @@ bool cvdescriptorset::DescriptorSet::WriteUpdate(debug_report_data *report_data,
             return false;
         // Update is within bounds and consistent so perform update
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
+            // TODO : Can we break this into a set-level "Validate" followed by Descriptor updating itself
+            //  if the validate passes? That saves us all the map ptrs in each descriptor instance
             if (!descriptors_[start_idx + di]->WriteUpdate(update, di, error_msg)) {
                 std::stringstream error_str;
                 error_str << "Write update to descriptor at global index " << start_idx + di << " within set " << set_
@@ -531,7 +534,7 @@ bool cvdescriptorset::DescriptorSet::CopyUpdate(debug_report_data *report_data, 
     }
     // Update parameters all look good so perform update
     for (uint32_t di = 0; di < update->descriptorCount; ++di) {
-        if (!descriptors_.at(dst_start_idx)->CopyUpdate(src_set->descriptors_.at(src_start_idx).get(), error))
+        if (!descriptors_[dst_start_idx]->CopyUpdate(src_set->descriptors_[src_start_idx].get(), error))
             return false;
         ++num_updates;
     }
@@ -561,7 +564,7 @@ cvdescriptorset::SamplerDescriptor::SamplerDescriptor(
 }
 bool cvdescriptorset::ValidateSampler(const VkSampler sampler,
                                       const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *sampler_map) {
-    return (sampler_map->count(sampler) != 0) ? true : false;
+    return (sampler_map->count(sampler) != 0);
 }
 bool cvdescriptorset::ValidateImageUpdate(const VkImageView image_view, const VkImageLayout image_layout,
                                           const std::unordered_map<VkImageView, VkImageViewCreateInfo> *image_view_map,
