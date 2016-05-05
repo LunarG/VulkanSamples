@@ -2136,6 +2136,9 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevi
 static PFN_vkVoidFunction
 intercept_core_device_command(const char *name);
 
+static PFN_vkVoidFunction
+intercept_khr_swapchain_command(const char *name, VkDevice dev);
+
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
     PFN_vkVoidFunction proc = intercept_core_device_command(funcName);
     if (proc)
@@ -2147,16 +2150,10 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, cons
 
     my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkLayerDispatchTable *pDisp =  my_data->device_dispatch_table;
-    if (!strcmp("vkCreateSwapchainKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(CreateSwapchainKHR);
-    if (!strcmp("vkDestroySwapchainKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(DestroySwapchainKHR);
-    if (!strcmp("vkGetSwapchainImagesKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(GetSwapchainImagesKHR);
-    if (!strcmp("vkAcquireNextImageKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(AcquireNextImageKHR);
-    if (!strcmp("vkQueuePresentKHR", funcName))
-        return reinterpret_cast<PFN_vkVoidFunction>(QueuePresentKHR);
+
+    proc = intercept_khr_swapchain_command(funcName, device);
+    if (proc)
+        return proc;
 
     if (pDisp->GetDeviceProcAddr == NULL)
         return NULL;
@@ -2263,6 +2260,29 @@ intercept_core_device_command(const char *name) {
     for (size_t i = 0; i < ARRAY_SIZE(core_device_commands); i++) {
         if (!strcmp(core_device_commands[i].name, name))
             return core_device_commands[i].proc;
+    }
+
+    return nullptr;
+}
+
+static PFN_vkVoidFunction
+intercept_khr_swapchain_command(const char *name, VkDevice dev) {
+    static const struct {
+        const char *name;
+        PFN_vkVoidFunction proc;
+    } khr_swapchain_commands[] = {
+        { "vkCreateSwapchainKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateSwapchainKHR) },
+        { "vkDestroySwapchainKHR", reinterpret_cast<PFN_vkVoidFunction>(DestroySwapchainKHR) },
+        { "vkGetSwapchainImagesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetSwapchainImagesKHR) },
+        { "vkAcquireNextImageKHR", reinterpret_cast<PFN_vkVoidFunction>(AcquireNextImageKHR) },
+        { "vkQueuePresentKHR", reinterpret_cast<PFN_vkVoidFunction>(QueuePresentKHR) },
+    };
+
+    // do not check if VK_KHR_swapchain is enabled (why?)
+
+    for (size_t i = 0; i < ARRAY_SIZE(khr_swapchain_commands); i++) {
+        if (!strcmp(khr_swapchain_commands[i].name, name))
+            return khr_swapchain_commands[i].proc;
     }
 
     return nullptr;
