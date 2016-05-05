@@ -3568,7 +3568,8 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
         vkDestroyDescriptorSetLayout(m_device->device(), ds_layout[i], NULL);
     }
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout_fs_only, NULL);
-    vkFreeDescriptorSets(m_device->device(), ds_pool, 1, descriptorSet);
+    vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &ds0_fs_only);
+    vkFreeDescriptorSets(m_device->device(), ds_pool, NUM_SETS, descriptorSet);
     vkDestroyBuffer(m_device->device(), dyub, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);

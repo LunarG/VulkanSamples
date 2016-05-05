@@ -3488,6 +3488,7 @@ static void deletePools(layer_data *my_data) {
         for (auto ds : (*ii).second->sets) {
             freeDescriptorSet(my_data, ds);
         }
+        (*ii).second->sets.clear();
     }
     my_data->descriptorPoolMap.clear();
 }
@@ -3505,6 +3506,7 @@ static void clearDescriptorPool(layer_data *my_data, const VkDevice device, cons
         for (auto ds : pPool->sets) {
             freeDescriptorSet(my_data, ds);
         }
+        pPool->sets.clear();
         // Reset available count for each type and available sets for this pool
         for (uint32_t i = 0; i < pPool->availableDescriptorTypeCount.size(); ++i) {
             pPool->availableDescriptorTypeCount[i] = pPool->maxDescriptorTypeCount[i];
@@ -3997,7 +3999,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
     deletePipelines(dev_data);
     deleteRenderPasses(dev_data);
     deleteCommandBuffers(dev_data);
+    // This will also delete all sets in the pool & remove them from setMap
     deletePools(dev_data);
+    // All sets should be removed
+    assert(dev_data->setMap.empty());
     for (auto del_layout : dev_data->descriptorSetLayoutMap) {
         delete del_layout.second;
     }
@@ -5950,7 +5955,7 @@ vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t 
         // Update available descriptor sets in pool
         pPoolNode->availableSets += count;
 
-        // For each freed descriptor add its resources back into the pool as available and remove from setMap
+        // For each freed descriptor add its resources back into the pool as available and remove from pool and setMap
         for (uint32_t i = 0; i < count; ++i) {
             cvdescriptorset::DescriptorSet *pSet = dev_data->setMap[pDescriptorSets[i]]; // getSetNode() without locking
             uint32_t typeIndex = 0, poolSizeCount = 0;
@@ -5960,6 +5965,7 @@ vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t 
                 pPoolNode->availableDescriptorTypeCount[typeIndex] += poolSizeCount;
             }
             freeDescriptorSet(dev_data, pSet);
+            pPoolNode->sets.erase(pSet);
         }
         lock.unlock();
     }
