@@ -3152,65 +3152,6 @@ static bool validateUpdateConsistency(layer_data *my_data, const VkDevice device
     }
     return skipCall;
 }
-
-// Determine the update type, allocate a new struct of that type, shadow the given pUpdate
-//   struct into the pNewNode param. Return true if error condition encountered and callback signals early exit.
-// NOTE : Calls to this function should be wrapped in mutex
-static bool shadowUpdateNode(layer_data *my_data, const VkDevice device, GENERIC_HEADER *pUpdate, GENERIC_HEADER **pNewNode) {
-    bool skipCall = false;
-    VkWriteDescriptorSet *pWDS = NULL;
-    VkCopyDescriptorSet *pCDS = NULL;
-    switch (pUpdate->sType) {
-    case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
-        pWDS = new VkWriteDescriptorSet;
-        *pNewNode = (GENERIC_HEADER *)pWDS;
-        memcpy(pWDS, pUpdate, sizeof(VkWriteDescriptorSet));
-
-        switch (pWDS->descriptorType) {
-        case VK_DESCRIPTOR_TYPE_SAMPLER:
-        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
-            VkDescriptorImageInfo *info = new VkDescriptorImageInfo[pWDS->descriptorCount];
-            memcpy(info, pWDS->pImageInfo, pWDS->descriptorCount * sizeof(VkDescriptorImageInfo));
-            pWDS->pImageInfo = info;
-        } break;
-        case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-        case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER: {
-            VkBufferView *info = new VkBufferView[pWDS->descriptorCount];
-            memcpy(info, pWDS->pTexelBufferView, pWDS->descriptorCount * sizeof(VkBufferView));
-            pWDS->pTexelBufferView = info;
-        } break;
-        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
-            VkDescriptorBufferInfo *info = new VkDescriptorBufferInfo[pWDS->descriptorCount];
-            memcpy(info, pWDS->pBufferInfo, pWDS->descriptorCount * sizeof(VkDescriptorBufferInfo));
-            pWDS->pBufferInfo = info;
-        } break;
-        default:
-            return true;
-            break;
-        }
-        break;
-    case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
-        pCDS = new VkCopyDescriptorSet;
-        *pNewNode = (GENERIC_HEADER *)pCDS;
-        memcpy(pCDS, pUpdate, sizeof(VkCopyDescriptorSet));
-        break;
-    default:
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                    DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
-                    "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree",
-                    string_VkStructureType(pUpdate->sType), pUpdate->sType))
-            return true;
-    }
-    // Make sure that pNext for the end of shadow copy is NULL
-    (*pNewNode)->pNext = NULL;
-    return skipCall;
-}
-
 //TODO: Consolidate functions
 bool FindLayout(const GLOBAL_CB_NODE *pCB, ImageSubresourcePair imgpair, IMAGE_CMD_BUF_LAYOUT_NODE &node, const VkImageAspectFlags aspectMask) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(pCB->commandBuffer), layer_data_map);
