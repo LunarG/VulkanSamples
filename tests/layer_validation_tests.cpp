@@ -8592,6 +8592,361 @@ TEST_F(VkLayerTest, CopyImageLayerCountMismatch) {
     vkFreeMemory(m_device->device(), destMem, NULL);
 }
 
+TEST_F(VkLayerTest, ImageLayerUnsupportedFormat) {
+
+    TEST_DESCRIPTION("Creating images with unsuported formats ");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    VkImageObj image(m_device);
+    image.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM,
+               VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                   VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+               VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+
+    VkFormat unsupported = VK_FORMAT_UNDEFINED;
+    for (int f = VK_FORMAT_BEGIN_RANGE; f <= VK_FORMAT_END_RANGE; f++) {
+        VkFormat format = static_cast<VkFormat>(f);
+        VkFormatProperties fProps = m_device->format_properties(format);
+        if (format != VK_FORMAT_UNDEFINED && fProps.linearTilingFeatures == 0 &&
+            fProps.optimalTilingFeatures == 0) {
+            unsupported = format;
+            break;
+        }
+    }
+    if (unsupported != VK_FORMAT_UNDEFINED) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "vkCreateImage parameter, "
+                                             "VkFormat pCreateInfo->format, "
+                                             "contains unsupported format");
+        // Create image with unsupported format - Expect FORMAT_UNSUPPORTED
+        VkImageCreateInfo image_create_info;
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = unsupported;
+        image_create_info.extent.width = 32;
+        image_create_info.extent.height = 32;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arrayLayers = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+        image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        image_create_info.flags = 0;
+
+        VkImage localImage;
+        vkCreateImage(m_device->handle(), &image_create_info, NULL, &localImage);
+        m_errorMonitor->VerifyFound();
+
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "vkCreateRenderPass parameter, "
+                                             "VkFormat in "
+                                             "pCreateInfo->pAttachments");
+        // Create renderpass with unsupported format - Expect FORMAT_UNSUPPORTED
+        VkAttachmentDescription att;
+        att.format = unsupported;
+        att.samples = VK_SAMPLE_COUNT_1_BIT;
+        att.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        att.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        att.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        att.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        att.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        att.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkRenderPassCreateInfo rp_info = {};
+        VkRenderPass rp;
+        rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        rp_info.attachmentCount = 1;
+        rp_info.pAttachments = &att;
+        rp_info.subpassCount = 0;
+        rp_info.pSubpasses = NULL;
+        vkCreateRenderPass(m_device->handle(), &rp_info, NULL, &rp);
+        m_errorMonitor->VerifyFound();
+    }
+}
+
+TEST_F(VkLayerTest, ImageLayerViewTests) {
+    VkResult ret;
+    TEST_DESCRIPTION("Passing bad parameters to CreateImageView");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkImageObj image(m_device);
+    image.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM,
+               VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                   VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+               VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+
+    VkImageView imgView;
+    VkImageViewCreateInfo imgViewInfo = {};
+    imgViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    imgViewInfo.image = image.handle();
+    imgViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    imgViewInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
+    imgViewInfo.subresourceRange.layerCount = 1;
+    imgViewInfo.subresourceRange.baseMipLevel = 0;
+    imgViewInfo.subresourceRange.levelCount = 1;
+    imgViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreateImageView called with baseMipLevel");
+    // View can't have baseMipLevel >= image's mipLevels - Expect
+    // VIEW_CREATE_ERROR
+    imgViewInfo.subresourceRange.baseMipLevel = 1;
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.subresourceRange.baseMipLevel = 0;
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreateImageView called with baseArrayLayer");
+    // View can't have baseArrayLayer >= image's arraySize - Expect
+    // VIEW_CREATE_ERROR
+    imgViewInfo.subresourceRange.baseArrayLayer = 1;
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.subresourceRange.baseArrayLayer = 0;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "vkCreateImageView called with 0 in "
+                                         "pCreateInfo->subresourceRange."
+                                         "levelCount");
+    // View's levelCount can't be 0 - Expect VIEW_CREATE_ERROR
+    imgViewInfo.subresourceRange.levelCount = 0;
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.subresourceRange.levelCount = 1;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "vkCreateImageView called with 0 in "
+                                         "pCreateInfo->subresourceRange."
+                                         "layerCount");
+    // View's layerCount can't be 0 - Expect VIEW_CREATE_ERROR
+    imgViewInfo.subresourceRange.layerCount = 0;
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.subresourceRange.layerCount = 1;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "but both must be color formats");
+    // Can't use depth format for view into color image - Expect INVALID_FORMAT
+    imgViewInfo.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Formats MUST be IDENTICAL unless "
+                                         "VK_IMAGE_CREATE_MUTABLE_FORMAT BIT "
+                                         "was set on image creation.");
+    // Same compatibility class but no MUTABLE_FORMAT bit - Expect
+    // VIEW_CREATE_ERROR
+    imgViewInfo.format = VK_FORMAT_B8G8R8A8_UINT;
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "can support ImageViews with "
+                                         "differing formats but they must be "
+                                         "in the same compatibility class.");
+    // Have MUTABLE_FORMAT bit but not in same compatibility class - Expect
+    // VIEW_CREATE_ERROR
+    VkImageCreateInfo mutImgInfo = image.create_info();
+    VkImage mutImage;
+    mutImgInfo.format = VK_FORMAT_R8_UINT;
+    assert(
+        m_device->format_properties(VK_FORMAT_R8_UINT).optimalTilingFeatures &
+        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT);
+    mutImgInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+    mutImgInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    ret = vkCreateImage(m_device->handle(), &mutImgInfo, NULL, &mutImage);
+    ASSERT_VK_SUCCESS(ret);
+    imgViewInfo.image = mutImage;
+    vkCreateImageView(m_device->handle(), &imgViewInfo, NULL, &imgView);
+    m_errorMonitor->VerifyFound();
+    imgViewInfo.image = image.handle();
+    vkDestroyImage(m_device->handle(), mutImage, NULL);
+}
+
+TEST_F(VkLayerTest, MiscImageLayerTests) {
+
+    TEST_DESCRIPTION("Image layer tests that don't belong elsewhare");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkImageObj image(m_device);
+    image.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM,
+               VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                   VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+               VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "number of layers in image subresource is zero");
+    vk_testing::Buffer buffer;
+    VkMemoryPropertyFlags reqs = 0;
+    buffer.init_as_src(*m_device, 128 * 128 * 4, reqs);
+    VkBufferImageCopy region = {};
+    region.bufferRowLength = 128;
+    region.bufferImageHeight = 128;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    // layerCount can't be 0 - Expect MISMATCHED_IMAGE_ASPECT
+    region.imageSubresource.layerCount = 0;
+    region.imageExtent.height = 4;
+    region.imageExtent.width = 4;
+    region.imageExtent.depth = 1;
+    m_commandBuffer->BeginCommandBuffer();
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(),
+                           image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           1, &region);
+    m_errorMonitor->VerifyFound();
+    region.imageSubresource.layerCount = 1;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "aspectMasks for each region must "
+                                         "specify only COLOR or DEPTH or "
+                                         "STENCIL");
+    // Expect MISMATCHED_IMAGE_ASPECT
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_METADATA_BIT;
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(),
+                           image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           1, &region);
+    m_errorMonitor->VerifyFound();
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "If the format of srcImage is a depth, stencil, depth stencil or "
+        "integer-based format then filter must be VK_FILTER_NEAREST");
+    // Expect INVALID_FILTER
+    VkImageObj intImage1(m_device);
+    intImage1.init(128, 128, VK_FORMAT_R8_UINT,
+                   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL,
+                   0);
+    VkImageObj intImage2(m_device);
+    intImage2.init(128, 128, VK_FORMAT_R8_UINT,
+                   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL,
+                   0);
+    VkImageBlit blitRegion = {};
+    blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blitRegion.srcSubresource.baseArrayLayer = 0;
+    blitRegion.srcSubresource.layerCount = 1;
+    blitRegion.srcSubresource.mipLevel = 0;
+    blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blitRegion.dstSubresource.baseArrayLayer = 0;
+    blitRegion.dstSubresource.layerCount = 1;
+    blitRegion.dstSubresource.mipLevel = 0;
+
+    vkCmdBlitImage(m_commandBuffer->GetBufferHandle(), intImage1.handle(),
+                   intImage1.layout(), intImage2.handle(), intImage2.layout(),
+                   16, &blitRegion, VK_FILTER_LINEAR);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "called with 0 in ppMemoryBarriers");
+    VkImageMemoryBarrier img_barrier;
+    img_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    img_barrier.pNext = NULL;
+    img_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+    img_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    img_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    img_barrier.image = image.handle();
+    img_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    img_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    img_barrier.subresourceRange.baseArrayLayer = 0;
+    img_barrier.subresourceRange.baseMipLevel = 0;
+    // layerCount should not be 0 - Expect INVALID_IMAGE_RESOURCE
+    img_barrier.subresourceRange.layerCount = 0;
+    img_barrier.subresourceRange.levelCount = 1;
+    vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
+                         VK_PIPELINE_STAGE_HOST_BIT,
+                         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0,
+                         nullptr, 1, &img_barrier);
+    m_errorMonitor->VerifyFound();
+    img_barrier.subresourceRange.layerCount = 1;
+}
+
+TEST_F(VkLayerTest, ImageFormatLimits) {
+
+    TEST_DESCRIPTION("Exceed the limits of image format ");
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "CreateImage extents exceed allowable limits for format");
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+    image_create_info.extent.width = 32;
+    image_create_info.extent.height = 32;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_create_info.flags = 0;
+
+    VkImage nullImg;
+    VkImageFormatProperties imgFmtProps;
+    vkGetPhysicalDeviceImageFormatProperties(
+        gpu(), image_create_info.format, image_create_info.imageType,
+        image_create_info.tiling, image_create_info.usage,
+        image_create_info.flags, &imgFmtProps);
+    image_create_info.extent.depth = imgFmtProps.maxExtent.depth + 1;
+    // Expect INVALID_FORMAT_LIMITS_VIOLATION
+    vkCreateImage(m_device->handle(), &image_create_info, NULL, &nullImg);
+    m_errorMonitor->VerifyFound();
+    image_create_info.extent.depth = 1;
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "exceeds allowable maximum supported by format of");
+    image_create_info.mipLevels = imgFmtProps.maxMipLevels + 1;
+    // Expect INVALID_FORMAT_LIMITS_VIOLATION
+    vkCreateImage(m_device->handle(), &image_create_info, NULL, &nullImg);
+    m_errorMonitor->VerifyFound();
+    image_create_info.mipLevels = 1;
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "exceeds allowable maximum supported by format of");
+    image_create_info.arrayLayers = imgFmtProps.maxArrayLayers + 1;
+    // Expect INVALID_FORMAT_LIMITS_VIOLATION
+    vkCreateImage(m_device->handle(), &image_create_info, NULL, &nullImg);
+    m_errorMonitor->VerifyFound();
+    image_create_info.arrayLayers = 1;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "is not supported by format");
+    int samples = imgFmtProps.sampleCounts >> 1;
+    image_create_info.samples = (VkSampleCountFlagBits)samples;
+    // Expect INVALID_FORMAT_LIMITS_VIOLATION
+    vkCreateImage(m_device->handle(), &image_create_info, NULL, &nullImg);
+    m_errorMonitor->VerifyFound();
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "pCreateInfo->initialLayout, must be "
+                                         "VK_IMAGE_LAYOUT_UNDEFINED or "
+                                         "VK_IMAGE_LAYOUT_PREINITIALIZED");
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    // Expect INVALID_LAYOUT
+    vkCreateImage(m_device->handle(), &image_create_info, NULL, &nullImg);
+    m_errorMonitor->VerifyFound();
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+}
+
 TEST_F(VkLayerTest, CopyImageFormatSizeMismatch) {
     VkResult err;
     bool pass;
