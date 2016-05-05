@@ -2,7 +2,7 @@
 
 ### **The Repositories**
 
-The Vulkan source code is distributed across several GitHub repositories.
+The source code for various Vulkan components is distributed across several GitHub repositories.
 The repositories sponsored by Khronos and LunarG are described here.
 In general, the canonical Vulkan Loader and Validation Layers sources are in the Khronos repository,
 while the LunarG repositories host sources for additional tools and sample programs.
@@ -14,6 +14,21 @@ while the LunarG repositories host sources for additional tools and sample progr
 As a convenience, the contents of the Vulkan-LoaderAndValidationLayers repository are downstreamed into the VulkanTools and VulkanSamples repositories via a branch named `trunk`.
 This makes the VulkanTools and VulkanSamples easier to work with and avoids compatibility issues 
 that might arise with Vulkan-LoaderAndValidationLayers components if they were obtained from a separate repository.
+
+### **We Do Need Your Help**
+
+The Vulkan validation layers are one of the larger and more important components in this repository.
+While there are often active and organized development efforts underway to improve their coverage,
+there are always opportunities for anyone to help by contributing additional validation layer checks
+and tests for these validation checks.
+If you desire to help in this area, please examine the
+[issues list](https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/issues)
+in this repository and look for any unassigned issues that are of interest to you.
+Of course, if you have your own work in mind, please open an issue to describe it and assign it to yourself.
+Finally, please feel free to contact any of the developers that are actively contributing should you
+wish to coordinate further.
+Please see the [section about Validation Layers](#special-considerations-for-validation-layers)
+later on this page.
 
 ### **How to Submit Fixes**
 
@@ -79,15 +94,8 @@ There are many existing validation tests in this directory that can be used as a
 
 ### **Contributor License Agreement (CLA)**
 
-#### **Khronos Repository (Vulkan-LoaderAndValidationLayers)**
-
-The Khronos Group is still finalizing the CLA process and documentation,
-so the details about using or requiring a CLA are not available yet.
-In the meantime, we suggest that you not submit any contributions unless you are comfortable doing so without a CLA.
-
-#### **LunarG Repositories**
-
-You'll be prompted with a "click-through" CLA as part of submitting your pull request in GitHub.
+You'll be prompted with a one-time "click-through" CLA dialog as part of submitting your pull request 
+or other contribution to GitHub.
 
 ### **License and Copyrights**
 
