@@ -9,16 +9,18 @@ Note: The sample Vulkan Intel driver for Linux (ICD) is being deprecated in favo
 This driver has been moved to the [VulkanTools repo](https://github.com/LunarG/VulkanTools).
 Further instructions regarding this ICD are available there.
 
+## Contributing
+
+If you intend to contribute, the preferred work flow is for you to develop your contribution
+in a fork of this repo in your GitHub account and then submit a pull request.
+Please see the [CONTRIBUTING](CONTRIBUTING.md) file in this respository for more details.
+
 ## Git the Bits
 
 To create your local git repository:
 ```
 git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers 
 ```
-
-If you intend to contribute, the preferred work flow is for you to develop your contribution
-in a fork of this repo in your GitHub account and then submit a pull request.
-Please see the CONTRIBUTING.md file in this respository for more details.
 
 ## Linux Build
 
