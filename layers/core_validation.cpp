@@ -1671,7 +1671,6 @@ static bool validate_vi_against_vs_inputs(layer_data *my_data, VkPipelineVertexI
 
 static bool validate_fs_outputs_against_render_pass(layer_data *my_data, shader_module const *fs,
                                                     spirv_inst_iter entrypoint, RENDER_PASS_NODE const *rp, uint32_t subpass) {
-    const std::vector<VkFormat> &color_formats = rp->subpassColorFormats[subpass];
     std::map<location_t, interface_var> outputs;
     std::map<uint32_t, VkFormat> color_attachments;
     for (auto i = 0u; i < rp->subpassColorFormats[subpass].size(); i++) {
