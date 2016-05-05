@@ -3479,8 +3479,9 @@ static void deletePools(layer_data *my_data) {
     if (my_data->descriptorPoolMap.size() <= 0)
         return;
     for (auto ii = my_data->descriptorPoolMap.begin(); ii != my_data->descriptorPoolMap.end(); ++ii) {
-        // TODODS : Is this correct now?
+        // Remove this pools' sets from setMap and delete them
         for (auto ds : (*ii).second->sets) {
+            my_data->setMap.erase(ds->GetSet());
             delete ds;
         }
     }
@@ -3497,8 +3498,9 @@ static void clearDescriptorPool(layer_data *my_data, const VkDevice device, cons
     } else {
         // TODO: validate flags
         // For every set off of this pool, clear it, remove from setMap, and free cvdescriptorset::DescriptorSet
-        // TODODS : Updated this code for new DescriptorSet class, is below all we need?
         for (auto ds : pPool->sets) {
+            // Remove this pools' sets from setMap and delete them
+            my_data->setMap.erase(ds->GetSet());
             delete ds;
         }
         // Reset available count for each type and available sets for this pool
@@ -5946,7 +5948,7 @@ vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t 
         // Update available descriptor sets in pool
         pPoolNode->availableSets += count;
 
-        // For each freed descriptor add it back into the pool as available
+        // For each freed descriptor add its resources back into the pool as available and remove from setMap
         for (uint32_t i = 0; i < count; ++i) {
             cvdescriptorset::DescriptorSet *pSet = dev_data->setMap[pDescriptorSets[i]]; // getSetNode() without locking
             invalidateBoundCmdBuffers(dev_data, pSet);
@@ -5956,6 +5958,8 @@ vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t 
                 poolSizeCount = pSet->GetDescriptorCountFromIndex(j);
                 pPoolNode->availableDescriptorTypeCount[typeIndex] += poolSizeCount;
             }
+            delete pSet;
+            dev_data->setMap.erase(pDescriptorSets[i]);
         }
         lock.unlock();
     }
