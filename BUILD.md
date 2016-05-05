@@ -100,6 +100,10 @@ Windows 7+ with additional required software packages:
 
 ## Windows Build - MSVC
 
+Before building on Windows, you may want to modify the customize section in loader/loader.rc to so as to
+set the version numbers and build description for your build. Doing so will set the information displayed
+for the Properites->Details tab of the loader vulkan-1.dll file that is built.
+
 Build all Windows targets after installing required software and cloning the LVL repo as described above by completing the following steps in a "Developer Command Prompt for VS2013" window (Note that the update\_external\_sources script used below builds external tools into predefined locations. See **LVL's Dependencies** for more information and other options):
 ```
 cd Vulkan-LoaderAndValidationLayers  # cd to the root of the cloned git repository

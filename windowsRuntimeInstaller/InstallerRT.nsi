@@ -23,15 +23,15 @@
 
 # Version information
 # Set VERSION_BUILDNO to:
-#    x.pre.z for prereleases
+#    x.devbuild.z for development builds
 #    x for releases
 #
 !define PRODUCTNAME "VulkanRT"
 !define VERSION_ABI_MAJOR "1"
 !define VERSION_API_MAJOR "1"
 !define VERSION_MINOR "0"
-!define VERSION_PATCH "1"
-!define VERSION_BUILDNO "0.pre.1"
+!define VERSION_PATCH "12"
+!define VERSION_BUILDNO "0.devbuild.1"
 !define PUBLISHER "YourCompany, Inc."
 #!define VERSION_BUILDNO "0"
 !define PRODUCTVERSION "${VERSION_API_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_BUILDNO}"
