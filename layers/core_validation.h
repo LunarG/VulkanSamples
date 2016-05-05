@@ -329,33 +329,13 @@ struct PIPELINE_LAYOUT_NODE {
     vector<VkPushConstantRange> pushConstantRanges;
 };
 
-class SET_NODE : public BASE_NODE {
-  public:
-    using BASE_NODE::in_use;
-    cvdescriptorset::DescriptorSet *descriptor_set;
-    SET_NODE() : descriptor_set(nullptr){};
-    SET_NODE(const VkDescriptorSet set, const cvdescriptorset::DescriptorSetLayout *layout,
-             const std::unordered_map<VkBuffer, BUFFER_NODE> *buffer_map,
-             const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *memory_map,
-             const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *bufferview_map,
-             const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *sampler_map,
-             const std::unordered_map<VkImageView, VkImageViewCreateInfo> *image_view_map,
-             const std::unordered_map<VkImage, IMAGE_NODE> *image_map,
-             const std::unordered_map<VkImage, VkSwapchainKHR> *image_to_swapchain_map,
-             const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *swapchain_map) {
-        descriptor_set = new cvdescriptorset::DescriptorSet(set, layout, buffer_map, memory_map, bufferview_map, sampler_map,
-                                                            image_view_map, image_map, image_to_swapchain_map, swapchain_map);
-    };
-    ~SET_NODE() { delete descriptor_set; };
-};
-
 typedef struct _DESCRIPTOR_POOL_NODE {
     VkDescriptorPool pool;
     uint32_t maxSets;                              // Max descriptor sets allowed in this pool
     uint32_t availableSets;                        // Available descriptor sets in this pool
 
     VkDescriptorPoolCreateInfo createInfo;
-    unordered_set<SET_NODE *> sets;                // Collection of all sets in this pool
+    unordered_set<cvdescriptorset::DescriptorSet *> sets; // Collection of all sets in this pool
     vector<uint32_t> maxDescriptorTypeCount;       // Max # of descriptors of each type in this pool
     vector<uint32_t> availableDescriptorTypeCount; // Available # of descriptors of each type in this pool
 

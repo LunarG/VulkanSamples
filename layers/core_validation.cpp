@@ -110,7 +110,7 @@ struct layer_data {
     unordered_map<VkPipeline, PIPELINE_NODE *> pipelineMap;
     unordered_map<VkCommandPool, CMD_POOL_INFO> commandPoolMap;
     unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> descriptorPoolMap;
-    unordered_map<VkDescriptorSet, SET_NODE *> setMap;
+    unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> setMap;
     unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> descriptorSetLayoutMap;
     unordered_map<VkPipelineLayout, PIPELINE_LAYOUT_NODE> pipelineLayoutMap;
     unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> memObjMap;
@@ -2127,9 +2127,10 @@ static bool verify_renderpass_compatibility(layer_data *my_data, const VkRenderP
     return true;
 }
 
-// For give SET_NODE, verify that its Set is compatible w/ the setLayout corresponding to pipelineLayout[layoutIndex]
-static bool verify_set_layout_compatibility(layer_data *my_data, const SET_NODE *pSet, const VkPipelineLayout layout,
-                                            const uint32_t layoutIndex, string &errorMsg) {
+// For given cvdescriptorset::DescriptorSet, verify that its Set is compatible w/ the setLayout corresponding to
+// pipelineLayout[layoutIndex]
+static bool verify_set_layout_compatibility(layer_data *my_data, const cvdescriptorset::DescriptorSet *pSet,
+                                            const VkPipelineLayout layout, const uint32_t layoutIndex, string &errorMsg) {
     auto pipeline_layout_it = my_data->pipelineLayoutMap.find(layout);
     if (pipeline_layout_it == my_data->pipelineLayoutMap.end()) {
         stringstream errorStr;
@@ -2146,7 +2147,7 @@ static bool verify_set_layout_compatibility(layer_data *my_data, const SET_NODE 
         return false;
     }
     auto layout_node = my_data->descriptorSetLayoutMap[pipeline_layout_it->second.descriptorSetLayouts[layoutIndex]];
-    return pSet->descriptor_set->IsCompatible(layout_node, &errorMsg);
+    return pSet->IsCompatible(layout_node, &errorMsg);
 }
 
 // Validate that data for each specialization entry is fully contained within the buffer.
@@ -2571,7 +2572,7 @@ static bool validate_compute_pipeline(layer_data *my_data, PIPELINE_NODE *pPipel
 }
 
 // Return Set node ptr for specified set or else NULL
-static SET_NODE *getSetNode(layer_data *my_data, const VkDescriptorSet set) {
+static cvdescriptorset::DescriptorSet *getSetNode(layer_data *my_data, const VkDescriptorSet set) {
     if (my_data->setMap.find(set) == my_data->setMap.end()) {
         return NULL;
     }
@@ -2586,21 +2587,21 @@ static SET_NODE *getSetNode(layer_data *my_data, const VkDescriptorSet set) {
 //  3. Grow updateBuffers for pCB to include buffers from STORAGE*_BUFFER descriptor buffers
 static bool validate_and_update_drawtime_descriptor_state(
     layer_data *dev_data, GLOBAL_CB_NODE *pCB,
-    const vector<std::pair<SET_NODE *, unordered_set<uint32_t>>> &activeSetBindingsPairs) {
+    const vector<std::pair<cvdescriptorset::DescriptorSet *, unordered_set<uint32_t>>> &activeSetBindingsPairs) {
     bool result = false;
     for (auto set_bindings_pair : activeSetBindingsPairs) {
-        SET_NODE *set_node = set_bindings_pair.first;
+        cvdescriptorset::DescriptorSet *set_node = set_bindings_pair.first;
         std::string err_str;
-        if (!set_node->descriptor_set->ValidateDrawState(
-                set_bindings_pair.second, pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].dynamicOffsets, &err_str)) {
+        if (!set_node->ValidateDrawState(set_bindings_pair.second, pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].dynamicOffsets,
+                                         &err_str)) {
             // Report error here
-            auto set = set_node->descriptor_set->GetSet();
+            auto set = set_node->GetSet();
             result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                               reinterpret_cast<const uint64_t &>(set), __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
                               "DS %#" PRIxLEAST64 " encountered the following validation error at draw time: %s",
                               reinterpret_cast<const uint64_t &>(set), err_str.c_str());
         }
-        set_node->descriptor_set->GetStorageUpdates(set_bindings_pair.second, &pCB->updateBuffers, &pCB->updateImages);
+        set_node->GetStorageUpdates(set_bindings_pair.second, &pCB->updateBuffers, &pCB->updateImages);
     }
     return result;
 }
@@ -2608,14 +2609,14 @@ static bool validate_and_update_drawtime_descriptor_state(
 //   When validate_and_update_draw_state() handles compute shaders so that active_slots is correct for compute pipelines, this
 //   function can be killed and validate_and_update_draw_state() used instead
 static void update_shader_storage_images_and_buffers(layer_data *dev_data, GLOBAL_CB_NODE *pCB) {
-    SET_NODE *pSet = nullptr;
+    cvdescriptorset::DescriptorSet *pSet = nullptr;
     // For the bound descriptor sets, pull off any storage images and buffers
     //  This may be more than are actually updated depending on which are active, but for now this is a stop-gap for compute
     //  pipelines
     for (auto set : pCB->lastBound[VK_PIPELINE_BIND_POINT_COMPUTE].uniqueBoundSets) {
         // Get the set node
         pSet = getSetNode(dev_data, set);
-        pSet->descriptor_set->GetAllStorageUpdates(&pCB->updateBuffers, &pCB->updateImages);
+        pSet->GetAllStorageUpdates(&pCB->updateBuffers, &pCB->updateImages);
     }
 }
 
@@ -2650,7 +2651,7 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
     if (state.pipelineLayout) {
         string errorString;
         // Need a vector (vs. std::set) of active Sets for dynamicOffset validation in case same set bound w/ different offsets
-        vector<std::pair<SET_NODE *, unordered_set<uint32_t>>> activeSetBindingsPairs;
+        vector<std::pair<cvdescriptorset::DescriptorSet *, unordered_set<uint32_t>>> activeSetBindingsPairs;
         for (auto setBindingPair : pPipe->active_slots) {
             uint32_t setIndex = setBindingPair.first;
             // If valid set is not bound throw an error
@@ -2662,7 +2663,7 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
             } else if (!verify_set_layout_compatibility(my_data, my_data->setMap[state.boundDescriptorSets[setIndex]],
                                                         pPipe->graphicsPipelineCI.layout, setIndex, errorString)) {
                 // Set is bound but not compatible w/ overlapping pipelineLayout from PSO
-                VkDescriptorSet setHandle = my_data->setMap[state.boundDescriptorSets[setIndex]]->descriptor_set->GetSet();
+                VkDescriptorSet setHandle = my_data->setMap[state.boundDescriptorSets[setIndex]]->GetSet();
                 result |=
                     log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                             (uint64_t)setHandle, __LINE__, DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, "DS",
@@ -2671,20 +2672,20 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
                             (uint64_t)setHandle, setIndex, (uint64_t)pPipe->graphicsPipelineCI.layout, errorString.c_str());
             } else { // Valid set is bound and layout compatible, validate that it's updated
                 // Pull the set node
-                SET_NODE *pSet = my_data->setMap[state.boundDescriptorSets[setIndex]];
+                cvdescriptorset::DescriptorSet *pSet = my_data->setMap[state.boundDescriptorSets[setIndex]];
                 // Save vector of all active sets to verify dynamicOffsets below
                 activeSetBindingsPairs.push_back(std::make_pair(pSet, setBindingPair.second));
                 // Make sure set has been updated if it has no immutable samplers
                 //  If it has immutable samplers, we'll flag error later as needed depending on binding
-                if (!pSet->descriptor_set->IsUpdated()) {
+                if (!pSet->IsUpdated()) {
                     for (auto binding : setBindingPair.second) {
-                        if (!pSet->descriptor_set->GetImmutableSamplerPtrFromBinding(binding)) {
+                        if (!pSet->GetImmutableSamplerPtrFromBinding(binding)) {
                             result |= log_msg(
                                 my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                                (uint64_t)pSet->descriptor_set->GetSet(), __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
+                                (uint64_t)pSet->GetSet(), __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
                                 "DS %#" PRIxLEAST64 " bound but it was never updated. It is now being used to draw so "
                                 "this will result in undefined behavior.",
-                                (uint64_t)pSet->descriptor_set->GetSet());
+                                (uint64_t)pSet->GetSet());
                         }
                     }
                 }
@@ -3421,9 +3422,9 @@ static bool validateIdleDescriptorSet(const layer_data *my_data, VkDescriptorSet
     }
     return skip_call;
 }
-static void invalidateBoundCmdBuffers(layer_data *dev_data, const SET_NODE *pSet) {
+static void invalidateBoundCmdBuffers(layer_data *dev_data, const cvdescriptorset::DescriptorSet *pSet) {
     // Flag any CBs this set is bound to as INVALID
-    for (auto cb : pSet->descriptor_set->GetBoundCmdBuffers()) {
+    for (auto cb : pSet->GetBoundCmdBuffers()) {
         auto cb_node = dev_data->commandBufferMap.find(cb);
         if (cb_node != dev_data->commandBufferMap.end()) {
             cb_node->second->state = CB_INVALID;
@@ -3438,7 +3439,7 @@ static bool dsUpdate(layer_data *my_data, VkDevice device, uint32_t descriptorWr
     uint32_t i = 0;
     for (i = 0; i < descriptorWriteCount; i++) {
         VkDescriptorSet ds = pWDS[i].dstSet;
-        SET_NODE *pSet = my_data->setMap[ds];
+        cvdescriptorset::DescriptorSet *pSet = my_data->setMap[ds];
         // Set being updated cannot be in-flight
         if ((skipCall = validateIdleDescriptorSet(my_data, ds, "VkUpdateDescriptorSets")) == true)
             return skipCall;
@@ -3450,7 +3451,7 @@ static bool dsUpdate(layer_data *my_data, VkDevice device, uint32_t descriptorWr
             break;
         }
         string error_str;
-        if (!pSet->descriptor_set->WriteUpdate(my_data->report_data, &pWDS[i], &error_str)) {
+        if (!pSet->WriteUpdate(my_data->report_data, &pWDS[i], &error_str)) {
             skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                 (uint64_t)(ds), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
                                 "vkUpdateDescriptorsSets() failed write update for Descriptor Set %" PRIu64 " with error: %s",
@@ -3459,16 +3460,16 @@ static bool dsUpdate(layer_data *my_data, VkDevice device, uint32_t descriptorWr
     }
     // Now validate copy updates
     for (i = 0; i < descriptorCopyCount; ++i) {
-        SET_NODE *pSrcSet = NULL, *pDstSet = NULL;
+        cvdescriptorset::DescriptorSet *pSrcSet = NULL, *pDstSet = NULL;
         // For each copy make sure that update falls within given layout and that types match
         pSrcSet = my_data->setMap[pCDS[i].srcSet];
         pDstSet = my_data->setMap[pCDS[i].dstSet];
         // Set being updated cannot be in-flight
-        if ((skipCall = validateIdleDescriptorSet(my_data, pDstSet->descriptor_set->GetSet(), "VkUpdateDescriptorSets")) == true)
+        if ((skipCall = validateIdleDescriptorSet(my_data, pDstSet->GetSet(), "VkUpdateDescriptorSets")) == true)
             return skipCall;
         invalidateBoundCmdBuffers(my_data, pDstSet);
         std::string error_str;
-        if (!pDstSet->descriptor_set->CopyUpdate(my_data->report_data, &pCDS[i], pSrcSet->descriptor_set, &error_str)) {
+        if (!pDstSet->CopyUpdate(my_data->report_data, &pCDS[i], pSrcSet, &error_str)) {
             skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                 reinterpret_cast<const uint64_t &>(pCDS[i].dstSet), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
                                 "vkUpdateDescriptorsSets() failed copy update from Descriptor Set %" PRIu64
@@ -3554,7 +3555,7 @@ static void clearDescriptorPool(layer_data *my_data, const VkDevice device, cons
                 "Unable to find pool node for pool %#" PRIxLEAST64 " specified in vkResetDescriptorPool() call", (uint64_t)pool);
     } else {
         // TODO: validate flags
-        // For every set off of this pool, clear it, remove from setMap, and free SET_NODE
+        // For every set off of this pool, clear it, remove from setMap, and free cvdescriptorset::DescriptorSet
         // TODODS : Updated this code for new DescriptorSet class, is below all we need?
         for (auto ds : pPool->sets) {
             delete ds;
@@ -3735,7 +3736,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
             for (auto set : pCB->lastBound[i].uniqueBoundSets) {
                 auto set_node = dev_data->setMap.find(set);
                 if (set_node != dev_data->setMap.end()) {
-                    set_node->second->descriptor_set->RemoveBoundCommandBuffer(pCB->commandBuffer);
+                    set_node->second->RemoveBoundCommandBuffer(pCB->commandBuffer);
                 }
             }
             pCB->lastBound[i].reset();
@@ -5953,15 +5954,15 @@ vkAllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAl
                     }
                 }
                 // Create new set node and add to head of pool nodes
-                SET_NODE *pNewNode =
-                    new SET_NODE(pDescriptorSets[i], layout_pair->second, &dev_data->bufferMap, &dev_data->memObjMap,
-                                 &dev_data->bufferViewMap, &dev_data->samplerMap, &dev_data->imageViewMap, &dev_data->imageMap,
-                                 &dev_data->device_extensions.imageToSwapchainMap, &dev_data->device_extensions.swapchainMap);
+                cvdescriptorset::DescriptorSet *pNewNode = new cvdescriptorset::DescriptorSet(
+                    pDescriptorSets[i], layout_pair->second, &dev_data->bufferMap, &dev_data->memObjMap, &dev_data->bufferViewMap,
+                    &dev_data->samplerMap, &dev_data->imageViewMap, &dev_data->imageMap,
+                    &dev_data->device_extensions.imageToSwapchainMap, &dev_data->device_extensions.swapchainMap);
                 if (NULL == pNewNode) {
                     if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pDescriptorSets[i], __LINE__,
-                                DRAWSTATE_OUT_OF_MEMORY, "DS",
-                                "Out of memory while attempting to allocate SET_NODE in vkAllocateDescriptorSets()")) {
+                                DRAWSTATE_OUT_OF_MEMORY, "DS", "Out of memory while attempting to allocate "
+                                                               "cvdescriptorset::DescriptorSet in vkAllocateDescriptorSets()")) {
                         lock.unlock();
                         return VK_ERROR_VALIDATION_FAILED_EXT;
                     }
@@ -6009,12 +6010,12 @@ vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t 
 
         // For each freed descriptor add it back into the pool as available
         for (uint32_t i = 0; i < count; ++i) {
-            SET_NODE *pSet = dev_data->setMap[pDescriptorSets[i]]; // getSetNode() without locking
+            cvdescriptorset::DescriptorSet *pSet = dev_data->setMap[pDescriptorSets[i]]; // getSetNode() without locking
             invalidateBoundCmdBuffers(dev_data, pSet);
             uint32_t typeIndex = 0, poolSizeCount = 0;
-            for (uint32_t j = 0; j < pSet->descriptor_set->GetBindingCount(); ++j) {
-                typeIndex = static_cast<uint32_t>(pSet->descriptor_set->GetTypeFromIndex(j));
-                poolSizeCount = pSet->descriptor_set->GetDescriptorCountFromIndex(j);
+            for (uint32_t j = 0; j < pSet->GetBindingCount(); ++j) {
+                typeIndex = static_cast<uint32_t>(pSet->GetTypeFromIndex(j));
+                poolSizeCount = pSet->GetDescriptorCountFromIndex(j);
                 pPoolNode->availableDescriptorTypeCount[typeIndex] += poolSizeCount;
             }
         }
@@ -6461,17 +6462,17 @@ vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipel
                 pCB->lastBound[pipelineBindPoint].boundDescriptorSets.resize(lastSetIndex + 1);
             VkDescriptorSet oldFinalBoundSet = pCB->lastBound[pipelineBindPoint].boundDescriptorSets[lastSetIndex];
             for (uint32_t i = 0; i < setCount; i++) {
-                SET_NODE *pSet = getSetNode(dev_data, pDescriptorSets[i]);
+                cvdescriptorset::DescriptorSet *pSet = getSetNode(dev_data, pDescriptorSets[i]);
                 if (pSet) {
                     pCB->lastBound[pipelineBindPoint].uniqueBoundSets.insert(pDescriptorSets[i]);
-                    pSet->descriptor_set->BindCommandBuffer(commandBuffer);
+                    pSet->BindCommandBuffer(commandBuffer);
                     pCB->lastBound[pipelineBindPoint].pipelineLayout = layout;
                     pCB->lastBound[pipelineBindPoint].boundDescriptorSets[i + firstSet] = pDescriptorSets[i];
                     skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
                                         VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pDescriptorSets[i], __LINE__,
                                         DRAWSTATE_NONE, "DS", "DS %#" PRIxLEAST64 " bound on pipeline %s",
                                         (uint64_t)pDescriptorSets[i], string_VkPipelineBindPoint(pipelineBindPoint));
-                    if (!pSet->descriptor_set->IsUpdated() && (pSet->descriptor_set->GetTotalDescriptorCount() != 0)) {
+                    if (!pSet->IsUpdated() && (pSet->GetTotalDescriptorCount() != 0)) {
                         skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
                                             VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pDescriptorSets[i],
                                             __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
@@ -6488,9 +6489,9 @@ vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipel
                                             "at index %u of pipelineLayout %#" PRIxLEAST64 " due to: %s",
                                             i, i + firstSet, reinterpret_cast<uint64_t &>(layout), errorString.c_str());
                     }
-                    if (pSet->descriptor_set->GetDynamicDescriptorCount()) {
+                    if (pSet->GetDynamicDescriptorCount()) {
                         // First make sure we won't overstep bounds of pDynamicOffsets array
-                        if ((totalDynamicDescriptors + pSet->descriptor_set->GetDynamicDescriptorCount()) > dynamicOffsetCount) {
+                        if ((totalDynamicDescriptors + pSet->GetDynamicDescriptorCount()) > dynamicOffsetCount) {
                             skipCall |=
                                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                         VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pDescriptorSets[i], __LINE__,
@@ -6498,13 +6499,13 @@ vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipel
                                         "descriptorSet #%u (%#" PRIxLEAST64
                                         ") requires %u dynamicOffsets, but only %u dynamicOffsets are left in pDynamicOffsets "
                                         "array. There must be one dynamic offset for each dynamic descriptor being bound.",
-                                        i, (uint64_t)pDescriptorSets[i], pSet->descriptor_set->GetDynamicDescriptorCount(),
+                                        i, (uint64_t)pDescriptorSets[i], pSet->GetDynamicDescriptorCount(),
                                         (dynamicOffsetCount - totalDynamicDescriptors));
                         } else { // Validate and store dynamic offsets with the set
                             // Validate Dynamic Offset Minimums
                             uint32_t cur_dyn_offset = totalDynamicDescriptors;
-                            for (uint32_t d = 0; d < pSet->descriptor_set->GetTotalDescriptorCount(); d++) {
-                                if (pSet->descriptor_set->GetTypeFromGlobalIndex(d) == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
+                            for (uint32_t d = 0; d < pSet->GetTotalDescriptorCount(); d++) {
+                                if (pSet->GetTypeFromGlobalIndex(d) == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
                                     if (vk_safe_modulo(
                                             pDynamicOffsets[cur_dyn_offset],
                                             dev_data->phys_dev_properties.properties.limits.minUniformBufferOffsetAlignment) != 0) {
@@ -6518,8 +6519,7 @@ vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipel
                                             dev_data->phys_dev_properties.properties.limits.minUniformBufferOffsetAlignment);
                                     }
                                     cur_dyn_offset++;
-                                } else if (pSet->descriptor_set->GetTypeFromGlobalIndex(d) ==
-                                           VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+                                } else if (pSet->GetTypeFromGlobalIndex(d) == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
                                     if (vk_safe_modulo(
                                             pDynamicOffsets[cur_dyn_offset],
                                             dev_data->phys_dev_properties.properties.limits.minStorageBufferOffsetAlignment) != 0) {
@@ -6536,7 +6536,7 @@ vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipel
                                 }
                             }
                             // Keep running total of dynamic descriptor count to verify at the end
-                            totalDynamicDescriptors += pSet->descriptor_set->GetDynamicDescriptorCount();
+                            totalDynamicDescriptors += pSet->GetDynamicDescriptorCount();
                         }
                     }
                 } else {

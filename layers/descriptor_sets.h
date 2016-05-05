@@ -273,7 +273,7 @@ class BufferDescriptor : public Descriptor {
  *   those maps is performed externally. The set class relies on their contents to
  *   be correct at the time of update.
  */
-class DescriptorSet {
+class DescriptorSet : public BASE_NODE {
   public:
     DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const std::unordered_map<VkBuffer, BUFFER_NODE> *,
                   const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *,
