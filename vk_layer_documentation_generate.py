@@ -81,6 +81,10 @@ layer_inputs = { 'draw_state' : {'header' : 'layers/core_validation_error_enums.
                             'source' : 'layers/swapchain.cpp',
                             'generated' : False,
                             'error_enum' : 'SWAPCHAIN_ERROR',},
+                 'parameter_validation' : {'header' : 'layers/parameter_validation_utils.h',
+                                           'source' : 'layers/parameter_validation.cpp',
+                                           'generated' : False,
+                                           'error_enum' : 'ErrorCode',},
     }
 
 builtin_headers = [layer_inputs[ln]['header'] for ln in layer_inputs]
@@ -198,8 +202,8 @@ class LayerParser:
                             if enum_name in self.layer_dict[layer_name]['CHECKS']:
                                 print('ERROR : % layer has duplicate error enum: %s' % (layer_name, enum_name))
                             self.layer_dict[layer_name]['CHECKS'].append(enum_name)
-                    # If the line includes 'typedef', 'enum', and the expected enum name, start capturing enums
-                    if False not in [ex in line for ex in ['typedef', 'enum', layer_inputs[layer_name]['error_enum']]]:
+                    # If the line includes 'enum' and the expected enum name, start capturing enums
+                    if False not in [ex in line for ex in ['enum', layer_inputs[layer_name]['error_enum']]]:
                         store_enum = True
 
         # For each source file, parse into dicts
