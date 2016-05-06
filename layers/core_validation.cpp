@@ -6152,6 +6152,13 @@ vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginIn
         if (pCB->beginInfo.pInheritanceInfo) {
             pCB->inheritanceInfo = *(pCB->beginInfo.pInheritanceInfo);
             pCB->beginInfo.pInheritanceInfo = &pCB->inheritanceInfo;
+            // If we are a secondary command-buffer and inheriting.  Update the items we should inherit.
+            if ((pCB->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) &&
+                (pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
+                pCB->activeRenderPass = pCB->beginInfo.pInheritanceInfo->renderPass;
+                pCB->activeSubpass = pCB->beginInfo.pInheritanceInfo->subpass;
+                pCB->framebuffers.insert(pCB->beginInfo.pInheritanceInfo->framebuffer);
+            }
         }
     } else {
         skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
