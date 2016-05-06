@@ -5504,8 +5504,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBuffer(VkDevice device, c
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         // TODO : This doesn't create deep copy of pQueueFamilyIndices so need to fix that if/when we want that data to be valid
-        dev_data->bufferMap[*pBuffer].createInfo = *pCreateInfo;
-        dev_data->bufferMap[*pBuffer].in_use.store(0);
+        dev_data->bufferMap.insert(std::make_pair(*pBuffer, BUFFER_NODE(pCreateInfo)));
     }
     return result;
 }
@@ -5539,7 +5538,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, co
         IMAGE_LAYOUT_NODE image_node;
         image_node.layout = pCreateInfo->initialLayout;
         image_node.format = pCreateInfo->format;
-        dev_data->imageMap[*pImage].createInfo = *pCreateInfo;
+        dev_data->imageMap.insert(std::make_pair(*pImage, IMAGE_NODE(pCreateInfo)));
         ImageSubresourcePair subpair = {*pImage, false, VkImageSubresource()};
         dev_data->imageSubresourceMap[*pImage].push_back(subpair);
         dev_data->imageLayoutMap[subpair] = image_node;

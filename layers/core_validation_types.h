@@ -60,6 +60,9 @@ class BUFFER_NODE : public BASE_NODE {
     using BASE_NODE::in_use;
     VkDeviceMemory mem;
     VkBufferCreateInfo createInfo;
+    BUFFER_NODE() : mem(VK_NULL_HANDLE), createInfo{} { in_use.store(0); };
+    BUFFER_NODE(const VkBufferCreateInfo *pCreateInfo) : mem(VK_NULL_HANDLE), createInfo(*pCreateInfo) { in_use.store(0); };
+    BUFFER_NODE(const BUFFER_NODE &rh_obj) : mem(rh_obj.mem), createInfo(rh_obj.createInfo) { in_use.store(rh_obj.in_use.load()); };
 };
 
 typedef struct _SAMPLER_NODE {
@@ -71,11 +74,22 @@ typedef struct _SAMPLER_NODE {
 
 class IMAGE_NODE : public BASE_NODE {
   public:
+    using BASE_NODE::in_use;
     VkImageCreateInfo createInfo;
     VkDeviceMemory mem;
     bool valid; // If this is a swapchain image backing memory track valid here as it doesn't have DEVICE_MEM_INFO
     VkDeviceSize memOffset;
     VkDeviceSize memSize;
+    IMAGE_NODE() : createInfo{}, mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0) { in_use.store(0); };
+    IMAGE_NODE(const VkImageCreateInfo *pCreateInfo)
+        : createInfo(*pCreateInfo), mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0) {
+        in_use.store(0);
+    };
+    IMAGE_NODE(const IMAGE_NODE &rh_obj)
+        : createInfo(rh_obj.createInfo), mem(rh_obj.mem), valid(rh_obj.valid), memOffset(rh_obj.memOffset),
+          memSize(rh_obj.memSize) {
+        in_use.store(rh_obj.in_use.load());
+    };
 };
 
 // Simple struct to hold handle and type of object so they can be uniquely identified and looked up in appropriate map
