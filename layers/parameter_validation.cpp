@@ -3122,17 +3122,41 @@ vkCmdSetDepthBounds(VkCommandBuffer commandBuffer, float minDepthBounds, float m
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t compareMask) {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilCompareMask(commandBuffer, faceMask, compareMask);
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= parameter_validation_vkCmdSetStencilCompareMask(my_data->report_data, faceMask, compareMask);
+
+    if (!skipCall) {
+        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilCompareMask(commandBuffer, faceMask, compareMask);
+    }
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdSetStencilWriteMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t writeMask) {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilWriteMask(commandBuffer, faceMask, writeMask);
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= parameter_validation_vkCmdSetStencilWriteMask(my_data->report_data, faceMask, writeMask);
+
+    if (!skipCall) {
+        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilWriteMask(commandBuffer, faceMask, writeMask);
+    }
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t reference) {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilReference(commandBuffer, faceMask, reference);
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= parameter_validation_vkCmdSetStencilReference(my_data->report_data, faceMask, reference);
+
+    if (!skipCall) {
+        get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilReference(commandBuffer, faceMask, reference);
+    }
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL
