@@ -8415,21 +8415,20 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
                                                 VkRenderPass *pRenderPass) {
     bool skip_call = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    std::unique_lock<std::mutex> lock(global_lock);
     // Create DAG
     std::vector<bool> has_self_dependency(pCreateInfo->subpassCount);
     std::vector<DAGNode> subpass_to_node(pCreateInfo->subpassCount);
-    skip_call |= CreatePassDAG(dev_data, device, pCreateInfo, subpass_to_node, has_self_dependency);
-    // Validate
-    skip_call |= ValidateLayouts(dev_data, device, pCreateInfo);
-    if (skip_call) {
-        lock.unlock();
-        return VK_ERROR_VALIDATION_FAILED_EXT;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        skip_call |= CreatePassDAG(dev_data, device, pCreateInfo, subpass_to_node, has_self_dependency);
+        // Validate
+        skip_call |= ValidateLayouts(dev_data, device, pCreateInfo);
+        if (skip_call) {
+            return VK_ERROR_VALIDATION_FAILED_EXT;
+        }
     }
-    lock.unlock();
     VkResult result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
     if (VK_SUCCESS == result) {
-        lock.lock();
         // TODOSC : Merge in tracking of renderpass from shader_checker
         // Shadow create info and store in map
         VkRenderPassCreateInfo *localRPCI = new VkRenderPassCreateInfo(*pCreateInfo);
@@ -8478,9 +8477,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
             memcpy((void *)localRPCI->pDependencies, pCreateInfo->pDependencies,
                    localRPCI->dependencyCount * sizeof(VkSubpassDependency));
         }
-        dev_data->renderPassMap[*pRenderPass] = new RENDER_PASS_NODE(localRPCI);
-        dev_data->renderPassMap[*pRenderPass]->hasSelfDependency = has_self_dependency;
-        dev_data->renderPassMap[*pRenderPass]->subpassToNode = subpass_to_node;
+
+        auto render_pass = new RENDER_PASS_NODE(localRPCI);
+        render_pass->hasSelfDependency = has_self_dependency;
+        render_pass->subpassToNode = subpass_to_node;
 #if MTMERGESOURCE
         // MTMTODO : Merge with code from above to eliminate duplication
         for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
@@ -8489,12 +8489,12 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
             pass_info.load_op = desc.loadOp;
             pass_info.store_op = desc.storeOp;
             pass_info.attachment = i;
-            dev_data->renderPassMap[*pRenderPass]->attachments.push_back(pass_info);
+            render_pass->attachments.push_back(pass_info);
         }
         // TODO: Maybe fill list and then copy instead of locking
-        std::unordered_map<uint32_t, bool> &attachment_first_read = dev_data->renderPassMap[*pRenderPass]->attachment_first_read;
+        std::unordered_map<uint32_t, bool> &attachment_first_read = render_pass->attachment_first_read;
         std::unordered_map<uint32_t, VkImageLayout> &attachment_first_layout =
-            dev_data->renderPassMap[*pRenderPass]->attachment_first_layout;
+            render_pass->attachment_first_layout;
         for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
             const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
             if (subpass.pipelineBindPoint != VK_PIPELINE_BIND_POINT_GRAPHICS) {
@@ -8566,7 +8566,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
             }
         }
 #endif
-        lock.unlock();
+        {
+            std::lock_guard<std::mutex> lock(global_lock);
+            dev_data->renderPassMap[*pRenderPass] = render_pass;
+        }
     }
     return result;
 }
