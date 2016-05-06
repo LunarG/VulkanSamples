@@ -67,6 +67,8 @@
 #define LOGCONSOLE(...) printf(__VA_ARGS__)
 #endif
 
+namespace core_validation {
+
 using std::unordered_map;
 using std::unordered_set;
 
@@ -252,7 +254,6 @@ static VkDeviceMemory *get_object_mem_binding(layer_data *my_data, uint64_t hand
 }
 // MTMERGESOURCE - end section
 #endif
-template layer_data *get_my_data_ptr<layer_data>(void *data_key, std::unordered_map<void *, layer_data *> &data_map);
 
 // prototype
 static GLOBAL_CB_NODE *getCBNode(layer_data *, const VkCommandBuffer);
@@ -10058,18 +10059,57 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
     return pTable->GetInstanceProcAddr(instance, funcName);
 }
 
+} // namespace core_validation
+
+// vk_layer_logging.h expects these to be defined
+
+VKAPI_ATTR VkResult VKAPI_CALL
+vkCreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
+                               const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pMsgCallback) {
+    return core_validation::vkCreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);
+}
+
+VKAPI_ATTR void VKAPI_CALL
+vkDestroyDebugReportCallbackEXT(VkInstance instance,
+                                VkDebugReportCallbackEXT msgCallback,
+                                const VkAllocationCallbacks *pAllocator) {
+    core_validation::vkDestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);
+}
+
+VKAPI_ATTR void VKAPI_CALL
+vkDebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t object,
+                        size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg) {
+    core_validation::vkDebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
+}
+
+// loader-layer interface v0
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount, VkExtensionProperties *pProperties) {
-    return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);
+    return util_GetExtensionProperties(1, core_validation::instance_extensions, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
-    return util_GetLayerProperties(ARRAY_SIZE(cv_global_layers), cv_global_layers, pCount, pProperties);
+    return util_GetLayerProperties(ARRAY_SIZE(core_validation::cv_global_layers), core_validation::cv_global_layers, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties *pProperties) {
     /* draw_state physical device layers are the same as global */
-    return util_GetLayerProperties(ARRAY_SIZE(cv_device_layers), cv_device_layers, pCount, pProperties);
+    return util_GetLayerProperties(ARRAY_SIZE(core_validation::cv_device_layers), core_validation::cv_device_layers, pCount, pProperties);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
+                                                                                    const char *pLayerName, uint32_t *pCount,
+                                                                                    VkExtensionProperties *pProperties) {
+    return core_validation::vkEnumerateDeviceExtensionProperties(physicalDevice, pLayerName, pCount, pProperties);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice dev, const char *funcName) {
+    return core_validation::vkGetDeviceProcAddr(dev, funcName);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *funcName) {
+    return core_validation::vkGetInstanceProcAddr(instance, funcName);
 }
