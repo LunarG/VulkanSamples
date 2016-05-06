@@ -5784,14 +5784,67 @@ CreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo
     return result;
 }
 
-static bool validatePushConstantSize(const layer_data *dev_data, const uint32_t offset, const uint32_t size,
-                                     const char *caller_name) {
+// Used by CreatePipelineLayout and CmdPushConstants.
+// Note that the index argument is optional and only used by CreatePipelineLayout.
+static bool validatePushConstantRange(const layer_data *dev_data, const uint32_t offset, const uint32_t size,
+                                      const char *caller_name, uint32_t index = 0) {
+    uint32_t const maxPushConstantsSize = dev_data->phys_dev_properties.properties.limits.maxPushConstantsSize;
     bool skipCall = false;
-    if ((offset + size) > dev_data->phys_dev_properties.properties.limits.maxPushConstantsSize) {
-        skipCall = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                           DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "%s call has push constants with offset %u and size %u that "
-                                                                 "exceeds this device's maxPushConstantSize of %u.",
-                           caller_name, offset, size, dev_data->phys_dev_properties.properties.limits.maxPushConstantsSize);
+    // Check that offset + size don't exceed the max.
+    // Prevent arithetic overflow here by avoiding addition and testing in this order.
+    if ((offset >= maxPushConstantsSize) || (size > maxPushConstantsSize - offset)) {
+        // This is a pain just to adapt the log message to the caller, but better to sort it out only when there is a problem.
+        if (0 == strcmp(caller_name, "vkCreatePipelineLayout()")) {
+            skipCall |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "%s call has push constants index %u with offset %u and size %u that "
+                                                              "exceeds this device's maxPushConstantSize of %u.",
+                        caller_name, index, offset, size, maxPushConstantsSize);
+        } else if (0 == strcmp(caller_name, "vkCmdPushConstants()")) {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "%s call has push constants with offset %u and size %u that "
+                                                                      "exceeds this device's maxPushConstantSize of %u.",
+                                caller_name, offset, size, maxPushConstantsSize);
+        } else {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                DRAWSTATE_INTERNAL_ERROR, "DS", "%s caller not supported.", caller_name);
+        }
+    }
+    // size needs to be non-zero and a multiple of 4.
+    if ((size == 0) || ((size & 0x3) != 0)) {
+        if (0 == strcmp(caller_name, "vkCreatePipelineLayout()")) {
+            skipCall |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "%s call has push constants index %u with "
+                                                              "size %u. Size must be greater than zero and a multiple of 4.",
+                        caller_name, index, size);
+        } else if (0 == strcmp(caller_name, "vkCmdPushConstants()")) {
+            skipCall |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "%s call has push constants with "
+                                                              "size %u. Size must be greater than zero and a multiple of 4.",
+                        caller_name, size);
+        } else {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                DRAWSTATE_INTERNAL_ERROR, "DS", "%s caller not supported.", caller_name);
+        }
+    }
+    // offset needs to be a multiple of 4.
+    if ((offset & 0x3) != 0) {
+        if (0 == strcmp(caller_name, "vkCreatePipelineLayout()")) {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "%s call has push constants index %u with "
+                                                                      "offset %u. Offset must be a multiple of 4.",
+                                caller_name, index, offset);
+        } else if (0 == strcmp(caller_name, "vkCmdPushConstants()")) {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "%s call has push constants with "
+                                                                      "offset %u. Offset must be a multiple of 4.",
+                                caller_name, offset);
+        } else {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                DRAWSTATE_INTERNAL_ERROR, "DS", "%s caller not supported.", caller_name);
+        }
     }
     return skipCall;
 }
@@ -5800,18 +5853,34 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
                                                     const VkAllocationCallbacks *pAllocator, VkPipelineLayout *pPipelineLayout) {
     bool skipCall = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    // Push Constant Range checks
     uint32_t i = 0;
     for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
-        skipCall |= validatePushConstantSize(dev_data, pCreateInfo->pPushConstantRanges[i].offset,
-                                             pCreateInfo->pPushConstantRanges[i].size, "vkCreatePipelineLayout()");
-        if ((pCreateInfo->pPushConstantRanges[i].size == 0) || ((pCreateInfo->pPushConstantRanges[i].size & 0x3) != 0)) {
-            skipCall |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCreatePipelineLayout() call has push constant index %u with "
-                                                              "size %u. Size must be greater than zero and a multiple of 4.",
-                        i, pCreateInfo->pPushConstantRanges[i].size);
+        skipCall |= validatePushConstantRange(dev_data, pCreateInfo->pPushConstantRanges[i].offset,
+                                              pCreateInfo->pPushConstantRanges[i].size, "vkCreatePipelineLayout()", i);
+        if (0 == pCreateInfo->pPushConstantRanges[i].stageFlags) {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCreatePipelineLayout() call has no stageFlags set.");
         }
-        // TODO : Add warning if ranges overlap
+    }
+    // Each range has been validated.  Now check for overlap between ranges (if they are good).
+    if (!skipCall) {
+        uint32_t i, j;
+        for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
+            for (j = i + 1; j < pCreateInfo->pushConstantRangeCount; ++j) {
+                const uint32_t minA = pCreateInfo->pPushConstantRanges[i].offset;
+                const uint32_t maxA = minA + pCreateInfo->pPushConstantRanges[i].size;
+                const uint32_t minB = pCreateInfo->pPushConstantRanges[j].offset;
+                const uint32_t maxB = minB + pCreateInfo->pPushConstantRanges[j].size;
+                if ((minA <= minB && maxA > minB) || (minB <= minA && maxB > minA)) {
+                    skipCall |=
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCreatePipelineLayout() call has push constants with "
+                                                                      "overlapping ranges: %u:[%u, %u), %u:[%u, %u)",
+                                i, minA, maxA, j, minB, maxB);
+                }
+            }
+        }
     }
 
     if (skipCall)
@@ -8006,10 +8075,36 @@ VKAPI_ATTR void VKAPI_CALL CmdPushConstants(VkCommandBuffer commandBuffer, VkPip
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdPushConstants()");
         }
     }
-    if ((offset + size) > dev_data->phys_dev_properties.properties.limits.maxPushConstantsSize) {
-        skipCall |= validatePushConstantSize(dev_data, offset, size, "vkCmdPushConstants()");
+    skipCall |= validatePushConstantRange(dev_data, offset, size, "vkCmdPushConstants()");
+    if (0 == stageFlags) {
+        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCmdPushConstants() call has no stageFlags set.");
     }
-    // TODO : Add warning if push constant update doesn't align with range
+
+    // Check if push constant update is within any of the ranges specified in pipeline layout.
+    auto pipeline_layout_it = dev_data->pipelineLayoutMap.find(layout);
+    if (pipeline_layout_it == dev_data->pipelineLayoutMap.end()) {
+        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCmdPushConstants() Pipeline Layout %" PRIu64 " not found.",
+                            (uint64_t)layout);
+    } else {
+        auto ranges = pipeline_layout_it->second.pushConstantRanges;
+        bool contained_in_a_range = false;
+        for (uint32_t i = 0; i < ranges.size(); ++i) {
+            if ((offset >= ranges[i].offset) &&
+                ((uint64_t)offset + (uint64_t)size <= (uint64_t)ranges[i].offset + (uint64_t)ranges[i].size)) {
+                contained_in_a_range = true;
+                break;
+            }
+        }
+        if (!contained_in_a_range) {
+            skipCall |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCmdPushConstants() Push constant range [%d, %d) "
+                                                              "not within any of the ranges in pipeline layout %" PRIu64 ".",
+                        offset, offset + size, (uint64_t)layout);
+        }
+    }
     lock.unlock();
     if (!skipCall)
         dev_data->device_dispatch_table->CmdPushConstants(commandBuffer, layout, stageFlags, offset, size, pValues);

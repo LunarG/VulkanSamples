@@ -3684,61 +3684,236 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
 }
 
 TEST_F(VkLayerTest, InvalidPushConstants) {
-    // Hit push constant error cases:
-    // 1. Create PipelineLayout where push constant overstep maxPushConstantSize
-    // 2. Incorrectly set push constant size to 0
-    // 3. Incorrectly set push constant size to non-multiple of 4
-    // 4. Attempt push constant update that exceeds maxPushConstantSize
     VkResult err;
-    m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "vkCreatePipelineLayout() call has push constants with offset ");
-
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
+    VkPipelineLayout pipeline_layout;
     VkPushConstantRange pc_range = {};
-    pc_range.size = 0xFFFFFFFFu;
     pc_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
     pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_ci.pushConstantRangeCount = 1;
     pipeline_layout_ci.pPushConstantRanges = &pc_range;
 
-    VkPipelineLayout pipeline_layout;
-    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
-                                 &pipeline_layout);
+    //
+    // Check for invalid push constant ranges in pipeline layouts.
+    //
+    struct PipelineLayoutTestCase {
+        uint32_t const offset;
+        uint32_t const size;
+        char const *msg;
+    };
 
-    m_errorMonitor->VerifyFound();
-    // Now cause errors due to size 0 and non-4 byte aligned size
-    pc_range.size = 0;
+    const uint32_t tooBig = m_device->props.limits.maxPushConstantsSize + 0x4;
+    const std::array<PipelineLayoutTestCase, 10> rangeTests = {{
+        {0, 0, "vkCreatePipelineLayout() call has push constants index 0 with "
+               "size 0."},
+        {0, 1, "vkCreatePipelineLayout() call has push constants index 0 with "
+               "size 1."},
+        {1, 1, "vkCreatePipelineLayout() call has push constants index 0 with "
+               "size 1."},
+        {1, 0, "vkCreatePipelineLayout() call has push constants index 0 with "
+               "size 0."},
+        {1, 4, "vkCreatePipelineLayout() call has push constants index 0 with "
+               "offset 1. Offset must"},
+        {0, tooBig, "vkCreatePipelineLayout() call has push constants index 0 "
+                    "with offset "},
+        {tooBig, tooBig, "vkCreatePipelineLayout() call has push constants "
+                         "index 0 with offset "},
+        {tooBig, 0, "vkCreatePipelineLayout() call has push constants index 0 "
+                    "with offset "},
+        {0xFFFFFFF0, 0x00000020, "vkCreatePipelineLayout() call has push "
+                                 "constants index 0 with offset "},
+        {0x00000020, 0xFFFFFFF0, "vkCreatePipelineLayout() call has push "
+                                 "constants index 0 with offset "},
+    }};
+
+    // Check for invalid offset and size
+    for (const auto &iter : rangeTests) {
+        pc_range.offset = iter.offset;
+        pc_range.size = iter.size;
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             iter.msg);
+        err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci,
+                                     NULL, &pipeline_layout);
+        m_errorMonitor->VerifyFound();
+        if (VK_SUCCESS == err) {
+            vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+        }
+    }
+
+    // Check for invalid stage flag
+    pc_range.offset = 0;
+    pc_range.size = 16;
+    pc_range.stageFlags = 0;
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "vkCreatePipelineLayout() call has push constant index 0 with size 0");
+        "vkCreatePipelineLayout() call has no stageFlags set.");
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
                                  &pipeline_layout);
     m_errorMonitor->VerifyFound();
-    pc_range.size = 1;
-    m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "vkCreatePipelineLayout() call has push constant index 0 with size 1");
-    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
-                                 &pipeline_layout);
-    m_errorMonitor->VerifyFound();
-    // Cause error due to bad size in vkCmdPushConstants() call
-    m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "vkCmdPushConstants() call has push constants with offset ");
-    pipeline_layout_ci.pushConstantRangeCount = 0;
-    pipeline_layout_ci.pPushConstantRanges = NULL;
+    if (VK_SUCCESS == err) {
+        vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    }
+
+    // Check for overlapping ranges
+    const uint32_t rangesPerTest = 5;
+    struct OverlappingRangeTestCase {
+        VkPushConstantRange ranges[rangesPerTest];
+        char const *msg;
+    };
+
+    const std::array<OverlappingRangeTestCase, 5> orTests = {
+        {{{{VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
+           {VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
+           {VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
+           {VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
+           {VK_SHADER_STAGE_VERTEX_BIT, 0, 4}},
+          "vkCreatePipelineLayout() call has push constants with overlapping "
+          "ranges: 0:[0, 4), 1:[0, 4)"},
+         {
+             {{VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 4, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 8, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 12, 8},
+              {VK_SHADER_STAGE_VERTEX_BIT, 16, 4}},
+             "vkCreatePipelineLayout() call has push constants with "
+             "overlapping "
+             "ranges: 3:[12, 20), 4:[16, 20)",
+         },
+         {
+             {{VK_SHADER_STAGE_VERTEX_BIT, 16, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 12, 8},
+              {VK_SHADER_STAGE_VERTEX_BIT, 8, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 4, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 0, 4}},
+             "vkCreatePipelineLayout() call has push constants with "
+             "overlapping "
+             "ranges: 0:[16, 20), 1:[12, 20)",
+         },
+         {
+             {{VK_SHADER_STAGE_VERTEX_BIT, 16, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 8, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 4, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 12, 8},
+              {VK_SHADER_STAGE_VERTEX_BIT, 0, 4}},
+             "vkCreatePipelineLayout() call has push constants with "
+             "overlapping "
+             "ranges: 0:[16, 20), 3:[12, 20)",
+         },
+         {
+             {{VK_SHADER_STAGE_VERTEX_BIT, 16, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 32, 4},
+              {VK_SHADER_STAGE_VERTEX_BIT, 4, 96},
+              {VK_SHADER_STAGE_VERTEX_BIT, 40, 8},
+              {VK_SHADER_STAGE_VERTEX_BIT, 52, 4}},
+             "vkCreatePipelineLayout() call has push constants with "
+             "overlapping "
+             "ranges: 0:[16, 20), 2:[4, 100)",
+         }}};
+    pipeline_layout_ci.pushConstantRangeCount = rangesPerTest;
+
+    for (const auto &iter : orTests) {
+        pipeline_layout_ci.pPushConstantRanges = iter.ranges;
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             iter.msg);
+        err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci,
+                                     NULL, &pipeline_layout);
+        m_errorMonitor->VerifyFound();
+        if (VK_SUCCESS == err) {
+            vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+        }
+    }
+
+    // Run some positive tests to make sure overlap checking in the layer is OK
+    const std::array<OverlappingRangeTestCase, 2> orPosTests = {
+        {{{{VK_SHADER_STAGE_VERTEX_BIT, 0, 4},
+           {VK_SHADER_STAGE_VERTEX_BIT, 4, 4},
+           {VK_SHADER_STAGE_VERTEX_BIT, 8, 4},
+           {VK_SHADER_STAGE_VERTEX_BIT, 12, 4},
+           {VK_SHADER_STAGE_VERTEX_BIT, 16, 4}},
+          ""},
+         {{{VK_SHADER_STAGE_VERTEX_BIT, 92, 24},
+           {VK_SHADER_STAGE_VERTEX_BIT, 80, 4},
+           {VK_SHADER_STAGE_VERTEX_BIT, 64, 8},
+           {VK_SHADER_STAGE_VERTEX_BIT, 4, 16},
+           {VK_SHADER_STAGE_VERTEX_BIT, 0, 4}},
+          ""}}};
+    for (const auto &iter : orPosTests) {
+        pipeline_layout_ci.pPushConstantRanges = iter.ranges;
+        m_errorMonitor->ExpectSuccess();
+        err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci,
+                                     NULL, &pipeline_layout);
+        m_errorMonitor->VerifyNotFound();
+        if (VK_SUCCESS == err) {
+            vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+        }
+    }
+
+    //
+    // CmdPushConstants tests
+    //
+
+    // Check for invalid offset and size and if range is within layout range(s)
+    std::array<PipelineLayoutTestCase, 13> cmdRangeTests = {{
+        {0, 0, "vkCmdPushConstants() call has push constants with size 0. Size "
+               "must be greater than zero and a multiple of 4."},
+        {0, 1, "vkCmdPushConstants() call has push constants with size 1. Size "
+               "must be greater than zero and a multiple of 4."},
+        {1, 1, "vkCmdPushConstants() call has push constants with size 1. Size "
+               "must be greater than zero and a multiple of 4."},
+        {1, 0, "vkCmdPushConstants() call has push constants with offset 1. "
+               "Offset must be a multiple of 4."},
+        {1, 4, "vkCmdPushConstants() call has push constants with offset 1. "
+               "Offset must be a multiple of 4."},
+        {0, 20, "vkCmdPushConstants() Push constant range [0, 20) not within "
+                "any of the ranges in pipeline layout"},
+        {60, 8, "vkCmdPushConstants() Push constant range [60, 68) not within "
+                "any of the ranges in pipeline layout"},
+        {76, 8, "vkCmdPushConstants() Push constant range [76, 84) not within "
+                "any of the ranges in pipeline layout"},
+        {0, tooBig,
+         "vkCmdPushConstants() call has push constants with offset "},
+        {tooBig, tooBig,
+         "vkCmdPushConstants() call has push constants with offset "},
+        {tooBig, 0,
+         "vkCmdPushConstants() call has push constants with offset "},
+        {0xFFFFFFF0, 0x00000020,
+         "vkCmdPushConstants() call has push constants with offset "},
+        {0x00000020, 0xFFFFFFF0,
+         "vkCmdPushConstants() call has push constants with offset "},
+    }};
+
+    // Two ranges for testing robustness
+    VkPushConstantRange pc_range2[] = {
+        {VK_SHADER_STAGE_VERTEX_BIT, 0, 16},
+        {VK_SHADER_STAGE_VERTEX_BIT, 64, 16},
+    };
+    pipeline_layout_ci.pushConstantRangeCount = 2;
+    pipeline_layout_ci.pPushConstantRanges = pc_range2;
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
                                  &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
     BeginCommandBuffer();
-    vkCmdPushConstants(m_commandBuffer->GetBufferHandle(), pipeline_layout,
-                       VK_SHADER_STAGE_VERTEX_BIT, 0, 0xFFFFFFFFu, NULL);
+    for (const auto &iter : cmdRangeTests) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             iter.msg);
+        vkCmdPushConstants(m_commandBuffer->GetBufferHandle(), pipeline_layout,
+                           VK_SHADER_STAGE_VERTEX_BIT, iter.offset, iter.size,
+                           NULL);
+        m_errorMonitor->VerifyFound();
+    }
+
+    // Check for invalid stage flag
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCmdPushConstants() call has no stageFlags set.");
+    vkCmdPushConstants(m_commandBuffer->GetBufferHandle(), pipeline_layout, 0,
+                       0, 16, NULL);
     m_errorMonitor->VerifyFound();
+
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
 }
 
