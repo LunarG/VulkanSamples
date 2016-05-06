@@ -9785,6 +9785,10 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice dev, const c
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName) {
     PFN_vkVoidFunction proc = intercept_core_instance_command(funcName);
+    if (!proc)
+        proc = intercept_core_device_command(funcName);
+    if (!proc)
+        proc = intercept_khr_swapchain_command(funcName, VK_NULL_HANDLE);
     if (proc)
         return proc;
 
@@ -9977,9 +9981,11 @@ intercept_khr_swapchain_command(const char *name, VkDevice dev) {
         { "vkQueuePresentKHR", reinterpret_cast<PFN_vkVoidFunction>(QueuePresentKHR) },
     };
 
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
-    if (!dev_data->device_extensions.wsi_enabled)
-        return nullptr;
+    if (dev) {
+        layer_data *dev_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
+        if (!dev_data->device_extensions.wsi_enabled)
+            return nullptr;
+    }
 
     for (size_t i = 0; i < ARRAY_SIZE(khr_swapchain_commands); i++) {
         if (!strcmp(khr_swapchain_commands[i].name, name))
