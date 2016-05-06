@@ -485,7 +485,7 @@ bool validate_ranged_enum(debug_report_data *report_data, const char *apiName, c
 
     if (((value < begin) || (value > end)) && !is_extension_added_token(value)) {
         skipCall |=
-            log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                     ParameterValidationName, "%s: value of %s (%d) does not fall within the begin..end range of the core %s "
                                              "enumeration tokens and is not an extension added token",
                     apiName, parameterName, value, enumName);
@@ -528,7 +528,7 @@ static bool validate_ranged_enum_array(debug_report_data *report_data, const cha
     } else {
         for (uint32_t i = 0; i < count; ++i) {
             if (((array[i] < begin) || (array[i] > end)) && !is_extension_added_token(array[i])) {
-                skipCall |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                                     ParameterValidationName,
                                     "%s: value of %s[%d] (%d) does not fall within the begin..end range of the core %s "
                                     "enumeration tokens and is not an extension added token",
@@ -585,11 +585,11 @@ static bool validate_flags(debug_report_data *report_data, const char *api_name,
 
     if (value == 0) {
         if (flags_required) {
-            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                                  ParameterValidationName, "%s: value of %s must not be 0", api_name, parameter_name);
         }
     } else if ((value & (~all_flags)) != 0) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                              ParameterValidationName, "%s: value of %s contains flag bits that are not recognized members of %s",
                              api_name, parameter_name, flag_bits_name);
     }
@@ -629,12 +629,12 @@ static bool validate_flags_array(debug_report_data *report_data, const char *api
                 // Current XML registry logic for validity generation uses the array parameter's optional tag to determine if
                 // elements in the array are allowed be 0
                 if (array_required) {
-                    skip_call |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                    skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                          1, ParameterValidationName, "%s: value of %s[%d] must not be 0", api_name, array_name, i);
                 }
             } else if ((array[i] & (~all_flags)) != 0) {
                 skip_call |=
-                    log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                             ParameterValidationName, "%s: value of %s[%d] contains flag bits that are not recognized members of %s",
                             api_name, array_name, i, flag_bits_name);
             }
