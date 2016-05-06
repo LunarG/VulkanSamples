@@ -38,9 +38,9 @@ public:
                 Meshes::MESH_PYRAMID,
                 Meshes::MESH_ICOSPHERE,
                 Meshes::MESH_PYRAMID,
+                Meshes::MESH_ICOSPHERE,
                 Meshes::MESH_PYRAMID,
-                Meshes::MESH_PYRAMID,
-                Meshes::MESH_PYRAMID,
+                Meshes::MESH_ICOSPHERE,
                 Meshes::MESH_PYRAMID,
                 }), cur_(-1)
     {

@@ -8,9 +8,11 @@ layout(std140, push_constant) uniform param_block {
 	vec3 light_color;
 	mat4 model;
 	mat4 view_projection;
+    float alpha;
 } params;
 
 out vec3 color;
+out float alpha;
 
 void main()
 {
@@ -24,4 +26,5 @@ void main()
 
 	gl_Position = params.view_projection * vec4(world_pos, 1.0);
 	color = params.light_color * brightness;
+    alpha = params.alpha;
 }

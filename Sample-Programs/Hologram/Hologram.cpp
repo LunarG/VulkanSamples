@@ -221,6 +221,32 @@ void Hologram::create_render_pass()
     vk::assert_success(vk::CreateRenderPass(dev_, &render_pass_info, nullptr, &render_pass_));
 }
 
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
+
+#include <MoltenGLSLToSPIRVConverter/GLSLConversion.h>
+void Hologram::create_shader_modules()
+{
+    const char* filename;
+    VkShaderModuleCreateInfo sh_info = {};
+    sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+
+    // Vertex shader
+    filename = use_push_constants_ ? "Hologram.push_constant.vert" : "Hologram.vert";
+    sh_info.pCode = mlnConvertGLSLFileToSPIRV(filename, kMLNShaderStageVertex,
+                                              &sh_info.codeSize, false, false);
+    vk::assert_success(vk::CreateShaderModule(dev_, &sh_info, nullptr, &vs_));
+    free((void*)sh_info.pCode);
+
+    // Fragment shader
+    filename = "Hologram.frag";
+    sh_info.pCode = mlnConvertGLSLFileToSPIRV(filename, kMLNShaderStageFragment,
+                                              &sh_info.codeSize, false, false);
+    vk::assert_success(vk::CreateShaderModule(dev_, &sh_info, nullptr, &fs_));
+    free((void*)sh_info.pCode);
+}
+
+#else
+
 void Hologram::create_shader_modules()
 {
     VkShaderModuleCreateInfo sh_info = {};
@@ -241,6 +267,8 @@ void Hologram::create_shader_modules()
     sh_info.pCode = Hologram_frag;
     vk::assert_success(vk::CreateShaderModule(dev_, &sh_info, nullptr, &fs_));
 }
+
+#endif      // __IPHONE_OS_VERSION_MAX_ALLOWED || __MAC_OS_X_VERSION_MAX_ALLOWED
 
 void Hologram::create_descriptor_set_layout()
 {
@@ -660,7 +688,7 @@ void Hologram::update_camera()
     const glm::mat4 view = glm::lookAt(camera_.eye_pos, center, up);
 
     float aspect = static_cast<float>(extent_.width) / static_cast<float>(extent_.height);
-    const glm::mat4 projection = glm::perspective(0.4f, aspect, 0.1f, 100.0f);
+    const glm::mat4 projection = glm::perspective(0.4f, aspect, 0.1f, 1000.0f);
 
     // Vulkan clip space has inverted Y and half Z.
     const glm::mat4 clip(1.0f,  0.0f, 0.0f, 0.0f,
@@ -758,11 +786,11 @@ void Hologram::on_key(Key key)
         shell_->quit();
         break;
     case KEY_UP:
-        camera_.eye_pos -= glm::vec3(0.05f);
+        camera_.eye_pos -= glm::vec3(1.0f);
         update_camera();
         break;
     case KEY_DOWN:
-        camera_.eye_pos += glm::vec3(0.05f);
+        camera_.eye_pos += glm::vec3(1.0f);
         update_camera();
         break;
     case KEY_SPACE:
