@@ -1115,6 +1115,11 @@ command to wrap the objects created by its lower layers, it must make sure its
 lower layers never see the wrapping objects, directly from itself or
 indirectly from its upper layers.
 
+When a layer requires host memory, it may ignore the provided allocators.  It
+should use memory allocators if the layer is intended to run in a production
+environment, such as an implicit layer that is always enabled.  That will
+allow applications to include the layer's memory usage.
+
 `vkEnumerateDeviceExtensionProperties` must handle the case where `pLayerName`
 is `NULL`, usually by chaining to other layers.
 
