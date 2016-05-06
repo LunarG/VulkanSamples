@@ -7499,7 +7499,7 @@ static bool ValidateMaskBits(const layer_data *my_data, VkCommandBuffer cmdBuffe
     bool skip_call = false;
 
     if ((accessMask & required_bit) || (!required_bit && (accessMask & optional_bits))) {
-        if (accessMask & !(required_bit | optional_bits)) {
+        if (accessMask & ~(required_bit | optional_bits)) {
             // TODO: Verify against Valid Use
             skip_call |=
                 log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
