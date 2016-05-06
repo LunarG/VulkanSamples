@@ -1972,11 +1972,12 @@ static bool validate_status(layer_data *my_data, GLOBAL_CB_NODE *pNode, CBStatus
 }
 
 // Retrieve pipeline node ptr for given pipeline object
-static PIPELINE_NODE *getPipeline(layer_data *my_data, const VkPipeline pipeline) {
-    if (my_data->pipelineMap.find(pipeline) == my_data->pipelineMap.end()) {
-        return NULL;
+static PIPELINE_NODE *getPipeline(layer_data const *my_data, const VkPipeline pipeline) {
+    auto it = my_data->pipelineMap.find(pipeline);
+    if (it == my_data->pipelineMap.end()) {
+        return nullptr;
     }
-    return my_data->pipelineMap[pipeline];
+    return it->second;
 }
 
 // Return true if for a given PSO, the given state enum is dynamic, else return false
@@ -2632,30 +2633,30 @@ static void update_shader_storage_images_and_buffers(layer_data *dev_data, GLOBA
 }
 
 // For given pipeline, return number of MSAA samples, or one if MSAA disabled
-static VkSampleCountFlagBits getNumSamples(layer_data *my_data, const VkPipeline pipeline) {
-    PIPELINE_NODE *pipe = my_data->pipelineMap[pipeline];
-    if ((pipe != NULL) && (pipe->graphicsPipelineCI.pMultisampleState != NULL) &&
-        (VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO == pipe->graphicsPipelineCI.pMultisampleState->sType)) {
+static VkSampleCountFlagBits getNumSamples(PIPELINE_NODE const *pipe) {
+    if (pipe->graphicsPipelineCI.pMultisampleState != NULL &&
+        VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO == pipe->graphicsPipelineCI.pMultisampleState->sType) {
         return pipe->graphicsPipelineCI.pMultisampleState->rasterizationSamples;
     }
     return VK_SAMPLE_COUNT_1_BIT;
 }
 
 // Validate draw-time state related to the PSO
-static bool validatePipelineDrawtimeState(layer_data *my_data, const GLOBAL_CB_NODE *pCB,
-                                          const VkPipelineBindPoint pipelineBindPoint, const VkPipeline pipeline) {
+static bool validatePipelineDrawtimeState(layer_data const *my_data, const GLOBAL_CB_NODE *pCB,
+                                          const VkPipelineBindPoint pipelineBindPoint, PIPELINE_NODE const *pPipeline) {
     bool skip_call = false;
     if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
         // Verify that any MSAA request in PSO matches sample# in bound FB
         // Skip the check if rasterization is disabled.
-        PIPELINE_NODE *pPipeline = my_data->pipelineMap[pipeline];
         if (!pPipeline->graphicsPipelineCI.pRasterizationState ||
             (pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) {
-            VkSampleCountFlagBits pso_num_samples = getNumSamples(my_data, pipeline);
+            VkSampleCountFlagBits pso_num_samples = getNumSamples(pPipeline);
             if (pCB->activeRenderPass) {
-                const VkRenderPassCreateInfo *render_pass_info = my_data->renderPassMap[pCB->activeRenderPass]->pCreateInfo;
+                auto render_pass_it = my_data->renderPassMap.find(pCB->activeRenderPass);
+                assert(render_pass_it != my_data->renderPassMap.end());
+                const VkRenderPassCreateInfo *render_pass_info = render_pass_it->second->pCreateInfo;
                 const VkSubpassDescription *subpass_desc = &render_pass_info->pSubpasses[pCB->activeSubpass];
-                VkSampleCountFlagBits subpass_num_samples = (VkSampleCountFlagBits)0;
+                VkSampleCountFlagBits subpass_num_samples = VkSampleCountFlagBits(0);
                 uint32_t i;
 
                 const VkPipelineColorBlendStateCreateInfo *color_blend_state = pPipeline->graphicsPipelineCI.pColorBlendState;
@@ -2663,12 +2664,12 @@ static bool validatePipelineDrawtimeState(layer_data *my_data, const GLOBAL_CB_N
                     (color_blend_state->attachmentCount != subpass_desc->colorAttachmentCount)) {
                     skip_call |=
                         log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                                reinterpret_cast<const uint64_t &>(pipeline), __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                reinterpret_cast<const uint64_t &>(pPipeline->pipeline), __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
                                 "Render pass subpass %u mismatch with blending state defined and blend state attachment "
                                 "count %u while subpass color attachment count %u in Pipeline (%#" PRIxLEAST64 ")!  These "
                                 "must be the same at draw-time.",
                                 pCB->activeSubpass, color_blend_state->attachmentCount, subpass_desc->colorAttachmentCount,
-                                reinterpret_cast<const uint64_t &>(pipeline));
+                                reinterpret_cast<const uint64_t &>(pPipeline->pipeline));
                 }
 
                 for (i = 0; i < subpass_desc->colorAttachmentCount; i++) {
@@ -2699,17 +2700,17 @@ static bool validatePipelineDrawtimeState(layer_data *my_data, const GLOBAL_CB_N
                     (pso_num_samples != subpass_num_samples)) {
                     skip_call |=
                         log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                                reinterpret_cast<const uint64_t &>(pipeline), __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
+                                reinterpret_cast<const uint64_t &>(pPipeline->pipeline), __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
                                 "Num samples mismatch! At draw-time in Pipeline (%#" PRIxLEAST64
                                 ") with %u samples while current RenderPass (%#" PRIxLEAST64 ") w/ %u samples!",
-                                reinterpret_cast<const uint64_t &>(pipeline), pso_num_samples,
+                                reinterpret_cast<const uint64_t &>(pPipeline->pipeline), pso_num_samples,
                                 reinterpret_cast<const uint64_t &>(pCB->activeRenderPass), subpass_num_samples);
                 }
             } else {
                 skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                                     reinterpret_cast<const uint64_t &>(pipeline), __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
+                                     reinterpret_cast<const uint64_t &>(pPipeline->pipeline), __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
                                      "No active render pass found at draw-time in Pipeline (%#" PRIxLEAST64 ")!",
-                                     reinterpret_cast<const uint64_t &>(pipeline));
+                                     reinterpret_cast<const uint64_t &>(pPipeline->pipeline));
             }
         }
         // TODO : Add more checks here
@@ -2845,7 +2846,7 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
     //} // end of "if (VK_PIPELINE_BIND_POINT_GRAPHICS == bindPoint) {" block
 
     // Check general pipeline state that needs to be validated at drawtime
-    result |= validatePipelineDrawtimeState(my_data, pCB, bindPoint, state.pipeline);
+    result |= validatePipelineDrawtimeState(my_data, pCB, bindPoint, pPipe);
 
     return result;
 }
