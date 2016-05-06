@@ -227,6 +227,7 @@ struct DAGNode {
 };
 
 struct RENDER_PASS_NODE {
+    VkRenderPass renderPass;
     VkRenderPassCreateInfo const *pCreateInfo;
     VkFramebuffer fb;
     vector<bool> hasSelfDependency;
