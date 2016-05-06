@@ -33,6 +33,7 @@
 #include "glm/glm.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
+#define PARAMETER_VALIDATION_TESTS 1
 #define MEM_TRACKER_TESTS 1
 #define OBJ_TRACKER_TESTS 1
 #define DRAW_STATE_TESTS 1
@@ -512,6 +513,101 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer,
 // ********************************************************************************************************************
 // ********************************************************************************************************************
 // ********************************************************************************************************************
+#if PARAMETER_VALIDATION_TESTS
+TEST_F(VkLayerTest, RequiredParameter) {
+    TEST_DESCRIPTION("Specify VK_NULL_HANDLE, NULL, and 0 for required handle, "
+                     "pointer, array, and array count parameters");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "required parameter pFeatures specified as NULL");
+    // Specify NULL for a pointer to a handle
+    // Expected to trigger an error with
+    // parameter_validation::validate_required_pointer
+    vkGetPhysicalDeviceFeatures(gpu(), NULL);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "required parameter pPhysicalDeviceCount specified as NULL");
+    // Specify NULL for pointer to array count
+    // Expected to trigger an error with parameter_validation::validate_array
+    vkEnumeratePhysicalDevices(instance(), NULL, NULL);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "parameter viewportCount must be greater than 0");
+    // Specify 0 for a required array count
+    // Expected to trigger an error with parameter_validation::validate_array
+    VkViewport view_port = {};
+    m_commandBuffer->SetViewport(0, 0, &view_port);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "required parameter pViewports specified as NULL");
+    // Specify NULL for a required array
+    // Expected to trigger an error with parameter_validation::validate_array
+    m_commandBuffer->SetViewport(0, 1, NULL);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "required parameter memory specified as VK_NULL_HANDLE");
+    // Specify VK_NULL_HANDLE for a required handle
+    // Expected to trigger an error with
+    // parameter_validation::validate_required_handle
+    vkUnmapMemory(device(), VK_NULL_HANDLE);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "required parameter pFences[0] specified as VK_NULL_HANDLE");
+    // Specify VK_NULL_HANDLE for a required handle array entry
+    // Expected to trigger an error with
+    // parameter_validation::validate_required_handle_array
+    VkFence fence = VK_NULL_HANDLE;
+    vkResetFences(device(), 1, &fence);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "required parameter pAllocateInfo specified as NULL");
+    // Specify NULL for a required struct pointer
+    // Expected to trigger an error with
+    // parameter_validation::validate_struct_type
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    vkAllocateMemory(device(), NULL, NULL, &memory);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "value of faceMask must not be 0");
+    // Specify 0 for a required VkFlags parameter
+    // Expected to trigger an error with parameter_validation::validate_flags
+    m_commandBuffer->SetStencilReference(0, 0);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "value of pSubmits[i].pWaitDstStageMask[0] must not be 0");
+    // Specify 0 for a required VkFlags array entry
+    // Expected to trigger an error with
+    // parameter_validation::validate_flags_array
+    VkSemaphore semaphore = VK_NULL_HANDLE;
+    VkPipelineStageFlags stageFlags = 0;
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = &semaphore;
+    submitInfo.pWaitDstStageMask = &stageFlags;
+    vkQueueSubmit(m_device->m_queue, 1, &submitInfo, VK_NULL_HANDLE);
+    m_errorMonitor->VerifyFound();
+}
+#endif // PARAMETER_VALIDATION_TESTS
+
 #if MEM_TRACKER_TESTS
 #if 0
 TEST_F(VkLayerTest, CallResetCommandBufferBeforeCompletion)
