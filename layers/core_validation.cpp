@@ -2652,9 +2652,7 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data, const GLOBA
             (pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) {
             VkSampleCountFlagBits pso_num_samples = getNumSamples(pPipeline);
             if (pCB->activeRenderPass) {
-                auto render_pass_it = my_data->renderPassMap.find(pCB->activeRenderPass);
-                assert(render_pass_it != my_data->renderPassMap.end());
-                const VkRenderPassCreateInfo *render_pass_info = render_pass_it->second->pCreateInfo;
+                const VkRenderPassCreateInfo *render_pass_info = pCB->activeRenderPass->pCreateInfo;
                 const VkSubpassDescription *subpass_desc = &render_pass_info->pSubpasses[pCB->activeSubpass];
                 VkSampleCountFlagBits subpass_num_samples = VkSampleCountFlagBits(0);
                 uint32_t i;
@@ -2704,7 +2702,7 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data, const GLOBA
                                 "Num samples mismatch! At draw-time in Pipeline (%#" PRIxLEAST64
                                 ") with %u samples while current RenderPass (%#" PRIxLEAST64 ") w/ %u samples!",
                                 reinterpret_cast<const uint64_t &>(pPipeline->pipeline), pso_num_samples,
-                                reinterpret_cast<const uint64_t &>(pCB->activeRenderPass), subpass_num_samples);
+                                reinterpret_cast<const uint64_t &>(pCB->activeRenderPass->renderPass), subpass_num_samples);
                 }
             } else {
                 skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
@@ -3715,7 +3713,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         }
 
         memset(&pCB->activeRenderPassBeginInfo, 0, sizeof(pCB->activeRenderPassBeginInfo));
-        pCB->activeRenderPass = 0;
+        pCB->activeRenderPass = nullptr;
         pCB->activeSubpassContents = VK_SUBPASS_CONTENTS_INLINE;
         pCB->activeSubpass = 0;
         pCB->lastSubmittedFence = VK_NULL_HANDLE;
@@ -3859,7 +3857,7 @@ static bool insideRenderPass(const layer_data *my_data, GLOBAL_CB_NODE *pCB, con
         inside = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                          (uint64_t)pCB->commandBuffer, __LINE__, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                          "%s: It is invalid to issue this call inside an active render pass (%#" PRIxLEAST64 ")", apiName,
-                         (uint64_t)pCB->activeRenderPass);
+                         (uint64_t)pCB->activeRenderPass->renderPass);
     }
     return inside;
 }
@@ -6153,7 +6151,8 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
             // If we are a secondary command-buffer and inheriting.  Update the items we should inherit.
             if ((pCB->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) &&
                 (pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
-                pCB->activeRenderPass = pCB->beginInfo.pInheritanceInfo->renderPass;
+                auto inherited_render_pass_it = dev_data->renderPassMap.find(pCB->beginInfo.pInheritanceInfo->renderPass);
+                pCB->activeRenderPass = inherited_render_pass_it != dev_data->renderPassMap.end() ? inherited_render_pass_it->second : nullptr;
                 pCB->activeSubpass = pCB->beginInfo.pInheritanceInfo->subpass;
                 pCB->framebuffers.insert(pCB->beginInfo.pInheritanceInfo->framebuffer);
             }
@@ -6250,7 +6249,7 @@ CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindP
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                         (uint64_t)pipeline, __LINE__, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                         "Incorrectly binding compute pipeline (%#" PRIxLEAST64 ") during active RenderPass (%#" PRIxLEAST64 ")",
-                        (uint64_t)pipeline, (uint64_t)pCB->activeRenderPass);
+                        (uint64_t)pipeline, (uint64_t)pCB->activeRenderPass->renderPass);
         }
 
         PIPELINE_NODE *pPN = getPipeline(dev_data, pipeline);
@@ -7250,7 +7249,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
 
     // Validate that attachment is in reference list of active subpass
     if (pCB->activeRenderPass) {
-        const VkRenderPassCreateInfo *pRPCI = dev_data->renderPassMap[pCB->activeRenderPass]->pCreateInfo;
+        const VkRenderPassCreateInfo *pRPCI = pCB->activeRenderPass->pCreateInfo;
         const VkSubpassDescription *pSD = &pRPCI->pSubpasses[pCB->activeSubpass];
 
         for (uint32_t attachment_idx = 0; attachment_idx < attachmentCount; attachment_idx++) {
@@ -7606,7 +7605,7 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, cmdBuffer);
     if (pCB->activeRenderPass && memBarrierCount) {
-        if (!dev_data->renderPassMap[pCB->activeRenderPass]->hasSelfDependency[pCB->activeSubpass]) {
+        if (!pCB->activeRenderPass->hasSelfDependency[pCB->activeSubpass]) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                  DRAWSTATE_INVALID_BARRIER, "DS", "%s: Barriers cannot be set during subpass %d "
                                                                   "with no self dependency specified.",
@@ -8788,14 +8787,17 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
 #endif
             skipCall |= VerifyRenderAreaBounds(dev_data, pRenderPassBegin);
             skipCall |= VerifyFramebufferAndRenderPassLayouts(commandBuffer, pRenderPassBegin);
+            skipCall |= insideRenderPass(dev_data, pCB, "vkCmdBeginRenderPass");
             auto render_pass_data = dev_data->renderPassMap.find(pRenderPassBegin->renderPass);
             if (render_pass_data != dev_data->renderPassMap.end()) {
                 skipCall |= ValidateDependencies(dev_data, pRenderPassBegin, render_pass_data->second->subpassToNode);
+                pCB->activeRenderPass = render_pass_data->second;
             }
-            skipCall |= insideRenderPass(dev_data, pCB, "vkCmdBeginRenderPass");
+            else {
+                pCB->activeRenderPass = nullptr;
+            }
             skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdBeginRenderPass");
             skipCall |= addCmd(dev_data, pCB, CMD_BEGINRENDERPASS, "vkCmdBeginRenderPass()");
-            pCB->activeRenderPass = pRenderPassBegin->renderPass;
             // This is a shallow copy as that is all that is needed for now
             pCB->activeRenderPassBeginInfo = *pRenderPassBegin;
             pCB->activeSubpass = 0;
@@ -8840,9 +8842,8 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
 #if MTMERGESOURCE
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     if (cb_data != dev_data->commandBufferMap.end()) {
-        auto pass_data = dev_data->renderPassMap.find(cb_data->second->activeRenderPass);
-        if (pass_data != dev_data->renderPassMap.end()) {
-            RENDER_PASS_NODE* pRPNode = pass_data->second;
+        RENDER_PASS_NODE* pRPNode = cb_data->second->activeRenderPass;
+        if (pRPNode) {
             for (size_t i = 0; i < pRPNode->attachments.size(); ++i) {
                 MT_FB_ATTACHMENT_INFO &fb_info = dev_data->frameBufferMap[pRPNode->fb].attachments[i];
                 if (pRPNode->attachments[i].store_op == VK_ATTACHMENT_STORE_OP_STORE) {
@@ -8872,7 +8873,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
         skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdEndRenderPass");
         skipCall |= addCmd(dev_data, pCB, CMD_ENDRENDERPASS, "vkCmdEndRenderPass()");
         TransitionFinalSubpassLayouts(commandBuffer, &pCB->activeRenderPassBeginInfo);
-        pCB->activeRenderPass = 0;
+        pCB->activeRenderPass = nullptr;
         pCB->activeSubpass = 0;
     }
     lock.unlock();
@@ -9036,7 +9037,7 @@ static bool validateFramebuffer(layer_data *dev_data, VkCommandBuffer primaryBuf
     if (!pSubCB->beginInfo.pInheritanceInfo) {
         return skip_call;
     }
-    VkFramebuffer primary_fb = dev_data->renderPassMap[pCB->activeRenderPass]->fb;
+    VkFramebuffer primary_fb = pCB->activeRenderPass->fb;
     VkFramebuffer secondary_fb = pSubCB->beginInfo.pInheritanceInfo->framebuffer;
     if (secondary_fb != VK_NULL_HANDLE) {
         if (primary_fb != secondary_fb) {
@@ -9128,15 +9129,15 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
                         (uint64_t)pCommandBuffers[i], __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
                         "vkCmdExecuteCommands(): Secondary Command Buffer (%p) executed within render pass (%#" PRIxLEAST64
                         ") must have had vkBeginCommandBuffer() called w/ VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT set.",
-                        (void *)pCommandBuffers[i], (uint64_t)pCB->activeRenderPass);
+                        (void *)pCommandBuffers[i], (uint64_t)pCB->activeRenderPass->renderPass);
                 } else {
                     // Make sure render pass is compatible with parent command buffer pass if has continue
-                    skipCall |= validateRenderPassCompatibility(dev_data, commandBuffer, pCB->activeRenderPass, pCommandBuffers[i],
+                    skipCall |= validateRenderPassCompatibility(dev_data, commandBuffer, pCB->activeRenderPass->renderPass, pCommandBuffers[i],
                                                                 pSubCB->beginInfo.pInheritanceInfo->renderPass);
                     skipCall |= validateFramebuffer(dev_data, commandBuffer, pCB, pCommandBuffers[i], pSubCB);
                 }
                 string errorString = "";
-                if (!verify_renderpass_compatibility(dev_data, pCB->activeRenderPass,
+                if (!verify_renderpass_compatibility(dev_data, pCB->activeRenderPass->renderPass,
                                                      pSubCB->beginInfo.pInheritanceInfo->renderPass, errorString)) {
                     skipCall |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
@@ -9144,7 +9145,7 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
                         "vkCmdExecuteCommands(): Secondary Command Buffer (%p) w/ render pass (%#" PRIxLEAST64
                         ") is incompatible w/ primary command buffer (%p) w/ render pass (%#" PRIxLEAST64 ") due to: %s",
                         (void *)pCommandBuffers[i], (uint64_t)pSubCB->beginInfo.pInheritanceInfo->renderPass, (void *)commandBuffer,
-                        (uint64_t)pCB->activeRenderPass, errorString.c_str());
+                        (uint64_t)pCB->activeRenderPass->renderPass, errorString.c_str());
                 }
                 //  If framebuffer for secondary CB is not NULL, then it must match FB from vkCmdBeginRenderPass()
                 //   that this CB will be executed in AND framebuffer must have been created w/ RP compatible w/ renderpass
@@ -9156,7 +9157,7 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
                             "vkCmdExecuteCommands(): Secondary Command Buffer (%p) references framebuffer (%#" PRIxLEAST64
                             ") that does not match framebuffer (%#" PRIxLEAST64 ") in active renderpass (%#" PRIxLEAST64 ").",
                             (void *)pCommandBuffers[i], (uint64_t)pSubCB->beginInfo.pInheritanceInfo->framebuffer,
-                            (uint64_t)pCB->activeRenderPassBeginInfo.framebuffer, (uint64_t)pCB->activeRenderPass);
+                            (uint64_t)pCB->activeRenderPassBeginInfo.framebuffer, (uint64_t)pCB->activeRenderPass->renderPass);
                     }
                 }
             }

@@ -553,7 +553,7 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     uint64_t fenceId;
     VkFence lastSubmittedFence;
     VkQueue lastSubmittedQueue;
-    VkRenderPass activeRenderPass;
+    RENDER_PASS_NODE *activeRenderPass;
     VkSubpassContents activeSubpassContents;
     uint32_t activeSubpass;
     std::unordered_set<VkFramebuffer> framebuffers;
