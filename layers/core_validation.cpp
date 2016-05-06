@@ -142,20 +142,20 @@ struct layer_data {
 // TODO : Do we need to guard access to layer_data_map w/ lock?
 static unordered_map<void *, layer_data *> layer_data_map;
 
-static const VkLayerProperties cv_global_layers[] = {{
+static const VkLayerProperties global_layer = {
     "VK_LAYER_LUNARG_core_validation", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
-}};
+};
 
 template <class TCreateInfo> void ValidateLayerOrdering(const TCreateInfo &createInfo) {
     bool foundLayer = false;
     for (uint32_t i = 0; i < createInfo.enabledLayerCount; ++i) {
-        if (!strcmp(createInfo.ppEnabledLayerNames[i], cv_global_layers[0].layerName)) {
+        if (!strcmp(createInfo.ppEnabledLayerNames[i], global_layer.layerName)) {
             foundLayer = true;
         }
         // This has to be logged to console as we don't have a callback at this point.
         if (!foundLayer && !strcmp(createInfo.ppEnabledLayerNames[0], "VK_LAYER_GOOGLE_unique_objects")) {
             LOGCONSOLE("Cannot activate layer VK_LAYER_GOOGLE_unique_objects prior to activating %s.",
-                       cv_global_layers[0].layerName);
+                       global_layer.layerName);
         }
     }
 }
@@ -4073,11 +4073,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
 }
 
 static const VkExtensionProperties instance_extensions[] = {{VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};
-
-// TODO: Why does this exist - can we just use global?
-static const VkLayerProperties cv_device_layers[] = {{
-    "VK_LAYER_LUNARG_core_validation", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
-}};
 
 // This validates that the initial layout specified in the command buffer for
 // the IMAGE is the same
@@ -10090,13 +10085,12 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
-    return util_GetLayerProperties(ARRAY_SIZE(core_validation::cv_global_layers), core_validation::cv_global_layers, pCount, pProperties);
+    return util_GetLayerProperties(1, &core_validation::global_layer, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties *pProperties) {
-    /* draw_state physical device layers are the same as global */
-    return util_GetLayerProperties(ARRAY_SIZE(core_validation::cv_device_layers), core_validation::cv_device_layers, pCount, pProperties);
+    return util_GetLayerProperties(1, &core_validation::global_layer, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
