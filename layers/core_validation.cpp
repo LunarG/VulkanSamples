@@ -5586,21 +5586,30 @@ static void ResolveRemainingLevelsLayers(layer_data *dev_data, uint32_t *levels,
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device, const VkImageViewCreateInfo *pCreateInfo,
                                                                  const VkAllocationCallbacks *pAllocator, VkImageView *pView) {
+    bool skipCall = false;
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pAllocator, pView);
+    {
+        // Validate that img has correct usage flags set
+        std::lock_guard<std::mutex> lock(global_lock);
+        skipCall |= validate_image_usage_flags(dev_data, pCreateInfo->image,
+                VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
+                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
+    }
+
+    if (!skipCall) {
+        result = dev_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pAllocator, pView);
+    }
+
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         VkImageViewCreateInfo localCI = VkImageViewCreateInfo(*pCreateInfo);
         ResolveRemainingLevelsLayers(dev_data, &localCI.subresourceRange, pCreateInfo->image);
         dev_data->imageViewMap[*pView] = localCI;
-#if MTMERGESOURCE
-        // Validate that img has correct usage flags set
-        validate_image_usage_flags(dev_data, pCreateInfo->image,
-                                   VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
-                                       VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                                   false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
-#endif
     }
+
     return result;
 }
 
