@@ -1323,8 +1323,6 @@ TEST_F(VkLayerTest, InvalidUsageBits)
                            image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                            1, &region);
     m_errorMonitor->VerifyFound();
-
-    vkDestroyImageView(m_device->device(), dsv, NULL);
 }
 #endif // MEM_TRACKER_TESTS
 
