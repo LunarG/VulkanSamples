@@ -3214,7 +3214,17 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
     mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     mem_alloc.pNext = NULL;
     mem_alloc.allocationSize = 1024;
-    mem_alloc.memoryTypeIndex = 1;
+    mem_alloc.memoryTypeIndex = 0;
+
+    VkMemoryRequirements memReqs;
+    vkGetBufferMemoryRequirements(m_device->device(), dyub, &memReqs);
+    bool pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &mem_alloc,
+                                           0);
+    if (!pass) {
+        vkDestroyBuffer(m_device->device(), dyub, NULL);
+        return;
+    }
+
     VkDeviceMemory mem;
     err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
     ASSERT_VK_SUCCESS(err);
