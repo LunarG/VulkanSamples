@@ -8650,7 +8650,7 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount) {
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
-    // Create two images of sample count 2 and try to Resolve between them
+    // Create two images of sample count 4 and try to Resolve between them
     VkImage srcImage;
     VkImage dstImage;
     VkDeviceMemory srcMem;
@@ -8667,7 +8667,7 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount) {
     image_create_info.extent.depth = 1;
     image_create_info.mipLevels = 1;
     image_create_info.arrayLayers = 1;
-    image_create_info.samples = VK_SAMPLE_COUNT_2_BIT;
+    image_create_info.samples = VK_SAMPLE_COUNT_4_BIT;
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     // Note: Some implementations expect color attachment usage for any
     // multisample surface
