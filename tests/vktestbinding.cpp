@@ -549,14 +549,18 @@ void Image::init(const Device &dev, const VkImageCreateInfo &info,
                  VkMemoryPropertyFlags mem_props) {
     init_no_mem(dev, info);
 
-    internal_mem_.init(
-        dev, get_resource_alloc_info(dev, memory_requirements(), mem_props));
-    bind_memory(internal_mem_, 0);
+    if (initialized()) {
+        internal_mem_.init(
+                    dev, get_resource_alloc_info(dev, memory_requirements(), mem_props));
+        bind_memory(internal_mem_, 0);
+    }
 }
 
 void Image::init_no_mem(const Device &dev, const VkImageCreateInfo &info) {
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateImage, dev, &info);
-    init_info(dev, info);
+    if (initialized()) {
+        init_info(dev, info);
+    }
 }
 
 void Image::init_info(const Device &dev, const VkImageCreateInfo &info) {

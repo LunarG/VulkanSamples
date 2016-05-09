@@ -47,6 +47,7 @@
 
 #pragma once
 #include "core_validation_error_enums.h"
+#include "core_validation_types.h"
 #include "descriptor_sets.h"
 #include "vk_layer_logging.h"
 #include "vk_safe_struct.h"
@@ -62,10 +63,6 @@ using std::vector;
 using std::unordered_set;
 
 #if MTMERGE
-struct MemRange {
-    VkDeviceSize offset;
-    VkDeviceSize size;
-};
 
 /*
  * MTMTODO : Update this comment
@@ -97,48 +94,6 @@ struct MemRange {
  */
 // TODO : Is there a way to track when Cmd Buffer finishes & remove mem references at that point?
 // TODO : Could potentially store a list of freed mem allocs to flag when they're incorrectly used
-
-// Simple struct to hold handle and type of object so they can be uniquely identified and looked up in appropriate map
-struct MT_OBJ_HANDLE_TYPE {
-    uint64_t handle;
-    VkDebugReportObjectTypeEXT type;
-};
-
-bool operator==(MT_OBJ_HANDLE_TYPE a, MT_OBJ_HANDLE_TYPE b) NOEXCEPT{
-    return a.handle == b.handle && a.type == b.type;
-}
-
-namespace std {
-    template<>
-    struct hash<MT_OBJ_HANDLE_TYPE> {
-        size_t operator()(MT_OBJ_HANDLE_TYPE obj) const NOEXCEPT{
-            return hash<uint64_t>()(obj.handle) ^
-                   hash<uint32_t>()(obj.type);
-        }
-    };
-}
-
-struct MEMORY_RANGE {
-    uint64_t handle;
-    VkDeviceMemory memory;
-    VkDeviceSize start;
-    VkDeviceSize end;
-};
-
-// Data struct for tracking memory object
-struct DEVICE_MEM_INFO {
-    void *object;      // Dispatchable object used to create this memory (device of swapchain)
-    bool valid;        // Stores if the memory has valid data or not
-    VkDeviceMemory mem;
-    VkMemoryAllocateInfo allocInfo;
-    unordered_set<MT_OBJ_HANDLE_TYPE> objBindings; // objects bound to this memory
-    unordered_set<VkCommandBuffer> commandBufferBindings; // cmd buffers referencing this memory
-    vector<MEMORY_RANGE> bufferRanges;
-    vector<MEMORY_RANGE> imageRanges;
-    VkImage image; // If memory is bound to image, this will have VkImage handle, else VK_NULL_HANDLE
-    MemRange memRange;
-    void *pData, *pDriverData;
-};
 
 struct MT_FB_ATTACHMENT_INFO {
     VkImage image;
@@ -249,27 +204,6 @@ class PIPELINE_NODE {
     }
 };
 
-class BASE_NODE {
-  public:
-    std::atomic_int in_use;
-};
-
-typedef struct _SAMPLER_NODE {
-    VkSampler sampler;
-    VkSamplerCreateInfo createInfo;
-
-    _SAMPLER_NODE(const VkSampler *ps, const VkSamplerCreateInfo *pci) : sampler(*ps), createInfo(*pci){};
-} SAMPLER_NODE;
-
-class IMAGE_NODE : public BASE_NODE {
-  public:
-    VkImageCreateInfo createInfo;
-    VkDeviceMemory mem;
-    bool valid; // If this is a swapchain image backing memory track valid here as it doesn't have DEVICE_MEM_INFO
-    VkDeviceSize memOffset;
-    VkDeviceSize memSize;
-};
-
 typedef struct _IMAGE_LAYOUT_NODE {
     VkImageLayout layout;
     VkFormat format;
@@ -283,13 +217,6 @@ class IMAGE_CMD_BUF_LAYOUT_NODE {
 
     VkImageLayout initialLayout;
     VkImageLayout layout;
-};
-
-class BUFFER_NODE : public BASE_NODE {
-  public:
-    using BASE_NODE::in_use;
-    VkDeviceMemory mem;
-    VkBufferCreateInfo createInfo;
 };
 
 // Store the DAG.
@@ -321,9 +248,13 @@ struct RENDER_PASS_NODE {
             color_formats.reserve(subpass->colorAttachmentCount);
             for (j = 0; j < subpass->colorAttachmentCount; j++) {
                 const uint32_t att = subpass->pColorAttachments[j].attachment;
-                const VkFormat format = pCreateInfo->pAttachments[att].format;
 
-                color_formats.push_back(format);
+                if (att != VK_ATTACHMENT_UNUSED) {
+                    color_formats.push_back(pCreateInfo->pAttachments[att].format);
+                }
+                else {
+                    color_formats.push_back(VK_FORMAT_UNDEFINED);
+                }
             }
 
             subpassColorFormats.push_back(color_formats);
@@ -398,35 +329,18 @@ struct PIPELINE_LAYOUT_NODE {
     vector<VkPushConstantRange> pushConstantRanges;
 };
 
-class SET_NODE : public BASE_NODE {
-  public:
-    using BASE_NODE::in_use;
-    VkDescriptorSet set;
-    VkDescriptorPool pool;
-    // Head of LL of all Update structs for this set
-    GENERIC_HEADER *pUpdateStructs;
-    uint32_t descriptorCount;                   // Total num of descriptors in this set
-    vector<GENERIC_HEADER*> pDescriptorUpdates; // Vector where each index points to update node for its slot
-    DescriptorSetLayout *p_layout;              // DescriptorSetLayout for this set
-    SET_NODE *pNext;
-    unordered_set<VkCommandBuffer> boundCmdBuffers; // Cmd buffers that this set has been bound to
-    SET_NODE()
-        : set(VK_NULL_HANDLE), pool(VK_NULL_HANDLE), pUpdateStructs(nullptr), descriptorCount(0), p_layout(nullptr),
-          pNext(nullptr){};
-};
-
 typedef struct _DESCRIPTOR_POOL_NODE {
     VkDescriptorPool pool;
     uint32_t maxSets;                              // Max descriptor sets allowed in this pool
     uint32_t availableSets;                        // Available descriptor sets in this pool
 
     VkDescriptorPoolCreateInfo createInfo;
-    SET_NODE *pSets;                               // Head of LL of sets for this Pool
+    unordered_set<cvdescriptorset::DescriptorSet *> sets; // Collection of all sets in this pool
     vector<uint32_t> maxDescriptorTypeCount;       // Max # of descriptors of each type in this pool
     vector<uint32_t> availableDescriptorTypeCount; // Available # of descriptors of each type in this pool
 
     _DESCRIPTOR_POOL_NODE(const VkDescriptorPool pool, const VkDescriptorPoolCreateInfo *pCreateInfo)
-        : pool(pool), maxSets(pCreateInfo->maxSets), availableSets(pCreateInfo->maxSets), createInfo(*pCreateInfo), pSets(NULL),
+        : pool(pool), maxSets(pCreateInfo->maxSets), availableSets(pCreateInfo->maxSets), createInfo(*pCreateInfo),
           maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0), availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0) {
         if (createInfo.poolSizeCount) { // Shadow type struct from ptr into local struct
             size_t poolSizeCountSize = createInfo.poolSizeCount * sizeof(VkDescriptorPoolSize);
@@ -673,17 +587,3 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     vector<std::function<bool(VkQueue)>> eventUpdates;
 };
 
-class SWAPCHAIN_NODE {
-  public:
-    VkSwapchainCreateInfoKHR createInfo;
-    uint32_t *pQueueFamilyIndices;
-    std::vector<VkImage> images;
-    SWAPCHAIN_NODE(const VkSwapchainCreateInfoKHR *pCreateInfo) : createInfo(*pCreateInfo), pQueueFamilyIndices(NULL) {
-        if (pCreateInfo->queueFamilyIndexCount && pCreateInfo->imageSharingMode == VK_SHARING_MODE_CONCURRENT) {
-            pQueueFamilyIndices = new uint32_t[pCreateInfo->queueFamilyIndexCount];
-            memcpy(pQueueFamilyIndices, pCreateInfo->pQueueFamilyIndices, pCreateInfo->queueFamilyIndexCount * sizeof(uint32_t));
-            createInfo.pQueueFamilyIndices = pQueueFamilyIndices;
-        }
-    }
-    ~SWAPCHAIN_NODE() { delete[] pQueueFamilyIndices; }
-};

@@ -33,9 +33,7 @@ typedef enum _OBJECT_TRACK_ERROR {
     OBJTRACK_NONE,                     // Used for INFO & other non-error messages
     OBJTRACK_UNKNOWN_OBJECT,           // Updating uses of object that's not in global object list
     OBJTRACK_INTERNAL_ERROR,           // Bug with data tracking within the layer
-    OBJTRACK_DESTROY_OBJECT_FAILED,    // Couldn't find object to be destroyed
     OBJTRACK_OBJECT_LEAK,              // OBJECT was not correctly freed/destroyed
-    OBJTRACK_OBJCOUNT_MAX_EXCEEDED,    // Request for Object data in excess of max obj count
     OBJTRACK_INVALID_OBJECT,           // Object used that has never been created
     OBJTRACK_DESCRIPTOR_POOL_MISMATCH, // Descriptor Pools specified incorrectly
     OBJTRACK_COMMAND_POOL_MISMATCH,    // Command Pools specified incorrectly
@@ -98,13 +96,10 @@ static instance_table_map object_tracker_instance_table_map;
 
 // We need additionally validate image usage using a separate map
 // of swapchain-created images
-static unordered_map<uint64_t, OBJTRACK_NODE *> swapchainImageMap;
+static std::unordered_map<uint64_t, OBJTRACK_NODE *> swapchainImageMap;
 
 static long long unsigned int object_track_index = 0;
 static std::mutex global_lock;
-
-// Objects stored in a global map w/ struct containing basic info
-// unordered_map<const void*, OBJTRACK_NODE*> objMap;
 
 #define NUM_OBJECT_TYPES (VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT + 1)
 
@@ -291,41 +286,6 @@ static void validateQueueFlags(VkQueue queue, const char *function) {
     }
 }
 
-/* TODO: Port to new type safety */
-#if 0
-// Check object status for selected flag state
-static VkBool32
-validate_status(
-    VkObject            dispatchable_object,
-    VkObject            vkObj,
-    VkObjectType        objType,
-    ObjectStatusFlags   status_mask,
-    ObjectStatusFlags   status_flag,
-    VkFlags             msg_flags,
-    OBJECT_TRACK_ERROR  error_code,
-    const char         *fail_msg)
-{
-    if (objMap.find(vkObj) != objMap.end()) {
-        OBJTRACK_NODE* pNode = objMap[vkObj];
-        if ((pNode->status & status_mask) != status_flag) {
-            char str[1024];
-            log_msg(mdd(dispatchable_object), msg_flags, pNode->objType, vkObj, __LINE__, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
-                "OBJECT VALIDATION WARNING: %s object 0x%" PRIxLEAST64 ": %s", string_VkObjectType(objType),
-                static_cast<uint64_t>(vkObj), fail_msg);
-            return VK_FALSE;
-        }
-        return VK_TRUE;
-    }
-    else {
-        // If we do not find it print an error
-        log_msg(mdd(dispatchable_object), msg_flags, (VkObjectType) 0, vkObj, __LINE__, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
-            "Unable to obtain status for non-existent object 0x%" PRIxLEAST64 " of %s type",
-            static_cast<uint64_t>(vkObj), string_VkObjectType(objType));
-        return VK_FALSE;
-    }
-}
-#endif
-
 #include "vk_dispatch_table_helper.h"
 
 static void init_object_tracker(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
@@ -342,56 +302,51 @@ static void create_instance(VkInstance dispatchable_object, VkInstance object, V
 static void create_device(VkDevice dispatchable_object, VkDevice object, VkDebugReportObjectTypeEXT objType);
 static void create_device(VkPhysicalDevice dispatchable_object, VkDevice object, VkDebugReportObjectTypeEXT objType);
 static void create_queue(VkDevice dispatchable_object, VkQueue vkObj, VkDebugReportObjectTypeEXT objType);
-static VkBool32 validate_image(VkQueue dispatchable_object, VkImage object, VkDebugReportObjectTypeEXT objType, bool null_allowed);
-static VkBool32 validate_instance(VkInstance dispatchable_object, VkInstance object, VkDebugReportObjectTypeEXT objType,
+static bool validate_image(VkQueue dispatchable_object, VkImage object, VkDebugReportObjectTypeEXT objType, bool null_allowed);
+static bool validate_instance(VkInstance dispatchable_object, VkInstance object, VkDebugReportObjectTypeEXT objType,
                                   bool null_allowed);
-static VkBool32 validate_device(VkDevice dispatchable_object, VkDevice object, VkDebugReportObjectTypeEXT objType,
+static bool validate_device(VkDevice dispatchable_object, VkDevice object, VkDebugReportObjectTypeEXT objType,
                                 bool null_allowed);
-static VkBool32 validate_descriptor_pool(VkDevice dispatchable_object, VkDescriptorPool object, VkDebugReportObjectTypeEXT objType,
+static bool validate_descriptor_pool(VkDevice dispatchable_object, VkDescriptorPool object, VkDebugReportObjectTypeEXT objType,
                                          bool null_allowed);
-static VkBool32 validate_descriptor_set_layout(VkDevice dispatchable_object, VkDescriptorSetLayout object,
+static bool validate_descriptor_set_layout(VkDevice dispatchable_object, VkDescriptorSetLayout object,
                                                VkDebugReportObjectTypeEXT objType, bool null_allowed);
-static VkBool32 validate_command_pool(VkDevice dispatchable_object, VkCommandPool object, VkDebugReportObjectTypeEXT objType,
+static bool validate_command_pool(VkDevice dispatchable_object, VkCommandPool object, VkDebugReportObjectTypeEXT objType,
                                       bool null_allowed);
-static VkBool32 validate_buffer(VkQueue dispatchable_object, VkBuffer object, VkDebugReportObjectTypeEXT objType,
+static bool validate_buffer(VkQueue dispatchable_object, VkBuffer object, VkDebugReportObjectTypeEXT objType,
                                 bool null_allowed);
 static void create_pipeline(VkDevice dispatchable_object, VkPipeline vkObj, VkDebugReportObjectTypeEXT objType);
-static VkBool32 validate_pipeline_cache(VkDevice dispatchable_object, VkPipelineCache object, VkDebugReportObjectTypeEXT objType,
+static bool validate_pipeline_cache(VkDevice dispatchable_object, VkPipelineCache object, VkDebugReportObjectTypeEXT objType,
                                         bool null_allowed);
-static VkBool32 validate_render_pass(VkDevice dispatchable_object, VkRenderPass object, VkDebugReportObjectTypeEXT objType,
+static bool validate_render_pass(VkDevice dispatchable_object, VkRenderPass object, VkDebugReportObjectTypeEXT objType,
                                      bool null_allowed);
-static VkBool32 validate_shader_module(VkDevice dispatchable_object, VkShaderModule object, VkDebugReportObjectTypeEXT objType,
+static bool validate_shader_module(VkDevice dispatchable_object, VkShaderModule object, VkDebugReportObjectTypeEXT objType,
                                        bool null_allowed);
-static VkBool32 validate_pipeline_layout(VkDevice dispatchable_object, VkPipelineLayout object, VkDebugReportObjectTypeEXT objType,
+static bool validate_pipeline_layout(VkDevice dispatchable_object, VkPipelineLayout object, VkDebugReportObjectTypeEXT objType,
                                          bool null_allowed);
-static VkBool32 validate_pipeline(VkDevice dispatchable_object, VkPipeline object, VkDebugReportObjectTypeEXT objType,
+static bool validate_pipeline(VkDevice dispatchable_object, VkPipeline object, VkDebugReportObjectTypeEXT objType,
                                   bool null_allowed);
 static void destroy_command_pool(VkDevice dispatchable_object, VkCommandPool object);
 static void destroy_descriptor_pool(VkDevice dispatchable_object, VkDescriptorPool object);
 static void destroy_descriptor_set(VkDevice dispatchable_object, VkDescriptorSet object);
 static void destroy_device_memory(VkDevice dispatchable_object, VkDeviceMemory object);
 static void destroy_swapchain_khr(VkDevice dispatchable_object, VkSwapchainKHR object);
-static VkBool32 set_device_memory_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDebugReportObjectTypeEXT objType,
+static bool set_device_memory_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDebugReportObjectTypeEXT objType,
                                          ObjectStatusFlags status_flag);
-static VkBool32 reset_device_memory_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDebugReportObjectTypeEXT objType,
+static bool reset_device_memory_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDebugReportObjectTypeEXT objType,
                                            ObjectStatusFlags status_flag);
-#if 0
-static VkBool32 validate_status(VkDevice dispatchable_object, VkFence object, VkDebugReportObjectTypeEXT objType,
-    ObjectStatusFlags status_mask, ObjectStatusFlags status_flag, VkFlags msg_flags, OBJECT_TRACK_ERROR  error_code,
-    const char         *fail_msg);
-#endif
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkPhysicalDeviceMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkDeviceMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkImageMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkQueueMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkDescriptorSetMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkBufferMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkFenceMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkSemaphoreMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkCommandPoolMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkCommandBufferMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkSwapchainKHRMap;
-extern unordered_map<uint64_t, OBJTRACK_NODE *> VkSurfaceKHRMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkPhysicalDeviceMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkDeviceMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkImageMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkQueueMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkDescriptorSetMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkBufferMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkFenceMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkSemaphoreMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkCommandPoolMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkCommandBufferMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkSwapchainKHRMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkSurfaceKHRMap;
 
 static void create_physical_device(VkInstance dispatchable_object, VkPhysicalDevice vkObj, VkDebugReportObjectTypeEXT objType) {
     log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), __LINE__,
@@ -471,36 +426,46 @@ static void alloc_command_buffer(VkDevice device, VkCommandPool commandPool, VkC
     numTotalObjs++;
 }
 
-static void free_command_buffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer commandBuffer) {
+static bool validate_command_buffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer commandBuffer) {
+    bool skipCall = false;
     uint64_t object_handle = reinterpret_cast<uint64_t>(commandBuffer);
     if (VkCommandBufferMap.find(object_handle) != VkCommandBufferMap.end()) {
         OBJTRACK_NODE *pNode = VkCommandBufferMap[(uint64_t)commandBuffer];
 
         if (pNode->parentObj != (uint64_t)(commandPool)) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, pNode->objType, object_handle, __LINE__,
-                    OBJTRACK_COMMAND_POOL_MISMATCH, "OBJTRACK",
-                    "FreeCommandBuffers is attempting to free Command Buffer 0x%" PRIxLEAST64
-                    " belonging to Command Pool 0x%" PRIxLEAST64 " from pool 0x%" PRIxLEAST64 ").",
-                    reinterpret_cast<uint64_t>(commandBuffer), pNode->parentObj, (uint64_t)(commandPool));
-        } else {
-
-            uint32_t objIndex = objTypeToIndex(pNode->objType);
-            assert(numTotalObjs > 0);
-            numTotalObjs--;
-            assert(numObjs[objIndex] > 0);
-            numObjs[objIndex]--;
-            log_msg(mdd(device), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, pNode->objType, object_handle, __LINE__, OBJTRACK_NONE,
-                    "OBJTRACK", "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
-                    string_VkDebugReportObjectTypeEXT(pNode->objType), reinterpret_cast<uint64_t>(commandBuffer), numTotalObjs,
-                    numObjs[objIndex], string_VkDebugReportObjectTypeEXT(pNode->objType));
-            delete pNode;
-            VkCommandBufferMap.erase(object_handle);
+            skipCall |= log_msg(
+                mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, pNode->objType, object_handle, __LINE__, OBJTRACK_COMMAND_POOL_MISMATCH,
+                "OBJTRACK", "FreeCommandBuffers is attempting to free Command Buffer 0x%" PRIxLEAST64
+                            " belonging to Command Pool 0x%" PRIxLEAST64 " from pool 0x%" PRIxLEAST64 ").",
+                reinterpret_cast<uint64_t>(commandBuffer), pNode->parentObj, reinterpret_cast<uint64_t &>(commandPool));
         }
     } else {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, object_handle, __LINE__, OBJTRACK_NONE,
-                "OBJTRACK", "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",
-                object_handle);
+        skipCall |= log_msg(
+            mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, object_handle, __LINE__, OBJTRACK_NONE,
+            "OBJTRACK", "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?", object_handle);
     }
+    return skipCall;
+}
+
+static bool free_command_buffer(VkDevice device, VkCommandBuffer commandBuffer) {
+    bool skipCall = false;
+    auto cbItem = VkCommandBufferMap.find(reinterpret_cast<uint64_t>(commandBuffer));
+    if (cbItem != VkCommandBufferMap.end()) {
+        OBJTRACK_NODE *pNode = cbItem->second;
+        uint32_t objIndex = objTypeToIndex(pNode->objType);
+        assert(numTotalObjs > 0);
+        numTotalObjs--;
+        assert(numObjs[objIndex] > 0);
+        numObjs[objIndex]--;
+        skipCall |= log_msg(mdd(device), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, pNode->objType,
+                            reinterpret_cast<uint64_t>(commandBuffer), __LINE__, OBJTRACK_NONE, "OBJTRACK",
+                            "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
+                            string_VkDebugReportObjectTypeEXT(pNode->objType), reinterpret_cast<uint64_t>(commandBuffer),
+                            numTotalObjs, numObjs[objIndex], string_VkDebugReportObjectTypeEXT(pNode->objType));
+        delete pNode;
+        VkCommandBufferMap.erase(cbItem);
+    }
+    return skipCall;
 }
 
 static void alloc_descriptor_set(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSet vkObj,
@@ -521,35 +486,48 @@ static void alloc_descriptor_set(VkDevice device, VkDescriptorPool descriptorPoo
     numTotalObjs++;
 }
 
-static void free_descriptor_set(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSet descriptorSet) {
-    uint64_t object_handle = (uint64_t)(descriptorSet);
-    if (VkDescriptorSetMap.find(object_handle) != VkDescriptorSetMap.end()) {
-        OBJTRACK_NODE *pNode = VkDescriptorSetMap[(uint64_t)descriptorSet];
+static bool validate_descriptor_set(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSet descriptorSet) {
+    bool skipCall = false;
+    uint64_t object_handle = reinterpret_cast<uint64_t &>(descriptorSet);
+    auto dsItem = VkDescriptorSetMap.find(object_handle);
+    if (dsItem != VkDescriptorSetMap.end()) {
+        OBJTRACK_NODE *pNode = dsItem->second;
 
-        if (pNode->parentObj != (uint64_t)(descriptorPool)) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, pNode->objType, object_handle, __LINE__,
-                    OBJTRACK_DESCRIPTOR_POOL_MISMATCH, "OBJTRACK",
-                    "FreeDescriptorSets is attempting to free descriptorSet 0x%" PRIxLEAST64
-                    " belonging to Descriptor Pool 0x%" PRIxLEAST64 " from pool 0x%" PRIxLEAST64 ").",
-                    (uint64_t)(descriptorSet), pNode->parentObj, (uint64_t)(descriptorPool));
-        } else {
-            uint32_t objIndex = objTypeToIndex(pNode->objType);
-            assert(numTotalObjs > 0);
-            numTotalObjs--;
-            assert(numObjs[objIndex] > 0);
-            numObjs[objIndex]--;
-            log_msg(mdd(device), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, pNode->objType, object_handle, __LINE__, OBJTRACK_NONE,
-                    "OBJTRACK", "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
-                    string_VkDebugReportObjectTypeEXT(pNode->objType), (uint64_t)(descriptorSet), numTotalObjs, numObjs[objIndex],
-                    string_VkDebugReportObjectTypeEXT(pNode->objType));
-            delete pNode;
-            VkDescriptorSetMap.erase(object_handle);
+        if (pNode->parentObj != reinterpret_cast<uint64_t &>(descriptorPool)) {
+            skipCall |= log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, pNode->objType, object_handle, __LINE__,
+                                OBJTRACK_DESCRIPTOR_POOL_MISMATCH, "OBJTRACK",
+                                "FreeDescriptorSets is attempting to free descriptorSet 0x%" PRIxLEAST64
+                                " belonging to Descriptor Pool 0x%" PRIxLEAST64 " from pool 0x%" PRIxLEAST64 ").",
+                                reinterpret_cast<uint64_t &>(descriptorSet), pNode->parentObj,
+                                reinterpret_cast<uint64_t &>(descriptorPool));
         }
     } else {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, object_handle, __LINE__, OBJTRACK_NONE,
-                "OBJTRACK", "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",
-                object_handle);
+        skipCall |= log_msg(
+            mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, object_handle, __LINE__, OBJTRACK_NONE,
+            "OBJTRACK", "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?", object_handle);
     }
+    return skipCall;
+}
+
+static bool free_descriptor_set(VkDevice device, VkDescriptorSet descriptorSet) {
+    bool skipCall = false;
+    auto dsItem = VkDescriptorSetMap.find(reinterpret_cast<uint64_t &>(descriptorSet));
+    if (dsItem != VkDescriptorSetMap.end()) {
+        OBJTRACK_NODE *pNode = dsItem->second;
+        uint32_t objIndex = objTypeToIndex(pNode->objType);
+        assert(numTotalObjs > 0);
+        numTotalObjs--;
+        assert(numObjs[objIndex] > 0);
+        numObjs[objIndex]--;
+        skipCall |= log_msg(mdd(device), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, pNode->objType,
+                            reinterpret_cast<uint64_t &>(descriptorSet), __LINE__, OBJTRACK_NONE, "OBJTRACK",
+                            "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
+                            string_VkDebugReportObjectTypeEXT(pNode->objType), reinterpret_cast<uint64_t &>(descriptorSet),
+                            numTotalObjs, numObjs[objIndex], string_VkDebugReportObjectTypeEXT(pNode->objType));
+        delete pNode;
+        VkDescriptorSetMap.erase(dsItem);
+    }
+    return skipCall;
 }
 
 static void create_queue(VkDevice dispatchable_object, VkQueue vkObj, VkDebugReportObjectTypeEXT objType) {
@@ -687,7 +665,7 @@ VkResult explicit_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *p
 
 VkResult explicit_EnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
                                            VkPhysicalDevice *pPhysicalDevices) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_instance(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false);
     lock.unlock();
@@ -721,9 +699,8 @@ void explicit_GetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t 
 
 VkResult explicit_MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkFlags flags,
                             void **ppData) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skipCall |= set_device_memory_status(device, mem, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, OBJSTATUS_GPU_MEM_MAPPED);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     lock.unlock();
     if (skipCall == VK_TRUE)
@@ -736,9 +713,8 @@ VkResult explicit_MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize of
 }
 
 void explicit_UnmapMemory(VkDevice device, VkDeviceMemory mem) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
-    skipCall |= reset_device_memory_status(device, mem, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, OBJSTATUS_GPU_MEM_MAPPED);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     lock.unlock();
     if (skipCall == VK_TRUE)
@@ -768,7 +744,7 @@ VkResult explicit_QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const V
 
 VkResult explicit_AllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pAllocateInfo,
                                          VkCommandBuffer *pCommandBuffers) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     skipCall |= validate_command_pool(device, pAllocateInfo->commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, false);
@@ -793,7 +769,7 @@ VkResult explicit_AllocateCommandBuffers(VkDevice device, const VkCommandBufferA
 
 VkResult explicit_AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllocateInfo,
                                          VkDescriptorSet *pDescriptorSets) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     skipCall |=
@@ -803,8 +779,9 @@ VkResult explicit_AllocateDescriptorSets(VkDevice device, const VkDescriptorSetA
                                                    VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, false);
     }
     lock.unlock();
-    if (skipCall)
+    if (skipCall) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
 
     VkResult result =
         get_dispatch_table(object_tracker_device_table_map, device)->AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
@@ -823,18 +800,23 @@ VkResult explicit_AllocateDescriptorSets(VkDevice device, const VkDescriptorSetA
 
 void explicit_FreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandBufferCount,
                                  const VkCommandBuffer *pCommandBuffers) {
+    bool skipCall = false;
     std::unique_lock<std::mutex> lock(global_lock);
     validate_command_pool(device, commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, false);
     validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
-    lock.unlock();
+    for (uint32_t i = 0; i < commandBufferCount; i++) {
+        skipCall |= validate_command_buffer(device, commandPool, pCommandBuffers[i]);
+    }
 
-    get_dispatch_table(object_tracker_device_table_map, device)
-        ->FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
+    lock.unlock();
+    if (!skipCall) {
+        get_dispatch_table(object_tracker_device_table_map, device)
+            ->FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
+    }
 
     lock.lock();
     for (uint32_t i = 0; i < commandBufferCount; i++) {
-        free_command_buffer(device, commandPool, *pCommandBuffers);
-        pCommandBuffers++;
+        free_command_buffer(device, pCommandBuffers[i]);
     }
 }
 
@@ -842,7 +824,7 @@ void explicit_DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, con
     std::unique_lock<std::mutex> lock(global_lock);
     // A swapchain's images are implicitly deleted when the swapchain is deleted.
     // Remove this swapchain's images from our map of such images.
-    unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = swapchainImageMap.begin();
+    std::unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = swapchainImageMap.begin();
     while (itr != swapchainImageMap.end()) {
         OBJTRACK_NODE *pNode = (*itr).second;
         if (pNode->parentObj == (uint64_t)(swapchain)) {
@@ -870,23 +852,30 @@ void explicit_FreeMemory(VkDevice device, VkDeviceMemory mem, const VkAllocation
 
 VkResult explicit_FreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count,
                                      const VkDescriptorSet *pDescriptorSets) {
+    bool skipCall = false;
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     std::unique_lock<std::mutex> lock(global_lock);
-    validate_descriptor_pool(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, false);
-    validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
+    skipCall |= validate_descriptor_pool(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, false);
+    skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
+    for (uint32_t i = 0; i < count; i++) {
+        skipCall |= validate_descriptor_set(device, descriptorPool, pDescriptorSets[i]);
+    }
+
     lock.unlock();
-    VkResult result = get_dispatch_table(object_tracker_device_table_map, device)
-                          ->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
+    if (!skipCall) {
+        result = get_dispatch_table(object_tracker_device_table_map, device)
+                     ->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
+    }
 
     lock.lock();
     for (uint32_t i = 0; i < count; i++) {
-        free_descriptor_set(device, descriptorPool, *pDescriptorSets++);
+        free_descriptor_set(device, pDescriptorSets[i]);
     }
-    lock.unlock();
     return result;
 }
 
 void explicit_DestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, const VkAllocationCallbacks *pAllocator) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     skipCall |= validate_descriptor_pool(device, descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, false);
@@ -897,7 +886,7 @@ void explicit_DestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptor
     // A DescriptorPool's descriptor sets are implicitly deleted when the pool is deleted.
     // Remove this pool's descriptor sets from our descriptorSet map.
     lock.lock();
-    unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = VkDescriptorSetMap.begin();
+    std::unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = VkDescriptorSetMap.begin();
     while (itr != VkDescriptorSetMap.end()) {
         OBJTRACK_NODE *pNode = (*itr).second;
         auto del_itr = itr++;
@@ -911,7 +900,7 @@ void explicit_DestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptor
 }
 
 void explicit_DestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocationCallbacks *pAllocator) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = false;
     std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     skipCall |= validate_command_pool(device, commandPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, false);
@@ -922,13 +911,14 @@ void explicit_DestroyCommandPool(VkDevice device, VkCommandPool commandPool, con
     lock.lock();
     // A CommandPool's command buffers are implicitly deleted when the pool is deleted.
     // Remove this pool's cmdBuffers from our cmd buffer map.
-    unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = VkCommandBufferMap.begin();
-    unordered_map<uint64_t, OBJTRACK_NODE *>::iterator del_itr;
+    std::unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = VkCommandBufferMap.begin();
+    std::unordered_map<uint64_t, OBJTRACK_NODE *>::iterator del_itr;
     while (itr != VkCommandBufferMap.end()) {
         OBJTRACK_NODE *pNode = (*itr).second;
         del_itr = itr++;
         if (pNode->parentObj == (uint64_t)(commandPool)) {
-            free_command_buffer(device, commandPool, reinterpret_cast<VkCommandBuffer>((*del_itr).first));
+            skipCall |= validate_command_buffer(device, commandPool, reinterpret_cast<VkCommandBuffer>((*del_itr).first));
+            free_command_buffer(device, reinterpret_cast<VkCommandBuffer>((*del_itr).first));
         }
     }
     destroy_command_pool(device, commandPool);
@@ -937,7 +927,7 @@ void explicit_DestroyCommandPool(VkDevice device, VkCommandPool commandPool, con
 }
 
 VkResult explicit_GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCount, VkImage *pSwapchainImages) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     lock.unlock();
@@ -961,7 +951,7 @@ VkResult explicit_GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchai
 VkResult explicit_CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount,
                                           const VkGraphicsPipelineCreateInfo *pCreateInfos, const VkAllocationCallbacks *pAllocator,
                                           VkPipeline *pPipelines) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     if (pCreateInfos) {
@@ -1010,7 +1000,7 @@ VkResult explicit_CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipel
 VkResult explicit_CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount,
                                          const VkComputePipelineCreateInfo *pCreateInfos, const VkAllocationCallbacks *pAllocator,
                                          VkPipeline *pPipelines) {
-    VkBool32 skipCall = VK_FALSE;
+    bool skipCall = VK_FALSE;
     std::unique_lock<std::mutex> lock(global_lock);
     skipCall |= validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);
     if (pCreateInfos) {

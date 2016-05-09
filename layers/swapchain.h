@@ -61,6 +61,7 @@ typedef enum _SWAPCHAIN_ERROR {
     SWAPCHAIN_INDEX_TOO_LARGE,          // Index is too large for swapchain
     SWAPCHAIN_INDEX_NOT_IN_USE,         // vkQueuePresentKHR() given index that is not acquired by app
     SWAPCHAIN_BAD_BOOL,                 // VkBool32 that doesn't have value of VK_TRUE or VK_FALSE (e.g. is a non-zero form of true)
+    SWAPCHAIN_PRIOR_COUNT,              // Query must be called first to get value of pCount, then called second time
     SWAPCHAIN_INVALID_COUNT,            // Second time a query called, the pCount value didn't match first time
     SWAPCHAIN_WRONG_STYPE,              // The sType for a struct has the wrong value
     SWAPCHAIN_WRONG_NEXT,               // The pNext for a struct is not NULL
@@ -91,6 +92,12 @@ typedef enum _SWAPCHAIN_ERROR {
                                                              "value (%d) that is greater than the value (%d) that "                \
                                                              "was returned when %s was NULL.",                                     \
                         __FUNCTION__, (obj2), (obj), (val), (val2), (obj2))                                                        \
+              : VK_FALSE
+#define LOG_ERROR_ZERO_PRIOR_COUNT(objType, type, obj, obj2)                                                                       \
+    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), 0,                        \
+                        SWAPCHAIN_PRIOR_COUNT, LAYER_NAME, "%s() called with non-NULL %s; but no prior "                           \
+                        "positive value has been seen for %s.",                                                                    \
+                        __FUNCTION__, (obj), (obj2))                                                                               \
               : VK_FALSE
 #define LOG_ERROR_WRONG_STYPE(objType, type, obj, val)                                                                             \
     (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), 0, SWAPCHAIN_WRONG_STYPE, \

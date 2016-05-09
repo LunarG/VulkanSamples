@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 #
 # VK
 #
@@ -718,7 +718,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('#include <inttypes.h>')
         header_txt.append('')
         header_txt.append('#include <unordered_map>')
-        header_txt.append('using namespace std;')
+        header_txt.append('')
         header_txt.append('#include "vulkan/vk_layer.h"')
         header_txt.append('#include "vk_layer_config.h"')
         header_txt.append('#include "vk_layer_table.h"')
@@ -733,7 +733,7 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_maps(self):
         maps_txt = []
         for o in vulkan.object_type_list:
-            maps_txt.append('unordered_map<uint64_t, OBJTRACK_NODE*> %sMap;' % (o))
+            maps_txt.append('std::unordered_map<uint64_t, OBJTRACK_NODE*> %sMap;' % (o))
         return "\n".join(maps_txt)
 
     def _gather_object_uses(self, obj_list, struct_type, obj_set):
@@ -812,89 +812,13 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('        delete pNode;')
             procs_txt.append('        %sMap.erase(it);' % (o))
             procs_txt.append('    } else {')
-            procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT ) 0, object_handle, __LINE__, OBJTRACK_NONE, "OBJTRACK",')
+            procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT ) 0,')
+            procs_txt.append('            object_handle, __LINE__, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
             procs_txt.append('            "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",')
-            procs_txt.append('           object_handle);')
+            procs_txt.append('            object_handle);')
             procs_txt.append('    }')
             procs_txt.append('}')
             procs_txt.append('')
-            procs_txt.append('%s' % self.lineinfo.get())
-            if o in vulkan.object_dispatch_list:
-                procs_txt.append('static VkBool32 set_%s_status(%s dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, ObjectStatusFlags status_flag)' % (name, o, o))
-            else:
-                procs_txt.append('static VkBool32 set_%s_status(VkDevice dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, ObjectStatusFlags status_flag)' % (name, o))
-            procs_txt.append('{')
-            procs_txt.append('    if (object != VK_NULL_HANDLE) {')
-            procs_txt.append('        uint64_t object_handle = (uint64_t)(object);')
-            procs_txt.append('        auto it = %sMap.find(object_handle);' % o)
-            procs_txt.append('        if (it != %sMap.end()) {' % o)
-            procs_txt.append('            it->second->status |= status_flag;')
-            procs_txt.append('        }')
-            procs_txt.append('        else {')
-            procs_txt.append('            // If we do not find it print an error')
-            procs_txt.append('            return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT ) 0, object_handle, __LINE__, OBJTRACK_NONE, "OBJTRACK",')
-            procs_txt.append('                "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
-            procs_txt.append('                object_handle, string_VkDebugReportObjectTypeEXT(objType));')
-            procs_txt.append('        }')
-            procs_txt.append('    }')
-            procs_txt.append('    return VK_FALSE;')
-            procs_txt.append('}')
-            procs_txt.append('')
-            procs_txt.append('%s' % self.lineinfo.get())
-            procs_txt.append('static VkBool32 validate_%s_status(' % (name))
-            if o in vulkan.object_dispatch_list:
-                procs_txt.append('%s dispatchable_object, %s object,' % (o, o))
-            else:
-                procs_txt.append('VkDevice dispatchable_object, %s object,' % (o))
-            procs_txt.append('    VkDebugReportObjectTypeEXT     objType,')
-            procs_txt.append('    ObjectStatusFlags   status_mask,')
-            procs_txt.append('    ObjectStatusFlags   status_flag,')
-            procs_txt.append('    VkFlags             msg_flags,')
-            procs_txt.append('    OBJECT_TRACK_ERROR  error_code,')
-            procs_txt.append('    const char         *fail_msg)')
-            procs_txt.append('{')
-            procs_txt.append('    uint64_t object_handle = (uint64_t)(object);')
-            procs_txt.append('    auto it = %sMap.find(object_handle);' % o)
-            procs_txt.append('    if (it != %sMap.end()) {' % o)
-            procs_txt.append('        OBJTRACK_NODE* pNode = it->second;')
-            procs_txt.append('        if ((pNode->status & status_mask) != status_flag) {')
-            procs_txt.append('            log_msg(mdd(dispatchable_object), msg_flags, pNode->objType, object_handle, __LINE__, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
-            procs_txt.append('                "OBJECT VALIDATION WARNING: %s object 0x%" PRIxLEAST64 ": %s", string_VkDebugReportObjectTypeEXT(objType),')
-            procs_txt.append('                 object_handle, fail_msg);')
-            procs_txt.append('            return VK_FALSE;')
-            procs_txt.append('        }')
-            procs_txt.append('        return VK_TRUE;')
-            procs_txt.append('    }')
-            procs_txt.append('    else {')
-            procs_txt.append('        // If we do not find it print an error')
-            procs_txt.append('        log_msg(mdd(dispatchable_object), msg_flags, (VkDebugReportObjectTypeEXT) 0, object_handle, __LINE__, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
-            procs_txt.append('            "Unable to obtain status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
-            procs_txt.append('            object_handle, string_VkDebugReportObjectTypeEXT(objType));')
-            procs_txt.append('        return VK_FALSE;')
-            procs_txt.append('    }')
-            procs_txt.append('}')
-            procs_txt.append('')
-            procs_txt.append('%s' % self.lineinfo.get())
-            if o in vulkan.object_dispatch_list:
-                procs_txt.append('static VkBool32 reset_%s_status(%s dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, ObjectStatusFlags status_flag)' % (name, o, o))
-            else:
-                procs_txt.append('static VkBool32 reset_%s_status(VkDevice dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, ObjectStatusFlags status_flag)' % (name, o))
-            procs_txt.append('{')
-            procs_txt.append('    uint64_t object_handle = (uint64_t)(object);')
-            procs_txt.append('    auto it = %sMap.find(object_handle);' % o)
-            procs_txt.append('    if (it != %sMap.end()) {' % o)
-            procs_txt.append('        it->second->status &= ~status_flag;')
-            procs_txt.append('    }')
-            procs_txt.append('    else {')
-            procs_txt.append('        // If we do not find it print an error')
-            procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, objType, object_handle, __LINE__, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
-            procs_txt.append('            "Unable to reset status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
-            procs_txt.append('            object_handle, string_VkDebugReportObjectTypeEXT(objType));')
-            procs_txt.append('    }')
-            procs_txt.append('    return VK_FALSE;')
-            procs_txt.append('}')
-            procs_txt.append('')
-        procs_txt.append('%s' % self.lineinfo.get())
         # Generate the permutations of validate_* functions where for each
         #  dispatchable object type, we have a corresponding validate_* function
         #  for that object and all non-dispatchable objects that are used in API
@@ -905,15 +829,15 @@ class ObjectTrackerSubcommand(Subcommand):
             name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
             # First create validate_* func for disp obj
             procs_txt.append('%s' % self.lineinfo.get())
-            procs_txt.append('static VkBool32 validate_%s(%s dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, bool null_allowed)' % (name, do, do))
+            procs_txt.append('static bool validate_%s(%s dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, bool null_allowed)' % (name, do, do))
             procs_txt.append('{')
             procs_txt.append('    if (null_allowed && (object == VK_NULL_HANDLE))')
-            procs_txt.append('        return VK_FALSE;')
+            procs_txt.append('        return false;')
             procs_txt.append('    if (%sMap.find((uint64_t)object) == %sMap.end()) {' % (do, do))
             procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, objType, (uint64_t)(object), __LINE__, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
             procs_txt.append('            "Invalid %s Object 0x%%" PRIx64 ,(uint64_t)(object));' % do)
             procs_txt.append('    }')
-            procs_txt.append('    return VK_FALSE;')
+            procs_txt.append('    return false;')
             procs_txt.append('}')
             procs_txt.append('')
             for o in sorted(obj_use_dict[do]):
@@ -922,10 +846,10 @@ class ObjectTrackerSubcommand(Subcommand):
                 name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', o)
                 name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
                 procs_txt.append('%s' % self.lineinfo.get())
-                procs_txt.append('static VkBool32 validate_%s(%s dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, bool null_allowed)' % (name, do, o))
+                procs_txt.append('static bool validate_%s(%s dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, bool null_allowed)' % (name, do, o))
                 procs_txt.append('{')
                 procs_txt.append('    if (null_allowed && (object == VK_NULL_HANDLE))')
-                procs_txt.append('        return VK_FALSE;')
+                procs_txt.append('        return false;')
                 if o == "VkImage":
                     procs_txt.append('    // We need to validate normal image objects and those from the swapchain')
                     procs_txt.append('    if ((%sMap.find((uint64_t)object) == %sMap.end()) &&' % (o, o))
@@ -935,7 +859,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, objType, (uint64_t)(object), __LINE__, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Invalid %s Object 0x%%" PRIx64, (uint64_t)(object));' % o)
                 procs_txt.append('    }')
-                procs_txt.append('    return VK_FALSE;')
+                procs_txt.append('    return false;')
                 procs_txt.append('}')
             procs_txt.append('')
         procs_txt.append('')
@@ -1320,7 +1244,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 destroy_line += '    }\n'
             indent = '    '
             if len(struct_uses) > 0:
-                using_line += '%sVkBool32 skipCall = VK_FALSE;\n' % (indent)
+                using_line += '%sbool skipCall = false;\n' % (indent)
                 if not mutex_unlock:
                     using_line += '%s{\n' % (indent)
                     indent += '    '
@@ -1333,8 +1257,8 @@ class ObjectTrackerSubcommand(Subcommand):
                 using_line += '%s}\n' % (indent)
             if len(struct_uses) > 0:
                 using_line += '    if (skipCall)\n'
-                if proto.ret == "VkBool32":
-                    using_line += '        return VK_FALSE;\n'
+                if proto.ret == "bool":
+                    using_line += '        return false;\n'
                 elif proto.ret != "void":
                     using_line += '        return VK_ERROR_VALIDATION_FAILED_EXT;\n'
                 else:

@@ -35,7 +35,7 @@ model {
                          "-I${file("../../../../include")}".toString(),
                          "-I${file("../../../../loader")}".toString(),
                          "-I${file("../../include")}".toString(),
-                         "-I${file("../../../../../glslang")}".toString()])
+                         "-I${file("../../../../external/glslang")}".toString()])
     }
 
     // Turn on hard float support in armeabi-v7a

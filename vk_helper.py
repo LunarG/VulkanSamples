@@ -1548,7 +1548,7 @@ class StructWrapperGen:
 
     # If struct has sType or ptr members, generate safe type
     def _hasSafeStruct(self, s):
-        exceptions = ['VkPhysicalDeviceFeatures', 'VkPipelineColorBlendStateCreateInfo']
+        exceptions = ['VkPhysicalDeviceFeatures', 'VkPipelineColorBlendStateCreateInfo', 'VkDebugMarkerMarkerInfoEXT']
         if s in exceptions:
             return False
         if 'sType' == self.struct_dict[s][0]['name']:
