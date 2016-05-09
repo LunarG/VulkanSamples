@@ -5825,7 +5825,7 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Attempted write update to combined "
                                          "image sampler descriptor failed due "
-                                         "to: Invalid VkImageView: 0xbaadbeef");
+                                         "to: Invalid VkImageView:");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     VkDescriptorPoolSize ds_type_count = {};
