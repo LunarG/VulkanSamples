@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 // This file is generated.
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "vulkan_wrapper.h"
 #include <dlfcn.h>
 
@@ -399,3 +403,6 @@ PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT;
 PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT;
 PFN_vkDebugReportMessageEXT vkDebugReportMessageEXT;
 
+#ifdef __cplusplus
+}
+#endif

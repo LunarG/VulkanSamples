@@ -1,4 +1,4 @@
-# Vulkan Samples Kit
+# Vulkan Samples
   - This repository is a collection of Vulkan C++ sample applications.
   - Run the following script to obtain a short description of all or a 
     specific sample:
@@ -43,6 +43,11 @@
   $ cmake -H. -Bbuild
   $ make -C build 
   ```
+#### Android:
+```
+$ cmake -DANDROID=ON -DANDROID_ABI=[armeabi-v7a|arm64-v8a| x86|x86_64|all(default)]
+```
+And import VulkanSamples/API-Samples/android/build.gradle in Android Studio.
 
 ### Windows:
 #### 64-bit Windows
@@ -83,7 +88,7 @@ Perform the same operations as 64-bit Windows above, except with the following a
   PS > cd build32
   PS > cmake -G "Visual Studio 12" ..
   ```
-  
+
 ## Contributing
   Refer to the README.contrib file for specific info regarding contributing to
   the Vulkan samples creation effort.

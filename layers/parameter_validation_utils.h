@@ -3,28 +3,17 @@
  * Copyright (c) 2015-2016 LunarG, Inc.
  * Copyright (C) 2015-2016 Google Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and/or associated documentation files (the "Materials"), to
- * deal in the Materials without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Materials, and to permit persons to whom the Materials
- * are furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice(s) and this permission notice shall be included
- * in all copies or substantial portions of the Materials.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * The Materials are Confidential Information as defined by the Khronos
- * Membership Agreement until designated non-confidential by Khronos, at which
- * point this condition clause shall be removed.
- *
- * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- *
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
- * USE OR OTHER DEALINGS IN THE MATERIALS
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  * Author: Dustin Graves <dustin@lunarg.com>
  */
@@ -158,11 +147,10 @@ bool validate_array(debug_report_data *report_data, const char *apiName, const c
     // Count parameters not tagged as optional cannot be 0
     if ((count == 0) && countRequired) {
         skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                            ParameterValidationName, "%s: value of %s must be greater than 0", apiName, countName);
+                            ParameterValidationName, "%s: parameter %s must be greater than 0", apiName, countName);
     }
 
-    // Array parameters not tagged as optional cannot be NULL,
-    // unless the count is 0
+    // Array parameters not tagged as optional cannot be NULL, unless the count is 0
     if ((array == NULL) && arrayRequired && (count != 0)) {
         skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                             ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, arrayName);
@@ -172,7 +160,11 @@ bool validate_array(debug_report_data *report_data, const char *apiName, const c
 }
 
 /**
- * Validate an Vulkan structure type.
+ * Validate a pointer to a Vulkan structure.
+ *
+ * Verify that a required pointer to a structure is not NULL.  If the pointer is
+ * not NULL, verify that each structure's sType field is set to the correct
+ * VkStructureType value.
  *
  * @param report_data debug_report_data object for routing validation messages.
  * @param apiName Name of API call being validated.
@@ -267,18 +259,7 @@ bool validate_struct_type_array(debug_report_data *report_data, const char *apiN
     bool skipCall = false;
 
     if ((count == 0) || (array == NULL)) {
-        // Count parameters not tagged as optional cannot be 0
-        if ((count == 0) && countRequired) {
-            skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                ParameterValidationName, "%s: parameter %s must be greater than 0", apiName, countName);
-        }
-
-        // Array parameters not tagged as optional cannot be NULL,
-        // unless the count is 0
-        if ((array == NULL) && arrayRequired && (count != 0)) {
-            skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, arrayName);
-        }
+        skipCall |= validate_array(report_data, apiName, countName, arrayName, count, array, countRequired, arrayRequired);
     } else {
         // Verify that all structs in the array have the correct type
         for (uint32_t i = 0; i < count; ++i) {
@@ -291,6 +272,73 @@ bool validate_struct_type_array(debug_report_data *report_data, const char *apiN
     }
 
     return skipCall;
+}
+
+/**
+* Validate a Vulkan handle.
+*
+* Verify that the specified handle is not VK_NULL_HANDLE.
+*
+* @param report_data debug_report_data object for routing validation messages.
+* @param api_name Name of API call being validated.
+* @param parameter_name Name of struct parameter being validated.
+* @param value Handle to validate.
+* @return Boolean value indicating that the call should be skipped.
+*/
+template <typename T>
+bool validate_required_handle(debug_report_data *report_data, const char *api_name, const char *parameter_name, T value) {
+    bool skip_call = false;
+
+    if (value == VK_NULL_HANDLE) {
+        skip_call |=
+            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                    ParameterValidationName, "%s: required parameter %s specified as VK_NULL_HANDLE", api_name, parameter_name);
+    }
+
+    return skip_call;
+}
+
+/**
+* Validate an array of Vulkan handles.
+*
+* Verify that required count and array parameters are not NULL.  If count
+* is not NULL and its value is not optional, verify that it is not 0.
+* If the array contains 1 or more handles, verify that no handle is set to
+* VK_NULL_HANDLE.
+*
+* @note This function is only intended to validate arrays of handles when none
+*       of the handles are allowed to be VK_NULL_HANDLE.  For arrays of handles
+*       that are allowed to contain VK_NULL_HANDLE, use validate_array() instead.
+*
+* @param report_data debug_report_data object for routing validation messages.
+* @param api_name Name of API call being validated.
+* @param count_name Name of count parameter.
+* @param array_name Name of array parameter.
+* @param count Number of elements in the array.
+* @param array Array to validate.
+* @param count_required The 'count' parameter may not be 0 when true.
+* @param array_required The 'array' parameter may not be NULL when true.
+* @return Boolean value indicating that the call should be skipped.
+*/
+template <typename T>
+bool validate_handle_array(debug_report_data *report_data, const char *api_name, const char *count_name, const char *array_name,
+                           uint32_t count, const T *array, bool count_required, bool array_required) {
+    bool skip_call = false;
+
+    if ((count == 0) || (array == NULL)) {
+        skip_call |= validate_array(report_data, api_name, count_name, array_name, count, array, count_required, array_required);
+    } else {
+        // Verify that no handles in the array are VK_NULL_HANDLE
+        for (uint32_t i = 0; i < count; ++i) {
+            if (array[i] == VK_NULL_HANDLE) {
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                     ParameterValidationName, "%s: required parameter %s[%d] specified as VK_NULL_HANDLE", api_name,
+                                     array_name, i);
+            }
+        }
+    }
+
+    return skip_call;
 }
 
 /**
@@ -316,20 +364,9 @@ static bool validate_string_array(debug_report_data *report_data, const char *ap
     bool skipCall = false;
 
     if ((count == 0) || (array == NULL)) {
-        // Count parameters not tagged as optional cannot be 0
-        if ((count == 0) && countRequired) {
-            skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                ParameterValidationName, "%s: parameter %s must be greater than 0", apiName, countName);
-        }
-
-        // Array parameters not tagged as optional cannot be NULL,
-        // unless the count is 0
-        if ((array == NULL) && arrayRequired && (count != 0)) {
-            skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                ParameterValidationName, "%s: required parameter %s specified as NULL", apiName, arrayName);
-        }
+        skipCall |= validate_array(report_data, apiName, countName, arrayName, count, array, countRequired, arrayRequired);
     } else {
-        // Verify that strings in the array not NULL
+        // Verify that strings in the array are not NULL
         for (uint32_t i = 0; i < count; ++i) {
             if (array[i] == NULL) {
                 skipCall |=
@@ -438,7 +475,7 @@ static bool validate_bool32(debug_report_data *report_data, const char *apiName,
 * @param enumName Name of the enumeration being validated.
 * @param begin The begin range value for the enumeration.
 * @param end The end range value for the enumeration.
-* @param value Boolean value to validate.
+* @param value Enumeration value to validate.
 * @return Boolean value indicating that the call should be skipped.
 */
 template <typename T>
@@ -469,25 +506,34 @@ bool validate_ranged_enum(debug_report_data *report_data, const char *apiName, c
 *
 * @param report_data debug_report_data object for routing validation messages.
 * @param apiName Name of API call being validated.
-* @param parameterName Name of parameter being validated.
+* @param countName Name of count parameter.
+* @param arrayName Name of array parameter.
 * @param enumName Name of the enumeration being validated.
 * @param begin The begin range value for the enumeration.
 * @param end The end range value for the enumeration.
-* @param value Boolean value to validate.
+* @param count Number of enumeration values in the array.
+* @param array Array of enumeration values to validate.
+* @param countRequired The 'count' parameter may not be 0 when true.
+* @param arrayRequired The 'array' parameter may not be NULL when true.
 * @return Boolean value indicating that the call should be skipped.
 */
 template <typename T>
-static bool validate_ranged_enum_array(debug_report_data *report_data, const char *apiName, const char *parameterName,
-                                       const char *enumName, T begin, T end, uint32_t count, const T *pValues) {
+static bool validate_ranged_enum_array(debug_report_data *report_data, const char *apiName, const char *countName,
+                                       const char *arrayName, const char *enumName, T begin, T end, uint32_t count, const T *array,
+                                       bool countRequired, bool arrayRequired) {
     bool skipCall = false;
 
-    for (uint32_t i = 0; i < count; ++i) {
-        if (((pValues[i] < begin) || (pValues[i] > end)) && !is_extension_added_token(pValues[i])) {
-            skipCall |=
-                log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                ParameterValidationName, "%s: value of %s[%d] (%d) does not fall within the begin..end range of the core %s "
-                "enumeration tokens and is not an extension added token",
-                apiName, parameterName, i, pValues[i], enumName);
+    if ((count == 0) || (array == NULL)) {
+        skipCall |= validate_array(report_data, apiName, countName, arrayName, count, array, countRequired, arrayRequired);
+    } else {
+        for (uint32_t i = 0; i < count; ++i) {
+            if (((array[i] < begin) || (array[i] > end)) && !is_extension_added_token(array[i])) {
+                skipCall |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                    ParameterValidationName,
+                                    "%s: value of %s[%d] (%d) does not fall within the begin..end range of the core %s "
+                                    "enumeration tokens and is not an extension added token",
+                                    apiName, arrayName, i, array[i], enumName);
+            }
         }
     }
 
@@ -495,9 +541,114 @@ static bool validate_ranged_enum_array(debug_report_data *report_data, const cha
 }
 
 /**
+* Verify that a reserved VkFlags value is zero.
+*
+* Verify that the specified value is zero, to check VkFlags values that are reserved for
+* future use.
+*
+* @param report_data debug_report_data object for routing validation messages.
+* @param api_name Name of API call being validated.
+* @param parameter_name Name of parameter being validated.
+* @param value Value to validate.
+* @return Boolean value indicating that the call should be skipped.
+*/
+static bool validate_reserved_flags(debug_report_data *report_data, const char *api_name, const char *parameter_name,
+                                    VkFlags value) {
+    bool skip_call = false;
+
+    if (value != 0) {
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                             ParameterValidationName, "%s: parameter %s must be 0", api_name, parameter_name);
+    }
+
+    return skip_call;
+}
+
+/**
+* Validate a Vulkan bitmask value.
+*
+* Generate a warning if a value with a VkFlags derived type does not contain valid flag bits
+* for that type.
+*
+* @param report_data debug_report_data object for routing validation messages.
+* @param api_name Name of API call being validated.
+* @param parameter_name Name of parameter being validated.
+* @param flag_bits_name Name of the VkFlags type being validated.
+* @param all_flags A bit mask combining all valid flag bits for the VkFlags type being validated.
+* @param value VkFlags value to validate.
+* @param flags_required The 'value' parameter may not be 0 when true.
+* @return Boolean value indicating that the call should be skipped.
+*/
+static bool validate_flags(debug_report_data *report_data, const char *api_name, const char *parameter_name,
+                           const char *flag_bits_name, VkFlags all_flags, VkFlags value, bool flags_required) {
+    bool skip_call = false;
+
+    if (value == 0) {
+        if (flags_required) {
+            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                 ParameterValidationName, "%s: value of %s must not be 0", api_name, parameter_name);
+        }
+    } else if ((value & (~all_flags)) != 0) {
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                             ParameterValidationName, "%s: value of %s contains flag bits that are not recognized members of %s",
+                             api_name, parameter_name, flag_bits_name);
+    }
+
+    return skip_call;
+}
+
+/**
+* Validate an array of Vulkan bitmask values.
+*
+* Generate a warning if a value with a VkFlags derived type does not contain valid flag bits
+* for that type.
+*
+* @param report_data debug_report_data object for routing validation messages.
+* @param api_name Name of API call being validated.
+* @param count_name Name of parameter being validated.
+* @param array_name Name of parameter being validated.
+* @param flag_bits_name Name of the VkFlags type being validated.
+* @param all_flags A bitmask combining all valid flag bits for the VkFlags type being validated.
+* @param count Number of VkFlags values in the array.
+* @param array Array of VkFlags value to validate.
+* @param count_required The 'count' parameter may not be 0 when true.
+* @param array_required The 'array' parameter may not be NULL when true.
+* @return Boolean value indicating that the call should be skipped.
+*/
+static bool validate_flags_array(debug_report_data *report_data, const char *api_name, const char *count_name,
+                                 const char *array_name, const char *flag_bits_name, VkFlags all_flags, uint32_t count,
+                                 const VkFlags *array, bool count_required, bool array_required) {
+    bool skip_call = false;
+
+    if ((count == 0) || (array == NULL)) {
+        skip_call |= validate_array(report_data, api_name, count_name, array_name, count, array, count_required, array_required);
+    } else {
+        // Verify that all VkFlags values in the array
+        for (uint32_t i = 0; i < count; ++i) {
+            if (array[i] == 0) {
+                // Current XML registry logic for validity generation uses the array parameter's optional tag to determine if
+                // elements in the array are allowed be 0
+                if (array_required) {
+                    skip_call |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                         1, ParameterValidationName, "%s: value of %s[%d] must not be 0", api_name, array_name, i);
+                }
+            } else if ((array[i] & (~all_flags)) != 0) {
+                skip_call |=
+                    log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                            ParameterValidationName, "%s: value of %s[%d] contains flag bits that are not recognized members of %s",
+                            api_name, array_name, i, flag_bits_name);
+            }
+        }
+    }
+
+    return skip_call;
+}
+
+/**
 * Get VkResult code description.
 *
-* Returns a string describing the specified VkResult code.  The description is based on the language in the Vulkan API specification.
+* Returns a string describing the specified VkResult code.  The description is based on the language in the Vulkan API
+* specification.
 *
 * @param value VkResult code to process.
 * @return String describing the specified VkResult code.

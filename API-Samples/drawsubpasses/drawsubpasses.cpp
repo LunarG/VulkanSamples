@@ -4,23 +4,17 @@
  * Copyright (C) 2015-2016 Valve Corporation
  * Copyright (C) 2015-2016 LunarG, Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 /*
@@ -69,12 +63,12 @@ static const char *fullscreenVertShaderText =
     "};\n"
     "void main() {\n"
     "   outColor = vec4(1.0f, 0.1f, 0.1f, 0.5f);\n"
-    "   const vec4 verts[4] = vec4[4](vec4(-1.0, -1.0, 0.5, 1.0),"
-    "                                 vec4( 1.0, -1.0, 0.5, 1.0),"
-    "                                 vec4(-1.0,  1.0, 0.5, 1.0),"
+    "   const vec4 verts[4] = vec4[4](vec4(-1.0, -1.0, 0.5, 1.0),\n"
+    "                                 vec4( 1.0, -1.0, 0.5, 1.0),\n"
+    "                                 vec4(-1.0,  1.0, 0.5, 1.0),\n"
     "                                 vec4( 1.0,  1.0, 0.5, 1.0));\n"
     "\n"
-    "   gl_Position = verts[gl_VertexIndex];"
+    "   gl_Position = verts[gl_VertexIndex];\n"
     "}\n";
 
 static const char *fragShaderText =
@@ -229,6 +223,7 @@ int sample_main(int argc, char *argv[]) {
     VkPipelineVertexInputStateCreateInfo vi;
     vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vi.pNext = NULL;
+    vi.flags = 0;
     vi.vertexBindingDescriptionCount = 1;
     vi.pVertexBindingDescriptions = &info.vi_binding;
     vi.vertexAttributeDescriptionCount = 2;
@@ -237,12 +232,14 @@ int sample_main(int argc, char *argv[]) {
     VkPipelineInputAssemblyStateCreateInfo ia;
     ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     ia.pNext = NULL;
+    ia.flags = 0;
     ia.primitiveRestartEnable = VK_FALSE;
     ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     VkPipelineRasterizationStateCreateInfo rs;
     rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rs.pNext = NULL;
+    rs.flags = 0;
     rs.polygonMode = VK_POLYGON_MODE_FILL;
     rs.cullMode = VK_CULL_MODE_BACK_BIT;
     rs.frontFace = VK_FRONT_FACE_CLOCKWISE;
@@ -252,11 +249,12 @@ int sample_main(int argc, char *argv[]) {
     rs.depthBiasConstantFactor = 0;
     rs.depthBiasClamp = 0;
     rs.depthBiasSlopeFactor = 0;
-    rs.lineWidth = 0;
+    rs.lineWidth = 1.0f;
 
     VkPipelineColorBlendStateCreateInfo cb;
     cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     cb.pNext = NULL;
+    cb.flags = 0;
     VkPipelineColorBlendAttachmentState att_state[1];
     att_state[0].colorWriteMask = 0xf;
     att_state[0].blendEnable = VK_FALSE;
@@ -288,6 +286,7 @@ int sample_main(int argc, char *argv[]) {
     VkPipelineDepthStencilStateCreateInfo ds;
     ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     ds.pNext = NULL;
+    ds.flags = 0;
     ds.depthTestEnable = VK_TRUE;
     ds.depthWriteEnable = VK_TRUE;
     ds.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
@@ -308,6 +307,7 @@ int sample_main(int argc, char *argv[]) {
     VkPipelineMultisampleStateCreateInfo ms;
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pNext = NULL;
+    ms.flags = 0;
     ms.pSampleMask = NULL;
     ms.rasterizationSamples = NUM_SAMPLES;
     ms.sampleShadingEnable = VK_FALSE;
@@ -402,11 +402,15 @@ int sample_main(int argc, char *argv[]) {
 
     // Get the index of the next available swapchain image:
     res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
-                                presentCompleteSemaphore, NULL,
+                                presentCompleteSemaphore, VK_NULL_HANDLE,
                                 &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
     assert(res == VK_SUCCESS);
+
+    set_image_layout(info, info.buffers[info.current_buffer].image,
+                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
     VkRenderPassBeginInfo rp_begin;
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -598,9 +602,6 @@ int sample_main(int argc, char *argv[]) {
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       blend_fullscreen_pipe);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            info.pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
-                            info.desc_set.data(), 0, NULL);
 
     /* Adjust the viewport to be a square in the centre, just overlapping the
      * cube */

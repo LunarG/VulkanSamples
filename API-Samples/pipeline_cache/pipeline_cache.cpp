@@ -5,23 +5,17 @@
  * Copyright (C) 2016 LunarG, Inc.
  * Copyright (C) 2016 Google, Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 /*
@@ -111,8 +105,9 @@ int sample_main(int argc, char *argv[]) {
     size_t startCacheSize = 0;
     void *startCacheData = nullptr;
 
-    const char *readFileName = "pipeline_cache_data.bin";
-    FILE *pReadFile = fopen(readFileName, "rb");
+    std::string directoryName = get_file_directory();
+    std::string readFileName = directoryName + "pipeline_cache_data.bin";
+    FILE *pReadFile = fopen(readFileName.c_str(), "rb");
 
     if (pReadFile) {
 
@@ -139,7 +134,7 @@ int sample_main(int argc, char *argv[]) {
         // Clean up and print results
         fclose(pReadFile);
         printf("  Pipeline cache HIT!\n");
-        printf("  cacheData loaded from %s\n", readFileName);
+        printf("  cacheData loaded from %s\n", readFileName.c_str());
 
     } else {
         // No cache found on disk
@@ -195,26 +190,26 @@ int sample_main(int argc, char *argv[]) {
 
         if (headerLength <= 0) {
             badCache = true;
-            printf("  Bad header length in %s.\n", readFileName);
+            printf("  Bad header length in %s.\n", readFileName.c_str());
             printf("    Cache contains: 0x%.8x\n", headerLength);
         }
 
         if (cacheHeaderVersion != VK_PIPELINE_CACHE_HEADER_VERSION_ONE) {
             badCache = true;
-            printf("  Unsupported cache header version in %s.\n", readFileName);
+            printf("  Unsupported cache header version in %s.\n", readFileName.c_str());
             printf("    Cache contains: 0x%.8x\n", cacheHeaderVersion);
         }
 
         if (vendorID != info.gpu_props.vendorID) {
             badCache = true;
-            printf("  Vendor ID mismatch in %s.\n", readFileName);
+            printf("  Vendor ID mismatch in %s.\n", readFileName.c_str());
             printf("    Cache contains: 0x%.8x\n", vendorID);
             printf("    Driver expects: 0x%.8x\n", info.gpu_props.vendorID);
         }
 
         if (deviceID != info.gpu_props.deviceID) {
             badCache = true;
-            printf("  Device ID mismatch in %s.\n", readFileName);
+            printf("  Device ID mismatch in %s.\n", readFileName.c_str());
             printf("    Cache contains: 0x%.8x\n", deviceID);
             printf("    Driver expects: 0x%.8x\n", info.gpu_props.deviceID);
         }
@@ -222,7 +217,7 @@ int sample_main(int argc, char *argv[]) {
         if (memcmp(pipelineCacheUUID, info.gpu_props.pipelineCacheUUID,
                    sizeof(pipelineCacheUUID)) != 0) {
             badCache = true;
-            printf("  UUID mismatch in %s.\n", readFileName);
+            printf("  UUID mismatch in %s.\n", readFileName.c_str());
             printf("    Cache contains: ");
             print_UUID(pipelineCacheUUID);
             printf("\n");
@@ -238,8 +233,8 @@ int sample_main(int argc, char *argv[]) {
             startCacheData = nullptr;
 
             // And clear out the old cache file for use in next run
-            printf("  Deleting cache entry %s to repopulate.\n", readFileName);
-            if (remove(readFileName) != 0) {
+            printf("  Deleting cache entry %s to repopulate.\n", readFileName.c_str());
+            if (remove(readFileName.c_str()) != 0) {
                 fputs("Reading error", stderr);
                 exit(EXIT_FAILURE);
             }
@@ -345,12 +340,12 @@ int sample_main(int argc, char *argv[]) {
 
     // Write the file to disk, overwriting whatever was there
     FILE *pWriteFile;
-    const char *writeFileName = "pipeline_cache_data.bin";
-    pWriteFile = fopen(writeFileName, "wb");
+    std::string writeFileName = directoryName + "pipeline_cache_data.bin";
+    pWriteFile = fopen(writeFileName.c_str(), "wb");
     if (pWriteFile) {
         fwrite(endCacheData, sizeof(char), endCacheSize, pWriteFile);
         fclose(pWriteFile);
-        printf("  cacheData written to %s\n", writeFileName);
+        printf("  cacheData written to %s\n", writeFileName.c_str());
     } else {
         // Something bad happened
         printf("  Unable to write cache data to disk!\n");

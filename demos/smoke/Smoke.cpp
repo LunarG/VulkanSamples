@@ -1,23 +1,17 @@
 /*
  * Copyright (C) 2016 Google, Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include <array>
@@ -389,17 +383,17 @@ void Smoke::destroy_frame_data()
     if (!use_push_constants_) {
         vk::DestroyDescriptorPool(dev_, desc_pool_, nullptr);
 
-        for (auto cmd_pool : worker_cmd_pools_)
-            vk::DestroyCommandPool(dev_, cmd_pool, nullptr);
-        worker_cmd_pools_.clear();
-        vk::DestroyCommandPool(dev_, primary_cmd_pool_, nullptr);
-
         vk::UnmapMemory(dev_, frame_data_mem_);
         vk::FreeMemory(dev_, frame_data_mem_, nullptr);
 
         for (auto &data : frame_data_)
             vk::DestroyBuffer(dev_, data.buf, nullptr);
     }
+
+    for (auto cmd_pool : worker_cmd_pools_)
+        vk::DestroyCommandPool(dev_, cmd_pool, nullptr);
+    worker_cmd_pools_.clear();
+    vk::DestroyCommandPool(dev_, primary_cmd_pool_, nullptr);
 
     for (auto &data : frame_data_)
         vk::DestroyFence(dev_, data.fence, nullptr);
@@ -783,18 +777,21 @@ void Smoke::on_frame(float frame_pred)
 
     VkResult res = vk::BeginCommandBuffer(data.primary_cmd, &primary_cmd_begin_info_);
 
-    VkBufferMemoryBarrier buf_barrier = {};
-    buf_barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-    buf_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-    buf_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    buf_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    buf_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    buf_barrier.buffer = data.buf;
-    buf_barrier.offset = 0;
-    buf_barrier.size = VK_WHOLE_SIZE;
-    vk::CmdPipelineBarrier(data.primary_cmd,
-            VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-            0, 0, nullptr, 1, &buf_barrier, 0, nullptr);
+    if (!use_push_constants_) {
+        VkBufferMemoryBarrier buf_barrier = {};
+        buf_barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        buf_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+        buf_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        buf_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        buf_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        buf_barrier.buffer = data.buf;
+        buf_barrier.offset = 0;
+        buf_barrier.size = VK_WHOLE_SIZE;
+        vk::CmdPipelineBarrier(data.primary_cmd,
+                               VK_PIPELINE_STAGE_HOST_BIT,
+                               VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+                               0, 0, nullptr, 1, &buf_barrier, 0, nullptr);
+    }
 
     render_pass_begin_info_.framebuffer = framebuffers_[back.image_index];
     render_pass_begin_info_.renderArea.extent = extent_;

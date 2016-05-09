@@ -4,23 +4,17 @@
  * Copyright (C) 2015-2016 Valve Corporation
  * Copyright (C) 2015-2016 LunarG, Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 /*
@@ -80,7 +74,24 @@ int sample_main(int argc, char *argv[]) {
     info.instance_layer_names.push_back("VK_LAYER_LUNARG_standard_validation");
     if (!demo_check_layers(info.instance_layer_properties,
                            info.instance_layer_names)) {
-        exit(1);
+        /* If standard validation is not present, search instead for the
+         * individual layers that make it up, in the correct order.
+         */
+        info.instance_layer_names.clear();
+        info.instance_layer_names.push_back("VK_LAYER_GOOGLE_threading");
+        info.instance_layer_names.push_back(
+            "VK_LAYER_LUNARG_parameter_validation");
+        info.instance_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
+        info.instance_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
+        info.instance_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
+        info.instance_layer_names.push_back("VK_LAYER_LUNARG_image");
+        info.instance_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
+        info.instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
+
+        if (!demo_check_layers(info.instance_layer_properties,
+                               info.instance_layer_names)) {
+            exit(1);
+        }
     }
 
     /* Enable debug callback extension */
@@ -123,9 +134,26 @@ int sample_main(int argc, char *argv[]) {
 
     if (!demo_check_layers(info.device_layer_properties,
                            info.device_layer_names)) {
-        exit(1);
+        /* If standard validation is not present, search instead for the
+         * individual layers that make it up, in the correct order.
+         */
+        info.device_layer_names.clear();
+        info.device_layer_names.push_back("VK_LAYER_GOOGLE_threading");
+        info.device_layer_names.push_back(
+            "VK_LAYER_LUNARG_parameter_validation");
+        info.device_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
+        info.device_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
+        info.device_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
+        info.device_layer_names.push_back("VK_LAYER_LUNARG_image");
+        info.device_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
+        info.device_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
+
+        if (!demo_check_layers(info.device_layer_properties,
+                               info.device_layer_names)) {
+            exit(1);
+        }
     }
-    float queue_priorities[1] = {0.0};
+    float queue_priorities[1] = { 0.0 };
     VkDeviceQueueCreateInfo queue_info = {};
 
     vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count,

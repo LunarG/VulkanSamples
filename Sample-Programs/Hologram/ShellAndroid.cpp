@@ -1,23 +1,17 @@
 /*
  * Copyright (C) 2016 Google, Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include <cassert>
@@ -70,6 +64,54 @@ private:
 };
 
 } // namespace
+
+std::vector<std::string> ShellAndroid::get_args(android_app &app)
+{
+    const char intent_extra_data_key[] = "args";
+    std::vector<std::string> args;
+
+    JavaVM &vm = *app.activity->vm;
+    JNIEnv *p_env;
+    if (vm.AttachCurrentThread(&p_env, nullptr) != JNI_OK)
+        return args;
+
+    JNIEnv &env = *p_env;
+    jobject activity = app.activity->clazz;
+    jmethodID get_intent_method = env.GetMethodID(env.GetObjectClass(activity),
+            "getIntent", "()Landroid/content/Intent;");
+    jobject intent = env.CallObjectMethod(activity, get_intent_method);
+
+    jmethodID get_string_extra_method = env.GetMethodID(env.GetObjectClass(intent),
+            "getStringExtra", "(Ljava/lang/String;)Ljava/lang/String;");
+    jvalue get_string_extra_args;
+    get_string_extra_args.l = env.NewStringUTF(intent_extra_data_key);
+    jstring extra_str = static_cast<jstring>(env.CallObjectMethodA(intent,
+            get_string_extra_method, &get_string_extra_args));
+
+    std::string args_str;
+    if (extra_str) {
+        const char *extra_utf = env.GetStringUTFChars(extra_str, nullptr);
+        args_str = extra_utf;
+        env.ReleaseStringUTFChars(extra_str, extra_utf);
+
+        env.DeleteLocalRef(extra_str);
+    }
+
+    env.DeleteLocalRef(get_string_extra_args.l);
+    env.DeleteLocalRef(intent);
+
+    vm.DetachCurrentThread();
+
+    // split args_str
+    std::stringstream ss(args_str);
+    std::string arg;
+    while (std::getline(ss, arg, ' ')) {
+        if (!arg.empty())
+            args.push_back(arg);
+    }
+
+    return args;
+}
 
 ShellAndroid::ShellAndroid(android_app &app, Game &game) : Shell(game), app_(app)
 {

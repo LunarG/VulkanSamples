@@ -11,8 +11,8 @@ layout(std140, set = 0, binding = 0) readonly buffer param_block {
 	float alpha;
 } params;
 
-out vec3 color;
-out float alpha;
+layout(location = 0) out vec3 color;
+layout(location = 1) out float alpha;
 
 void main()
 {

@@ -3,24 +3,17 @@
  * Copyright (c) 2015-2016 LunarG, Inc.
  * Copyright (C) 2015-2016 Google Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and/or associated documentation files (the "Materials"), to
- * deal in the Materials without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Materials, and to permit persons to whom the Materials
- * are furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice(s) and this permission notice shall be included
- * in all copies or substantial portions of the Materials.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- *
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
- * USE OR OTHER DEALINGS IN THE MATERIALS
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  * Author: Jeremy Hayes <jeremy@lunarg.com>
  * Author: Mark Lobodzinski <mark@lunarg.com>
@@ -31,16 +24,16 @@
 // Allow use of STL min and max functions in Windows
 #define NOMINMAX
 
+#include <algorithm>
+#include <assert.h>
 #include <inttypes.h>
+#include <memory>
+#include <mutex>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
-#include <vector>
-#include <algorithm>
 #include <unordered_map>
-#include <memory>
-using namespace std;
+#include <vector>
 
 #include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
@@ -54,8 +47,6 @@ using namespace std;
 #include "vk_layer_extension_utils.h"
 #include "vk_layer_utils.h"
 #include "vk_layer_logging.h"
-
-using namespace std;
 
 struct layer_data {
     debug_report_data *report_data;
@@ -73,17 +64,10 @@ struct layer_data {
 };
 
 static unordered_map<void *, layer_data *> layer_data_map;
-static int globalLockInitialized = 0;
-static loader_platform_thread_mutex globalLock;
+static std::mutex global_lock;
 
 static void init_image(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
-
     layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "lunarg_image");
-
-    if (!globalLockInitialized) {
-        loader_platform_thread_create_mutex(&globalLock);
-        globalLockInitialized = 1;
-    }
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
@@ -299,6 +283,36 @@ vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, const VkAll
     VkDeviceSize imageGranularity = device_data->physicalDeviceProperties.limits.bufferImageGranularity;
     imageGranularity = imageGranularity == 1 ? 0 : imageGranularity;
 
+    // Make sure all required dimension are non-zero at least.
+    bool failedMinSize = false;
+    switch (pCreateInfo->imageType) {
+    case VK_IMAGE_TYPE_3D:
+        if (pCreateInfo->extent.depth == 0) {
+            failedMinSize = true;
+        }
+    // Intentional fall-through
+    case VK_IMAGE_TYPE_2D:
+        if (pCreateInfo->extent.height == 0) {
+            failedMinSize = true;
+        }
+    // Intentional fall-through
+    case VK_IMAGE_TYPE_1D:
+        if (pCreateInfo->extent.width == 0) {
+            failedMinSize = true;
+        }
+        break;
+    default:
+        break;
+    }
+    if (failedMinSize) {
+        skipCall |=
+            log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                    (uint64_t)pImage, __LINE__, IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
+                    "CreateImage extents is 0 for at least one required dimension for image of type %d: "
+                    "Width = %d Height = %d Depth = %d.",
+                    pCreateInfo->imageType, pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth);
+    }
+
     if ((pCreateInfo->extent.depth > ImageFormatProperties.maxExtent.depth) ||
         (pCreateInfo->extent.width > ImageFormatProperties.maxExtent.width) ||
         (pCreateInfo->extent.height > ImageFormatProperties.maxExtent.height)) {
@@ -357,18 +371,17 @@ vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, const VkAll
         result = device_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
     }
     if (result == VK_SUCCESS) {
-        loader_platform_thread_lock_mutex(&globalLock);
+        std::lock_guard<std::mutex> lock(global_lock);
         device_data->imageMap[*pImage] = IMAGE_STATE(pCreateInfo);
-        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks *pAllocator) {
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    loader_platform_thread_lock_mutex(&globalLock);
+    std::unique_lock<std::mutex> lock(global_lock);
     device_data->imageMap.erase(image);
-    loader_platform_thread_unlock_mutex(&globalLock);
+    lock.unlock();
     device_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
 }
 

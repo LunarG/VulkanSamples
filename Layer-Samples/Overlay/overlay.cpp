@@ -5,23 +5,17 @@
  * Copyright (C) 2015-2016 LunarG, Inc.
  * Copyright (C) 2015-2016 Google Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  * Author: Chris Forbes <chrisforbes@google.com>
  */
@@ -201,7 +195,7 @@ static bool compile_shader(VkDevice device, char const *filename,
 }
 
 static uint32_t choose_memory_type(VkPhysicalDevice gpu, uint32_t typeBits,
-                                   VkMemoryPropertyFlagBits properties) {
+                                   VkMemoryPropertyFlags properties) {
     layer_data *my_data =
         get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
 
@@ -340,7 +334,8 @@ static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
     mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     mem_alloc.allocationSize = mem_reqs.size;
     mem_alloc.memoryTypeIndex = choose_memory_type(
-        gpu, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        gpu, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     err = pTable->AllocateMemory(device, &mem_alloc, nullptr,
                                  &data->fontGlyphsMemory);
@@ -774,6 +769,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
             VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         prsci.polygonMode = VK_POLYGON_MODE_FILL;
         prsci.cullMode = VK_CULL_MODE_NONE;
+        prsci.lineWidth = 1.0f;
 
         VkPipelineMultisampleStateCreateInfo pmsci;
         memset(&pmsci, 0, sizeof(pmsci));
@@ -954,7 +950,8 @@ vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapChain,
             mem_alloc.allocationSize = mem_reqs.size;
             mem_alloc.memoryTypeIndex =
                 choose_memory_type(my_data->gpu, mem_reqs.memoryTypeBits,
-                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
             VkDeviceMemory mem;
             err = pTable->AllocateMemory(device, &mem_alloc, nullptr, &mem);

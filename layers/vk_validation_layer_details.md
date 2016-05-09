@@ -330,13 +330,10 @@ For the second category of errors, VK_LAYER_LUNARG_device_limits stores its own 
 | Querying array counts | For API calls where an array count should be queried with an initial call and a NULL array pointer, verify that such a call was made before making a call with non-null array pointer. | MUST_QUERY_COUNT | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | NA | Create focused test |
 | Array count value | For API calls where an array of details is queried, verify that the size of the requested array matches the size of the array supported by the device. | COUNT_MISMATCH | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | NA | Create focused test |
 | Queue Creation | When creating/requesting queues, make sure that QueueFamilyPropertiesIndex and index/count within that queue family are valid. | INVALID_QUEUE_CREATE_REQUEST | vkGetDeviceQueue vkCreateDevice | NA | Create focused test |
-| Query Properties | Before creating an Image, warn if physical device properties have not been queried | MUST_QUERY_PROPERTIES | vkCreateImage | NA | Add validation test |
 | API Call Sequencing | This is a general error indicating that an app did not use vkGetPhysicalDevice* and other such query calls, but rather made an assumption about device capabilities. | INVALID_CALL_SEQUENCE | vkCreateDevice | NA | Add validation test |
 | Feature Request | Attempting to vkCreateDevice with a feature that is not supported by the underlying physical device. | INVALID_FEATURE_REQUESTED | vkCreateDevice | NA | Add validation test |
-| Valid Image Extents | When creating an Image, ensure that image extents are within device limits for the specified format | LIMITS_VIOLATION | vkCreateImage | CreateImageLimitsViolationWidth | NA |
-| Valid Image Resource Size | When creating an image, ensure the the total image resource size is less than the queried device maximum resource size  | LIMITS_VIOLATION | vkCreateImage | CreateImageResourceSizeViolation | NA |
-| Alignment | When updating a buffer, data should be aligned on 4 byte boundaries  | LIMITS_VIOLATION | vkCmdUpdateBuffer | UpdateBufferAlignment | NA |
-| Alignment | When filling a buffer, data should be aligned on 4 byte boundaries  | LIMITS_VIOLATION | vkCmdFillBuffer | UpdateBufferAlignment | NA |
+| Alignment | When updating a buffer, data should be aligned on 4 byte boundaries  | INVALID_BUFFER_UPDATE_ALIGNMENT | vkCmdUpdateBuffer | UpdateBufferAlignment | NA |
+| Alignment | When filling a buffer, data should be aligned on 4 byte boundaries  | INVALID_BUFFER_UPDATE_ALIGNMENT | vkCmdFillBuffer | UpdateBufferAlignment | NA |
 | Storage Buffer Alignment  | Storage Buffer offsets must agree with offset alignment device limit | INVALID_STORAGE_BUFFER_OFFSET | vkBindBufferMemory vkUpdateDescriptorSets | TODO | Create test |
 | Uniform Buffer Alignment  | Uniform Buffer offsets must agree with offset alignment device limit | INVALID_UNIFORM_BUFFER_OFFSET | vkBindBufferMemory vkUpdateDescriptorSets | TODO | Create test |
 | NA | Enum used for informational messages | NONE | | NA | None |

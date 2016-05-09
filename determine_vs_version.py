@@ -3,26 +3,18 @@
 # Copyright (c) 2016 The Khronos Group Inc.
 # Copyright (c) 2016 Valve Corporation
 # Copyright (c) 2016 LunarG, Inc.
-# Copyright (c) 2016 Google Inc.
 #
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and/or associated documentation files (the "Materials"), to
-# deal in the Materials without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Materials, and to permit persons to whom the Materials
-# are furnished to do so, subject to the following conditions:
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# The above copyright notice(s) and this permission notice shall be included
-# in all copies or substantial portions of the Materials.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-#
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-# DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-# OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
-# USE OR OTHER DEALINGS IN THE MATERIALS
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 # Author: Mark Young <marky@lunarg.com>
 
@@ -48,76 +40,76 @@ def find_executable(program):
                 return exe_file
 
     return None
-	
+
 def determine_year(version):
-	if version == 8:
-		return 2005
-	elif version == 9:
-		return 2008
-	elif version == 10:
-		return 2010
-	elif version == 11:
-		return 2012
-	elif version == 12:
-		return 2013
-	elif version == 14:
-		return 2015
-	else:
-		return 0000
-	
+    if version == 8:
+        return 2005
+    elif version == 9:
+        return 2008
+    elif version == 10:
+        return 2010
+    elif version == 11:
+        return 2012
+    elif version == 12:
+        return 2013
+    elif version == 14:
+        return 2015
+    else:
+        return 0000
+
 # Determine if msbuild is in the path, then call it to determine the version and parse
 # it into a format we can use, which is "<version_num> <version_year>".
 if __name__ == '__main__':
-	exeName     = 'msbuild.exe'
-	versionCall = exeName + ' /ver'
+    exeName     = 'msbuild.exe'
+    versionCall = exeName + ' /ver'
 
-	# Determine if the executable exists in the path, this is critical.
-	#
-	foundExeName = find_executable(exeName)
+    # Determine if the executable exists in the path, this is critical.
+    #
+    foundExeName = find_executable(exeName)
 
-	# If not found, return an invalid number but in the appropriate format so it will
-	# fail if the program above tries to use it.
-	if foundExeName == None:
-		print('00 0000')
-		print('Executable ' + exeName + ' not found in PATH!')		
-	else:
-		sysCallOut = os.popen(versionCall).read()
-		
-		version = None
+    # If not found, return an invalid number but in the appropriate format so it will
+    # fail if the program above tries to use it.
+    if foundExeName == None:
+        print('00 0000')
+        print('Executable ' + exeName + ' not found in PATH!')
+    else:
+        sysCallOut = os.popen(versionCall).read()
 
-		# Split around any spaces first
-		spaceList  = sysCallOut.split(' ')
-		for spaceString in spaceList:
+        version = None
 
-			# If we've already found it, bail.
-			if version != None:
-				break
-		
-			# Now split around line feeds
-			lineList = spaceString.split('\n')
-			for curLine in lineList:
+        # Split around any spaces first
+        spaceList  = sysCallOut.split(' ')
+        for spaceString in spaceList:
 
-				# If we've already found it, bail.
-				if version != None:
-					break
-			
-				# We only want to continue if there's a period in the list
-				if '.' not in curLine:
-					continue
+            # If we've already found it, bail.
+            if version != None:
+                break
 
-				# Get the first element and determine if it is a number, if so, we've
-				# got our number.
-				splitAroundPeriod = curLine.split('.')
-				if splitAroundPeriod[0].isdigit():
-					version = int (splitAroundPeriod[0])
-					break
-		
-		# Failsafe to return a number in the proper format, but one that will fail.
-		if version == None:
-			version = 00
+            # Now split around line feeds
+            lineList = spaceString.split('\n')
+            for curLine in lineList:
 
-		# Determine the year associated with that version
-		year = determine_year(version)
-        
-		# Output the string we need for Cmake to properly build for this version
-		print(str(version) + ' ' + str(year))
+                # If we've already found it, bail.
+                if version != None:
+                    break
+
+                # We only want to continue if there's a period in the list
+                if '.' not in curLine:
+                    continue
+
+                # Get the first element and determine if it is a number, if so, we've
+                # got our number.
+                splitAroundPeriod = curLine.split('.')
+                if splitAroundPeriod[0].isdigit():
+                    version = int (splitAroundPeriod[0])
+                    break
+
+        # Failsafe to return a number in the proper format, but one that will fail.
+        if version == None:
+            version = 00
+
+        # Determine the year associated with that version
+        year = determine_year(version)
+
+        # Output the string we need for Cmake to properly build for this version
+        print(str(version) + ' ' + str(year))

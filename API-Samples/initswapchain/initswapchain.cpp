@@ -4,23 +4,17 @@
  * Copyright (C) 2015-2016 Valve Corporation
  * Copyright (C) 2015-2016 LunarG, Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 /*
@@ -70,8 +64,18 @@ int sample_main(int argc, char *argv[]) {
     createInfo.pNext = NULL;
     createInfo.hinstance = info.connection;
     createInfo.hwnd = info.window;
-    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo, NULL, &info.surface);
-#else  // _WIN32
+    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo,
+                                  NULL, &info.surface);
+#elif defined(__ANDROID__)
+    GET_INSTANCE_PROC_ADDR(info.inst, CreateAndroidSurfaceKHR);
+
+    VkAndroidSurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = nullptr;
+    createInfo.flags = 0;
+    createInfo.window = AndroidGetApplicationWindow();
+    res = info.fpCreateAndroidSurfaceKHR(info.inst, &createInfo, nullptr, &info.surface);
+#else  // !__ANDROID__ && !_WIN32
     VkXcbSurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
@@ -211,7 +215,7 @@ int sample_main(int argc, char *argv[]) {
     swap_chain.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     swap_chain.imageArrayLayers = 1;
     swap_chain.presentMode = swapchainPresentMode;
-    swap_chain.oldSwapchain = NULL;
+    swap_chain.oldSwapchain = VK_NULL_HANDLE;
     swap_chain.clipped = true;
     swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
     swap_chain.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;

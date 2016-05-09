@@ -4,23 +4,17 @@
  * Copyright (C) 2015-2016 Valve Corporation
  * Copyright (C) 2015-2016 LunarG, Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include <iostream>
@@ -44,23 +38,25 @@
 #define NOMINMAX /* Don't let Windows define min() or max() */
 #endif
 #define APP_NAME_STR_LEN 80
-#else // _WIN32
+#elif defined(__ANDROID__)
+// Include files for Android
 #include <unistd.h>
-#endif // _WIN32
-
-#if defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
+#include <android/log.h>
+#include "vulkan_wrapper.h" // Include Vulkan_wrapper and dynamically load symbols.
+#elif defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
 #	define VK_USE_PLATFORM_IOS_MVK
 #	include <MoltenVK/vk_mvk_ios_surface.h>
+#   include <unistd.h>
 #elif defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
 #	define VK_USE_PLATFORM_OSX_MVK
 #	include <MoltenVK/vk_mvk_osx_surface.h>
-#endif 
-
-#include <vulkan/vulkan.h>
-
-#if !(defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
+#   include <unistd.h>
+#else
+#include <unistd.h>
 #include "vulkan/vk_sdk_platform.h"
 #endif
+
+#include <vulkan/vulkan.h>
 
 /* Number of descriptor sets needs to be the same at alloc,       */
 /* pipeline layout creation, and descriptor set layout creation   */
@@ -150,14 +146,16 @@ struct sample_info {
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND window;                 // hWnd - window handle
-#elif (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) || defined(__MAC_OS_X_VERSION_MAX_ALLOWED))
+#elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_OSX_MVK))
 	void* window;
-#else                            // _WIN32
+#elif defined(__ANDROID__)
+    PFN_vkCreateAndroidSurfaceKHR fpCreateAndroidSurfaceKHR;
+#else  // _WIN32
     xcb_connection_t *connection;
     xcb_screen_t *screen;
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
-#endif                           // _WIN32
+#endif // _WIN32
     VkSurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;
@@ -273,9 +271,30 @@ void init_glslang();
 void finalize_glslang();
 void wait_seconds(int seconds);
 void print_UUID(uint8_t *pipelineCacheUUID);
+std::string get_file_directory();
 
 typedef unsigned long long timestamp_t;
 timestamp_t get_milliseconds();
 
 // Main entry point of samples
-int sample_main(int argc = 0, char **argv = NULL);
+int sample_main(int argc, char *argv[]);
+
+#ifdef __ANDROID__
+// Android specific definitions & helpers.
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "threaded_app", __VA_ARGS__))
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "threaded_app", __VA_ARGS__))
+// Replace printf to logcat output.
+#define printf(...) __android_log_print(ANDROID_LOG_DEBUG, "TAG", __VA_ARGS__);
+
+bool Android_process_command();
+ANativeWindow* AndroidGetApplicationWindow();
+FILE* AndroidFopen(const char* fname, const char* mode);
+void AndroidGetWindowSize(int32_t *width, int32_t *height);
+bool AndroidLoadFile(const char* filePath, std::string *data);
+
+#ifndef VK_API_VERSION_1_0
+// On Android, NDK would include slightly older version of headers that is missing the definition.
+#define VK_API_VERSION_1_0 VK_API_VERSION
+#endif
+
+#endif

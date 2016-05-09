@@ -3,24 +3,17 @@
  * Copyright (c) 2015-2016 LunarG, Inc.
  * Copyright (C) 2015-2016 Google Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and/or associated documentation files (the "Materials"), to
- * deal in the Materials without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Materials, and to permit persons to whom the Materials
- * are furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice(s) and this permission notice shall be included
- * in all copies or substantial portions of the Materials.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- *
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
- * USE OR OTHER DEALINGS IN THE MATERIALS
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  * Author: Courtney Goeltzenleuchter <courtneygo@google.com>
  * Author: Tobin Ehlis <tobine@google.com>
@@ -53,48 +46,22 @@
 #define MTMERGE 1
 
 #pragma once
+#include "core_validation_error_enums.h"
+#include "descriptor_sets.h"
+#include "vk_layer_logging.h"
 #include "vk_safe_struct.h"
 #include "vulkan/vk_layer.h"
 #include <atomic>
-#include <vector>
+#include <functional>
+#include <memory>
 #include <unordered_map>
 #include <unordered_set>
-#include <memory>
-#include <functional>
+#include <vector>
 
 using std::vector;
 using std::unordered_set;
 
 #if MTMERGE
-// Mem Tracker ERROR codes
-typedef enum _MEM_TRACK_ERROR {
-    MEMTRACK_NONE,                         // Used for INFO & other non-error messages
-    MEMTRACK_INVALID_CB,                   // Cmd Buffer invalid
-    MEMTRACK_INVALID_MEM_OBJ,              // Invalid Memory Object
-    MEMTRACK_INVALID_ALIASING,             // Invalid Memory Aliasing
-    MEMTRACK_INVALID_LAYOUT,               // Invalid Layout
-    MEMTRACK_INTERNAL_ERROR,               // Bug in Mem Track Layer internal data structures
-    MEMTRACK_FREED_MEM_REF,                // MEM Obj freed while it still has obj and/or CB refs
-    MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS, // Clearing bindings on mem obj that doesn't have any bindings
-    MEMTRACK_MISSING_MEM_BINDINGS,         // Trying to retrieve mem bindings, but none found (may be internal error)
-    MEMTRACK_INVALID_OBJECT,               // Attempting to reference generic VK Object that is invalid
-    MEMTRACK_MEMORY_BINDING_ERROR,         // Error during one of many calls that bind memory to object or CB
-    MEMTRACK_MEMORY_LEAK,                  // Failure to call vkFreeMemory on Mem Obj prior to DestroyDevice
-    MEMTRACK_INVALID_STATE,                // Memory not in the correct state
-    MEMTRACK_RESET_CB_WHILE_IN_FLIGHT,     // vkResetCommandBuffer() called on a CB that hasn't completed
-    MEMTRACK_INVALID_FENCE_STATE,          // Invalid Fence State signaled or used
-    MEMTRACK_REBIND_OBJECT,                // Non-sparse object bindings are immutable
-    MEMTRACK_INVALID_USAGE_FLAG,           // Usage flags specified at image/buffer create conflict w/ use of object
-    MEMTRACK_INVALID_MAP,                  // Size flag specified at alloc is too small for mapping range
-} MEM_TRACK_ERROR;
-
-// MemTracker Semaphore states
-typedef enum SemaphoreState {
-    MEMTRACK_SEMAPHORE_STATE_UNSET,     // Semaphore is in an undefined state
-    MEMTRACK_SEMAPHORE_STATE_SIGNALLED, // Semaphore has is in signalled state
-    MEMTRACK_SEMAPHORE_STATE_WAIT,      // Semaphore is in wait state
-} SemaphoreState;
-
 struct MemRange {
     VkDeviceSize offset;
     VkDeviceSize size;
@@ -184,23 +151,6 @@ struct MT_PASS_ATTACHMENT_INFO {
     VkAttachmentStoreOp store_op;
 };
 
-// Associate fenceId with a fence object
-struct MT_FENCE_INFO {
-    uint64_t fenceId;         // Sequence number for fence at last submit
-    VkQueue queue;            // Queue that this fence is submitted against or NULL
-    VkSwapchainKHR swapchain; // Swapchain that this fence is submitted against or NULL
-    bool firstTimeFlag;       // Fence was created in signaled state, avoid warnings for first use
-    VkFenceCreateInfo createInfo;
-};
-
-// Track Queue information
-struct MT_QUEUE_INFO {
-    uint64_t lastRetiredId;
-    uint64_t lastSubmittedId;
-    list<VkCommandBuffer> pQueueCommandBuffers;
-    list<VkDeviceMemory> pMemRefList;
-};
-
 struct MT_DESCRIPTOR_SET_INFO {
     std::vector<VkImageView> images;
     std::vector<VkBuffer> buffers;
@@ -213,201 +163,6 @@ struct MT_SWAP_CHAIN_INFO {
 };
 
 #endif
-// Draw State ERROR codes
-typedef enum _DRAW_STATE_ERROR {
-    // TODO: Remove the comments here or expand them. There isn't any additional information in the
-    // comments than in the name in almost all cases.
-    DRAWSTATE_NONE,                          // Used for INFO & other non-error messages
-    DRAWSTATE_INTERNAL_ERROR,                // Error with DrawState internal data structures
-    DRAWSTATE_NO_PIPELINE_BOUND,             // Unable to identify a bound pipeline
-    DRAWSTATE_INVALID_POOL,                  // Invalid DS pool
-    DRAWSTATE_INVALID_SET,                   // Invalid DS
-    DRAWSTATE_INVALID_RENDER_AREA,           // Invalid renderArea
-    DRAWSTATE_INVALID_LAYOUT,                // Invalid DS layout
-    DRAWSTATE_INVALID_IMAGE_LAYOUT,          // Invalid Image layout
-    DRAWSTATE_INVALID_PIPELINE,              // Invalid Pipeline handle referenced
-    DRAWSTATE_INVALID_PIPELINE_LAYOUT,       // Invalid PipelineLayout
-    DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, // Attempt to create a pipeline
-                                             // with invalid state
-    DRAWSTATE_INVALID_COMMAND_BUFFER,        // Invalid CommandBuffer referenced
-    DRAWSTATE_INVALID_BARRIER,               // Invalid Barrier
-    DRAWSTATE_INVALID_BUFFER,                // Invalid Buffer
-    DRAWSTATE_INVALID_QUERY,                 // Invalid Query
-    DRAWSTATE_INVALID_FENCE,                 // Invalid Fence
-    DRAWSTATE_INVALID_SEMAPHORE,             // Invalid Semaphore
-    DRAWSTATE_INVALID_EVENT,                 // Invalid Event
-    DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,       // binding in vkCmdBindVertexData() too
-                                             // large for PSO's
-                                             // pVertexBindingDescriptions array
-    DRAWSTATE_VTX_INDEX_ALIGNMENT_ERROR,     // binding offset in
-                                             // vkCmdBindIndexBuffer() out of
-                                             // alignment based on indexType
-    // DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order
-    // to generate png image
-    DRAWSTATE_OUT_OF_MEMORY,                          // malloc failed
-    DRAWSTATE_INVALID_DESCRIPTOR_SET,                 // Descriptor Set handle is unknown
-    DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH,               // Type in layout vs. update are not the
-                                                      // same
-    DRAWSTATE_DESCRIPTOR_STAGEFLAGS_MISMATCH,         // StageFlags in layout are not
-                                                      // the same throughout a single
-                                                      // VkWriteDescriptorSet update
-    DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS,        // Descriptors set for update out
-                                                      // of bounds for corresponding
-                                                      // layout section
-    DRAWSTATE_DESCRIPTOR_POOL_EMPTY,                  // Attempt to allocate descriptor from a
-                                                      // pool with no more descriptors of that
-                                                      // type available
-    DRAWSTATE_CANT_FREE_FROM_NON_FREE_POOL,           // Invalid to call
-                                                      // vkFreeDescriptorSets on Sets
-                                                      // allocated from a NON_FREE Pool
-    DRAWSTATE_INVALID_UPDATE_INDEX,                   // Index of requested update is invalid for
-                                                      // specified descriptors set
-    DRAWSTATE_INVALID_UPDATE_STRUCT,                  // Struct in DS Update tree is of invalid
-                                                      // type
-    DRAWSTATE_NUM_SAMPLES_MISMATCH,                   // Number of samples in bound PSO does not
-                                                      // match number in FB of current RenderPass
-    DRAWSTATE_NO_END_COMMAND_BUFFER,                  // Must call vkEndCommandBuffer() before
-                                                      // QueueSubmit on that commandBuffer
-    DRAWSTATE_NO_BEGIN_COMMAND_BUFFER,                // Binding cmds or calling End on CB that
-                                                      // never had vkBeginCommandBuffer()
-                                                      // called on it
-    DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, // Cmd Buffer created with
-    // VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-    // flag is submitted
-    // multiple times
-    DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, // vkCmdExecuteCommands() called
-                                                // with a primary commandBuffer
-                                                // in pCommandBuffers array
-    DRAWSTATE_VIEWPORT_NOT_BOUND,               // Draw submitted with no viewport state bound
-    DRAWSTATE_SCISSOR_NOT_BOUND,                // Draw submitted with no scissor state bound
-    DRAWSTATE_LINE_WIDTH_NOT_BOUND,             // Draw submitted with no line width state
-                                                // bound
-    DRAWSTATE_DEPTH_BIAS_NOT_BOUND,             // Draw submitted with no depth bias state
-                                                // bound
-    DRAWSTATE_BLEND_NOT_BOUND,                  // Draw submitted with no blend state bound when
-                                                // color write enabled
-    DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND,           // Draw submitted with no depth bounds
-                                                // state bound when depth enabled
-    DRAWSTATE_STENCIL_NOT_BOUND,                // Draw submitted with no stencil state bound
-                                                // when stencil enabled
-    DRAWSTATE_INDEX_BUFFER_NOT_BOUND,           // Draw submitted with no depth-stencil
-                                                // state bound when depth write enabled
-    DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE,    // Draw submitted PSO Pipeline
-                                                // layout that's not compatible
-                                                // with layout from
-                                                // BindDescriptorSets
-    DRAWSTATE_RENDERPASS_INCOMPATIBLE,          // Incompatible renderpasses between
-                                                // secondary cmdBuffer and primary
-                                                // cmdBuffer or framebuffer
-    DRAWSTATE_FRAMEBUFFER_INCOMPATIBLE,         // Incompatible framebuffer between
-                                                // secondary cmdBuffer and active
-                                                // renderPass
-    DRAWSTATE_INVALID_RENDERPASS,               // Use of a NULL or otherwise invalid
-                                                // RenderPass object
-    DRAWSTATE_INVALID_RENDERPASS_CMD,           // Invalid cmd submitted while a
-                                                // RenderPass is active
-    DRAWSTATE_NO_ACTIVE_RENDERPASS,             // Rendering cmd submitted without an active
-                                                // RenderPass
-    DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED,       // DescriptorSet bound but it was
-                                                // never updated. This is a warning
-                                                // code.
-    DRAWSTATE_DESCRIPTOR_SET_NOT_BOUND,         // DescriptorSet used by pipeline at
-                                                // draw time is not bound, or has been
-                                                // disturbed (which would have flagged
-                                                // previous warning)
-    DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT,     // DescriptorSets bound with
-                                                // different number of dynamic
-                                                // descriptors that were included in
-                                                // dynamicOffsetCount
-    DRAWSTATE_CLEAR_CMD_BEFORE_DRAW,            // Clear cmd issued before any Draw in
-                                                // CommandBuffer, should use RenderPass Ops
-                                                // instead
-    DRAWSTATE_BEGIN_CB_INVALID_STATE,           // CB state at Begin call is bad. Can be
-                                                // Primary/Secondary CB created with
-                                                // mismatched FB/RP information or CB in
-                                                // RECORDING state
-    DRAWSTATE_INVALID_CB_SIMULTANEOUS_USE,      // CmdBuffer is being used in
-                                                // violation of
-    // VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
-    // rules (i.e. simultaneous use w/o
-    // that bit set)
-    DRAWSTATE_INVALID_COMMAND_BUFFER_RESET, // Attempting to call Reset (or
-                                            // Begin on recorded cmdBuffer) that
-                                            // was allocated from Pool w/o
-    // VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
-    // bit set
-    DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH,             // Count for viewports and scissors
-                                                     // mismatch and/or state doesn't match
-                                                     // count
-    DRAWSTATE_INVALID_IMAGE_ASPECT,                  // Image aspect is invalid for the current
-                                                     // operation
-    DRAWSTATE_MISSING_ATTACHMENT_REFERENCE,          // Attachment reference must be
-                                                     // present in active subpass
-    DRAWSTATE_SAMPLER_DESCRIPTOR_ERROR,              // A Descriptor of *_SAMPLER type is
-                                                     // being updated with an invalid or bad
-                                                     // Sampler
-    DRAWSTATE_INCONSISTENT_IMMUTABLE_SAMPLER_UPDATE, // Descriptors of
-                                                     // *COMBINED_IMAGE_SAMPLER
-                                                     // type are being updated
-                                                     // where some, but not all,
-                                                     // of the updates use
-                                                     // immutable samplers
-    DRAWSTATE_IMAGEVIEW_DESCRIPTOR_ERROR,            // A Descriptor of *_IMAGE or
-                                                     // *_ATTACHMENT type is being updated
-                                                     // with an invalid or bad ImageView
-    DRAWSTATE_BUFFERVIEW_DESCRIPTOR_ERROR,           // A Descriptor of *_TEXEL_BUFFER
-                                                     // type is being updated with an
-                                                     // invalid or bad BufferView
-    DRAWSTATE_BUFFERINFO_DESCRIPTOR_ERROR,           // A Descriptor of
-    // *_[UNIFORM|STORAGE]_BUFFER_[DYNAMIC]
-    // type is being updated with an
-    // invalid or bad BufferView
-    DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW,       // At draw time the dynamic offset
-                                             // combined with buffer offset and range
-                                             // oversteps size of buffer
-    DRAWSTATE_DOUBLE_DESTROY,                // Destroying an object twice
-    DRAWSTATE_OBJECT_INUSE,                  // Destroying or modifying an object in use by a
-                                             // command buffer
-    DRAWSTATE_QUEUE_FORWARD_PROGRESS,        // Queue cannot guarantee forward progress
-    DRAWSTATE_INVALID_BUFFER_MEMORY_OFFSET,  // Dynamic Buffer Offset
-                                             // violates memory requirements limit
-    DRAWSTATE_INVALID_TEXEL_BUFFER_OFFSET,   // Dynamic Texel Buffer Offsets
-                                             // violate device limit
-    DRAWSTATE_INVALID_UNIFORM_BUFFER_OFFSET, // Dynamic Uniform Buffer Offsets
-                                             // violate device limit
-    DRAWSTATE_INVALID_STORAGE_BUFFER_OFFSET, // Dynamic Storage Buffer Offsets
-                                             // violate device limit
-    DRAWSTATE_INDEPENDENT_BLEND,             // If independent blending is not enabled, all
-                                             // elements of pAttachmentsMustBeIdentical
-    DRAWSTATE_DISABLED_LOGIC_OP,             // If logic operations is not enabled, logicOpEnable
-                                             // must be VK_FALSE
-    DRAWSTATE_INVALID_LOGIC_OP,              // If logicOpEnable is VK_TRUE, logicOp must
-                                             // must be a valid VkLogicOp value
-    DRAWSTATE_INVALID_QUEUE_INDEX,           // Specified queue index exceeds number
-                                             // of queried queue families
-    DRAWSTATE_PUSH_CONSTANTS_ERROR,          // Push constants exceed maxPushConstantSize
-} DRAW_STATE_ERROR;
-
-typedef enum _SHADER_CHECKER_ERROR {
-    SHADER_CHECKER_NONE,
-    SHADER_CHECKER_INTERFACE_TYPE_MISMATCH,    // Type mismatch between shader stages or shader and pipeline
-    SHADER_CHECKER_OUTPUT_NOT_CONSUMED,        // Entry appears in output interface, but missing in input
-    SHADER_CHECKER_INPUT_NOT_PRODUCED,         // Entry appears in input interface, but missing in output
-    SHADER_CHECKER_NON_SPIRV_SHADER,           // Shader image is not SPIR-V
-    SHADER_CHECKER_INCONSISTENT_SPIRV,         // General inconsistency within a SPIR-V module
-    SHADER_CHECKER_UNKNOWN_STAGE,              // Stage is not supported by analysis
-    SHADER_CHECKER_INCONSISTENT_VI,            // VI state contains conflicting binding or attrib descriptions
-    SHADER_CHECKER_MISSING_DESCRIPTOR,         // Shader attempts to use a descriptor binding not declared in the layout
-    SHADER_CHECKER_BAD_SPECIALIZATION,         // Specialization map entry points outside specialization data block
-    SHADER_CHECKER_MISSING_ENTRYPOINT,         // Shader module does not contain the requested entrypoint
-    SHADER_CHECKER_PUSH_CONSTANT_OUT_OF_RANGE, // Push constant variable is not in a push constant range
-    SHADER_CHECKER_PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE, // Push constant range exists, but not accessible from stage
-    SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH,                // Descriptor type does not match shader resource type
-    SHADER_CHECKER_DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE,    // Descriptor used by shader, but not accessible from stage
-    SHADER_CHECKER_FEATURE_NOT_ENABLED,        // Shader uses capability requiring a feature not enabled on device
-    SHADER_CHECKER_BAD_CAPABILITY,             // Shader uses capability not supported by Vulkan (OpenCL features)
-} SHADER_CHECKER_ERROR;
-
 typedef enum _DRAW_TYPE {
     DRAW = 0,
     DRAW_INDEXED = 1,
@@ -586,26 +341,23 @@ class PHYS_DEV_PROPERTIES_NODE {
 class FENCE_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
-#if MTMERGE
-    uint64_t fenceId;         // Sequence number for fence at last submit
+
     VkSwapchainKHR swapchain; // Swapchain that this fence is submitted against or NULL
     bool firstTimeFlag;       // Fence was created in signaled state, avoid warnings for first use
     VkFenceCreateInfo createInfo;
-#endif
     VkQueue queue;
     vector<VkCommandBuffer> cmdBuffers;
     bool needsSignaled;
     vector<VkFence> priorFences;
 
     // Default constructor
-    FENCE_NODE() : queue(NULL), needsSignaled(VK_FALSE){};
+    FENCE_NODE() : queue(VK_NULL_HANDLE), needsSignaled(false){};
 };
 
 class SEMAPHORE_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
-    uint32_t signaled;
-    SemaphoreState state;
+    bool signaled;
     VkQueue queue;
 };
 
@@ -621,14 +373,11 @@ class QUEUE_NODE {
     VkDevice device;
     vector<VkFence> lastFences;
 #if MTMERGE
-    uint64_t lastRetiredId;
-    uint64_t lastSubmittedId;
     // MTMTODO : merge cmd_buffer data structs here
     list<VkCommandBuffer> pQueueCommandBuffers;
     list<VkDeviceMemory> pMemRefList;
 #endif
     vector<VkCommandBuffer> untrackedCmdBuffers;
-    unordered_set<VkCommandBuffer> inFlightCmdBuffers;
     unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
 };
 
@@ -643,27 +392,6 @@ class FRAMEBUFFER_NODE {
     unordered_set<VkCommandBuffer> referencingCmdBuffers;
     vector<MT_FB_ATTACHMENT_INFO> attachments;
 };
-
-// Descriptor Data structures
-// Layout Node has the core layout data
-typedef struct _LAYOUT_NODE {
-    VkDescriptorSetLayout layout;
-    VkDescriptorSetLayoutCreateInfo createInfo;
-    uint32_t startIndex;                                 // 1st index of this layout
-    uint32_t endIndex;                                   // last index of this layout
-    uint32_t dynamicDescriptorCount;                     // Total count of dynamic descriptors used
-                                                         // by this layout
-    vector<VkDescriptorType> descriptorTypes;            // Type per descriptor in this
-                                                         // layout to verify correct
-                                                         // updates
-    vector<VkShaderStageFlags> stageFlags;               // stageFlags per descriptor in this
-                                                         // layout to verify correct updates
-    unordered_map<uint32_t, uint32_t> bindingToIndexMap; // map set binding # to
-                                                         // createInfo.pBindings index
-    // Default constructor
-    _LAYOUT_NODE() : layout{}, createInfo{}, startIndex(0), endIndex(0), dynamicDescriptorCount(0){};
-} LAYOUT_NODE;
-
 // Store layouts and pushconstants for PipelineLayout
 struct PIPELINE_LAYOUT_NODE {
     vector<VkDescriptorSetLayout> descriptorSetLayouts;
@@ -677,13 +405,14 @@ class SET_NODE : public BASE_NODE {
     VkDescriptorPool pool;
     // Head of LL of all Update structs for this set
     GENERIC_HEADER *pUpdateStructs;
-    // Total num of descriptors in this set (count of its layout plus all prior layouts)
-    uint32_t descriptorCount;
+    uint32_t descriptorCount;                   // Total num of descriptors in this set
     vector<GENERIC_HEADER*> pDescriptorUpdates; // Vector where each index points to update node for its slot
-    LAYOUT_NODE *pLayout;           // Layout for this set
+    DescriptorSetLayout *p_layout;              // DescriptorSetLayout for this set
     SET_NODE *pNext;
     unordered_set<VkCommandBuffer> boundCmdBuffers; // Cmd buffers that this set has been bound to
-    SET_NODE() : set(VK_NULL_HANDLE), pool(VK_NULL_HANDLE), pUpdateStructs(nullptr), pLayout(nullptr), pNext(nullptr){};
+    SET_NODE()
+        : set(VK_NULL_HANDLE), pool(VK_NULL_HANDLE), pUpdateStructs(nullptr), descriptorCount(0), p_layout(nullptr),
+          pNext(nullptr){};
 };
 
 typedef struct _DESCRIPTOR_POOL_NODE {
@@ -698,7 +427,7 @@ typedef struct _DESCRIPTOR_POOL_NODE {
 
     _DESCRIPTOR_POOL_NODE(const VkDescriptorPool pool, const VkDescriptorPoolCreateInfo *pCreateInfo)
         : pool(pool), maxSets(pCreateInfo->maxSets), availableSets(pCreateInfo->maxSets), createInfo(*pCreateInfo), pSets(NULL),
-          maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE), availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE) {
+          maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0), availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0) {
         if (createInfo.poolSizeCount) { // Shadow type struct from ptr into local struct
             size_t poolSizeCountSize = createInfo.poolSizeCount * sizeof(VkDescriptorPoolSize);
             createInfo.pPoolSizes = new VkDescriptorPoolSize[poolSizeCountSize];
@@ -707,7 +436,8 @@ typedef struct _DESCRIPTOR_POOL_NODE {
             uint32_t i = 0;
             for (i = 0; i < createInfo.poolSizeCount; ++i) {
                 uint32_t typeIndex = static_cast<uint32_t>(createInfo.pPoolSizes[i].type);
-                maxDescriptorTypeCount[typeIndex] = createInfo.pPoolSizes[i].descriptorCount;
+                // Same descriptor types can appear several times
+                maxDescriptorTypeCount[typeIndex] += createInfo.pPoolSizes[i].descriptorCount;
                 availableDescriptorTypeCount[typeIndex] = maxDescriptorTypeCount[typeIndex];
             }
         } else {
@@ -877,7 +607,7 @@ struct LAST_BOUND_STATE {
     }
 };
 // Cmd Buffer Wrapper Struct
-struct GLOBAL_CB_NODE {
+struct GLOBAL_CB_NODE : public BASE_NODE {
     VkCommandBuffer commandBuffer;
     VkCommandBufferAllocateInfo createInfo;
     VkCommandBufferBeginInfo beginInfo;
@@ -910,13 +640,13 @@ struct GLOBAL_CB_NODE {
     VkRenderPass activeRenderPass;
     VkSubpassContents activeSubpassContents;
     uint32_t activeSubpass;
-    VkFramebuffer framebuffer;
+    std::unordered_set<VkFramebuffer> framebuffers;
     // Track descriptor sets that are destroyed or updated while bound to CB
     // TODO : These data structures relate to tracking resources that invalidate
     //  a cmd buffer that references them. Need to unify how we handle these
     //  cases so we don't have different tracking data for each type.
-    std::set<VkDescriptorSet> destroyedSets;
-    std::set<VkDescriptorSet> updatedSets;
+    unordered_set<VkDescriptorSet> destroyedSets;
+    unordered_set<VkDescriptorSet> updatedSets;
     unordered_set<VkFramebuffer> destroyedFramebuffers;
     vector<VkEvent> waitedEvents;
     vector<VkSemaphore> semaphores;

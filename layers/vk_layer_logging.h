@@ -2,24 +2,17 @@
  * Copyright (c) 2015-2016 Valve Corporation
  * Copyright (c) 2015-2016 LunarG, Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and/or associated documentation files (the "Materials"), to
- * deal in the Materials without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Materials, and to permit persons to whom the Materials
- * are furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice(s) and this permission notice shall be included
- * in all copies or substantial portions of the Materials.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- *
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
- * USE OR OTHER DEALINGS IN THE MATERIALS
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
  * Author: Tobin Ehlis <tobin@lunarg.com>
@@ -29,15 +22,16 @@
 #ifndef LAYER_LOGGING_H
 #define LAYER_LOGGING_H
 
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <unordered_map>
-#include <inttypes.h>
-#include "vk_loader_platform.h"
-#include "vulkan/vk_layer.h"
+#include "vk_layer_config.h"
 #include "vk_layer_data.h"
 #include "vk_layer_table.h"
+#include "vk_loader_platform.h"
+#include "vulkan/vk_layer.h"
+#include <inttypes.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <unordered_map>
 
 typedef struct _debug_report_data {
     VkLayerDbgFunctionNode *g_pDbgFunctionHead;
@@ -198,6 +192,87 @@ static inline PFN_vkVoidFunction debug_report_get_instance_proc_addr(debug_repor
     return NULL;
 }
 
+// This utility (called at vkCreateInstance() time), looks at a pNext chain.
+// It counts any VkDebugReportCallbackCreateInfoEXT structs that it finds.  It
+// then allocates an array that can hold that many structs, as well as that
+// many VkDebugReportCallbackEXT handles.  It then copies each
+// VkDebugReportCallbackCreateInfoEXT, and initializes each handle.
+static VkResult layer_copy_tmp_callbacks(const void *pChain, uint32_t *num_callbacks, VkDebugReportCallbackCreateInfoEXT **infos,
+                                         VkDebugReportCallbackEXT **callbacks) {
+    uint32_t n = *num_callbacks = 0;
+
+    const void *pNext = pChain;
+    while (pNext) {
+        // 1st, count the number VkDebugReportCallbackCreateInfoEXT:
+        if (((VkDebugReportCallbackCreateInfoEXT *)pNext)->sType == VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT) {
+            n++;
+        }
+        pNext = (void *)((VkDebugReportCallbackCreateInfoEXT *)pNext)->pNext;
+    }
+    if (n == 0) {
+        return VK_SUCCESS;
+    }
+
+    // 2nd, allocate memory for each VkDebugReportCallbackCreateInfoEXT:
+    VkDebugReportCallbackCreateInfoEXT *pInfos = *infos =
+        ((VkDebugReportCallbackCreateInfoEXT *)malloc(n * sizeof(VkDebugReportCallbackCreateInfoEXT)));
+    if (!pInfos) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+    // 3rd, allocate memory for a unique handle for each callback:
+    VkDebugReportCallbackEXT *pCallbacks = *callbacks = ((VkDebugReportCallbackEXT *)malloc(n * sizeof(VkDebugReportCallbackEXT)));
+    if (!pCallbacks) {
+        free(pInfos);
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+    // 4th, copy each VkDebugReportCallbackCreateInfoEXT for use by
+    // vkDestroyInstance, and assign a unique handle to each callback (just
+    // use the address of the copied VkDebugReportCallbackCreateInfoEXT):
+    pNext = pChain;
+    while (pNext) {
+        if (((VkInstanceCreateInfo *)pNext)->sType == VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT) {
+            memcpy(pInfos, pNext, sizeof(VkDebugReportCallbackCreateInfoEXT));
+            *pCallbacks++ = (VkDebugReportCallbackEXT)pInfos++;
+        }
+        pNext = (void *)((VkInstanceCreateInfo *)pNext)->pNext;
+    }
+
+    *num_callbacks = n;
+    return VK_SUCCESS;
+}
+
+// This utility frees the arrays allocated by layer_copy_tmp_callbacks()
+static void layer_free_tmp_callbacks(VkDebugReportCallbackCreateInfoEXT *infos, VkDebugReportCallbackEXT *callbacks) {
+    free(infos);
+    free(callbacks);
+}
+
+// This utility enables all of the VkDebugReportCallbackCreateInfoEXT structs
+// that were copied by layer_copy_tmp_callbacks()
+static VkResult layer_enable_tmp_callbacks(debug_report_data *debug_data, uint32_t num_callbacks,
+                                           VkDebugReportCallbackCreateInfoEXT *infos, VkDebugReportCallbackEXT *callbacks) {
+    VkResult rtn = VK_SUCCESS;
+    for (uint32_t i = 0; i < num_callbacks; i++) {
+        rtn = layer_create_msg_callback(debug_data, &infos[i], NULL, &callbacks[i]);
+        if (rtn != VK_SUCCESS) {
+            for (uint32_t j = 0; j < i; j++) {
+                layer_destroy_msg_callback(debug_data, callbacks[j], NULL);
+            }
+            return rtn;
+        }
+    }
+    return rtn;
+}
+
+// This utility disables all of the VkDebugReportCallbackCreateInfoEXT structs
+// that were copied by layer_copy_tmp_callbacks()
+static void layer_disable_tmp_callbacks(debug_report_data *debug_data, uint32_t num_callbacks,
+                                        VkDebugReportCallbackEXT *callbacks) {
+    for (uint32_t i = 0; i < num_callbacks; i++) {
+        layer_destroy_msg_callback(debug_data, callbacks[i], NULL);
+    }
+}
+
 /*
  * Checks if the message will get logged.
  * Allows layer to defer collecting & formating data if the
@@ -248,9 +323,13 @@ static inline bool log_msg(debug_report_data *debug_data, VkFlags msgFlags, VkDe
     va_list argptr;
     va_start(argptr, format);
     char *str;
-    vasprintf(&str, format, argptr);
+    if (-1 == vasprintf(&str, format, argptr)) {
+        /* on failure, glibc vasprintf leaves str undefined */
+        str = nullptr;
+    }
     va_end(argptr);
-    bool result = debug_report_log_msg(debug_data, msgFlags, objectType, srcObject, location, msgCode, pLayerPrefix, str);
+    bool result = debug_report_log_msg(debug_data, msgFlags, objectType, srcObject, location, msgCode, pLayerPrefix,
+                                       str ? str : "Allocation failure");
     free(str);
     return result;
 }

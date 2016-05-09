@@ -1,5 +1,6 @@
 if(NOT WIN32)
     find_package(XCB REQUIRED)
+    find_package(X11 REQUIRED)
 endif()
 
 file(GLOB TEXTURES
@@ -73,10 +74,10 @@ endif()
 if(NOT WIN32)
     include_directories (
        ${XCB_INCLUDE_DIRS}
+       ${X11_INCLUDE_DIRS}
        "${PROJECT_SOURCE_DIR}/icd/common"
        )
-
-    link_libraries(${XCB_LIBRARIES} vulkan m)
+    link_libraries(${XCB_LIBRARIES} ${X11_LIBRARIES} vulkan m)
 endif()
 if(WIN32)
     include_directories (

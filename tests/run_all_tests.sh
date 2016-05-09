@@ -6,6 +6,9 @@ cd $(dirname "$0")
 # Halt on error
 set -e
 
+#Verify that the loader is working
+./vk_loader_validation_tests
+
 # Verify that validation checks in source match documentation
 ./vkvalidatelayerdoc.sh
 
