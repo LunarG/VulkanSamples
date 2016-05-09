@@ -3057,12 +3057,17 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEndCommandBuffer(VkCommandBuffe
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flags) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     assert(my_data != NULL);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, commandBuffer)->ResetCommandBuffer(commandBuffer, flags);
+    bool skip_call = parameter_validation_vkResetCommandBuffer(my_data->report_data, flags);
 
-    validate_result(my_data->report_data, "vkResetCommandBuffer", result);
+    if (!skip_call) {
+        result = get_dispatch_table(pc_device_table_map, commandBuffer)->ResetCommandBuffer(commandBuffer, flags);
+
+        validate_result(my_data->report_data, "vkResetCommandBuffer", result);
+    }
 
     return result;
 }
@@ -4027,6 +4032,14 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
         return (PFN_vkVoidFunction)vkGetPhysicalDeviceFeatures;
     if (!strcmp(funcName, "vkGetPhysicalDeviceFormatProperties"))
         return (PFN_vkVoidFunction)vkGetPhysicalDeviceFormatProperties;
+    if (!strcmp(funcName, "vkGetPhysicalDeviceImageFormatProperties"))
+        return (PFN_vkVoidFunction)vkGetPhysicalDeviceImageFormatProperties;
+    if (!strcmp(funcName, "vkGetPhysicalDeviceSparseImageFormatProperties"))
+        return (PFN_vkVoidFunction)vkGetPhysicalDeviceSparseImageFormatProperties;
+    if (!strcmp(funcName, "vkGetPhysicalDeviceQueueFamilyProperties"))
+        return (PFN_vkVoidFunction)vkGetPhysicalDeviceQueueFamilyProperties;
+    if (!strcmp(funcName, "vkGetPhysicalDeviceMemoryProperties"))
+        return (PFN_vkVoidFunction)vkGetPhysicalDeviceMemoryProperties;
     if (!strcmp(funcName, "vkEnumerateInstanceLayerProperties"))
         return (PFN_vkVoidFunction)vkEnumerateInstanceLayerProperties;
     if (!strcmp(funcName, "vkEnumerateInstanceExtensionProperties"))
