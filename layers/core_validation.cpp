@@ -4502,12 +4502,14 @@ static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NO
         for (auto secondaryCmdBuffer : pCB->secondaryCommandBuffers) {
             skipCall |= validateAndIncrementResources(dev_data, dev_data->commandBufferMap[secondaryCmdBuffer]);
             GLOBAL_CB_NODE *pSubCB = getCBNode(dev_data, secondaryCmdBuffer);
-            if (pSubCB->primaryCommandBuffer != pCB->commandBuffer) {
+            if ((pSubCB->primaryCommandBuffer != pCB->commandBuffer) &&
+                !(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
                         __LINE__, DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
                         "CB %#" PRIxLEAST64 " was submitted with secondary buffer %#" PRIxLEAST64
                         " but that buffer has subsequently been bound to "
-                        "primary cmd buffer %#" PRIxLEAST64 ".",
+                        "primary cmd buffer %#" PRIxLEAST64
+                        " and it does not have VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set.",
                         reinterpret_cast<uint64_t>(pCB->commandBuffer), reinterpret_cast<uint64_t>(secondaryCmdBuffer),
                         reinterpret_cast<uint64_t>(pSubCB->primaryCommandBuffer));
             }
