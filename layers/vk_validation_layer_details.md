@@ -193,7 +193,7 @@ The VK_LAYER_LUNARG_parameter_validation layer validates parameter values and fl
 | Valid Structure pNext Value | Verifies that the pNext field of a Vulkan structure references a value that is compatible with a structure of that type or is NULL when a structure of that type has no compatible pNext values | INVALID_STRUCT_PNEXT | | InvalidStructPNext | NA |
 | Required Parameter | Verifies that a required parameter was not specified as 0 or NULL | REQUIRED_PARAMETER | | RequiredParameter | NA |
 | Reserved Parameter | Verifies that a parameter reserved for future use was specified as 0 or NULL | RESERVED_PARAMETER | | TBD | NA |
-| Unrecognized Value | Verifies that a Vulkan enumeration, VkFlags, or VkBool32 parameter contains a value that is recognized as valid for that type | UNRECOGNIZED_VALUE | | TBD | NA |
+| Unrecognized Value | Verifies that a Vulkan enumeration, VkFlags, or VkBool32 parameter contains a value that is recognized as valid for that type | UNRECOGNIZED_VALUE | | UnrecognizedValue | NA |
 | Failed Call Return Code | Provides a description of a failure code returned by a Vulkan API call | FAILURE_RETURN_CODE | | TBD | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 

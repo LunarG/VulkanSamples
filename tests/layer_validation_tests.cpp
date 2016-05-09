@@ -660,6 +660,82 @@ TEST_F(VkLayerTest, InvalidStructPNext) {
 
     // TODO: Add non-NULL pNext case
 }
+
+TEST_F(VkLayerTest, UnrecognizedValue) {
+    TEST_DESCRIPTION(
+        "Specify unrecognized Vulkan enumeration, flags, and VkBool32 values");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "does not fall within the begin..end "
+                                         "range of the core VkFormat "
+                                         "enumeration tokens");
+    // Specify an invalid VkFormat value
+    // Expected to trigger an error with
+    // parameter_validation::validate_ranged_enum
+    VkFormatProperties format_properties;
+    vkGetPhysicalDeviceFormatProperties(gpu(), static_cast<VkFormat>(8000),
+        &format_properties);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "contains flag bits that are not recognized members of");
+    // Specify an invalid VkFlags bitmask value
+    // Expected to trigger an error with parameter_validation::validate_flags
+    VkImageFormatProperties image_format_properties;
+    vkGetPhysicalDeviceImageFormatProperties(
+        gpu(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TYPE_2D,
+        VK_IMAGE_TILING_OPTIMAL, static_cast<VkImageUsageFlags>(1 << 25), 0,
+        &image_format_properties);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "contains flag bits that are not recognized members of");
+    // Specify an invalid VkFlags array entry
+    // Expected to trigger an error with
+    // parameter_validation::validate_flags_array
+    VkSemaphore semaphore = VK_NULL_HANDLE;
+    VkPipelineStageFlags stage_flags =
+        static_cast<VkPipelineStageFlags>(1 << 25);
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.waitSemaphoreCount = 1;
+    submit_info.pWaitSemaphores = &semaphore;
+    submit_info.pWaitDstStageMask = &stage_flags;
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                                         "is neither VK_TRUE nor VK_FALSE");
+    // Specify an invalid VkBool32 value
+    // Expected to trigger a warning with
+    // parameter_validation::validate_bool32
+    VkSampler sampler = VK_NULL_HANDLE;
+    VkSamplerCreateInfo sampler_info = {};
+    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_info.pNext = NULL;
+    sampler_info.magFilter = VK_FILTER_NEAREST;
+    sampler_info.minFilter = VK_FILTER_NEAREST;
+    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_info.mipLodBias = 1.0;
+    sampler_info.maxAnisotropy = 1;
+    sampler_info.compareEnable = VK_FALSE;
+    sampler_info.compareOp = VK_COMPARE_OP_NEVER;
+    sampler_info.minLod = 1.0;
+    sampler_info.maxLod = 1.0;
+    sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    sampler_info.unnormalizedCoordinates = VK_FALSE;
+    // Not VK_TRUE or VK_FALSE
+    sampler_info.anisotropyEnable = 3;
+    vkCreateSampler(m_device->device(), &sampler_info, NULL, &sampler);
+    m_errorMonitor->VerifyFound();
+}
 #endif // PARAMETER_VALIDATION_TESTS
 
 #if MEM_TRACKER_TESTS
