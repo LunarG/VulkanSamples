@@ -606,6 +606,60 @@ TEST_F(VkLayerTest, RequiredParameter) {
     vkQueueSubmit(m_device->m_queue, 1, &submitInfo, VK_NULL_HANDLE);
     m_errorMonitor->VerifyFound();
 }
+
+TEST_F(VkLayerTest, InvalidStructSType) {
+    TEST_DESCRIPTION("Specify an invalid VkStructureType for a Vulkan "
+                     "structure's sType field");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "parameter pAllocateInfo->sType must be");
+    // Zero struct memory, effectively setting sType to
+    // VK_STRUCTURE_TYPE_APPLICATION_INFO
+    // Expected to trigger an error with
+    // parameter_validation::validate_struct_type
+    VkMemoryAllocateInfo alloc_info = {};
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    vkAllocateMemory(device(), &alloc_info, NULL, &memory);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "parameter pSubmits[0].sType must be");
+    // Zero struct memory, effectively setting sType to
+    // VK_STRUCTURE_TYPE_APPLICATION_INFO
+    // Expected to trigger an error with
+    // parameter_validation::validate_struct_type_array
+    VkSubmitInfo submit_info = {};
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkLayerTest, InvalidStructPNext) {
+    TEST_DESCRIPTION(
+        "Specify an invalid value for a Vulkan structure's pNext field");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "value of pAllocateInfo->pNext must be NULL");
+    // Set VkMemoryAllocateInfo::pNext to a non-NULL value, when pNext must be
+    // NULL
+    // Expected to trigger an error with
+    // parameter_validation::validate_struct_pnext
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    // Zero-initialization will provide the correct sType
+    VkApplicationInfo app_info = {};
+    VkMemoryAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = &app_info;
+    vkAllocateMemory(device(), &alloc_info, NULL, &memory);
+    m_errorMonitor->VerifyFound();
+
+    // TODO: Add non-NULL pNext case
+}
 #endif // PARAMETER_VALIDATION_TESTS
 
 #if MEM_TRACKER_TESTS
