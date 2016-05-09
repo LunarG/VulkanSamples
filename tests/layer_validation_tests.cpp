@@ -5338,6 +5338,31 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, EndCommandBufferWithinRenderPass) {
+
+    TEST_DESCRIPTION("End a command buffer with an active render pass");
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "It is invalid to issue this call inside an active render pass");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    // The framework's BeginCommandBuffer calls CreateRenderPass
+    BeginCommandBuffer();
+
+    // Call directly into vkEndCommandBuffer instead of the
+    // the framework's EndCommandBuffer, which inserts a
+    // vkEndRenderPass
+    vkEndCommandBuffer(m_commandBuffer->GetBufferHandle());
+
+    m_errorMonitor->VerifyFound();
+
+   // TODO: Add test for VK_COMMAND_BUFFER_LEVEL_SECONDARY
+   // TODO: Add test for VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT
+}
+
 TEST_F(VkLayerTest, FillBufferWithinRenderPass) {
     // Call CmdFillBuffer within an active renderpass
     m_errorMonitor->SetDesiredFailureMsg(
