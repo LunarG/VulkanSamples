@@ -1370,7 +1370,7 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
                          VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
     if (!pCreateInfo) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
+        return LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     } else {
         if (pCreateInfo->sType != VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR) {
             skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
