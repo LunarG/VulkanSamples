@@ -47,7 +47,7 @@
 #include "murmurhash.h"
 
 #if defined(__GNUC__)
-#if __GNUC__ < 2 || (__GNUC__ == 2 && __GNUC_MINOR__ < 17)
+#if (__GLIBC__ < 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ < 17))
 #define secure_getenv __secure_getenv
 #endif
 #endif
