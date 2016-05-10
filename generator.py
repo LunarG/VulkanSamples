@@ -1899,11 +1899,14 @@ class ValidityOutputGenerator(OutputGenerator):
         asciidoc += self.makeParameterName(paramname.text)
 
         validextensionstructs = param.attrib.get('validextensionstructs')
-        if validextensionstructs is None:
-            asciidoc += ' must: be `NULL`'
-        else:
-            extensionstructs = validextensionstructs.split(',')
-            asciidoc += ' must: point to one of ' + extensionstructs[:-1].join(', ') + ' or ' + extensionstructs[-1] + 'if the extension that introduced them is enabled '
+        asciidoc += ' must: be `NULL`'
+        if validextensionstructs is not None:
+            extensionstructs = ['slink:' + x for x in validextensionstructs.split(',')]
+            asciidoc += ', or a pointer to a valid instance of '
+            if len(extensionstructs) == 1:
+                asciidoc += validextensionstructs
+            else:
+                asciidoc += (', ').join(extensionstructs[:-1]) + ' or ' + extensionstructs[-1]
 
         asciidoc += '\n'
 
@@ -2760,6 +2763,9 @@ class ThreadOutputGenerator(OutputGenerator):
         if "KHR" in name:
             self.appendSection('command', '// TODO - not wrapping KHR function ' + name)
             return
+        if ("DebugMarker" in name) and ("EXT" in name):
+            self.appendSection('command', '// TODO - not wrapping EXT function ' + name)
+            return
         # Determine first if this function needs to be intercepted
         startthreadsafety = self.makeThreadUseBlock(cmdinfo.elem, 'start')
         if startthreadsafety is None:
@@ -3033,19 +3039,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 result = re.search(r'VK_STRUCTURE_TYPE_\w+', rawXml)
                 if result:
                     value = result.group(0)
-                    # Make sure value is valid
-                    #if value not in self.stypes:
-                    #    print('WARNING: {} is not part of the VkStructureType enumeration [{}]'.format(value, typeName))
                 else:
-                    value = typeName
-                    # Remove EXT
-                    value = re.sub('EXT', '', value)
-                    # Add underscore between lowercase then uppercase
-                    value = re.sub('([a-z0-9])([A-Z])', r'\1_\2', value)
-                    # Change to uppercase
-                    value = value.upper()
-                    # Add STRUCTURE_TYPE_
-                    value = re.sub('VK_', 'VK_STRUCTURE_TYPE_', value)
+                    value = self.genVkStructureType(typeName)
                 # Store the required type value
                 self.structTypes[typeName] = self.StructType(name=name, value=value)
             #
@@ -3199,6 +3194,26 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         if lenParam and lenParam.isoptional:
             return True
         return False
+    #
+    # Generate a VkStructureType based on a structure typename
+    def genVkStructureType(self, typename):
+        # Add underscore between lowercase then uppercase
+        value = re.sub('([a-z0-9])([A-Z])', r'\1_\2', typename)
+        # Change to uppercase
+        value = value.upper()
+        # Add STRUCTURE_TYPE_
+        return re.sub('VK_', 'VK_STRUCTURE_TYPE_', value)
+    #
+    # Get the cached VkStructureType value for the specified struct typename, or generate a VkStructureType
+    # value assuming the struct is defined by a different feature
+    def getStructType(self, typename):
+        value = None
+        if typename in self.structTypes:
+            value = self.structTypes[typename].value
+        else:
+            value = self.genVkStructureType(typename)
+            #print('Generating {} for {} structure type that was not defined by the current feature'.format(value, typename))
+        return value
     #
     # Retrieve the value of the len tag
     def getLen(self, param):
@@ -3385,7 +3400,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         extStructNames = 'NULL'
         if value.extstructs:
             structs = value.extstructs.split(',')
-            checkExpr.append('const VkStructureType allowedStructs[] = {' + ', '.join([self.structTypes[s].value for s in structs]) + '};\n')
+            checkExpr.append('const VkStructureType allowedStructs[] = {' + ', '.join([self.getStructType(s) for s in structs]) + '};\n')
             extStructCount = 'ARRAY_SIZE(allowedStructs)'
             extStructVar = 'allowedStructs'
             extStructNames = '"' + ', '.join(structs) + '"'
