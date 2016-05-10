@@ -1932,7 +1932,7 @@ static bool validate_push_constant_usage(debug_report_data *report_data,
 
 // For given pipelineLayout verify that the set_layout_node at slot.first
 //  has the requested binding at slot.second and return ptr to that binding
-static VkDescriptorSetLayoutBinding const * get_descriptor_binding(layer_data *my_data, PIPELINE_LAYOUT_NODE *pipelineLayout, descriptor_slot_t slot) {
+static VkDescriptorSetLayoutBinding const * get_descriptor_binding(PIPELINE_LAYOUT_NODE *pipelineLayout, descriptor_slot_t slot) {
 
     if (!pipelineLayout)
         return nullptr;
@@ -1940,8 +1940,7 @@ static VkDescriptorSetLayoutBinding const * get_descriptor_binding(layer_data *m
     if (slot.first >= pipelineLayout->descriptorSetLayouts.size())
         return nullptr;
 
-    const auto & layout_node = my_data->descriptorSetLayoutMap[pipelineLayout->descriptorSetLayouts[slot.first]];
-    return layout_node->GetDescriptorSetLayoutBindingPtrFromBinding(slot.second);
+    pipelineLayout->setLayouts[slot.first]->GetDescriptorSetLayoutBindingPtrFromBinding(slot.second);
 }
 
 // Block of code at start here for managing/tracking Pipeline state that this layer cares about
@@ -2273,9 +2272,9 @@ static bool descriptor_type_match(shader_module const *module, uint32_t type_id,
     }
 }
 
-static bool require_feature(layer_data *my_data, VkBool32 feature, char const *feature_name) {
+static bool require_feature(debug_report_data *report_data, VkBool32 feature, char const *feature_name) {
     if (!feature) {
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+        if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                     __LINE__, SHADER_CHECKER_FEATURE_NOT_ENABLED, "SC",
                     "Shader requires VkPhysicalDeviceFeatures::%s but is not "
                     "enabled on the device",
@@ -2287,10 +2286,9 @@ static bool require_feature(layer_data *my_data, VkBool32 feature, char const *f
     return true;
 }
 
-static bool validate_shader_capabilities(layer_data *my_data, shader_module const *src) {
+static bool validate_shader_capabilities(debug_report_data *report_data, shader_module const *src, VkPhysicalDeviceFeatures const *enabledFeatures) {
     bool pass = true;
 
-    auto enabledFeatures = &my_data->phys_dev_properties.features;
 
     for (auto insn : *src) {
         if (insn.opcode() == spv::OpCapability) {
@@ -2308,112 +2306,112 @@ static bool validate_shader_capabilities(layer_data *my_data, shader_module cons
                 break;
 
             case spv::CapabilityGeometry:
-                pass &= require_feature(my_data, enabledFeatures->geometryShader, "geometryShader");
+                pass &= require_feature(report_data, enabledFeatures->geometryShader, "geometryShader");
                 break;
 
             case spv::CapabilityTessellation:
-                pass &= require_feature(my_data, enabledFeatures->tessellationShader, "tessellationShader");
+                pass &= require_feature(report_data, enabledFeatures->tessellationShader, "tessellationShader");
                 break;
 
             case spv::CapabilityFloat64:
-                pass &= require_feature(my_data, enabledFeatures->shaderFloat64, "shaderFloat64");
+                pass &= require_feature(report_data, enabledFeatures->shaderFloat64, "shaderFloat64");
                 break;
 
             case spv::CapabilityInt64:
-                pass &= require_feature(my_data, enabledFeatures->shaderInt64, "shaderInt64");
+                pass &= require_feature(report_data, enabledFeatures->shaderInt64, "shaderInt64");
                 break;
 
             case spv::CapabilityTessellationPointSize:
             case spv::CapabilityGeometryPointSize:
-                pass &= require_feature(my_data, enabledFeatures->shaderTessellationAndGeometryPointSize,
+                pass &= require_feature(report_data, enabledFeatures->shaderTessellationAndGeometryPointSize,
                                         "shaderTessellationAndGeometryPointSize");
                 break;
 
             case spv::CapabilityImageGatherExtended:
-                pass &= require_feature(my_data, enabledFeatures->shaderImageGatherExtended, "shaderImageGatherExtended");
+                pass &= require_feature(report_data, enabledFeatures->shaderImageGatherExtended, "shaderImageGatherExtended");
                 break;
 
             case spv::CapabilityStorageImageMultisample:
-                pass &= require_feature(my_data, enabledFeatures->shaderStorageImageMultisample, "shaderStorageImageMultisample");
+                pass &= require_feature(report_data, enabledFeatures->shaderStorageImageMultisample, "shaderStorageImageMultisample");
                 break;
 
             case spv::CapabilityUniformBufferArrayDynamicIndexing:
-                pass &= require_feature(my_data, enabledFeatures->shaderUniformBufferArrayDynamicIndexing,
+                pass &= require_feature(report_data, enabledFeatures->shaderUniformBufferArrayDynamicIndexing,
                                         "shaderUniformBufferArrayDynamicIndexing");
                 break;
 
             case spv::CapabilitySampledImageArrayDynamicIndexing:
-                pass &= require_feature(my_data, enabledFeatures->shaderSampledImageArrayDynamicIndexing,
+                pass &= require_feature(report_data, enabledFeatures->shaderSampledImageArrayDynamicIndexing,
                                         "shaderSampledImageArrayDynamicIndexing");
                 break;
 
             case spv::CapabilityStorageBufferArrayDynamicIndexing:
-                pass &= require_feature(my_data, enabledFeatures->shaderStorageBufferArrayDynamicIndexing,
+                pass &= require_feature(report_data, enabledFeatures->shaderStorageBufferArrayDynamicIndexing,
                                         "shaderStorageBufferArrayDynamicIndexing");
                 break;
 
             case spv::CapabilityStorageImageArrayDynamicIndexing:
-                pass &= require_feature(my_data, enabledFeatures->shaderStorageImageArrayDynamicIndexing,
+                pass &= require_feature(report_data, enabledFeatures->shaderStorageImageArrayDynamicIndexing,
                                         "shaderStorageImageArrayDynamicIndexing");
                 break;
 
             case spv::CapabilityClipDistance:
-                pass &= require_feature(my_data, enabledFeatures->shaderClipDistance, "shaderClipDistance");
+                pass &= require_feature(report_data, enabledFeatures->shaderClipDistance, "shaderClipDistance");
                 break;
 
             case spv::CapabilityCullDistance:
-                pass &= require_feature(my_data, enabledFeatures->shaderCullDistance, "shaderCullDistance");
+                pass &= require_feature(report_data, enabledFeatures->shaderCullDistance, "shaderCullDistance");
                 break;
 
             case spv::CapabilityImageCubeArray:
-                pass &= require_feature(my_data, enabledFeatures->imageCubeArray, "imageCubeArray");
+                pass &= require_feature(report_data, enabledFeatures->imageCubeArray, "imageCubeArray");
                 break;
 
             case spv::CapabilitySampleRateShading:
-                pass &= require_feature(my_data, enabledFeatures->sampleRateShading, "sampleRateShading");
+                pass &= require_feature(report_data, enabledFeatures->sampleRateShading, "sampleRateShading");
                 break;
 
             case spv::CapabilitySparseResidency:
-                pass &= require_feature(my_data, enabledFeatures->shaderResourceResidency, "shaderResourceResidency");
+                pass &= require_feature(report_data, enabledFeatures->shaderResourceResidency, "shaderResourceResidency");
                 break;
 
             case spv::CapabilityMinLod:
-                pass &= require_feature(my_data, enabledFeatures->shaderResourceMinLod, "shaderResourceMinLod");
+                pass &= require_feature(report_data, enabledFeatures->shaderResourceMinLod, "shaderResourceMinLod");
                 break;
 
             case spv::CapabilitySampledCubeArray:
-                pass &= require_feature(my_data, enabledFeatures->imageCubeArray, "imageCubeArray");
+                pass &= require_feature(report_data, enabledFeatures->imageCubeArray, "imageCubeArray");
                 break;
 
             case spv::CapabilityImageMSArray:
-                pass &= require_feature(my_data, enabledFeatures->shaderStorageImageMultisample, "shaderStorageImageMultisample");
+                pass &= require_feature(report_data, enabledFeatures->shaderStorageImageMultisample, "shaderStorageImageMultisample");
                 break;
 
             case spv::CapabilityStorageImageExtendedFormats:
-                pass &= require_feature(my_data, enabledFeatures->shaderStorageImageExtendedFormats,
+                pass &= require_feature(report_data, enabledFeatures->shaderStorageImageExtendedFormats,
                                         "shaderStorageImageExtendedFormats");
                 break;
 
             case spv::CapabilityInterpolationFunction:
-                pass &= require_feature(my_data, enabledFeatures->sampleRateShading, "sampleRateShading");
+                pass &= require_feature(report_data, enabledFeatures->sampleRateShading, "sampleRateShading");
                 break;
 
             case spv::CapabilityStorageImageReadWithoutFormat:
-                pass &= require_feature(my_data, enabledFeatures->shaderStorageImageReadWithoutFormat,
+                pass &= require_feature(report_data, enabledFeatures->shaderStorageImageReadWithoutFormat,
                                         "shaderStorageImageReadWithoutFormat");
                 break;
 
             case spv::CapabilityStorageImageWriteWithoutFormat:
-                pass &= require_feature(my_data, enabledFeatures->shaderStorageImageWriteWithoutFormat,
+                pass &= require_feature(report_data, enabledFeatures->shaderStorageImageWriteWithoutFormat,
                                         "shaderStorageImageWriteWithoutFormat");
                 break;
 
             case spv::CapabilityMultiViewport:
-                pass &= require_feature(my_data, enabledFeatures->multiViewport, "multiViewport");
+                pass &= require_feature(report_data, enabledFeatures->multiViewport, "multiViewport");
                 break;
 
             default:
-                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_BAD_CAPABILITY, "SC",
                             "Shader declares capability %u, not supported in Vulkan.",
                             insn.word(1)))
@@ -2445,7 +2443,7 @@ static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShade
     }
 
     /* validate shader capabilities against enabled device features */
-    pass &= validate_shader_capabilities(dev_data, module);
+    pass &= validate_shader_capabilities(dev_data->report_data, module, &dev_data->phys_dev_properties.features);
 
     /* mark accessible ids */
     std::unordered_set<uint32_t> accessible_ids;
@@ -2465,7 +2463,7 @@ static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShade
         pipeline->active_slots[use.first.first].insert(use.first.second);
 
         /* verify given pipelineLayout has requested setLayout with requested binding */
-        const auto & binding = get_descriptor_binding(dev_data, pipelineLayout, use.first);
+        const auto & binding = get_descriptor_binding(pipelineLayout, use.first);
         unsigned required_descriptor_count;
 
         if (!binding) {
