@@ -2158,7 +2158,7 @@ def main(argv=None):
     if opts.gen_struct_wrappers:
         sw = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
         #print(sw.get_class_name(struct))
-        sw.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","inttypes.h", "stdio.h","stdlib.h"])
+        sw.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","cinttypes", "stdio.h","stdlib.h"])
         print("Generating struct wrapper header to %s" % sw.header_filename)
         sw.generateHeader()
         print("Generating struct wrapper class to %s" % sw.class_filename)
@@ -2189,7 +2189,7 @@ def main(argv=None):
         cmg.generate()
     if opts.gen_graphviz:
         gv = GraphVizGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
-        gv.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h", "inttypes.h"])
+        gv.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h", "cinttypes"])
         gv.generate()
     print("DONE!")
     #print(typedef_rev_dict)

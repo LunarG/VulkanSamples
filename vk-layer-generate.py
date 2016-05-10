@@ -715,7 +715,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('#include <stdio.h>')
         header_txt.append('#include <stdlib.h>')
         header_txt.append('#include <string.h>')
-        header_txt.append('#include <inttypes.h>')
+        header_txt.append('#include <cinttypes>')
         header_txt.append('')
         header_txt.append('#include <unordered_map>')
         header_txt.append('')

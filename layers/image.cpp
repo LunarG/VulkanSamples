@@ -26,7 +26,7 @@
 
 #include <algorithm>
 #include <assert.h>
-#include <inttypes.h>
+#include <cinttypes>
 #include <memory>
 #include <mutex>
 #include <stdio.h>

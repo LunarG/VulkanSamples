@@ -27,7 +27,7 @@
 #include "vk_layer_table.h"
 #include "vk_loader_platform.h"
 #include "vulkan/vk_layer.h"
-#include <inttypes.h>
+#include <cinttypes>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
