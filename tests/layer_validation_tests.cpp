@@ -607,6 +607,24 @@ TEST_F(VkLayerTest, RequiredParameter) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, ReservedParameter) {
+    TEST_DESCRIPTION("Specify a non-zero value for a reserved parameter");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " must be 0");
+    // Specify 0 for a reserved VkFlags parameter
+    // Expected to trigger an error with
+    // parameter_validation::validate_reserved_flags
+    VkEvent event_handle = VK_NULL_HANDLE;
+    VkEventCreateInfo event_info = {};
+    event_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+    event_info.flags = 1;
+    vkCreateEvent(device(), &event_info, NULL, &event_handle);
+    m_errorMonitor->VerifyFound();
+}
+
 TEST_F(VkLayerTest, InvalidStructSType) {
     TEST_DESCRIPTION("Specify an invalid VkStructureType for a Vulkan "
                      "structure's sType field");
@@ -734,6 +752,26 @@ TEST_F(VkLayerTest, UnrecognizedValue) {
     // Not VK_TRUE or VK_FALSE
     sampler_info.anisotropyEnable = 3;
     vkCreateSampler(m_device->device(), &sampler_info, NULL, &sampler);
+    m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkLayerTest, FailedReturnValue) {
+    TEST_DESCRIPTION("Check for a message describing a VkResult failure code");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_WARNING_BIT_EXT,
+        "the requested format is not supported on this device");
+    // Specify invalid VkFormat value to generate a
+    // VK_ERROR_FORMAT_NOT_SUPPORTED return code
+    // Expected to trigger a warning from parameter_validation::validate_result
+    VkImageFormatProperties image_format_properties;
+    VkResult err = vkGetPhysicalDeviceImageFormatProperties(
+        gpu(), static_cast<VkFormat>(0x8000), VK_IMAGE_TYPE_2D,
+        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 0,
+        &image_format_properties);
+    ASSERT_TRUE(err == VK_ERROR_FORMAT_NOT_SUPPORTED);
     m_errorMonitor->VerifyFound();
 }
 #endif // PARAMETER_VALIDATION_TESTS
