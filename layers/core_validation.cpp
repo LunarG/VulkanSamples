@@ -1223,7 +1223,7 @@ static spirv_inst_iter get_struct_type(shader_module const *src, spirv_inst_iter
     }
 }
 
-static void collect_interface_block_members(layer_data *my_data, shader_module const *src,
+static void collect_interface_block_members(shader_module const *src,
                                             std::map<location_t, interface_var> &out,
                                             std::unordered_map<unsigned, unsigned> const &blocks, bool is_array_of_verts,
                                             uint32_t id, uint32_t type_id, bool is_patch) {
@@ -1275,7 +1275,7 @@ static void collect_interface_block_members(layer_data *my_data, shader_module c
     }
 }
 
-static void collect_interface_by_location(layer_data *my_data, shader_module const *src, spirv_inst_iter entrypoint,
+static void collect_interface_by_location(shader_module const *src, spirv_inst_iter entrypoint,
                                           spv::StorageClass sinterface, std::map<location_t, interface_var> &out,
                                           bool is_array_of_verts) {
     std::unordered_map<unsigned, unsigned> var_locations;
@@ -1362,13 +1362,13 @@ static void collect_interface_by_location(layer_data *my_data, shader_module con
                 }
             } else if (builtin == -1) {
                 /* An interface block instance */
-                collect_interface_block_members(my_data, src, out, blocks, is_array_of_verts, id, type, is_patch);
+                collect_interface_block_members(src, out, blocks, is_array_of_verts, id, type, is_patch);
             }
         }
     }
 }
 
-static void collect_interface_by_descriptor_slot(layer_data *my_data, shader_module const *src,
+static void collect_interface_by_descriptor_slot(debug_report_data *report_data, shader_module const *src,
                                                  std::unordered_set<uint32_t> const &accessible_ids,
                                                  std::map<descriptor_slot_t, interface_var> &out) {
 
@@ -1402,7 +1402,7 @@ static void collect_interface_by_descriptor_slot(layer_data *my_data, shader_mod
             auto existing_it = out.find(std::make_pair(set, binding));
             if (existing_it != out.end()) {
                 /* conflict within spv image */
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
                         "var %d (type %d) in %s interface in descriptor slot (%u,%u) conflicts with existing definition",
                         insn.word(2), insn.word(1), storage_class_name(insn.word(3)), existing_it->first.first,
@@ -1420,7 +1420,7 @@ static void collect_interface_by_descriptor_slot(layer_data *my_data, shader_mod
     }
 }
 
-static bool validate_interface_between_stages(layer_data *my_data, shader_module const *producer,
+static bool validate_interface_between_stages(debug_report_data *report_data, shader_module const *producer,
                                               spirv_inst_iter producer_entrypoint, shader_stage_attributes const *producer_stage,
                                               shader_module const *consumer, spirv_inst_iter consumer_entrypoint,
                                               shader_stage_attributes const *consumer_stage) {
@@ -1429,8 +1429,8 @@ static bool validate_interface_between_stages(layer_data *my_data, shader_module
 
     bool pass = true;
 
-    collect_interface_by_location(my_data, producer, producer_entrypoint, spv::StorageClassOutput, outputs, producer_stage->arrayed_output);
-    collect_interface_by_location(my_data, consumer, consumer_entrypoint, spv::StorageClassInput, inputs, consumer_stage->arrayed_input);
+    collect_interface_by_location(producer, producer_entrypoint, spv::StorageClassOutput, outputs, producer_stage->arrayed_output);
+    collect_interface_by_location(consumer, consumer_entrypoint, spv::StorageClassInput, inputs, consumer_stage->arrayed_input);
 
     auto a_it = outputs.begin();
     auto b_it = inputs.begin();
@@ -1443,7 +1443,7 @@ static bool validate_interface_between_stages(layer_data *my_data, shader_module
         auto b_first = b_at_end ? std::make_pair(0u, 0u) : b_it->first;
 
         if (b_at_end || ((!a_at_end) && (a_first < b_first))) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+            if (log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                         "%s writes to output location %u.%u which is not consumed by %s", producer_stage->name, a_first.first,
                         a_first.second, consumer_stage->name)) {
@@ -1451,7 +1451,7 @@ static bool validate_interface_between_stages(layer_data *my_data, shader_module
             }
             a_it++;
         } else if (a_at_end || a_first > b_first) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+            if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
                         "%s consumes input location %u.%u which is not written by %s", consumer_stage->name, b_first.first, b_first.second,
                         producer_stage->name)) {
@@ -1467,7 +1467,7 @@ static bool validate_interface_between_stages(layer_data *my_data, shader_module
                              producer_stage->arrayed_output && !a_it->second.is_patch && !a_it->second.is_block_member,
                              consumer_stage->arrayed_input && !b_it->second.is_patch && !b_it->second.is_block_member,
                              true)) {
-                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC", "Type mismatch on location %u.%u: '%s' vs '%s'",
                             a_first.first, a_first.second,
                             describe_type(producer, a_it->second.type_id).c_str(),
@@ -1476,7 +1476,7 @@ static bool validate_interface_between_stages(layer_data *my_data, shader_module
                 }
             }
             if (a_it->second.is_patch != b_it->second.is_patch) {
-                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
+                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                             "Decoration mismatch on location %u.%u: is per-%s in %s stage but "
                             "per-%s in %s stage", a_first.first, a_first.second,
@@ -1582,7 +1582,7 @@ static uint32_t get_shader_stage_id(VkShaderStageFlagBits stage) {
     return bit_pos - 1;
 }
 
-static bool validate_vi_consistency(layer_data *my_data, VkPipelineVertexInputStateCreateInfo const *vi) {
+static bool validate_vi_consistency(debug_report_data *report_data, VkPipelineVertexInputStateCreateInfo const *vi) {
     /* walk the binding descriptions, which describe the step rate and stride of each vertex buffer.
      * each binding should be specified only once.
      */
@@ -1593,7 +1593,7 @@ static bool validate_vi_consistency(layer_data *my_data, VkPipelineVertexInputSt
         auto desc = &vi->pVertexBindingDescriptions[i];
         auto &binding = bindings[desc->binding];
         if (binding) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+            if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_INCONSISTENT_VI, "SC",
                         "Duplicate vertex input binding descriptions for binding %d", desc->binding)) {
                 pass = false;
@@ -1606,12 +1606,12 @@ static bool validate_vi_consistency(layer_data *my_data, VkPipelineVertexInputSt
     return pass;
 }
 
-static bool validate_vi_against_vs_inputs(layer_data *my_data, VkPipelineVertexInputStateCreateInfo const *vi,
+static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipelineVertexInputStateCreateInfo const *vi,
                                           shader_module const *vs, spirv_inst_iter entrypoint) {
     std::map<location_t, interface_var> inputs;
     bool pass = true;
 
-    collect_interface_by_location(my_data, vs, entrypoint, spv::StorageClassInput, inputs, false);
+    collect_interface_by_location(vs, entrypoint, spv::StorageClassInput, inputs, false);
 
     /* Build index by location */
     std::map<uint32_t, VkVertexInputAttributeDescription const *> attribs;
@@ -1633,14 +1633,14 @@ static bool validate_vi_against_vs_inputs(layer_data *my_data, VkPipelineVertexI
         auto a_first = a_at_end ? 0 : it_a->first;
         auto b_first = b_at_end ? 0 : it_b->first.first;
         if (!a_at_end && (b_at_end || a_first < b_first)) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+            if (log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                         "Vertex attribute at location %d not consumed by VS", a_first)) {
                 pass = false;
             }
             it_a++;
         } else if (!b_at_end && (a_at_end || b_first < a_first)) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
+            if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
                         __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", "VS consumes input at location %d but not provided",
                         b_first)) {
                 pass = false;
@@ -1652,7 +1652,7 @@ static bool validate_vi_against_vs_inputs(layer_data *my_data, VkPipelineVertexI
 
             /* type checking */
             if (attrib_type != FORMAT_TYPE_UNDEFINED && input_type != FORMAT_TYPE_UNDEFINED && attrib_type != input_type) {
-                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                             "Attribute type of `%s` at location %d does not match VS input type of `%s`",
                             string_VkFormat(it_a->second->format), a_first,
@@ -1670,7 +1670,7 @@ static bool validate_vi_against_vs_inputs(layer_data *my_data, VkPipelineVertexI
     return pass;
 }
 
-static bool validate_fs_outputs_against_render_pass(layer_data *my_data, shader_module const *fs,
+static bool validate_fs_outputs_against_render_pass(debug_report_data *report_data, shader_module const *fs,
                                                     spirv_inst_iter entrypoint, RENDER_PASS_NODE const *rp, uint32_t subpass) {
     std::map<location_t, interface_var> outputs;
     std::map<uint32_t, VkFormat> color_attachments;
@@ -1684,7 +1684,7 @@ static bool validate_fs_outputs_against_render_pass(layer_data *my_data, shader_
 
     /* TODO: dual source blend index (spv::DecIndex, zero if not provided) */
 
-    collect_interface_by_location(my_data, fs, entrypoint, spv::StorageClassOutput, outputs, false);
+    collect_interface_by_location(fs, entrypoint, spv::StorageClassOutput, outputs, false);
 
     auto it_a = outputs.begin();
     auto it_b = color_attachments.begin();
@@ -1696,14 +1696,14 @@ static bool validate_fs_outputs_against_render_pass(layer_data *my_data, shader_
         bool b_at_end = color_attachments.size() == 0 || it_b == color_attachments.end();
 
         if (!a_at_end && (b_at_end || it_a->first.first < it_b->first)) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+            if (log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                         "FS writes to output location %d with no matching attachment", it_a->first.first)) {
                 pass = false;
             }
             it_a++;
         } else if (!b_at_end && (a_at_end || it_a->first.first > it_b->first)) {
-            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+            if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC", "Attachment %d not written by FS", it_b->first)) {
                 pass = false;
             }
@@ -1714,7 +1714,7 @@ static bool validate_fs_outputs_against_render_pass(layer_data *my_data, shader_
 
             /* type checking */
             if (att_type != FORMAT_TYPE_UNDEFINED && output_type != FORMAT_TYPE_UNDEFINED && att_type != output_type) {
-                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                             __LINE__, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                             "Attachment %d of type `%s` does not match FS output type of `%s`", it_b->first,
                             string_VkFormat(it_b->second),
@@ -1849,7 +1849,7 @@ static void mark_accessible_ids(shader_module const *src, spirv_inst_iter entryp
     }
 }
 
-static bool validate_push_constant_block_against_pipeline(layer_data *my_data,
+static bool validate_push_constant_block_against_pipeline(debug_report_data *report_data,
                                                           std::vector<VkPushConstantRange> const *pushConstantRanges,
                                                           shader_module const *src, spirv_inst_iter type,
                                                           VkShaderStageFlagBits stage) {
@@ -1875,7 +1875,7 @@ static bool validate_push_constant_block_against_pipeline(layer_data *my_data,
                         found_range = true;
 
                         if ((range.stageFlags & stage) == 0) {
-                            if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                            if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                                         __LINE__, SHADER_CHECKER_PUSH_CONSTANT_NOT_ACCESSIBLE_FROM_STAGE, "SC",
                                         "Push constant range covering variable starting at "
                                         "offset %u not accessible from stage %s",
@@ -1889,7 +1889,7 @@ static bool validate_push_constant_block_against_pipeline(layer_data *my_data,
                 }
 
                 if (!found_range) {
-                    if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                    if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                                 __LINE__, SHADER_CHECKER_PUSH_CONSTANT_OUT_OF_RANGE, "SC",
                                 "Push constant range covering variable starting at "
                                 "offset %u not declared in layout",
@@ -1904,7 +1904,7 @@ static bool validate_push_constant_block_against_pipeline(layer_data *my_data,
     return pass;
 }
 
-static bool validate_push_constant_usage(layer_data *my_data,
+static bool validate_push_constant_usage(debug_report_data *report_data,
                                          std::vector<VkPushConstantRange> const *pushConstantRanges, shader_module const *src,
                                          std::unordered_set<uint32_t> accessible_ids, VkShaderStageFlagBits stage) {
     bool pass = true;
@@ -1912,7 +1912,7 @@ static bool validate_push_constant_usage(layer_data *my_data,
     for (auto id : accessible_ids) {
         auto def_insn = src->get_def(id);
         if (def_insn.opcode() == spv::OpVariable && def_insn.word(3) == spv::StorageClassPushConstant) {
-            pass &= validate_push_constant_block_against_pipeline(my_data, pushConstantRanges, src,
+            pass &= validate_push_constant_block_against_pipeline(report_data, pushConstantRanges, src,
                                                                  src->get_def(def_insn.word(1)), stage);
         }
     }
@@ -2154,7 +2154,7 @@ static bool verify_set_layout_compatibility(layer_data *my_data, const cvdescrip
 }
 
 // Validate that data for each specialization entry is fully contained within the buffer.
-static bool validate_specialization_offsets(layer_data *my_data, VkPipelineShaderStageCreateInfo const *info) {
+static bool validate_specialization_offsets(debug_report_data *report_data, VkPipelineShaderStageCreateInfo const *info) {
     bool pass = true;
 
     VkSpecializationInfo const *spec = info->pSpecializationInfo;
@@ -2162,7 +2162,7 @@ static bool validate_specialization_offsets(layer_data *my_data, VkPipelineShade
     if (spec) {
         for (auto i = 0u; i < spec->mapEntryCount; i++) {
             if (spec->pMapEntries[i].offset + spec->pMapEntries[i].size > spec->dataSize) {
-                if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                             /*dev*/ 0, __LINE__, SHADER_CHECKER_BAD_SPECIALIZATION, "SC",
                             "Specialization entry %u (for constant id %u) references memory outside provided "
                             "specialization data (bytes %u.." PRINTF_SIZE_T_SPECIFIER "; " PRINTF_SIZE_T_SPECIFIER
@@ -2179,7 +2179,7 @@ static bool validate_specialization_offsets(layer_data *my_data, VkPipelineShade
     return pass;
 }
 
-static bool descriptor_type_match(layer_data *my_data, shader_module const *module, uint32_t type_id,
+static bool descriptor_type_match(shader_module const *module, uint32_t type_id,
                                   VkDescriptorType descriptor_type, unsigned &descriptor_count) {
     auto type = module->get_def(type_id);
 
@@ -2421,7 +2421,7 @@ static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShade
                                            shader_module **out_module, spirv_inst_iter *out_entrypoint) {
     bool pass = true;
     auto module = *out_module = dev_data->shaderModuleMap[pStage->module].get();
-    pass &= validate_specialization_offsets(dev_data, pStage);
+    pass &= validate_specialization_offsets(dev_data->report_data, pStage);
 
     /* find the entrypoint */
     auto entrypoint = *out_entrypoint = find_entrypoint(module, pStage->pName, pStage->stage);
@@ -2443,10 +2443,10 @@ static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShade
 
     /* validate descriptor set layout against what the entrypoint actually uses */
     std::map<descriptor_slot_t, interface_var> descriptor_uses;
-    collect_interface_by_descriptor_slot(dev_data, module, accessible_ids, descriptor_uses);
+    collect_interface_by_descriptor_slot(dev_data->report_data, module, accessible_ids, descriptor_uses);
 
     /* validate push constant usage */
-    pass &= validate_push_constant_usage(dev_data, &pipelineLayout->pushConstantRanges,
+    pass &= validate_push_constant_usage(dev_data->report_data, &pipelineLayout->pushConstantRanges,
                                         module, accessible_ids, pStage->stage);
 
     /* validate descriptor use */
@@ -2475,7 +2475,7 @@ static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShade
                         string_VkShaderStageFlagBits(pStage->stage))) {
                 pass = false;
             }
-        } else if (!descriptor_type_match(dev_data, module, use.second.type_id, binding->descriptorType,
+        } else if (!descriptor_type_match(module, use.second.type_id, binding->descriptorType,
                                           /*out*/ required_descriptor_count)) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
                         SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC", "Type mismatch on descriptor slot "
@@ -2526,11 +2526,11 @@ static bool validate_and_capture_pipeline_shader_state(layer_data *my_data, PIPE
     vi = pCreateInfo->pVertexInputState;
 
     if (vi) {
-        pass &= validate_vi_consistency(my_data, vi);
+        pass &= validate_vi_consistency(my_data->report_data, vi);
     }
 
     if (shaders[vertex_stage]) {
-        pass &= validate_vi_against_vs_inputs(my_data, vi, shaders[vertex_stage], entrypoints[vertex_stage]);
+        pass &= validate_vi_against_vs_inputs(my_data->report_data, vi, shaders[vertex_stage], entrypoints[vertex_stage]);
     }
 
     int producer = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
@@ -2544,7 +2544,7 @@ static bool validate_and_capture_pipeline_shader_state(layer_data *my_data, PIPE
     for (; producer != fragment_stage && consumer <= fragment_stage; consumer++) {
         assert(shaders[producer]);
         if (shaders[consumer]) {
-            pass &= validate_interface_between_stages(my_data,
+            pass &= validate_interface_between_stages(my_data->report_data,
                                                       shaders[producer], entrypoints[producer], &shader_stage_attribs[producer],
                                                       shaders[consumer], entrypoints[consumer], &shader_stage_attribs[consumer]);
 
@@ -2555,7 +2555,7 @@ static bool validate_and_capture_pipeline_shader_state(layer_data *my_data, PIPE
     auto rp = pCreateInfo->renderPass != VK_NULL_HANDLE ? my_data->renderPassMap[pCreateInfo->renderPass] : nullptr;
 
     if (shaders[fragment_stage] && rp) {
-        pass &= validate_fs_outputs_against_render_pass(my_data, shaders[fragment_stage], entrypoints[fragment_stage], rp,
+        pass &= validate_fs_outputs_against_render_pass(my_data->report_data, shaders[fragment_stage], entrypoints[fragment_stage], rp,
                                                        pCreateInfo->subpass);
     }
 
