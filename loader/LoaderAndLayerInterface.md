@@ -1094,11 +1094,12 @@ the above lists may be extended in the future.
 #### Layer Library Interface
 
 A layer library is a container of layers.  This section defines an extensible
-programming interface to discover layers contained in layer libraries.  It
-also specifies the minimal conventions and rules a layer must follow.
+manifest file interface or programming interface to discover layers contained in layer libraries.
+The extensible programming interface is used on Android only. For Windows and Linux,
+the layer manifest JSON files are used.
 
-Other sections might have other guidelines that layers, at least validation
-layers, should follow.
+It also specifies the minimal conventions
+and rules a layer must follow. Other sections might have other guidelines that layers should follow.
 
 ##### Layer Conventions and Rules
 
@@ -1141,9 +1142,9 @@ extension names have been validated.
 Some of the conventions or rules, for example, may be considered abuses of the
 specification.
 
-###### Layer Library Interface Version 0
+###### Layer Library Interface Version 0 (Android)
 
-A layer library supporting interface version 0 must define and export these
+An Android layer library supporting interface version 0 must define and export these
 functions, unrelated to any Vulkan command despite the names, signatures, and
 other similarities:
 
@@ -1192,37 +1193,97 @@ All contained layers must support [`vk_layer.h`][].  They do not need to
 implement commands that are not queryable.  They are recommended not to export
 any command.
 
+###### Layer Library Interface Version 0 (Windows and Linux)
+On Windows and Linux (desktop), the loader uses manifest files to discover
+layer libraries and layers.  The desktop loader doesn't directly query the
+layer library except during chaining.  On Android, the loader queries the layer libraries directly as outlined above.
+
+The layer libraries and the manifest files must be kept in sync.
+
+The following table associates the desktop JSON nodes with the Android layer library queries. It also indicates requirements.
+
+| Property | JSON node | Android library query | Notes |
+|----------|-----------|-----------------------|-------|
+| layers in library | layer | vkEnumerate*LayerProperties | one node required for each layer in the library |
+|layer name | name | vkEnumerate*LayerProperties | one node is required |
+| layer type | type | vkEnumerate*LayerProperties | one node is required |
+| library location | library_path | N/A | one node is required |
+| vulkan spec version | api_version | vkEnumerate*LayerProperties | one node is required |
+| layer implementation version | api_version | vkEnumerate*LayerProperties | one node is required |
+| layer description | description | vkEnumerate*LayerProperties | one node is required |
+| chaining functions | functions | vkGet*ProcAddr | see Note 1 |
+| instance extensions | instance_extensions | vkEnumerateInstanceExtensionProperties | see Note 2 |
+| device extensions | device_extensions | vkEnumerateDeviceExtensionProperties | see Note 3 |
+
+Note 1: The "functions" node is required if the layer is using alternative
+names for vkGetInstanceProcAddr or vkGetDeviceProcAddr. vkGetInstanceProcAddr is
+required for all layer types. vkGetDeviceProcAddr is required for
+device or global (both instance and device) layers. See further requirements below.
+
+Note 2: One "instance_extensions" node with an array of 1 or more elements
+required if any instance
+extensions are supported by a layer, otherwise the node is optional.  Each
+element of the array must have the nodes "name" and "spec_version" which
+correspond to  VkExtensionProperties "extensionName" and "specVersion"
+respectively.
+
+Note 3: One "device_extensions" node with an array of 1 or more elements
+required if any device
+extensions are supported by a layer, otherwise the node is optional.  Each
+element of the array must have the nodes "name" and "spec_version" which
+correspond to  VkExtensionProperties "extensionName" and "specVersion"
+respectively. Additionally, each element of the array of device extensions
+must have the node "entrypoints" if the device extension adds Vulkan API commands,
+otherwise this node is not required.
+The "entrypoint" node is an array of the names of all entrypoints added by the
+supported extension.
+
+The manifest file nodes "file_format_version", "disable_environment", and
+"enable_environment" have no corresponding equivalent in the Vulkan API nor
+in the Android layer library interface.
+
+"file_format_version" is used to indicate the valid JSON syntax of the file.
+As nodes are added or deleted which would change the parsing of this file,
+the file_format_version should change. This version
+is NOT the same as the interface version. The interface version is a superset
+of the "file_format_version" and includes the semantics of the nodes in the JSON file.  For interface version 0 the file format version must be "1.0.0"
+
+"disable_environment" (required) and "enable_evironment" (optional) are for implicit layers as previously described.
+
+vkGetInstanceProcAddr requirements:
+-Irregardless of the name, this function must be implemented and exported in the library for all  layers.
+-This function must return
+the local entry points for all instance level Vulkan commands it intercepts. At
+a minimum, this includes vkGetInstanceProcAddr and vkCreateInstance.
+Optionally, this function may return intercepted device level
+Vulkan commands.
+-Vulkan commands that a layer doesn't intercept must be passed to the next
+entity in the chain. That is, the next layer/ICD's GetInstanceProcAddr must be called.
+-Currently this function must be able to handle a VkInstance parameter equal
+to NULL for instance level commands it intercepts including vkCreateDevice.
+
+VkGetDeviceProcAddr requirements:
+-Irregardless of the name, a layer intercepting device level Vulkan commands
+(aka a device level layer) must implement  vkGetDeviceProcAddr type of function.
+-This vkGetDeviceProcAddr type function must be exported by the layer library.
+-This function must return the entry points for all device level Vulkan
+commands it intercepts. At a minimum, this includes vkGetDeviceProcAddr and vkCreateDevice.
+-Vulkan commands that a layer doesn't intercept must be passed to the next
+entity in the chain. That is, the next layer/ICD's GetDeviceProcAddr must be called.
+
+There are no requirements on the names of the intercepting functions a layer
+implements except those listed above for vkGetInstanceProcAddr and
+vkGetDeviceProcAddr. Layers do not need to implement commands that are not going to be intercepted.
+
+All layers within a library must support [`vk_layer.h`][].
 [`vk_layer.h`]: ../include/vulkan/vk_layer.h
-
-#### Layer Libraries and Manifest Files
-
-The layer libraries and the manifest files must be kept in sync.  On Windows
-and Linux, the loader uses manifest files to discover layer libraries and
-layers.  On Android, the loader inspects the layer libraries directly.
-
-The manifest file specifies in its "functions", "vkGetInstanceProcAddr" node
-the function name the loader will use to discover
-<layerName>GetInstanceProcAddr.  When the layer library exports
-<layerName>GetInstanceProcAddr, the JSON node must explicitly specify that
-function name.  When the layer library exports vkGetInstanceProcAddr, the JSON
-node may be omitted.  The layer library may additionally export another alias
-and specify that in the JSON node.
-
-Similarly, the manifest file specifies in its "functions",
-"vkGetDeviceProcAddr" node the function name the loader will use to discover
-<layerName>GetDeviceProcAddr.  When the layer library exports
-<layerName>GetDeviceProcAddr, the JSON node must explicitly specify that
-function name.  When the layer library exports vkGetDeviceProcAddr, the JSON
-node may be omitted.  The layer library may additionally export another alias
-and specify that in the JSON node.
 
 #### Layer intercept requirements
 
 - Layers intercept a Vulkan command by defining a C/C++ function with signature
 identical to the Vulkan API for that command.
 - An instance layer must intercept at least vkGetInstanceProcAddr and
-vkCreateInstance.  A device layer must intercept at least vkGetDeviceProcAddr
-and vkCreateDevice.
+vkCreateInstance.  A device layer must intercept at least vkGetInstanceProcAddr, vkGetDeviceProcAddr and vkCreateDevice.
 - Other than the two vkGet*ProcAddr, all other functions intercepted by a layer
 need NOT be exported by the layer.
 - For any Vulkan command a layer intercepts which has a non-void return value,
