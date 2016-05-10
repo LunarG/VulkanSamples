@@ -171,9 +171,19 @@ struct spirv_inst_iter {
     std::vector<uint32_t>::const_iterator zero;
     std::vector<uint32_t>::const_iterator it;
 
-    uint32_t len() { return *it >> 16; }
+    uint32_t len() {
+        auto result = *it >> 16;
+        assert(result > 0);
+        return result;
+    }
+
     uint32_t opcode() { return *it & 0x0ffffu; }
-    uint32_t const &word(unsigned n) { return it[n]; }
+
+    uint32_t const &word(unsigned n) {
+        assert(n < len());
+        return it[n];
+    }
+
     uint32_t offset() { return (uint32_t)(it - zero); }
 
     spirv_inst_iter() {}
