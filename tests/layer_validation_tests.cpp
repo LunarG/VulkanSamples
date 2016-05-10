@@ -2958,8 +2958,9 @@ TEST_F(VkLayerTest, InvalidDescriptorPool) {
     // ObjectTracker should catch this.
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Invalid VkDescriptorPool Object 0xbaad6001");
-    VkDescriptorPool badPool = (VkDescriptorPool)0xbaad6001;
-    vkResetDescriptorPool(device(), badPool, 0);
+    uint64_t fake_pool_handle = 0xbaad6001;
+    VkDescriptorPool bad_pool = reinterpret_cast<VkDescriptorPool &>(fake_pool_handle);
+    vkResetDescriptorPool(device(), bad_pool, 0);
     m_errorMonitor->VerifyFound();
 }
 
@@ -2968,7 +2969,9 @@ TEST_F(VkLayerTest, InvalidDescriptorSet) {
     // ObjectTracker should catch this.
     // Create a valid cmd buffer
     // call vkCmdBindDescriptorSets w/ false Descriptor Set
-    VkDescriptorSet badSet = (VkDescriptorSet)0xbaad6001;
+
+    uint64_t fake_set_handle = 0xbaad6001;
+    VkDescriptorSet bad_set = reinterpret_cast<VkDescriptorSet &>(fake_set_handle);
     VkResult err;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Invalid VkDescriptorSet Object 0xbaad6001");
@@ -3002,7 +3005,7 @@ TEST_F(VkLayerTest, InvalidDescriptorSet) {
 
     BeginCommandBuffer();
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipeline_layout, 0, 1, &badSet, 0, NULL);
+                            pipeline_layout, 0, 1, &bad_set, 0, NULL);
     m_errorMonitor->VerifyFound();
     EndCommandBuffer();
     vkDestroyPipelineLayout(device(), pipeline_layout, NULL);
@@ -3012,7 +3015,8 @@ TEST_F(VkLayerTest, InvalidDescriptorSet) {
 TEST_F(VkLayerTest, InvalidDescriptorSetLayout) {
     // Attempt to create a Pipeline Layout with an invalid Descriptor Set Layout.
     // ObjectTracker should catch this.
-    VkDescriptorSetLayout bad_layout = (VkDescriptorSetLayout)0xbaad6001;
+    uint64_t fake_layout_handle = 0xbaad6001;
+    VkDescriptorSetLayout bad_layout = reinterpret_cast<VkDescriptorSetLayout &>(fake_layout_handle);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Invalid VkDescriptorSetLayout Object 0xbaad6001");
 
@@ -3032,7 +3036,8 @@ TEST_F(VkLayerTest, InvalidPipeline) {
     // ObjectTracker should catch this.
     // Create a valid cmd buffer
     // call vkCmdBindPipeline w/ false Pipeline
-    VkPipeline bad_pipeline = (VkPipeline)0xbaad6001;
+    uint64_t fake_pipeline_handle = 0xbaad6001;
+    VkPipeline bad_pipeline = reinterpret_cast<VkPipeline &>(fake_pipeline_handle);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Invalid VkPipeline Object 0xbaad6001");
     ASSERT_NO_FATAL_FAILURE(InitState());
