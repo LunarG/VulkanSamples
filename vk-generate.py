@@ -35,9 +35,14 @@ class Subcommand(object):
         self.argv = argv
         self.headers = vulkan.headers
         self.protos = vulkan.protos
+        self.outfile = None
 
     def run(self):
-        print(self.generate())
+        if self.outfile:
+            with open(self.outfile, "w") as outfile:
+                outfile.write(self.generate())
+        else:
+            print(self.generate())
 
     def generate(self):
         copyright = self.generate_copyright()
@@ -91,11 +96,19 @@ class Subcommand(object):
 
 class DispatchTableOpsSubcommand(Subcommand):
     def run(self):
-        if len(self.argv) != 1:
+        if len(self.argv) < 1:
             print("DispatchTableOpsSubcommand: <prefix> unspecified")
             return
 
         self.prefix = self.argv[0]
+
+        if len(self.argv) > 2:
+            print("DispatchTableOpsSubcommand: <prefix> [outfile]")
+            return
+
+        if len(self.argv) == 2:
+            self.outfile = self.argv[1]
+
         super(DispatchTableOpsSubcommand, self).run()
 
     def generate_header(self):
@@ -167,8 +180,8 @@ class WinDefFileSubcommand(Subcommand):
                 ]
         }
 
-        if len(self.argv) != 2 or self.argv[1] not in library_exports:
-            print("WinDefFileSubcommand: <library-name> {%s}" %
+        if len(self.argv) < 2 or len(self.argv) > 3 or self.argv[1] not in library_exports:
+            print("WinDefFileSubcommand: <library-name> {%s} [outfile]" %
                     "|".join(library_exports.keys()))
             return
 
@@ -177,6 +190,9 @@ class WinDefFileSubcommand(Subcommand):
             self.exports = library_exports["layer_multi"]
         else:
             self.exports = library_exports[self.argv[1]]
+
+        if len(self.argv) == 3:
+            self.outfile = self.argv[2]
 
         super(WinDefFileSubcommand, self).run()
 

@@ -164,8 +164,8 @@ def get_object_uses(obj_list, params):
     return (obj_uses, local_decls)
 
 class Subcommand(object):
-    def __init__(self, argv):
-        self.argv = argv
+    def __init__(self, outfile):
+        self.outfile = outfile
         self.headers = vulkan.headers
         self.protos = vulkan.protos
         self.no_addr = False
@@ -174,7 +174,11 @@ class Subcommand(object):
         self.wsi = sys.argv[1]
 
     def run(self):
-        print(self.generate())
+        if self.outfile:
+            with open(self.outfile, "w") as outfile:
+                outfile.write(self.generate())
+        else:
+            print(self.generate())
 
     def generate(self):
         copyright = self.generate_copyright()
@@ -1664,7 +1668,7 @@ def main():
     }
 
     if len(sys.argv) < 4 or sys.argv[1] not in wsi or sys.argv[2] not in subcommands or not os.path.exists(sys.argv[3]):
-        print("Usage: %s <wsi> <subcommand> <input_header> [options]" % sys.argv[0])
+        print("Usage: %s <wsi> <subcommand> <input_header> [outdir]" % sys.argv[0])
         print
         print("Available subcommands are: %s" % " ".join(subcommands))
         exit(1)
@@ -1678,7 +1682,11 @@ def main():
     vk_helper.typedef_rev_dict = hfp.get_typedef_rev_dict()
     vk_helper.types_dict = hfp.get_types_dict()
 
-    subcmd = subcommands[sys.argv[2]](sys.argv[3:])
+    outfile = None
+    if len(sys.argv) >= 5:
+        outfile = sys.argv[4]
+
+    subcmd = subcommands[sys.argv[2]](outfile)
     subcmd.run()
 
 if __name__ == "__main__":
