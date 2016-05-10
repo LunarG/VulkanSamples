@@ -4265,12 +4265,14 @@ static bool decrementResources(layer_data *my_data, uint32_t fenceCount, const V
         fence_data->second.priorFences.clear();
     }
     for (auto fence_pair : fence_pairs) {
-        auto queue_pair = my_data->queueMap.find(fence_pair.second->queue);
-        if (queue_pair != my_data->queueMap.end()) {
-            auto last_fence_data =
-                std::find(queue_pair->second.lastFences.begin(), queue_pair->second.lastFences.end(), fence_pair.first);
-            if (last_fence_data != queue_pair->second.lastFences.end())
-                queue_pair->second.lastFences.erase(last_fence_data);
+        for (auto queue : fence_pair.second->queues) {
+            auto queue_pair = my_data->queueMap.find(queue);
+            if (queue_pair != my_data->queueMap.end()) {
+                auto last_fence_data =
+                    std::find(queue_pair->second.lastFences.begin(), queue_pair->second.lastFences.end(), fence_pair.first);
+                if (last_fence_data != queue_pair->second.lastFences.end())
+                    queue_pair->second.lastFences.erase(last_fence_data);
+            }
         }
     }
     return skip_call;
@@ -4307,6 +4309,10 @@ static void updateTrackedCommandBuffers(layer_data *dev_data, VkQueue queue, VkQ
     }
     for (auto fenceInner : other_queue_data->second.lastFences) {
         queue_data->second.lastFences.push_back(fenceInner);
+        auto fence_node = dev_data->fenceMap.find(fenceInner);
+        if (fence_node != dev_data->fenceMap.end()) {
+            fence_node->second.queues.insert(other_queue_data->first);
+        }
     }
     if (fence != VK_NULL_HANDLE) {
         auto fence_data = dev_data->fenceMap.find(fence);
@@ -4357,7 +4363,7 @@ static void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t sub
         }
         fence_data->second.priorFences = prior_fences;
         fence_data->second.needsSignaled = true;
-        fence_data->second.queue = queue;
+        fence_data->second.queues.insert(queue);
         fence_data->second.in_use.fetch_add(1);
         for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
             const VkSubmitInfo *submit = &pSubmits[submit_idx];
@@ -4531,7 +4537,6 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
     std::unique_lock<std::mutex> lock(global_lock);
     // First verify that fence is not in use
     if (fence != VK_NULL_HANDLE) {
-        dev_data->fenceMap[fence].queue = queue;
         if ((submitCount != 0) && dev_data->fenceMap[fence].in_use.load()) {
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                                 (uint64_t)(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
@@ -4754,7 +4759,7 @@ static inline bool verifyWaitFenceState(VkDevice device, VkFence fence, const ch
                             (uint64_t)fence, __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                             "%s specified fence %#" PRIxLEAST64 " already in SIGNALED state.", apiCall, (uint64_t)fence);
             }
-            if (!pFenceInfo->second.queue && !pFenceInfo->second.swapchain) { // Checking status of unsubmitted fence
+            if (pFenceInfo->second.queues.empty() && !pFenceInfo->second.swapchain) { // Checking status of unsubmitted fence
                 skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                                     reinterpret_cast<uint64_t &>(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                                     "%s called for fence %#" PRIxLEAST64 " which has not been submitted on a Queue or during "
@@ -5425,6 +5430,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount,
         auto fence_item = dev_data->fenceMap.find(pFences[i]);
         if (fence_item != dev_data->fenceMap.end()) {
             fence_item->second.needsSignaled = true;
+            fence_item->second.queues.clear();
             if (fence_item->second.in_use.load()) {
                 skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,

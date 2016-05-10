@@ -276,13 +276,13 @@ class FENCE_NODE : public BASE_NODE {
     VkSwapchainKHR swapchain; // Swapchain that this fence is submitted against or NULL
     bool firstTimeFlag;       // Fence was created in signaled state, avoid warnings for first use
     VkFenceCreateInfo createInfo;
-    VkQueue queue;
+    std::unordered_set<VkQueue> queues;
     vector<VkCommandBuffer> cmdBuffers;
     bool needsSignaled;
     vector<VkFence> priorFences;
 
     // Default constructor
-    FENCE_NODE() : queue(VK_NULL_HANDLE), needsSignaled(false){};
+    FENCE_NODE() : swapchain(VK_NULL_HANDLE), firstTimeFlag(false), needsSignaled(false){};
 };
 
 class SEMAPHORE_NODE : public BASE_NODE {
