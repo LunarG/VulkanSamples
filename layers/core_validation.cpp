@@ -5812,14 +5812,25 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
         }
         // TODO : Add warning if ranges overlap
     }
+
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+
     VkResult result = dev_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
-        // TODOSC : Merge capture of the setLayouts per pipeline
         PIPELINE_LAYOUT_NODE &plNode = dev_data->pipelineLayoutMap[*pPipelineLayout];
         plNode.descriptorSetLayouts.resize(pCreateInfo->setLayoutCount);
+        plNode.setLayouts.resize(pCreateInfo->setLayoutCount);
         for (i = 0; i < pCreateInfo->setLayoutCount; ++i) {
             plNode.descriptorSetLayouts[i] = pCreateInfo->pSetLayouts[i];
+            auto set_layout_it = dev_data->descriptorSetLayoutMap.find(pCreateInfo->pSetLayouts[i]);
+            if (set_layout_it != dev_data->descriptorSetLayoutMap.end()) {
+                plNode.setLayouts[i] = set_layout_it->second;
+            }
+            else {
+                plNode.setLayouts[i] = nullptr;
+            }
         }
         plNode.pushConstantRanges.resize(pCreateInfo->pushConstantRangeCount);
         for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {

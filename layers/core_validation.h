@@ -326,6 +326,7 @@ class FRAMEBUFFER_NODE {
 // Store layouts and pushconstants for PipelineLayout
 struct PIPELINE_LAYOUT_NODE {
     vector<VkDescriptorSetLayout> descriptorSetLayouts;
+    vector<cvdescriptorset::DescriptorSetLayout const *> setLayouts;
     vector<VkPushConstantRange> pushConstantRanges;
 };
 
