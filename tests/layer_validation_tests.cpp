@@ -2971,6 +2971,93 @@ TEST_F(VkLayerTest, ResetEventThenSet) {
 }
 
 // This is a positive test.  No errors should be generated.
+TEST_F(VkLayerTest, TwoFencesThreeFrames) {
+    TEST_DESCRIPTION("Two command buffers with two separate fences are each "
+                     "run through a Submit & WaitForFences cycle 3 times. This "
+                     "previously revealed a bug so running this positive test "
+                     "to prevent a regression.");
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_,
+                     0, &queue);
+
+    static const uint32_t NUM_OBJECTS = 2;
+    static const uint32_t NUM_FRAMES = 3;
+    VkCommandBuffer cmd_buffers[NUM_OBJECTS] = {};
+    VkFence fences[NUM_OBJECTS] = {};
+
+    VkCommandPool cmd_pool;
+    VkCommandPoolCreateInfo cmd_pool_ci = {};
+    cmd_pool_ci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    cmd_pool_ci.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    cmd_pool_ci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    VkResult err = vkCreateCommandPool(m_device->device(), &cmd_pool_ci,
+                                       nullptr, &cmd_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkCommandBufferAllocateInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmd_buf_info.commandPool = cmd_pool;
+    cmd_buf_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmd_buf_info.commandBufferCount = 1;
+
+    VkFenceCreateInfo fence_ci = {};
+    fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_ci.pNext = nullptr;
+    fence_ci.flags = 0;
+
+    for (uint32_t i = 0; i < NUM_OBJECTS; ++i) {
+        err = vkAllocateCommandBuffers(m_device->device(), &cmd_buf_info,
+                                       &cmd_buffers[i]);
+        ASSERT_VK_SUCCESS(err);
+        err = vkCreateFence(m_device->device(), &fence_ci, nullptr, &fences[i]);
+        ASSERT_VK_SUCCESS(err);
+    }
+
+    for (uint32_t frame = 0; frame < NUM_FRAMES; ++frame) {
+        // Create empty cmd buffer
+        VkCommandBufferBeginInfo cmdBufBeginDesc = {};
+        cmdBufBeginDesc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+        err = vkBeginCommandBuffer(cmd_buffers[0], &cmdBufBeginDesc);
+        ASSERT_VK_SUCCESS(err);
+        err = vkEndCommandBuffer(cmd_buffers[0]);
+        ASSERT_VK_SUCCESS(err);
+
+        VkSubmitInfo submit_info = {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &cmd_buffers[0];
+        // Submit cmd buffer and wait for fence
+        err = vkQueueSubmit(queue, 1, &submit_info, fences[0]);
+        ASSERT_VK_SUCCESS(err);
+        err = vkWaitForFences(m_device->device(), 1, &fences[0], VK_TRUE,
+                              UINT64_MAX);
+        ASSERT_VK_SUCCESS(err);
+        err = vkResetFences(m_device->device(), 1, &fences[0]);
+        ASSERT_VK_SUCCESS(err);
+
+        // 2nd cmd buffer with separate fence
+        err = vkBeginCommandBuffer(cmd_buffers[1], &cmdBufBeginDesc);
+        ASSERT_VK_SUCCESS(err);
+        err = vkEndCommandBuffer(cmd_buffers[1]);
+        ASSERT_VK_SUCCESS(err);
+        // Update submit info to refer to 2nd cmd buffer
+        submit_info.pCommandBuffers = &cmd_buffers[1];
+        // Submit 2nd cmd buffer and wait for its fence
+        err = vkQueueSubmit(queue, 1, &submit_info, fences[1]);
+        ASSERT_VK_SUCCESS(err);
+        err = vkWaitForFences(m_device->device(), 1, &fences[1], VK_TRUE,
+                              UINT64_MAX);
+        ASSERT_VK_SUCCESS(err);
+        err = vkResetFences(m_device->device(), 1, &fences[1]);
+        ASSERT_VK_SUCCESS(err);
+    }
+    m_errorMonitor->VerifyNotFound();
+}
+// This is a positive test.  No errors should be generated.
 TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceQWI) {
 
     TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
