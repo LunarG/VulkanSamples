@@ -348,9 +348,9 @@ class LayerDoc:
                                 print(self.txt_color.yellow() + 'Validation check %s has missing or invalid test : %s' % (chk, test))
                                 warnings_found += 1
                                 break
-                    elif test not in tests_set and not chk.endswith('_NONE'):
-                        print(self.txt_color.yellow() + 'Validation check %s has missing or invalid test : %s' % (chk, test))
-                        warnings_found += 1
+                    elif test not in tests_set and not chk.endswith('_NONE') and test != 'TODO':
+                        print(self.txt_color.red() + 'Validation check %s has missing or invalid test : %s' % (chk, test))
+                        errors_found += 1
         # Now go through all of the actual checks in the layers and make sure they're covered in the doc
         for ln in layer_dict:
             for chk in layer_dict[ln]['CHECKS']:
