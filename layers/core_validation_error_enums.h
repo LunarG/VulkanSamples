@@ -31,7 +31,6 @@ typedef enum _MEM_TRACK_ERROR {
     MEMTRACK_INVALID_ALIASING,             // Invalid Memory Aliasing
     MEMTRACK_INTERNAL_ERROR,               // Bug in Mem Track Layer internal data structures
     MEMTRACK_FREED_MEM_REF,                // MEM Obj freed while it still has obj and/or CB refs
-    MEMTRACK_MISSING_MEM_BINDINGS,         // Trying to retrieve mem bindings, but none found (may be internal error)
     MEMTRACK_INVALID_OBJECT,               // Attempting to reference generic VK Object that is invalid
     MEMTRACK_MEMORY_LEAK,                  // Failure to call vkFreeMemory on Mem Obj prior to DestroyDevice
     MEMTRACK_INVALID_STATE,                // Memory not in the correct state
