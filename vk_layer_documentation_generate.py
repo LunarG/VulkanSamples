@@ -133,10 +133,13 @@ class bcolors:
 
 # Class to parse the validation layer test source and store testnames
 class TestParser:
-    def __init__(self, test_file_list, test_group_name='VkLayerTest'):
+    def __init__(self, test_file_list, test_group_name=['VkLayerTest', 'VkWsiEnabledLayerTest']):
         self.test_files = test_file_list
         self.tests_set = set()
-        self.test_trigger_txt = 'TEST_F(%s' % test_group_name
+        self.test_trigger_txt_list = []
+        for tg in test_group_name:
+            self.test_trigger_txt_list.append('TEST_F(%s' % tg)
+            #print('Test trigger test list: %s' % (self.test_trigger_txt_list))
 
     # Parse test files into internal data struct
     def parse(self):
@@ -148,7 +151,7 @@ class TestParser:
                     if True in [line.strip().startswith(comment) for comment in ['//', '/*']]:
                         continue
 
-                    if self.test_trigger_txt in line:
+                    if True in [ttt in line for ttt in self.test_trigger_txt_list]:
                         #print('Test wildcard in line: %s' % (line))
                         testname = line.split(',')[-1]
                         testname = testname.strip().strip(' {)')
@@ -272,7 +275,8 @@ class LayerDoc:
                         self.layer_doc_dict[layer_name][check_name]['notes'] = detail_sections[6].strip()
                         # strip any unwanted commas from api and test names
                         self.layer_doc_dict[layer_name][check_name]['api_list'] = [a.strip(',') for a in self.layer_doc_dict[layer_name][check_name]['api_list']]
-                        self.layer_doc_dict[layer_name][check_name]['tests'] = [a.strip(',') for a in self.layer_doc_dict[layer_name][check_name]['tests']]
+                        test_list = [a.strip(',') for a in self.layer_doc_dict[layer_name][check_name]['tests']]
+                        self.layer_doc_dict[layer_name][check_name]['tests'] = [a.split('.')[-1] for a in test_list]
                 # Trigger details parsing when we have table header
                 if detail_trigger in line:
                     parse_layer_details = True
