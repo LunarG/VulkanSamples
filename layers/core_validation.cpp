@@ -8290,6 +8290,25 @@ static bool ValidateDependencies(const layer_data *my_data, const VkRenderPassBe
     }
     return skip_call;
 }
+// ValidateLayoutVsAttachmentDescription is a general function where we can validate various state associated with the
+// VkAttachmentDescription structs that are used by the sub-passes of a renderpass. Initial check is to make sure that
+// READ_ONLY layout attachments don't have CLEAR as their loadOp.
+static bool ValidateLayoutVsAttachmentDescription(debug_report_data *report_data, const VkImageLayout first_layout,
+                                                  const uint32_t attachment,
+                                                  const VkAttachmentDescription &attachment_description) {
+    bool skip_call = false;
+    // Verify that initial loadOp on READ_ONLY attachments is not CLEAR
+    if (attachment_description.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+        if ((first_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) ||
+            (first_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)) {
+            skip_call |=
+                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
+                        VkDebugReportObjectTypeEXT(0), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                        "Cannot clear attachment %d with invalid first layout %s.", attachment, string_VkImageLayout(first_layout));
+        }
+    }
+    return skip_call;
+}
 
 static bool ValidateLayouts(const layer_data *my_data, VkDevice device, const VkRenderPassCreateInfo *pCreateInfo) {
     bool skip = false;
@@ -8297,6 +8316,7 @@ static bool ValidateLayouts(const layer_data *my_data, VkDevice device, const Vk
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
+            const VkAttachmentDescription attach_desc = pCreateInfo->pAttachments[subpass.pInputAttachments[j].attachment];
             if (subpass.pInputAttachments[j].layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL &&
                 subpass.pInputAttachments[j].layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
                 if (subpass.pInputAttachments[j].layout == VK_IMAGE_LAYOUT_GENERAL) {
@@ -8311,6 +8331,9 @@ static bool ValidateLayouts(const layer_data *my_data, VkDevice device, const Vk
                                     string_VkImageLayout(subpass.pInputAttachments[j].layout));
                 }
             }
+            auto attach_index = subpass.pInputAttachments[j].attachment;
+            skip |= ValidateLayoutVsAttachmentDescription(my_data->report_data, subpass.pInputAttachments[j].layout, attach_index,
+                                                          pCreateInfo->pAttachments[attach_index]);
         }
         for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
             if (subpass.pColorAttachments[j].layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
@@ -8326,6 +8349,9 @@ static bool ValidateLayouts(const layer_data *my_data, VkDevice device, const Vk
                                     string_VkImageLayout(subpass.pColorAttachments[j].layout));
                 }
             }
+            auto attach_index = subpass.pColorAttachments[j].attachment;
+            skip |= ValidateLayoutVsAttachmentDescription(my_data->report_data, subpass.pColorAttachments[j].layout, attach_index,
+                                                          pCreateInfo->pAttachments[attach_index]);
         }
         if ((subpass.pDepthStencilAttachment != NULL) && (subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED)) {
             if (subpass.pDepthStencilAttachment->layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
@@ -8342,6 +8368,9 @@ static bool ValidateLayouts(const layer_data *my_data, VkDevice device, const Vk
                                 string_VkImageLayout(subpass.pDepthStencilAttachment->layout));
                 }
             }
+            auto attach_index = subpass.pDepthStencilAttachment->attachment;
+            skip |= ValidateLayoutVsAttachmentDescription(my_data->report_data, subpass.pDepthStencilAttachment->layout,
+                                                          attach_index, pCreateInfo->pAttachments[attach_index]);
         }
     }
     return skip;
@@ -8752,15 +8781,6 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                                 return false;
                             };
                             cb_data->second->validate_functions.push_back(function);
-                        }
-                        VkImageLayout &attachment_layout = pRPNode->attachment_first_layout[pRPNode->attachments[i].attachment];
-                        if (attachment_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL ||
-                            attachment_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-                            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                                VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
-                                                (uint64_t)(pRenderPassBegin->renderPass), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
-                                                "Cannot clear attachment %d with invalid first layout %d.",
-                                                pRPNode->attachments[i].attachment, attachment_layout);
                         }
                     } else if (pRPNode->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_DONT_CARE) {
                         if (cb_data != dev_data->commandBufferMap.end()) {
