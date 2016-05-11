@@ -1263,6 +1263,8 @@ class ObjectTrackerSubcommand(Subcommand):
                 using_line += '    if (skipCall)\n'
                 if proto.ret == "bool":
                     using_line += '        return false;\n'
+                elif proto.ret == "VkBool32":
+                    using_line += '        return VK_FALSE;\n'
                 elif proto.ret != "void":
                     using_line += '        return VK_ERROR_VALIDATION_FAILED_EXT;\n'
                 else:
