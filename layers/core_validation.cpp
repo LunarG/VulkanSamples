@@ -1940,7 +1940,7 @@ static VkDescriptorSetLayoutBinding const * get_descriptor_binding(PIPELINE_LAYO
     if (slot.first >= pipelineLayout->descriptorSetLayouts.size())
         return nullptr;
 
-    pipelineLayout->setLayouts[slot.first]->GetDescriptorSetLayoutBindingPtrFromBinding(slot.second);
+    return pipelineLayout->setLayouts[slot.first]->GetDescriptorSetLayoutBindingPtrFromBinding(slot.second);
 }
 
 // Block of code at start here for managing/tracking Pipeline state that this layer cares about
