@@ -8756,11 +8756,11 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                         VkImageLayout &attachment_layout = pRPNode->attachment_first_layout[pRPNode->attachments[i].attachment];
                         if (attachment_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL ||
                             attachment_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-                            skipCall |=
-                                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                        VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, (uint64_t)(pRenderPassBegin->renderPass), __LINE__,
-                                        MEMTRACK_INVALID_LAYOUT, "MEM", "Cannot clear attachment %d with invalid first layout %d.",
-                                        pRPNode->attachments[i].attachment, attachment_layout);
+                            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                                VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                                                (uint64_t)(pRenderPassBegin->renderPass), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
+                                                "Cannot clear attachment %d with invalid first layout %d.",
+                                                pRPNode->attachments[i].attachment, attachment_layout);
                         }
                     } else if (pRPNode->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_DONT_CARE) {
                         if (cb_data != dev_data->commandBufferMap.end()) {

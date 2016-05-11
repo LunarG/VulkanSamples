@@ -29,7 +29,6 @@ typedef enum _MEM_TRACK_ERROR {
     MEMTRACK_INVALID_CB,                   // Cmd Buffer invalid
     MEMTRACK_INVALID_MEM_OBJ,              // Invalid Memory Object
     MEMTRACK_INVALID_ALIASING,             // Invalid Memory Aliasing
-    MEMTRACK_INVALID_LAYOUT,               // Invalid Layout
     MEMTRACK_INTERNAL_ERROR,               // Bug in Mem Track Layer internal data structures
     MEMTRACK_FREED_MEM_REF,                // MEM Obj freed while it still has obj and/or CB refs
     MEMTRACK_MISSING_MEM_BINDINGS,         // Trying to retrieve mem bindings, but none found (may be internal error)
