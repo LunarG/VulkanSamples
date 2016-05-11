@@ -201,7 +201,7 @@ EnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount, Vk
         return result;
     } else {
         log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, 0, __LINE__,
-                DEVLIMITS_INVALID_INSTANCE, "DL", "Invalid instance (%#" PRIxLEAST64 ") passed into vkEnumeratePhysicalDevices().",
+                DEVLIMITS_INVALID_INSTANCE, "DL", "Invalid instance (0x%" PRIxLEAST64 ") passed into vkEnumeratePhysicalDevices().",
                 (uint64_t)instance);
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -282,7 +282,7 @@ GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t
     } else {
         log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
                 __LINE__, DEVLIMITS_INVALID_PHYSICAL_DEVICE, "DL",
-                "Invalid physicalDevice (%#" PRIxLEAST64 ") passed into vkGetPhysicalDeviceQueueFamilyProperties().",
+                "Invalid physicalDevice (0x%" PRIxLEAST64 ") passed into vkGetPhysicalDeviceQueueFamilyProperties().",
                 (uint64_t)physicalDevice);
     }
 }
@@ -560,8 +560,8 @@ UpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWri
                     skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                         VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__,
                                         DEVLIMITS_INVALID_UNIFORM_BUFFER_OFFSET, "DL",
-                                        "vkUpdateDescriptorSets(): pDescriptorWrites[%d].pBufferInfo[%d].offset (%#" PRIxLEAST64
-                                        ") must be a multiple of device limit minUniformBufferOffsetAlignment %#" PRIxLEAST64,
+                                        "vkUpdateDescriptorSets(): pDescriptorWrites[%d].pBufferInfo[%d].offset (0x%" PRIxLEAST64
+                                        ") must be a multiple of device limit minUniformBufferOffsetAlignment 0x%" PRIxLEAST64,
                                         i, j, pDescriptorWrites[i].pBufferInfo[j].offset, uniformAlignment);
                 }
             }
@@ -573,8 +573,8 @@ UpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWri
                     skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                         VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__,
                                         DEVLIMITS_INVALID_STORAGE_BUFFER_OFFSET, "DL",
-                                        "vkUpdateDescriptorSets(): pDescriptorWrites[%d].pBufferInfo[%d].offset (%#" PRIxLEAST64
-                                        ") must be a multiple of device limit minStorageBufferOffsetAlignment %#" PRIxLEAST64,
+                                        "vkUpdateDescriptorSets(): pDescriptorWrites[%d].pBufferInfo[%d].offset (0x%" PRIxLEAST64
+                                        ") must be a multiple of device limit minStorageBufferOffsetAlignment 0x%" PRIxLEAST64,
                                         i, j, pDescriptorWrites[i].pBufferInfo[j].offset, storageAlignment);
                 }
             }

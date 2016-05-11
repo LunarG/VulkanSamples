@@ -40,10 +40,10 @@ VkLayerInstanceDispatchTable *instance_dispatch_table(void *object) {
     instance_table_map::const_iterator it = tableInstanceMap.find((void *)key);
 #if DISPATCH_MAP_DEBUG
     if (it != tableInstanceMap.end()) {
-        fprintf(stderr, "instance_dispatch_table: map: %p, object: %p, key: %p, table: %p\n", &tableInstanceMap, object, key,
+        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table:  0x%p\n", &tableInstanceMap, object, key,
                 it->second);
     } else {
-        fprintf(stderr, "instance_dispatch_table: map: %p, object: %p, key: %p, table: UNKNOWN\n", &tableInstanceMap, object, key);
+        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table: UNKNOWN\n", &tableInstanceMap, object, key);
     }
 #endif
     assert(it != tableInstanceMap.end() && "Not able to find instance dispatch entry");
@@ -54,9 +54,9 @@ void destroy_dispatch_table(device_table_map &map, dispatch_key key) {
 #if DISPATCH_MAP_DEBUG
     device_table_map::const_iterator it = map.find((void *)key);
     if (it != map.end()) {
-        fprintf(stderr, "destroy device dispatch_table: map: %p, key: %p, table: %p\n", &map, key, it->second);
+        fprintf(stderr, "destroy device dispatch_table: map:  0x%p, key:  0x%p, table:  0x%p\n", &map, key, it->second);
     } else {
-        fprintf(stderr, "destroy device dispatch table: map: %p, key: %p, table: UNKNOWN\n", &map, key);
+        fprintf(stderr, "destroy device dispatch table: map:  0x%p, key:  0x%p, table: UNKNOWN\n", &map, key);
         assert(it != map.end());
     }
 #endif
@@ -67,9 +67,9 @@ void destroy_dispatch_table(instance_table_map &map, dispatch_key key) {
 #if DISPATCH_MAP_DEBUG
     instance_table_map::const_iterator it = map.find((void *)key);
     if (it != map.end()) {
-        fprintf(stderr, "destroy instance dispatch_table: map: %p, key: %p, table: %p\n", &map, key, it->second);
+        fprintf(stderr, "destroy instance dispatch_table: map:  0x%p, key:  0x%p, table:  0x%p\n", &map, key, it->second);
     } else {
-        fprintf(stderr, "destroy instance dispatch table: map: %p, key: %p, table: UNKNOWN\n", &map, key);
+        fprintf(stderr, "destroy instance dispatch table: map:  0x%p, key:  0x%p, table: UNKNOWN\n", &map, key);
         assert(it != map.end());
     }
 #endif
@@ -85,10 +85,10 @@ VkLayerDispatchTable *get_dispatch_table(device_table_map &map, void *object) {
     device_table_map::const_iterator it = map.find((void *)key);
 #if DISPATCH_MAP_DEBUG
     if (it != map.end()) {
-        fprintf(stderr, "device_dispatch_table: map: %p, object: %p, key: %p, table: %p\n", &tableInstanceMap, object, key,
+        fprintf(stderr, "device_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table:  0x%p\n", &tableInstanceMap, object, key,
                 it->second);
     } else {
-        fprintf(stderr, "device_dispatch_table: map: %p, object: %p, key: %p, table: UNKNOWN\n", &tableInstanceMap, object, key);
+        fprintf(stderr, "device_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table: UNKNOWN\n", &tableInstanceMap, object, key);
     }
 #endif
     assert(it != map.end() && "Not able to find device dispatch entry");
@@ -101,10 +101,10 @@ VkLayerInstanceDispatchTable *get_dispatch_table(instance_table_map &map, void *
     instance_table_map::const_iterator it = map.find((void *)key);
 #if DISPATCH_MAP_DEBUG
     if (it != map.end()) {
-        fprintf(stderr, "instance_dispatch_table: map: %p, object: %p, key: %p, table: %p\n", &tableInstanceMap, object, key,
+        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table:  0x%p\n", &tableInstanceMap, object, key,
                 it->second);
     } else {
-        fprintf(stderr, "instance_dispatch_table: map: %p, object: %p, key: %p, table: UNKNOWN\n", &tableInstanceMap, object, key);
+        fprintf(stderr, "instance_dispatch_table: map:  0x%p, object:  0x%p, key:  0x%p, table: UNKNOWN\n", &tableInstanceMap, object, key);
     }
 #endif
     assert(it != map.end() && "Not able to find instance dispatch entry");
@@ -145,11 +145,11 @@ VkLayerInstanceDispatchTable *initInstanceTable(VkInstance instance, const PFN_v
         pTable = new VkLayerInstanceDispatchTable;
         map[(void *)key] = pTable;
 #if DISPATCH_MAP_DEBUG
-        fprintf(stderr, "New, Instance: map: %p, key: %p, table: %p\n", &map, key, pTable);
+        fprintf(stderr, "New, Instance: map:  0x%p, key:  0x%p, table:  0x%p\n", &map, key, pTable);
 #endif
     } else {
 #if DISPATCH_MAP_DEBUG
-        fprintf(stderr, "Instance: map: %p, key: %p, table: %p\n", &map, key, it->second);
+        fprintf(stderr, "Instance: map:  0x%p, key:  0x%p, table:  0x%p\n", &map, key, it->second);
 #endif
         return it->second;
     }
@@ -172,11 +172,11 @@ VkLayerDispatchTable *initDeviceTable(VkDevice device, const PFN_vkGetDeviceProc
         pTable = new VkLayerDispatchTable;
         map[(void *)key] = pTable;
 #if DISPATCH_MAP_DEBUG
-        fprintf(stderr, "New, Device: map: %p, key: %p, table: %p\n", &map, key, pTable);
+        fprintf(stderr, "New, Device: map:  0x%p, key:  0x%p, table:  0x%p\n", &map, key, pTable);
 #endif
     } else {
 #if DISPATCH_MAP_DEBUG
-        fprintf(stderr, "Device: map: %p, key: %p, table: %p\n", &map, key, it->second);
+        fprintf(stderr, "Device: map:  0x%p, key:  0x%p, table:  0x%p\n", &map, key, it->second);
 #endif
         return it->second;
     }

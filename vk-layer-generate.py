@@ -268,19 +268,19 @@ class Subcommand(object):
                 if 'pUserData' == name:
                     return ("%i", "((pUserData == 0) ? 0 : *(pUserData))")
                 if 'const' in vk_type.lower():
-                    return ("%p", "(void*)(%s)" % name)
+                    return ("0x%p", "(void*)(%s)" % name)
                 return ("%i", "*(%s)" % name)
             return ("%i", name)
         # TODO : This is special-cased as there's only one "format" param currently and it's nice to expand it
         if "VkFormat" == vk_type:
             if cpp:
-                return ("%p", "&%s" % name)
+                return ("0x%p", "&%s" % name)
             return ("{%s.channelFormat = %%s, %s.numericFormat = %%s}" % (name, name), "string_VK_COLOR_COMPONENT_FORMAT(%s.channelFormat), string_VK_FORMAT_RANGE_SIZE(%s.numericFormat)" % (name, name))
         if output_param:
-            return ("%p", "(void*)*%s" % name)
+            return ("0x%p", "(void*)*%s" % name)
         if vk_helper.is_type(vk_type, 'struct') and '*' not in vk_type:
-            return ("%p", "(void*)(&%s)" % name)
-        return ("%p", "(void*)(%s)" % name)
+            return ("0x%p", "(void*)(&%s)" % name)
+        return ("0x%p", "(void*)(%s)" % name)
 
     def _gen_create_msg_callback(self):
         r_body = []

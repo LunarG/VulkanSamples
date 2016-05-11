@@ -341,7 +341,7 @@ static inline VKAPI_ATTR VkBool32 VKAPI_CALL log_callback(VkFlags msgFlags, VkDe
 
     print_msg_flags(msgFlags, msg_flags);
 
-    fprintf((FILE *)pUserData, "%s(%s): object: %#" PRIx64 " type: %d location: %lu msgCode: %d: %s\n", pLayerPrefix, msg_flags,
+    fprintf((FILE *)pUserData, "%s(%s): object: 0x%" PRIx64 " type: %d location: %lu msgCode: %d: %s\n", pLayerPrefix, msg_flags,
             srcObject, objType, (unsigned long)location, msgCode, pMsg);
     fflush((FILE *)pUserData);
 

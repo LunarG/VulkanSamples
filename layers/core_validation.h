@@ -59,9 +59,6 @@
 #include <unordered_set>
 #include <vector>
 
-using std::vector;
-using std::unordered_set;
-
 #if MTMERGE
 
 /*
@@ -147,7 +144,7 @@ class PIPELINE_NODE {
     uint32_t active_shaders;
     uint32_t duplicate_shaders;
     // Capture which slots (set#->bindings) are actually used by the shaders of this pipeline
-    unordered_map<uint32_t, unordered_set<uint32_t>> active_slots;
+    std::unordered_map<uint32_t, std::unordered_set<uint32_t>> active_slots;
     // Vtx input info (if any)
     std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
     std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions;
@@ -230,12 +227,12 @@ struct RENDER_PASS_NODE {
     VkRenderPass renderPass;
     VkRenderPassCreateInfo const *pCreateInfo;
     VkFramebuffer fb;
-    vector<bool> hasSelfDependency;
-    vector<DAGNode> subpassToNode;
-    vector<vector<VkFormat>> subpassColorFormats;
-    vector<MT_PASS_ATTACHMENT_INFO> attachments;
-    unordered_map<uint32_t, bool> attachment_first_read;
-    unordered_map<uint32_t, VkImageLayout> attachment_first_layout;
+    std::vector<bool> hasSelfDependency;
+    std::vector<DAGNode> subpassToNode;
+    std::vector<std::vector<VkFormat>> subpassColorFormats;
+    std::vector<MT_PASS_ATTACHMENT_INFO> attachments;
+    std::unordered_map<uint32_t, bool> attachment_first_read;
+    std::unordered_map<uint32_t, VkImageLayout> attachment_first_layout;
 
     RENDER_PASS_NODE(VkRenderPassCreateInfo const *pCreateInfo) : pCreateInfo(pCreateInfo), fb(VK_NULL_HANDLE) {
         uint32_t i;
@@ -243,7 +240,7 @@ struct RENDER_PASS_NODE {
         subpassColorFormats.reserve(pCreateInfo->subpassCount);
         for (i = 0; i < pCreateInfo->subpassCount; i++) {
             const VkSubpassDescription *subpass = &pCreateInfo->pSubpasses[i];
-            vector<VkFormat> color_formats;
+            std::vector<VkFormat> color_formats;
             uint32_t j;
 
             color_formats.reserve(subpass->colorAttachmentCount);
@@ -267,7 +264,7 @@ class PHYS_DEV_PROPERTIES_NODE {
   public:
     VkPhysicalDeviceProperties properties;
     VkPhysicalDeviceFeatures features;
-    vector<VkQueueFamilyProperties> queue_family_properties;
+    std::vector<VkQueueFamilyProperties> queue_family_properties;
 };
 
 class FENCE_NODE : public BASE_NODE {
@@ -278,9 +275,9 @@ class FENCE_NODE : public BASE_NODE {
     bool firstTimeFlag;       // Fence was created in signaled state, avoid warnings for first use
     VkFenceCreateInfo createInfo;
     std::unordered_set<VkQueue> queues;
-    vector<VkCommandBuffer> cmdBuffers;
+    std::vector<VkCommandBuffer> cmdBuffers;
     bool needsSignaled;
-    vector<VkFence> priorFences;
+    std::vector<VkFence> priorFences;
 
     // Default constructor
     FENCE_NODE() : swapchain(VK_NULL_HANDLE), firstTimeFlag(false), needsSignaled(false){};
@@ -303,14 +300,14 @@ class EVENT_NODE : public BASE_NODE {
 class QUEUE_NODE {
   public:
     VkDevice device;
-    vector<VkFence> lastFences;
+    std::vector<VkFence> lastFences;
 #if MTMERGE
     // MTMTODO : merge cmd_buffer data structs here
-    list<VkCommandBuffer> pQueueCommandBuffers;
-    list<VkDeviceMemory> pMemRefList;
+    std::list<VkCommandBuffer> pQueueCommandBuffers;
+    std::list<VkDeviceMemory> pMemRefList;
 #endif
-    vector<VkCommandBuffer> untrackedCmdBuffers;
-    unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
+    std::vector<VkCommandBuffer> untrackedCmdBuffers;
+    std::unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
 };
 
 class QUERY_POOL_NODE : public BASE_NODE {
@@ -321,14 +318,14 @@ class QUERY_POOL_NODE : public BASE_NODE {
 class FRAMEBUFFER_NODE {
   public:
     VkFramebufferCreateInfo createInfo;
-    unordered_set<VkCommandBuffer> referencingCmdBuffers;
-    vector<MT_FB_ATTACHMENT_INFO> attachments;
+    std::unordered_set<VkCommandBuffer> referencingCmdBuffers;
+    std::vector<MT_FB_ATTACHMENT_INFO> attachments;
 };
 // Store layouts and pushconstants for PipelineLayout
 struct PIPELINE_LAYOUT_NODE {
-    vector<VkDescriptorSetLayout> descriptorSetLayouts;
-    vector<cvdescriptorset::DescriptorSetLayout const *> setLayouts;
-    vector<VkPushConstantRange> pushConstantRanges;
+    std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+    std::vector<cvdescriptorset::DescriptorSetLayout const *> setLayouts;
+    std::vector<VkPushConstantRange> pushConstantRanges;
 };
 
 typedef struct _DESCRIPTOR_POOL_NODE {
@@ -337,9 +334,9 @@ typedef struct _DESCRIPTOR_POOL_NODE {
     uint32_t availableSets;                        // Available descriptor sets in this pool
 
     VkDescriptorPoolCreateInfo createInfo;
-    unordered_set<cvdescriptorset::DescriptorSet *> sets; // Collection of all sets in this pool
-    vector<uint32_t> maxDescriptorTypeCount;       // Max # of descriptors of each type in this pool
-    vector<uint32_t> availableDescriptorTypeCount; // Available # of descriptors of each type in this pool
+    std::unordered_set<cvdescriptorset::DescriptorSet *> sets; // Collection of all sets in this pool
+    std::vector<uint32_t> maxDescriptorTypeCount;       // Max # of descriptors of each type in this pool
+    std::vector<uint32_t> availableDescriptorTypeCount; // Available # of descriptors of each type in this pool
 
     _DESCRIPTOR_POOL_NODE(const VkDescriptorPool pool, const VkDescriptorPoolCreateInfo *pCreateInfo)
         : pool(pool), maxSets(pCreateInfo->maxSets), availableSets(pCreateInfo->maxSets), createInfo(*pCreateInfo),
@@ -456,7 +453,7 @@ typedef struct stencil_data {
     uint32_t reference;
 } CBStencilData;
 
-typedef struct _DRAW_DATA { vector<VkBuffer> buffers; } DRAW_DATA;
+typedef struct _DRAW_DATA { std::vector<VkBuffer> buffers; } DRAW_DATA;
 
 struct ImageSubresourcePair {
     VkImage image;
@@ -509,11 +506,11 @@ struct LAST_BOUND_STATE {
     VkPipelineLayout pipelineLayout;
     // Track each set that has been bound
     // TODO : can unique be global per CB? (do we care about Gfx vs. Compute?)
-    unordered_set<VkDescriptorSet> uniqueBoundSets;
+    std::unordered_set<VkDescriptorSet> uniqueBoundSets;
     // Ordered bound set tracking where index is set# that given set is bound to
-    vector<VkDescriptorSet> boundDescriptorSets;
+    std::vector<VkDescriptorSet> boundDescriptorSets;
     // one dynamic offset per dynamic descriptor bound to this CB
-    vector<uint32_t> dynamicOffsets;
+    std::vector<uint32_t> dynamicOffsets;
     void reset() {
         pipeline = VK_NULL_HANDLE;
         pipelineLayout = VK_NULL_HANDLE;
@@ -535,7 +532,7 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     CB_STATE state;                     // Track cmd buffer update state
     uint64_t submitCount;               // Number of times CB has been submitted
     CBStatusFlags status;               // Track status of various bindings on cmd buffer
-    vector<CMD_NODE> cmds;              // vector of commands bound to this command buffer
+    std::vector<CMD_NODE> cmds;              // vector of commands bound to this command buffer
     // Currently storing "lastBound" objects on per-CB basis
     //  long-term may want to create caches of "lastBound" states and could have
     //  each individual CMD_NODE referencing its own "lastBound" state
@@ -547,8 +544,8 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     // Store last bound state for Gfx & Compute pipeline bind points
     LAST_BOUND_STATE lastBound[VK_PIPELINE_BIND_POINT_RANGE_SIZE];
 
-    vector<VkViewport> viewports;
-    vector<VkRect2D> scissors;
+    std::vector<VkViewport> viewports;
+    std::vector<VkRect2D> scissors;
     VkRenderPassBeginInfo activeRenderPassBeginInfo;
     uint64_t fenceId;
     VkFence lastSubmittedFence;
@@ -561,31 +558,31 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     // TODO : These data structures relate to tracking resources that invalidate
     //  a cmd buffer that references them. Need to unify how we handle these
     //  cases so we don't have different tracking data for each type.
-    unordered_set<VkDescriptorSet> destroyedSets;
-    unordered_set<VkDescriptorSet> updatedSets;
-    unordered_set<VkFramebuffer> destroyedFramebuffers;
-    vector<VkEvent> waitedEvents;
-    vector<VkSemaphore> semaphores;
-    vector<VkEvent> events;
-    unordered_map<QueryObject, vector<VkEvent>> waitedEventsBeforeQueryReset;
-    unordered_map<QueryObject, bool> queryToStateMap; // 0 is unavailable, 1 is available
-    unordered_set<QueryObject> activeQueries;
-    unordered_set<QueryObject> startedQueries;
-    unordered_map<ImageSubresourcePair, IMAGE_CMD_BUF_LAYOUT_NODE> imageLayoutMap;
-    unordered_map<VkImage, vector<ImageSubresourcePair>> imageSubresourceMap;
-    unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
-    vector<DRAW_DATA> drawData;
+    std::unordered_set<VkDescriptorSet> destroyedSets;
+    std::unordered_set<VkDescriptorSet> updatedSets;
+    std::unordered_set<VkFramebuffer> destroyedFramebuffers;
+    std::vector<VkEvent> waitedEvents;
+    std::vector<VkSemaphore> semaphores;
+    std::vector<VkEvent> events;
+    std::unordered_map<QueryObject, std::vector<VkEvent>> waitedEventsBeforeQueryReset;
+    std::unordered_map<QueryObject, bool> queryToStateMap; // 0 is unavailable, 1 is available
+    std::unordered_set<QueryObject> activeQueries;
+    std::unordered_set<QueryObject> startedQueries;
+    std::unordered_map<ImageSubresourcePair, IMAGE_CMD_BUF_LAYOUT_NODE> imageLayoutMap;
+    std::unordered_map<VkImage, std::vector<ImageSubresourcePair>> imageSubresourceMap;
+    std::unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
+    std::vector<DRAW_DATA> drawData;
     DRAW_DATA currentDrawData;
     VkCommandBuffer primaryCommandBuffer;
     // Track images and buffers that are updated by this CB at the point of a draw
-    unordered_set<VkImageView> updateImages;
-    unordered_set<VkBuffer> updateBuffers;
+    std::unordered_set<VkImageView> updateImages;
+    std::unordered_set<VkBuffer> updateBuffers;
     // If cmd buffer is primary, track secondary command buffers pending
     // execution
     std::unordered_set<VkCommandBuffer> secondaryCommandBuffers;
     // MTMTODO : Scrub these data fields and merge active sets w/ lastBound as appropriate
-    vector<std::function<bool()>> validate_functions;
+    std::vector<std::function<bool()>> validate_functions;
     std::unordered_set<VkDeviceMemory> memObjs;
-    vector<std::function<bool(VkQueue)>> eventUpdates;
+    std::vector<std::function<bool(VkQueue)>> eventUpdates;
 };
 
