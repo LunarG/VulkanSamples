@@ -51,6 +51,7 @@ if (NOT WIN32)
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         add_custom_target(binary-dir-symlinks ALL
             COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/run_all_tests.sh
+            COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/test_wrap_objects.sh
             COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/vkvalidatelayerdoc.sh
             VERBATIM
             )
@@ -92,3 +93,4 @@ set_target_properties(vk_loader_validation_tests
 target_link_libraries(vk_loader_validation_tests ${LIBVK} gtest gtest_main VkLayer_utils ${GLSLANG_LIBRARIES})
 
 add_subdirectory(gtest-1.7.0)
+add_subdirectory(layers)
