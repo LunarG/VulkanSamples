@@ -8416,7 +8416,6 @@ static bool ValidateLayouts(const layer_data *my_data, VkDevice device, const Vk
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
-            const VkAttachmentDescription attach_desc = pCreateInfo->pAttachments[subpass.pInputAttachments[j].attachment];
             if (subpass.pInputAttachments[j].layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL &&
                 subpass.pInputAttachments[j].layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
                 if (subpass.pInputAttachments[j].layout == VK_IMAGE_LAYOUT_GENERAL) {
