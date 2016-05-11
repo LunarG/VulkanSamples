@@ -17,3 +17,5 @@ set -e
 # that are wrong
 ./vk_layer_validation_tests
 
+# Test the wrap objects layer.
+./test_wrap_objects.sh
