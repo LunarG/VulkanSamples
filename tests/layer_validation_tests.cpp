@@ -1128,7 +1128,7 @@ TEST_F(VkLayerTest, TestAliasedMemoryTracking) {
         return;
     }
 
-    // VALDIATION FAILURE:
+    // VALIDATION FAILURE:
     err = vkBindImageMemory(m_device->device(), image, mem, 0);
     ASSERT_VK_SUCCESS(err);
 
@@ -1145,11 +1145,11 @@ TEST_F(VkLayerTest, InvalidMemoryAliasing) {
     bool pass;
     ASSERT_NO_FATAL_FAILURE(InitState());
 
-    VkBuffer buffer;
+    VkBuffer buffer, buffer2;
     VkImage image;
     VkDeviceMemory mem;     // buffer will be bound first
     VkDeviceMemory mem_img; // image bound first
-    VkMemoryRequirements mem_reqs;
+    VkMemoryRequirements buff_mem_reqs, img_mem_reqs;
 
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1163,31 +1163,7 @@ TEST_F(VkLayerTest, InvalidMemoryAliasing) {
     err = vkCreateBuffer(m_device->device(), &buf_info, NULL, &buffer);
     ASSERT_VK_SUCCESS(err);
 
-    vkGetBufferMemoryRequirements(m_device->device(), buffer, &mem_reqs);
-    VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.pNext = NULL;
-    alloc_info.memoryTypeIndex = 0;
-
-    // Ensure memory is big enough for both bindings
-    alloc_info.allocationSize = 0x10000;
-    pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info,
-                                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    if (!pass) {
-        vkDestroyBuffer(m_device->device(), buffer, NULL);
-        return;
-    }
-    err = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &mem);
-    ASSERT_VK_SUCCESS(err);
-
-    uint8_t *pData;
-    err = vkMapMemory(m_device->device(), mem, 0, mem_reqs.size, 0,
-                      (void **)&pData);
-    ASSERT_VK_SUCCESS(err);
-    memset(pData, 0xCADECADE, static_cast<size_t>(mem_reqs.size));
-    vkUnmapMemory(m_device->device(), mem);
-    err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
-    ASSERT_VK_SUCCESS(err);
+    vkGetBufferMemoryRequirements(m_device->device(), buffer, &buff_mem_reqs);
 
     VkImageCreateInfo image_create_info = {};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -1208,44 +1184,51 @@ TEST_F(VkLayerTest, InvalidMemoryAliasing) {
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_create_info.flags = 0;
 
-    VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_alloc.pNext = NULL;
-    mem_alloc.allocationSize = 0;
-    mem_alloc.memoryTypeIndex = 0;
-
-    /* Create a mappable image.  It will be the texture if linear images are ok
-    * to be textures or it will be the staging image if they are not.
-    */
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
     ASSERT_VK_SUCCESS(err);
 
-    vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
-    mem_alloc.allocationSize = mem_reqs.size;
-    pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc,
-                                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    vkGetImageMemoryRequirements(m_device->device(), image, &img_mem_reqs);
+
+    VkMemoryAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.memoryTypeIndex = 0;
+    // Ensure memory is big enough for both bindings
+    alloc_info.allocationSize = buff_mem_reqs.size + img_mem_reqs.size;
+    pass = m_device->phy().set_memory_type(
+        buff_mem_reqs.memoryTypeBits | img_mem_reqs.memoryTypeBits, &alloc_info,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     if (!pass) {
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
         vkDestroyImage(m_device->device(), image, NULL);
         return;
     }
+    err = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
+    ASSERT_VK_SUCCESS(err);
+
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          " is aliased with buffer 0x");
-    // VALDIATION FAILURE due to image mapping overlapping buffer mapping
+    // VALIDATION FAILURE due to image mapping overlapping buffer mapping
     err = vkBindImageMemory(m_device->device(), image, mem, 0);
     m_errorMonitor->VerifyFound();
 
     // Now correctly bind image to second mem allocation before incorrectly
-    // aliasing buffer
+    // aliasing buffer2
+    err = vkCreateBuffer(m_device->device(), &buf_info, NULL, &buffer2);
+    ASSERT_VK_SUCCESS(err);
     err = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &mem_img);
     ASSERT_VK_SUCCESS(err);
     err = vkBindImageMemory(m_device->device(), image, mem_img, 0);
     ASSERT_VK_SUCCESS(err);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          " is aliased with image 0x");
-    err = vkBindBufferMemory(m_device->device(), buffer, mem_img, 0);
+    err = vkBindBufferMemory(m_device->device(), buffer2, mem_img, 0);
     m_errorMonitor->VerifyFound();
 
     vkDestroyBuffer(m_device->device(), buffer, NULL);
+    vkDestroyBuffer(m_device->device(), buffer2, NULL);
     vkDestroyImage(m_device->device(), image, NULL);
     vkFreeMemory(m_device->device(), mem, NULL);
     vkFreeMemory(m_device->device(), mem_img, NULL);
