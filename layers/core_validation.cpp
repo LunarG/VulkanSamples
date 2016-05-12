@@ -5874,7 +5874,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
                 const uint32_t maxB = minB + pCreateInfo->pPushConstantRanges[j].size;
                 if ((minA <= minB && maxA > minB) || (minB <= minA && maxB > minA)) {
                     skipCall |=
-                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                 DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCreatePipelineLayout() call has push constants with "
                                                                       "overlapping ranges: %u:[%u, %u), %u:[%u, %u)",
                                 i, minA, maxA, j, minB, maxB);
@@ -8081,28 +8081,76 @@ VKAPI_ATTR void VKAPI_CALL CmdPushConstants(VkCommandBuffer commandBuffer, VkPip
                             DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCmdPushConstants() call has no stageFlags set.");
     }
 
-    // Check if push constant update is within any of the ranges specified in pipeline layout.
+    // Check if push constant update is within any of the ranges with the same stage flags specified in pipeline layout.
     auto pipeline_layout_it = dev_data->pipelineLayoutMap.find(layout);
     if (pipeline_layout_it == dev_data->pipelineLayoutMap.end()) {
         skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                            DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCmdPushConstants() Pipeline Layout %" PRIu64 " not found.",
+                            DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCmdPushConstants() Pipeline Layout 0x%" PRIx64 " not found.",
                             (uint64_t)layout);
     } else {
-        auto ranges = pipeline_layout_it->second.pushConstantRanges;
-        bool contained_in_a_range = false;
-        for (uint32_t i = 0; i < ranges.size(); ++i) {
-            if ((offset >= ranges[i].offset) &&
-                ((uint64_t)offset + (uint64_t)size <= (uint64_t)ranges[i].offset + (uint64_t)ranges[i].size)) {
-                contained_in_a_range = true;
-                break;
+        // Coalesce adjacent/overlapping pipeline ranges before checking to see if incoming range is
+        // contained in the pipeline ranges.
+        // Build a {start, end} span list for ranges with matching stage flags.
+        const auto &ranges = pipeline_layout_it->second.pushConstantRanges;
+        struct span {
+            uint32_t start;
+            uint32_t end;
+        };
+        std::vector<span> spans;
+        spans.reserve(ranges.size());
+        for (const auto &iter : ranges) {
+            if (iter.stageFlags == stageFlags) {
+                spans.push_back({iter.offset, iter.offset + iter.size});
             }
         }
-        if (!contained_in_a_range) {
-            skipCall |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCmdPushConstants() Push constant range [%d, %d) "
-                                                              "not within any of the ranges in pipeline layout %" PRIu64 ".",
-                        offset, offset + size, (uint64_t)layout);
+        if (spans.size() == 0) {
+            // There were no ranges that matched the stageFlags.
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS",
+                                "vkCmdPushConstants() stageFlags = 0x%" PRIx32 " do not match "
+                                "the stageFlags in any of the ranges in pipeline layout 0x%" PRIx64 ".",
+                                (uint32_t)stageFlags, (uint64_t)layout);
+        } else {
+            // Sort span list by start value.
+            struct comparer {
+                bool operator()(struct span i, struct span j) { return i.start < j.start; }
+            } my_comparer;
+            std::sort(spans.begin(), spans.end(), my_comparer);
+
+            // Examine two spans at a time.
+            std::vector<span>::iterator current = spans.begin();
+            std::vector<span>::iterator next = current + 1;
+            while (next != spans.end()) {
+                if (current->end < next->start) {
+                    // There is a gap; cannot coalesce. Move to the next two spans.
+                    ++current;
+                    ++next;
+                } else {
+                    // Coalesce the two spans.  The start of the next span
+                    // is within the current span, so pick the larger of
+                    // the end values to extend the current span.
+                    // Then delete the next span and set next to the span after it.
+                    current->end = max(current->end, next->end);
+                    next = spans.erase(next);
+                }
+            }
+
+            // Now we can check if the incoming range is within any of the spans.
+            bool contained_in_a_range = false;
+            for (uint32_t i = 0; i < spans.size(); ++i) {
+                if ((offset >= spans[i].start) && ((uint64_t)offset + (uint64_t)size <= (uint64_t)spans[i].end)) {
+                    contained_in_a_range = true;
+                    break;
+                }
+            }
+            if (!contained_in_a_range) {
+                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                    __LINE__, DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS",
+                                    "vkCmdPushConstants() Push constant range [%d, %d) "
+                                    "with stageFlags = 0x%" PRIx32 " "
+                                    "not within flag-matching ranges in pipeline layout 0x%" PRIx64 ".",
+                                    offset, offset + size, (uint32_t)stageFlags, (uint64_t)layout);
+            }
         }
     }
     lock.unlock();
