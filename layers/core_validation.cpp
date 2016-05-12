@@ -4665,8 +4665,7 @@ static bool validateMemRange(layer_data *my_data, VkDeviceMemory mem, VkDeviceSi
     bool skipCall = false;
 
     if (size == 0) {
-        // TODO: a size of 0 is not listed as an invalid use in the spec, should it be?
-        skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+        skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                            (uint64_t)mem, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
                            "VkMapMemory: Attempting to map memory range of size zero");
     }
@@ -4685,14 +4684,14 @@ static bool validateMemRange(layer_data *my_data, VkDeviceMemory mem, VkDeviceSi
             if (offset >= mem_element->second.allocInfo.allocationSize) {
                 skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                    VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)mem, __LINE__, MEMTRACK_INVALID_MAP,
-                                   "MEM", "Mapping Memory from 0x%" PRIx64 " to 0x%" PRIx64 " with total array size 0x%" PRIx64, offset,
+                                   "MEM", "Mapping Memory from 0x%" PRIx64 " to 0x%" PRIx64 " with size of VK_WHOLE_SIZE oversteps total array size 0x%" PRIx64, offset,
                                    mem_element->second.allocInfo.allocationSize, mem_element->second.allocInfo.allocationSize);
             }
         } else {
             if ((offset + size) > mem_element->second.allocInfo.allocationSize) {
                 skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                    VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)mem, __LINE__, MEMTRACK_INVALID_MAP,
-                                   "MEM", "Mapping Memory from 0x%" PRIx64 " to 0x%" PRIx64 " with total array size 0x%" PRIx64, offset,
+                                   "MEM", "Mapping Memory from 0x%" PRIx64 " to 0x%" PRIx64 " oversteps total array size 0x%" PRIx64, offset,
                                    size + offset, mem_element->second.allocInfo.allocationSize);
             }
         }
@@ -9429,18 +9428,20 @@ MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize
         }
     }
     skip_call |= validateMemRange(dev_data, mem, offset, size);
-    storeMemRanges(dev_data, mem, offset, size);
 #endif
     skip_call |= ValidateMapImageLayouts(device, mem);
     lock.unlock();
 
     if (!skip_call) {
         result = dev_data->device_dispatch_table->MapMemory(device, mem, offset, size, flags, ppData);
+        if (VK_SUCCESS == result) {
 #if MTMERGESOURCE
-        lock.lock();
-        initializeAndTrackMemory(dev_data, mem, size, ppData);
-        lock.unlock();
+            lock.lock();
+            storeMemRanges(dev_data, mem, offset, size);
+            initializeAndTrackMemory(dev_data, mem, size, ppData);
+            lock.unlock();
 #endif
+        }
     }
     return result;
 }
