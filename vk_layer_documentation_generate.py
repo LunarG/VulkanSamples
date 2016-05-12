@@ -345,12 +345,15 @@ class LayerDoc:
                                     part_found = True
                                     break
                             if not part_found:
-                                print(self.txt_color.yellow() + 'Validation check %s has missing or invalid test : %s' % (chk, test))
-                                warnings_found += 1
+                                print(self.txt_color.red() + 'Validation check %s has missing or invalid test : %s' % (chk, test))
+                                errors_found += 1
                                 break
-                    elif test not in tests_set and not chk.endswith('_NONE') and test != 'TODO':
-                        print(self.txt_color.red() + 'Validation check %s has missing or invalid test : %s' % (chk, test))
-                        errors_found += 1
+                    elif test not in tests_set and not chk.endswith('_NONE'):
+                        if test == 'TODO':
+                            warnings_found += 1
+                        else:
+                            print(self.txt_color.red() + 'Validation check %s has missing or invalid test : %s' % (chk, test))
+                            errors_found += 1
         # Now go through all of the actual checks in the layers and make sure they're covered in the doc
         for ln in layer_dict:
             for chk in layer_dict[ln]['CHECKS']:
@@ -390,7 +393,7 @@ def main(argv=None):
         if (0 == num_warnings):
             print(txt_color.green() + 'No warning cases found between %s and implementation' % (os.path.basename(opts.layer_doc)) + txt_color.endc())
         else:
-            print(txt_color.yellow() + 'Found %s warnings. See above for details' % num_warnings)
+            print(txt_color.yellow() + 'Found %s warnings due to missing tests. Missing tests are labeled as "TODO" in "%s."' % (num_warnings, opts.layer_doc))
         if (0 == num_errors):
             print(txt_color.green() + 'No mismatches found between %s and implementation' % (os.path.basename(opts.layer_doc)) + txt_color.endc())
         else:
