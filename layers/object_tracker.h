@@ -105,8 +105,7 @@ static std::mutex global_lock;
 
 static uint64_t numObjs[NUM_OBJECT_TYPES] = {0};
 static uint64_t numTotalObjs = 0;
-static VkQueueFamilyProperties *queueInfo = NULL;
-static uint32_t queueCount = 0;
+std::vector<VkQueueFamilyProperties> queue_family_properties;
 
 template layer_data *get_my_data_ptr<layer_data>(void *data_key, std::unordered_map<void *, layer_data *> &data_map);
 
@@ -213,78 +212,13 @@ typedef struct _OT_MEM_INFO {
 // Track Queue information
 typedef struct _OT_QUEUE_INFO {
     OT_MEM_INFO *pMemRefList;
-    struct _OT_QUEUE_INFO *pNextQI;
     uint32_t queueNodeIndex;
     VkQueue queue;
     uint32_t refCount;
 } OT_QUEUE_INFO;
 
-// Global list of QueueInfo structures, one per queue
-static OT_QUEUE_INFO *g_pQueueInfo = NULL;
-
-// Convert an object type enum to an object type array index
-static uint32_t objTypeToIndex(uint32_t objType) {
-    uint32_t index = objType;
-    return index;
-}
-
-// Add new queue to head of global queue list
-static void addQueueInfo(uint32_t queueNodeIndex, VkQueue queue) {
-    OT_QUEUE_INFO *pQueueInfo = new OT_QUEUE_INFO;
-
-    if (pQueueInfo != NULL) {
-        memset(pQueueInfo, 0, sizeof(OT_QUEUE_INFO));
-        pQueueInfo->queue = queue;
-        pQueueInfo->queueNodeIndex = queueNodeIndex;
-        pQueueInfo->pNextQI = g_pQueueInfo;
-        g_pQueueInfo = pQueueInfo;
-    } else {
-        log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT, reinterpret_cast<uint64_t>(queue),
-                __LINE__, OBJTRACK_INTERNAL_ERROR, "OBJTRACK",
-                "ERROR:  VK_ERROR_OUT_OF_HOST_MEMORY -- could not allocate memory for Queue Information");
-    }
-}
-
-// Destroy memRef lists and free all memory
-static void destroyQueueMemRefLists(void) {
-    OT_QUEUE_INFO *pQueueInfo = g_pQueueInfo;
-    OT_QUEUE_INFO *pDelQueueInfo = NULL;
-    while (pQueueInfo != NULL) {
-        OT_MEM_INFO *pMemInfo = pQueueInfo->pMemRefList;
-        while (pMemInfo != NULL) {
-            OT_MEM_INFO *pDelMemInfo = pMemInfo;
-            pMemInfo = pMemInfo->pNextMI;
-            delete pDelMemInfo;
-        }
-        pDelQueueInfo = pQueueInfo;
-        pQueueInfo = pQueueInfo->pNextQI;
-        delete pDelQueueInfo;
-    }
-    g_pQueueInfo = pQueueInfo;
-}
-
-static void setGpuQueueInfoState(uint32_t count, void *pData) {
-    queueCount = count;
-    queueInfo = (VkQueueFamilyProperties *)realloc((void *)queueInfo, count * sizeof(VkQueueFamilyProperties));
-    if (queueInfo != NULL) {
-        memcpy(queueInfo, pData, count * sizeof(VkQueueFamilyProperties));
-    }
-}
-
-// Check Queue type flags for selected queue operations
-static void validateQueueFlags(VkQueue queue, const char *function) {
-    OT_QUEUE_INFO *pQueueInfo = g_pQueueInfo;
-    while ((pQueueInfo != NULL) && (pQueueInfo->queue != queue)) {
-        pQueueInfo = pQueueInfo->pNextQI;
-    }
-    if (pQueueInfo != NULL) {
-        if ((queueInfo != NULL) && (queueInfo[pQueueInfo->queueNodeIndex].queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) == 0) {
-            log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
-                    reinterpret_cast<uint64_t>(queue), __LINE__, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
-                    "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_SPARSE_BINDING_BIT not set", function);
-        }
-    }
-}
+// Global map of structures, one per queue
+std::unordered_map<VkQueue, OT_QUEUE_INFO *> queue_info_map;
 
 #include "vk_dispatch_table_helper.h"
 
@@ -335,6 +269,8 @@ static bool set_device_memory_status(VkDevice dispatchable_object, VkDeviceMemor
                                          ObjectStatusFlags status_flag);
 static bool reset_device_memory_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDebugReportObjectTypeEXT objType,
                                            ObjectStatusFlags status_flag);
+static void destroy_queue(VkQueue dispatchable_object, VkQueue object);
+
 extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkPhysicalDeviceMap;
 extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkDeviceMap;
 extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkImageMap;
@@ -347,21 +283,97 @@ extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkCommandPoolMap;
 extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkCommandBufferMap;
 extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkSwapchainKHRMap;
 extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkSurfaceKHRMap;
+extern std::unordered_map<uint64_t, OBJTRACK_NODE *> VkQueueMap;
 
-static void create_physical_device(VkInstance dispatchable_object, VkPhysicalDevice vkObj, VkDebugReportObjectTypeEXT objType) {
-    log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), __LINE__,
+// Convert an object type enum to an object type array index
+static uint32_t objTypeToIndex(uint32_t objType) {
+    uint32_t index = objType;
+    return index;
+}
+
+// Add new queue to head of global queue list
+static void addQueueInfo(uint32_t queueNodeIndex, VkQueue queue) {
+    auto queueItem = queue_info_map.find(queue);
+    if (queueItem == queue_info_map.end()) {
+        OT_QUEUE_INFO *p_queue_info = new OT_QUEUE_INFO;
+        if (p_queue_info != NULL) {
+            memset(p_queue_info, 0, sizeof(OT_QUEUE_INFO));
+            p_queue_info->queue = queue;
+            p_queue_info->queueNodeIndex = queueNodeIndex;
+            queue_info_map[queue] = p_queue_info;
+        } else {
+            log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
+                    reinterpret_cast<uint64_t>(queue), __LINE__, OBJTRACK_INTERNAL_ERROR, "OBJTRACK",
+                    "ERROR:  VK_ERROR_OUT_OF_HOST_MEMORY -- could not allocate memory for Queue Information");
+        }
+    }
+}
+
+// Destroy memRef lists and free all memory
+static void destroyQueueMemRefLists() {
+    for (auto queue_item : queue_info_map) {
+        OT_MEM_INFO *p_mem_info = queue_item.second->pMemRefList;
+        while (p_mem_info != NULL) {
+            OT_MEM_INFO *p_del_mem_info = p_mem_info;
+            p_mem_info = p_mem_info->pNextMI;
+            delete p_del_mem_info;
+        }
+        delete queue_item.second;
+    }
+    queue_info_map.clear();
+
+    // Destroy the items in the queue map
+    auto queue = VkQueueMap.begin();
+    while (queue != VkQueueMap.end()) {
+        uint32_t obj_index = objTypeToIndex(queue->second->objType);
+        assert(numTotalObjs > 0);
+        numTotalObjs--;
+        assert(numObjs[obj_index] > 0);
+        numObjs[obj_index]--;
+        log_msg(mdd(reinterpret_cast<VkQueue>(queue->second->vkObj)), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, queue->second->objType,
+                queue->second->vkObj, __LINE__, OBJTRACK_NONE, "OBJTRACK",
+                "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
+                string_VkDebugReportObjectTypeEXT(queue->second->objType), queue->second->vkObj, numTotalObjs, numObjs[obj_index],
+                string_VkDebugReportObjectTypeEXT(queue->second->objType));
+        delete queue->second;
+        queue = VkQueueMap.erase(queue);
+    }
+}
+
+// Check Queue type flags for selected queue operations
+static void validateQueueFlags(VkQueue queue, const char *function) {
+
+    auto queue_item = queue_info_map.find(queue);
+    if (queue_item != queue_info_map.end()) {
+        OT_QUEUE_INFO *pQueueInfo = queue_item->second;
+        if (pQueueInfo != NULL) {
+            if ((queue_family_properties[pQueueInfo->queueNodeIndex].queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) == 0) {
+                log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
+                        reinterpret_cast<uint64_t>(queue), __LINE__, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
+                        "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_SPARSE_BINDING_BIT not set", function);
+            }
+        }
+    }
+}
+
+static void create_physical_device(VkInstance instance, VkPhysicalDevice vkObj, VkDebugReportObjectTypeEXT objType) {
+    log_msg(mdd(instance), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), __LINE__,
             OBJTRACK_NONE, "OBJTRACK", "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
             string_VkDebugReportObjectTypeEXT(objType), reinterpret_cast<uint64_t>(vkObj));
 
-    OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
-    pNewObjNode->objType = objType;
-    pNewObjNode->belongsTo = (uint64_t)dispatchable_object;
-    pNewObjNode->status = OBJSTATUS_NONE;
-    pNewObjNode->vkObj = reinterpret_cast<uint64_t>(vkObj);
-    VkPhysicalDeviceMap[reinterpret_cast<uint64_t>(vkObj)] = pNewObjNode;
-    uint32_t objIndex = objTypeToIndex(objType);
-    numObjs[objIndex]++;
-    numTotalObjs++;
+    uint64_t physical_device_handle = reinterpret_cast<uint64_t>(vkObj);
+    auto pd_item = VkPhysicalDeviceMap.find(physical_device_handle);
+    if (pd_item == VkPhysicalDeviceMap.end()) {
+        OBJTRACK_NODE *p_new_obj_node = new OBJTRACK_NODE;
+        p_new_obj_node->objType = objType;
+        p_new_obj_node->belongsTo = reinterpret_cast<uint64_t>(instance);
+        p_new_obj_node->status = OBJSTATUS_NONE;
+        p_new_obj_node->vkObj = physical_device_handle;
+        VkPhysicalDeviceMap[physical_device_handle] = p_new_obj_node;
+        uint32_t objIndex = objTypeToIndex(objType);
+        numObjs[objIndex]++;
+        numTotalObjs++;
+    }
 }
 
 static void create_surface_khr(VkInstance dispatchable_object, VkSurfaceKHR vkObj, VkDebugReportObjectTypeEXT objType) {
@@ -530,21 +542,29 @@ static bool free_descriptor_set(VkDevice device, VkDescriptorSet descriptorSet) 
     return skipCall;
 }
 
-static void create_queue(VkDevice dispatchable_object, VkQueue vkObj, VkDebugReportObjectTypeEXT objType) {
-    log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), __LINE__,
+static void create_queue(VkDevice device, VkQueue vkObj, VkDebugReportObjectTypeEXT objType) {
+
+    log_msg(mdd(device), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), __LINE__,
             OBJTRACK_NONE, "OBJTRACK", "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
             string_VkDebugReportObjectTypeEXT(objType), reinterpret_cast<uint64_t>(vkObj));
 
-    OBJTRACK_NODE *pNewObjNode = new OBJTRACK_NODE;
-    pNewObjNode->objType = objType;
-    pNewObjNode->belongsTo = (uint64_t)dispatchable_object;
-    pNewObjNode->status = OBJSTATUS_NONE;
-    pNewObjNode->vkObj = reinterpret_cast<uint64_t>(vkObj);
-    VkQueueMap[reinterpret_cast<uint64_t>(vkObj)] = pNewObjNode;
-    uint32_t objIndex = objTypeToIndex(objType);
-    numObjs[objIndex]++;
-    numTotalObjs++;
+    OBJTRACK_NODE *p_obj_node = NULL;
+    auto queue_item = VkQueueMap.find(reinterpret_cast<uint64_t>(vkObj));
+    if (queue_item == VkQueueMap.end()) {
+        p_obj_node = new OBJTRACK_NODE;
+        VkQueueMap[reinterpret_cast<uint64_t>(vkObj)] = p_obj_node;
+        uint32_t objIndex = objTypeToIndex(objType);
+        numObjs[objIndex]++;
+        numTotalObjs++;
+    } else {
+        p_obj_node = queue_item->second;
+    }
+    p_obj_node->objType = objType;
+    p_obj_node->belongsTo = reinterpret_cast<uint64_t>(device);
+    p_obj_node->status = OBJSTATUS_NONE;
+    p_obj_node->vkObj = reinterpret_cast<uint64_t>(vkObj);
 }
+
 static void create_swapchain_image_obj(VkDevice dispatchable_object, VkImage vkObj, VkSwapchainKHR swapchain) {
     log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, (uint64_t)vkObj,
             __LINE__, OBJTRACK_NONE, "OBJTRACK", "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64, object_track_index++,
@@ -622,7 +642,9 @@ void explicit_GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice gpu, uint3
 
     std::lock_guard<std::mutex> lock(global_lock);
     if (pProperties != NULL) {
-        setGpuQueueInfoState(*pCount, pProperties);
+        for (uint32_t i = 0; i < *pCount; i++) {
+            queue_family_properties.emplace_back(pProperties[i]);
+        }
     }
 }
 
@@ -693,8 +715,9 @@ void explicit_GetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t 
     get_dispatch_table(object_tracker_device_table_map, device)->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
 
     lock.lock();
-    addQueueInfo(queueNodeIndex, *pQueue);
+
     create_queue(device, *pQueue, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT);
+    addQueueInfo(queueNodeIndex, *pQueue);
 }
 
 VkResult explicit_MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkFlags flags,
@@ -827,7 +850,8 @@ void explicit_DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, con
     std::unordered_map<uint64_t, OBJTRACK_NODE *>::iterator itr = swapchainImageMap.begin();
     while (itr != swapchainImageMap.end()) {
         OBJTRACK_NODE *pNode = (*itr).second;
-        if (pNode->parentObj == (uint64_t)(swapchain)) {
+        if (pNode->parentObj == reinterpret_cast<uint64_t &>(swapchain)) {
+            delete pNode;
             swapchainImageMap.erase(itr++);
         } else {
             ++itr;
