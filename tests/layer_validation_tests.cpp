@@ -265,6 +265,7 @@ class VkLayerTest : public VkRenderFramework {
 
   protected:
     ErrorMonitor *m_errorMonitor;
+    bool m_enableWSI;
 
     virtual void SetUp() {
         std::vector<const char *> instance_layer_names;
@@ -298,6 +299,30 @@ class VkLayerTest : public VkRenderFramework {
         device_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
         device_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
 
+        if (m_enableWSI) {
+            instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+            device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+#ifdef NEED_TO_TEST_THIS_ON_PLATFORM
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+            instance_extension_names.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+#endif // VK_USE_PLATFORM_ANDROID_KHR
+#if defined(VK_USE_PLATFORM_MIR_KHR)
+            instance_extension_names.push_back(VK_KHR_MIR_SURFACE_EXTENSION_NAME);
+#endif // VK_USE_PLATFORM_MIR_KHR
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+            instance_extension_names.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+            instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#endif // VK_USE_PLATFORM_WIN32_KHR
+#endif // NEED_TO_TEST_THIS_ON_PLATFORM
+#if defined(VK_USE_PLATFORM_XCB_KHR)
+            instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+            instance_extension_names.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+#endif // VK_USE_PLATFORM_XLIB_KHR
+        }
+
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
         this->app_info.pApplicationName = "layer_tests";
@@ -316,6 +341,10 @@ class VkLayerTest : public VkRenderFramework {
         // Clean up resources before we reset
         ShutdownFramework();
         delete m_errorMonitor;
+    }
+
+    VkLayerTest() {
+        m_enableWSI = false;
     }
 };
 
@@ -508,6 +537,14 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer,
     commandBuffer->BindPipeline(pipelineobj);
     commandBuffer->BindDescriptorSet(descriptorSet);
 }
+
+class VkWsiEnabledLayerTest : public VkLayerTest {
+  public:
+protected:
+    VkWsiEnabledLayerTest() {
+        m_enableWSI = true;
+    }
+};
 
 // ********************************************************************************************************************
 // ********************************************************************************************************************
@@ -1124,8 +1161,6 @@ TEST_F(VkLayerTest, EnableWsiBeforeUse) {
 
     // Create a surface:
     VkAndroidSurfaceCreateInfoKHR android_create_info = {};
-#if 0
-#endif
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "extension was not enabled for this");
@@ -1143,8 +1178,6 @@ TEST_F(VkLayerTest, EnableWsiBeforeUse) {
 
     // Create a surface:
     VkMirSurfaceCreateInfoKHR mir_create_info = {};
-#if 0
-#endif
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "extension was not enabled for this");
@@ -1170,8 +1203,6 @@ TEST_F(VkLayerTest, EnableWsiBeforeUse) {
 
     // Create a surface:
     VkWaylandSurfaceCreateInfoKHR wayland_create_info = {};
-#if 0
-#endif
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "extension was not enabled for this");
@@ -1202,8 +1233,6 @@ VkSurfaceKHR surface = VK_NULL_HANDLE;
 
     // Create a surface:
     VkWin32SurfaceCreateInfoKHR win32_create_info = {};
-#if 0
-#endif
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "extension was not enabled for this");
@@ -1233,8 +1262,6 @@ VkSurfaceKHR surface = VK_NULL_HANDLE;
 
     // Create a surface:
     VkXcbSurfaceCreateInfoKHR xcb_create_info = {};
-#if 0
-#endif
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "extension was not enabled for this");
@@ -1263,8 +1290,6 @@ VkSurfaceKHR surface = VK_NULL_HANDLE;
 
     // Create a surface:
     VkXlibSurfaceCreateInfoKHR xlib_create_info = {};
-#if 0
-#endif
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "extension was not enabled for this");
@@ -1353,24 +1378,6 @@ VkSurfaceKHR surface = VK_NULL_HANDLE;
         "extension was not enabled for this");
     swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_create_info.pNext = NULL;
-#if 0
-    swapchain_create_info.flags = 0;
-    swapchain_create_info.surface = 0;
-    swapchain_create_info.minImageCount = 0;
-    swapchain_create_info.imageFormat = 0;
-    swapchain_create_info.imageColorSpace = 0;
-    swapchain_create_info.imageExtent.width = 0;
-    swapchain_create_info.imageExtent.height = 0;
-    swapchain_create_info.imageArrayLayers = 0;
-    swapchain_create_info.imageUsage = 0;
-    swapchain_create_info.imageSharingMode = 0;
-    swapchain_create_info.queueFamilyIndexCount = 0;
-    swapchain_create_info.preTransform = 0;
-    swapchain_create_info.compositeAlpha = 0;
-    swapchain_create_info.presentMode = 0;
-    swapchain_create_info.clipped = 0;
-    swapchain_create_info.oldSwapchain = NULL;
-#endif
     err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info,
                                NULL, &swapchain);
     pass = (err != VK_SUCCESS);
@@ -1398,21 +1405,10 @@ VkSurfaceKHR surface = VK_NULL_HANDLE;
     m_errorMonitor->VerifyFound();
 
     // Try to present an image:
-#if 0   // NOTE: Currently can't test this because a real swapchain is needed
-        // (as opposed to the fake one we created) in order for the layer to
-        // lookup the VkDevice used to enable the extension:
-    m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "extension was not enabled for this");
-    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    present_info.pNext = NULL;
-#if 0
-#endif
-    err = vkQueuePresentKHR(m_device->m_queue, &present_info);
-    pass = (err != VK_SUCCESS);
-    ASSERT_TRUE(pass);
-    m_errorMonitor->VerifyFound();
-#endif
+    //
+    // NOTE: Currently can't test this because a real swapchain is needed (as
+    // opposed to the fake one we created) in order for the layer to lookup the
+    // VkDevice used to enable the extension:
 
     // Destroy the swapchain:
     m_errorMonitor->SetDesiredFailureMsg(
@@ -1420,6 +1416,430 @@ VkSurfaceKHR surface = VK_NULL_HANDLE;
         "extension was not enabled for this");
     vkDestroySwapchainKHR(m_device->device(), swapchain, NULL);
     m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
+    VkResult err;
+    bool pass;
+
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+#if defined(VK_USE_PLATFORM_XCB_KHR)
+    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+    VkSwapchainCreateInfoKHR swapchain_create_info = {};
+//    uint32_t swapchain_image_count = 0;
+//    VkImage swapchain_images[1] = {VK_NULL_HANDLE};
+//    uint32_t image_index = 0;
+//    VkPresentInfoKHR present_info = {};
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Use the create function from one of the VK_KHR_*_surface extension in
+    // order to create a surface, testing all known errors in the process,
+    // before successfully creating a surface:
+    // First, try to create a surface without a VkXcbSurfaceCreateInfoKHR:
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "called with NULL pointer");
+    err = vkCreateXcbSurfaceKHR(instance(), NULL, NULL, &surface);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, try to create a surface with the wrong
+    // VkXcbSurfaceCreateInfoKHR::sType:
+    VkXcbSurfaceCreateInfoKHR xcb_create_info = {};
+    xcb_create_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "called with the wrong value for");
+    err = vkCreateXcbSurfaceKHR(instance(), &xcb_create_info, NULL, &surface);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+
+    // Create a native window, and then correctly create a surface:
+    xcb_connection_t *connection;
+    xcb_screen_t *screen;
+    xcb_window_t xcb_window;
+    xcb_intern_atom_reply_t *atom_wm_delete_window;
+
+    const xcb_setup_t *setup;
+    xcb_screen_iterator_t iter;
+    int scr;
+    uint32_t value_mask, value_list[32];
+    int width = 1;
+    int height = 1;
+
+    connection = xcb_connect(NULL, &scr);
+    ASSERT_TRUE(connection != NULL);
+    setup = xcb_get_setup(connection);
+    iter = xcb_setup_roots_iterator(setup);
+    while (scr-- > 0)
+        xcb_screen_next(&iter);
+    screen = iter.data;
+
+    xcb_window = xcb_generate_id(connection);
+
+    value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
+    value_list[0] = screen->black_pixel;
+    value_list[1] = XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE |
+                    XCB_EVENT_MASK_STRUCTURE_NOTIFY;
+
+    xcb_create_window(connection, XCB_COPY_FROM_PARENT, xcb_window,
+                      screen->root, 0, 0, width, height, 0,
+                      XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual,
+                      value_mask, value_list);
+
+    /* Magic code that will send notification when window is destroyed */
+    xcb_intern_atom_cookie_t cookie =
+        xcb_intern_atom(connection, 1, 12, "WM_PROTOCOLS");
+    xcb_intern_atom_reply_t *reply =
+        xcb_intern_atom_reply(connection, cookie, 0);
+
+    xcb_intern_atom_cookie_t cookie2 =
+        xcb_intern_atom(connection, 0, 16, "WM_DELETE_WINDOW");
+    atom_wm_delete_window =
+        xcb_intern_atom_reply(connection, cookie2, 0);
+    xcb_change_property(connection, XCB_PROP_MODE_REPLACE, xcb_window,
+                        (*reply).atom, 4, 32, 1,
+                        &(*atom_wm_delete_window).atom);
+    free(reply);
+
+    xcb_map_window(connection, xcb_window);
+
+    // Force the x/y coordinates to 100,100 results are identical in consecutive
+    // runs
+    const uint32_t coords[] = {100, 100};
+    xcb_configure_window(connection, xcb_window,
+                         XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
+
+
+
+    // Finally, try to correctly create a surface:
+    xcb_create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    xcb_create_info.pNext = NULL;
+    xcb_create_info.flags = 0;
+    xcb_create_info.connection = connection;
+    xcb_create_info.window = xcb_window;
+    err = vkCreateXcbSurfaceKHR(instance(), &xcb_create_info, NULL, &surface);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+
+
+
+    // Check if surface supports presentation:
+
+    // 1st, do so without having queried the queue families:
+    VkBool32 supported = false;
+    // TODO: Get the following error to come out:
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "called before calling the vkGetPhysicalDeviceQueueFamilyProperties "
+        "function");
+    err = vkGetPhysicalDeviceSurfaceSupportKHR(gpu(), 0, surface, &supported);
+    pass = (err != VK_SUCCESS);
+//    ASSERT_TRUE(pass);
+//    m_errorMonitor->VerifyFound();
+
+    // Next, query a queue family index that's too large:
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "called with a queueFamilyIndex that is too large");
+    err = vkGetPhysicalDeviceSurfaceSupportKHR(gpu(), 100000, surface, &supported);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Finally, do so correctly:
+// FIXME: THIS ISN'T CORRECT--MUST QUERY UNTIL WE FIND A QUEUE FAMILY THAT'S SUPPORTED
+    err = vkGetPhysicalDeviceSurfaceSupportKHR(gpu(), 0, surface, &supported);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+
+
+
+    // Before proceeding, try to create a swapchain without having called
+    // vkGetPhysicalDeviceSurfaceCapabilitiesKHR():
+    swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchain_create_info.pNext = NULL;
+    swapchain_create_info.flags = 0;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "called before calling vkGetPhysicalDeviceSurfaceCapabilitiesKHR().");
+    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info,
+                               NULL, &swapchain);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+
+
+    // Get the surface capabilities:
+    VkSurfaceCapabilitiesKHR surface_capabilities;
+
+    // Do so correctly (only error logged by this entrypoint is if the
+    // extension isn't enabled):
+    err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu(), surface,
+                                                    &surface_capabilities);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+
+
+
+    // Get the surface formats:
+    uint32_t surface_format_count;
+
+    // First, try without a pointer to surface_format_count:
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "called with NULL pointer");
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, NULL, NULL);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, call with a non-NULL pSurfaceFormats, even though we haven't
+    // correctly done a 1st try (to get the count):
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "but no prior positive value has been seen for");
+    surface_format_count = 0;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(
+            gpu(),
+            surface,
+            &surface_format_count,
+            (VkSurfaceFormatKHR *) &surface_format_count);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, correctly do a 1st try (with a NULL pointer to surface_formats):
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface,
+                                         &surface_format_count, NULL);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+
+    // Allocate memory for the correct number of VkSurfaceFormatKHR's:
+    VkSurfaceFormatKHR *surface_formats =
+        (VkSurfaceFormatKHR *)malloc(surface_format_count *
+                                     sizeof(VkSurfaceFormatKHR));
+
+    // Next, do a 2nd try with surface_format_count being set too high:
+    surface_format_count += 5;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "that is greater than the value");
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface,
+                                         &surface_format_count,
+                                         surface_formats);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Finally, do a correct 1st and 2nd try:
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface,
+                                         &surface_format_count, NULL);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface,
+                                         &surface_format_count,
+                                         surface_formats);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+
+
+
+    // Get the surface present modes:
+    uint32_t surface_present_mode_count;
+
+    // First, try without a pointer to surface_format_count:
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "called with NULL pointer");
+    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, NULL, NULL);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, call with a non-NULL VkPresentModeKHR, even though we haven't
+    // correctly done a 1st try (to get the count):
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "but no prior positive value has been seen for");
+    surface_present_mode_count = 0;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(
+            gpu(),
+            surface,
+            &surface_present_mode_count,
+            (VkPresentModeKHR *) &surface_present_mode_count);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, correctly do a 1st try (with a NULL pointer to surface_formats):
+    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface,
+                                              &surface_present_mode_count,
+                                              NULL);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+
+    // Allocate memory for the correct number of VkSurfaceFormatKHR's:
+    VkPresentModeKHR *surface_present_modes =
+        (VkPresentModeKHR *)malloc(surface_present_mode_count *
+                                     sizeof(VkPresentModeKHR));
+
+    // Next, do a 2nd try with surface_format_count being set too high:
+    surface_present_mode_count += 5;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "that is greater than the value");
+    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface,
+                                              &surface_present_mode_count,
+                                              surface_present_modes);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Finally, do a correct 1st and 2nd try:
+    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface,
+                                              &surface_present_mode_count,
+                                              NULL);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface,
+                                              &surface_present_mode_count,
+                                              surface_present_modes);
+    pass = (err == VK_SUCCESS);
+    ASSERT_TRUE(pass);
+
+
+
+    // Create a swapchain:
+
+    // First, try without a pointer to swapchain_create_info:
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "called with NULL pointer");
+    err = vkCreateSwapchainKHR(m_device->device(), NULL, NULL, &swapchain);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, call with a non-NULL swapchain_create_info, that has the wrong
+    // sType:
+    swapchain_create_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "called with the wrong value for");
+    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info,
+                               NULL, &swapchain);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, call with a NULL swapchain pointer:
+    swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchain_create_info.pNext = NULL;
+    swapchain_create_info.flags = 0;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "called with NULL pointer");
+    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info,
+                               NULL, NULL);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+// TODO: Enhance swapchain layer so that
+// swapchain_create_info.queueFamilyIndexCount is checked against something?
+
+    // Next, call with a queue family index that's too large:
+    uint32_t queueFamilyIndex[2] = {100000, 0};
+    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+    swapchain_create_info.queueFamilyIndexCount = 2;
+    swapchain_create_info.pQueueFamilyIndices = queueFamilyIndex;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "called with a queueFamilyIndex that is too large");
+    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info,
+                               NULL, &swapchain);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, call a queueFamilyIndexCount that's too small for CONCURRENT:
+    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+    swapchain_create_info.queueFamilyIndexCount = 1;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "but with a bad value(s) for pCreateInfo->queueFamilyIndexCount or "
+        "pCreateInfo->pQueueFamilyIndices).");
+    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info,
+                               NULL, &swapchain);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+
+    // Next, call with an invalid imageSharingMode:
+    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_MAX_ENUM;
+    swapchain_create_info.queueFamilyIndexCount = 1;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "called with a non-supported pCreateInfo->imageSharingMode (i.e.");
+    err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info,
+                               NULL, &swapchain);
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+    m_errorMonitor->VerifyFound();
+    // Fix for the future:
+// FIXME: THIS ISN'T CORRECT--MUST QUERY UNTIL WE FIND A QUEUE FAMILY THAT'S SUPPORTED
+    swapchain_create_info.queueFamilyIndexCount = 0;
+    queueFamilyIndex[0] = 0;
+    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+// TODO: CONTINUE TESTING VALIDATION OF vkCreateSwapchainKHR() ...
+
+
+
+    // Get the images from a swapchain:
+
+
+
+    // Acquire an image from a swapchain:
+
+
+
+    // Present an image to a swapchain:
+
+
+
+    // Destroy the swapchain:
+
+
+
+// TODOs:
+//
+// - Try destroying the device without first destroying the swapchain
+//
+// - Try destroying the device without first destroying the surface
+//
+// - Try destroying the surface without first destroying the swapchain
+
+
+    // Destroy the surface:
+    vkDestroySurfaceKHR(instance(), surface, NULL);
+
+
+    // Tear down the window:
+    xcb_destroy_window(connection, xcb_window);
+    xcb_disconnect(connection);
+
+#else  // VK_USE_PLATFORM_XCB_KHR
+    err = (surface == VK_NULL_HANDLE) ? VK_SUCCESS : VK_SUCCESS;
+    pass = (err != VK_SUCCESS);
+    ASSERT_TRUE(pass);
+#endif // VK_USE_PLATFORM_XCB_KHR
 }
 
 TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit) {

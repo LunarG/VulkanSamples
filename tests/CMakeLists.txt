@@ -78,7 +78,12 @@ add_executable(vk_layer_validation_tests layer_validation_tests.cpp ${COMMON_CPP
 set_target_properties(vk_layer_validation_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(vk_layer_validation_tests ${LIBVK} gtest gtest_main VkLayer_utils ${GLSLANG_LIBRARIES})
+if(NOT WIN32)
+   target_link_libraries(vk_layer_validation_tests ${LIBVK} ${XCB_LIBRARIES} ${X11_LIBRARIES} gtest gtest_main VkLayer_utils ${GLSLANG_LIBRARIES})
+endif()
+if(WIN32)
+   target_link_libraries(vk_layer_validation_tests ${LIBVK} gtest gtest_main VkLayer_utils ${GLSLANG_LIBRARIES})
+endif()
 
 add_executable(vk_loader_validation_tests loader_validation_tests.cpp ${COMMON_CPP})
 set_target_properties(vk_loader_validation_tests
