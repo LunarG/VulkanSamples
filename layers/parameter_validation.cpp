@@ -21,6 +21,9 @@
  * Author: Dustin Graves <dustin@lunarg.com>
  */
 
+#define NOMINMAX
+
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2358,32 +2361,97 @@ vkDestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocation
     }
 }
 
-bool PreCreateImage(layer_data *device_data, const VkImageCreateInfo *pCreateInfo) {
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo,
+                                                             const VkAllocationCallbacks *pAllocator, VkImage *pImage) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip_call = false;
+    layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(device_data != NULL);
+    debug_report_data *report_data = device_data->report_data;
+
+    skip_call |= parameter_validation_vkCreateImage(report_data, pCreateInfo, pAllocator, pImage);
+
     if (pCreateInfo != nullptr) {
         if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
-            validate_queue_family_indices(device_data, "vkCreateImage", "pCreateInfo->pQueueFamilyIndices",
-                                          pCreateInfo->queueFamilyIndexCount, pCreateInfo->pQueueFamilyIndices);
+            // pQueueFamilyIndices must not be NULL
+            skip_call |= validate_required_pointer(report_data, "vkCreateImage", "pCreateInfo->pQueueFamilyIndices",
+                                                   pCreateInfo->pQueueFamilyIndices);
+
+            // queueFamilyIndexCount must be greater than 1
+            skip_call |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->pQueueFamilyIndices",
+                                               pCreateInfo->queueFamilyIndexCount, 1u);
+
+            skip_call |= validate_queue_family_indices(device_data, "vkCreateImage", "pCreateInfo->pQueueFamilyIndices",
+                                                       pCreateInfo->queueFamilyIndexCount, pCreateInfo->pQueueFamilyIndices);
+        }
+
+        // width, height, and depth members of extent must be greater than 0
+        skip_call |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->extent.width", pCreateInfo->extent.width,
+                                           0u);
+        skip_call |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->extent.height", pCreateInfo->extent.height,
+                                           0u);
+        skip_call |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->extent.depth", pCreateInfo->extent.depth,
+                                           0u);
+
+        // mipLevels must be greater than 0
+        skip_call |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->mipLevels", pCreateInfo->mipLevels,
+                                           0u);
+
+        // arrayLayers must be greater than 0
+        skip_call |= ValidateGreaterThan(report_data, "vkCreateImage", "pCreateInfo->arrayLayers", pCreateInfo->arrayLayers,
+                                           0u);
+
+        // If imageType is VK_IMAGE_TYPE_1D, both extent.height and extent.depth must be 1
+        if ((pCreateInfo->imageType == VK_IMAGE_TYPE_1D) && (pCreateInfo->extent.height != 1) && (pCreateInfo->extent.depth != 1)) {
+            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                 LayerName, "vkCreateImage: if pCreateInfo->imageType is VK_IMAGE_TYPE_1D, both "
+                                                          "pCreateInfo->extent.height and pCreateInfo->extent.depth must be 1");
+        }
+
+        if (pCreateInfo->imageType == VK_IMAGE_TYPE_2D) {
+            // If imageType is VK_IMAGE_TYPE_2D and flags contains VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, extent.width and
+            // extent.height must be equal
+            if ((pCreateInfo->flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) &&
+                (pCreateInfo->extent.width != pCreateInfo->extent.height)) {
+                skip_call |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                            LayerName, "vkCreateImage: if pCreateInfo->imageType is VK_IMAGE_TYPE_2D and "
+                                                     "pCreateInfo->flags contains VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, "
+                                                     "pCreateInfo->extent.width and pCreateInfo->extent.height must be equal");
+            }
+
+            if (pCreateInfo->extent.depth != 1) {
+                skip_call |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                            LayerName,
+                            "vkCreateImage: if pCreateInfo->imageType is VK_IMAGE_TYPE_2D, pCreateInfo->extent.depth must be 1");
+            }
+        }
+
+        // mipLevels must be less than or equal to floor(log2(max(extent.width,extent.height,extent.depth)))+1
+        uint32_t maxDim = std::max(std::max(pCreateInfo->extent.width, pCreateInfo->extent.height), pCreateInfo->extent.depth);
+        if (pCreateInfo->mipLevels > (floor(log2(maxDim)) + 1)) {
+            skip_call |= log_msg(
+                report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, LayerName,
+                "vkCreateImage: pCreateInfo->mipLevels must be less than or equal to "
+                "floor(log2(max(pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth)))+1");
+        }
+
+        // If flags contains VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT or VK_IMAGE_CREATE_SPARSE_ALIASED_BIT, it must also contain
+        // VK_IMAGE_CREATE_SPARSE_BINDING_BIT
+        if (((pCreateInfo->flags & (VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT | VK_IMAGE_CREATE_SPARSE_ALIASED_BIT)) != 0) &&
+            ((pCreateInfo->flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT) != VK_IMAGE_CREATE_SPARSE_BINDING_BIT)) {
+            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                 LayerName,
+                                 "vkCreateImage: pCreateInfo->flags contains VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT or "
+                                 "VK_IMAGE_CREATE_SPARSE_ALIASED_BIT, it must also contain VK_IMAGE_CREATE_SPARSE_BINDING_BIT");
         }
     }
 
-    return true;
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
-vkCreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkImage *pImage) {
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    bool skipCall = false;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    assert(my_data != NULL);
-
-    skipCall |= parameter_validation_vkCreateImage(my_data->report_data, pCreateInfo, pAllocator, pImage);
-
-    if (!skipCall) {
-        PreCreateImage(my_data, pCreateInfo);
-
+    if (!skip_call) {
         result = get_dispatch_table(pc_device_table_map, device)->CreateImage(device, pCreateInfo, pAllocator, pImage);
 
-        validate_result(my_data->report_data, "vkCreateImage", result);
+        validate_result(report_data, "vkCreateImage", result);
     }
 
     return result;
