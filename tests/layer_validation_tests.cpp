@@ -1251,6 +1251,125 @@ TEST_F(VkLayerTest, InvalidMemoryAliasing) {
     vkFreeMemory(m_device->device(), mem_img, NULL);
 }
 
+TEST_F(VkLayerTest, InvalidMemoryMapping) {
+    TEST_DESCRIPTION("Attempt to map memory in a number of incorrect ways");
+    VkResult err;
+    bool pass;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkBuffer buffer;
+    VkDeviceMemory mem;
+    VkMemoryRequirements mem_reqs;
+
+    VkBufferCreateInfo buf_info = {};
+    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.pNext = NULL;
+    buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buf_info.size = 256;
+    buf_info.queueFamilyIndexCount = 0;
+    buf_info.pQueueFamilyIndices = NULL;
+    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buf_info.flags = 0;
+    err = vkCreateBuffer(m_device->device(), &buf_info, NULL, &buffer);
+    ASSERT_VK_SUCCESS(err);
+
+    vkGetBufferMemoryRequirements(m_device->device(), buffer, &mem_reqs);
+    VkMemoryAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.memoryTypeIndex = 0;
+
+    // Ensure memory is big enough for both bindings
+    static const VkDeviceSize allocation_size = 0x10000;
+    alloc_info.allocationSize = allocation_size;
+    pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info,
+                                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    if (!pass) {
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        return;
+    }
+    err = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+
+    uint8_t *pData;
+    // Attempt to map memory size 0 is invalid
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "VkMapMemory: Attempting to map memory range of size zero");
+    err = vkMapMemory(m_device->device(), mem, 0, 0, 0, (void **)&pData);
+    m_errorMonitor->VerifyFound();
+    // Map memory twice
+    err = vkMapMemory(m_device->device(), mem, 0, mem_reqs.size, 0,
+                      (void **)&pData);
+    ASSERT_VK_SUCCESS(err);
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "VkMapMemory: Attempting to map memory on an already-mapped object ");
+    err = vkMapMemory(m_device->device(), mem, 0, mem_reqs.size, 0,
+                      (void **)&pData);
+    m_errorMonitor->VerifyFound();
+
+    // Unmap the memory to avoid re-map error
+    vkUnmapMemory(m_device->device(), mem);
+    // overstep allocation with VK_WHOLE_SIZE
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        " with size of VK_WHOLE_SIZE oversteps total array size 0x");
+    err = vkMapMemory(m_device->device(), mem, allocation_size + 1,
+                      VK_WHOLE_SIZE, 0, (void **)&pData);
+    m_errorMonitor->VerifyFound();
+    // overstep allocation w/o VK_WHOLE_SIZE
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " oversteps total array size 0x");
+    err = vkMapMemory(m_device->device(), mem, 1, allocation_size, 0,
+                      (void **)&pData);
+    m_errorMonitor->VerifyFound();
+    // Now error due to unmapping memory that's not mapped
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Unmapping Memory without memory being mapped: ");
+    vkUnmapMemory(m_device->device(), mem);
+    m_errorMonitor->VerifyFound();
+    // Now map memory and cause errors due to flushing invalid ranges
+    err = vkMapMemory(m_device->device(), mem, 16, VK_WHOLE_SIZE, 0,
+                      (void **)&pData);
+    ASSERT_VK_SUCCESS(err);
+    VkMappedMemoryRange mmr = {};
+    mmr.memory = mem;
+    mmr.offset = 15; // Error b/c offset less than offset of mapped mem
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        ") is less than Memory Object's offset (");
+    vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+    m_errorMonitor->VerifyFound();
+    // Now flush range that oversteps mapped range
+    vkUnmapMemory(m_device->device(), mem);
+    err = vkMapMemory(m_device->device(), mem, 0, 256, 0, (void **)&pData);
+    ASSERT_VK_SUCCESS(err);
+    mmr.offset = 16;
+    mmr.size = 256; // flushing bounds (272) exceed mapped bounds (256)
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        ") exceeds the Memory Object's upper-bound (");
+    vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+    m_errorMonitor->VerifyFound();
+
+    pass =
+        m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info,
+                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    if (!pass) {
+        vkFreeMemory(m_device->device(), mem, NULL);
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        return;
+    }
+    // TODO : If we can get HOST_VISIBLE w/o HOST_COHERENT we can test cases of
+    //  MEMTRACK_INVALID_MAP in validateAndCopyNoncoherentMemoryToDriver()
+
+    vkDestroyBuffer(m_device->device(), buffer, NULL);
+    vkFreeMemory(m_device->device(), mem, NULL);
+}
+
 TEST_F(VkLayerTest, EnableWsiBeforeUse) {
     VkResult err;
     bool pass;
