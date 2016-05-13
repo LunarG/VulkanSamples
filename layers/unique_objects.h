@@ -39,6 +39,8 @@
 #include "vk_safe_struct.h"
 #include "vk_layer_utils.h"
 
+namespace unique_objects {
+
 // All increments must be guarded by global_lock
 static uint64_t global_unique_id = 1;
 
@@ -393,3 +395,5 @@ VkResult explicit_GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchai
     }
     return result;
 }
+
+} // namespace unique_objects
