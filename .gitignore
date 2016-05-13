@@ -31,3 +31,8 @@ build
 build32
 dbuild
 external
+*.config
+*.creator
+*.creator.user
+*.files
+*.includes
