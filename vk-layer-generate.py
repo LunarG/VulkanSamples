@@ -347,79 +347,56 @@ class Subcommand(object):
         r_body.append('}')
         return "\n".join(r_body)
 
-    def _gen_layer_get_global_extension_props(self, layer="object_tracker"):
-        ggep_body = []
-        # generated layers do not provide any global extensions
-        ggep_body.append('%s' % self.lineinfo.get())
+    def _gen_layer_interface_v0_functions(self):
+        body = []
+        body.append('%s' % self.lineinfo.get())
+        body.append('// loader-layer interface v0')
+        body.append('')
 
-        ggep_body.append('')
         if self.layer_name == 'object_tracker':
-            ggep_body.append('static const VkExtensionProperties instance_extensions[] = {')
-            ggep_body.append('    {')
-            ggep_body.append('        VK_EXT_DEBUG_REPORT_EXTENSION_NAME,')
-            ggep_body.append('        VK_EXT_DEBUG_REPORT_SPEC_VERSION')
-            ggep_body.append('    }')
-            ggep_body.append('};')
-        ggep_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)')
-        ggep_body.append('{')
+            body.append('static const VkExtensionProperties instance_extensions[] = {')
+            body.append('    {')
+            body.append('        VK_EXT_DEBUG_REPORT_EXTENSION_NAME,')
+            body.append('        VK_EXT_DEBUG_REPORT_SPEC_VERSION')
+            body.append('    }')
+            body.append('};')
+            body.append('')
+
+            body.append('static const VkLayerProperties globalLayerProps = {')
+            body.append('    "VK_LAYER_LUNARG_%s",' % self.layer_name)
+            body.append('    VK_LAYER_API_VERSION, // specVersion')
+            body.append('    1, // implementationVersion')
+            body.append('    "LunarG Validation Layer"')
+            body.append('};')
+            body.append('')
+        else:
+            body.append('static const VkLayerProperties globalLayerProps = {')
+            body.append('    "VK_LAYER_GOOGLE_%s",' % self.layer_name)
+            body.append('    VK_LAYER_API_VERSION, // specVersion')
+            body.append('    1, // implementationVersion')
+            body.append('    "Google Validation Layer"')
+            body.append('};')
+            body.append('')
+
+        body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)')
+        body.append('{')
         if self.layer_name == 'object_tracker':
-          ggep_body.append('    return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);')
+          body.append('    return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);')
         else:
-          ggep_body.append('    return util_GetExtensionProperties(0, NULL, pCount, pProperties);')
-        ggep_body.append('}')
-        return "\n".join(ggep_body)
+          body.append('    return util_GetExtensionProperties(0, NULL, pCount, pProperties);')
+        body.append('}')
+        body.append('')
+        body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)')
+        body.append('{')
+        body.append('    return util_GetLayerProperties(1, &globalLayerProps, pCount, pProperties);')
+        body.append('}')
+        body.append('')
+        body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties* pProperties)')
+        body.append('{')
+        body.append('    return util_GetLayerProperties(1, &globalLayerProps, pCount, pProperties);')
+        body.append('}')
 
-    def _gen_layer_get_global_layer_props(self, layer="object_tracker"):
-        ggep_body = []
-        layer_name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', layer)
-        layer_name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', layer_name).lower()
-        ggep_body.append('%s' % self.lineinfo.get())
-        ggep_body.append('static const VkLayerProperties globalLayerProps[] = {')
-        ggep_body.append('    {')
-        if self.layer_name in ['unique_objects']:
-          ggep_body.append('        "VK_LAYER_GOOGLE_%s",' % layer)
-          ggep_body.append('        VK_LAYER_API_VERSION, // specVersion')
-          ggep_body.append('        1, // implementationVersion')
-          ggep_body.append('        "Google Validation Layer"')
-        else:
-          ggep_body.append('        "VK_LAYER_LUNARG_%s",' % layer)
-          ggep_body.append('        VK_LAYER_API_VERSION, // specVersion')
-          ggep_body.append('        1, // implementationVersion')
-          ggep_body.append('        "LunarG Validation Layer"')
-        ggep_body.append('    }')
-        ggep_body.append('};')
-        ggep_body.append('')
-        ggep_body.append('%s' % self.lineinfo.get())
-        ggep_body.append('')
-        ggep_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)')
-        ggep_body.append('{')
-        ggep_body.append('    return util_GetLayerProperties(ARRAY_SIZE(globalLayerProps), globalLayerProps, pCount, pProperties);')
-        ggep_body.append('}')
-        return "\n".join(ggep_body)
-
-    def _gen_layer_get_physical_device_layer_props(self, layer="object_tracker"):
-        gpdlp_body = []
-        gpdlp_body.append('%s' % self.lineinfo.get())
-        gpdlp_body.append('static const VkLayerProperties deviceLayerProps[] = {')
-        gpdlp_body.append('    {')
-        if self.layer_name in ['unique_objects']:
-          gpdlp_body.append('        "VK_LAYER_GOOGLE_%s",' % layer)
-          gpdlp_body.append('        VK_LAYER_API_VERSION, // specVersion')
-          gpdlp_body.append('        1, // implementationVersion')
-          gpdlp_body.append('        "Google Validation Layer"')
-        else:
-          gpdlp_body.append('        "VK_LAYER_LUNARG_%s",' % layer)
-          gpdlp_body.append('        VK_LAYER_API_VERSION, // specVersion')
-          gpdlp_body.append('        1, // implementationVersion')
-          gpdlp_body.append('        "LunarG Validation Layer"')
-        gpdlp_body.append('    }')
-        gpdlp_body.append('};')
-        gpdlp_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties* pProperties)')
-        gpdlp_body.append('{')
-        gpdlp_body.append('    return util_GetLayerProperties(ARRAY_SIZE(deviceLayerProps), deviceLayerProps, pCount, pProperties);')
-        gpdlp_body.append('}')
-        gpdlp_body.append('')
-        return "\n".join(gpdlp_body)
+        return "\n".join(body)
 
     def _generate_dispatch_entrypoints(self, qual=""):
         if qual:
@@ -429,7 +406,10 @@ class Subcommand(object):
         intercepted = []
         for proto in self.protos:
             if proto.name in ["GetDeviceProcAddr",
-                              "GetInstanceProcAddr"]:
+                              "GetInstanceProcAddr",
+                              "EnumerateInstanceExtensionProperties",
+                              "EnumerateInstanceLayerProperties",
+                              "EnumerateDeviceLayerProperties"]:
                 intercepted.append(proto)
             else:
                 intercept = self.generate_intercept(proto, qual)
@@ -443,12 +423,6 @@ class Subcommand(object):
                         intercept = self._gen_debug_report_msg()
                     elif 'CreateDevice' == proto.name:
                         funcs.append('/* CreateDevice HERE */')
-                    elif 'EnumerateInstanceExtensionProperties' == proto.name:
-                        intercept = self._gen_layer_get_global_extension_props(self.layer_name)
-                    elif 'EnumerateInstanceLayerProperties' == proto.name:
-                        intercept = self._gen_layer_get_global_layer_props(self.layer_name)
-                    elif 'EnumerateDeviceLayerProperties' == proto.name:
-                        intercept = self._gen_layer_get_physical_device_layer_props(self.layer_name)
 
                 if intercept is not None:
                     funcs.append(intercept)
@@ -1330,7 +1304,8 @@ class ObjectTrackerSubcommand(Subcommand):
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_extensions(),
                 self._generate_layer_gpa_function(extensions,
-                                                  instance_extensions)]
+                                                  instance_extensions),
+                self._gen_layer_interface_v0_functions()]
         return "\n\n".join(body)
 
 class UniqueObjectsSubcommand(Subcommand):
@@ -1630,7 +1605,8 @@ class UniqueObjectsSubcommand(Subcommand):
 
         body = [self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function(extensions,
-                                                  instance_extensions)]
+                                                  instance_extensions),
+                self._gen_layer_interface_v0_functions()]
         return "\n\n".join(body)
 
 def main():
