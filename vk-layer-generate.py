@@ -347,6 +347,31 @@ class Subcommand(object):
         r_body.append('}')
         return "\n".join(r_body)
 
+    def _gen_layer_logging_workaround(self):
+        body = []
+        body.append('%s' % self.lineinfo.get())
+        body.append('// vk_layer_logging.h expects these to be defined')
+        body.append('')
+        body.append('VKAPI_ATTR VkResult VKAPI_CALL')
+        body.append('vkCreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,')
+        body.append('                               const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pMsgCallback) {')
+        body.append('    return %s::vkCreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);' % self.layer_name)
+        body.append('}')
+        body.append('')
+        body.append('VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance,')
+        body.append('                                                                           VkDebugReportCallbackEXT msgCallback,')
+        body.append('                                                                           const VkAllocationCallbacks *pAllocator) {')
+        body.append('    %s::vkDestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);' % self.layer_name)
+        body.append('}')
+        body.append('')
+        body.append('VKAPI_ATTR void VKAPI_CALL')
+        body.append('vkDebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t object,')
+        body.append('                        size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg) {')
+        body.append('    %s::vkDebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);' % self.layer_name)
+        body.append('}')
+
+        return "\n".join(body)
+
     def _gen_layer_interface_v0_functions(self):
         body = []
         body.append('%s' % self.lineinfo.get())
@@ -394,6 +419,16 @@ class Subcommand(object):
         body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties* pProperties)')
         body.append('{')
         body.append('    return util_GetLayerProperties(1, &globalLayerProps, pCount, pProperties);')
+        body.append('}')
+        body.append('')
+        body.append('VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice dev, const char *funcName)')
+        body.append('{')
+        body.append('    return %s::vkGetDeviceProcAddr(dev, funcName);' % self.layer_name)
+        body.append('}')
+        body.append('')
+        body.append('VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *funcName)')
+        body.append('{')
+        body.append('    return %s::vkGetInstanceProcAddr(instance, funcName);' % self.layer_name)
         body.append('}')
 
         return "\n".join(body)
@@ -1297,7 +1332,8 @@ class ObjectTrackerSubcommand(Subcommand):
             print('Error: Undefined DisplayServer')
             instance_extensions=[]
 
-        body = [self.generate_maps(),
+        body = ["namespace %s {" % self.layer_name,
+                self.generate_maps(),
                 self.generate_procs(),
                 self.generate_destroy_instance(),
                 self.generate_destroy_device(),
@@ -1305,6 +1341,8 @@ class ObjectTrackerSubcommand(Subcommand):
                 self._generate_extensions(),
                 self._generate_layer_gpa_function(extensions,
                                                   instance_extensions),
+                "} // namespace %s" % self.layer_name,
+                self._gen_layer_logging_workaround(),
                 self._gen_layer_interface_v0_functions()]
         return "\n\n".join(body)
 
@@ -1603,9 +1641,11 @@ class UniqueObjectsSubcommand(Subcommand):
             print('Error: Undefined DisplayServer')
             instance_extensions=[]
 
-        body = [self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
+        body = ["namespace %s {" % self.layer_name,
+                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function(extensions,
                                                   instance_extensions),
+                "} // namespace %s" % self.layer_name,
                 self._gen_layer_interface_v0_functions()]
         return "\n\n".join(body)
 

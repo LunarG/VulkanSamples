@@ -28,6 +28,8 @@
 #include "vk_layer_table.h"
 #include "vk_layer_utils.h"
 
+namespace object_tracker {
+
 // Object Tracker ERROR codes
 enum OBJECT_TRACK_ERROR {
     OBJTRACK_NONE,                     // Used for INFO & other non-error messages
@@ -106,8 +108,6 @@ static std::mutex global_lock;
 static uint64_t numObjs[NUM_OBJECT_TYPES] = {0};
 static uint64_t numTotalObjs = 0;
 std::vector<VkQueueFamilyProperties> queue_family_properties;
-
-template layer_data *get_my_data_ptr<layer_data>(void *data_key, std::unordered_map<void *, layer_data *> &data_map);
 
 //
 // Internal Object Tracker Functions
@@ -1059,3 +1059,5 @@ VkResult explicit_CreateComputePipelines(VkDevice device, VkPipelineCache pipeli
     lock.unlock();
     return result;
 }
+
+} // namespace object_tracker
