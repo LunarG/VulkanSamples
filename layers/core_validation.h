@@ -160,7 +160,6 @@ struct DAGNode {
 struct RENDER_PASS_NODE {
     VkRenderPass renderPass;
     VkRenderPassCreateInfo const *pCreateInfo;
-    VkFramebuffer fb;
     std::vector<bool> hasSelfDependency;
     std::vector<DAGNode> subpassToNode;
     std::vector<std::vector<VkFormat>> subpassColorFormats;
@@ -168,7 +167,7 @@ struct RENDER_PASS_NODE {
     std::unordered_map<uint32_t, bool> attachment_first_read;
     std::unordered_map<uint32_t, VkImageLayout> attachment_first_layout;
 
-    RENDER_PASS_NODE(VkRenderPassCreateInfo const *pCreateInfo) : pCreateInfo(pCreateInfo), fb(VK_NULL_HANDLE) {
+    RENDER_PASS_NODE(VkRenderPassCreateInfo const *pCreateInfo) : pCreateInfo(pCreateInfo) {
         uint32_t i;
 
         subpassColorFormats.reserve(pCreateInfo->subpassCount);
@@ -557,6 +556,7 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     RENDER_PASS_NODE *activeRenderPass;
     VkSubpassContents activeSubpassContents;
     uint32_t activeSubpass;
+    VkFramebuffer activeFramebuffer;
     std::unordered_set<VkFramebuffer> framebuffers;
     // Track descriptor sets that are destroyed or updated while bound to CB
     // TODO : These data structures relate to tracking resources that invalidate

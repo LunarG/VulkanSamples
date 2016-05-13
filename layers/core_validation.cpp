@@ -3763,6 +3763,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
             }
         }
         pCB->framebuffers.clear();
+        pCB->activeFramebuffer = nullptr;
 
     }
 }
@@ -8941,10 +8942,10 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
             auto pass_data = dev_data->renderPassMap.find(pRenderPassBegin->renderPass);
             if (pass_data != dev_data->renderPassMap.end()) {
                 RENDER_PASS_NODE* pRPNode = pass_data->second;
-                pRPNode->fb = pRenderPassBegin->framebuffer;
+                pCB->activeFramebuffer = pRenderPassBegin->framebuffer;
                 auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
                 for (size_t i = 0; i < pRPNode->attachments.size(); ++i) {
-                    MT_FB_ATTACHMENT_INFO &fb_info = dev_data->frameBufferMap[pRPNode->fb].attachments[i];
+                    MT_FB_ATTACHMENT_INFO &fb_info = dev_data->frameBufferMap[pRenderPassBegin->framebuffer].attachments[i];
                     if (pRPNode->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
                         if (cb_data != dev_data->commandBufferMap.end()) {
                             std::function<bool()> function = [=]() {
@@ -9040,7 +9041,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
         RENDER_PASS_NODE* pRPNode = cb_data->second->activeRenderPass;
         if (pRPNode) {
             for (size_t i = 0; i < pRPNode->attachments.size(); ++i) {
-                MT_FB_ATTACHMENT_INFO &fb_info = dev_data->frameBufferMap[pRPNode->fb].attachments[i];
+                MT_FB_ATTACHMENT_INFO &fb_info = dev_data->frameBufferMap[cb_data->second->activeFramebuffer].attachments[i];
                 if (pRPNode->attachments[i].store_op == VK_ATTACHMENT_STORE_OP_STORE) {
                     if (cb_data != dev_data->commandBufferMap.end()) {
                         std::function<bool()> function = [=]() {
@@ -9070,6 +9071,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
         TransitionFinalSubpassLayouts(commandBuffer, &pCB->activeRenderPassBeginInfo);
         pCB->activeRenderPass = nullptr;
         pCB->activeSubpass = 0;
+        pCB->activeFramebuffer = nullptr;
     }
     lock.unlock();
     if (!skipCall)
@@ -9228,7 +9230,7 @@ static bool validateFramebuffer(layer_data *dev_data, VkCommandBuffer primaryBuf
     if (!pSubCB->beginInfo.pInheritanceInfo) {
         return skip_call;
     }
-    VkFramebuffer primary_fb = pCB->activeRenderPass->fb;
+    VkFramebuffer primary_fb = pCB->activeFramebuffer;
     VkFramebuffer secondary_fb = pSubCB->beginInfo.pInheritanceInfo->framebuffer;
     if (secondary_fb != VK_NULL_HANDLE) {
         if (primary_fb != secondary_fb) {
