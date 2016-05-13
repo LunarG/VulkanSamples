@@ -2289,7 +2289,8 @@ static bool require_feature(debug_report_data *report_data, VkBool32 feature, ch
     return true;
 }
 
-static bool validate_shader_capabilities(debug_report_data *report_data, shader_module const *src, VkPhysicalDeviceFeatures const *enabledFeatures) {
+static bool validate_shader_capabilities(debug_report_data *report_data, shader_module const *src,
+                                         VkPhysicalDeviceFeatures const *enabledFeatures) {
     bool pass = true;
 
 
@@ -2429,9 +2430,12 @@ static bool validate_shader_capabilities(debug_report_data *report_data, shader_
 
 static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShaderStageCreateInfo const *pStage,
                                            PIPELINE_NODE *pipeline, PIPELINE_LAYOUT_NODE *pipelineLayout,
-                                           shader_module **out_module, spirv_inst_iter *out_entrypoint) {
+                                           shader_module **out_module, spirv_inst_iter *out_entrypoint,
+                                           VkPhysicalDeviceFeatures const *enabledFeatures,
+                                           std::unordered_map<VkShaderModule, std::unique_ptr<shader_module>> const &shaderModuleMap) {
     bool pass = true;
-    auto module = *out_module = dev_data->shaderModuleMap[pStage->module].get();
+    auto module_it = shaderModuleMap.find(pStage->module);
+    auto module = *out_module = module_it->second.get();
     pass &= validate_specialization_offsets(dev_data->report_data, pStage);
 
     /* find the entrypoint */
@@ -2446,7 +2450,7 @@ static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShade
     }
 
     /* validate shader capabilities against enabled device features */
-    pass &= validate_shader_capabilities(dev_data->report_data, module, &dev_data->phys_dev_properties.features);
+    pass &= validate_shader_capabilities(dev_data->report_data, module, enabledFeatures);
 
     /* mark accessible ids */
     std::unordered_set<uint32_t> accessible_ids;
@@ -2513,7 +2517,9 @@ static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShade
 
 // Validate that the shaders used by the given pipeline and store the active_slots
 //  that are actually used by the pipeline into pPipeline->active_slots
-static bool validate_and_capture_pipeline_shader_state(layer_data *my_data, PIPELINE_NODE *pPipeline) {
+static bool validate_and_capture_pipeline_shader_state(layer_data *my_data, PIPELINE_NODE *pPipeline,
+                                                       VkPhysicalDeviceFeatures const *enabledFeatures,
+                                                       std::unordered_map<VkShaderModule, unique_ptr<shader_module>> const & shaderModuleMap) {
     auto pCreateInfo = pPipeline->graphicsPipelineCI.ptr();
     int vertex_stage = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
     int fragment_stage = get_shader_stage_id(VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -2531,7 +2537,8 @@ static bool validate_and_capture_pipeline_shader_state(layer_data *my_data, PIPE
         auto pStage = &pCreateInfo->pStages[i];
         auto stage_id = get_shader_stage_id(pStage->stage);
         pass &= validate_pipeline_shader_stage(my_data, pStage, pPipeline, pipelineLayout,
-                                               &shaders[stage_id], &entrypoints[stage_id]);
+                                               &shaders[stage_id], &entrypoints[stage_id],
+                                               enabledFeatures, shaderModuleMap);
     }
 
     vi = pCreateInfo->pVertexInputState;
@@ -2571,7 +2578,8 @@ static bool validate_and_capture_pipeline_shader_state(layer_data *my_data, PIPE
     return pass;
 }
 
-static bool validate_compute_pipeline(layer_data *my_data, PIPELINE_NODE *pPipeline) {
+static bool validate_compute_pipeline(layer_data *my_data, PIPELINE_NODE *pPipeline, VkPhysicalDeviceFeatures const *enabledFeatures,
+                                      std::unordered_map<VkShaderModule, unique_ptr<shader_module>> const & shaderModuleMap) {
     auto pCreateInfo = pPipeline->computePipelineCI.ptr();
 
     auto pipelineLayout = pCreateInfo->layout != VK_NULL_HANDLE ? &my_data->pipelineLayoutMap[pCreateInfo->layout] : nullptr;
@@ -2580,7 +2588,7 @@ static bool validate_compute_pipeline(layer_data *my_data, PIPELINE_NODE *pPipel
     spirv_inst_iter entrypoint;
 
     return validate_pipeline_shader_stage(my_data, &pCreateInfo->stage, pPipeline, pipelineLayout,
-                                          &module, &entrypoint);
+                                          &module, &entrypoint, enabledFeatures, shaderModuleMap);
 }
 
 // Return Set node ptr for specified set or else NULL
@@ -2961,7 +2969,8 @@ static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device
                             pPipeline->graphicsPipelineCI.subpass, rp_data->second->pCreateInfo->subpassCount - 1);
     }
 
-    if (!validate_and_capture_pipeline_shader_state(my_data, pPipeline)) {
+    if (!validate_and_capture_pipeline_shader_state(my_data, pPipeline, &my_data->phys_dev_properties.features,
+                                                    my_data->shaderModuleMap)) {
         skipCall = true;
     }
     // Each shader's stage must be unique
