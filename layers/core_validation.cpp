@@ -5703,6 +5703,11 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
             pPipeNode[i]->renderPass = renderpass_it->second;
         }
 
+        auto pipeline_layout_it = dev_data->pipelineLayoutMap.find(pCreateInfos[i].layout);
+        if (pipeline_layout_it != dev_data->pipelineLayoutMap.end()) {
+            pPipeNode[i]->pipelineLayout = &pipeline_layout_it->second;
+        }
+
         skipCall |= verifyPipelineCreateState(dev_data, device, pPipeNode, i);
     }
 
@@ -5745,6 +5750,11 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
         // Create and initialize internal tracking data structure
         pPipeNode[i] = new PIPELINE_NODE;
         pPipeNode[i]->initComputePipeline(&pCreateInfos[i]);
+
+        auto pipeline_layout_it = dev_data->pipelineLayoutMap.find(pCreateInfos[i].layout);
+        if (pipeline_layout_it != dev_data->pipelineLayoutMap.end()) {
+            pPipeNode[i]->pipelineLayout = &pipeline_layout_it->second;
+        }
         // memcpy(&pPipeNode[i]->computePipelineCI, (const void *)&pCreateInfos[i], sizeof(VkComputePipelineCreateInfo));
 
         // TODO: Add Compute Pipeline Verification

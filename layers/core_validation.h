@@ -194,6 +194,13 @@ struct RENDER_PASS_NODE {
     }
 };
 
+// Store layouts and pushconstants for PipelineLayout
+struct PIPELINE_LAYOUT_NODE {
+    std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+    std::vector<cvdescriptorset::DescriptorSetLayout const *> setLayouts;
+    std::vector<VkPushConstantRange> pushConstantRanges;
+};
+
 class PIPELINE_NODE {
   public:
     VkPipeline pipeline;
@@ -210,10 +217,12 @@ class PIPELINE_NODE {
     std::vector<VkPipelineColorBlendAttachmentState> attachments;
     bool blendConstantsEnabled; // Blend constants enabled for any attachments
     RENDER_PASS_NODE *renderPass;
+    PIPELINE_LAYOUT_NODE *pipelineLayout;
+
     // Default constructor
     PIPELINE_NODE()
         : pipeline{}, graphicsPipelineCI{}, computePipelineCI{}, active_shaders(0), duplicate_shaders(0), active_slots(), vertexBindingDescriptions(),
-          vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false), renderPass(nullptr) {}
+          vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false), renderPass(nullptr), pipelineLayout(nullptr) {}
 
     void initGraphicsPipeline(const VkGraphicsPipelineCreateInfo *pCreateInfo) {
         graphicsPipelineCI.initialize(pCreateInfo);
@@ -321,12 +330,6 @@ class FRAMEBUFFER_NODE {
     VkFramebufferCreateInfo createInfo;
     std::unordered_set<VkCommandBuffer> referencingCmdBuffers;
     std::vector<MT_FB_ATTACHMENT_INFO> attachments;
-};
-// Store layouts and pushconstants for PipelineLayout
-struct PIPELINE_LAYOUT_NODE {
-    std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
-    std::vector<cvdescriptorset::DescriptorSetLayout const *> setLayouts;
-    std::vector<VkPushConstantRange> pushConstantRanges;
 };
 
 typedef struct _DESCRIPTOR_POOL_NODE {
