@@ -2563,11 +2563,9 @@ static bool validate_and_capture_pipeline_shader_state(layer_data *my_data, PIPE
         }
     }
 
-    auto rp = pCreateInfo->renderPass != VK_NULL_HANDLE ? my_data->renderPassMap[pCreateInfo->renderPass] : nullptr;
-
-    if (shaders[fragment_stage] && rp) {
-        pass &= validate_fs_outputs_against_render_pass(my_data->report_data, shaders[fragment_stage], entrypoints[fragment_stage], rp,
-                                                       pCreateInfo->subpass);
+    if (shaders[fragment_stage] && pPipeline->renderPass) {
+        pass &= validate_fs_outputs_against_render_pass(my_data->report_data, shaders[fragment_stage], entrypoints[fragment_stage],
+                                                        pPipeline->renderPass, pCreateInfo->subpass);
     }
 
     return pass;
