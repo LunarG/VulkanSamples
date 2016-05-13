@@ -289,7 +289,7 @@ class Subcommand(object):
     def _gen_create_msg_callback(self):
         r_body = []
         r_body.append('%s' % self.lineinfo.get())
-        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(')
+        r_body.append('VKAPI_ATTR VkResult VKAPI_CALL CreateDebugReportCallbackEXT(')
         r_body.append('        VkInstance                                   instance,')
         r_body.append('        const VkDebugReportCallbackCreateInfoEXT*    pCreateInfo,')
         r_body.append('        const VkAllocationCallbacks*                 pAllocator,')
@@ -320,7 +320,7 @@ class Subcommand(object):
     def _gen_destroy_msg_callback(self):
         r_body = []
         r_body.append('%s' % self.lineinfo.get())
-        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT msgCallback, const VkAllocationCallbacks *pAllocator)')
+        r_body.append('VKAPI_ATTR void VKAPI_CALL DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT msgCallback, const VkAllocationCallbacks *pAllocator)')
         r_body.append('{')
         # Switch to this code section for the new per-instance storage and debug callbacks
         if self.layer_name in ['object_tracker', 'unique_objects']:
@@ -336,7 +336,7 @@ class Subcommand(object):
     def _gen_debug_report_msg(self):
         r_body = []
         r_body.append('%s' % self.lineinfo.get())
-        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT    flags, VkDebugReportObjectTypeEXT objType, uint64_t object, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg)')
+        r_body.append('VKAPI_ATTR void VKAPI_CALL DebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT    flags, VkDebugReportObjectTypeEXT objType, uint64_t object, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg)')
         r_body.append('{')
         # Switch to this code section for the new per-instance storage and debug callbacks
         if self.layer_name == 'object_tracker':
@@ -355,19 +355,19 @@ class Subcommand(object):
         body.append('VKAPI_ATTR VkResult VKAPI_CALL')
         body.append('vkCreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,')
         body.append('                               const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pMsgCallback) {')
-        body.append('    return %s::vkCreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);' % self.layer_name)
+        body.append('    return %s::CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);' % self.layer_name)
         body.append('}')
         body.append('')
         body.append('VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance,')
         body.append('                                                                           VkDebugReportCallbackEXT msgCallback,')
         body.append('                                                                           const VkAllocationCallbacks *pAllocator) {')
-        body.append('    %s::vkDestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);' % self.layer_name)
+        body.append('    %s::DestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);' % self.layer_name)
         body.append('}')
         body.append('')
         body.append('VKAPI_ATTR void VKAPI_CALL')
         body.append('vkDebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t object,')
         body.append('                        size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg) {')
-        body.append('    %s::vkDebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);' % self.layer_name)
+        body.append('    %s::DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);' % self.layer_name)
         body.append('}')
 
         return "\n".join(body)
@@ -423,7 +423,7 @@ class Subcommand(object):
         body.append('')
         body.append('VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice dev, const char *funcName)')
         body.append('{')
-        body.append('    return %s::vkGetDeviceProcAddr(dev, funcName);' % self.layer_name)
+        body.append('    return %s::GetDeviceProcAddr(dev, funcName);' % self.layer_name)
         body.append('}')
         body.append('')
         body.append('VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *funcName)')
@@ -437,7 +437,7 @@ class Subcommand(object):
         body.append('    if (!strcmp(funcName, "vkGetInstanceProcAddr"))')
         body.append('        return reinterpret_cast<PFN_vkVoidFunction>(vkGetInstanceProcAddr);')
         body.append('')
-        body.append('    return %s::vkGetInstanceProcAddr(instance, funcName);' % self.layer_name)
+        body.append('    return %s::GetInstanceProcAddr(instance, funcName);' % self.layer_name)
         body.append('}')
 
         return "\n".join(body)
@@ -456,6 +456,7 @@ class Subcommand(object):
                 continue
             elif proto.name in ["GetDeviceProcAddr",
                                 "GetInstanceProcAddr"]:
+                funcs.append(proto.c_func(attr="VKAPI") + ';')
                 intercepted.append(proto)
             else:
                 intercept = self.generate_intercept(proto, qual)
@@ -475,16 +476,15 @@ class Subcommand(object):
                     if not "KHR" in proto.name:
                         intercepted.append(proto)
 
-        prefix="vk"
         instance_lookups = []
         device_lookups = []
         for proto in intercepted:
             if proto_is_global(proto):
                 instance_lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
-                instance_lookups.append("    return (PFN_vkVoidFunction) %s%s;" % (prefix, proto.name))
+                instance_lookups.append("    return (PFN_vkVoidFunction) %s;" % (proto.name))
             else:
                 device_lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
-                device_lookups.append("    return (PFN_vkVoidFunction) %s%s;" % (prefix, proto.name))
+                device_lookups.append("    return (PFN_vkVoidFunction) %s;" % (proto.name))
 
         # add customized intercept_core_device_command
         body = []
@@ -541,11 +541,11 @@ class Subcommand(object):
 
                 for ext_name in ext_list:
                     func_body.append('    if (!strcmp("%s", name))\n'
-                                     '        return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (ext_name, ext_name))
+                                     '        return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (ext_name, ext_name[2:]))
                 func_body.append('\n    return nullptr;')
                 func_body.append('}\n')
 
-            func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
+            func_body.append("VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
                              "    addr = intercept_core_device_command(funcName);\n"
@@ -579,14 +579,14 @@ class Subcommand(object):
                         if wsi_name(ext_name):
                             func_body.append('%s' % wsi_ifdef(ext_name))
                         func_body.append('    if (!strcmp("%s", name))\n'
-                                         '        return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (ext_name, ext_name))
+                                         '        return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (ext_name, ext_name[2:]))
                         if wsi_name(ext_name):
                             func_body.append('%s' % wsi_endif(ext_name))
 
                     func_body.append('\n    return nullptr;')
                 func_body.append('}\n')
 
-            func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
+            func_body.append("VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
                              "    addr = intercept_core_instance_command(funcName);\n"
@@ -611,7 +611,7 @@ class Subcommand(object):
             return "\n".join(func_body)
         else:
             func_body.append('%s' % self.lineinfo.get())
-            func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
+            func_body.append("VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n")
             func_body.append("\n"
@@ -644,7 +644,7 @@ class Subcommand(object):
                              "    }\n"
                              "}\n")
             func_body.append('%s' % self.lineinfo.get())
-            func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
+            func_body.append("VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
                              )
@@ -876,7 +876,7 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_destroy_instance(self):
         gedi_txt = []
         gedi_txt.append('%s' % self.lineinfo.get())
-        gedi_txt.append('VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(')
+        gedi_txt.append('VKAPI_ATTR void VKAPI_CALL DestroyInstance(')
         gedi_txt.append('VkInstance instance,')
         gedi_txt.append('const VkAllocationCallbacks* pAllocator)')
         gedi_txt.append('{')
@@ -963,7 +963,7 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_destroy_device(self):
         gedd_txt = []
         gedd_txt.append('%s' % self.lineinfo.get())
-        gedd_txt.append('VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(')
+        gedd_txt.append('VKAPI_ATTR void VKAPI_CALL DestroyDevice(')
         gedd_txt.append('VkDevice device,')
         gedd_txt.append('const VkAllocationCallbacks* pAllocator)')
         gedd_txt.append('{')
@@ -1132,7 +1132,7 @@ class ObjectTrackerSubcommand(Subcommand):
             "DestroySwapchainKHR",
             "GetSwapchainImagesKHR"
         ]
-        decl = proto.c_func(prefix="vk", attr="VKAPI")
+        decl = proto.c_func(attr="VKAPI")
         param0_name = proto.params[0].name
         using_line = ''
         create_line = ''
@@ -1353,7 +1353,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 self.generate_procs(),
                 self.generate_destroy_instance(),
                 self.generate_destroy_device(),
-                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
+                self._generate_dispatch_entrypoints(),
                 self._generate_extensions(),
                 self._generate_layer_gpa_function(extensions,
                                                   instance_extensions),
@@ -1473,7 +1473,7 @@ class UniqueObjectsSubcommand(Subcommand):
         post_call_txt = '' # code following call down chain such to wrap newly created ndos, or destroy local wrap struct
         funcs = []
         indent = '    ' # indent level for generated code
-        decl = proto.c_func(prefix="vk", attr="VKAPI")
+        decl = proto.c_func(attr="VKAPI")
         # A few API cases that are manual code
         # TODO : Special case Create*Pipelines funcs to handle creating multiple unique objects
         explicit_object_tracker_functions = ['GetSwapchainImagesKHR',
@@ -1658,7 +1658,7 @@ class UniqueObjectsSubcommand(Subcommand):
             instance_extensions=[]
 
         body = ["namespace %s {" % self.layer_name,
-                self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
+                self._generate_dispatch_entrypoints(),
                 self._generate_layer_gpa_function(extensions,
                                                   instance_extensions),
                 "} // namespace %s" % self.layer_name,
