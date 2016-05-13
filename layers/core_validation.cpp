@@ -2428,7 +2428,7 @@ static bool validate_shader_capabilities(debug_report_data *report_data, shader_
     return pass;
 }
 
-static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShaderStageCreateInfo const *pStage,
+static bool validate_pipeline_shader_stage(debug_report_data *report_data, VkPipelineShaderStageCreateInfo const *pStage,
                                            PIPELINE_NODE *pipeline, PIPELINE_LAYOUT_NODE *pipelineLayout,
                                            shader_module **out_module, spirv_inst_iter *out_entrypoint,
                                            VkPhysicalDeviceFeatures const *enabledFeatures,
@@ -2436,12 +2436,12 @@ static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShade
     bool pass = true;
     auto module_it = shaderModuleMap.find(pStage->module);
     auto module = *out_module = module_it->second.get();
-    pass &= validate_specialization_offsets(dev_data->report_data, pStage);
+    pass &= validate_specialization_offsets(report_data, pStage);
 
     /* find the entrypoint */
     auto entrypoint = *out_entrypoint = find_entrypoint(module, pStage->pName, pStage->stage);
     if (entrypoint == module->end()) {
-        if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+        if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                     __LINE__, SHADER_CHECKER_MISSING_ENTRYPOINT, "SC",
                     "No entrypoint found named `%s` for stage %s", pStage->pName,
                     string_VkShaderStageFlagBits(pStage->stage))) {
@@ -2450,7 +2450,7 @@ static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShade
     }
 
     /* validate shader capabilities against enabled device features */
-    pass &= validate_shader_capabilities(dev_data->report_data, module, enabledFeatures);
+    pass &= validate_shader_capabilities(report_data, module, enabledFeatures);
 
     /* mark accessible ids */
     std::unordered_set<uint32_t> accessible_ids;
@@ -2458,10 +2458,10 @@ static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShade
 
     /* validate descriptor set layout against what the entrypoint actually uses */
     std::map<descriptor_slot_t, interface_var> descriptor_uses;
-    collect_interface_by_descriptor_slot(dev_data->report_data, module, accessible_ids, descriptor_uses);
+    collect_interface_by_descriptor_slot(report_data, module, accessible_ids, descriptor_uses);
 
     /* validate push constant usage */
-    pass &= validate_push_constant_usage(dev_data->report_data, &pipelineLayout->pushConstantRanges,
+    pass &= validate_push_constant_usage(report_data, &pipelineLayout->pushConstantRanges,
                                         module, accessible_ids, pStage->stage);
 
     /* validate descriptor use */
@@ -2474,14 +2474,14 @@ static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShade
         unsigned required_descriptor_count;
 
         if (!binding) {
-            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+            if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_MISSING_DESCRIPTOR, "SC",
                         "Shader uses descriptor slot %u.%u (used as type `%s`) but not declared in pipeline layout",
                         use.first.first, use.first.second, describe_type(module, use.second.type_id).c_str())) {
                 pass = false;
             }
         } else if (~binding->stageFlags & pStage->stage) {
-            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+            if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                         /*dev*/ 0, __LINE__, SHADER_CHECKER_DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE, "SC",
                         "Shader uses descriptor slot %u.%u (used "
                         "as type `%s`) but descriptor not "
@@ -2492,7 +2492,7 @@ static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShade
             }
         } else if (!descriptor_type_match(module, use.second.type_id, binding->descriptorType,
                                           /*out*/ required_descriptor_count)) {
-            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
+            if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
                         SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC", "Type mismatch on descriptor slot "
                                                                        "%u.%u (used as type `%s`) but "
                                                                        "descriptor of type %s",
@@ -2501,7 +2501,7 @@ static bool validate_pipeline_shader_stage(layer_data *dev_data, VkPipelineShade
                 pass = false;
             }
         } else if (binding->descriptorCount < required_descriptor_count) {
-            if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
+            if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
                         SHADER_CHECKER_DESCRIPTOR_TYPE_MISMATCH, "SC",
                         "Shader expects at least %u descriptors for binding %u.%u (used as type `%s`) but only %u provided",
                         required_descriptor_count, use.first.first, use.first.second,
@@ -2536,7 +2536,7 @@ static bool validate_and_capture_pipeline_shader_state(layer_data *my_data, PIPE
     for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
         auto pStage = &pCreateInfo->pStages[i];
         auto stage_id = get_shader_stage_id(pStage->stage);
-        pass &= validate_pipeline_shader_stage(my_data, pStage, pPipeline, pipelineLayout,
+        pass &= validate_pipeline_shader_stage(my_data->report_data, pStage, pPipeline, pipelineLayout,
                                                &shaders[stage_id], &entrypoints[stage_id],
                                                enabledFeatures, shaderModuleMap);
     }
@@ -2587,7 +2587,7 @@ static bool validate_compute_pipeline(layer_data *my_data, PIPELINE_NODE *pPipel
     shader_module *module;
     spirv_inst_iter entrypoint;
 
-    return validate_pipeline_shader_stage(my_data, &pCreateInfo->stage, pPipeline, pipelineLayout,
+    return validate_pipeline_shader_stage(my_data->report_data, &pCreateInfo->stage, pPipeline, pipelineLayout,
                                           &module, &entrypoint, enabledFeatures, shaderModuleMap);
 }
 
