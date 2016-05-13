@@ -5690,6 +5690,12 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
     for (i = 0; i < count; i++) {
         pPipeNode[i] = new PIPELINE_NODE;
         pPipeNode[i]->initGraphicsPipeline(&pCreateInfos[i]);
+
+        auto renderpass_it = dev_data->renderPassMap.find(pCreateInfos[i].renderPass);
+        if (renderpass_it != dev_data->renderPassMap.end()) {
+            pPipeNode[i]->renderPass = renderpass_it->second;
+        }
+
         skipCall |= verifyPipelineCreateState(dev_data, device, pPipeNode, i);
     }
 
