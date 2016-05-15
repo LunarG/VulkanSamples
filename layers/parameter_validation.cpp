@@ -4304,6 +4304,8 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, cons
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance, const char *funcName) {
     PFN_vkVoidFunction proc = intercept_core_instance_command(funcName);
+    if (!proc)
+        proc = intercept_core_device_command(funcName);
     if (proc)
         return proc;
 
