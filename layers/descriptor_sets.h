@@ -212,6 +212,7 @@ class ImageDescriptor : public Descriptor {
                     const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *);
     bool WriteUpdate(const VkWriteDescriptorSet *, const uint32_t, std::string *) override;
     bool CopyUpdate(const Descriptor *, std::string *) override;
+    virtual bool IsStorage() const override { return storage_; }
     VkImageView GetImageView() const { return image_view_; }
     VkImageLayout GetImageLayout() const { return image_layout_; }
 
