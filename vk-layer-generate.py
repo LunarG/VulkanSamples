@@ -428,6 +428,15 @@ class Subcommand(object):
         body.append('')
         body.append('VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *funcName)')
         body.append('{')
+        body.append('    if (!strcmp(funcName, "vkEnumerateInstanceLayerProperties"))')
+        body.append('        return reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceLayerProperties);')
+        body.append('    if (!strcmp(funcName, "vkEnumerateDeviceLayerProperties"))')
+        body.append('        return reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateDeviceLayerProperties);')
+        body.append('    if (!strcmp(funcName, "vkEnumerateInstanceExtensionProperties"))')
+        body.append('        return reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceExtensionProperties);')
+        body.append('    if (!strcmp(funcName, "vkGetInstanceProcAddr"))')
+        body.append('        return reinterpret_cast<PFN_vkVoidFunction>(vkGetInstanceProcAddr);')
+        body.append('')
         body.append('    return %s::vkGetInstanceProcAddr(instance, funcName);' % self.layer_name)
         body.append('}')
 
@@ -440,11 +449,13 @@ class Subcommand(object):
         funcs = []
         intercepted = []
         for proto in self.protos:
-            if proto.name in ["GetDeviceProcAddr",
-                              "GetInstanceProcAddr",
-                              "EnumerateInstanceExtensionProperties",
+            if proto.name in ["EnumerateInstanceExtensionProperties",
                               "EnumerateInstanceLayerProperties",
                               "EnumerateDeviceLayerProperties"]:
+                # the layer do not need to define these
+                continue
+            elif proto.name in ["GetDeviceProcAddr",
+                                "GetInstanceProcAddr"]:
                 intercepted.append(proto)
             else:
                 intercept = self.generate_intercept(proto, qual)
@@ -491,6 +502,11 @@ class Subcommand(object):
         body.append("static inline PFN_vkVoidFunction intercept_core_instance_command(const char *name)")
         body.append("{")
         body.append(generate_get_proc_addr_check("name"))
+        body.append("")
+        body.append("    // we should never be queried for these commands")
+        body.append("    assert(strcmp(name, \"vkEnumerateInstanceLayerProperties\") &&")
+        body.append("           strcmp(name, \"vkEnumerateInstanceExtensionProperties\") &&")
+        body.append("           strcmp(name, \"vkEnumerateDeviceLayerProperties\"));")
         body.append("")
         body.append("    name += 2;")
         body.append("    %s" % "\n    ".join(instance_lookups))
