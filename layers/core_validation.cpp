@@ -3440,8 +3440,6 @@ static bool dsUpdate(layer_data *my_data, VkDevice device, uint32_t descriptorWr
 static bool validate_descriptor_availability_in_pool(layer_data *dev_data, DESCRIPTOR_POOL_NODE *pPoolNode, uint32_t count,
                                                      const VkDescriptorSetLayout *pSetLayouts) {
     bool skipCall = false;
-    uint32_t i = 0;
-    uint32_t j = 0;
 
     // Track number of descriptorSets allowable in this pool
     if (pPoolNode->availableSets < count) {
@@ -3454,7 +3452,7 @@ static bool validate_descriptor_availability_in_pool(layer_data *dev_data, DESCR
         pPoolNode->availableSets -= count;
     }
 
-    for (i = 0; i < count; ++i) {
+    for (uint32_t i = 0; i < count; ++i) {
         auto layout_pair = dev_data->descriptorSetLayoutMap.find(pSetLayouts[i]);
         if (layout_pair == dev_data->descriptorSetLayoutMap.end()) {
             skipCall |=
@@ -3463,12 +3461,11 @@ static bool validate_descriptor_availability_in_pool(layer_data *dev_data, DESCR
                         "Unable to find set layout node for layout 0x%" PRIxLEAST64 " specified in vkAllocateDescriptorSets() call",
                         (uint64_t)pSetLayouts[i]);
         } else {
-            uint32_t typeIndex = 0, poolSizeCount = 0;
             auto &layout_node = layout_pair->second;
-            for (j = 0; j < layout_node->GetBindingCount(); ++j) {
+            for (uint32_t j = 0; j < layout_node->GetBindingCount(); ++j) {
                 const auto &binding_layout = layout_node->GetDescriptorSetLayoutBindingPtrFromIndex(j);
-                typeIndex = static_cast<uint32_t>(binding_layout->descriptorType);
-                poolSizeCount = binding_layout->descriptorCount;
+                uint32_t typeIndex = static_cast<uint32_t>(binding_layout->descriptorType);
+                uint32_t poolSizeCount = binding_layout->descriptorCount;
                 if (poolSizeCount > pPoolNode->availableDescriptorTypeCount[typeIndex]) {
                     skipCall |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
@@ -3485,6 +3482,7 @@ static bool validate_descriptor_availability_in_pool(layer_data *dev_data, DESCR
     }
     return skipCall;
 }
+
 // Free the descriptor set, remove it from setMap and invalidate any cmd buffers that it was bound to
 static void freeDescriptorSet(layer_data *dev_data, cvdescriptorset::DescriptorSet *descriptor_set) {
     invalidateBoundCmdBuffers(dev_data, descriptor_set);
