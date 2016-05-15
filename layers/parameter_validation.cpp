@@ -4338,11 +4338,13 @@ intercept_core_instance_command(const char *name) {
         { "vkGetPhysicalDeviceSparseImageFormatProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSparseImageFormatProperties) },
         { "vkGetPhysicalDeviceQueueFamilyProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceQueueFamilyProperties) },
         { "vkGetPhysicalDeviceMemoryProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceMemoryProperties) },
-        { "vkEnumerateInstanceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceLayerProperties) },
-        { "vkEnumerateInstanceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceExtensionProperties) },
-        { "vkEnumerateDeviceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateDeviceLayerProperties) },
         { "vkEnumerateDeviceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceExtensionProperties) },
     };
+
+    // we should never be queried for these commands
+    assert(strcmp(name, "vkEnumerateInstanceLayerProperties") &&
+           strcmp(name, "vkEnumerateInstanceExtensionProperties") &&
+           strcmp(name, "vkEnumerateDeviceLayerProperties"));
 
     for (size_t i = 0; i < ARRAY_SIZE(core_instance_commands); i++) {
         if (!strcmp(core_instance_commands[i].name, name))
@@ -4533,5 +4535,14 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *funcName) {
+    if (!strcmp(funcName, "vkEnumerateInstanceLayerProperties"))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceLayerProperties);
+    if (!strcmp(funcName, "vkEnumerateDeviceLayerProperties"))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateDeviceLayerProperties);
+    if (!strcmp(funcName, "vkEnumerateInstanceExtensionProperties"))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceExtensionProperties);
+    if (!strcmp(funcName, "vkGetInstanceProcAddr"))
+        return reinterpret_cast<PFN_vkVoidFunction>(vkGetInstanceProcAddr);
+
     return parameter_validation::GetInstanceProcAddr(instance, funcName);
 }
