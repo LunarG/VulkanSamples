@@ -134,9 +134,9 @@ DebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags, VkDebugR
 
 static const VkExtensionProperties instance_extensions[] = {{VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};
 
-static const VkLayerProperties pc_global_layers[] = {{
+static const VkLayerProperties global_layer = {
     "VK_LAYER_LUNARG_parameter_validation", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
-}};
+};
 
 static bool ValidateEnumerator(VkFormatFeatureFlagBits const &enumerator) {
     VkFormatFeatureFlagBits allFlags = (VkFormatFeatureFlagBits)(
@@ -4598,14 +4598,14 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
-    return util_GetLayerProperties(ARRAY_SIZE(parameter_validation::pc_global_layers), parameter_validation::pc_global_layers, pCount, pProperties);
+    return util_GetLayerProperties(1, &parameter_validation::global_layer, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties *pProperties) {
 
     /* parameter_validation's physical device layers are the same as global */
-    return util_GetLayerProperties(ARRAY_SIZE(parameter_validation::pc_global_layers), parameter_validation::pc_global_layers, pCount, pProperties);
+    return util_GetLayerProperties(1, &parameter_validation::global_layer, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
