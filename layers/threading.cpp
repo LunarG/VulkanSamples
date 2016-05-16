@@ -217,9 +217,8 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name)
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
     PFN_vkVoidFunction addr;
     layer_data *dev_data;
-    if (device == VK_NULL_HANDLE) {
-        return NULL;
-    }
+
+    assert(device);
 
     addr = layer_intercept_proc(funcName);
     if (addr)
@@ -242,9 +241,7 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
         return addr;
     }
 
-    if (instance == VK_NULL_HANDLE) {
-        return NULL;
-    }
+    assert(instance);
 
     my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     addr = debug_report_get_instance_proc_addr(my_data->report_data, funcName);
