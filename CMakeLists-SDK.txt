@@ -2,6 +2,16 @@ cmake_minimum_required(VERSION 2.8.11)
 project (VULKAN_SAMPLES)
 # set (CMAKE_VERBOSE_MAKEFILE 1)
 
+if(EXISTS "${CMAKE_SOURCE_DIR}/../x86_64/include")
+    set(SDK_INCLUDE_PATH "${CMAKE_SOURCE_DIR}/../x86_64/include")
+    message("SDK_INCLUDE_PATH = ${SDK_INCLUDE_PATH}")
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/../x86_64/lib")
+    set(SDK_LIBRARY_PATH "${CMAKE_SOURCE_DIR}/../x86_64/lib")
+    message("SDK_LIBRARY_PATH = ${SDK_LIBRARY_PATH}")
+endif()
+
 # The MAJOR number of the version we're building, used in naming
 # vulkan-<major>.dll (and other files).
 set(MAJOR "1")
@@ -19,7 +29,7 @@ set (UTILS_NAME vsamputils)
 if(NOT WIN32)
     find_package(XCB REQUIRED)
     set (BUILDTGT_DIR build)
-    set (BINDATA_DIR Bin)
+    set (BINDATA_DIR x86_64/bin)
     set (LIBSOURCE_DIR Lib)
 else()
     # For Windows, since 32-bit and 64-bit items can co-exist, we build each in its own build directory.
