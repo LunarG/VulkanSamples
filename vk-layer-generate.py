@@ -428,8 +428,9 @@ class Subcommand(object):
         funcs = []
         intercepted = []
         for proto in self.protos:
-            if proto.name == "GetDeviceProcAddr" or proto.name == "GetInstanceProcAddr":
-                continue
+            if proto.name in ["GetDeviceProcAddr",
+                              "GetInstanceProcAddr"]:
+                intercepted.append(proto)
             else:
                 intercept = self.generate_intercept(proto, qual)
                 if intercept is None:
@@ -455,45 +456,35 @@ class Subcommand(object):
                         intercepted.append(proto)
 
         prefix="vk"
-        lookups = []
+        instance_lookups = []
+        device_lookups = []
         for proto in intercepted:
-            lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
-            lookups.append("    return (PFN_vkVoidFunction) %s%s;" %
-                    (prefix, proto.name))
+            if proto_is_global(proto):
+                instance_lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
+                instance_lookups.append("    return (PFN_vkVoidFunction) %s%s;" % (prefix, proto.name))
+            else:
+                device_lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
+                device_lookups.append("    return (PFN_vkVoidFunction) %s%s;" % (prefix, proto.name))
 
-        # add customized layer_intercept_proc
+        # add customized intercept_core_device_command
         body = []
         body.append('%s' % self.lineinfo.get())
-        body.append("static inline PFN_vkVoidFunction layer_intercept_proc(const char *name)")
+        body.append("static inline PFN_vkVoidFunction intercept_core_device_command(const char *name)")
         body.append("{")
         body.append(generate_get_proc_addr_check("name"))
         body.append("")
         body.append("    name += 2;")
-        body.append("    %s" % "\n    ".join(lookups))
+        body.append("    %s" % "\n    ".join(device_lookups))
         body.append("")
         body.append("    return NULL;")
         body.append("}")
-        # add layer_intercept_instance_proc
-        lookups = []
-        for proto in self.protos:
-            if not proto_is_global(proto):
-                continue
-
-            if not proto in intercepted:
-                continue
-            if proto.name == "CreateInstance":
-                continue
-            if proto.name == "CreateDevice":
-                continue
-            lookups.append("if (!strcmp(name, \"%s\"))" % proto.name)
-            lookups.append("    return (PFN_vkVoidFunction) %s%s;" % (prefix, proto.name))
-
-        body.append("static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name)")
+        # add intercept_core_instance_command
+        body.append("static inline PFN_vkVoidFunction intercept_core_instance_command(const char *name)")
         body.append("{")
         body.append(generate_get_proc_addr_check("name"))
         body.append("")
         body.append("    name += 2;")
-        body.append("    %s" % "\n    ".join(lookups))
+        body.append("    %s" % "\n    ".join(instance_lookups))
         body.append("")
         body.append("    return NULL;")
         body.append("}")
@@ -518,10 +509,7 @@ class Subcommand(object):
             func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
-                             "    if (!strcmp(\"vkGetDeviceProcAddr\", funcName)) {\n"
-                             "        return (PFN_vkVoidFunction) vkGetDeviceProcAddr;\n"
-                             "    }\n\n"
-                             "    addr = layer_intercept_proc(funcName);\n"
+                             "    addr = intercept_core_device_command(funcName);\n"
                              "    if (addr)\n"
                              "        return addr;\n"
                              "    if (device == VK_NULL_HANDLE) {\n"
@@ -547,13 +535,7 @@ class Subcommand(object):
             func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
-                             "    if (!strcmp(funcName, \"vkGetInstanceProcAddr\"))\n"
-                             "        return (PFN_vkVoidFunction) vkGetInstanceProcAddr;\n"
-                             "    if (!strcmp(funcName, \"vkCreateInstance\"))\n"
-                             "        return (PFN_vkVoidFunction) vkCreateInstance;\n"
-                             "    if (!strcmp(funcName, \"vkCreateDevice\"))\n"
-                             "        return (PFN_vkVoidFunction) vkCreateDevice;\n"
-                             "    addr = layer_intercept_instance_proc(funcName);\n"
+                             "    addr = intercept_core_instance_command(funcName);\n"
                              "    if (addr) {\n"
                              "        return addr;"
                              "    }\n"
@@ -603,10 +585,7 @@ class Subcommand(object):
                              "    PFN_vkVoidFunction addr;\n")
             func_body.append("\n"
                              "    loader_platform_thread_once(&initOnce, init%s);\n\n"
-                             "    if (!strcmp(\"vkGetDeviceProcAddr\", funcName)) {\n"
-                             "        return (PFN_vkVoidFunction) vkGetDeviceProcAddr;\n"
-                             "    }\n\n"
-                             "    addr = layer_intercept_proc(funcName);\n"
+                             "    addr = intercept_core_device_command(funcName);\n"
                              "    if (addr)\n"
                              "        return addr;" % self.layer_name)
             func_body.append("    if (device == VK_NULL_HANDLE) {\n"
@@ -637,16 +616,10 @@ class Subcommand(object):
             func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
-                             "    if (!strcmp(funcName, \"vkGetInstanceProcAddr\"))\n"
-                             "        return (PFN_vkVoidFunction) vkGetInstanceProcAddr;\n"
-                             "    if (!strcmp(funcName, \"vkCreateInstance\"))\n"
-                             "        return (PFN_vkVoidFunction) vkCreateInstance;\n"
-                             "    if (!strcmp(funcName, \"vkCreateDevice\"))\n"
-                             "        return (PFN_vkVoidFunction) vkCreateDevice;\n"
                              )
             func_body.append(
                              "    loader_platform_thread_once(&initOnce, init%s);\n\n"
-                             "    addr = layer_intercept_instance_proc(funcName);\n"
+                             "    addr = intercept_core_instance_command(funcName);\n"
                              "    if (addr)\n"
                              "        return addr;" % self.layer_name)
             func_body.append("    if (instance == VK_NULL_HANDLE) {\n"
