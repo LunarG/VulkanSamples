@@ -2764,7 +2764,7 @@ class ThreadOutputGenerator(OutputGenerator):
             self.appendSection('command', '')
             self.appendSection('command', '// declare only')
             self.appendSection('command', decls[0])
-            self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (name,name) ]
+            self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (name,name[2:]) ]
             return
         if "KHR" in name:
             self.appendSection('command', '// TODO - not wrapping KHR function ' + name)
@@ -2780,7 +2780,7 @@ class ThreadOutputGenerator(OutputGenerator):
         # record that the function will be intercepted
         if (self.featureExtraProtect != None):
             self.intercepts += [ '#ifdef %s' % self.featureExtraProtect ]
-        self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (name,name) ]
+        self.intercepts += [ '    {"%s", reinterpret_cast<PFN_vkVoidFunction>(%s)},' % (name,name[2:]) ]
         if (self.featureExtraProtect != None):
             self.intercepts += [ '#endif' ]
 
@@ -2820,6 +2820,10 @@ class ThreadOutputGenerator(OutputGenerator):
         if (resulttype != None):
             self.appendSection('command', '    return result;')
         self.appendSection('command', '}')
+    #
+    # override makeProtoName to drop the "vk" prefix
+    def makeProtoName(self, name, tail):
+        return self.genOpts.apientry + name[2:] + tail
 
 # ParamCheckerOutputGenerator - subclass of OutputGenerator.
 # Generates param checker layer code.
