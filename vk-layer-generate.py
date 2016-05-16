@@ -506,6 +506,20 @@ class Subcommand(object):
 # New style of GPA Functions for the new layer_data/layer_logging changes
 #
         if self.layer_name in ['object_tracker', 'unique_objects']:
+            for ext_enable, ext_list in extensions:
+                func_body.append('%s' % self.lineinfo.get())
+                func_body.append('static inline PFN_vkVoidFunction intercept_%s_command(const char *name, VkDevice dev)' % ext_enable)
+                func_body.append('{')
+                func_body.append('    layer_data *my_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);')
+                func_body.append('    if (!my_data->%s)' % ext_enable)
+                func_body.append('        return nullptr;\n')
+
+                for ext_name in ext_list:
+                    func_body.append('    if (!strcmp("%s", name))\n'
+                                     '        return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (ext_name, ext_name))
+                func_body.append('\n    return nullptr;')
+                func_body.append('}\n')
+
             func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
@@ -515,62 +529,54 @@ class Subcommand(object):
                              "    if (device == VK_NULL_HANDLE) {\n"
                              "        return NULL;\n"
                              "    }\n")
-            if 0 != len(extensions):
-                func_body.append('%s' % self.lineinfo.get())
-                func_body.append('    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);')
-                for (ext_enable, ext_list) in extensions:
-                    extra_space = ""
-                    if 0 != len(ext_enable):
-                        func_body.append('    if (my_device_data->%s) {' % ext_enable)
-                        extra_space = "    "
-                    for ext_name in ext_list:
-                        func_body.append('    %sif (!strcmp("%s", funcName))\n'
-                                         '        %sreturn reinterpret_cast<PFN_vkVoidFunction>(%s);' % (extra_space, ext_name, extra_space, ext_name))
-                    if 0 != len(ext_enable):
-                        func_body.append('    }\n')
+            for ext_enable, _ in extensions:
+                func_body.append('    addr = intercept_%s_command(funcName, device);' % ext_enable)
+                func_body.append('    if (addr)\n'
+                                 '        return addr;')
             func_body.append("\n    if (get_dispatch_table(%s_device_table_map, device)->GetDeviceProcAddr == NULL)\n"
                              "        return NULL;\n"
                              "    return get_dispatch_table(%s_device_table_map, device)->GetDeviceProcAddr(device, funcName);\n"
                              "}\n" % (self.layer_name, self.layer_name))
+
+            for ext_enable, ext_list in instance_extensions:
+                func_body.append('%s' % self.lineinfo.get())
+                func_body.append('static inline PFN_vkVoidFunction intercept_%s_command(const char *name, VkInstance instance)' % ext_enable)
+                func_body.append('{')
+                if ext_enable == 'msg_callback_get_proc_addr':
+                    func_body.append("    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);\n"
+                                     "    return debug_report_get_instance_proc_addr(my_data->report_data, name);")
+                else:
+                    func_body.append("    VkLayerInstanceDispatchTable* pTable = get_dispatch_table(%s_instance_table_map, instance);" % self.layer_name)
+                    func_body.append('    if (instanceExtMap.size() == 0 || !instanceExtMap[pTable].%s)' % ext_enable)
+                    func_body.append('        return nullptr;\n')
+
+                    for ext_name in ext_list:
+                        if wsi_name(ext_name):
+                            func_body.append('%s' % wsi_ifdef(ext_name))
+                        func_body.append('    if (!strcmp("%s", name))\n'
+                                         '        return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (ext_name, ext_name))
+                        if wsi_name(ext_name):
+                            func_body.append('%s' % wsi_endif(ext_name))
+
+                    func_body.append('\n    return nullptr;')
+                func_body.append('}\n')
+
             func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
                              "    addr = intercept_core_instance_command(funcName);\n"
                              "    if (addr) {\n"
-                             "        return addr;"
+                             "        return addr;\n"
                              "    }\n"
                              "    if (instance == VK_NULL_HANDLE) {\n"
                              "        return NULL;\n"
                              "    }\n"
                              )
 
-            table_declared = False
-            if 0 != len(instance_extensions):
-                for (ext_enable, ext_list) in instance_extensions:
-                    extra_space = ""
-                    if 0 != len(ext_enable):
-                        if ext_enable == 'msg_callback_get_proc_addr':
-                            func_body.append("    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);\n"
-                                     "    addr = debug_report_get_instance_proc_addr(my_data->report_data, funcName);\n"
-                                     "    if (addr) {\n"
-                                     "        return addr;\n"
-                                     "    }\n")
-                        else:
-                            if table_declared == False:
-                                func_body.append("    VkLayerInstanceDispatchTable* pTable = get_dispatch_table(%s_instance_table_map, instance);" % self.layer_name)
-                                table_declared = True
-                            func_body.append('    if (instanceExtMap.size() != 0 && instanceExtMap[pTable].%s)' % ext_enable)
-                            func_body.append('    {')
-                            extra_space = "    "
-                            for ext_name in ext_list:
-                                if wsi_name(ext_name):
-                                    func_body.append('%s' % wsi_ifdef(ext_name))
-                                func_body.append('    %sif (!strcmp("%s", funcName))\n'
-                                                 '            return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (extra_space, ext_name, ext_name))
-                                if wsi_name(ext_name):
-                                    func_body.append('%s' % wsi_endif(ext_name))
-                            if 0 != len(ext_enable):
-                               func_body.append('    }\n')
+            for ext_enable, _ in instance_extensions:
+                func_body.append('    addr = intercept_%s_command(funcName, instance);' % ext_enable)
+                func_body.append('    if (addr)\n'
+                                 '        return addr;\n')
 
             func_body.append("    if (get_dispatch_table(%s_instance_table_map, instance)->GetInstanceProcAddr == NULL) {\n"
                              "        return NULL;\n"
