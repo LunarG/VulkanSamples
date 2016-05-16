@@ -3658,6 +3658,7 @@ static bool addCmd(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYP
         case CMD_UPDATEBUFFER:
         case CMD_PIPELINEBARRIER:
         case CMD_EXECUTECOMMANDS:
+        case CMD_END:
             break;
         default:
             break;
@@ -3665,6 +3666,7 @@ static bool addCmd(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYP
     }
     if (pCB->state != CB_RECORDING) {
         skipCall |= report_error_no_cb_begin(my_data, pCB->commandBuffer, caller_name);
+    } else {
         skipCall |= validateCmdsInCmdBuffer(my_data, pCB, cmd);
         CMD_NODE cmdNode = {};
         // init cmd node and append to end of cmd LL
@@ -6197,7 +6199,7 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                         "vkBeginCommandBuffer(): Cannot call Begin on CB (0x%" PRIxLEAST64
                         ") in the RECORDING state. Must first call vkEndCommandBuffer().",
                         (uint64_t)commandBuffer);
-        } else if (CB_RECORDED == pCB->state) {
+        } else if (CB_RECORDED == pCB->state || (CB_INVALID == pCB->state && CMD_END == pCB->cmds.back().type)) {
             VkCommandPool cmdPool = pCB->createInfo.commandPool;
             if (!(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT & dev_data->commandPoolMap[cmdPool].createFlags)) {
                 skipCall |=
@@ -6251,9 +6253,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EndCommandBuffer(VkCommandBuffer commandBuffer) {
             // https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/pull/516#discussion_r63013756
             skipCall |= insideRenderPass(dev_data, pCB, "vkEndCommandBuffer");
         }
-        if (pCB->state != CB_RECORDING) {
-            skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkEndCommandBuffer()");
-        }
+        skipCall |= addCmd(dev_data, pCB, CMD_END, "vkEndCommandBuffer()");
         for (auto query : pCB->activeQueries) {
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                 DRAWSTATE_INVALID_QUERY, "DS",

@@ -418,6 +418,7 @@ typedef enum _CMD_TYPE {
     CMD_NEXTSUBPASS,
     CMD_ENDRENDERPASS,
     CMD_EXECUTECOMMANDS,
+    CMD_END, // Should be last command in any RECORDED cmd buffer
 } CMD_TYPE;
 // Data structure for holding sequence of cmds in cmd buffer
 typedef struct _CMD_NODE {
