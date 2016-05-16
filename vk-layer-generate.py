@@ -551,9 +551,7 @@ class Subcommand(object):
                              "    addr = intercept_core_device_command(funcName);\n"
                              "    if (addr)\n"
                              "        return addr;\n"
-                             "    if (device == VK_NULL_HANDLE) {\n"
-                             "        return NULL;\n"
-                             "    }\n")
+                             "    assert(device);\n")
             for ext_enable, _ in extensions:
                 func_body.append('    addr = intercept_%s_command(funcName, device);' % ext_enable)
                 func_body.append('    if (addr)\n'
@@ -593,9 +591,7 @@ class Subcommand(object):
                              "    if (addr) {\n"
                              "        return addr;\n"
                              "    }\n"
-                             "    if (instance == VK_NULL_HANDLE) {\n"
-                             "        return NULL;\n"
-                             "    }\n"
+                             "    assert(instance);\n"
                              )
 
             for ext_enable, _ in instance_extensions:
@@ -619,9 +615,7 @@ class Subcommand(object):
                              "    addr = intercept_core_device_command(funcName);\n"
                              "    if (addr)\n"
                              "        return addr;" % self.layer_name)
-            func_body.append("    if (device == VK_NULL_HANDLE) {\n"
-                             "        return NULL;\n"
-                             "    }\n")
+            func_body.append("    assert(device);\n")
             func_body.append('')
             func_body.append('    VkLayerDispatchTable *pDisp =  device_dispatch_table(device);')
             if 0 != len(extensions):
@@ -653,9 +647,7 @@ class Subcommand(object):
                              "    addr = intercept_core_instance_command(funcName);\n"
                              "    if (addr)\n"
                              "        return addr;" % self.layer_name)
-            func_body.append("    if (instance == VK_NULL_HANDLE) {\n"
-                             "        return NULL;\n"
-                             "    }\n")
+            func_body.append("    assert(instance);\n")
             func_body.append("")
             func_body.append("    VkLayerInstanceDispatchTable* pTable = instance_dispatch_table(instance);\n")
             if 0 != len(instance_extensions):
