@@ -161,17 +161,11 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
 static const VkExtensionProperties threading_extensions[] = {
     {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};
 
-static const VkLayerProperties globalLayerProps[] = {{
+static const VkLayerProperties layerProps = {
     "VK_LAYER_GOOGLE_threading",
     VK_LAYER_API_VERSION, // specVersion
     1, "Google Validation Layer",
-}};
-
-static const VkLayerProperties deviceLayerProps[] = {{
-    "VK_LAYER_GOOGLE_threading",
-    VK_LAYER_API_VERSION, // specVersion
-    1, "Google Validation Layer",
-}};
+};
 
 static inline PFN_vkVoidFunction layer_intercept_proc(const char *name) {
     for (int i = 0; i < sizeof(procmap) / sizeof(procmap[0]); i++) {
@@ -365,12 +359,12 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
-    return util_GetLayerProperties(ARRAY_SIZE(threading::globalLayerProps), threading::globalLayerProps, pCount, pProperties);
+    return util_GetLayerProperties(1, &threading::layerProps, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties *pProperties) {
-    return util_GetLayerProperties(ARRAY_SIZE(threading::deviceLayerProps), threading::deviceLayerProps, pCount, pProperties);
+    return util_GetLayerProperties(1, &threading::layerProps, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
