@@ -45,6 +45,8 @@ namespace unique_objects {
 static uint64_t global_unique_id = 1;
 
 struct layer_data {
+    VkInstance instance;
+
     bool wsi_enabled;
     std::unordered_map<uint64_t, uint64_t> unique_id_mapping; // Map uniqueID to actual object handle
     VkPhysicalDevice gpu;
@@ -162,6 +164,8 @@ VkResult explicit_CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const 
         return result;
     }
 
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+    my_data->instance = *pInstance;
     initInstanceTable(*pInstance, fpGetInstanceProcAddr, unique_objects_instance_table_map);
 
     createInstanceRegisterExtensions(pCreateInfo, *pInstance);
@@ -194,12 +198,13 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo
 
 VkResult explicit_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                                VkDevice *pDevice) {
+    layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
     VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
     assert(chain_info->u.pLayerInfo);
     PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
     PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
-    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice)fpGetInstanceProcAddr(NULL, "vkCreateDevice");
+    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice)fpGetInstanceProcAddr(my_instance_data->instance, "vkCreateDevice");
     if (fpCreateDevice == NULL) {
         return VK_ERROR_INITIALIZATION_FAILED;
     }
