@@ -3749,8 +3749,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
             }
         }
         pCB->framebuffers.clear();
-        pCB->activeFramebuffer = nullptr;
-
+        pCB->activeFramebuffer = VK_NULL_HANDLE;
     }
 }
 
@@ -9056,7 +9055,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
         TransitionFinalSubpassLayouts(commandBuffer, &pCB->activeRenderPassBeginInfo);
         pCB->activeRenderPass = nullptr;
         pCB->activeSubpass = 0;
-        pCB->activeFramebuffer = nullptr;
+        pCB->activeFramebuffer = VK_NULL_HANDLE;
     }
     lock.unlock();
     if (!skipCall)
