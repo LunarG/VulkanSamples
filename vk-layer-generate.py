@@ -535,9 +535,11 @@ class Subcommand(object):
                 func_body.append('%s' % self.lineinfo.get())
                 func_body.append('static inline PFN_vkVoidFunction intercept_%s_command(const char *name, VkDevice dev)' % ext_enable)
                 func_body.append('{')
-                func_body.append('    layer_data *my_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);')
-                func_body.append('    if (!my_data->%s)' % ext_enable)
-                func_body.append('        return nullptr;\n')
+                func_body.append('    if (dev) {')
+                func_body.append('        layer_data *my_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);')
+                func_body.append('        if (!my_data->%s)' % ext_enable)
+                func_body.append('            return nullptr;')
+                func_body.append('    }\n')
 
                 for ext_name in ext_list:
                     func_body.append('    if (!strcmp("%s", name))\n'
@@ -588,7 +590,16 @@ class Subcommand(object):
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
                              "    addr = intercept_core_instance_command(funcName);\n"
-                             "    if (addr) {\n"
+                             "    if (!addr) {\n"
+                             "        addr = intercept_core_device_command(funcName);\n"
+                             "    }")
+
+            for ext_enable, _ in extensions:
+                func_body.append("    if (!addr) {\n"
+                                 "        addr = intercept_%s_command(funcName, VkDevice(VK_NULL_HANDLE));\n"
+                                 "    }" % ext_enable)
+
+            func_body.append("    if (addr) {\n"
                              "        return addr;\n"
                              "    }\n"
                              "    assert(instance);\n"
