@@ -29,7 +29,7 @@ if (EXISTS "${CMAKE_SOURCE_DIR}/layers")
 else()
     set(LAYERS_LOC ${CMAKE_SOURCE_DIR}/../source)
     find_library(LAYER_UTILS_LIB NAMES VkLayer_utils
-                 HINTS "${CMAKE_SOURCE_DIR}/../bin" )
+        HINTS "${CMAKE_SOURCE_DIR}/../bin" "${CMAKE_SOURCE_DIR}/../x86_64/lib/vulkan/layer" )
 endif()
 
 set(UTILDIR "${CMAKE_SOURCE_DIR}/Layer-Samples/utils")
@@ -58,10 +58,19 @@ endif()
 target_link_libraries(VKLayer_overlay ${LAYER_UTILS_LIB})
 set_target_properties(VKLayer_overlay PROPERTIES CXX_FLAGS "-Wno-unused-function")
 
-include_directories(
-        "${CMAKE_BINARY_DIR}/layers"
-        "${LAYERS_LOC}/layers"
-        "${LAYERS_LOC}/loader"
-        "${UTILDIR}/stb"
-        )
-
+if(SDK_INCLUDE_PATH)
+    include_directories(
+            "${CMAKE_BINARY_DIR}/layers"
+            "${LAYERS_LOC}/layers"
+            "${LAYERS_LOC}/loader"
+            "${UTILDIR}/stb"
+            "${SDK_INCLUDE_PATH}"
+            )
+else()
+    include_directories(
+            "${CMAKE_BINARY_DIR}/layers"
+            "${LAYERS_LOC}/layers"
+            "${LAYERS_LOC}/loader"
+            "${UTILDIR}/stb"
+            )
+endif()
