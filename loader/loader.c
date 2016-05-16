@@ -3279,7 +3279,7 @@ loader_create_device_chain(const struct loader_physical_device_tramp *pd,
                         loader_platform_get_proc_address(
                             lib_handle, layer_prop->functions.str_gdpa);
                 if (!fpGDPA) {
-                    loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                    loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
                                "Failed to find vkGetDeviceProcAddr in layer %s",
                                layer_prop->lib_name);
                     continue;
