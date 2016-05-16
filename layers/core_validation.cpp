@@ -8857,40 +8857,31 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
             if (pass_data != dev_data->renderPassMap.end()) {
                 RENDER_PASS_NODE* pRPNode = pass_data->second;
                 pCB->activeFramebuffer = pRenderPassBegin->framebuffer;
-                auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
                 for (size_t i = 0; i < pRPNode->attachments.size(); ++i) {
                     MT_FB_ATTACHMENT_INFO &fb_info = dev_data->frameBufferMap[pRenderPassBegin->framebuffer].attachments[i];
                     if (pRPNode->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-                        if (cb_data != dev_data->commandBufferMap.end()) {
-                            std::function<bool()> function = [=]() {
-                                set_memory_valid(dev_data, fb_info.mem, true, fb_info.image);
-                                return false;
-                            };
-                            cb_data->second->validate_functions.push_back(function);
-                        }
+                        std::function<bool()> function = [=]() {
+                            set_memory_valid(dev_data, fb_info.mem, true, fb_info.image);
+                            return false;
+                        };
+                        pCB->validate_functions.push_back(function);
                     } else if (pRPNode->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_DONT_CARE) {
-                        if (cb_data != dev_data->commandBufferMap.end()) {
-                            std::function<bool()> function = [=]() {
-                                set_memory_valid(dev_data, fb_info.mem, false, fb_info.image);
-                                return false;
-                            };
-                            cb_data->second->validate_functions.push_back(function);
-                        }
+                        std::function<bool()> function = [=]() {
+                            set_memory_valid(dev_data, fb_info.mem, false, fb_info.image);
+                            return false;
+                        };
+                        pCB->validate_functions.push_back(function);
                     } else if (pRPNode->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_LOAD) {
-                        if (cb_data != dev_data->commandBufferMap.end()) {
-                            std::function<bool()> function = [=]() {
-                                return validate_memory_is_valid(dev_data, fb_info.mem, "vkCmdBeginRenderPass()", fb_info.image);
-                            };
-                            cb_data->second->validate_functions.push_back(function);
-                        }
+                        std::function<bool()> function = [=]() {
+                            return validate_memory_is_valid(dev_data, fb_info.mem, "vkCmdBeginRenderPass()", fb_info.image);
+                        };
+                        pCB->validate_functions.push_back(function);
                     }
                     if (pRPNode->attachment_first_read[pRPNode->attachments[i].attachment]) {
-                        if (cb_data != dev_data->commandBufferMap.end()) {
-                            std::function<bool()> function = [=]() {
-                                return validate_memory_is_valid(dev_data, fb_info.mem, "vkCmdBeginRenderPass()", fb_info.image);
-                            };
-                            cb_data->second->validate_functions.push_back(function);
-                        }
+                        std::function<bool()> function = [=]() {
+                            return validate_memory_is_valid(dev_data, fb_info.mem, "vkCmdBeginRenderPass()", fb_info.image);
+                        };
+                        pCB->validate_functions.push_back(function);
                     }
                 }
             }
