@@ -217,7 +217,7 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name)
     return NULL;
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char *funcName) {
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char *funcName) {
     PFN_vkVoidFunction addr;
     layer_data *dev_data;
     if (device == VK_NULL_HANDLE) {
@@ -236,7 +236,7 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice devic
     return pTable->GetDeviceProcAddr(device, funcName);
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *funcName) {
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *funcName) {
     PFN_vkVoidFunction addr;
     layer_data *my_data;
 
@@ -287,7 +287,7 @@ vkDestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT ca
     finishWriteObject(my_data, callback);
 }
 
-VkResult VKAPI_CALL
+VKAPI_ATTR VkResult VKAPI_CALL
 vkAllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pAllocateInfo, VkCommandBuffer *pCommandBuffers) {
     dispatch_key key = get_dispatch_key(device);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
@@ -311,8 +311,8 @@ vkAllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pAl
     return result;
 }
 
-void VKAPI_CALL vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandBufferCount,
-                                     const VkCommandBuffer *pCommandBuffers) {
+VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandBufferCount,
+                                                const VkCommandBuffer *pCommandBuffers) {
     dispatch_key key = get_dispatch_key(device);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
@@ -333,16 +333,16 @@ void VKAPI_CALL vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool,
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI_CALL
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount, VkExtensionProperties *pProperties) {
     return util_GetExtensionProperties(ARRAY_SIZE(threading_extensions), threading_extensions, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
     return util_GetLayerProperties(ARRAY_SIZE(globalLayerProps), globalLayerProps, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI_CALL
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties *pProperties) {
     return util_GetLayerProperties(ARRAY_SIZE(deviceLayerProps), deviceLayerProps, pCount, pProperties);
 }
