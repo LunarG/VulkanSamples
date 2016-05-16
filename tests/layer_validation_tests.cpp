@@ -568,10 +568,10 @@ TEST_F(VkLayerTest, RequiredParameter) {
 
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "required parameter pPhysicalDeviceCount specified as NULL");
+        "required parameter pQueueFamilyPropertyCount specified as NULL");
     // Specify NULL for pointer to array count
     // Expected to trigger an error with parameter_validation::validate_array
-    vkEnumeratePhysicalDevices(instance(), NULL, NULL);
+    vkGetPhysicalDeviceQueueFamilyProperties(gpu(), NULL, NULL);
     m_errorMonitor->VerifyFound();
 
     m_errorMonitor->SetDesiredFailureMsg(
