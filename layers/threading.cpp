@@ -159,26 +159,25 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
 static const VkExtensionProperties threading_extensions[] = {
     {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_EXT_DEBUG_REPORT_SPEC_VERSION}};
 
-VK_LAYER_EXPORT VkResult VKAPI_CALL
-vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount, VkExtensionProperties *pProperties) {
-    return util_GetExtensionProperties(ARRAY_SIZE(threading_extensions), threading_extensions, pCount, pProperties);
-}
-
 static const VkLayerProperties globalLayerProps[] = {{
     "VK_LAYER_GOOGLE_threading",
     VK_LAYER_API_VERSION, // specVersion
     1, "Google Validation Layer",
 }};
 
-VK_LAYER_EXPORT VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
-    return util_GetLayerProperties(ARRAY_SIZE(globalLayerProps), globalLayerProps, pCount, pProperties);
-}
-
 static const VkLayerProperties deviceLayerProps[] = {{
     "VK_LAYER_GOOGLE_threading",
     VK_LAYER_API_VERSION, // specVersion
     1, "Google Validation Layer",
 }};
+
+static inline PFN_vkVoidFunction layer_intercept_proc(const char *name) {
+    for (int i = 0; i < sizeof(procmap) / sizeof(procmap[0]); i++) {
+        if (!strcmp(name, procmap[i].name))
+            return procmap[i].pFunc;
+    }
+    return NULL;
+}
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
                                                                                     const char *pLayerName, uint32_t *pCount,
@@ -191,19 +190,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionPropert
         // Threading layer does not have any device extensions
         return util_GetExtensionProperties(0, nullptr, pCount, pProperties);
     }
-}
-
-VK_LAYER_EXPORT VkResult VKAPI_CALL
-vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties *pProperties) {
-    return util_GetLayerProperties(ARRAY_SIZE(deviceLayerProps), deviceLayerProps, pCount, pProperties);
-}
-
-static inline PFN_vkVoidFunction layer_intercept_proc(const char *name) {
-    for (int i = 0; i < sizeof(procmap) / sizeof(procmap[0]); i++) {
-        if (!strcmp(name, procmap[i].name))
-            return procmap[i].pFunc;
-    }
-    return NULL;
 }
 
 static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name) {
@@ -345,4 +331,18 @@ void VKAPI_CALL vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool,
         std::lock_guard<std::mutex> lock(global_lock);
         command_pool_map.erase(pCommandBuffers[index]);
     }
+}
+
+VK_LAYER_EXPORT VkResult VKAPI_CALL
+vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount, VkExtensionProperties *pProperties) {
+    return util_GetExtensionProperties(ARRAY_SIZE(threading_extensions), threading_extensions, pCount, pProperties);
+}
+
+VK_LAYER_EXPORT VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
+    return util_GetLayerProperties(ARRAY_SIZE(globalLayerProps), globalLayerProps, pCount, pProperties);
+}
+
+VK_LAYER_EXPORT VkResult VKAPI_CALL
+vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties *pProperties) {
+    return util_GetLayerProperties(ARRAY_SIZE(deviceLayerProps), deviceLayerProps, pCount, pProperties);
 }
