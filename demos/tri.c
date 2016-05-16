@@ -199,6 +199,7 @@ struct demo {
     VkDevice device;
     VkQueue queue;
     VkPhysicalDeviceProperties gpu_props;
+    VkPhysicalDeviceFeatures gpu_features;
     VkQueueFamilyProperties *queue_props;
     uint32_t graphics_queue_node_index;
 
@@ -2161,8 +2162,7 @@ static void demo_init_vk(struct demo *demo) {
                                              demo->queue_props);
     assert(demo->queue_count >= 1);
 
-    VkPhysicalDeviceFeatures features;
-    vkGetPhysicalDeviceFeatures(demo->gpu, &features);
+    vkGetPhysicalDeviceFeatures(demo->gpu, &demo->gpu_features);
 
     // Graphics queue and MemMgr queue can be separate.
     // TODO: Add support for separate queues, including synchronization,
@@ -2180,9 +2180,12 @@ static void demo_init_device(struct demo *demo) {
         .queueCount = 1,
         .pQueuePriorities = queue_priorities};
 
-    VkPhysicalDeviceFeatures features = {
-        .shaderClipDistance = VK_TRUE,
-    };
+
+    VkPhysicalDeviceFeatures features;
+    memset(&features, 0, sizeof(features));
+    if (demo->gpu_features.shaderClipDistance) {
+        features.shaderClipDistance = VK_TRUE;
+    }
 
     VkDeviceCreateInfo device = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
