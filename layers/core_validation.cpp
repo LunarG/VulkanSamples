@@ -42,6 +42,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
+#include <tuple>
 
 #include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
@@ -2588,12 +2589,13 @@ static cvdescriptorset::DescriptorSet *getSetNode(layer_data *my_data, const VkD
 //  3. Grow updateBuffers for pCB to include buffers from STORAGE*_BUFFER descriptor buffers
 static bool validate_and_update_drawtime_descriptor_state(
     layer_data *dev_data, GLOBAL_CB_NODE *pCB,
-    const vector<std::pair<cvdescriptorset::DescriptorSet *, unordered_set<uint32_t>>> &activeSetBindingsPairs) {
+    const vector<std::tuple<cvdescriptorset::DescriptorSet *, unordered_set<uint32_t>,
+                            std::vector<uint32_t> const *>> &activeSetBindingsPairs) {
     bool result = false;
     for (auto set_bindings_pair : activeSetBindingsPairs) {
-        cvdescriptorset::DescriptorSet *set_node = set_bindings_pair.first;
+        cvdescriptorset::DescriptorSet *set_node = std::get<0>(set_bindings_pair);
         std::string err_str;
-        if (!set_node->ValidateDrawState(set_bindings_pair.second, pCB->lastBound[VK_PIPELINE_BIND_POINT_GRAPHICS].dynamicOffsets,
+        if (!set_node->ValidateDrawState(std::get<1>(set_bindings_pair), *std::get<2>(set_bindings_pair),
                                          &err_str)) {
             // Report error here
             auto set = set_node->GetSet();
@@ -2602,7 +2604,7 @@ static bool validate_and_update_drawtime_descriptor_state(
                               "DS 0x%" PRIxLEAST64 " encountered the following validation error at draw time: %s",
                               reinterpret_cast<const uint64_t &>(set), err_str.c_str());
         }
-        set_node->GetStorageUpdates(set_bindings_pair.second, &pCB->updateBuffers, &pCB->updateImages);
+        set_node->GetStorageUpdates(std::get<1>(set_bindings_pair), &pCB->updateBuffers, &pCB->updateImages);
     }
     return result;
 }
@@ -2738,8 +2740,8 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
     if (state.pipelineLayout) {
         string errorString;
         // Need a vector (vs. std::set) of active Sets for dynamicOffset validation in case same set bound w/ different offsets
-        vector<std::pair<cvdescriptorset::DescriptorSet *, unordered_set<uint32_t>>> activeSetBindingsPairs;
-        for (auto setBindingPair : pPipe->active_slots) {
+        vector<std::tuple<cvdescriptorset::DescriptorSet *, unordered_set<uint32_t>, std::vector<uint32_t> const *>> activeSetBindingsPairs;
+        for (auto & setBindingPair : pPipe->active_slots) {
             uint32_t setIndex = setBindingPair.first;
             // If valid set is not bound throw an error
             if ((state.boundDescriptorSets.size() <= setIndex) || (!state.boundDescriptorSets[setIndex])) {
@@ -2761,7 +2763,8 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
                 // Pull the set node
                 cvdescriptorset::DescriptorSet *pSet = my_data->setMap[state.boundDescriptorSets[setIndex]];
                 // Save vector of all active sets to verify dynamicOffsets below
-                activeSetBindingsPairs.push_back(std::make_pair(pSet, setBindingPair.second));
+                activeSetBindingsPairs.push_back(std::make_tuple(pSet, setBindingPair.second,
+                                                                 &state.dynamicOffsets[setIndex]));
                 // Make sure set has been updated if it has no immutable samplers
                 //  If it has immutable samplers, we'll flag error later as needed depending on binding
                 if (!pSet->IsUpdated()) {
@@ -6496,8 +6499,10 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
             uint32_t totalDynamicDescriptors = 0;
             string errorString = "";
             uint32_t lastSetIndex = firstSet + setCount - 1;
-            if (lastSetIndex >= pCB->lastBound[pipelineBindPoint].boundDescriptorSets.size())
+            if (lastSetIndex >= pCB->lastBound[pipelineBindPoint].boundDescriptorSets.size()) {
                 pCB->lastBound[pipelineBindPoint].boundDescriptorSets.resize(lastSetIndex + 1);
+                pCB->lastBound[pipelineBindPoint].dynamicOffsets.resize(lastSetIndex + 1);
+            }
             VkDescriptorSet oldFinalBoundSet = pCB->lastBound[pipelineBindPoint].boundDescriptorSets[lastSetIndex];
             for (uint32_t i = 0; i < setCount; i++) {
                 cvdescriptorset::DescriptorSet *pSet = getSetNode(dev_data, pDescriptorSets[i]);
@@ -6527,9 +6532,14 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                                             "at index %u of pipelineLayout 0x%" PRIxLEAST64 " due to: %s",
                                             i, i + firstSet, reinterpret_cast<uint64_t &>(layout), errorString.c_str());
                     }
-                    if (pSet->GetDynamicDescriptorCount()) {
+
+                    auto setDynamicDescriptorCount = pSet->GetDynamicDescriptorCount();
+
+                    pCB->lastBound[pipelineBindPoint].dynamicOffsets[firstSet + i].clear();
+
+                    if (setDynamicDescriptorCount) {
                         // First make sure we won't overstep bounds of pDynamicOffsets array
-                        if ((totalDynamicDescriptors + pSet->GetDynamicDescriptorCount()) > dynamicOffsetCount) {
+                        if ((totalDynamicDescriptors + setDynamicDescriptorCount) > dynamicOffsetCount) {
                             skipCall |=
                                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                         VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pDescriptorSets[i], __LINE__,
@@ -6573,8 +6583,13 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                                     cur_dyn_offset++;
                                 }
                             }
+
+                            pCB->lastBound[pipelineBindPoint].dynamicOffsets[firstSet + i] =
+                                std::vector<uint32_t>(pDynamicOffsets + totalDynamicDescriptors,
+                                                      pDynamicOffsets + totalDynamicDescriptors + setDynamicDescriptorCount);
                             // Keep running total of dynamic descriptor count to verify at the end
-                            totalDynamicDescriptors += pSet->GetDynamicDescriptorCount();
+                            totalDynamicDescriptors += setDynamicDescriptorCount;
+
                         }
                     }
                 } else {
@@ -6629,10 +6644,6 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                                     "Attempting to bind %u descriptorSets with %u dynamic descriptors, but dynamicOffsetCount "
                                     "is %u. It should exactly match the number of dynamic descriptors.",
                                     setCount, totalDynamicDescriptors, dynamicOffsetCount);
-            }
-            // Save dynamicOffsets bound to this CB
-            for (uint32_t i = 0; i < dynamicOffsetCount; i++) {
-                pCB->lastBound[pipelineBindPoint].dynamicOffsets.emplace_back(pDynamicOffsets[i]);
             }
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdBindDescriptorSets()");

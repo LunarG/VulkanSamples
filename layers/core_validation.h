@@ -513,7 +513,8 @@ struct LAST_BOUND_STATE {
     // Ordered bound set tracking where index is set# that given set is bound to
     std::vector<VkDescriptorSet> boundDescriptorSets;
     // one dynamic offset per dynamic descriptor bound to this CB
-    std::vector<uint32_t> dynamicOffsets;
+    std::vector<std::vector<uint32_t>> dynamicOffsets;
+
     void reset() {
         pipeline = VK_NULL_HANDLE;
         pipelineLayout = VK_NULL_HANDLE;
