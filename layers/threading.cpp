@@ -236,6 +236,8 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
     layer_data *my_data;
 
     addr = layer_intercept_instance_proc(funcName);
+    if (!addr)
+        addr = layer_intercept_proc(funcName);
     if (addr) {
         return addr;
     }
