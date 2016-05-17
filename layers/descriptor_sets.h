@@ -259,6 +259,9 @@ class BufferDescriptor : public Descriptor {
     VkDeviceSize range_;
     const std::unordered_map<VkBuffer, BUFFER_NODE> *buffer_map_;
 };
+// Helper function for Updating descriptor sets since it crosses multiple sets
+void UpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites,
+                          uint32_t descriptorCopyCount, const VkCopyDescriptorSet *pDescriptorCopies);
 /*
  * DescriptorSet class
  *
@@ -279,8 +282,9 @@ class BufferDescriptor : public Descriptor {
  */
 class DescriptorSet : public BASE_NODE {
   public:
-    DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const std::unordered_map<VkBuffer, BUFFER_NODE> *,
-                  const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *,
+    using BASE_NODE::in_use;
+    DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const debug_report_data *,
+                  const std::unordered_map<VkBuffer, BUFFER_NODE> *, const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *,
                   const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *,
                   const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *,
                   const std::unordered_map<VkImageView, VkImageViewCreateInfo> *, const std::unordered_map<VkImage, IMAGE_NODE> *,
@@ -327,11 +331,11 @@ class DescriptorSet : public BASE_NODE {
     const DescriptorSetLayout *GetLayout() const { return p_layout_; };
     VkDescriptorSet GetSet() const { return set_; };
     // Return unordered_set of all command buffers that this set is bound to
-    std::unordered_set<VkCommandBuffer> GetBoundCmdBuffers() const { return bound_cmd_buffers_; }
+    std::unordered_set<GLOBAL_CB_NODE *> GetBoundCmdBuffers() const { return bound_cmd_buffers_; }
     // Bind given cmd_buffer to this descriptor set
-    void BindCommandBuffer(const VkCommandBuffer cmd_buffer) { bound_cmd_buffers_.insert(cmd_buffer); }
+    void BindCommandBuffer(GLOBAL_CB_NODE *cb_node) { bound_cmd_buffers_.insert(cb_node); }
     // If given cmd_buffer is in the bound_cmd_buffers_ set, remove it
-    void RemoveBoundCommandBuffer(const VkCommandBuffer cmd_buffer) { bound_cmd_buffers_.erase(cmd_buffer); }
+    void RemoveBoundCommandBuffer(GLOBAL_CB_NODE *cb_node) { bound_cmd_buffers_.erase(cb_node); }
     VkSampler const *GetImmutableSamplerPtrFromBinding(const uint32_t index) const {
         return p_layout_->GetImmutableSamplerPtrFromBinding(index);
     };
@@ -351,8 +355,9 @@ class DescriptorSet : public BASE_NODE {
     VkDescriptorSet set_;
     uint32_t descriptor_count_; // Count of all descriptors in this set
     const DescriptorSetLayout *p_layout_;
-    std::unordered_set<VkCommandBuffer> bound_cmd_buffers_;
+    std::unordered_set<GLOBAL_CB_NODE *> bound_cmd_buffers_;
     std::vector<std::unique_ptr<Descriptor>> descriptors_;
+    const debug_report_data *report_data_;
     // Ptrs to object containers to verify bound data
     const std::unordered_map<VkBuffer, BUFFER_NODE> *buffer_map_;
     const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *memory_map_;

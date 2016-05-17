@@ -3381,61 +3381,67 @@ static bool validateIdleDescriptorSet(const layer_data *my_data, VkDescriptorSet
 }
 static void invalidateBoundCmdBuffers(layer_data *dev_data, const cvdescriptorset::DescriptorSet *pSet) {
     // Flag any CBs this set is bound to as INVALID
-    for (auto cb : pSet->GetBoundCmdBuffers()) {
-        auto cb_node = dev_data->commandBufferMap.find(cb);
-        if (cb_node != dev_data->commandBufferMap.end()) {
-            cb_node->second->state = CB_INVALID;
-        }
+    for (auto cb_node : pSet->GetBoundCmdBuffers()) {
+        cb_node->state = CB_INVALID;
     }
 }
 // update DS mappings based on write and copy update arrays
 static bool dsUpdate(layer_data *my_data, VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pWDS,
                      uint32_t descriptorCopyCount, const VkCopyDescriptorSet *pCDS) {
-    bool skipCall = false;
+    bool skip_call = false;
     // Validate Write updates
     uint32_t i = 0;
     for (i = 0; i < descriptorWriteCount; i++) {
-        VkDescriptorSet ds = pWDS[i].dstSet;
-        cvdescriptorset::DescriptorSet *pSet = my_data->setMap[ds];
-        // Set being updated cannot be in-flight
-        if ((skipCall = validateIdleDescriptorSet(my_data, ds, "VkUpdateDescriptorSets")) == true)
-            return skipCall;
-        // If set is bound to any cmdBuffers, mark them invalid
-        invalidateBoundCmdBuffers(my_data, pSet);
-        GENERIC_HEADER *pUpdate = (GENERIC_HEADER *)&pWDS[i];
-        // First verify valid update struct
-        if ((skipCall = validUpdateStruct(my_data, device, pUpdate)) == true) {
-            break;
-        }
-        string error_str;
-        if (!pSet->WriteUpdate(my_data->report_data, &pWDS[i], &error_str)) {
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                                (uint64_t)(ds), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
-                                "vkUpdateDescriptorsSets() failed write update for Descriptor Set 0x%" PRIx64 " with error: %s",
-                                reinterpret_cast<uint64_t &>(ds), error_str.c_str());
+        auto dest_set = pWDS[i].dstSet;
+        auto set_pair = my_data->setMap.find(dest_set);
+        if (set_pair == my_data->setMap.end()) {
+            skip_call |=
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                        reinterpret_cast<uint64_t &>(dest_set), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
+                        "Cannot call vkUpdateDescriptorSets() on descriptor set 0x%" PRIxLEAST64 " that has not been allocated.",
+                        reinterpret_cast<uint64_t &>(dest_set));
+        } else {
+            string error_str;
+            if (!set_pair->second->WriteUpdate(my_data->report_data, &pWDS[i], &error_str)) {
+                skip_call |=
+                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                            reinterpret_cast<uint64_t &>(dest_set), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
+                            "vkUpdateDescriptorsSets() failed write update for Descriptor Set 0x%" PRIx64 " with error: %s",
+                            reinterpret_cast<uint64_t &>(dest_set), error_str.c_str());
+            }
         }
     }
     // Now validate copy updates
     for (i = 0; i < descriptorCopyCount; ++i) {
-        cvdescriptorset::DescriptorSet *pSrcSet = NULL, *pDstSet = NULL;
-        // For each copy make sure that update falls within given layout and that types match
-        pSrcSet = my_data->setMap[pCDS[i].srcSet];
-        pDstSet = my_data->setMap[pCDS[i].dstSet];
-        // Set being updated cannot be in-flight
-        if ((skipCall = validateIdleDescriptorSet(my_data, pDstSet->GetSet(), "VkUpdateDescriptorSets")) == true)
-            return skipCall;
-        invalidateBoundCmdBuffers(my_data, pDstSet);
-        std::string error_str;
-        if (!pDstSet->CopyUpdate(my_data->report_data, &pCDS[i], pSrcSet, &error_str)) {
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                                reinterpret_cast<const uint64_t &>(pCDS[i].dstSet), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
-                                "vkUpdateDescriptorsSets() failed copy update from Descriptor Set 0x%" PRIx64
-                                " to Descriptor Set 0x%" PRIx64 " with error: %s",
-                                reinterpret_cast<const uint64_t &>(pCDS[i].srcSet),
-                                reinterpret_cast<const uint64_t &>(pCDS[i].dstSet), error_str.c_str());
+        auto dst_set = pCDS[i].dstSet;
+        auto src_set = pCDS[i].srcSet;
+        auto src_pair = my_data->setMap.find(src_set);
+        auto dst_pair = my_data->setMap.find(dst_set);
+        if (src_pair == my_data->setMap.end()) {
+            skip_call |= log_msg(
+                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                reinterpret_cast<uint64_t &>(src_set), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
+                "Cannot call vkUpdateDescriptorSets() to copy from descriptor set 0x%" PRIxLEAST64 " that has not been allocated.",
+                reinterpret_cast<uint64_t &>(src_set));
+        } else if (dst_pair == my_data->setMap.end()) {
+            skip_call |= log_msg(
+                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                reinterpret_cast<uint64_t &>(dst_set), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
+                "Cannot call vkUpdateDescriptorSets() to copy to descriptor set 0x%" PRIxLEAST64 " that has not been allocated.",
+                reinterpret_cast<uint64_t &>(dst_set));
+        } else {
+            std::string error_str;
+            if (!dst_pair->second->CopyUpdate(my_data->report_data, &pCDS[i], src_pair->second, &error_str)) {
+                skip_call |=
+                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                            reinterpret_cast<uint64_t &>(dst_set), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
+                            "vkUpdateDescriptorsSets() failed copy update from Descriptor Set 0x%" PRIx64
+                            " to Descriptor Set 0x%" PRIx64 " with error: %s",
+                            reinterpret_cast<uint64_t &>(src_set), reinterpret_cast<uint64_t &>(dst_set), error_str.c_str());
+            }
         }
     }
-    return skipCall;
+    return skip_call;
 }
 
 // Verify that given pool has descriptors that are being requested for allocation.
@@ -3701,7 +3707,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
             for (auto set : pCB->lastBound[i].uniqueBoundSets) {
                 auto set_node = dev_data->setMap.find(set);
                 if (set_node != dev_data->setMap.end()) {
-                    set_node->second->RemoveBoundCommandBuffer(pCB->commandBuffer);
+                    set_node->second->RemoveBoundCommandBuffer(pCB);
                 }
             }
             pCB->lastBound[i].reset();
@@ -5995,8 +6001,8 @@ AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllo
                 }
                 // Create new DescriptorSet instance and add to the pool's unordered_set of DescriptorSets
                 cvdescriptorset::DescriptorSet *pNewNode = new cvdescriptorset::DescriptorSet(
-                    pDescriptorSets[i], layout_pair->second, &dev_data->bufferMap, &dev_data->memObjMap, &dev_data->bufferViewMap,
-                    &dev_data->samplerMap, &dev_data->imageViewMap, &dev_data->imageMap,
+                    pDescriptorSets[i], layout_pair->second, dev_data->report_data, &dev_data->bufferMap, &dev_data->memObjMap,
+                    &dev_data->bufferViewMap, &dev_data->samplerMap, &dev_data->imageViewMap, &dev_data->imageMap,
                     &dev_data->device_extensions.imageToSwapchainMap, &dev_data->device_extensions.swapchainMap);
                 if (NULL == pNewNode) {
                     if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -6509,7 +6515,7 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                 cvdescriptorset::DescriptorSet *pSet = getSetNode(dev_data, pDescriptorSets[i]);
                 if (pSet) {
                     pCB->lastBound[pipelineBindPoint].uniqueBoundSets.insert(pDescriptorSets[i]);
-                    pSet->BindCommandBuffer(commandBuffer);
+                    pSet->BindCommandBuffer(pCB);
                     pCB->lastBound[pipelineBindPoint].pipelineLayout = layout;
                     pCB->lastBound[pipelineBindPoint].boundDescriptorSets[i + firstSet] = pDescriptorSets[i];
                     skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
