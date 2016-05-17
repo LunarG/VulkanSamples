@@ -290,7 +290,7 @@ class DescriptorSet : public BASE_NODE {
                   const std::unordered_map<VkImageView, VkImageViewCreateInfo> *, const std::unordered_map<VkImage, IMAGE_NODE> *,
                   const std::unordered_map<VkImage, VkSwapchainKHR> *,
                   const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *);
-    ~DescriptorSet(){};
+    ~DescriptorSet();
     // A number of common Get* functions that return data based on layout from which this set was created
     uint32_t GetTotalDescriptorCount() const { return p_layout_ ? p_layout_->GetTotalDescriptorCount() : 0; };
     uint32_t GetDynamicDescriptorCount() const { return p_layout_ ? p_layout_->GetDynamicDescriptorCount() : 0; };
@@ -351,6 +351,8 @@ class DescriptorSet : public BASE_NODE {
 
   private:
     bool ValidateUpdate(const VkWriteDescriptorSet *, const uint32_t, std::string *) const;
+    // Private helper to set all bound cmd buffers to INVALID state
+    void InvalidateBoundCmdBuffers();
     bool some_update_; // has any part of the set ever been updated?
     VkDescriptorSet set_;
     uint32_t descriptor_count_; // Count of all descriptors in this set

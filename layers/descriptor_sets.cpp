@@ -324,6 +324,15 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
         }
     }
 }
+cvdescriptorset::DescriptorSet::~DescriptorSet() {
+    InvalidateBoundCmdBuffers();
+    // Remove link to any cmd buffers
+    for (auto cb : bound_cmd_buffers_) {
+        for (uint32_t i=0; i<VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
+            cb->lastBound[i].uniqueBoundSets.erase(this);
+        }
+    }
+}
 // Is this sets underlying layout compatible with passed in layout according to "Pipeline Layout Compatibility" in spec?
 bool cvdescriptorset::DescriptorSet::IsCompatible(const DescriptorSetLayout *layout, std::string *error) const {
     return layout->IsCompatible(p_layout_, error);
@@ -452,6 +461,12 @@ uint32_t cvdescriptorset::DescriptorSet::GetAllStorageUpdates(std::unordered_set
     p_layout_->FillBindingSet(&binding_set);
     return GetStorageUpdates(binding_set, buffer_set, image_set);
 }
+// Set is being deleted or updates so invalidate all bound cmd buffers
+void cvdescriptorset::DescriptorSet::InvalidateBoundCmdBuffers() {
+    for (auto cb_node : bound_cmd_buffers_) {
+        cb_node->state = CB_INVALID;
+    }
+}
 // Perform write update in given update struct
 //  If an error occurs, return false and fill in details in error_msg string
 bool cvdescriptorset::DescriptorSet::WriteUpdate(debug_report_data *report_data, const VkWriteDescriptorSet *update,
@@ -514,10 +529,7 @@ bool cvdescriptorset::DescriptorSet::WriteUpdate(debug_report_data *report_data,
     if (num_updates != 0) {
         some_update_ = true;
     }
-    // Invalidate any bound command buffers
-    for (auto cb_node : bound_cmd_buffers_) {
-        cb_node->state = CB_INVALID;
-    }
+    InvalidateBoundCmdBuffers();
     return true;
 }
 // Copy update
@@ -595,10 +607,7 @@ bool cvdescriptorset::DescriptorSet::CopyUpdate(debug_report_data *report_data, 
     if (num_updates != 0) {
         some_update_ = true;
     }
-    // Invalidate any bound command buffers
-    for (auto cb_node : bound_cmd_buffers_) {
-        cb_node->state = CB_INVALID;
-    }
+    InvalidateBoundCmdBuffers();
     return true;
 }
 cvdescriptorset::SamplerDescriptor::SamplerDescriptor(
