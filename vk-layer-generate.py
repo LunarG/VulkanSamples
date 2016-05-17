@@ -164,8 +164,8 @@ def get_object_uses(obj_list, params):
     return (obj_uses, local_decls)
 
 class Subcommand(object):
-    def __init__(self, argv):
-        self.argv = argv
+    def __init__(self, outfile):
+        self.outfile = outfile
         self.headers = vulkan.headers
         self.protos = vulkan.protos
         self.no_addr = False
@@ -174,7 +174,11 @@ class Subcommand(object):
         self.wsi = sys.argv[1]
 
     def run(self):
-        print(self.generate())
+        if self.outfile:
+            with open(self.outfile, "w") as outfile:
+                outfile.write(self.generate())
+        else:
+            print(self.generate())
 
     def generate(self):
         copyright = self.generate_copyright()
@@ -268,19 +272,19 @@ class Subcommand(object):
                 if 'pUserData' == name:
                     return ("%i", "((pUserData == 0) ? 0 : *(pUserData))")
                 if 'const' in vk_type.lower():
-                    return ("%p", "(void*)(%s)" % name)
+                    return ("0x%p", "(void*)(%s)" % name)
                 return ("%i", "*(%s)" % name)
             return ("%i", name)
         # TODO : This is special-cased as there's only one "format" param currently and it's nice to expand it
         if "VkFormat" == vk_type:
             if cpp:
-                return ("%p", "&%s" % name)
+                return ("0x%p", "&%s" % name)
             return ("{%s.channelFormat = %%s, %s.numericFormat = %%s}" % (name, name), "string_VK_COLOR_COMPONENT_FORMAT(%s.channelFormat), string_VK_FORMAT_RANGE_SIZE(%s.numericFormat)" % (name, name))
         if output_param:
-            return ("%p", "(void*)*%s" % name)
+            return ("0x%p", "(void*)*%s" % name)
         if vk_helper.is_type(vk_type, 'struct') and '*' not in vk_type:
-            return ("%p", "(void*)(&%s)" % name)
-        return ("%p", "(void*)(%s)" % name)
+            return ("0x%p", "(void*)(&%s)" % name)
+        return ("0x%p", "(void*)(%s)" % name)
 
     def _gen_create_msg_callback(self):
         r_body = []
@@ -715,7 +719,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('#include <stdio.h>')
         header_txt.append('#include <stdlib.h>')
         header_txt.append('#include <string.h>')
-        header_txt.append('#include <inttypes.h>')
+        header_txt.append('#include <cinttypes>')
         header_txt.append('')
         header_txt.append('#include <unordered_map>')
         header_txt.append('')
@@ -1259,6 +1263,8 @@ class ObjectTrackerSubcommand(Subcommand):
                 using_line += '    if (skipCall)\n'
                 if proto.ret == "bool":
                     using_line += '        return false;\n'
+                elif proto.ret == "VkBool32":
+                    using_line += '        return VK_FALSE;\n'
                 elif proto.ret != "void":
                     using_line += '        return VK_ERROR_VALIDATION_FAILED_EXT;\n'
                 else:
@@ -1664,7 +1670,7 @@ def main():
     }
 
     if len(sys.argv) < 4 or sys.argv[1] not in wsi or sys.argv[2] not in subcommands or not os.path.exists(sys.argv[3]):
-        print("Usage: %s <wsi> <subcommand> <input_header> [options]" % sys.argv[0])
+        print("Usage: %s <wsi> <subcommand> <input_header> [outdir]" % sys.argv[0])
         print
         print("Available subcommands are: %s" % " ".join(subcommands))
         exit(1)
@@ -1678,7 +1684,11 @@ def main():
     vk_helper.typedef_rev_dict = hfp.get_typedef_rev_dict()
     vk_helper.types_dict = hfp.get_types_dict()
 
-    subcmd = subcommands[sys.argv[2]](sys.argv[3:])
+    outfile = None
+    if len(sys.argv) >= 5:
+        outfile = sys.argv[4]
+
+    subcmd = subcommands[sys.argv[2]](outfile)
     subcmd.run()
 
 if __name__ == "__main__":

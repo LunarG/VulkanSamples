@@ -85,6 +85,32 @@ template <> bool is_extension_added_token(VkSamplerAddressMode value) {
 }
 
 /**
+* Validate a minimum value.
+*
+* Verify that the specified value is greater than the specified lower bound.
+*
+* @param report_data debug_report_data object for routing validation messages.
+* @param api_name Name of API call being validated.
+* @param parameter_name Name of parameter being validated.
+* @param value Value to validate.
+* @param lower_bound Lower bound value to use for validation.
+* @return Boolean value indicating that the call should be skipped.
+*/
+template <typename T>
+bool ValidateGreaterThan(debug_report_data *report_data, const char *api_name, const char *parameter_name, T value,
+    T lower_bound) {
+    bool skip_call = false;
+
+    if (value <= lower_bound) {
+        skip_call |=
+            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+            LayerName, "%s: parameter %s must be greater than %d", api_name, parameter_name, lower_bound);
+    }
+
+    return skip_call;
+}
+
+/**
  * Validate a required pointer.
  *
  * Verify that a required pointer is not NULL.
@@ -691,8 +717,8 @@ static std::string get_result_description(VkResult result) {
         case VK_INCOMPLETE:                     return "a return array was too small for the result";
         case VK_ERROR_OUT_OF_HOST_MEMORY:       return "a host memory allocation has failed";
         case VK_ERROR_OUT_OF_DEVICE_MEMORY:     return "a device memory allocation has failed";
-        case VK_ERROR_INITIALIZATION_FAILED:    return "the logical device has been lost";
-        case VK_ERROR_DEVICE_LOST:              return "initialization of an object has failed";
+        case VK_ERROR_INITIALIZATION_FAILED:    return "initialization of an object has failed";
+        case VK_ERROR_DEVICE_LOST:              return "the logical device has been lost";
         case VK_ERROR_MEMORY_MAP_FAILED:        return "mapping of a memory object has failed";
         case VK_ERROR_LAYER_NOT_PRESENT:        return "the specified layer does not exist";
         case VK_ERROR_EXTENSION_NOT_PRESENT:    return "the specified extension does not exist";

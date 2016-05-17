@@ -212,6 +212,7 @@ class ImageDescriptor : public Descriptor {
                     const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *);
     bool WriteUpdate(const VkWriteDescriptorSet *, const uint32_t, std::string *) override;
     bool CopyUpdate(const Descriptor *, std::string *) override;
+    virtual bool IsStorage() const override { return storage_; }
     VkImageView GetImageView() const { return image_view_; }
     VkImageLayout GetImageLayout() const { return image_layout_; }
 
@@ -230,7 +231,8 @@ class TexelDescriptor : public Descriptor {
     TexelDescriptor(const VkDescriptorType, const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *);
     bool WriteUpdate(const VkWriteDescriptorSet *, const uint32_t, std::string *) override;
     bool CopyUpdate(const Descriptor *, std::string *) override;
-    VkBufferView GetBufferView() const { return buffer_view_; };
+    virtual bool IsStorage() const override { return storage_; }
+    VkBufferView GetBufferView() const { return buffer_view_; }
 
   private:
     VkBufferView buffer_view_;

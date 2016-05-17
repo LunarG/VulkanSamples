@@ -133,10 +133,13 @@ class bcolors:
 
 # Class to parse the validation layer test source and store testnames
 class TestParser:
-    def __init__(self, test_file_list, test_group_name='VkLayerTest'):
+    def __init__(self, test_file_list, test_group_name=['VkLayerTest', 'VkWsiEnabledLayerTest']):
         self.test_files = test_file_list
         self.tests_set = set()
-        self.test_trigger_txt = 'TEST_F(%s' % test_group_name
+        self.test_trigger_txt_list = []
+        for tg in test_group_name:
+            self.test_trigger_txt_list.append('TEST_F(%s' % tg)
+            #print('Test trigger test list: %s' % (self.test_trigger_txt_list))
 
     # Parse test files into internal data struct
     def parse(self):
@@ -148,7 +151,7 @@ class TestParser:
                     if True in [line.strip().startswith(comment) for comment in ['//', '/*']]:
                         continue
 
-                    if self.test_trigger_txt in line:
+                    if True in [ttt in line for ttt in self.test_trigger_txt_list]:
                         #print('Test wildcard in line: %s' % (line))
                         testname = line.split(',')[-1]
                         testname = testname.strip().strip(' {)')
@@ -272,7 +275,8 @@ class LayerDoc:
                         self.layer_doc_dict[layer_name][check_name]['notes'] = detail_sections[6].strip()
                         # strip any unwanted commas from api and test names
                         self.layer_doc_dict[layer_name][check_name]['api_list'] = [a.strip(',') for a in self.layer_doc_dict[layer_name][check_name]['api_list']]
-                        self.layer_doc_dict[layer_name][check_name]['tests'] = [a.strip(',') for a in self.layer_doc_dict[layer_name][check_name]['tests']]
+                        test_list = [a.strip(',') for a in self.layer_doc_dict[layer_name][check_name]['tests']]
+                        self.layer_doc_dict[layer_name][check_name]['tests'] = [a.split('.')[-1] for a in test_list]
                 # Trigger details parsing when we have table header
                 if detail_trigger in line:
                     parse_layer_details = True
@@ -341,12 +345,15 @@ class LayerDoc:
                                     part_found = True
                                     break
                             if not part_found:
-                                print(self.txt_color.yellow() + 'Validation check %s has missing or invalid test : %s' % (chk, test))
-                                warnings_found += 1
+                                print(self.txt_color.red() + 'Validation check %s has missing or invalid test : %s' % (chk, test))
+                                errors_found += 1
                                 break
                     elif test not in tests_set and not chk.endswith('_NONE'):
-                        print(self.txt_color.yellow() + 'Validation check %s has missing or invalid test : %s' % (chk, test))
-                        warnings_found += 1
+                        if test == 'TODO':
+                            warnings_found += 1
+                        else:
+                            print(self.txt_color.red() + 'Validation check %s has missing or invalid test : %s' % (chk, test))
+                            errors_found += 1
         # Now go through all of the actual checks in the layers and make sure they're covered in the doc
         for ln in layer_dict:
             for chk in layer_dict[ln]['CHECKS']:
@@ -386,7 +393,7 @@ def main(argv=None):
         if (0 == num_warnings):
             print(txt_color.green() + 'No warning cases found between %s and implementation' % (os.path.basename(opts.layer_doc)) + txt_color.endc())
         else:
-            print(txt_color.yellow() + 'Found %s warnings. See above for details' % num_warnings)
+            print(txt_color.yellow() + 'Found %s warnings due to missing tests. Missing tests are labeled as "TODO" in "%s."' % (num_warnings, opts.layer_doc))
         if (0 == num_errors):
             print(txt_color.green() + 'No mismatches found between %s and implementation' % (os.path.basename(opts.layer_doc)) + txt_color.endc())
         else:
