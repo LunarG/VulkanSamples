@@ -4417,6 +4417,10 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction)vkResetDescriptorPool;
     if (!strcmp(funcName, "vkAllocateDescriptorSets"))
         return (PFN_vkVoidFunction)vkAllocateDescriptorSets;
+    if (!strcmp(funcName, "vkFreeDescriptorSets"))
+        return (PFN_vkVoidFunction)vkFreeDescriptorSets;
+    if (!strcmp(funcName, "vkUpdateDescriptorSets"))
+        return (PFN_vkVoidFunction)vkUpdateDescriptorSets;
     if (!strcmp(funcName, "vkCmdSetViewport"))
         return (PFN_vkVoidFunction)vkCmdSetViewport;
     if (!strcmp(funcName, "vkCmdSetScissor"))
