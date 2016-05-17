@@ -2,7 +2,7 @@
     "file_format_version" : "1.0.0",
     "layer" : {
         "name": "VK_LAYER_LUNARG_parameter_validation",
-        "type": "INSTANCE",
+        "type": "GLOBAL",
         "library_path": "./libVkLayer_parameter_validation.so",
         "api_version": "1.0.13",
         "implementation_version": "1",

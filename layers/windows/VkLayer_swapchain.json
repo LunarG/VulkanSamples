@@ -2,7 +2,7 @@
     "file_format_version" : "1.0.0",
     "layer" : {
         "name": "VK_LAYER_LUNARG_swapchain",
-        "type": "INSTANCE",
+        "type": "GLOBAL",
         "library_path": ".\\VkLayer_swapchain.dll",
         "api_version": "1.0.13",
         "implementation_version": "1",

@@ -1907,18 +1907,9 @@ loader_add_layer_properties(const struct loader_instance *inst,
                 continue;
 
         }
-        if (!strcmp(type, "INSTANCE")) {
-            if (layer_instance_list == NULL) {
-                layer_node = layer_node->next;
-                continue;
-            }
-            props = loader_get_next_layer_property(inst, layer_instance_list);
-            props->type = (is_implicit) ? VK_LAYER_TYPE_INSTANCE_IMPLICIT
-                                        : VK_LAYER_TYPE_INSTANCE_EXPLICIT;
-        }
-        if (!strcmp(type, "GLOBAL")) {
-            loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
-                    "Global layers are treated the same as instance layers");
+        // Allow either GLOBAL or INSTANCE type interchangeably to handle
+        // layers that must work with older loaders
+        if (!strcmp(type, "INSTANCE") || !strcmp(type, "GLOBAL")) {
             if (layer_instance_list == NULL) {
                 layer_node = layer_node->next;
                 continue;

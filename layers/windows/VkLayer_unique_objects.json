@@ -2,7 +2,7 @@
     "file_format_version" : "1.0.0",
     "layer" : {
         "name": "VK_LAYER_GOOGLE_unique_objects",
-        "type": "INSTANCE",
+        "type": "GLOBAL",
         "library_path": ".\\VkLayer_unique_objects.dll",
         "api_version": "1.0.13",
         "implementation_version": "1",
