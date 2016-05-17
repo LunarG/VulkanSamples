@@ -353,6 +353,7 @@ template <> struct hash<ImageSubresourcePair> {
     }
 };
 }
+
 // Track last states that are bound per pipeline bind point (Gfx & Compute)
 struct LAST_BOUND_STATE {
     VkPipeline pipeline;
