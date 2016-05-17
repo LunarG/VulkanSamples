@@ -414,23 +414,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
                                                 VkRenderPass *pRenderPass) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skipCall = false;
-    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
-        if (pCreateInfo->pAttachments[i].format != VK_FORMAT_UNDEFINED) {
-            VkFormatProperties properties;
-            get_my_data_ptr(get_dispatch_key(my_data->physicalDevice), layer_data_map)
-                ->instance_dispatch_table->GetPhysicalDeviceFormatProperties(my_data->physicalDevice,
-                                                                             pCreateInfo->pAttachments[i].format, &properties);
-
-            if ((properties.linearTilingFeatures) == 0 && (properties.optimalTilingFeatures == 0)) {
-                std::stringstream ss;
-                ss << "vkCreateRenderPass parameter, VkFormat in pCreateInfo->pAttachments[" << i
-                   << "], contains unsupported format";
-                // TODO: Verify against Valid Use section of spec. Generally if something yield an undefined result, it's invalid
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                    IMAGE_FORMAT_UNSUPPORTED, "IMAGE", "%s", ss.str().c_str());
-            }
-        }
-    }
 
     for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
         if (!validate_VkImageLayoutKHR(pCreateInfo->pAttachments[i].initialLayout) ||
