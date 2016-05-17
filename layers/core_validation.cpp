@@ -1981,6 +1981,14 @@ static RENDER_PASS_NODE *getRenderPass(layer_data const *my_data, VkRenderPass r
     return it->second;
 }
 
+static FRAMEBUFFER_NODE *getFramebuffer(layer_data *my_data, VkFramebuffer framebuffer) {
+    auto it = my_data->frameBufferMap.find(framebuffer);
+    if (it == my_data->frameBufferMap.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}
+
 // Return true if for a given PSO, the given state enum is dynamic, else return false
 static bool isDynamic(const PIPELINE_NODE *pPipeline, const VkDynamicState state) {
     if (pPipeline && pPipeline->graphicsPipelineCI.pDynamicState) {
@@ -3756,10 +3764,9 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
 
         // Remove this cmdBuffer's reference from each FrameBuffer's CB ref list
         for (auto framebuffer : pCB->framebuffers) {
-            auto fbNode = dev_data->frameBufferMap.find(framebuffer);
-            if (fbNode != dev_data->frameBufferMap.end()) {
-                fbNode->second.referencingCmdBuffers.erase(pCB->commandBuffer);
-            }
+            auto fbNode = getFramebuffer(dev_data, framebuffer);
+            if (fbNode)
+                fbNode->referencingCmdBuffers.erase(pCB->commandBuffer);
         }
         pCB->framebuffers.clear();
         pCB->activeFramebuffer = VK_NULL_HANDLE;
@@ -6154,9 +6161,9 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                                             reinterpret_cast<void *>(commandBuffer));
                     } else {
                         string errorString = "";
-                        auto fbNode = dev_data->frameBufferMap.find(pInfo->framebuffer);
-                        if (fbNode != dev_data->frameBufferMap.end()) {
-                            VkRenderPass fbRP = fbNode->second.createInfo.renderPass;
+                        auto framebuffer = getFramebuffer(dev_data, pInfo->framebuffer);
+                        if (framebuffer) {
+                            VkRenderPass fbRP = framebuffer->createInfo.renderPass;
                             if (!verify_renderpass_compatibility(dev_data, fbRP, pInfo->renderPass, errorString)) {
                                 // renderPass that framebuffer was created with must be compatible with local renderPass
                                 skipCall |=
@@ -6170,7 +6177,7 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                                             (uint64_t)(pInfo->framebuffer), (uint64_t)(fbRP), errorString.c_str());
                             }
                             // Connect this framebuffer to this cmdBuffer
-                            fbNode->second.referencingCmdBuffers.insert(pCB->commandBuffer);
+                            framebuffer->referencingCmdBuffers.insert(pCB->commandBuffer);
                         }
                     }
                 }
@@ -8258,10 +8265,10 @@ bool isRegionOverlapping(VkImageSubresourceRange range1, VkImageSubresourceRange
             isRangeOverlapping(range1.baseArrayLayer, range1.layerCount, range2.baseArrayLayer, range2.layerCount));
 }
 
-static bool ValidateDependencies(const layer_data *my_data, const VkRenderPassBeginInfo *pRenderPassBegin,
+static bool ValidateDependencies(const layer_data *my_data, FRAMEBUFFER_NODE const * framebuffer,
                                  RENDER_PASS_NODE const * renderPass) {
     bool skip_call = false;
-    const VkFramebufferCreateInfo *pFramebufferInfo = &my_data->frameBufferMap.at(pRenderPassBegin->framebuffer).createInfo;
+    const VkFramebufferCreateInfo *pFramebufferInfo = &framebuffer->createInfo;
     const VkRenderPassCreateInfo *pCreateInfo = renderPass->pCreateInfo;
     auto const & subpass_to_node = renderPass->subpassToNode;
     std::vector<std::vector<uint32_t>> output_attachment_to_subpass(pCreateInfo->attachmentCount);
@@ -8814,9 +8821,7 @@ static bool validatePrimaryCommandBuffer(const layer_data *my_data, const GLOBAL
     return skip_call;
 }
 
-static void TransitionFinalSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBeginInfo *pRenderPassBegin) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
-    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, cmdBuffer);
+static void TransitionFinalSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const VkRenderPassBeginInfo *pRenderPassBegin) {
     auto renderPass = getRenderPass(dev_data, pRenderPassBegin->renderPass);
     if (!renderPass)
         return;
@@ -8859,12 +8864,13 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
     std::unique_lock<std::mutex> lock(global_lock);
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     auto renderPass = pRenderPassBegin ? getRenderPass(dev_data, pRenderPassBegin->renderPass) : nullptr;
+    auto framebuffer = pRenderPassBegin ? getFramebuffer(dev_data, pRenderPassBegin->framebuffer) : nullptr;
     if (pCB) {
         if (renderPass) {
 #if MTMERGE
             pCB->activeFramebuffer = pRenderPassBegin->framebuffer;
             for (size_t i = 0; i < renderPass->attachments.size(); ++i) {
-                MT_FB_ATTACHMENT_INFO &fb_info = dev_data->frameBufferMap[pRenderPassBegin->framebuffer].attachments[i];
+                MT_FB_ATTACHMENT_INFO &fb_info = framebuffer->attachments[i];
                 if (renderPass->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
                     std::function<bool()> function = [=]() {
                         set_memory_valid(dev_data, fb_info.mem, true, fb_info.image);
@@ -8895,7 +8901,7 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
             skipCall |= VerifyFramebufferAndRenderPassLayouts(commandBuffer, pRenderPassBegin);
             skipCall |= insideRenderPass(dev_data, pCB, "vkCmdBeginRenderPass");
             if (renderPass) {
-                skipCall |= ValidateDependencies(dev_data, pRenderPassBegin, renderPass);
+                skipCall |= ValidateDependencies(dev_data, framebuffer, renderPass);
             }
             pCB->activeRenderPass = renderPass;
             skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdBeginRenderPass");
@@ -8965,7 +8971,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
         skipCall |= outsideRenderPass(dev_data, pCB, "vkCmdEndRenderpass");
         skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdEndRenderPass");
         skipCall |= addCmd(dev_data, pCB, CMD_ENDRENDERPASS, "vkCmdEndRenderPass()");
-        TransitionFinalSubpassLayouts(commandBuffer, &pCB->activeRenderPassBeginInfo);
+        TransitionFinalSubpassLayouts(dev_data, pCB, &pCB->activeRenderPassBeginInfo);
         pCB->activeRenderPass = nullptr;
         pCB->activeSubpass = 0;
         pCB->activeFramebuffer = VK_NULL_HANDLE;
