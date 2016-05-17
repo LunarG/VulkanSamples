@@ -6925,7 +6925,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct) {
     VkResult err;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "Unexpected UPDATE struct of type ");
+                                         ".sType must be VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
