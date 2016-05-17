@@ -8783,10 +8783,8 @@ static bool VerifyFramebufferAndRenderPassLayouts(VkCommandBuffer cmdBuffer, con
     return skip_call;
 }
 
-static void TransitionSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBeginInfo *pRenderPassBegin,
+static void TransitionSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const VkRenderPassBeginInfo *pRenderPassBegin,
                                      const int subpass_index) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
-    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, cmdBuffer);
     auto renderPass = getRenderPass(dev_data, pRenderPassBegin->renderPass);
     if (!renderPass)
         return;
@@ -8935,7 +8933,7 @@ VKAPI_ATTR void VKAPI_CALL CmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpa
         skipCall |= addCmd(dev_data, pCB, CMD_NEXTSUBPASS, "vkCmdNextSubpass()");
         pCB->activeSubpass++;
         pCB->activeSubpassContents = contents;
-        TransitionSubpassLayouts(commandBuffer, &pCB->activeRenderPassBeginInfo, pCB->activeSubpass);
+        TransitionSubpassLayouts(dev_data, pCB, &pCB->activeRenderPassBeginInfo, pCB->activeSubpass);
         skipCall |= outsideRenderPass(dev_data, pCB, "vkCmdNextSubpass");
     }
     lock.unlock();
