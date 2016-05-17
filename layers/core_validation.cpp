@@ -8738,10 +8738,8 @@ static void deleteRenderPasses(layer_data *my_data) {
     my_data->renderPassMap.clear();
 }
 
-static bool VerifyFramebufferAndRenderPassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBeginInfo *pRenderPassBegin) {
+static bool VerifyFramebufferAndRenderPassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const VkRenderPassBeginInfo *pRenderPassBegin) {
     bool skip_call = false;
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
-    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, cmdBuffer);
     const VkRenderPassCreateInfo *pRenderPassInfo = dev_data->renderPassMap[pRenderPassBegin->renderPass]->pCreateInfo;
     const VkFramebufferCreateInfo framebufferInfo = dev_data->frameBufferMap[pRenderPassBegin->framebuffer].createInfo;
     if (pRenderPassInfo->attachmentCount != framebufferInfo.attachmentCount) {
@@ -8789,11 +8787,11 @@ static void TransitionSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB, 
     if (!renderPass)
         return;
 
-    auto framebuffer_data = dev_data->frameBufferMap.find(pRenderPassBegin->framebuffer);
-    if (framebuffer_data == dev_data->frameBufferMap.end()) {
+    auto framebuffer = getFramebuffer(dev_data, pRenderPassBegin->framebuffer);
+    if (!framebuffer)
         return;
-    }
-    const VkFramebufferCreateInfo framebufferInfo = framebuffer_data->second.createInfo;
+
+    const VkFramebufferCreateInfo &framebufferInfo = framebuffer->createInfo;
     const VkSubpassDescription &subpass = renderPass->pCreateInfo->pSubpasses[subpass_index];
     for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
         const VkImageView &image_view = framebufferInfo.pAttachments[subpass.pInputAttachments[j].attachment];
@@ -8825,13 +8823,12 @@ static void TransitionFinalSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *
         return;
 
     const VkRenderPassCreateInfo *pRenderPassInfo = renderPass->pCreateInfo;
-    auto framebuffer_data = dev_data->frameBufferMap.find(pRenderPassBegin->framebuffer);
-    if (framebuffer_data == dev_data->frameBufferMap.end()) {
+    auto framebuffer = getFramebuffer(dev_data, pRenderPassBegin->framebuffer);
+    if (!framebuffer)
         return;
-    }
-    const VkFramebufferCreateInfo framebufferInfo = framebuffer_data->second.createInfo;
+
     for (uint32_t i = 0; i < pRenderPassInfo->attachmentCount; ++i) {
-        const VkImageView &image_view = framebufferInfo.pAttachments[i];
+        const VkImageView &image_view = framebuffer->createInfo.pAttachments[i];
         SetLayout(dev_data, pCB, image_view, pRenderPassInfo->pAttachments[i].finalLayout);
     }
 }
@@ -8896,7 +8893,7 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
             }
 #endif
             skipCall |= VerifyRenderAreaBounds(dev_data, pRenderPassBegin);
-            skipCall |= VerifyFramebufferAndRenderPassLayouts(commandBuffer, pRenderPassBegin);
+            skipCall |= VerifyFramebufferAndRenderPassLayouts(dev_data, pCB, pRenderPassBegin);
             skipCall |= insideRenderPass(dev_data, pCB, "vkCmdBeginRenderPass");
             if (renderPass) {
                 skipCall |= ValidateDependencies(dev_data, framebuffer, renderPass);
@@ -8910,7 +8907,7 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
             pCB->activeSubpassContents = contents;
             pCB->framebuffers.insert(pRenderPassBegin->framebuffer);
             // Connect this framebuffer to this cmdBuffer
-            dev_data->frameBufferMap[pRenderPassBegin->framebuffer].referencingCmdBuffers.insert(pCB->commandBuffer);
+            framebuffer->referencingCmdBuffers.insert(pCB->commandBuffer);
         } else {
             skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
@@ -8948,9 +8945,10 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
     auto pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         RENDER_PASS_NODE* pRPNode = pCB->activeRenderPass;
+        auto framebuffer = getFramebuffer(dev_data, pCB->activeFramebuffer);
         if (pRPNode) {
             for (size_t i = 0; i < pRPNode->attachments.size(); ++i) {
-                MT_FB_ATTACHMENT_INFO &fb_info = dev_data->frameBufferMap[pCB->activeFramebuffer].attachments[i];
+                MT_FB_ATTACHMENT_INFO &fb_info = framebuffer->attachments[i];
                 if (pRPNode->attachments[i].store_op == VK_ATTACHMENT_STORE_OP_STORE) {
                     std::function<bool()> function = [=]() {
                         set_memory_valid(dev_data, fb_info.mem, true, fb_info.image);
@@ -9141,8 +9139,8 @@ static bool validateFramebuffer(layer_data *dev_data, VkCommandBuffer primaryBuf
                                  " that is not compatible with the current framebuffer 0x%" PRIx64 ".",
                                  (void *)secondaryBuffer, (uint64_t)(secondary_fb), (uint64_t)(primary_fb));
         }
-        auto fb_data = dev_data->frameBufferMap.find(secondary_fb);
-        if (fb_data == dev_data->frameBufferMap.end()) {
+        auto fb = getFramebuffer(dev_data, secondary_fb);
+        if (!fb) {
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                         DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS", "vkCmdExecuteCommands() called w/ invalid Cmd Buffer 0x%p "
@@ -9150,7 +9148,7 @@ static bool validateFramebuffer(layer_data *dev_data, VkCommandBuffer primaryBuf
                         (void *)secondaryBuffer, (uint64_t)(secondary_fb));
             return skip_call;
         }
-        skip_call |= validateRenderPassCompatibility(dev_data, secondaryBuffer, fb_data->second.createInfo.renderPass,
+        skip_call |= validateRenderPassCompatibility(dev_data, secondaryBuffer, fb->createInfo.renderPass,
                                                      secondaryBuffer, pSubCB->beginInfo.pInheritanceInfo->renderPass);
     }
     return skip_call;
