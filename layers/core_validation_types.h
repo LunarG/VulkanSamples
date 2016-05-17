@@ -52,6 +52,11 @@
 #include <vector>
 #include <functional>
 
+// Fwd declarations
+namespace cvdescriptorset {
+class DescriptorSet;
+};
+
 class BASE_NODE {
   public:
     std::atomic_int in_use;
@@ -302,27 +307,6 @@ typedef enum _CBStatusFlagBits {
     // clang-format on
 } CBStatusFlagBits;
 
-// Track last states that are bound per pipeline bind point (Gfx & Compute)
-struct LAST_BOUND_STATE {
-    VkPipeline pipeline;
-    VkPipelineLayout pipelineLayout;
-    // Track each set that has been bound
-    // TODO : can unique be global per CB? (do we care about Gfx vs. Compute?)
-    std::unordered_set<VkDescriptorSet> uniqueBoundSets;
-    // Ordered bound set tracking where index is set# that given set is bound to
-    std::vector<VkDescriptorSet> boundDescriptorSets;
-    // one dynamic offset per dynamic descriptor bound to this CB
-    std::vector<std::vector<uint32_t>> dynamicOffsets;
-
-    void reset() {
-        pipeline = VK_NULL_HANDLE;
-        pipelineLayout = VK_NULL_HANDLE;
-        uniqueBoundSets.clear();
-        boundDescriptorSets.clear();
-        dynamicOffsets.clear();
-    }
-};
-
 struct QueryObject {
     VkQueryPool pool;
     uint32_t index;
@@ -369,7 +353,27 @@ template <> struct hash<ImageSubresourcePair> {
     }
 };
 }
-// Cmd Buffer Wrapper Struct
+// Track last states that are bound per pipeline bind point (Gfx & Compute)
+struct LAST_BOUND_STATE {
+    VkPipeline pipeline;
+    VkPipelineLayout pipelineLayout;
+    // Track each set that has been bound
+    // TODO : can unique be global per CB? (do we care about Gfx vs. Compute?)
+    std::unordered_set<cvdescriptorset::DescriptorSet *> uniqueBoundSets;
+    // Ordered bound set tracking where index is set# that given set is bound to
+    std::vector<cvdescriptorset::DescriptorSet *> boundDescriptorSets;
+    // one dynamic offset per dynamic descriptor bound to this CB
+    std::vector<std::vector<uint32_t>> dynamicOffsets;
+
+    void reset() {
+        pipeline = VK_NULL_HANDLE;
+        pipelineLayout = VK_NULL_HANDLE;
+        uniqueBoundSets.clear();
+        boundDescriptorSets.clear();
+        dynamicOffsets.clear();
+    }
+};
+// Cmd Buffer Wrapper Struct - TODO : This desperately needs its own class
 struct GLOBAL_CB_NODE : public BASE_NODE {
     VkCommandBuffer commandBuffer;
     VkCommandBufferAllocateInfo createInfo;
@@ -386,11 +390,6 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     // Currently storing "lastBound" objects on per-CB basis
     //  long-term may want to create caches of "lastBound" states and could have
     //  each individual CMD_NODE referencing its own "lastBound" state
-    //    VkPipeline lastBoundPipeline;
-    //    VkPipelineLayout lastBoundPipelineLayout;
-    //    // Capture unique std::set of descriptorSets that are bound to this CB.
-    //    std::set<VkDescriptorSet> uniqueBoundSets;
-    //    vector<VkDescriptorSet> boundDescriptorSets; // Index is set# that given set is bound to
     // Store last bound state for Gfx & Compute pipeline bind points
     LAST_BOUND_STATE lastBound[VK_PIPELINE_BIND_POINT_RANGE_SIZE];
 
@@ -409,8 +408,8 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     // TODO : These data structures relate to tracking resources that invalidate
     //  a cmd buffer that references them. Need to unify how we handle these
     //  cases so we don't have different tracking data for each type.
-    std::unordered_set<VkDescriptorSet> destroyedSets;
-    std::unordered_set<VkDescriptorSet> updatedSets;
+    std::unordered_set<cvdescriptorset::DescriptorSet *> destroyedSets;
+    std::unordered_set<cvdescriptorset::DescriptorSet *> updatedSets;
     std::unordered_set<VkFramebuffer> destroyedFramebuffers;
     std::vector<VkEvent> waitedEvents;
     std::vector<VkSemaphore> semaphores;
@@ -435,6 +434,8 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     std::vector<std::function<bool()>> validate_functions;
     std::unordered_set<VkDeviceMemory> memObjs;
     std::vector<std::function<bool(VkQueue)>> eventUpdates;
+
+    ~GLOBAL_CB_NODE();
 };
 
 #endif // CORE_VALIDATION_TYPES_H_
