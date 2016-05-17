@@ -3387,15 +3387,6 @@ static bool validateIdleDescriptorSet(const layer_data *my_data, VkDescriptorSet
     }
     return skip_call;
 }
-static void invalidateBoundCmdBuffers(layer_data *dev_data, cvdescriptorset::DescriptorSet *pSet) {
-    // Flag any CBs this set is bound to as INVALID and remove set binding
-    for (auto cb_node : pSet->GetBoundCmdBuffers()) {
-        cb_node->state = CB_INVALID;
-        for (uint32_t i = 0; i < VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
-            cb_node->lastBound[i].uniqueBoundSets.erase(pSet);
-        }
-    }
-}
 // update DS mappings based on write and copy update arrays
 static bool dsUpdate(layer_data *my_data, VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pWDS,
                      uint32_t descriptorCopyCount, const VkCopyDescriptorSet *pCDS) {
@@ -3505,7 +3496,6 @@ static bool validate_descriptor_availability_in_pool(layer_data *dev_data, DESCR
 
 // Free the descriptor set, remove it from setMap and invalidate any cmd buffers that it was bound to
 static void freeDescriptorSet(layer_data *dev_data, cvdescriptorset::DescriptorSet *descriptor_set) {
-    invalidateBoundCmdBuffers(dev_data, descriptor_set);
     dev_data->setMap.erase(descriptor_set->GetSet());
     delete descriptor_set;
 }
