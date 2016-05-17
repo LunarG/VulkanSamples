@@ -3088,6 +3088,19 @@ static void processCommand(struct android_app* app, int32_t cmd) {
     switch(cmd) {
         case APP_CMD_INIT_WINDOW: {
             if (app->window) {
+                // We're getting a new window.  If the app is starting up, we
+                // need to initialize.  If the app has already been
+                // initialized, that means that we lost our previous window,
+                // which means that we have a lot of work to do.  At a minimum,
+                // we need to destroy the swapchain and surface associated with
+                // the old window, and create a new surface and swapchain.
+                // However, since there are a lot of other objects/state that
+                // is tied to the swapchain, it's easiest to simply cleanup and
+                // start over (i.e. use a brute-force approach of re-starting
+                // the app)
+                if (demo.prepared) {
+                    demo_cleanup(&demo);
+                }
                 demo_init(&demo, 0, NULL);
                 demo.window = (void*)app->window;
                 demo_init_vk_swapchain(&demo);
@@ -3116,6 +3129,8 @@ void android_main(struct android_app *app)
     if (vulkanSupport == 0)
         return;
 #endif
+
+    demo.prepared = false;
 
     app->onAppCmd = processCommand;
     app->onInputEvent = processInput;
