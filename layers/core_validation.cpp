@@ -5386,15 +5386,13 @@ DestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocatio
     // Verify that command buffers in pool are complete (not in-flight)
     VkBool32 result = checkAndClearCommandBuffersInFlight(dev_data, commandPool, "destroy command pool with");
     // Must remove cmdpool from cmdpoolmap, after removing all cmdbuffers in its list from the commandPoolMap
-    if (dev_data->commandPoolMap.find(commandPool) != dev_data->commandPoolMap.end()) {
-        for (auto poolCb = dev_data->commandPoolMap[commandPool].commandBuffers.begin();
-             poolCb != dev_data->commandPoolMap[commandPool].commandBuffers.end();) {
-            clear_cmd_buf_and_mem_references(dev_data, *poolCb);
-            auto del_cb = dev_data->commandBufferMap.find(*poolCb);
-            delete (*del_cb).second;                  // delete CB info structure
+    auto pool_it = dev_data->commandPoolMap.find(commandPool);
+    if (pool_it != dev_data->commandPoolMap.end()) {
+        for (auto cb : pool_it->second.commandBuffers) {
+            clear_cmd_buf_and_mem_references(dev_data, cb);
+            auto del_cb = dev_data->commandBufferMap.find(cb);
+            delete del_cb->second;                  // delete CB info structure
             dev_data->commandBufferMap.erase(del_cb); // Remove this command buffer
-            poolCb = dev_data->commandPoolMap[commandPool].commandBuffers.erase(
-                poolCb); // Remove CB reference from commandPoolMap's list
         }
     }
     dev_data->commandPoolMap.erase(commandPool);
