@@ -43,7 +43,7 @@ template debug_report_data *get_my_data_ptr<debug_report_data>(void *data_key,
                                                                std::unordered_map<void *, debug_report_data *> &data_map);
 
 // Utility function to handle reporting
-static inline bool debug_report_log_msg(debug_report_data *debug_data, VkFlags msgFlags, VkDebugReportObjectTypeEXT objectType,
+static inline bool debug_report_log_msg(const debug_report_data *debug_data, VkFlags msgFlags, VkDebugReportObjectTypeEXT objectType,
                                         uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix,
                                         const char *pMsg) {
     bool bail = false;
@@ -308,11 +308,11 @@ static inline int vasprintf(char **strp, char const *fmt, va_list ap) {
  * is only computed if a message needs to be logged
  */
 #ifndef WIN32
-static inline bool log_msg(debug_report_data *debug_data, VkFlags msgFlags, VkDebugReportObjectTypeEXT objectType,
+static inline bool log_msg(const debug_report_data *debug_data, VkFlags msgFlags, VkDebugReportObjectTypeEXT objectType,
                            uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *format, ...)
     __attribute__((format(printf, 8, 9)));
 #endif
-static inline bool log_msg(debug_report_data *debug_data, VkFlags msgFlags, VkDebugReportObjectTypeEXT objectType,
+static inline bool log_msg(const debug_report_data *debug_data, VkFlags msgFlags, VkDebugReportObjectTypeEXT objectType,
                            uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *format,
                            ...) {
     if (!debug_data || !(debug_data->active_flags & msgFlags)) {
