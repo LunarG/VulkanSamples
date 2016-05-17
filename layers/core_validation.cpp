@@ -70,6 +70,17 @@
 
 using namespace std;
 
+// TODO : CB really needs it's own class and files so this is just temp code until that happens
+GLOBAL_CB_NODE::~GLOBAL_CB_NODE() {
+    for (uint32_t i=0; i<VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
+        // Make sure that no sets hold onto deleted CB binding
+        for (auto set : lastBound[i].uniqueBoundSets) {
+            set->RemoveBoundCommandBuffer(this);
+        }
+        lastBound[i].reset();
+    }
+}
+
 namespace core_validation {
 
 using std::unordered_map;
@@ -2612,14 +2623,11 @@ static bool validate_and_update_drawtime_descriptor_state(
 //   When validate_and_update_draw_state() handles compute shaders so that active_slots is correct for compute pipelines, this
 //   function can be killed and validate_and_update_draw_state() used instead
 static void update_shader_storage_images_and_buffers(layer_data *dev_data, GLOBAL_CB_NODE *pCB) {
-    cvdescriptorset::DescriptorSet *pSet = nullptr;
     // For the bound descriptor sets, pull off any storage images and buffers
     //  This may be more than are actually updated depending on which are active, but for now this is a stop-gap for compute
     //  pipelines
     for (auto set : pCB->lastBound[VK_PIPELINE_BIND_POINT_COMPUTE].uniqueBoundSets) {
-        // Get the set node
-        pSet = getSetNode(dev_data, set);
-        pSet->GetAllStorageUpdates(&pCB->updateBuffers, &pCB->updateImages);
+        set->GetAllStorageUpdates(&pCB->updateBuffers, &pCB->updateImages);
     }
 }
 
@@ -2749,10 +2757,10 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
                                   DRAWSTATE_DESCRIPTOR_SET_NOT_BOUND, "DS",
                                   "VkPipeline 0x%" PRIxLEAST64 " uses set #%u but that set is not bound.", (uint64_t)pPipe->pipeline,
                                   setIndex);
-            } else if (!verify_set_layout_compatibility(my_data, my_data->setMap[state.boundDescriptorSets[setIndex]],
+            } else if (!verify_set_layout_compatibility(my_data, state.boundDescriptorSets[setIndex],
                                                         pPipe->graphicsPipelineCI.layout, setIndex, errorString)) {
                 // Set is bound but not compatible w/ overlapping pipelineLayout from PSO
-                VkDescriptorSet setHandle = my_data->setMap[state.boundDescriptorSets[setIndex]]->GetSet();
+                VkDescriptorSet setHandle = state.boundDescriptorSets[setIndex]->GetSet();
                 result |=
                     log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                             (uint64_t)setHandle, __LINE__, DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, "DS",
@@ -2761,7 +2769,7 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
                             (uint64_t)setHandle, setIndex, (uint64_t)pPipe->graphicsPipelineCI.layout, errorString.c_str());
             } else { // Valid set is bound and layout compatible, validate that it's updated
                 // Pull the set node
-                cvdescriptorset::DescriptorSet *pSet = my_data->setMap[state.boundDescriptorSets[setIndex]];
+                cvdescriptorset::DescriptorSet *pSet = state.boundDescriptorSets[setIndex];
                 // Save vector of all active sets to verify dynamicOffsets below
                 activeSetBindingsPairs.push_back(std::make_tuple(pSet, setBindingPair.second,
                                                                  &state.dynamicOffsets[setIndex]));
@@ -3379,10 +3387,13 @@ static bool validateIdleDescriptorSet(const layer_data *my_data, VkDescriptorSet
     }
     return skip_call;
 }
-static void invalidateBoundCmdBuffers(layer_data *dev_data, const cvdescriptorset::DescriptorSet *pSet) {
-    // Flag any CBs this set is bound to as INVALID
+static void invalidateBoundCmdBuffers(layer_data *dev_data, cvdescriptorset::DescriptorSet *pSet) {
+    // Flag any CBs this set is bound to as INVALID and remove set binding
     for (auto cb_node : pSet->GetBoundCmdBuffers()) {
         cb_node->state = CB_INVALID;
+        for (uint32_t i = 0; i < VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
+            cb_node->lastBound[i].uniqueBoundSets.erase(pSet);
+        }
     }
 }
 // update DS mappings based on write and copy update arrays
@@ -3546,7 +3557,6 @@ static GLOBAL_CB_NODE *getCBNode(layer_data const *my_data, const VkCommandBuffe
     }
     return it->second;
 }
-
 // Free all CB Nodes
 // NOTE : Calls to this function should be wrapped in mutex
 static void deleteCommandBuffers(layer_data *my_data) {
@@ -3705,10 +3715,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         for (uint32_t i = 0; i < VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
             // Before clearing lastBoundState, remove any CB bindings from all uniqueBoundSets
             for (auto set : pCB->lastBound[i].uniqueBoundSets) {
-                auto set_node = dev_data->setMap.find(set);
-                if (set_node != dev_data->setMap.end()) {
-                    set_node->second->RemoveBoundCommandBuffer(pCB);
-                }
+                set->RemoveBoundCommandBuffer(pCB);
             }
             pCB->lastBound[i].reset();
         }
@@ -4146,14 +4153,13 @@ static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *p
     }
     for (uint32_t i = 0; i < VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
         for (auto set : pCB->lastBound[i].uniqueBoundSets) {
-            auto setNode = my_data->setMap.find(set);
-            if (setNode == my_data->setMap.end()) {
+            if (!my_data->setMap.count(set->GetSet())) {
                 skip_call |=
                     log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                             (uint64_t)(set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
                             "Cannot submit cmd buffer using deleted descriptor set 0x%" PRIx64 ".", (uint64_t)(set));
             } else {
-                setNode->second->in_use.fetch_add(1);
+                set->in_use.fetch_add(1);
             }
         }
     }
@@ -4224,10 +4230,7 @@ static void decrementResources(layer_data *my_data, VkCommandBuffer cmdBuffer) {
     }
     for (uint32_t i = 0; i < VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
         for (auto set : pCB->lastBound[i].uniqueBoundSets) {
-            auto setNode = my_data->setMap.find(set);
-            if (setNode != my_data->setMap.end()) {
-                setNode->second->in_use.fetch_sub(1);
-            }
+            set->in_use.fetch_sub(1);
         }
     }
     for (auto semaphore : pCB->semaphores) {
@@ -6510,14 +6513,14 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                 pCB->lastBound[pipelineBindPoint].boundDescriptorSets.resize(lastSetIndex + 1);
                 pCB->lastBound[pipelineBindPoint].dynamicOffsets.resize(lastSetIndex + 1);
             }
-            VkDescriptorSet oldFinalBoundSet = pCB->lastBound[pipelineBindPoint].boundDescriptorSets[lastSetIndex];
+            auto oldFinalBoundSet = pCB->lastBound[pipelineBindPoint].boundDescriptorSets[lastSetIndex];
             for (uint32_t i = 0; i < setCount; i++) {
                 cvdescriptorset::DescriptorSet *pSet = getSetNode(dev_data, pDescriptorSets[i]);
                 if (pSet) {
-                    pCB->lastBound[pipelineBindPoint].uniqueBoundSets.insert(pDescriptorSets[i]);
+                    pCB->lastBound[pipelineBindPoint].uniqueBoundSets.insert(pSet);
                     pSet->BindCommandBuffer(pCB);
                     pCB->lastBound[pipelineBindPoint].pipelineLayout = layout;
-                    pCB->lastBound[pipelineBindPoint].boundDescriptorSets[i + firstSet] = pDescriptorSets[i];
+                    pCB->lastBound[pipelineBindPoint].boundDescriptorSets[i + firstSet] = pSet;
                     skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
                                         VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pDescriptorSets[i], __LINE__,
                                         DRAWSTATE_NONE, "DS", "DS 0x%" PRIxLEAST64 " bound on pipeline %s",
@@ -6610,9 +6613,8 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                 if (firstSet > 0) { // Check set #s below the first bound set
                     for (uint32_t i = 0; i < firstSet; ++i) {
                         if (pCB->lastBound[pipelineBindPoint].boundDescriptorSets[i] &&
-                            !verify_set_layout_compatibility(
-                                dev_data, dev_data->setMap[pCB->lastBound[pipelineBindPoint].boundDescriptorSets[i]], layout, i,
-                                errorString)) {
+                            !verify_set_layout_compatibility(dev_data, pCB->lastBound[pipelineBindPoint].boundDescriptorSets[i],
+                                                             layout, i, errorString)) {
                             skipCall |= log_msg(
                                 dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                 VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
@@ -6627,16 +6629,16 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
                 // Check if newly last bound set invalidates any remaining bound sets
                 if ((pCB->lastBound[pipelineBindPoint].boundDescriptorSets.size() - 1) > (lastSetIndex)) {
                     if (oldFinalBoundSet &&
-                        !verify_set_layout_compatibility(dev_data, dev_data->setMap[oldFinalBoundSet], layout, lastSetIndex,
-                                                         errorString)) {
+                        !verify_set_layout_compatibility(dev_data, oldFinalBoundSet, layout, lastSetIndex, errorString)) {
+                        auto old_set = oldFinalBoundSet->GetSet();
                         skipCall |=
                             log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)oldFinalBoundSet, __LINE__,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, reinterpret_cast<uint64_t &>(old_set), __LINE__,
                                     DRAWSTATE_NONE, "DS", "DescriptorSetDS 0x%" PRIxLEAST64
                                                           " previously bound as set #%u is incompatible with set 0x%" PRIxLEAST64
                                                           " newly bound as set #%u so set #%u and any subsequent sets were "
                                                           "disturbed by newly bound pipelineLayout (0x%" PRIxLEAST64 ")",
-                                    (uint64_t)oldFinalBoundSet, lastSetIndex,
+                                    reinterpret_cast<uint64_t &>(old_set), lastSetIndex,
                                     (uint64_t)pCB->lastBound[pipelineBindPoint].boundDescriptorSets[lastSetIndex], lastSetIndex,
                                     lastSetIndex + 1, (uint64_t)layout);
                         pCB->lastBound[pipelineBindPoint].boundDescriptorSets.resize(lastSetIndex + 1);
