@@ -1649,9 +1649,9 @@ VkSurfaceKHR surface = VK_NULL_HANDLE;
 
 TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
 
+#if defined(VK_USE_PLATFORM_XCB_KHR)
     VkSurfaceKHR surface = VK_NULL_HANDLE;
 
-#if defined(VK_USE_PLATFORM_XCB_KHR)
     VkResult err;
     bool pass;
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;
