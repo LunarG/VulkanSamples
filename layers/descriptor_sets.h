@@ -146,8 +146,8 @@ typedef enum _DescriptorClass { PlainSampler, ImageSampler, Image, TexelBuffer, 
 class Descriptor {
   public:
     virtual ~Descriptor(){};
-    virtual bool WriteUpdate(const VkWriteDescriptorSet *, const uint32_t, std::string *) = 0;
-    virtual bool CopyUpdate(const Descriptor *, std::string *) = 0;
+    virtual void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) = 0;
+    virtual void CopyUpdate(const Descriptor *) = 0;
     virtual DescriptorClass GetClass() const { return descriptor_class; };
     // Special fast-path check for SamplerDescriptors that are immutable
     virtual bool IsImmutableSampler() const { return false; };
@@ -167,51 +167,41 @@ bool ValidateImageUpdate(const VkImageView, const VkImageLayout, const std::unor
 
 class SamplerDescriptor : public Descriptor {
   public:
-    SamplerDescriptor(const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *);
-    SamplerDescriptor(const VkSampler *, const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *);
-    bool WriteUpdate(const VkWriteDescriptorSet *, const uint32_t, std::string *) override;
-    bool CopyUpdate(const Descriptor *, std::string *) override;
+    SamplerDescriptor();
+    SamplerDescriptor(const VkSampler *);
+    void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
+    void CopyUpdate(const Descriptor *) override;
     virtual bool IsImmutableSampler() const override { return immutable_; };
+    VkSampler GetSampler() const { return sampler_; }
 
   private:
     // bool ValidateSampler(const VkSampler) const;
     VkSampler sampler_;
     bool immutable_;
-    const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *sampler_map_;
 };
 
 class ImageSamplerDescriptor : public Descriptor {
   public:
-    ImageSamplerDescriptor(const std::unordered_map<VkImageView, VkImageViewCreateInfo> *,
-                           const std::unordered_map<VkImage, IMAGE_NODE> *, const std::unordered_map<VkImage, VkSwapchainKHR> *,
-                           const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *,
-                           const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *);
-    ImageSamplerDescriptor(const VkSampler *, const std::unordered_map<VkImageView, VkImageViewCreateInfo> *,
-                           const std::unordered_map<VkImage, IMAGE_NODE> *, const std::unordered_map<VkImage, VkSwapchainKHR> *,
-                           const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *,
-                           const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *);
-    bool WriteUpdate(const VkWriteDescriptorSet *, const uint32_t, std::string *) override;
-    bool CopyUpdate(const Descriptor *, std::string *) override;
+    ImageSamplerDescriptor();
+    ImageSamplerDescriptor(const VkSampler *);
+    void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
+    void CopyUpdate(const Descriptor *) override;
+    VkSampler GetSampler() const { return sampler_; }
+    VkImageView GetImageView() const { return image_view_; }
+    VkImageLayout GetImageLayout() const { return image_layout_; }
 
   private:
     VkSampler sampler_;
     bool immutable_;
     VkImageView image_view_;
     VkImageLayout image_layout_;
-    const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *sampler_map_;
-    const std::unordered_map<VkImageView, VkImageViewCreateInfo> *image_view_map_;
-    const std::unordered_map<VkImage, IMAGE_NODE> *image_map_;
-    const std::unordered_map<VkImage, VkSwapchainKHR> *image_to_swapchain_map_;
-    const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *swapchain_map_;
 };
 
 class ImageDescriptor : public Descriptor {
   public:
-    ImageDescriptor(const VkDescriptorType, const std::unordered_map<VkImageView, VkImageViewCreateInfo> *,
-                    const std::unordered_map<VkImage, IMAGE_NODE> *, const std::unordered_map<VkImage, VkSwapchainKHR> *,
-                    const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *);
-    bool WriteUpdate(const VkWriteDescriptorSet *, const uint32_t, std::string *) override;
-    bool CopyUpdate(const Descriptor *, std::string *) override;
+    ImageDescriptor(const VkDescriptorType);
+    void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
+    void CopyUpdate(const Descriptor *) override;
     virtual bool IsStorage() const override { return storage_; }
     VkImageView GetImageView() const { return image_view_; }
     VkImageLayout GetImageLayout() const { return image_layout_; }
@@ -220,31 +210,26 @@ class ImageDescriptor : public Descriptor {
     bool storage_;
     VkImageView image_view_;
     VkImageLayout image_layout_;
-    const std::unordered_map<VkImageView, VkImageViewCreateInfo> *image_view_map_;
-    const std::unordered_map<VkImage, IMAGE_NODE> *image_map_;
-    const std::unordered_map<VkImage, VkSwapchainKHR> *image_to_swapchain_map_;
-    const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *swapchain_map_;
 };
 
 class TexelDescriptor : public Descriptor {
   public:
-    TexelDescriptor(const VkDescriptorType, const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *);
-    bool WriteUpdate(const VkWriteDescriptorSet *, const uint32_t, std::string *) override;
-    bool CopyUpdate(const Descriptor *, std::string *) override;
+    TexelDescriptor(const VkDescriptorType);
+    void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
+    void CopyUpdate(const Descriptor *) override;
     virtual bool IsStorage() const override { return storage_; }
     VkBufferView GetBufferView() const { return buffer_view_; }
 
   private:
     VkBufferView buffer_view_;
     bool storage_;
-    const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *buffer_view_map_;
 };
 
 class BufferDescriptor : public Descriptor {
   public:
-    BufferDescriptor(const VkDescriptorType, const std::unordered_map<VkBuffer, BUFFER_NODE> *);
-    bool WriteUpdate(const VkWriteDescriptorSet *, const uint32_t, std::string *) override;
-    bool CopyUpdate(const Descriptor *, std::string *) override;
+    BufferDescriptor(const VkDescriptorType);
+    void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
+    void CopyUpdate(const Descriptor *) override;
     virtual bool IsDynamic() const override { return dynamic_; }
     virtual bool IsStorage() const override { return storage_; }
     VkBuffer GetBuffer() const { return buffer_; }
@@ -257,11 +242,15 @@ class BufferDescriptor : public Descriptor {
     VkBuffer buffer_;
     VkDeviceSize offset_;
     VkDeviceSize range_;
-    const std::unordered_map<VkBuffer, BUFFER_NODE> *buffer_map_;
 };
-// Helper function for Updating descriptor sets since it crosses multiple sets
-void UpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites,
-                          uint32_t descriptorCopyCount, const VkCopyDescriptorSet *pDescriptorCopies);
+// Helper functions for Updating descriptor sets since it crosses multiple sets
+// Validate will make sure an update is ok without actually performing it
+bool ValidateUpdateDescriptorSets(const debug_report_data *,
+                                  const std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> &, const uint32_t,
+                                  const VkWriteDescriptorSet *, const uint32_t, const VkCopyDescriptorSet *);
+// Perform does the update with the assumption that ValidateUpdateDescriptorSets() has passed for the given update
+void PerformUpdateDescriptorSets(const std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> &, const uint32_t,
+                                 const VkWriteDescriptorSet *, const uint32_t, const VkCopyDescriptorSet *);
 /*
  * DescriptorSet class
  *
@@ -323,10 +312,16 @@ class DescriptorSet : public BASE_NODE {
     // For all descriptors in a set, add any buffers and images that may be updated to their respective unordered_sets & return
     // number of objects inserted
     uint32_t GetAllStorageUpdates(std::unordered_set<VkBuffer> *, std::unordered_set<VkImageView> *) const;
-    // Perform write update based on update struct
-    bool WriteUpdate(debug_report_data *, const VkWriteDescriptorSet *, std::string *);
-    // Perform copy update, using 'this' set as the dest and the passed-in DescriptorSet as the src
-    bool CopyUpdate(debug_report_data *, const VkCopyDescriptorSet *, const DescriptorSet *, std::string *);
+
+    // Descriptor Update functions. These functions validate state and perform update separately
+    // Validate contents of a WriteUpdate
+    bool ValidateWriteUpdate(const debug_report_data *, const VkWriteDescriptorSet *, std::string *);
+    // Perform a WriteUpdate whose contents were just validated using ValidateWriteUpdate
+    void PerformWriteUpdate(const VkWriteDescriptorSet *);
+    // Validate contents of a CopyUpdate
+    bool ValidateCopyUpdate(const debug_report_data *, const VkCopyDescriptorSet *, const DescriptorSet *, std::string *);
+    // Perform a CopyUpdate whose contents were just validated using ValidateCopyUpdate
+    void PerformCopyUpdate(const VkCopyDescriptorSet *, const DescriptorSet *);
 
     const DescriptorSetLayout *GetLayout() const { return p_layout_; };
     VkDescriptorSet GetSet() const { return set_; };
@@ -350,7 +345,8 @@ class DescriptorSet : public BASE_NODE {
     bool IsUpdated() const { return some_update_; };
 
   private:
-    bool ValidateUpdate(const VkWriteDescriptorSet *, const uint32_t, std::string *) const;
+    bool VerifyWriteUpdateContents(const VkWriteDescriptorSet *, const uint32_t, std::string *) const;
+    bool VerifyCopyUpdateContents(const VkCopyDescriptorSet *, const DescriptorSet *, const uint32_t, std::string *) const;
     // Private helper to set all bound cmd buffers to INVALID state
     void InvalidateBoundCmdBuffers();
     bool some_update_; // has any part of the set ever been updated?
