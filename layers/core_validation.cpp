@@ -3407,65 +3407,6 @@ static bool validateIdleDescriptorSet(const layer_data *my_data, VkDescriptorSet
     }
     return skip_call;
 }
-// update DS mappings based on write and copy update arrays
-static bool dsUpdate(layer_data *my_data, VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pWDS,
-                     uint32_t descriptorCopyCount, const VkCopyDescriptorSet *pCDS) {
-    bool skip_call = false;
-    // Validate Write updates
-    uint32_t i = 0;
-    for (i = 0; i < descriptorWriteCount; i++) {
-        auto dest_set = pWDS[i].dstSet;
-        auto set_pair = my_data->setMap.find(dest_set);
-        if (set_pair == my_data->setMap.end()) {
-            skip_call |=
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                        reinterpret_cast<uint64_t &>(dest_set), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
-                        "Cannot call vkUpdateDescriptorSets() on descriptor set 0x%" PRIxLEAST64 " that has not been allocated.",
-                        reinterpret_cast<uint64_t &>(dest_set));
-        } else {
-            string error_str;
-            if (!set_pair->second->WriteUpdate(my_data->report_data, &pWDS[i], &error_str)) {
-                skip_call |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                            reinterpret_cast<uint64_t &>(dest_set), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
-                            "vkUpdateDescriptorsSets() failed write update for Descriptor Set 0x%" PRIx64 " with error: %s",
-                            reinterpret_cast<uint64_t &>(dest_set), error_str.c_str());
-            }
-        }
-    }
-    // Now validate copy updates
-    for (i = 0; i < descriptorCopyCount; ++i) {
-        auto dst_set = pCDS[i].dstSet;
-        auto src_set = pCDS[i].srcSet;
-        auto src_pair = my_data->setMap.find(src_set);
-        auto dst_pair = my_data->setMap.find(dst_set);
-        if (src_pair == my_data->setMap.end()) {
-            skip_call |= log_msg(
-                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                reinterpret_cast<uint64_t &>(src_set), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
-                "Cannot call vkUpdateDescriptorSets() to copy from descriptor set 0x%" PRIxLEAST64 " that has not been allocated.",
-                reinterpret_cast<uint64_t &>(src_set));
-        } else if (dst_pair == my_data->setMap.end()) {
-            skip_call |= log_msg(
-                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                reinterpret_cast<uint64_t &>(dst_set), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
-                "Cannot call vkUpdateDescriptorSets() to copy to descriptor set 0x%" PRIxLEAST64 " that has not been allocated.",
-                reinterpret_cast<uint64_t &>(dst_set));
-        } else {
-            std::string error_str;
-            if (!dst_pair->second->CopyUpdate(my_data->report_data, &pCDS[i], src_pair->second, &error_str)) {
-                skip_call |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                            reinterpret_cast<uint64_t &>(dst_set), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
-                            "vkUpdateDescriptorsSets() failed copy update from Descriptor Set 0x%" PRIx64
-                            " to Descriptor Set 0x%" PRIx64 " with error: %s",
-                            reinterpret_cast<uint64_t &>(src_set), reinterpret_cast<uint64_t &>(dst_set), error_str.c_str());
-            }
-        }
-    }
-    return skip_call;
-}
-
 // Verify that given pool has descriptors that are being requested for allocation.
 // NOTE : Calls to this function should be wrapped in mutex
 static bool validate_descriptor_availability_in_pool(layer_data *dev_data, DESCRIPTOR_POOL_NODE *pPoolNode, uint32_t count,
@@ -6070,18 +6011,47 @@ FreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t co
     // TODO : Any other clean-up or book-keeping to do here?
     return result;
 }
+// TODO : This is a Proof-of-concept for core validation architecture
+//  Really we'll want to break out these functions to separate files but
+//  keeping it all together here to prove out design
+// PreCallValidate* handles validating all of the state prior to calling down chain to UpdateDescriptorSets()
+static bool PreCallValidateUpdateDescriptorSets(layer_data *dev_data, uint32_t descriptorWriteCount,
+                                                const VkWriteDescriptorSet *pDescriptorWrites, uint32_t descriptorCopyCount,
+                                                const VkCopyDescriptorSet *pDescriptorCopies) {
+    // First thing to do is perform map look-ups.
+    // NOTE : UpdateDescriptorSets is somewhat unique in that it's operating on a number of DescriptorSets
+    //  so we can't just do a single map look-up up-front, but do them individually in functions below
+
+    // Now make call(s) that validate state, but don't perform state updates in this function
+    // Note, here DescriptorSets is unique in that we don't yet have an instance. Using a helper function in the
+    //  namespace which will parse params and make calls into specific class instances
+    return cvdescriptorset::ValidateUpdateDescriptorSets(dev_data->report_data, dev_data->setMap, descriptorWriteCount,
+                                                         pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
+}
+// PostCallRecord* handles recording state updates following call down chain to UpdateDescriptorSets()
+static void PostCallRecordUpdateDescriptorSets(layer_data *dev_data, uint32_t descriptorWriteCount,
+                                               const VkWriteDescriptorSet *pDescriptorWrites, uint32_t descriptorCopyCount,
+                                               const VkCopyDescriptorSet *pDescriptorCopies) {
+    cvdescriptorset::PerformUpdateDescriptorSets(dev_data->setMap, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
+                                                 pDescriptorCopies);
+}
 
 VKAPI_ATTR void VKAPI_CALL
 UpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet *pDescriptorWrites,
                      uint32_t descriptorCopyCount, const VkCopyDescriptorSet *pDescriptorCopies) {
-    // dsUpdate will return true only if a bailout error occurs, so we want to call down tree when update returns false
+    // Only map look-up at top level is for device-level layer_data
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
-    bool rtn = dsUpdate(dev_data, device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
+    bool skip_call = PreCallValidateUpdateDescriptorSets(dev_data, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
+                                                         pDescriptorCopies);
     lock.unlock();
-    if (!rtn) {
+    if (!skip_call) {
         dev_data->device_dispatch_table->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
                                                               pDescriptorCopies);
+        lock.lock();
+        // Since UpdateDescriptorSets() is void, nothing to check prior to updating state
+        PostCallRecordUpdateDescriptorSets(dev_data, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
+                                           pDescriptorCopies);
     }
 }
 
