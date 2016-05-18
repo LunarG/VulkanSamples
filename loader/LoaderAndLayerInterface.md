@@ -151,24 +151,26 @@ Vulkan commands, but may offer extensions that do. A common use of layers is
 for API validation. A developer can use validation layers during application
 development, but during production the layers can be disabled by the
 application. Thus, eliminating the overhead of validating the application's
-usage of the API. Layers discovered by the loader can be reported to the
-application via vkEnumerateInstanceLayerProperties and
-vkEnumerateDeviceLayerProperties, for instance and device layers respectively.
-Instance layers are enabled at vkCreateInstance; device layers are enabled at
-vkCreateDevice. For example, the ppEnabledLayerNames array in the
-VkDeviceCreateInfo structure is used by the application to list the device
-layer names to be enabled at vkCreateDevice. At vkCreateInstance and
+usage of the API. Layers discovered by the loader are reported to the
+application via vkEnumerateInstanceLayerProperties.
+Layers are enabled at vkCreateInstance and are active for all Vulkan commands
+that using the given VkIstance and any of it's child objects.
+For example, the ppEnabledLayerNames array in the
+VkInstanceCreateInfo structure is used by the application to list the
+layer names to be enabled at vkCreateInstance. At vkCreateInstance and
 vkCreateDevice, the loader will construct call chains that include the
-application specified (enabled) layers. Order is important in the
+application specified (enabled) layers.  vkCreateDevice will use the layers
+specified at vkCreateInstance. vkEnumerateDeviceLayerProperties and
+device layers are deprecated.  Order is important in the
 ppEnabledLayerNames array; array element 0 is the topmost (closest to the
 application) layer inserted in the chain and the last array element is closest
 to the driver.
 
 Developers may want to enable layers that are not enabled by the given
-application they are using. On Linux and Windows, the environment variables
-“VK\_INSTANCE\_LAYERS” and “VK\_DEVICE\_LAYERS” can be used to enable
+application they are using. On Linux and Windows, the environment variable
+“VK\_INSTANCE\_LAYERS” can be used to enable
 additional layers which are not specified (enabled) by the application at
-vkCreateInstance/vkCreateDevice. VK\_INSTANCE\_LAYERS is a colon
+vkCreateInstance. VK\_INSTANCE\_LAYERS is a colon
 (Linux)/semi-colon (Windows) separated list of layer names to enable. Order is
 relevant with the first layer in the list being the topmost layer (closest to
 the application) and the last layer in the list being the bottommost layer
@@ -180,19 +182,12 @@ layers. Layers specified via environment variable are topmost (closest to the
 application) while layers specified by the application are bottommost.
 
 An example of using these environment variables to activate the validation
-layer VK\_LAYER\_LUNARG\_param\_checker on Windows or Linux is as follows:
+layer VK\_LAYER\_LUNARG\_parameter\_validation on Windows or Linux is as follows:
 
 ```
 > $ export VK_INSTANCE_LAYERS=VK_LAYER_LUNARG_parameter_validation
 
-> $ export VK_DEVICE_LAYERS=VK_LAYER_LUNARG_parameter_validation
 ```
-
-**Note**: Many layers, including all LunarG validation layers are “global”
-(i.e. both instance and device) layers and *must* be enabled on both the
-instance and device chains to function properly. This is required for “global”
-layers regardless of which method is used to enable the layer (application or
-environment variable).
 
 Some platforms, including Linux and Windows, support layers which are enabled
 automatically by the loader rather than explicitly by the application (or via
@@ -745,9 +740,11 @@ version can vary independently for ICDs and layers.
 
 - (required) "name" - layer name
 
-- (required) "type" - which layer chains should the layer be activated on.
-Allowable values are "INSTANCE", "DEVICE", "GLOBAL". Global means activate on
-both device and instance chains.
+- (required and deprecated) "type" - which layer chains should the layer be activated on.
+Distinct instance and device layers are deprecated; there are now just layers.
+Allowable values for type (both before and after deprecation) are "INSTANCE", "GLOBAL" and, "DEVICE."
+"DEVICE" layers are skipped over by the loader as if they were not found.
+Thus, layers must have a type of "GLOBAL" or "INSTANCE" for the loader to include the layer in it's discovery.
 
 - (required) "library\_path" - filename / full path / relative path to the
 library file
@@ -793,7 +790,7 @@ implicit layer(s).
 - (required for implicit layers) "disable\_environment" requirement(s) -
 environment variable and value required to disable an implicit layer. Note: in
 rare cases of an application not working with an implicit layer, the
-application can set this environment variable (before calling Vulkan functions)
+application can set this environment variable (before calling Vulkan commands)
 in order to "blacklist" the layer. This environment variable (which should vary
 with each "version" of the layer, as in "DISABLE\_LAYER\_FOO\_1") must be set
 (not particularly to any value). If both the "enable\_environment" and
@@ -805,8 +802,8 @@ For example:
 {
 "file_format_version" : "1.0.0",
 "layer": {
-    "name": "VK_LAYER_LUNARG_OverlayLayer",
-    "type": "DEVICE",
+    "name": "VK_LAYER_LUNARG_overlay",
+    "type": "INSTANCE",
     "library_path": "vkOverlayLayer.dll"
     "api_version" : "1.0.5",
     "implementation_version" : "2",
@@ -914,9 +911,11 @@ version can vary independently for ICDs and layers.
 
 - (required) "name" - layer name
 
-- (required) "type" - which layer chains should the layer be activated on.
-Allowable values are "INSTANCE", "DEVICE", "GLOBAL". Global means activate on
-both device and instance chains.
+- (required and deprecated) "type" - which layer chains should the layer be activated on.
+Distinct instance and device layers are deprecated; there are now just layers.
+Allowable values for type (both before and after deprecation) are "INSTANCE", "GLOBAL" and, "DEVICE."
+"DEVICE" layers are skipped over by the loader as if they were not found.
+Thus, layers must have a type of "GLOBAL" or "INSTANCE" for the loader to include the layer in it's discovery.
 
 - (required) "library\_path" - filename / full path / relative path to the text
 file
@@ -960,7 +959,7 @@ implicit layer(s).
 - (required for implicit layers) "disable\_environment" requirement(s) -
 environment variable and value required to disable an implicit layer. Note: in
 rare cases of an application not working with an implicit layer, the
-application can set this environment variable (before calling Vulkan functions)
+application can set this environment variable (before calling Vulkan commands)
 in order to "blacklist" the layer. This environment variable (which should vary
 with each "version" of the layer, as in "DISABLE\_LAYER\_FOO\_1") must be set
 (not particularly to any value). If both the "enable\_environment" and
@@ -971,8 +970,8 @@ For example:
 {
 "file_format_version" : "1.0.0",
 "layer": {
-    "name": "VK_LAYER_LUNARG_OverlayLayer",
-    "type": "DEVICE",
+    "name": "VK_LAYER_LUNARG_overlay",
+    "type": "INSTANCE",
     "library_path": "vkOverlayLayer.dll"
     "api_version" : "1.0.5",
     "implementation_version" : "2",
@@ -1040,7 +1039,7 @@ NOTE: these environment variables will be ignored for suid programs.
 The recommended way to enable layers is for applications
 to programatically enable them. The layers are provided by the application
 and must live in the application's library folder. The application
-enables the layers at vkCreateInstance and vkCreateDevice as any Vulkan
+enables the layers at vkCreateInstance as any Vulkan
 application would.
 An application enabled for debug has more options. It can enumerate and enable
 layers located in /data/local/vulkan/debug.
@@ -1060,12 +1059,11 @@ to layer module with the loader and or the ICD being the bottom most command.
 Call chains are constructed at both the instance level and the device level by
 the loader with cooperation from the layer libraries. Instance call chains are
 constructed by the loader when layers are enabled at vkCreateInstance. Device
-call chains are constructed by the loader when layers are enabled at
+call chains are constructed by the loader when layers are enabled, by the loader, at
 vkCreateDevice. A layer can intercept Vulkan instance commands, device commands
 or both. For a layer to intercept instance commands, it must participate in the
 instance call chain. For a layer to intercept device commands, it must
-participate in the device chain. Layers which participate in intercepting calls
-in both the instance and device chains are called global layers.
+participate in the device chain.
 
 Normally, when a layer intercepts a given Vulkan command, it will call down the
 instance or device chain as needed. The loader and all layer libraries that
@@ -1204,21 +1202,20 @@ The following table associates the desktop JSON nodes with the Android layer lib
 
 | Property | JSON node | Android library query | Notes |
 |----------|-----------|-----------------------|-------|
-| layers in library | layer | vkEnumerate*LayerProperties | one node required for each layer in the library |
-|layer name | name | vkEnumerate*LayerProperties | one node is required |
-| layer type | type | vkEnumerate*LayerProperties | one node is required |
+| layers in library | layer | vkEnumerateInstanceLayerProperties | one node required for each layer in the library |
+|layer name | name | vkEnumerateInstanceLayerProperties | one node is required |
+| layer type | type | vkEnumerateInstanceLayerProperties | one node is required (deprecated) |
 | library location | library_path | N/A | one node is required |
-| vulkan spec version | api_version | vkEnumerate*LayerProperties | one node is required |
-| layer implementation version | api_version | vkEnumerate*LayerProperties | one node is required |
-| layer description | description | vkEnumerate*LayerProperties | one node is required |
+| vulkan spec version | api_version | vkEnumerateInstanceLayerProperties | one node is required |
+| layer implementation version | api_version | vkEnumerateInstanceLayerProperties | one node is required |
+| layer description | description | vkEnumerateInstanceLayerProperties | one node is required |
 | chaining functions | functions | vkGet*ProcAddr | see Note 1 |
 | instance extensions | instance_extensions | vkEnumerateInstanceExtensionProperties | see Note 2 |
 | device extensions | device_extensions | vkEnumerateDeviceExtensionProperties | see Note 3 |
 
 Note 1: The "functions" node is required if the layer is using alternative
-names for vkGetInstanceProcAddr or vkGetDeviceProcAddr. vkGetInstanceProcAddr is
-required for all layer types. vkGetDeviceProcAddr is required for
-device or global (both instance and device) layers. See further requirements below.
+names for vkGetInstanceProcAddr or vkGetDeviceProcAddr. vkGetInstanceProcAddr and vkGetDeviceProcAddr
+are required for all layers. See further requirements below.
 
 Note 2: One "instance_extensions" node with an array of 1 or more elements
 required if any instance
@@ -1252,9 +1249,8 @@ of the "file_format_version" and includes the semantics of the nodes in the JSON
 
 vkGetInstanceProcAddr requirements:
 -Irregardless of the name, this function must be implemented and exported in the library for all  layers.
--This function must return
-the local entry points for all instance level Vulkan commands it intercepts. At
-a minimum, this includes vkGetInstanceProcAddr and vkCreateInstance.
+-This function must return the local entry points for all instance level Vulkan commands it intercepts.
+At a minimum, this includes vkGetInstanceProcAddr and vkCreateInstance.
 Optionally, this function may return intercepted device level
 Vulkan commands.
 -Vulkan commands that a layer doesn't intercept must be passed to the next
@@ -1263,10 +1259,8 @@ entity in the chain. That is, the next layer/ICD's GetInstanceProcAddr must be c
 to NULL for instance level commands it intercepts including vkCreateDevice.
 
 VkGetDeviceProcAddr requirements:
--Irregardless of the name, a layer intercepting device level Vulkan commands
-(aka a device level layer) must implement  vkGetDeviceProcAddr type of function.
--This vkGetDeviceProcAddr type function must be exported by the layer library.
--This function must return the entry points for all device level Vulkan
+-Irregardless of the name, this function must be implemented and exported in the library for all  layers.
+-This function must return the local entry points for all device level Vulkan
 commands it intercepts. At a minimum, this includes vkGetDeviceProcAddr and vkCreateDevice.
 -Vulkan commands that a layer doesn't intercept must be passed to the next
 entity in the chain. That is, the next layer/ICD's GetDeviceProcAddr must be called.
@@ -1282,8 +1276,8 @@ All layers within a library must support [`vk_layer.h`][].
 
 - Layers intercept a Vulkan command by defining a C/C++ function with signature
 identical to the Vulkan API for that command.
-- An instance layer must intercept at least vkGetInstanceProcAddr and
-vkCreateInstance.  A device layer must intercept at least vkGetInstanceProcAddr, vkGetDeviceProcAddr and vkCreateDevice.
+- A layer must intercept at least vkGetInstanceProcAddr and
+vkCreateInstance.  Additionally, a layer would also intercept vkGetDeviceProcAddr and vkCreateDevice to participate in the device chain.
 - Other than the two vkGet*ProcAddr, all other functions intercepted by a layer
 need NOT be exported by the layer.
 - For any Vulkan command a layer intercepts which has a non-void return value,
@@ -1374,7 +1368,7 @@ VkResult vkCreateInstance(
     PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
         chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
     PFN_vkCreateInstance fpCreateInstance =
-        (PFN_vkCreateInstance)fpGetInstanceProcAddr(NULL, "vkCreateInstance");
+        (PFN_vkCreateInstance)fpGetInstanceProcAddr(*pInstance, "vkCreateInstance");
     if (fpCreateInstance == NULL) {
         return VK_ERROR_INITIALIZATION_FAILED;
     }

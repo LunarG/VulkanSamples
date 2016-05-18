@@ -13,9 +13,12 @@ Layer libraries can be written to intercept or hook VK entry points for various
 debug and validation purposes.  One or more VK entry points can be defined in your Layer
 library.  Undefined entrypoints in the Layer library will be passed to the next Layer which
 may be the driver.  Multiple layer libraries can be chained (actually a hierarchy) together.
-`vkEnumerateInstanceLayerProperties` can be called to list the available layers and their properties.
+vkEnumerateInstanceLayerProperties can be called to list the
+available layers and their properties.  Layers can intercept all Vulkan commands
+that take a dispatchable object as it's first argument. I.e.  VkInstance, VkPhysicalDevice,
+VkDevice, VkCommandBuffer, and VkQueue.
 vkXXXXGetProcAddr is used internally by the Layers and Loader to initialize dispatch tables.
-Layers can also be activated via the `VK_INSTANCE_LAYERS` environment variable.
+Layers can also be activated via the VK_INSTANCE_LAYERS environment variable.
 
 All validation layers work with the DEBUG_REPORT extension to provide the application or user with
 validation feedback. When a validation layer is enabled, it will look at the vk_layer_settings.txt
