@@ -170,7 +170,7 @@ BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     return false;
 }
 
-typedef struct _SwapchainBuffers {
+typedef struct {
     VkImage image;
     VkCommandBuffer cmd;
     VkImageView view;

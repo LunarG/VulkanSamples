@@ -324,7 +324,7 @@ BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     return false;
 }
 
-typedef struct _SwapchainBuffers {
+typedef struct {
     VkImage image;
     VkCommandBuffer cmd;
     VkImageView view;
@@ -1023,8 +1023,8 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
 #ifdef __ANDROID__
 #include <lunarg.ppm.h>
     char *cPtr;
-    cPtr = (char*)___lunarg_ppm;
-    if ((unsigned char*)cPtr >= (___lunarg_ppm + ___lunarg_ppm_len) || strncmp(cPtr, "P6\n", 3)) {
+    cPtr = (char*)lunarg_ppm;
+    if ((unsigned char*)cPtr >= (lunarg_ppm + lunarg_ppm_len) || strncmp(cPtr, "P6\n", 3)) {
         return false;
     }
     while(strncmp(cPtr++, "\n", 1));
@@ -1033,7 +1033,7 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
         return true;
     }
     while(strncmp(cPtr++, "\n", 1));
-    if ((unsigned char*)cPtr >= (___lunarg_ppm + ___lunarg_ppm_len) || strncmp(cPtr, "255\n", 4)) {
+    if ((unsigned char*)cPtr >= (lunarg_ppm + lunarg_ppm_len) || strncmp(cPtr, "255\n", 4)) {
         return false;
     }
     while(strncmp(cPtr++, "\n", 1));
