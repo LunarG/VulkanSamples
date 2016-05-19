@@ -604,11 +604,20 @@ VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8) {
     return result;
 }
 
+// Debug callbacks get created in three ways:
+//   o  Application-defined debug callbacks
+//   o  Through settings in a vk_layer_settings.txt file
+//   o  By default, if neither an app-defined debug callback nor a vk_layer_settings.txt file is present
+//
+// At layer initialization time, default logging callbacks are created to output layer error messages.
+// If a vk_layer_settings.txt file is present its settings will override any default settings.
+//
+// If a vk_layer_settings.txt file is present and an application defines a debug callback, both callbacks
+// will be active.  If no vk_layer_settings.txt file is present, creating an application-defined debug
+// callback will cause the default callbacks to be unregisterd and removed.
 void layer_debug_actions(debug_report_data *report_data, std::vector<VkDebugReportCallbackEXT> &logging_callback,
-                      const VkAllocationCallbacks *pAllocator, const char *layer_identifier) {
+                         const VkAllocationCallbacks *pAllocator, const char *layer_identifier) {
 
-    uint32_t report_flags = 0;
-    uint32_t debug_action = 0;
     VkDebugReportCallbackEXT callback = VK_NULL_HANDLE;
 
     std::string report_flags_key = layer_identifier;
@@ -618,9 +627,11 @@ void layer_debug_actions(debug_report_data *report_data, std::vector<VkDebugRepo
     debug_action_key.append(".debug_action");
     log_filename_key.append(".log_filename");
 
-    // initialize layer options
-    report_flags = getLayerOptionFlags(report_flags_key.c_str(), 0);
-    getLayerOptionEnum(debug_action_key.c_str(), (uint32_t *)&debug_action);
+    // Initialize layer options
+    VkDebugReportFlagsEXT report_flags = GetLayerOptionFlags(report_flags_key, report_flags_option_definitions, 0);
+    VkLayerDbgActionFlags debug_action = GetLayerOptionFlags(debug_action_key, debug_actions_option_definitions, 0);
+    // Flag as default if these settings are not from a vk_layer_settings.txt file
+    bool default_layer_callback = (debug_action & VK_DBG_LAYER_ACTION_DEFAULT) ? true : false;
 
     if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG) {
         const char *log_filename = getLayerOption(log_filename_key.c_str());
@@ -631,9 +642,11 @@ void layer_debug_actions(debug_report_data *report_data, std::vector<VkDebugRepo
         dbgCreateInfo.flags = report_flags;
         dbgCreateInfo.pfnCallback = log_callback;
         dbgCreateInfo.pUserData = (void *)log_output;
-        layer_create_msg_callback(report_data, &dbgCreateInfo, pAllocator, &callback);
+        layer_create_msg_callback(report_data, default_layer_callback, &dbgCreateInfo, pAllocator, &callback);
         logging_callback.push_back(callback);
     }
+
+    callback = VK_NULL_HANDLE;
 
     if (debug_action & VK_DBG_LAYER_ACTION_DEBUG_OUTPUT) {
         VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
@@ -642,7 +655,7 @@ void layer_debug_actions(debug_report_data *report_data, std::vector<VkDebugRepo
         dbgCreateInfo.flags = report_flags;
         dbgCreateInfo.pfnCallback = win32_debug_output_msg;
         dbgCreateInfo.pUserData = NULL;
-        layer_create_msg_callback(report_data, &dbgCreateInfo, pAllocator, &callback);
+        layer_create_msg_callback(report_data, default_layer_callback, &dbgCreateInfo, pAllocator, &callback);
         logging_callback.push_back(callback);
     }
 }

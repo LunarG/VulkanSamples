@@ -19,6 +19,7 @@
  * Author: Jon Ashburn <jon@lunarg.com>
  * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
  * Author: Tobin Ehlis <tobin@lunarg.com>
+ * Author: Mark Lobodzinski <mark@lunarg.com>
  **************************************************************************/
 #include <fstream>
 #include <string>
@@ -48,50 +49,10 @@ class ConfigFile {
 
 static ConfigFile g_configFileObj;
 
-static VkLayerDbgAction stringToDbgAction(const char *_enum) {
-    // only handles single enum values
-    if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_IGNORE"))
-        return VK_DBG_LAYER_ACTION_IGNORE;
-    else if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_LOG_MSG"))
-        return VK_DBG_LAYER_ACTION_LOG_MSG;
-#ifdef WIN32
-    else if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_DEBUG_OUTPUT"))
-        return VK_DBG_LAYER_ACTION_DEBUG_OUTPUT;
-#endif
-    else if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_BREAK"))
-        return VK_DBG_LAYER_ACTION_BREAK;
-    return (VkLayerDbgAction)0;
-}
-
-static VkFlags stringToDbgReportFlags(const char *_enum) {
-    // only handles single enum values
-    if (!strcmp(_enum, "VK_DEBUG_REPORT_INFO"))
-        return VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
-    else if (!strcmp(_enum, "VK_DEBUG_REPORT_WARN"))
-        return VK_DEBUG_REPORT_WARNING_BIT_EXT;
-    else if (!strcmp(_enum, "VK_DEBUG_REPORT_PERF_WARN"))
-        return VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-    else if (!strcmp(_enum, "VK_DEBUG_REPORT_ERROR"))
-        return VK_DEBUG_REPORT_ERROR_BIT_EXT;
-    else if (!strcmp(_enum, "VK_DEBUG_REPORT_DEBUG"))
-        return VK_DEBUG_REPORT_DEBUG_BIT_EXT;
-    return (VkFlags)0;
-}
-
-static unsigned int convertStringEnumVal(const char *_enum) {
-    unsigned int ret;
-
-    ret = stringToDbgAction(_enum);
-    if (ret)
-        return ret;
-
-    return stringToDbgReportFlags(_enum);
-}
-
 const char *getLayerOption(const char *_option) { return g_configFileObj.getOption(_option); }
 
 // If option is NULL or stdout, return stdout, otherwise try to open option
-//  as a filename. If successful, return file handle, otherwise stdout
+// as a filename. If successful, return file handle, otherwise stdout
 FILE *getLayerLogOutput(const char *_option, const char *layerName) {
     FILE *log_output = NULL;
     if (!_option || !strcmp("stdout", _option))
@@ -110,64 +71,84 @@ FILE *getLayerLogOutput(const char *_option, const char *layerName) {
     return log_output;
 }
 
-VkDebugReportFlagsEXT getLayerOptionFlags(const char *_option, uint32_t optionDefault) {
-    VkDebugReportFlagsEXT flags = optionDefault;
-    const char *option = (g_configFileObj.getOption(_option));
+// Map option strings to flag enum values
+VkFlags GetLayerOptionFlags(std::string _option, std::unordered_map<std::string, VkFlags> const &enum_data,
+                            uint32_t option_default) {
+    VkDebugReportFlagsEXT flags = option_default;
+    std::string option_list = g_configFileObj.getOption(_option.c_str());
 
-    /* parse comma-separated options */
-    while (option) {
-        const char *p = strchr(option, ',');
-        size_t len;
+    while (option_list.length() != 0) {
 
-        if (p)
-            len = p - option;
-        else
-            len = strlen(option);
-
-        if (len > 0) {
-            if (strncmp(option, "warn", len) == 0) {
-                flags |= VK_DEBUG_REPORT_WARNING_BIT_EXT;
-            } else if (strncmp(option, "info", len) == 0) {
-                flags |= VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
-            } else if (strncmp(option, "perf", len) == 0) {
-                flags |= VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-            } else if (strncmp(option, "error", len) == 0) {
-                flags |= VK_DEBUG_REPORT_ERROR_BIT_EXT;
-            } else if (strncmp(option, "debug", len) == 0) {
-                flags |= VK_DEBUG_REPORT_DEBUG_BIT_EXT;
-            }
+        // Find length of option string
+        std::size_t option_length = option_list.find(",");
+        if (option_length == option_list.npos) {
+            option_length = option_list.size();
         }
 
-        if (!p)
-            break;
+        // Get first option in list
+        const std::string option = option_list.substr(0, option_length);
 
-        option = p + 1;
+        auto enum_value = enum_data.find(option);
+        if (enum_value != enum_data.end()) {
+            flags |= enum_value->second;
+        }
+
+        // Remove first option from option_list
+        option_list.erase(0, option_length);
+        // Remove possible comma separator
+        std::size_t char_position = option_list.find(",");
+        if (char_position == 0) {
+            option_list.erase(char_position, 1);
+        }
+        // Remove possible space
+        char_position = option_list.find(" ");
+        if (char_position == 0) {
+            option_list.erase(char_position, 1);
+        }
     }
     return flags;
 }
 
-bool getLayerOptionEnum(const char *_option, uint32_t *optionDefault) {
-    bool res;
-    const char *option = (g_configFileObj.getOption(_option));
-    if (option != NULL) {
-        *optionDefault = convertStringEnumVal(option);
-        res = false;
-    } else {
-        res = true;
-    }
-    return res;
-}
-
-void setLayerOptionEnum(const char *_option, const char *_valEnum) {
-    unsigned int val = convertStringEnumVal(_valEnum);
-    char strVal[24];
-    snprintf(strVal, 24, "%u", val);
-    g_configFileObj.setOption(_option, strVal);
-}
-
 void setLayerOption(const char *_option, const char *_val) { g_configFileObj.setOption(_option, _val); }
 
-ConfigFile::ConfigFile() : m_fileIsParsed(false) {}
+// Constructor for ConfigFile. Initialize layers to log error messages to stdout by default. If a vk_layer_settings file is present,
+// its settings will override the defaults.
+ConfigFile::ConfigFile() : m_fileIsParsed(false) {
+    m_valueMap["lunarg_device_limits.report_flags"] = "error";
+    m_valueMap["lunarg_core_validation.report_flags"] = "error";
+    m_valueMap["lunarg_image.report_flags"] = "error";
+    m_valueMap["lunarg_object_tracker.report_flags"] = "error";
+    m_valueMap["lunarg_parameter_validation.report_flags"] = "error";
+    m_valueMap["lunarg_swapchain.report_flags"] = "error";
+    m_valueMap["google_threading.report_flags"] = "error";
+
+#ifdef WIN32
+    // For Windows, enable message logging AND OutputDebugString
+    m_valueMap["lunarg_device_limits.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
+    m_valueMap["lunarg_core_validation.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
+    m_valueMap["lunarg_image.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
+    m_valueMap["lunarg_object_tracker.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
+    m_valueMap["lunarg_parameter_validation.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
+    m_valueMap["lunarg_swapchain.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
+    m_valueMap["google_threading.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
+#else  // WIN32
+    m_valueMap["lunarg_device_limits.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
+    m_valueMap["lunarg_core_validation.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
+    m_valueMap["lunarg_image.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
+    m_valueMap["lunarg_object_tracker.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
+    m_valueMap["lunarg_parameter_validation.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
+    m_valueMap["lunarg_swapchain.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
+    m_valueMap["google_threading.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
+#endif // WIN32
+
+    m_valueMap["lunarg_device_limits.log_filename"] = "stdout";
+    m_valueMap["lunarg_core_validation.log_filename"] = "stdout";
+    m_valueMap["lunarg_image.log_filename"] = "stdout";
+    m_valueMap["lunarg_object_tracker.log_filename"] = "stdout";
+    m_valueMap["lunarg_parameter_validation.log_filename"] = "stdout";
+    m_valueMap["lunarg_swapchain.log_filename"] = "stdout";
+    m_valueMap["google_threading.log_filename"] = "stdout";
+}
 
 ConfigFile::~ConfigFile() {}
 
@@ -178,7 +159,7 @@ const char *ConfigFile::getOption(const std::string &_option) {
     }
 
     if ((it = m_valueMap.find(_option)) == m_valueMap.end())
-        return NULL;
+        return "";
     else
         return it->second.c_str();
 }
@@ -196,11 +177,12 @@ void ConfigFile::parseFile(const char *filename) {
     char buf[MAX_CHARS_PER_LINE];
 
     m_fileIsParsed = true;
-    m_valueMap.clear();
 
     file.open(filename);
-    if (!file.good())
+    if (!file.good()) {
         return;
+    }
+
 
     // read tokens from the file and form option, value pairs
     file.getline(buf, MAX_CHARS_PER_LINE);

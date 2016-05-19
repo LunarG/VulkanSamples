@@ -32,9 +32,11 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <unordered_map>
+#include <vector>
 
 typedef struct _debug_report_data {
-    VkLayerDbgFunctionNode *g_pDbgFunctionHead;
+    VkLayerDbgFunctionNode *debug_callback_list;
+    VkLayerDbgFunctionNode *default_debug_callback_list;
     VkFlags active_flags;
     bool g_DEBUG_REPORT;
 } debug_report_data;
@@ -42,12 +44,78 @@ typedef struct _debug_report_data {
 template debug_report_data *get_my_data_ptr<debug_report_data>(void *data_key,
                                                                std::unordered_map<void *, debug_report_data *> &data_map);
 
+// Forward Declarations
+static inline bool debug_report_log_msg(const debug_report_data *debug_data, VkFlags msgFlags,
+                                        VkDebugReportObjectTypeEXT objectType, uint64_t srcObject, size_t location, int32_t msgCode,
+                                        const char *pLayerPrefix, const char *pMsg);
+
+// Add a debug message callback node structure to the specified callback linked list
+static inline void AddDebugMessageCallback(debug_report_data *debug_data, VkLayerDbgFunctionNode **list_head,
+                                           VkLayerDbgFunctionNode *new_node) {
+
+    new_node->pNext = *list_head;
+    *list_head = new_node;
+}
+
+// Remove specified debug message callback node structure from the specified callback linked list
+static inline void RemoveDebugMessageCallback(debug_report_data *debug_data, VkLayerDbgFunctionNode **list_head,
+                                              VkDebugReportCallbackEXT callback) {
+    VkLayerDbgFunctionNode *cur_callback = *list_head;
+    VkLayerDbgFunctionNode *prev_callback = cur_callback;
+    bool matched = false;
+
+    debug_data->active_flags = 0;
+    while (cur_callback) {
+        if (cur_callback->msgCallback == callback) {
+            matched = true;
+            prev_callback->pNext = cur_callback->pNext;
+            if (*list_head == cur_callback) {
+                *list_head = cur_callback->pNext;
+            }
+            debug_report_log_msg(debug_data, VK_DEBUG_REPORT_DEBUG_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT,
+                                 reinterpret_cast<uint64_t &>(cur_callback->msgCallback), 0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT,
+                                 "DebugReport", "Destroyed callback");
+        } else {
+            matched = false;
+            debug_data->active_flags |= cur_callback->msgFlags;
+        }
+        prev_callback = cur_callback;
+        cur_callback = cur_callback->pNext;
+        if (matched) {
+            free(prev_callback);
+        }
+    }
+}
+
+// Removes all debug callback function nodes from the specified callback linked lists and frees their resources
+static inline void RemoveAllMessageCallbacks(debug_report_data *debug_data, VkLayerDbgFunctionNode **list_head) {
+    VkLayerDbgFunctionNode *current_callback = *list_head;
+    VkLayerDbgFunctionNode *prev_callback = current_callback;
+
+    while (current_callback) {
+        prev_callback = current_callback->pNext;
+        debug_report_log_msg(debug_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT,
+                             (uint64_t)current_callback->msgCallback, 0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT, "DebugReport",
+                             "Debug Report callbacks not removed before DestroyInstance");
+        free(current_callback);
+        current_callback = prev_callback;
+    }
+    *list_head = NULL;
+}
+
 // Utility function to handle reporting
-static inline bool debug_report_log_msg(const debug_report_data *debug_data, VkFlags msgFlags, VkDebugReportObjectTypeEXT objectType,
-                                        uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix,
-                                        const char *pMsg) {
+static inline bool debug_report_log_msg(const debug_report_data *debug_data, VkFlags msgFlags,
+                                        VkDebugReportObjectTypeEXT objectType, uint64_t srcObject, size_t location, int32_t msgCode,
+                                        const char *pLayerPrefix, const char *pMsg) {
     bool bail = false;
-    VkLayerDbgFunctionNode *pTrav = debug_data->g_pDbgFunctionHead;
+    VkLayerDbgFunctionNode *pTrav = NULL;
+
+    if (debug_data->debug_callback_list != NULL) {
+        pTrav = debug_data->debug_callback_list;
+    } else {
+        pTrav = debug_data->default_debug_callback_list;
+    }
+
     while (pTrav) {
         if (pTrav->msgFlags & msgFlags) {
             if (pTrav->pfnMsgCallback(msgFlags, objectType, srcObject, location, msgCode, pLayerPrefix, pMsg, pTrav->pUserData)) {
@@ -77,7 +145,7 @@ debug_report_create_instance(VkLayerInstanceDispatchTable *table, VkInstance ins
 
     memset(debug_data, 0, sizeof(debug_report_data));
     for (uint32_t i = 0; i < extension_count; i++) {
-        /* TODO: Check other property fields */
+        // TODO: Check other property fields
         if (strcmp(ppEnabledExtensions[i], VK_EXT_DEBUG_REPORT_EXTENSION_NAME) == 0) {
             debug_data->g_DEBUG_REPORT = true;
         }
@@ -86,42 +154,32 @@ debug_report_create_instance(VkLayerInstanceDispatchTable *table, VkInstance ins
 }
 
 static inline void layer_debug_report_destroy_instance(debug_report_data *debug_data) {
-    VkLayerDbgFunctionNode *pTrav;
-    VkLayerDbgFunctionNode *pTravNext;
-
-    if (!debug_data) {
-        return;
+    if (debug_data) {
+        RemoveAllMessageCallbacks(debug_data, &debug_data->default_debug_callback_list);
+        RemoveAllMessageCallbacks(debug_data, &debug_data->debug_callback_list);
+        free(debug_data);
     }
-
-    pTrav = debug_data->g_pDbgFunctionHead;
-    /* Clear out any leftover callbacks */
-    while (pTrav) {
-        pTravNext = pTrav->pNext;
-
-        debug_report_log_msg(debug_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT,
-                             (uint64_t)pTrav->msgCallback, 0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT, "DebugReport",
-                             "Debug Report callbacks not removed before DestroyInstance");
-
-        free(pTrav);
-        pTrav = pTravNext;
-    }
-    debug_data->g_pDbgFunctionHead = NULL;
-
-    free(debug_data);
 }
 
 static inline debug_report_data *layer_debug_report_create_device(debug_report_data *instance_debug_data, VkDevice device) {
-    /* DEBUG_REPORT shares data between Instance and Device,
-     * so just return instance's data pointer */
+    // DEBUG_REPORT shares data between Instance and Device,
+    // so just return instance's data pointer
     return instance_debug_data;
 }
 
-static inline void layer_debug_report_destroy_device(VkDevice device) { /* Nothing to do since we're using instance data record */ }
+static inline void layer_debug_report_destroy_device(VkDevice device) {
+    // Nothing to do since we're using instance data record
+}
 
-static inline VkResult layer_create_msg_callback(debug_report_data *debug_data,
+static inline void layer_destroy_msg_callback(debug_report_data *debug_data, VkDebugReportCallbackEXT callback,
+                                              const VkAllocationCallbacks *pAllocator) {
+    RemoveDebugMessageCallback(debug_data, &debug_data->debug_callback_list, callback);
+    RemoveDebugMessageCallback(debug_data, &debug_data->default_debug_callback_list, callback);
+}
+
+static inline VkResult layer_create_msg_callback(debug_report_data *debug_data, bool default_callback,
                                                  const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
                                                  const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pCallback) {
-    /* TODO: Use app allocator */
     VkLayerDbgFunctionNode *pNewDbgFuncNode = (VkLayerDbgFunctionNode *)malloc(sizeof(VkLayerDbgFunctionNode));
     if (!pNewDbgFuncNode)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -133,44 +191,17 @@ static inline VkResult layer_create_msg_callback(debug_report_data *debug_data,
     pNewDbgFuncNode->pfnMsgCallback = pCreateInfo->pfnCallback;
     pNewDbgFuncNode->msgFlags = pCreateInfo->flags;
     pNewDbgFuncNode->pUserData = pCreateInfo->pUserData;
-    pNewDbgFuncNode->pNext = debug_data->g_pDbgFunctionHead;
 
-    debug_data->g_pDbgFunctionHead = pNewDbgFuncNode;
+    if (default_callback) {
+        AddDebugMessageCallback(debug_data, &debug_data->default_debug_callback_list, pNewDbgFuncNode);
+    } else {
+        AddDebugMessageCallback(debug_data, &debug_data->debug_callback_list, pNewDbgFuncNode);
+    }
     debug_data->active_flags |= pCreateInfo->flags;
 
     debug_report_log_msg(debug_data, VK_DEBUG_REPORT_DEBUG_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT,
                          (uint64_t)*pCallback, 0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT, "DebugReport", "Added callback");
     return VK_SUCCESS;
-}
-
-static inline void layer_destroy_msg_callback(debug_report_data *debug_data, VkDebugReportCallbackEXT callback,
-                                              const VkAllocationCallbacks *pAllocator) {
-    VkLayerDbgFunctionNode *pTrav = debug_data->g_pDbgFunctionHead;
-    VkLayerDbgFunctionNode *pPrev = pTrav;
-    bool matched;
-
-    debug_data->active_flags = 0;
-    while (pTrav) {
-        if (pTrav->msgCallback == callback) {
-            matched = true;
-            pPrev->pNext = pTrav->pNext;
-            if (debug_data->g_pDbgFunctionHead == pTrav) {
-                debug_data->g_pDbgFunctionHead = pTrav->pNext;
-            }
-            debug_report_log_msg(debug_data, VK_DEBUG_REPORT_DEBUG_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT,
-                                 (uint64_t)pTrav->msgCallback, 0, VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT, "DebugReport",
-                                 "Destroyed callback");
-        } else {
-            matched = false;
-            debug_data->active_flags |= pTrav->msgFlags;
-        }
-        pPrev = pTrav;
-        pTrav = pTrav->pNext;
-        if (matched) {
-            /* TODO: Use pAllocator */
-            free(pPrev);
-        }
-    }
 }
 
 static inline PFN_vkVoidFunction debug_report_get_instance_proc_addr(debug_report_data *debug_data, const char *funcName) {
@@ -253,7 +284,7 @@ static VkResult layer_enable_tmp_callbacks(debug_report_data *debug_data, uint32
                                            VkDebugReportCallbackCreateInfoEXT *infos, VkDebugReportCallbackEXT *callbacks) {
     VkResult rtn = VK_SUCCESS;
     for (uint32_t i = 0; i < num_callbacks; i++) {
-        rtn = layer_create_msg_callback(debug_data, &infos[i], NULL, &callbacks[i]);
+        rtn = layer_create_msg_callback(debug_data, false, &infos[i], NULL, &callbacks[i]);
         if (rtn != VK_SUCCESS) {
             for (uint32_t j = 0; j < i; j++) {
                 layer_destroy_msg_callback(debug_data, callbacks[j], NULL);
@@ -273,14 +304,12 @@ static void layer_disable_tmp_callbacks(debug_report_data *debug_data, uint32_t 
     }
 }
 
-/*
- * Checks if the message will get logged.
- * Allows layer to defer collecting & formating data if the
- * message will be discarded.
- */
+// Checks if the message will get logged.
+// Allows layer to defer collecting & formating data if the
+// message will be discarded.
 static inline bool will_log_msg(debug_report_data *debug_data, VkFlags msgFlags) {
     if (!debug_data || !(debug_data->active_flags & msgFlags)) {
-        /* message is not wanted */
+        // Message is not wanted
         return false;
     }
 
@@ -302,11 +331,9 @@ static inline int vasprintf(char **strp, char const *fmt, va_list ap) {
 }
 #endif
 
-/*
- * Output log message via DEBUG_REPORT
- * Takes format and variable arg list so that output string
- * is only computed if a message needs to be logged
- */
+// Output log message via DEBUG_REPORT
+// Takes format and variable arg list so that output string
+// is only computed if a message needs to be logged
 #ifndef WIN32
 static inline bool log_msg(const debug_report_data *debug_data, VkFlags msgFlags, VkDebugReportObjectTypeEXT objectType,
                            uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *format, ...)
@@ -316,7 +343,7 @@ static inline bool log_msg(const debug_report_data *debug_data, VkFlags msgFlags
                            uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *format,
                            ...) {
     if (!debug_data || !(debug_data->active_flags & msgFlags)) {
-        /* message is not wanted */
+        // Message is not wanted
         return false;
     }
 
@@ -324,7 +351,7 @@ static inline bool log_msg(const debug_report_data *debug_data, VkFlags msgFlags
     va_start(argptr, format);
     char *str;
     if (-1 == vasprintf(&str, format, argptr)) {
-        /* on failure, glibc vasprintf leaves str undefined */
+        // On failure, glibc vasprintf leaves str undefined
         str = nullptr;
     }
     va_end(argptr);
