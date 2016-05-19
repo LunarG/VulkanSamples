@@ -246,11 +246,11 @@ class BufferDescriptor : public Descriptor {
 // Helper functions for Updating descriptor sets since it crosses multiple sets
 // Validate will make sure an update is ok without actually performing it
 bool ValidateUpdateDescriptorSets(const debug_report_data *,
-                                  const std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> &, const uint32_t,
-                                  const VkWriteDescriptorSet *, const uint32_t, const VkCopyDescriptorSet *);
+                                  const std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> &, uint32_t,
+                                  const VkWriteDescriptorSet *, uint32_t, const VkCopyDescriptorSet *);
 // Perform does the update with the assumption that ValidateUpdateDescriptorSets() has passed for the given update
-void PerformUpdateDescriptorSets(const std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> &, const uint32_t,
-                                 const VkWriteDescriptorSet *, const uint32_t, const VkCopyDescriptorSet *);
+void PerformUpdateDescriptorSets(const std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> &, uint32_t,
+                                 const VkWriteDescriptorSet *, uint32_t, const VkCopyDescriptorSet *);
 /*
  * DescriptorSet class
  *
@@ -272,8 +272,8 @@ void PerformUpdateDescriptorSets(const std::unordered_map<VkDescriptorSet, cvdes
 class DescriptorSet : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
-    DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const debug_report_data *,
-                  const std::unordered_map<VkBuffer, BUFFER_NODE> *, const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *,
+    DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const std::unordered_map<VkBuffer, BUFFER_NODE> *,
+                  const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *,
                   const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *,
                   const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *,
                   const std::unordered_map<VkImageView, VkImageViewCreateInfo> *, const std::unordered_map<VkImage, IMAGE_NODE> *,
@@ -351,11 +351,9 @@ class DescriptorSet : public BASE_NODE {
     void InvalidateBoundCmdBuffers();
     bool some_update_; // has any part of the set ever been updated?
     VkDescriptorSet set_;
-    uint32_t descriptor_count_; // Count of all descriptors in this set
     const DescriptorSetLayout *p_layout_;
     std::unordered_set<GLOBAL_CB_NODE *> bound_cmd_buffers_;
     std::vector<std::unique_ptr<Descriptor>> descriptors_;
-    const debug_report_data *report_data_;
     // Ptrs to object containers to verify bound data
     const std::unordered_map<VkBuffer, BUFFER_NODE> *buffer_map_;
     const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *memory_map_;

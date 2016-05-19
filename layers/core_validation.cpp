@@ -5944,8 +5944,8 @@ AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllo
                 }
                 // Create new DescriptorSet instance and add to the pool's unordered_set of DescriptorSets
                 cvdescriptorset::DescriptorSet *pNewNode = new cvdescriptorset::DescriptorSet(
-                    pDescriptorSets[i], layout_pair->second, dev_data->report_data, &dev_data->bufferMap, &dev_data->memObjMap,
-                    &dev_data->bufferViewMap, &dev_data->samplerMap, &dev_data->imageViewMap, &dev_data->imageMap,
+                    pDescriptorSets[i], layout_pair->second, &dev_data->bufferMap, &dev_data->memObjMap, &dev_data->bufferViewMap,
+                    &dev_data->samplerMap, &dev_data->imageViewMap, &dev_data->imageMap,
                     &dev_data->device_extensions.imageToSwapchainMap, &dev_data->device_extensions.swapchainMap);
                 if (NULL == pNewNode) {
                     if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
