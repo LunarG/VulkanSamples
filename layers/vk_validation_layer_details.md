@@ -137,7 +137,7 @@ It flags errors when inconsistencies are found across interfaces between shader 
 | Bad capability | Flags error if a capability declared by the shader is not supported by Vulkan shaders | BAD_CAPABILITY | vkCreateGraphicsPipelines | TODO | NA |
 | NA | Enum used for informational messages | NONE | | TODO | None |
 
-### VK_LAYER_LUNARG_core_validation Shader Checker Work
+### VK_LAYER_LUNARG_core_validation Shader Checker Pending Work
  
 See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
