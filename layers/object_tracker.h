@@ -29,7 +29,7 @@
 #include "vk_layer_utils.h"
 
 // Object Tracker ERROR codes
-typedef enum _OBJECT_TRACK_ERROR {
+enum OBJECT_TRACK_ERROR {
     OBJTRACK_NONE,                     // Used for INFO & other non-error messages
     OBJTRACK_UNKNOWN_OBJECT,           // Updating uses of object that's not in global object list
     OBJTRACK_INTERNAL_ERROR,           // Bug with data tracking within the layer
@@ -37,11 +37,11 @@ typedef enum _OBJECT_TRACK_ERROR {
     OBJTRACK_INVALID_OBJECT,           // Object used that has never been created
     OBJTRACK_DESCRIPTOR_POOL_MISMATCH, // Descriptor Pools specified incorrectly
     OBJTRACK_COMMAND_POOL_MISMATCH,    // Command Pools specified incorrectly
-} OBJECT_TRACK_ERROR;
+};
 
 // Object Status -- used to track state of individual objects
 typedef VkFlags ObjectStatusFlags;
-typedef enum _ObjectStatusFlagBits {
+enum ObjectStatusFlagBits {
     OBJSTATUS_NONE = 0x00000000,                     // No status is set
     OBJSTATUS_FENCE_IS_SUBMITTED = 0x00000001,       // Fence has been submitted
     OBJSTATUS_VIEWPORT_BOUND = 0x00000002,           // Viewport state object has been bound
@@ -50,15 +50,15 @@ typedef enum _ObjectStatusFlagBits {
     OBJSTATUS_DEPTH_STENCIL_BOUND = 0x00000010,      // Viewport state object has been bound
     OBJSTATUS_GPU_MEM_MAPPED = 0x00000020,           // Memory object is currently mapped
     OBJSTATUS_COMMAND_BUFFER_SECONDARY = 0x00000040, // Command Buffer is of type SECONDARY
-} ObjectStatusFlagBits;
+};
 
-typedef struct _OBJTRACK_NODE {
+struct OBJTRACK_NODE {
     uint64_t vkObj;                     // Object handle
     VkDebugReportObjectTypeEXT objType; // Object type identifier
     ObjectStatusFlags status;           // Object state
     uint64_t parentObj;                 // Parent object
     uint64_t belongsTo;                 // Object Scope -- owning device/instance
-} OBJTRACK_NODE;
+};
 
 // prototype for extension functions
 uint64_t objTrackGetObjectCount(VkDevice device);
@@ -184,10 +184,10 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreate
 }
 
 // Indicate device or instance dispatch table type
-typedef enum _DispTableType {
+enum DispTableType {
     DISP_TBL_TYPE_INSTANCE,
     DISP_TBL_TYPE_DEVICE,
-} DispTableType;
+};
 
 debug_report_data *mdd(const void *object) {
     dispatch_key key = get_dispatch_key(object);
@@ -202,20 +202,19 @@ debug_report_data *mid(VkInstance object) {
 }
 
 // For each Queue's doubly linked-list of mem refs
-typedef struct _OT_MEM_INFO {
+struct OT_MEM_INFO {
     VkDeviceMemory mem;
-    struct _OT_MEM_INFO *pNextMI;
-    struct _OT_MEM_INFO *pPrevMI;
-
-} OT_MEM_INFO;
+    OT_MEM_INFO *pNextMI;
+    OT_MEM_INFO *pPrevMI;
+};
 
 // Track Queue information
-typedef struct _OT_QUEUE_INFO {
+struct OT_QUEUE_INFO {
     OT_MEM_INFO *pMemRefList;
     uint32_t queueNodeIndex;
     VkQueue queue;
     uint32_t refCount;
-} OT_QUEUE_INFO;
+};
 
 // Global map of structures, one per queue
 std::unordered_map<VkQueue, OT_QUEUE_INFO *> queue_info_map;
