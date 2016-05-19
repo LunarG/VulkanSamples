@@ -1119,8 +1119,22 @@ should use memory allocators if the layer is intended to run in a production
 environment, such as an implicit layer that is always enabled.  That will
 allow applications to include the layer's memory usage.
 
+`vkEnumerateInstanceLayerProperties` must enumerate and only enumerate the
+layer itself.
+
+`vkEnumerateInstanceExtensionProperties` must handle the case where
+`pLayerName` is itself.  It must return `VK_ERROR_LAYER_NOT_PRESENT`
+otherwise, including when `pLayerName` is `NULL`.
+
+`vkEnumerateDeviceLayerProperties` is deprecated and may be omitted.  The
+behavior is undefined.
+
 `vkEnumerateDeviceExtensionProperties` must handle the case where `pLayerName`
-is `NULL`, usually by chaining to other layers.
+is itself.  In other cases, it should normally chain to other layers.
+
+`vkCreateInstance` must not generate an error for unrecognized layer names and
+extension names.  It may assume the layer names and extension names have been
+validated.
 
 `vkGetInstanceProcAddr` can intercept a command by returning a function
 pointer different from what would be returned through chaining.
@@ -1128,39 +1142,43 @@ pointer different from what would be returned through chaining.
 `vkGetDeviceProcAddr` can intercept a command by returning a function pointer
 different from what would be returned through chaining.
 
-`vkCreateInstance` must not generate an error for unrecognized layer names,
-extension names, and `pNext` structs.  It may assume the layer names and
-extension names have been validated.
-
-`vkCreateDevice` must not generate an error for unrecognized layer names,
-extension names, and `pNext` structs.  It may assume the layer names and
-extension names have been validated.
-
 [\*]: The intention is for layers to have a well-defined baseline behavior.
 Some of the conventions or rules, for example, may be considered abuses of the
 specification.
 
 ###### Layer Library Interface Version 0 (Android)
 
-An Android layer library supporting interface version 0 must define and export these
-functions, unrelated to any Vulkan command despite the names, signatures, and
-other similarities:
+A layer library supporting interface version 0 must define and export these
+introspection functions, unrelated to any Vulkan command despite the names,
+signatures, and other similarities:
 
- - `vkEnumerateInstanceLayerProperties` enumerates all instance layers in a
-   layer library.  This function never fails.
+ - `vkEnumerateInstanceLayerProperties` enumerates all layers in a layer
+   library.  This function never fails.
+
+   When a layer library contains only one layer, this function may be an alias
+   to the layer's `vkEnumerateInstanceLayerProperties`.
 
  - `vkEnumerateInstanceExtensionProperties` enumerates instance extensions of
-   instance layers in a layer library.  `pLayerName` is always a valid
-   instance layer name.  This function never fails.
+   layers in a layer library.  `pLayerName` is always a valid layer name.
+   This function never fails.
 
- - `vkEnumerateDeviceLayerProperties` enumerates all device layers in a layer
-   library.  `physicalDevice` is always `VK_NULL_HANDLE`.  This function never
-   fails.
+   When a layer library contains only one layer, this function may be an alias
+   to the layer's `vkEnumerateInstanceExtensionProperties`.
+
+ - `vkEnumerateDeviceLayerProperties` enumerates a subset (can be full,
+   proper, or empty subset) of layers in a layer library.  `physicalDevice` is
+   always `VK_NULL_HANDLE`.  This function never fails.
+
+   If a layer is not enumerated by this function, it will not participate in
+   device command interception.
 
  - `vkEnumerateDeviceExtensionProperties` enumerates device extensions of
-   device layers in a layer library.  `physicalDevice` is always
-   `VK_NULL_HANDLE`.  `pLayerName` is always a valid device layer name.  This
-   function never fails.
+   layers in a layer library.  `physicalDevice` is always `VK_NULL_HANDLE`.
+   `pLayerName` is always a valid layer name.  This function never fails.
+
+The introspection functions are not used by the desktop loader.
+
+It must also define and export these functions:
 
  - `<layerName>GetInstanceProcAddr` behaves as if `<layerName>`'s
    `vkGetInstanceProcAddr` is called, except
@@ -1169,9 +1187,12 @@ other similarities:
      `vkEnumerateInstanceExtensionProperties`, or
      `vkEnumerateDeviceLayerProperties` (but _not_
      `vkEnumerateDeviceExtensionProperties`), it returns a function pointer to
-     the function of the same name defined by this interface.
+     the corresponding introspection function defined by this interface.
    - when `pName` is `vkGetInstanceProcAddr`, it returns a function pointer
      to itself.
+
+   For compatibility with older layer libraries,
+
    - when `pName` is `vkCreateDevice`, it ignores `instance`.
    - when `pName` is a device command defined by Vulkan 1.0 or
      `VK_KHR_swapchain` (but _not_ other device commands), it may chain to
