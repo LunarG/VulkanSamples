@@ -72,12 +72,12 @@ class BUFFER_NODE : public BASE_NODE {
     BUFFER_NODE(const BUFFER_NODE &rh_obj) : mem(rh_obj.mem), createInfo(rh_obj.createInfo) { in_use.store(rh_obj.in_use.load()); };
 };
 
-typedef struct _SAMPLER_NODE {
+struct SAMPLER_NODE {
     VkSampler sampler;
     VkSamplerCreateInfo createInfo;
 
-    _SAMPLER_NODE(const VkSampler *ps, const VkSamplerCreateInfo *pci) : sampler(*ps), createInfo(*pci){};
-} SAMPLER_NODE;
+    SAMPLER_NODE(const VkSampler *ps, const VkSamplerCreateInfo *pci) : sampler(*ps), createInfo(*pci){};
+};
 
 class IMAGE_NODE : public BASE_NODE {
   public:
@@ -154,7 +154,8 @@ class SWAPCHAIN_NODE {
     }
     ~SWAPCHAIN_NODE() { delete[] pQueueFamilyIndices; }
 };
-typedef enum _DRAW_TYPE {
+
+enum DRAW_TYPE {
     DRAW = 0,
     DRAW_INDEXED = 1,
     DRAW_INDIRECT = 2,
@@ -162,7 +163,7 @@ typedef enum _DRAW_TYPE {
     DRAW_BEGIN_RANGE = DRAW,
     DRAW_END_RANGE = DRAW_INDEXED_INDIRECT,
     NUM_DRAW_TYPES = (DRAW_END_RANGE - DRAW_BEGIN_RANGE + 1),
-} DRAW_TYPE;
+};
 
 class IMAGE_CMD_BUF_LAYOUT_NODE {
   public:
@@ -222,8 +223,9 @@ struct RENDER_PASS_NODE {
         }
     }
 };
+
 // Cmd Buffer Tracking
-typedef enum _CMD_TYPE {
+enum CMD_TYPE {
     CMD_BINDPIPELINE,
     CMD_BINDPIPELINEDELTA,
     CMD_SETVIEWPORTSTATE,
@@ -274,23 +276,24 @@ typedef enum _CMD_TYPE {
     CMD_ENDRENDERPASS,
     CMD_EXECUTECOMMANDS,
     CMD_END, // Should be last command in any RECORDED cmd buffer
-} CMD_TYPE;
+};
+
 // Data structure for holding sequence of cmds in cmd buffer
-typedef struct _CMD_NODE {
+struct CMD_NODE {
     CMD_TYPE type;
     uint64_t cmdNumber;
-} CMD_NODE;
+};
 
-typedef enum _CB_STATE {
+enum CB_STATE {
     CB_NEW,       // Newly created CB w/o any cmds
     CB_RECORDING, // BeginCB has been called on this CB
     CB_RECORDED,  // EndCB has been called on this CB
     CB_INVALID    // CB had a bound descriptor set destroyed or updated
-} CB_STATE;
+};
 
 // CB Status -- used to track status of various bindings on cmd buffer objects
 typedef VkFlags CBStatusFlags;
-typedef enum _CBStatusFlagBits {
+enum CBStatusFlagBits {
     // clang-format off
     CBSTATUS_NONE                   = 0x00000000,   // No status is set
     CBSTATUS_VIEWPORT_SET           = 0x00000001,   // Viewport has been set
@@ -305,7 +308,7 @@ typedef enum _CBStatusFlagBits {
     CBSTATUS_SCISSOR_SET            = 0x00000200,   // Scissor has been set
     CBSTATUS_ALL                    = 0x000003FF,   // All dynamic state set
     // clang-format on
-} CBStatusFlagBits;
+};
 
 struct QueryObject {
     VkQueryPool pool;
@@ -323,7 +326,7 @@ template <> struct hash<QueryObject> {
     }
 };
 }
-typedef struct _DRAW_DATA { std::vector<VkBuffer> buffers; } DRAW_DATA;
+struct DRAW_DATA { std::vector<VkBuffer> buffers; };
 
 struct ImageSubresourcePair {
     VkImage image;
