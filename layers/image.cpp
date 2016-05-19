@@ -214,25 +214,6 @@ static const VkLayerProperties global_layer = {
 
 // Start of the Image layer proper
 
-// Returns TRUE if a format is a depth-compatible format
-bool is_depth_format(VkFormat format) {
-    bool result = false;
-    switch (format) {
-    case VK_FORMAT_D16_UNORM:
-    case VK_FORMAT_X8_D24_UNORM_PACK32:
-    case VK_FORMAT_D32_SFLOAT:
-    case VK_FORMAT_S8_UINT:
-    case VK_FORMAT_D16_UNORM_S8_UINT:
-    case VK_FORMAT_D24_UNORM_S8_UINT:
-    case VK_FORMAT_D32_SFLOAT_S8_UINT:
-        result = true;
-        break;
-    default:
-        break;
-    }
-    return result;
-}
-
 static inline uint32_t validate_VkImageLayoutKHR(VkImageLayout input_value) {
     return ((validate_VkImageLayout(input_value) == 1) || (input_value == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR));
 }
@@ -457,7 +438,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
     // Any depth buffers specified as attachments?
     bool depthFormatPresent = false;
     for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
-        depthFormatPresent |= is_depth_format(pCreateInfo->pAttachments[i].format);
+        depthFormatPresent |= vk_format_is_depth_or_stencil(pCreateInfo->pAttachments[i].format);
     }
 
     if (!depthFormatPresent) {
@@ -903,7 +884,7 @@ bool cmd_copy_image_valid_usage(VkCommandBuffer commandBuffer, VkImage srcImage,
         // The formats of srcImage and dstImage must be compatible. Formats are considered compatible if their texel size in bytes
         // is the same between both formats. For example, VK_FORMAT_R8G8B8A8_UNORM is compatible with VK_FORMAT_R32_UINT because
         // because both texels are 4 bytes in size. Depth/stencil formats must match exactly.
-        if (is_depth_format(srcImageEntry->format) || is_depth_format(dstImageEntry->format)) {
+        if (vk_format_is_depth_or_stencil(srcImageEntry->format) || vk_format_is_depth_or_stencil(dstImageEntry->format)) {
             if (srcImageEntry->format != dstImageEntry->format) {
                 char const str[] = "vkCmdCopyImage called with unmatched source and dest image depth/stencil formats.";
                 skipCall |=
