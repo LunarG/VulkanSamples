@@ -77,7 +77,6 @@ GLOBAL_CB_NODE::~GLOBAL_CB_NODE() {
         for (auto set : lastBound[i].uniqueBoundSets) {
             set->RemoveBoundCommandBuffer(this);
         }
-        lastBound[i].reset();
     }
 }
 
