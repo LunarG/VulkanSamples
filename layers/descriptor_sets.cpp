@@ -59,6 +59,7 @@ void cvdescriptorset::DescriptorSetLayout::FillBindingSet(std::unordered_set<uin
     for (auto binding_index_pair : binding_to_index_map_)
         binding_set->insert(binding_index_pair.first);
 }
+
 VkDescriptorSetLayoutBinding const *
 cvdescriptorset::DescriptorSetLayout::GetDescriptorSetLayoutBindingPtrFromBinding(const uint32_t binding) const {
     const auto &bi_itr = binding_to_index_map_.find(binding);
@@ -260,7 +261,6 @@ bool cvdescriptorset::DescriptorSetLayout::VerifyUpdateConsistency(uint32_t curr
 }
 
 cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const DescriptorSetLayout *layout,
-                                              const debug_report_data *debug_report_data,
                                               const std::unordered_map<VkBuffer, BUFFER_NODE> *buffer_map,
                                               const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *memory_map,
                                               const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *buffer_view_map,
@@ -269,9 +269,9 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
                                               const std::unordered_map<VkImage, IMAGE_NODE> *image_map,
                                               const std::unordered_map<VkImage, VkSwapchainKHR> *image_to_swapchain_map,
                                               const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *swapchain_map)
-    : some_update_(false), set_(set), p_layout_(layout), report_data_(debug_report_data), buffer_map_(buffer_map),
-      memory_map_(memory_map), buffer_view_map_(buffer_view_map), sampler_map_(sampler_map), image_view_map_(image_view_map),
-      image_map_(image_map), image_to_swapchain_map_(image_to_swapchain_map), swapchain_map_(swapchain_map) {
+    : some_update_(false), set_(set), p_layout_(layout), buffer_map_(buffer_map), memory_map_(memory_map),
+      buffer_view_map_(buffer_view_map), sampler_map_(sampler_map), image_view_map_(image_view_map), image_map_(image_map),
+      image_to_swapchain_map_(image_to_swapchain_map), swapchain_map_(swapchain_map) {
     // Foreach binding, create default descriptors of given type
     for (uint32_t i = 0; i < p_layout_->GetBindingCount(); ++i) {
         auto type = p_layout_->GetTypeFromIndex(i);
@@ -321,6 +321,7 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
         }
     }
 }
+
 cvdescriptorset::DescriptorSet::~DescriptorSet() {
     InvalidateBoundCmdBuffers();
     // Remove link to any cmd buffers
@@ -466,16 +467,14 @@ void cvdescriptorset::DescriptorSet::InvalidateBoundCmdBuffers() {
 }
 // Perform write update in given update struct
 void cvdescriptorset::DescriptorSet::PerformWriteUpdate(const VkWriteDescriptorSet *update) {
-    auto num_updates = 0;
     auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
     // perform update
     for (uint32_t di = 0; di < update->descriptorCount; ++di) {
         descriptors_[start_idx + di]->WriteUpdate(update, di);
-        ++num_updates;
     }
-    if (num_updates != 0) {
+    if (update->descriptorCount)
         some_update_ = true;
-    }
+
     InvalidateBoundCmdBuffers();
 }
 // Validate Copy update
@@ -562,19 +561,18 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
 }
 // Perform Copy update
 void cvdescriptorset::DescriptorSet::PerformCopyUpdate(const VkCopyDescriptorSet *update, const DescriptorSet *src_set) {
-    auto num_updates = 0;
     auto src_start_idx = src_set->GetGlobalStartIndexFromBinding(update->srcBinding) + update->srcArrayElement;
     auto dst_start_idx = p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
     // Update parameters all look good so perform update
     for (uint32_t di = 0; di < update->descriptorCount; ++di) {
         descriptors_[dst_start_idx + di]->CopyUpdate(src_set->descriptors_[src_start_idx + di].get());
-        ++num_updates;
     }
-    if (num_updates != 0) {
+    if (update->descriptorCount)
         some_update_ = true;
-    }
+
     InvalidateBoundCmdBuffers();
 }
+
 cvdescriptorset::SamplerDescriptor::SamplerDescriptor() : sampler_(VK_NULL_HANDLE), immutable_(false) {
     updated = false;
     descriptor_class = PlainSampler;
@@ -589,10 +587,12 @@ cvdescriptorset::SamplerDescriptor::SamplerDescriptor(const VkSampler *immut) : 
         updated = true;
     }
 }
+
 bool cvdescriptorset::ValidateSampler(const VkSampler sampler,
                                       const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *sampler_map) {
     return (sampler_map->count(sampler) != 0);
 }
+
 bool cvdescriptorset::ValidateImageUpdate(const VkImageView image_view, const VkImageLayout image_layout,
                                           const std::unordered_map<VkImageView, VkImageViewCreateInfo> *image_view_map,
                                           const std::unordered_map<VkImage, IMAGE_NODE> *image_map,
@@ -687,6 +687,7 @@ bool cvdescriptorset::ValidateImageUpdate(const VkImageView image_view, const Vk
     }
     return true;
 }
+
 void cvdescriptorset::SamplerDescriptor::WriteUpdate(const VkWriteDescriptorSet *update, const uint32_t index) {
     sampler_ = update->pImageInfo[index].sampler;
     updated = true;
@@ -699,6 +700,7 @@ void cvdescriptorset::SamplerDescriptor::CopyUpdate(const Descriptor *src) {
     }
     updated = true;
 }
+
 cvdescriptorset::ImageSamplerDescriptor::ImageSamplerDescriptor()
     : sampler_(VK_NULL_HANDLE), immutable_(false), image_view_(VK_NULL_HANDLE), image_layout_(VK_IMAGE_LAYOUT_UNDEFINED) {
     updated = false;
@@ -715,9 +717,10 @@ cvdescriptorset::ImageSamplerDescriptor::ImageSamplerDescriptor(const VkSampler 
         updated = true;
     }
 }
+
 void cvdescriptorset::ImageSamplerDescriptor::WriteUpdate(const VkWriteDescriptorSet *update, const uint32_t index) {
     updated = true;
-    auto image_info = update->pImageInfo[index];
+    const auto &image_info = update->pImageInfo[index];
     sampler_ = image_info.sampler;
     image_view_ = image_info.imageView;
     image_layout_ = image_info.imageLayout;
@@ -745,7 +748,7 @@ cvdescriptorset::ImageDescriptor::ImageDescriptor(const VkDescriptorType type)
 
 void cvdescriptorset::ImageDescriptor::WriteUpdate(const VkWriteDescriptorSet *update, const uint32_t index) {
     updated = true;
-    auto image_info = update->pImageInfo[index];
+    const auto &image_info = update->pImageInfo[index];
     image_view_ = image_info.imageView;
     image_layout_ = image_info.imageLayout;
 }
@@ -773,7 +776,7 @@ cvdescriptorset::BufferDescriptor::BufferDescriptor(const VkDescriptorType type)
 }
 void cvdescriptorset::BufferDescriptor::WriteUpdate(const VkWriteDescriptorSet *update, const uint32_t index) {
     updated = true;
-    auto buffer_info = update->pBufferInfo[index];
+    const auto &buffer_info = update->pBufferInfo[index];
     buffer_ = buffer_info.buffer;
     offset_ = buffer_info.offset;
     range_ = buffer_info.range;
@@ -793,6 +796,7 @@ cvdescriptorset::TexelDescriptor::TexelDescriptor(const VkDescriptorType type) :
     if (VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER == type)
         storage_ = true;
 };
+
 void cvdescriptorset::TexelDescriptor::WriteUpdate(const VkWriteDescriptorSet *update, const uint32_t index) {
     updated = true;
     buffer_view_ = update->pTexelBufferView[index];
@@ -809,17 +813,16 @@ void cvdescriptorset::TexelDescriptor::CopyUpdate(const Descriptor *src) {
 // If there is no issue with the update, then false is returned.
 bool cvdescriptorset::ValidateUpdateDescriptorSets(
     const debug_report_data *report_data, const std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> &set_map,
-    const uint32_t write_count, const VkWriteDescriptorSet *p_wds, const uint32_t copy_count, const VkCopyDescriptorSet *p_cds) {
+    uint32_t write_count, const VkWriteDescriptorSet *p_wds, uint32_t copy_count, const VkCopyDescriptorSet *p_cds) {
     bool skip_call = false;
     // Validate Write updates
-    uint32_t i = 0;
-    for (i = 0; i < write_count; i++) {
+    for (uint32_t i = 0; i < write_count; i++) {
         auto dest_set = p_wds[i].dstSet;
         auto set_pair = set_map.find(dest_set);
         if (set_pair == set_map.end()) {
             skip_call |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                        reinterpret_cast<uint64_t &>(dest_set), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
+                        reinterpret_cast<uint64_t &>(dest_set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
                         "Cannot call vkUpdateDescriptorSets() on descriptor set 0x%" PRIxLEAST64 " that has not been allocated.",
                         reinterpret_cast<uint64_t &>(dest_set));
         } else {
@@ -834,20 +837,20 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(
         }
     }
     // Now validate copy updates
-    for (i = 0; i < copy_count; ++i) {
+    for (uint32_t i = 0; i < copy_count; ++i) {
         auto dst_set = p_cds[i].dstSet;
         auto src_set = p_cds[i].srcSet;
         auto src_pair = set_map.find(src_set);
         auto dst_pair = set_map.find(dst_set);
         if (src_pair == set_map.end()) {
             skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                                 reinterpret_cast<uint64_t &>(src_set), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
+                                 reinterpret_cast<uint64_t &>(src_set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
                                  "Cannot call vkUpdateDescriptorSets() to copy from descriptor set 0x%" PRIxLEAST64
                                  " that has not been allocated.",
                                  reinterpret_cast<uint64_t &>(src_set));
         } else if (dst_pair == set_map.end()) {
             skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                                 reinterpret_cast<uint64_t &>(dst_set), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
+                                 reinterpret_cast<uint64_t &>(dst_set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
                                  "Cannot call vkUpdateDescriptorSets() to copy to descriptor set 0x%" PRIxLEAST64
                                  " that has not been allocated.",
                                  reinterpret_cast<uint64_t &>(dst_set));
@@ -872,8 +875,8 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(
 // This is split from the validate code to allow validation prior to calling down the chain, and then update after
 //  calling down the chain.
 void cvdescriptorset::PerformUpdateDescriptorSets(
-    const std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> &set_map, const uint32_t write_count,
-    const VkWriteDescriptorSet *p_wds, const uint32_t copy_count, const VkCopyDescriptorSet *p_cds) {
+    const std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> &set_map, uint32_t write_count,
+    const VkWriteDescriptorSet *p_wds, uint32_t copy_count, const VkCopyDescriptorSet *p_cds) {
     // Write updates first
     uint32_t i = 0;
     for (i = 0; i < write_count; ++i) {
