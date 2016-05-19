@@ -375,50 +375,24 @@ class Subcommand(object):
     def _gen_layer_interface_v0_functions(self):
         body = []
         body.append('%s' % self.lineinfo.get())
-        body.append('// loader-layer interface v0')
+        body.append('// loader-layer interface v0, just wrappers since there is only a layer')
         body.append('')
-
-        if self.layer_name == 'object_tracker':
-            body.append('static const VkExtensionProperties instance_extensions[] = {')
-            body.append('    {')
-            body.append('        VK_EXT_DEBUG_REPORT_EXTENSION_NAME,')
-            body.append('        VK_EXT_DEBUG_REPORT_SPEC_VERSION')
-            body.append('    }')
-            body.append('};')
-            body.append('')
-
-            body.append('static const VkLayerProperties globalLayerProps = {')
-            body.append('    "VK_LAYER_LUNARG_%s",' % self.layer_name)
-            body.append('    VK_LAYER_API_VERSION, // specVersion')
-            body.append('    1, // implementationVersion')
-            body.append('    "LunarG Validation Layer"')
-            body.append('};')
-            body.append('')
-        else:
-            body.append('static const VkLayerProperties globalLayerProps = {')
-            body.append('    "VK_LAYER_GOOGLE_%s",' % self.layer_name)
-            body.append('    VK_LAYER_API_VERSION, // specVersion')
-            body.append('    1, // implementationVersion')
-            body.append('    "Google Validation Layer"')
-            body.append('};')
-            body.append('')
 
         body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)')
         body.append('{')
-        if self.layer_name == 'object_tracker':
-          body.append('    return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);')
-        else:
-          body.append('    return util_GetExtensionProperties(0, NULL, pCount, pProperties);')
+        body.append('    return %s::EnumerateInstanceExtensionProperties(pLayerName, pCount, pProperties);' % self.layer_name)
         body.append('}')
         body.append('')
         body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)')
         body.append('{')
-        body.append('    return util_GetLayerProperties(1, &globalLayerProps, pCount, pProperties);')
+        body.append('    return %s::EnumerateInstanceLayerProperties(pCount, pProperties);' % self.layer_name)
         body.append('}')
         body.append('')
         body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties* pProperties)')
         body.append('{')
-        body.append('    return util_GetLayerProperties(1, &globalLayerProps, pCount, pProperties);')
+        body.append('    // the layer command handles VK_NULL_HANDLE just fine internally')
+        body.append('    assert(physicalDevice == VK_NULL_HANDLE);')
+        body.append('    return %s::EnumerateDeviceLayerProperties(VK_NULL_HANDLE, pCount, pProperties);' % self.layer_name)
         body.append('}')
         body.append('')
         body.append('VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice dev, const char *funcName)')
@@ -428,16 +402,16 @@ class Subcommand(object):
         body.append('')
         body.append('VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *funcName)')
         body.append('{')
-        body.append('    if (!strcmp(funcName, "vkEnumerateInstanceLayerProperties"))')
-        body.append('        return reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceLayerProperties);')
-        body.append('    if (!strcmp(funcName, "vkEnumerateDeviceLayerProperties"))')
-        body.append('        return reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateDeviceLayerProperties);')
-        body.append('    if (!strcmp(funcName, "vkEnumerateInstanceExtensionProperties"))')
-        body.append('        return reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceExtensionProperties);')
-        body.append('    if (!strcmp(funcName, "vkGetInstanceProcAddr"))')
-        body.append('        return reinterpret_cast<PFN_vkVoidFunction>(vkGetInstanceProcAddr);')
-        body.append('')
         body.append('    return %s::GetInstanceProcAddr(instance, funcName);' % self.layer_name)
+        body.append('}')
+        body.append('')
+        body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,')
+        body.append('                                                                                    const char *pLayerName, uint32_t *pCount,')
+        body.append('                                                                                    VkExtensionProperties *pProperties)')
+        body.append('{')
+        body.append('    // the layer command handles VK_NULL_HANDLE just fine internally')
+        body.append('    assert(physicalDevice == VK_NULL_HANDLE);')
+        body.append('    return %s::EnumerateDeviceExtensionProperties(VK_NULL_HANDLE, pLayerName, pCount, pProperties);' % self.layer_name)
         body.append('}')
 
         return "\n".join(body)
@@ -451,11 +425,9 @@ class Subcommand(object):
         for proto in self.protos:
             if proto.name in ["EnumerateInstanceExtensionProperties",
                               "EnumerateInstanceLayerProperties",
-                              "EnumerateDeviceLayerProperties"]:
-                # the layer do not need to define these
-                continue
-            elif proto.name in ["GetDeviceProcAddr",
-                                "GetInstanceProcAddr"]:
+                              "EnumerateDeviceLayerProperties",
+                              "GetDeviceProcAddr",
+                              "GetInstanceProcAddr"]:
                 funcs.append(proto.c_func(attr="VKAPI") + ';')
                 intercepted.append(proto)
             else:
@@ -503,11 +475,6 @@ class Subcommand(object):
         body.append("{")
         body.append(generate_get_proc_addr_check("name"))
         body.append("")
-        body.append("    // we should never be queried for these commands")
-        body.append("    assert(strcmp(name, \"vkEnumerateInstanceLayerProperties\") &&")
-        body.append("           strcmp(name, \"vkEnumerateInstanceExtensionProperties\") &&")
-        body.append("           strcmp(name, \"vkEnumerateDeviceLayerProperties\"));")
-        body.append("")
         body.append("    name += 2;")
         body.append("    %s" % "\n    ".join(instance_lookups))
         body.append("")
@@ -524,6 +491,69 @@ class Subcommand(object):
         exts.append(self._gen_destroy_msg_callback())
         exts.append(self._gen_debug_report_msg())
         return "\n".join(exts)
+
+    def _generate_layer_introspection_function(self):
+        body = []
+        body.append('%s' % self.lineinfo.get())
+        if self.layer_name == 'object_tracker':
+            body.append('static const VkExtensionProperties instance_extensions[] = {')
+            body.append('    {')
+            body.append('        VK_EXT_DEBUG_REPORT_EXTENSION_NAME,')
+            body.append('        VK_EXT_DEBUG_REPORT_SPEC_VERSION')
+            body.append('    }')
+            body.append('};')
+            body.append('')
+
+            body.append('static const VkLayerProperties globalLayerProps = {')
+            body.append('    "VK_LAYER_LUNARG_%s",' % self.layer_name)
+            body.append('    VK_LAYER_API_VERSION, // specVersion')
+            body.append('    1, // implementationVersion')
+            body.append('    "LunarG Validation Layer"')
+            body.append('};')
+            body.append('')
+        else:
+            body.append('static const VkLayerProperties globalLayerProps = {')
+            body.append('    "VK_LAYER_GOOGLE_%s",' % self.layer_name)
+            body.append('    VK_LAYER_API_VERSION, // specVersion')
+            body.append('    1, // implementationVersion')
+            body.append('    "Google Validation Layer"')
+            body.append('};')
+            body.append('')
+
+        body.append('VKAPI_ATTR VkResult VKAPI_CALL EnumerateInstanceLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)')
+        body.append('{')
+        body.append('    return util_GetLayerProperties(1, &globalLayerProps, pCount, pProperties);')
+        body.append('}')
+        body.append('')
+        body.append('VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties* pProperties)')
+        body.append('{')
+        body.append('    return util_GetLayerProperties(1, &globalLayerProps, pCount, pProperties);')
+        body.append('}')
+        body.append('')
+        body.append('VKAPI_ATTR VkResult VKAPI_CALL EnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)')
+        body.append('{')
+        body.append('    if (pLayerName && !strcmp(pLayerName, globalLayerProps.layerName))')
+        if self.layer_name == 'object_tracker':
+          body.append('        return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);')
+        else:
+          body.append('        return util_GetExtensionProperties(0, NULL, pCount, pProperties);')
+        body.append('')
+        body.append('    return VK_ERROR_LAYER_NOT_PRESENT;')
+        body.append('}')
+        body.append('')
+        body.append('VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,')
+        body.append('                                                                  const char *pLayerName, uint32_t *pCount,')
+        body.append('                                                                  VkExtensionProperties *pProperties)')
+        body.append('{')
+        body.append('    if (pLayerName && !strcmp(pLayerName, globalLayerProps.layerName))')
+        body.append('        return util_GetExtensionProperties(0, nullptr, pCount, pProperties);')
+        body.append('')
+        body.append('    assert(physicalDevice);')
+        body.append('    VkLayerInstanceDispatchTable* pTable = get_dispatch_table(%s_instance_table_map, physicalDevice);' % self.layer_name)
+        body.append('    return pTable->EnumerateDeviceExtensionProperties(physicalDevice, NULL, pCount, pProperties);')
+        body.append('}')
+
+        return "\n".join(body)
 
     def _generate_layer_gpa_function(self, extensions=[], instance_extensions=[]):
         func_body = []
@@ -1358,6 +1388,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 self.generate_destroy_device(),
                 self._generate_dispatch_entrypoints(),
                 self._generate_extensions(),
+                self._generate_layer_introspection_function(),
                 self._generate_layer_gpa_function(extensions,
                                                   instance_extensions),
                 "} // namespace %s" % self.layer_name,
@@ -1662,6 +1693,7 @@ class UniqueObjectsSubcommand(Subcommand):
 
         body = ["namespace %s {" % self.layer_name,
                 self._generate_dispatch_entrypoints(),
+                self._generate_layer_introspection_function(),
                 self._generate_layer_gpa_function(extensions,
                                                   instance_extensions),
                 "} // namespace %s" % self.layer_name,
