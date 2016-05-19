@@ -10895,6 +10895,88 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError) {
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
+
+TEST_F(VkLayerTest, ClearImageErrors) {
+    TEST_DESCRIPTION("Call ClearColorImage w/ a depth|stencil image and "
+                     "ClearDepthStencilImage with a color image.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    // Renderpass is started here so end it as Clear cmds can't be in renderpass
+    BeginCommandBuffer();
+    m_commandBuffer->EndRenderPass();
+
+    // Color image
+    VkClearColorValue clear_color;
+    memset(clear_color.uint32, 0, sizeof(uint32_t) * 4);
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    const VkFormat color_format = VK_FORMAT_B8G8R8A8_UNORM;
+    const int32_t img_width = 32;
+    const int32_t img_height = 32;
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = color_format;
+    image_create_info.extent.width = img_width;
+    image_create_info.extent.height = img_height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+
+    vk_testing::Image color_image;
+    color_image.init(*m_device, (const VkImageCreateInfo &)image_create_info,
+                     reqs);
+
+    const VkImageSubresourceRange color_range =
+        vk_testing::Image::subresource_range(image_create_info,
+                                             VK_IMAGE_ASPECT_COLOR_BIT);
+
+    // Depth/Stencil image
+    VkClearDepthStencilValue clear_value = {0};
+    reqs = 0; // don't need HOST_VISIBLE DS image
+    VkImageCreateInfo ds_image_create_info = vk_testing::Image::create_info();
+    ds_image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    ds_image_create_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    ds_image_create_info.extent.width = 64;
+    ds_image_create_info.extent.height = 64;
+    ds_image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ds_image_create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+    vk_testing::Image ds_image;
+    ds_image.init(*m_device, (const VkImageCreateInfo &)ds_image_create_info,
+                  reqs);
+
+    const VkImageSubresourceRange ds_range =
+        vk_testing::Image::subresource_range(ds_image_create_info,
+                                             VK_IMAGE_ASPECT_DEPTH_BIT);
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCmdClearColorImage called with depth/stencil image.");
+
+    vkCmdClearColorImage(m_commandBuffer->GetBufferHandle(), ds_image.handle(),
+                         VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1,
+                         &color_range);
+
+    m_errorMonitor->VerifyFound();
+
+    // Call CmdClearDepthStencilImage with color image
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCmdClearDepthStencilImage called without a depth/stencil image.");
+
+    vkCmdClearDepthStencilImage(
+        m_commandBuffer->GetBufferHandle(), color_image.handle(),
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, &clear_value, 1,
+        &ds_range);
+
+    m_errorMonitor->VerifyFound();
+}
 #endif // IMAGE_TESTS
 
 int main(int argc, char **argv) {
