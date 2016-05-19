@@ -110,20 +110,20 @@ struct MT_SWAP_CHAIN_INFO {
 };
 #endif
 
-typedef struct _SHADER_DS_MAPPING {
+struct SHADER_DS_MAPPING {
     uint32_t slotCount;
     VkDescriptorSetLayoutCreateInfo *pShaderMappingSlot;
-} SHADER_DS_MAPPING;
+};
 
-typedef struct _GENERIC_HEADER {
+struct GENERIC_HEADER {
     VkStructureType sType;
     const void *pNext;
-} GENERIC_HEADER;
+};
 
-typedef struct _IMAGE_LAYOUT_NODE {
+struct IMAGE_LAYOUT_NODE {
     VkImageLayout layout;
     VkFormat format;
-} IMAGE_LAYOUT_NODE;
+};
 
 // Store layouts and pushconstants for PipelineLayout
 struct PIPELINE_LAYOUT_NODE {
@@ -263,7 +263,7 @@ class FRAMEBUFFER_NODE {
     std::vector<MT_FB_ATTACHMENT_INFO> attachments;
 };
 
-typedef struct _DESCRIPTOR_POOL_NODE {
+struct DESCRIPTOR_POOL_NODE {
     VkDescriptorPool pool;
     uint32_t maxSets;                              // Max descriptor sets allowed in this pool
     uint32_t availableSets;                        // Available descriptor sets in this pool
@@ -273,7 +273,7 @@ typedef struct _DESCRIPTOR_POOL_NODE {
     std::vector<uint32_t> maxDescriptorTypeCount;       // Max # of descriptors of each type in this pool
     std::vector<uint32_t> availableDescriptorTypeCount; // Available # of descriptors of each type in this pool
 
-    _DESCRIPTOR_POOL_NODE(const VkDescriptorPool pool, const VkDescriptorPoolCreateInfo *pCreateInfo)
+    DESCRIPTOR_POOL_NODE(const VkDescriptorPool pool, const VkDescriptorPoolCreateInfo *pCreateInfo)
         : pool(pool), maxSets(pCreateInfo->maxSets), availableSets(pCreateInfo->maxSets), createInfo(*pCreateInfo),
           maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0), availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0) {
         if (createInfo.poolSizeCount) { // Shadow type struct from ptr into local struct
@@ -292,12 +292,12 @@ typedef struct _DESCRIPTOR_POOL_NODE {
             createInfo.pPoolSizes = NULL; // Make sure this is NULL so we don't try to clean it up
         }
     }
-    ~_DESCRIPTOR_POOL_NODE() {
+    ~DESCRIPTOR_POOL_NODE() {
         delete[] createInfo.pPoolSizes;
         // TODO : pSets are currently freed in deletePools function which uses freeShadowUpdateTree function
         //  need to migrate that struct to smart ptrs for auto-cleanup
     }
-} DESCRIPTOR_POOL_NODE;
+};
 
 typedef struct stencil_data {
     uint32_t compareMask;

@@ -141,7 +141,7 @@ class DescriptorSetLayout {
  */
 
 // Slightly broader than type, each c++ "class" will has a corresponding "DescriptorClass"
-typedef enum _DescriptorClass { PlainSampler, ImageSampler, Image, TexelBuffer, GeneralBuffer } DescriptorClass;
+enum DescriptorClass { PlainSampler, ImageSampler, Image, TexelBuffer, GeneralBuffer };
 
 class Descriptor {
   public:
