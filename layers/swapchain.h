@@ -31,7 +31,7 @@
 using namespace std;
 
 // Swapchain ERROR codes
-typedef enum _SWAPCHAIN_ERROR {
+enum SWAPCHAIN_ERROR {
     SWAPCHAIN_INVALID_HANDLE,             // Handle used that isn't currently valid
     SWAPCHAIN_NULL_POINTER,               // Pointer set to NULL, instead of being a valid pointer
     SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,   // Did not enable WSI extension, but called WSI function
@@ -74,7 +74,7 @@ typedef enum _SWAPCHAIN_ERROR {
     SWAPCHAIN_SURFACE_NOT_SUPPORTED_WITH_QUEUE, // A surface is not supported by a given queueFamilyIndex, as seen by
                                                 // vkGetPhysicalDeviceSurfaceSupportKHR()
     SWAPCHAIN_NO_SYNC_FOR_ACQUIRE,      // vkAcquireNextImageKHR should be called with a valid semaphore and/or fence
-} SWAPCHAIN_ERROR;
+};
 
 // The following is for logging error messages:
 #define LAYER_NAME (char *) "Swapchain"
@@ -138,25 +138,16 @@ typedef enum _SWAPCHAIN_ERROR {
 // info that is used for validating the WSI extensions.
 
 // Forward declarations:
-struct _SwpInstance;
-struct _SwpSurface;
-struct _SwpPhysicalDevice;
-struct _SwpDevice;
-struct _SwpSwapchain;
-struct _SwpImage;
-struct _SwpQueue;
-
-typedef _SwpInstance SwpInstance;
-typedef _SwpSurface SwpSurface;
-;
-typedef _SwpPhysicalDevice SwpPhysicalDevice;
-typedef _SwpDevice SwpDevice;
-typedef _SwpSwapchain SwpSwapchain;
-typedef _SwpImage SwpImage;
-typedef _SwpQueue SwpQueue;
+struct SwpInstance;
+struct SwpSurface;
+struct SwpPhysicalDevice;
+struct SwpDevice;
+struct SwpSwapchain;
+struct SwpImage;
+struct SwpQueue;
 
 // Create one of these for each VkInstance:
-struct _SwpInstance {
+struct SwpInstance {
     // The actual handle for this VkInstance:
     VkInstance instance;
 
@@ -198,7 +189,7 @@ struct _SwpInstance {
 };
 
 // Create one of these for each VkSurfaceKHR:
-struct _SwpSurface {
+struct SwpSurface {
     // The actual handle for this VkSurfaceKHR:
     VkSurfaceKHR surface;
 
@@ -224,7 +215,7 @@ struct _SwpSurface {
 };
 
 // Create one of these for each VkPhysicalDevice within a VkInstance:
-struct _SwpPhysicalDevice {
+struct SwpPhysicalDevice {
     // The actual handle for this VkPhysicalDevice:
     VkPhysicalDevice physicalDevice;
 
@@ -263,7 +254,7 @@ struct _SwpPhysicalDevice {
 };
 
 // Create one of these for each VkDevice within a VkInstance:
-struct _SwpDevice {
+struct SwpDevice {
     // The actual handle for this VkDevice:
     VkDevice device;
 
@@ -282,7 +273,7 @@ struct _SwpDevice {
 };
 
 // Create one of these for each VkImage within a VkSwapchainKHR:
-struct _SwpImage {
+struct SwpImage {
     // The actual handle for this VkImage:
     VkImage image;
 
@@ -295,7 +286,7 @@ struct _SwpImage {
 };
 
 // Create one of these for each VkSwapchainKHR within a VkDevice:
-struct _SwpSwapchain {
+struct SwpSwapchain {
     // The actual handle for this VkSwapchainKHR:
     VkSwapchainKHR swapchain;
 
@@ -315,7 +306,7 @@ struct _SwpSwapchain {
 };
 
 // Create one of these for each VkQueue within a VkDevice:
-struct _SwpQueue {
+struct SwpQueue {
     // The actual handle for this VkQueue:
     VkQueue queue;
 
