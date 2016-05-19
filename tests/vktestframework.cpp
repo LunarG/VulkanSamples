@@ -87,11 +87,11 @@ enum TOptions {
     EOptionDefaultDesktop = 0x1000,
 };
 
-typedef struct _SwapchainBuffers {
+struct SwapchainBuffers {
     VkImage image;
     VkCommandBuffer cmd;
     VkImageView view;
-} SwapchainBuffers;
+};
 
 #ifndef _WIN32
 
