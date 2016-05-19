@@ -25,11 +25,11 @@
 #include "vk_layer_config.h"
 #include "vk_layer_utils.h"
 
-typedef struct _VULKAN_FORMAT_INFO {
+struct VULKAN_FORMAT_INFO {
     size_t size;
     uint32_t channel_count;
     VkFormatCompatibilityClass format_class;
-} VULKAN_FORMAT_INFO;
+};
 
 // Set up data structure with number of bytes and number of channels
 // for each Vulkan format.
