@@ -439,6 +439,7 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     std::vector<std::function<bool()>> validate_functions;
     std::unordered_set<VkDeviceMemory> memObjs;
     std::vector<std::function<bool(VkQueue)>> eventUpdates;
+    std::vector<std::function<bool(VkQueue)>> queryUpdates;
 
     ~GLOBAL_CB_NODE();
 };

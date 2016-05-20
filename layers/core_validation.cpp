@@ -3675,6 +3675,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->updateBuffers.clear();
         clear_cmd_buf_and_mem_references(dev_data, pCB);
         pCB->eventUpdates.clear();
+        pCB->queryUpdates.clear();
 
         // Remove this cmdBuffer's reference from each FrameBuffer's CB ref list
         for (auto framebuffer : pCB->framebuffers) {
@@ -4275,6 +4276,9 @@ static void updateTrackedCommandBuffers(layer_data *dev_data, VkQueue queue, VkQ
     for (auto eventStagePair : other_queue_data->second.eventToStageMap) {
         queue_data->second.eventToStageMap[eventStagePair.first] = eventStagePair.second;
     }
+    for (auto queryStatePair : other_queue_data->second.queryToStateMap) {
+        queue_data->second.queryToStateMap[queryStatePair.first] = queryStatePair.second;
+    }
 }
 
 // This is the core function for tracking command buffers. There are two primary ways command
@@ -4553,6 +4557,9 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
                     skipCall |= function();
                 }
                 for (auto &function : pCBNode->eventUpdates) {
+                    skipCall |= function(queue);
+                }
+                for (auto &function : pCBNode->queryUpdates) {
                     skipCall |= function(queue);
                 }
             }
@@ -7881,6 +7888,19 @@ CmdPipelineBarrier(VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStageM
                                                             pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
 }
 
+bool setQueryState(VkQueue queue, VkCommandBuffer commandBuffer, QueryObject object, bool value) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
+    if (pCB) {
+        pCB->queryToStateMap[object] = value;
+    }
+    auto queue_data = dev_data->queueMap.find(queue);
+    if (queue_data != dev_data->queueMap.end()) {
+        queue_data->second.queryToStateMap[object] = value;
+    }
+    return false;
+}
+
 VKAPI_ATTR void VKAPI_CALL
 CmdBeginQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags) {
     bool skipCall = false;
@@ -7915,7 +7935,8 @@ VKAPI_ATTR void VKAPI_CALL CmdEndQuery(VkCommandBuffer commandBuffer, VkQueryPoo
         } else {
             pCB->activeQueries.erase(query);
         }
-        pCB->queryToStateMap[query] = 1;
+        std::function<bool(VkQueue)> queryUpdate = std::bind(setQueryState, std::placeholders::_1, commandBuffer, query, 1);
+        pCB->queryUpdates.push_back(queryUpdate);
         if (pCB->state == CB_RECORDING) {
             skipCall |= addCmd(dev_data, pCB, CMD_ENDQUERY, "VkCmdEndQuery()");
         } else {
@@ -7937,7 +7958,8 @@ CmdResetQueryPool(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t
         for (uint32_t i = 0; i < queryCount; i++) {
             QueryObject query = {queryPool, firstQuery + i};
             pCB->waitedEventsBeforeQueryReset[query] = pCB->waitedEvents;
-            pCB->queryToStateMap[query] = 0;
+            std::function<bool(VkQueue)> queryUpdate = std::bind(setQueryState, std::placeholders::_1, commandBuffer, query, 0);
+            pCB->queryUpdates.push_back(queryUpdate);
         }
         if (pCB->state == CB_RECORDING) {
             skipCall |= addCmd(dev_data, pCB, CMD_RESETQUERYPOOL, "VkCmdResetQueryPool()");
@@ -7949,6 +7971,40 @@ CmdResetQueryPool(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t
     lock.unlock();
     if (!skipCall)
         dev_data->device_dispatch_table->CmdResetQueryPool(commandBuffer, queryPool, firstQuery, queryCount);
+}
+
+bool validateQuery(VkQueue queue, GLOBAL_CB_NODE *pCB, VkQueryPool queryPool, uint32_t queryCount, uint32_t firstQuery) {
+    bool skip_call = false;
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(pCB->commandBuffer), layer_data_map);
+    auto queue_data = dev_data->queueMap.find(queue);
+    if (queue_data == dev_data->queueMap.end())
+        return false;
+    for (uint32_t i = 0; i < queryCount; i++) {
+        QueryObject query = {queryPool, firstQuery + i};
+        auto query_data = queue_data->second.queryToStateMap.find(query);
+        bool fail = false;
+        if (query_data != queue_data->second.queryToStateMap.end()) {
+            if (!query_data->second) {
+                fail = true;
+            }
+        } else {
+            auto global_query_data = dev_data->queryToStateMap.find(query);
+            if (global_query_data != dev_data->queryToStateMap.end()) {
+                if (!global_query_data->second) {
+                    fail = true;
+                }
+            } else {
+                fail = true;
+            }
+        }
+        if (fail) {
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                 DRAWSTATE_INVALID_QUERY, "DS",
+                                 "Requesting a copy from query to buffer with invalid query: queryPool 0x%" PRIx64 ", index %d",
+                                 reinterpret_cast<uint64_t &>(queryPool), firstQuery + i);
+        }
+    }
+    return skip_call;
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -7976,15 +8032,9 @@ CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, ui
                                             "vkCmdCopyQueryPoolResults()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
 #endif
     if (pCB) {
-        for (uint32_t i = 0; i < queryCount; i++) {
-            QueryObject query = {queryPool, firstQuery + i};
-            if (!pCB->queryToStateMap[query]) {
-                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                    __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
-                                    "Requesting a copy from query to buffer with invalid query: queryPool 0x%" PRIx64 ", index %d",
-                                    (uint64_t)(queryPool), firstQuery + i);
-            }
-        }
+        std::function<bool(VkQueue)> queryUpdate =
+            std::bind(validateQuery, std::placeholders::_1, pCB, queryPool, queryCount, firstQuery);
+        pCB->queryUpdates.push_back(queryUpdate);
         if (pCB->state == CB_RECORDING) {
             skipCall |= addCmd(dev_data, pCB, CMD_COPYQUERYPOOLRESULTS, "vkCmdCopyQueryPoolResults()");
         } else {
@@ -8103,7 +8153,8 @@ CmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelin
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         QueryObject query = {queryPool, slot};
-        pCB->queryToStateMap[query] = 1;
+        std::function<bool(VkQueue)> queryUpdate = std::bind(setQueryState, std::placeholders::_1, commandBuffer, query, 1);
+        pCB->queryUpdates.push_back(queryUpdate);
         if (pCB->state == CB_RECORDING) {
             skipCall |= addCmd(dev_data, pCB, CMD_WRITETIMESTAMP, "vkCmdWriteTimestamp()");
         } else {
