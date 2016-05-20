@@ -148,7 +148,7 @@ class PIPELINE_NODE {
     std::vector<VkPipelineColorBlendAttachmentState> attachments;
     bool blendConstantsEnabled; // Blend constants enabled for any attachments
     RENDER_PASS_NODE *renderPass;
-    PIPELINE_LAYOUT_NODE *pipelineLayout;
+    PIPELINE_LAYOUT_NODE const *pipelineLayout;
 
     // Default constructor
     PIPELINE_NODE()

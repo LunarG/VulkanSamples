@@ -1925,7 +1925,7 @@ static bool validate_push_constant_usage(debug_report_data *report_data,
 
 // For given pipelineLayout verify that the set_layout_node at slot.first
 //  has the requested binding at slot.second and return ptr to that binding
-static VkDescriptorSetLayoutBinding const * get_descriptor_binding(PIPELINE_LAYOUT_NODE *pipelineLayout, descriptor_slot_t slot) {
+static VkDescriptorSetLayoutBinding const * get_descriptor_binding(PIPELINE_LAYOUT_NODE const *pipelineLayout, descriptor_slot_t slot) {
 
     if (!pipelineLayout)
         return nullptr;
@@ -1995,6 +1995,14 @@ static cvdescriptorset::DescriptorSetLayout const *getDescriptorSetLayout(layer_
         return nullptr;
     }
     return it->second;
+}
+
+static PIPELINE_LAYOUT_NODE const *getPipelineLayout(layer_data const *my_data, VkPipelineLayout pipeLayout) {
+    auto it = my_data->pipelineLayoutMap.find(pipeLayout);
+    if (it == my_data->pipelineLayoutMap.end()) {
+        return nullptr;
+    }
+    return &it->second;
 }
 
 // Return true if for a given PSO, the given state enum is dynamic, else return false
@@ -2166,22 +2174,22 @@ static bool verify_renderpass_compatibility(layer_data *my_data, const VkRenderP
 // pipelineLayout[layoutIndex]
 static bool verify_set_layout_compatibility(layer_data *my_data, const cvdescriptorset::DescriptorSet *pSet,
                                             const VkPipelineLayout layout, const uint32_t layoutIndex, string &errorMsg) {
-    auto pipeline_layout_it = my_data->pipelineLayoutMap.find(layout);
-    if (pipeline_layout_it == my_data->pipelineLayoutMap.end()) {
+    auto pipeline_layout = getPipelineLayout(my_data, layout);
+    if (!pipeline_layout) {
         stringstream errorStr;
         errorStr << "invalid VkPipelineLayout (" << layout << ")";
         errorMsg = errorStr.str();
         return false;
     }
-    if (layoutIndex >= pipeline_layout_it->second.descriptorSetLayouts.size()) {
+    if (layoutIndex >= pipeline_layout->descriptorSetLayouts.size()) {
         stringstream errorStr;
-        errorStr << "VkPipelineLayout (" << layout << ") only contains " << pipeline_layout_it->second.descriptorSetLayouts.size()
-                 << " setLayouts corresponding to sets 0-" << pipeline_layout_it->second.descriptorSetLayouts.size() - 1
+        errorStr << "VkPipelineLayout (" << layout << ") only contains " << pipeline_layout->descriptorSetLayouts.size()
+                 << " setLayouts corresponding to sets 0-" << pipeline_layout->descriptorSetLayouts.size() - 1
                  << ", but you're attempting to bind set to index " << layoutIndex;
         errorMsg = errorStr.str();
         return false;
     }
-    auto layout_node = pipeline_layout_it->second.setLayouts[layoutIndex];
+    auto layout_node = pipeline_layout->setLayouts[layoutIndex];
     return pSet->IsCompatible(layout_node, &errorMsg);
 }
 
@@ -5631,11 +5639,7 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
         pPipeNode[i] = new PIPELINE_NODE;
         pPipeNode[i]->initGraphicsPipeline(&pCreateInfos[i]);
         pPipeNode[i]->renderPass = getRenderPass(dev_data, pCreateInfos[i].renderPass);
-
-        auto pipeline_layout_it = dev_data->pipelineLayoutMap.find(pCreateInfos[i].layout);
-        if (pipeline_layout_it != dev_data->pipelineLayoutMap.end()) {
-            pPipeNode[i]->pipelineLayout = &pipeline_layout_it->second;
-        }
+        pPipeNode[i]->pipelineLayout = getPipelineLayout(dev_data, pCreateInfos[i].layout);
 
         skipCall |= verifyPipelineCreateState(dev_data, device, pPipeNode, i);
     }
@@ -5679,11 +5683,7 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
         // Create and initialize internal tracking data structure
         pPipeNode[i] = new PIPELINE_NODE;
         pPipeNode[i]->initComputePipeline(&pCreateInfos[i]);
-
-        auto pipeline_layout_it = dev_data->pipelineLayoutMap.find(pCreateInfos[i].layout);
-        if (pipeline_layout_it != dev_data->pipelineLayoutMap.end()) {
-            pPipeNode[i]->pipelineLayout = &pipeline_layout_it->second;
-        }
+        pPipeNode[i]->pipelineLayout = getPipelineLayout(dev_data, pCreateInfos[i].layout);
         // memcpy(&pPipeNode[i]->computePipelineCI, (const void *)&pCreateInfos[i], sizeof(VkComputePipelineCreateInfo));
 
         // TODO: Add Compute Pipeline Verification
@@ -7994,8 +7994,8 @@ VKAPI_ATTR void VKAPI_CALL CmdPushConstants(VkCommandBuffer commandBuffer, VkPip
     }
 
     // Check if push constant update is within any of the ranges with the same stage flags specified in pipeline layout.
-    auto pipeline_layout_it = dev_data->pipelineLayoutMap.find(layout);
-    if (pipeline_layout_it == dev_data->pipelineLayoutMap.end()) {
+    auto pipeline_layout = getPipelineLayout(dev_data, layout);
+    if (!pipeline_layout) {
         skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                             DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCmdPushConstants() Pipeline Layout 0x%" PRIx64 " not found.",
                             (uint64_t)layout);
@@ -8003,7 +8003,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPushConstants(VkCommandBuffer commandBuffer, VkPip
         // Coalesce adjacent/overlapping pipeline ranges before checking to see if incoming range is
         // contained in the pipeline ranges.
         // Build a {start, end} span list for ranges with matching stage flags.
-        const auto &ranges = pipeline_layout_it->second.pushConstantRanges;
+        const auto &ranges = pipeline_layout->pushConstantRanges;
         struct span {
             uint32_t start;
             uint32_t end;
