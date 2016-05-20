@@ -28,6 +28,9 @@ if(WIN32)
         set (BUILDTGT_DIR build32)
     endif()
 
+    set(CMAKE_C_FLAGS_DEBUG "-MTd")
+    set(CMAKE_C_FLAGS_RELEASE "-MT")
+
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/demos/tri-vert.spv
        COMMAND ${GLSLANG_VALIDATOR} -s -V ${PROJECT_SOURCE_DIR}/demos/tri.vert
        COMMAND move vert.spv ${CMAKE_BINARY_DIR}/demos/tri-vert.spv

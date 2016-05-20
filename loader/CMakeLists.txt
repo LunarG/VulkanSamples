@@ -37,6 +37,8 @@ set (OPT_LOADER_SRCS
 set (LOADER_SRCS ${NORMAL_LOADER_SRCS} ${OPT_LOADER_SRCS})
 
 if (WIN32)
+    set(CMAKE_C_FLAGS_DEBUG "-MTd")
+    set(CMAKE_C_FLAGS_RELEASE "-MT")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
     # Build dev_ext_trampoline.c with -O2 to allow tail-call optimization.
     # Build other C files with normal options
