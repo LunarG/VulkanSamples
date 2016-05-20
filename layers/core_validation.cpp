@@ -5846,13 +5846,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
         plNode.setLayouts.resize(pCreateInfo->setLayoutCount);
         for (i = 0; i < pCreateInfo->setLayoutCount; ++i) {
             plNode.descriptorSetLayouts[i] = pCreateInfo->pSetLayouts[i];
-            auto set_layout_it = dev_data->descriptorSetLayoutMap.find(pCreateInfo->pSetLayouts[i]);
-            if (set_layout_it != dev_data->descriptorSetLayoutMap.end()) {
-                plNode.setLayouts[i] = set_layout_it->second;
-            }
-            else {
-                plNode.setLayouts[i] = nullptr;
-            }
+            plNode.setLayouts[i] = getDescriptorSetLayout(dev_data, pCreateInfo->pSetLayouts[i]);
         }
         plNode.pushConstantRanges.resize(pCreateInfo->pushConstantRangeCount);
         for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
