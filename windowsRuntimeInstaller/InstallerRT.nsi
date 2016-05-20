@@ -460,38 +460,6 @@ Section
     # by the uninstaller when it needs to be run again during uninstall.
     Delete ConfigLayersAndVulkanDLL.ps1
 
-    # Possibly install MSVC 2013 redistributables
-    ClearErrors
-    ${If} ${RunningX64}
-        ReadRegDword $1 HKLM "SOFTWARE\WOW6432Node\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
-        ${If} ${Errors}
-           StrCpy $1 0
-           ClearErrors
-        ${Endif}
-    ${Else}
-       StrCpy $1 1
-    ${Endif}
-    ReadRegDword $2 HKLM "SOFTWARE\Microsoft\DevDiv\vc\Servicing\12.0\RuntimeMinimum" "Install"
-    ${If} ${Errors}
-       StrCpy $2 0
-       ClearErrors
-    ${Endif}
-    IntOp $3 $1 + $2
-    ${If} $3 <= 1
-        # If either x86 or x64 redistributables are not present, install redistributables.
-        # We install both resdistributables because we have found that the x86 redist
-        # will uninstall the x64 redist if the x64 redistrib is an old version. Amazing, isn't it?
-        SetOutPath "$TEMP\VulkanRT"
-        ${If} ${RunningX64}
-            File vcredist_x64.exe
-            ExecWait '"$TEMP\VulkanRT\vcredist_x64.exe"  /quiet /norestart'
-        ${Endif}
-        File vcredist_x86.exe
-        ExecWait '"$TEMP\VulkanRT\vcredist_x86.exe"  /quiet /norestart'
-    ${Endif}
-    StrCpy $1 65
-    Call CheckForError
-
     # Finish logging and move log file to TEMP dir
     LogSet off
     Rename "$INSTDIR\install.log" "$TEMP\VulkanRT\Install.log"
