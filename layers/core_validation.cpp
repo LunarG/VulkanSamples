@@ -3410,7 +3410,8 @@ static bool validateIdleDescriptorSet(const layer_data *my_data, VkDescriptorSet
 // Verify that given pool has descriptors that are being requested for allocation.
 // NOTE : Calls to this function should be wrapped in mutex
 static bool validate_descriptor_availability_in_pool(layer_data *dev_data, DESCRIPTOR_POOL_NODE *pPoolNode, uint32_t count,
-                                                     const VkDescriptorSetLayout *pSetLayouts) {
+                                                     const VkDescriptorSetLayout *pSetLayouts,
+                                                     uint32_t requiredDescriptorsByType[]) {
     bool skipCall = false;
 
     // Track number of descriptorSets allowable in this pool
@@ -3420,10 +3421,9 @@ static bool validate_descriptor_availability_in_pool(layer_data *dev_data, DESCR
                             "Unable to allocate %u descriptorSets from pool 0x%" PRIxLEAST64
                             ". This pool only has %d descriptorSets remaining.",
                             count, reinterpret_cast<uint64_t &>(pPoolNode->pool), pPoolNode->availableSets);
-    } else {
-        pPoolNode->availableSets -= count;
     }
 
+    // Count total descriptors required per type
     for (uint32_t i = 0; i < count; ++i) {
         auto layout_pair = dev_data->descriptorSetLayoutMap.find(pSetLayouts[i]);
         if (layout_pair == dev_data->descriptorSetLayoutMap.end()) {
@@ -3437,21 +3437,24 @@ static bool validate_descriptor_availability_in_pool(layer_data *dev_data, DESCR
             for (uint32_t j = 0; j < layout_node->GetBindingCount(); ++j) {
                 const auto &binding_layout = layout_node->GetDescriptorSetLayoutBindingPtrFromIndex(j);
                 uint32_t typeIndex = static_cast<uint32_t>(binding_layout->descriptorType);
-                uint32_t poolSizeCount = binding_layout->descriptorCount;
-                if (poolSizeCount > pPoolNode->availableDescriptorTypeCount[typeIndex]) {
-                    skipCall |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
-                        reinterpret_cast<const uint64_t &>(pSetLayouts[i]), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY, "DS",
-                        "Unable to allocate %u descriptors of type %s from pool 0x%" PRIxLEAST64
-                        ". This pool only has %d descriptors of this type remaining.",
-                        poolSizeCount, string_VkDescriptorType(binding_layout->descriptorType), (uint64_t)pPoolNode->pool,
-                        pPoolNode->availableDescriptorTypeCount[typeIndex]);
-                } else { // Decrement available descriptors of this type
-                    pPoolNode->availableDescriptorTypeCount[typeIndex] -= poolSizeCount;
-                }
+                requiredDescriptorsByType[typeIndex] += binding_layout->descriptorCount;
             }
         }
     }
+
+    // Determine whether descriptor counts are satisfiable
+    for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; i++) {
+        if (requiredDescriptorsByType[i] > pPoolNode->availableDescriptorTypeCount[i]) {
+            skipCall |= log_msg(
+                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
+                    reinterpret_cast<const uint64_t &>(pSetLayouts[i]), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY, "DS",
+                    "Unable to allocate %u descriptors of type %s from pool 0x%" PRIxLEAST64
+                    ". This pool only has %d descriptors of this type remaining.",
+                    requiredDescriptorsByType[i], string_VkDescriptorType(VkDescriptorType(i)), (uint64_t)pPoolNode->pool,
+                    pPoolNode->availableDescriptorTypeCount[i]);
+        }
+    }
+
     return skipCall;
 }
 
@@ -5901,10 +5904,12 @@ VKAPI_ATTR VkResult VKAPI_CALL
 AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllocateInfo, VkDescriptorSet *pDescriptorSets) {
     bool skipCall = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    uint32_t requiredDescriptorsByType[VK_DESCRIPTOR_TYPE_RANGE_SIZE] {};
 
     std::unique_lock<std::mutex> lock(global_lock);
     // Verify that requested descriptorSets are available in pool
     DESCRIPTOR_POOL_NODE *pPoolNode = getPoolNode(dev_data, pAllocateInfo->descriptorPool);
+
     if (!pPoolNode) {
         skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
                             (uint64_t)pAllocateInfo->descriptorPool, __LINE__, DRAWSTATE_INVALID_POOL, "DS",
@@ -5912,16 +5917,24 @@ AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllo
                             (uint64_t)pAllocateInfo->descriptorPool);
     } else { // Make sure pool has all the available descriptors before calling down chain
         skipCall |= validate_descriptor_availability_in_pool(dev_data, pPoolNode, pAllocateInfo->descriptorSetCount,
-                                                             pAllocateInfo->pSetLayouts);
+                                                             pAllocateInfo->pSetLayouts,
+                                                             requiredDescriptorsByType);
     }
     lock.unlock();
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
+
     if (VK_SUCCESS == result) {
         lock.lock();
-        DESCRIPTOR_POOL_NODE *pPoolNode = getPoolNode(dev_data, pAllocateInfo->descriptorPool);
         if (pPoolNode) {
+
+            /* Account for sets and descriptors allocated */
+            pPoolNode->availableSets -= pAllocateInfo->descriptorSetCount;
+            for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; i++) {
+                pPoolNode->availableDescriptorTypeCount[i] -= requiredDescriptorsByType[i];
+            }
+
             if (pAllocateInfo->descriptorSetCount == 0) {
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                         pAllocateInfo->descriptorSetCount, __LINE__, DRAWSTATE_NONE, "DS",
