@@ -65,7 +65,11 @@
 #include <android/log.h>
 #define LOGCONSOLE(...) ((void)__android_log_print(ANDROID_LOG_INFO, "DS", __VA_ARGS__))
 #else
-#define LOGCONSOLE(...) printf(__VA_ARGS__)
+#define LOGCONSOLE(...)                                                                                                            \
+    {                                                                                                                              \
+        printf(__VA_ARGS__);                                                                                                       \
+        printf("\n");                                                                                                              \
+    }
 #endif
 
 using namespace std;
@@ -4102,6 +4106,10 @@ static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *p
             eventNode->second.in_use.fetch_add(1);
         }
     }
+    for (auto event : pCB->writeEventsBeforeWait) {
+        auto eventNode = my_data->eventMap.find(event);
+        eventNode->second.write_in_use++;
+    }
     return skip_call;
 }
 
@@ -4160,6 +4168,12 @@ static void decrementResources(layer_data *my_data, VkCommandBuffer cmdBuffer) {
         auto eventNode = my_data->eventMap.find(event);
         if (eventNode != my_data->eventMap.end()) {
             eventNode->second.in_use.fetch_sub(1);
+        }
+    }
+    for (auto event : pCB->writeEventsBeforeWait) {
+        auto eventNode = my_data->eventMap.find(event);
+        if (eventNode != my_data->eventMap.end()) {
+            eventNode->second.write_in_use--;
         }
     }
     for (auto queryStatePair : pCB->queryToStateMap) {
@@ -7405,6 +7419,9 @@ CmdSetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags s
         skipCall |= addCmd(dev_data, pCB, CMD_SETEVENT, "vkCmdSetEvent()");
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdSetEvent");
         pCB->events.push_back(event);
+        if (!pCB->waitedEvents.count(event)) {
+            pCB->writeEventsBeforeWait.push_back(event);
+        }
         std::function<bool(VkQueue)> eventUpdate =
             std::bind(setEventStageMask, std::placeholders::_1, commandBuffer, event, stageMask);
         pCB->eventUpdates.push_back(eventUpdate);
@@ -7424,6 +7441,9 @@ CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags
         skipCall |= addCmd(dev_data, pCB, CMD_RESETEVENT, "vkCmdResetEvent()");
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdResetEvent");
         pCB->events.push_back(event);
+        if (!pCB->waitedEvents.count(event)) {
+            pCB->writeEventsBeforeWait.push_back(event);
+        }
         std::function<bool(VkQueue)> eventUpdate =
             std::bind(setEventStageMask, std::placeholders::_1, commandBuffer, event, VkPipelineStageFlags(0));
         pCB->eventUpdates.push_back(eventUpdate);
@@ -7789,13 +7809,16 @@ bool validateEventStageMask(VkQueue queue, GLOBAL_CB_NODE *pCB, uint32_t eventCo
             }
         }
     }
-    if (sourceStageMask != stageMask) {
-        skip_call |=
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                    DRAWSTATE_INVALID_EVENT, "DS",
-                    "Submitting cmdbuffer with call to VkCmdWaitEvents using srcStageMask 0x%x which must be the bitwise OR of the "
-                    "stageMask parameters used in calls to vkCmdSetEvent and VK_PIPELINE_STAGE_HOST_BIT if used with vkSetEvent.",
-                    sourceStageMask);
+    // TODO: Need to validate that host_bit is only set if set event is called
+    // but set event can be called at any time.
+    if (sourceStageMask != stageMask && sourceStageMask != (stageMask | VK_PIPELINE_STAGE_HOST_BIT)) {
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                             DRAWSTATE_INVALID_EVENT, "DS", "Submitting cmdbuffer with call to VkCmdWaitEvents "
+                                                            "using srcStageMask 0x%x which must be the bitwise "
+                                                            "OR of the stageMask parameters used in calls to "
+                                                            "vkCmdSetEvent and VK_PIPELINE_STAGE_HOST_BIT if "
+                                                            "used with vkSetEvent but instead is 0x%x.",
+                             sourceStageMask, stageMask);
     }
     return skip_call;
 }
@@ -7812,7 +7835,7 @@ CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent 
     if (pCB) {
         auto firstEventIndex = pCB->events.size();
         for (uint32_t i = 0; i < eventCount; ++i) {
-            pCB->waitedEvents.push_back(pEvents[i]);
+            pCB->waitedEvents.insert(pEvents[i]);
             pCB->events.push_back(pEvents[i]);
         }
         std::function<bool(VkQueue)> eventUpdate =
@@ -9479,7 +9502,7 @@ VKAPI_ATTR VkResult VKAPI_CALL SetEvent(VkDevice device, VkEvent event) {
     if (event_node != dev_data->eventMap.end()) {
         event_node->second.needsSignaled = false;
         event_node->second.stageMask = VK_PIPELINE_STAGE_HOST_BIT;
-        if (event_node->second.in_use.load()) {
+        if (event_node->second.write_in_use) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT,
                                  reinterpret_cast<const uint64_t &>(event), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
                                  "Cannot call vkSetEvent() on event 0x%" PRIxLEAST64 " that is already in use by a command buffer.",

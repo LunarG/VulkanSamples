@@ -234,6 +234,7 @@ class SEMAPHORE_NODE : public BASE_NODE {
 class EVENT_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
+    int write_in_use;
     bool needsSignaled;
     VkPipelineStageFlags stageMask;
 };
