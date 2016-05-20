@@ -1989,6 +1989,14 @@ static FRAMEBUFFER_NODE *getFramebuffer(layer_data *my_data, VkFramebuffer frame
     return &it->second;
 }
 
+static cvdescriptorset::DescriptorSetLayout const *getDescriptorSetLayout(layer_data const *my_data, VkDescriptorSetLayout dsLayout) {
+    auto it = my_data->descriptorSetLayoutMap.find(dsLayout);
+    if (it == my_data->descriptorSetLayoutMap.end()) {
+        return nullptr;
+    }
+    return it->second;
+}
+
 // Return true if for a given PSO, the given state enum is dynamic, else return false
 static bool isDynamic(const PIPELINE_NODE *pPipeline, const VkDynamicState state) {
     if (pPipeline && pPipeline->graphicsPipelineCI.pDynamicState) {
@@ -3410,7 +3418,7 @@ static bool validateIdleDescriptorSet(const layer_data *my_data, VkDescriptorSet
 // Verify that given pool has descriptors that are being requested for allocation.
 // NOTE : Calls to this function should be wrapped in mutex
 static bool validate_descriptor_availability_in_pool(layer_data *dev_data, DESCRIPTOR_POOL_NODE *pPoolNode, uint32_t count,
-                                                     const VkDescriptorSetLayout *pSetLayouts,
+                                                     std::vector<cvdescriptorset::DescriptorSetLayout const *> const & layout_nodes,
                                                      uint32_t requiredDescriptorsByType[]) {
     bool skipCall = false;
 
@@ -3424,16 +3432,8 @@ static bool validate_descriptor_availability_in_pool(layer_data *dev_data, DESCR
     }
 
     // Count total descriptors required per type
-    for (uint32_t i = 0; i < count; ++i) {
-        auto layout_pair = dev_data->descriptorSetLayoutMap.find(pSetLayouts[i]);
-        if (layout_pair == dev_data->descriptorSetLayoutMap.end()) {
-            skipCall |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
-                        (uint64_t)pSetLayouts[i], __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
-                        "Unable to find set layout node for layout 0x%" PRIxLEAST64 " specified in vkAllocateDescriptorSets() call",
-                        (uint64_t)pSetLayouts[i]);
-        } else {
-            auto &layout_node = layout_pair->second;
+    for (auto layout_node : layout_nodes) {
+        if (layout_node) {
             for (uint32_t j = 0; j < layout_node->GetBindingCount(); ++j) {
                 const auto &binding_layout = layout_node->GetDescriptorSetLayoutBindingPtrFromIndex(j);
                 uint32_t typeIndex = static_cast<uint32_t>(binding_layout->descriptorType);
@@ -3446,8 +3446,8 @@ static bool validate_descriptor_availability_in_pool(layer_data *dev_data, DESCR
     for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; i++) {
         if (requiredDescriptorsByType[i] > pPoolNode->availableDescriptorTypeCount[i]) {
             skipCall |= log_msg(
-                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
-                    reinterpret_cast<const uint64_t &>(pSetLayouts[i]), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY, "DS",
+                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+                    reinterpret_cast<const uint64_t &>(pPoolNode->pool), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY, "DS",
                     "Unable to allocate %u descriptors of type %s from pool 0x%" PRIxLEAST64
                     ". This pool only has %d descriptors of this type remaining.",
                     requiredDescriptorsByType[i], string_VkDescriptorType(VkDescriptorType(i)), (uint64_t)pPoolNode->pool,
@@ -5904,9 +5904,22 @@ VKAPI_ATTR VkResult VKAPI_CALL
 AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllocateInfo, VkDescriptorSet *pDescriptorSets) {
     bool skipCall = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
     uint32_t requiredDescriptorsByType[VK_DESCRIPTOR_TYPE_RANGE_SIZE] {};
+    std::vector<cvdescriptorset::DescriptorSetLayout const *> layout_nodes(pAllocateInfo->descriptorSetCount, nullptr);
 
     std::unique_lock<std::mutex> lock(global_lock);
+
+    for (uint32_t i = 0; i < pAllocateInfo->descriptorSetCount; i++) {
+        layout_nodes[i] = getDescriptorSetLayout(dev_data, pAllocateInfo->pSetLayouts[i]);
+        if (!layout_nodes[i]) {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
+                        (uint64_t)pAllocateInfo->pSetLayouts[i], __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
+                        "Unable to find set layout node for layout 0x%" PRIxLEAST64 " specified in vkAllocateDescriptorSets() call",
+                        (uint64_t)pAllocateInfo->pSetLayouts[i]);
+        }
+    }
+
     // Verify that requested descriptorSets are available in pool
     DESCRIPTOR_POOL_NODE *pPoolNode = getPoolNode(dev_data, pAllocateInfo->descriptorPool);
 
@@ -5917,8 +5930,7 @@ AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllo
                             (uint64_t)pAllocateInfo->descriptorPool);
     } else { // Make sure pool has all the available descriptors before calling down chain
         skipCall |= validate_descriptor_availability_in_pool(dev_data, pPoolNode, pAllocateInfo->descriptorSetCount,
-                                                             pAllocateInfo->pSetLayouts,
-                                                             requiredDescriptorsByType);
+                                                             layout_nodes, requiredDescriptorsByType);
     }
     lock.unlock();
     if (skipCall)
@@ -5928,7 +5940,6 @@ AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllo
     if (VK_SUCCESS == result) {
         lock.lock();
         if (pPoolNode) {
-
             /* Account for sets and descriptors allocated */
             pPoolNode->availableSets -= pAllocateInfo->descriptorSetCount;
             for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; i++) {
@@ -5940,35 +5951,18 @@ AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllo
                         pAllocateInfo->descriptorSetCount, __LINE__, DRAWSTATE_NONE, "DS",
                         "AllocateDescriptorSets called with 0 count");
             }
+
             for (uint32_t i = 0; i < pAllocateInfo->descriptorSetCount; i++) {
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                         (uint64_t)pDescriptorSets[i], __LINE__, DRAWSTATE_NONE, "DS", "Created Descriptor Set 0x%" PRIxLEAST64,
                         (uint64_t)pDescriptorSets[i]);
-                auto layout_pair = dev_data->descriptorSetLayoutMap.find(pAllocateInfo->pSetLayouts[i]);
-                if (layout_pair == dev_data->descriptorSetLayoutMap.end()) {
-                    if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, (uint64_t)pAllocateInfo->pSetLayouts[i],
-                                __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS", "Unable to find set layout node for layout 0x%" PRIxLEAST64
-                                                                          " specified in vkAllocateDescriptorSets() call",
-                                (uint64_t)pAllocateInfo->pSetLayouts[i])) {
-                        lock.unlock();
-                        return VK_ERROR_VALIDATION_FAILED_EXT;
-                    }
-                }
                 // Create new DescriptorSet instance and add to the pool's unordered_set of DescriptorSets
-                cvdescriptorset::DescriptorSet *pNewNode = new cvdescriptorset::DescriptorSet(
-                    pDescriptorSets[i], layout_pair->second, &dev_data->bufferMap, &dev_data->memObjMap, &dev_data->bufferViewMap,
-                    &dev_data->samplerMap, &dev_data->imageViewMap, &dev_data->imageMap,
-                    &dev_data->device_extensions.imageToSwapchainMap, &dev_data->device_extensions.swapchainMap);
-                if (NULL == pNewNode) {
-                    if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pDescriptorSets[i], __LINE__,
-                                DRAWSTATE_OUT_OF_MEMORY, "DS", "Out of memory while attempting to allocate "
-                                                               "cvdescriptorset::DescriptorSet in vkAllocateDescriptorSets()")) {
-                        lock.unlock();
-                        return VK_ERROR_VALIDATION_FAILED_EXT;
-                    }
-                } else {
+                if (layout_nodes[i]) {
+                    auto pNewNode = new cvdescriptorset::DescriptorSet(
+                            pDescriptorSets[i], layout_nodes[i], &dev_data->bufferMap, &dev_data->memObjMap, &dev_data->bufferViewMap,
+                            &dev_data->samplerMap, &dev_data->imageViewMap, &dev_data->imageMap,
+                            &dev_data->device_extensions.imageToSwapchainMap, &dev_data->device_extensions.swapchainMap);
+
                     // Insert set into this pool
                     pPoolNode->sets.insert(pNewNode);
                     pNewNode->in_use.store(0);
