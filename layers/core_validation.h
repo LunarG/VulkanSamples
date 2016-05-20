@@ -250,6 +250,7 @@ class QUEUE_NODE {
 #endif
     std::vector<VkCommandBuffer> untrackedCmdBuffers;
     std::unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
+    std::unordered_map<QueryObject, bool> queryToStateMap; // 0 is unavailable, 1 is available
 };
 
 class QUERY_POOL_NODE : public BASE_NODE {

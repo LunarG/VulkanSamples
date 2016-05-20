@@ -2784,6 +2784,116 @@ TEST_F(VkLayerTest, WaitEventThenSet) {
 
     m_errorMonitor->VerifyNotFound();
 }
+// This is a positive test.  No errors should be generated.
+TEST_F(VkLayerTest, QueryAndCopyMultipleCommandBuffers) {
+    TEST_DESCRIPTION(
+        "Issue a query and copy from it on a second command buffer.");
+
+    if ((m_device->queue_props.empty()) ||
+        (m_device->queue_props[0].queueCount < 2))
+        return;
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkQueryPool query_pool;
+    VkQueryPoolCreateInfo query_pool_create_info{};
+    query_pool_create_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    query_pool_create_info.queryType = VK_QUERY_TYPE_TIMESTAMP;
+    query_pool_create_info.queryCount = 1;
+    vkCreateQueryPool(m_device->device(), &query_pool_create_info, nullptr,
+                      &query_pool);
+
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr,
+                        &command_pool);
+
+    VkCommandBuffer command_buffer[2];
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType =
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 2;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info,
+                             command_buffer);
+
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_,
+                     1, &queue);
+
+    uint32_t qfi = 0;
+    VkBufferCreateInfo buff_create_info = {};
+    buff_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buff_create_info.size = 1024;
+    buff_create_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    buff_create_info.queueFamilyIndexCount = 1;
+    buff_create_info.pQueueFamilyIndices = &qfi;
+
+    VkResult err;
+    VkBuffer buffer;
+    err = vkCreateBuffer(m_device->device(), &buff_create_info, NULL, &buffer);
+    ASSERT_VK_SUCCESS(err);
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 1024;
+    mem_alloc.memoryTypeIndex = 0;
+
+    VkMemoryRequirements memReqs;
+    vkGetBufferMemoryRequirements(m_device->device(), buffer, &memReqs);
+    bool pass =
+        m_device->phy().set_memory_type(memReqs.memoryTypeBits, &mem_alloc, 0);
+    if (!pass) {
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        return;
+    }
+
+    VkDeviceMemory mem;
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindBufferMemory(m_device->device(), buffer, mem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    {
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(command_buffer[0], &begin_info);
+
+        vkCmdResetQueryPool(command_buffer[0], query_pool, 0, 1);
+        vkCmdWriteTimestamp(command_buffer[0],
+                            VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, query_pool, 0);
+
+        vkEndCommandBuffer(command_buffer[0]);
+
+        vkBeginCommandBuffer(command_buffer[1], &begin_info);
+
+        vkCmdCopyQueryPoolResults(command_buffer[1], query_pool, 0, 1, buffer,
+                                  0, 0, 0);
+
+        vkEndCommandBuffer(command_buffer[1]);
+    }
+    {
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 2;
+        submit_info.pCommandBuffers = command_buffer;
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = nullptr;
+        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+    }
+
+    vkQueueWaitIdle(queue);
+
+    vkDestroyQueryPool(m_device->device(), query_pool, nullptr);
+    vkFreeCommandBuffers(m_device->device(), command_pool, 2, command_buffer);
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+
+    m_errorMonitor->VerifyNotFound();
+}
 
 TEST_F(VkLayerTest, ResetEventThenSet) {
     TEST_DESCRIPTION(
