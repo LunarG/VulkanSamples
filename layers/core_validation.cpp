@@ -2181,7 +2181,7 @@ static bool verify_set_layout_compatibility(layer_data *my_data, const cvdescrip
         errorMsg = errorStr.str();
         return false;
     }
-    auto layout_node = my_data->descriptorSetLayoutMap[pipeline_layout_it->second.descriptorSetLayouts[layoutIndex]];
+    auto layout_node = pipeline_layout_it->second.setLayouts[layoutIndex];
     return pSet->IsCompatible(layout_node, &errorMsg);
 }
 
