@@ -5920,7 +5920,6 @@ AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllo
         }
     }
 
-    // Verify that requested descriptorSets are available in pool
     DESCRIPTOR_POOL_NODE *pPoolNode = getPoolNode(dev_data, pAllocateInfo->descriptorPool);
 
     if (!pPoolNode) {
@@ -5933,8 +5932,10 @@ AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllo
                                                              layout_nodes, requiredDescriptorsByType);
     }
     lock.unlock();
+
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED_EXT;
+
     VkResult result = dev_data->device_dispatch_table->AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
 
     if (VK_SUCCESS == result) {
@@ -5946,24 +5947,16 @@ AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllo
                 pPoolNode->availableDescriptorTypeCount[i] -= requiredDescriptorsByType[i];
             }
 
-            if (pAllocateInfo->descriptorSetCount == 0) {
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                        pAllocateInfo->descriptorSetCount, __LINE__, DRAWSTATE_NONE, "DS",
-                        "AllocateDescriptorSets called with 0 count");
-            }
-
+            /* Create tracking object for each descriptor set; insert into
+             * global map and the pool's set.
+             */
             for (uint32_t i = 0; i < pAllocateInfo->descriptorSetCount; i++) {
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                        (uint64_t)pDescriptorSets[i], __LINE__, DRAWSTATE_NONE, "DS", "Created Descriptor Set 0x%" PRIxLEAST64,
-                        (uint64_t)pDescriptorSets[i]);
-                // Create new DescriptorSet instance and add to the pool's unordered_set of DescriptorSets
                 if (layout_nodes[i]) {
                     auto pNewNode = new cvdescriptorset::DescriptorSet(
                             pDescriptorSets[i], layout_nodes[i], &dev_data->bufferMap, &dev_data->memObjMap, &dev_data->bufferViewMap,
                             &dev_data->samplerMap, &dev_data->imageViewMap, &dev_data->imageMap,
                             &dev_data->device_extensions.imageToSwapchainMap, &dev_data->device_extensions.swapchainMap);
 
-                    // Insert set into this pool
                     pPoolNode->sets.insert(pNewNode);
                     pNewNode->in_use.store(0);
                     dev_data->setMap[pDescriptorSets[i]] = pNewNode;
