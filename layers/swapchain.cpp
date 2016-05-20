@@ -1519,13 +1519,13 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
                                 reinterpret_cast<uint64_t &>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_COMPOSITE_ALPHA,
                                 LAYER_NAME, "%s", errorString.c_str());
         }
-        // Validate pCreateInfo->imageArraySize against
-        // VkSurfaceCapabilitiesKHR::maxImageArraySize:
+        // Validate pCreateInfo->imageArrayLayers against
+        // VkSurfaceCapabilitiesKHR::maxImageArrayLayers:
         if ((pCreateInfo->imageArrayLayers < 1) || (pCreateInfo->imageArrayLayers > pCapabilities->maxImageArrayLayers)) {
             skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                                  SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_SIZE, "%s() called with a non-supported "
-                                                                            "pCreateInfo->imageArraySize (i.e. %d).  "
-                                                                            "Minimum value is 1, maximum value is %d.",
+                                  SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_LAYERS, "%s() called with a non-supported "
+                                                                              "pCreateInfo->imageArrayLayers (i.e. %d).  "
+                                                                              "Minimum value is 1, maximum value is %d.",
                                   fn, pCreateInfo->imageArrayLayers, pCapabilities->maxImageArrayLayers);
         }
         // Validate pCreateInfo->imageUsage against
