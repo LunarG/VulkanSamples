@@ -7535,7 +7535,7 @@ static bool ValidateMaskBits(const layer_data *my_data, VkCommandBuffer cmdBuffe
             // TODO: Verify against Valid Use
             skip_call |=
                 log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        DRAWSTATE_INVALID_BARRIER, "DS", "Additional bits in %s accessMask %d %s are specified when layout is %s.",
+                        DRAWSTATE_INVALID_BARRIER, "DS", "Additional bits in %s accessMask 0x%X %s are specified when layout is %s.",
                         type, accessMask, string_VkAccessFlags(accessMask).c_str(), string_VkImageLayout(layout));
         }
     } else {
@@ -7605,7 +7605,7 @@ static bool ValidateMaskBitsFromLayouts(const layer_data *my_data, VkCommandBuff
             // TODO: Verify against Valid Use section spec
             skip_call |=
                 log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        DRAWSTATE_INVALID_BARRIER, "DS", "Additional bits in %s accessMask %d %s are specified when layout is %s.",
+                        DRAWSTATE_INVALID_BARRIER, "DS", "Additional bits in %s accessMask 0x%X %s are specified when layout is %s.",
                         type, accessMask, string_VkAccessFlags(accessMask).c_str(), string_VkImageLayout(layout));
         }
         break;
