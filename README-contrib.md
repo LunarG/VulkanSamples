@@ -2,7 +2,7 @@
   Contributions to the Vulkan Samples Kit effort are encouraged!
 
 ## General Requirements
-  - All contributions MUST have a BSD-style license.
+  - All contributions MUST have an Apache-style license.
 
 ## Procedure for Contributing
   0. contact LunarG for access to the VulkanSamplesKit repository
