@@ -9583,7 +9583,6 @@ QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *p
     std::unique_lock<std::mutex> lock(global_lock);
     // First verify that fence is not in use
     if (fence != VK_NULL_HANDLE) {
-        trackCommandBuffers(dev_data, queue, 0, nullptr, fence);
         auto fence_data = dev_data->fenceMap.find(fence);
         if ((bindInfoCount != 0) && fence_data->second.in_use.load()) {
             skip_call |=
@@ -9598,6 +9597,7 @@ QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *p
                         "Fence 0x%" PRIxLEAST64 " submitted in SIGNALED state.  Fences must be reset before being submitted",
                         reinterpret_cast<uint64_t &>(fence));
         }
+        trackCommandBuffers(dev_data, queue, 0, nullptr, fence);
     }
     for (uint32_t bindIdx = 0; bindIdx < bindInfoCount; ++bindIdx) {
         const VkBindSparseInfo &bindInfo = pBindInfo[bindIdx];
