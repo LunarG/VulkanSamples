@@ -2696,7 +2696,7 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data, const GLOBA
                 VkSampleCountFlagBits subpass_num_samples = VkSampleCountFlagBits(0);
                 uint32_t i;
 
-                const VkPipelineColorBlendStateCreateInfo *color_blend_state = pPipeline->graphicsPipelineCI.pColorBlendState;
+                const safe_VkPipelineColorBlendStateCreateInfo *color_blend_state = pPipeline->graphicsPipelineCI.pColorBlendState;
                 if ((color_blend_state != NULL) && (pCB->activeSubpass == pPipeline->graphicsPipelineCI.subpass) &&
                     (color_blend_state->attachmentCount != subpass_desc->colorAttachmentCount)) {
                     skip_call |=

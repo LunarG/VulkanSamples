@@ -1563,7 +1563,7 @@ class StructWrapperGen:
 
     # If struct has sType or ptr members, generate safe type
     def _hasSafeStruct(self, s):
-        exceptions = ['VkPhysicalDeviceFeatures', 'VkPipelineColorBlendStateCreateInfo', 'VkDebugMarkerMarkerInfoEXT']
+        exceptions = ['VkPhysicalDeviceFeatures']
         if s in exceptions:
             return False
         if 'sType' == self.struct_dict[s][0]['name']:
@@ -1713,23 +1713,34 @@ class StructWrapperGen:
                                 destruct_txt += '    if (%s)\n' % (m_name)
                                 destruct_txt += '        delete[] %s;\n' % (m_name)
                 elif self.struct_dict[s][m]['array']:
-                    # Init array ptr to NULL
-                    init_list += '\n\t%s(NULL),' % (m_name)
-                    init_func_txt += '    %s = NULL;\n' % (m_name)
-                    array_element = 'pInStruct->%s[i]' % (m_name)
-                    if is_type(self.struct_dict[s][m]['type'], 'struct') and self._hasSafeStruct(self.struct_dict[s][m]['type']):
-                        array_element = '%s(&pInStruct->%s[i])' % (self._getSafeStructName(self.struct_dict[s][m]['type']), m_name)
-                    construct_txt += '    if (%s && pInStruct->%s) {\n' % (self.struct_dict[s][m]['array_size'], m_name)
-                    construct_txt += '        %s = new %s[%s];\n' % (m_name, m_type, self.struct_dict[s][m]['array_size'])
-                    destruct_txt += '    if (%s)\n' % (m_name)
-                    destruct_txt += '        delete[] %s;\n' % (m_name)
-                    construct_txt += '        for (uint32_t i=0; i<%s; ++i) {\n' % (self.struct_dict[s][m]['array_size'])
-                    if 'safe_' in m_type:
-                        construct_txt += '            %s[i].initialize(&pInStruct->%s[i]);\n' % (m_name, m_name)
+                    if not self.struct_dict[s][m]['dyn_array']:
+                        # Handle static array case
+                        array_init_str = ''
+                        for i in range(int(self.struct_dict[s][m]['array_size'])):
+                            array_init_str += 'pInStruct->%s[%d], ' % (m_name, i)
+                        array_init_str = array_init_str.strip().rstrip(',')
+                        init_list += '\n\t%s{%s},' % (m_name, array_init_str)
+                        init_func_txt += '    for (uint32_t i=0; i<%s; ++i) {\n' % (self.struct_dict[s][m]['array_size'])
+                        init_func_txt += '        %s[i] = pInStruct->%s[i];\n' % (m_name, m_name)
+                        init_func_txt += '    }\n'
                     else:
-                        construct_txt += '            %s[i] = %s;\n' % (m_name, array_element)
-                    construct_txt += '        }\n'
-                    construct_txt += '    }\n'
+                        # Init array ptr to NULL
+                        init_list += '\n\t%s(NULL),' % (m_name)
+                        init_func_txt += '    %s = NULL;\n' % (m_name)
+                        array_element = 'pInStruct->%s[i]' % (m_name)
+                        if is_type(self.struct_dict[s][m]['type'], 'struct') and self._hasSafeStruct(self.struct_dict[s][m]['type']):
+                            array_element = '%s(&pInStruct->%s[i])' % (self._getSafeStructName(self.struct_dict[s][m]['type']), m_name)
+                        construct_txt += '    if (%s && pInStruct->%s) {\n' % (self.struct_dict[s][m]['array_size'], m_name)
+                        construct_txt += '        %s = new %s[%s];\n' % (m_name, m_type, self.struct_dict[s][m]['array_size'])
+                        destruct_txt += '    if (%s)\n' % (m_name)
+                        destruct_txt += '        delete[] %s;\n' % (m_name)
+                        construct_txt += '        for (uint32_t i=0; i<%s; ++i) {\n' % (self.struct_dict[s][m]['array_size'])
+                        if 'safe_' in m_type:
+                            construct_txt += '            %s[i].initialize(&pInStruct->%s[i]);\n' % (m_name, m_name)
+                        else:
+                            construct_txt += '            %s[i] = %s;\n' % (m_name, array_element)
+                        construct_txt += '        }\n'
+                        construct_txt += '    }\n'
                 elif self.struct_dict[s][m]['ptr']:
                     construct_txt += '    if (pInStruct->%s)\n' % (m_name)
                     construct_txt += '        %s = new %s(pInStruct->%s);\n' % (m_name, m_type, m_name)
