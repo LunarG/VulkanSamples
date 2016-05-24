@@ -1486,9 +1486,9 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
                 }
             }
             // Log the message that we've built up:
-            skipCall |= debug_report_log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                             VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, (uint64_t)device, __LINE__,
-                                             SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM, LAYER_NAME, errorString.c_str());
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                reinterpret_cast<uint64_t &>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM, LAYER_NAME,
+                                "%s", errorString.c_str());
         }
         // Validate pCreateInfo->compositeAlpha has one bit set (1st two
         // lines of if-statement), which bit is also set in
@@ -1515,9 +1515,9 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
                 }
             }
             // Log the message that we've built up:
-            skipCall |= debug_report_log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                             VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, (uint64_t)device, 0,
-                                             SWAPCHAIN_CREATE_SWAP_BAD_COMPOSITE_ALPHA, LAYER_NAME, errorString.c_str());
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                reinterpret_cast<uint64_t &>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_COMPOSITE_ALPHA,
+                                LAYER_NAME, "%s", errorString.c_str());
         }
         // Validate pCreateInfo->imageArraySize against
         // VkSurfaceCapabilitiesKHR::maxImageArraySize:
