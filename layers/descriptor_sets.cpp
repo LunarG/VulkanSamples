@@ -944,40 +944,38 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
         error_str << "DescriptorSet " << set_ << " does not have binding " << update->dstBinding << ".";
         *error_msg = error_str.str();
         return false;
-    } else {
-        // We know that binding is valid, verify update and do update on each descriptor
-        auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
-        auto type = p_layout_->GetTypeFromBinding(update->dstBinding);
-        if (type != update->descriptorType) {
-            std::stringstream error_str;
-            error_str << "Attempting write update to descriptor set " << set_ << " binding #" << update->dstBinding << " with type "
-                      << string_VkDescriptorType(type) << " but update type is " << string_VkDescriptorType(update->descriptorType);
-            *error_msg = error_str.str();
-            return false;
-        }
-        if ((start_idx + update->descriptorCount) > p_layout_->GetTotalDescriptorCount()) {
-            std::stringstream error_str;
-            error_str << "Attempting write update to descriptor set " << set_ << " binding #" << update->dstBinding << " with "
-                      << p_layout_->GetTotalDescriptorCount() << " total descriptors but update of " << update->descriptorCount
-                      << " descriptors starting at binding offset of "
-                      << p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding)
-                      << " combined with update array element offset of " << update->dstArrayElement
-                      << " oversteps the size of this descriptor set.";
-            *error_msg = error_str.str();
-            return false;
-        }
-        // Verify consecutive bindings match (if needed)
-        if (!p_layout_->VerifyUpdateConsistency(update->dstBinding, update->dstArrayElement, update->descriptorCount,
-                                                "write update to", set_, error_msg))
-            return false;
-        // Update is within bounds and consistent so last step is to validate update contents
-        if (!VerifyWriteUpdateContents(update, start_idx, error_msg)) {
-            std::stringstream error_str;
-            error_str << "Write update to descriptor in set " << set_ << " binding #" << update->dstBinding
-                      << " failed with error message: " << error_msg->c_str();
-            *error_msg = error_str.str();
-            return false;
-        }
+    }
+    // We know that binding is valid, verify update and do update on each descriptor
+    auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
+    auto type = p_layout_->GetTypeFromBinding(update->dstBinding);
+    if (type != update->descriptorType) {
+        std::stringstream error_str;
+        error_str << "Attempting write update to descriptor set " << set_ << " binding #" << update->dstBinding << " with type "
+                  << string_VkDescriptorType(type) << " but update type is " << string_VkDescriptorType(update->descriptorType);
+        *error_msg = error_str.str();
+        return false;
+    }
+    if ((start_idx + update->descriptorCount) > p_layout_->GetTotalDescriptorCount()) {
+        std::stringstream error_str;
+        error_str << "Attempting write update to descriptor set " << set_ << " binding #" << update->dstBinding << " with "
+                  << p_layout_->GetTotalDescriptorCount() << " total descriptors but update of " << update->descriptorCount
+                  << " descriptors starting at binding offset of " << p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding)
+                  << " combined with update array element offset of " << update->dstArrayElement
+                  << " oversteps the size of this descriptor set.";
+        *error_msg = error_str.str();
+        return false;
+    }
+    // Verify consecutive bindings match (if needed)
+    if (!p_layout_->VerifyUpdateConsistency(update->dstBinding, update->dstArrayElement, update->descriptorCount, "write update to",
+                                            set_, error_msg))
+        return false;
+    // Update is within bounds and consistent so last step is to validate update contents
+    if (!VerifyWriteUpdateContents(update, start_idx, error_msg)) {
+        std::stringstream error_str;
+        error_str << "Write update to descriptor in set " << set_ << " binding #" << update->dstBinding
+                  << " failed with error message: " << error_msg->c_str();
+        *error_msg = error_str.str();
+        return false;
     }
     // All checks passed, update is clean
     return true;
