@@ -585,7 +585,7 @@ bool cvdescriptorset::ValidateSampler(const VkSampler sampler,
     return (sampler_map->count(sampler) != 0);
 }
 
-bool cvdescriptorset::ValidateImageUpdate(const VkImageView image_view, const VkImageLayout image_layout,
+bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout image_layout, VkDescriptorType type,
                                           const std::unordered_map<VkImageView, VkImageViewCreateInfo> *image_view_map,
                                           const std::unordered_map<VkImage, IMAGE_NODE> *image_map,
                                           const std::unordered_map<VkImage, VkSwapchainKHR> *image_to_swapchain_map,
@@ -599,12 +599,15 @@ bool cvdescriptorset::ValidateImageUpdate(const VkImageView image_view, const Vk
         return false;
     } else {
         // Validate that imageLayout is compatible with aspect_mask and image format
+        //  and validate that image usage bits are correct for given usage
         VkImageAspectFlags aspect_mask = image_pair->second.subresourceRange.aspectMask;
         VkImage image = image_pair->second.image;
         VkFormat format = VK_FORMAT_MAX_ENUM;
+        VkImageUsageFlags usage = 0;
         auto img_pair = image_map->find(image);
         if (img_pair != image_map->end()) {
             format = img_pair->second.createInfo.format;
+            usage = img_pair->second.createInfo.usage;
         } else {
             // Also need to check the swapchains.
             auto swapchain_pair = image_to_swapchain_map->find(image);
@@ -616,6 +619,7 @@ bool cvdescriptorset::ValidateImageUpdate(const VkImageView image_view, const Vk
                 }
             }
         }
+        // First validate that format and layout are compatible
         if (format == VK_FORMAT_MAX_ENUM) {
             std::stringstream error_str;
             error_str << "Invalid image (" << image << ") in imageView (" << image_view << ").";
@@ -675,6 +679,39 @@ bool cvdescriptorset::ValidateImageUpdate(const VkImageView image_view, const Vk
                 // anything to check for other layouts?
                 break;
             }
+        }
+        // Now validate that usage flags are correctly set for given type of update
+        std::string error_usage_bit;
+        switch (type) {
+        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: {
+            if (!(usage & VK_IMAGE_USAGE_SAMPLED_BIT)) {
+                error_usage_bit = "VK_IMAGE_USAGE_SAMPLED_BIT";
+            }
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
+            if (!(usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
+                error_usage_bit = "VK_IMAGE_USAGE_STORAGE_BIT";
+            }
+            break;
+        }
+        case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT: {
+            if (!(usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)) {
+                error_usage_bit = "VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT";
+            }
+            break;
+        }
+        default:
+            break;
+        }
+        if (!error_usage_bit.empty()) {
+            std::stringstream error_str;
+            error_str << "ImageView (" << image_view << ") with usage mask 0x" << usage
+                      << " being used for a descriptor update of type " << string_VkDescriptorType(type) << " does not have "
+                      << error_usage_bit << " set.";
+            *error = error_str.str();
+            return false;
         }
     }
     return true;
@@ -954,8 +991,8 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
             // Validate image
             auto image_view = update->pImageInfo[di].imageView;
             auto image_layout = update->pImageInfo[di].imageLayout;
-            if (!ValidateImageUpdate(image_view, image_layout, image_view_map_, image_map_, image_to_swapchain_map_, swapchain_map_,
-                                     error)) {
+            if (!ValidateImageUpdate(image_view, image_layout, update->descriptorType, image_view_map_, image_map_,
+                                     image_to_swapchain_map_, swapchain_map_, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to combined image sampler descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
@@ -986,8 +1023,8 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto image_view = update->pImageInfo[di].imageView;
             auto image_layout = update->pImageInfo[di].imageLayout;
-            if (!ValidateImageUpdate(image_view, image_layout, image_view_map_, image_map_, image_to_swapchain_map_, swapchain_map_,
-                                     error)) {
+            if (!ValidateImageUpdate(image_view, image_layout, update->descriptorType, image_view_map_, image_map_,
+                                     image_to_swapchain_map_, swapchain_map_, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to image descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
@@ -1069,8 +1106,8 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
             // Validate image
             auto image_view = img_samp_desc->GetImageView();
             auto image_layout = img_samp_desc->GetImageLayout();
-            if (!ValidateImageUpdate(image_view, image_layout, image_view_map_, image_map_, image_to_swapchain_map_, swapchain_map_,
-                                     error)) {
+            if (!ValidateImageUpdate(image_view, image_layout, src_set->GetTypeFromGlobalIndex(index), image_view_map_, image_map_,
+                                     image_to_swapchain_map_, swapchain_map_, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to combined image sampler descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
@@ -1083,8 +1120,8 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
             auto img_desc = static_cast<const ImageDescriptor *>(src_set->descriptors_[index + di].get());
             auto image_view = img_desc->GetImageView();
             auto image_layout = img_desc->GetImageLayout();
-            if (!ValidateImageUpdate(image_view, image_layout, image_view_map_, image_map_, image_to_swapchain_map_, swapchain_map_,
-                                     error)) {
+            if (!ValidateImageUpdate(image_view, image_layout, src_set->GetTypeFromGlobalIndex(index), image_view_map_, image_map_,
+                                     image_to_swapchain_map_, swapchain_map_, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to image descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
