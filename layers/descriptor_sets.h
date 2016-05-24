@@ -346,6 +346,7 @@ class DescriptorSet : public BASE_NODE {
   private:
     bool VerifyWriteUpdateContents(const VkWriteDescriptorSet *, const uint32_t, std::string *) const;
     bool VerifyCopyUpdateContents(const VkCopyDescriptorSet *, const DescriptorSet *, const uint32_t, std::string *) const;
+    bool ValidateBufferUpdate(VkBuffer, VkDescriptorType, std::string *) const;
     // Private helper to set all bound cmd buffers to INVALID state
     void InvalidateBoundCmdBuffers();
     bool some_update_; // has any part of the set ever been updated?

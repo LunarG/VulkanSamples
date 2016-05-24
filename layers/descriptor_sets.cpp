@@ -982,6 +982,55 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
     // All checks passed, update is clean
     return true;
 }
+// For the given buffer, verify that its creation parameters are appropriate for the given type
+//  If there's an error, update the error string with details and return false, else return true
+bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkBuffer buffer, VkDescriptorType type, std::string *error) const {
+    // First make sure that buffer is valid
+    auto buff_it = buffer_map_->find(buffer);
+    if (buff_it == buffer_map_->end()) {
+        std::stringstream error_str;
+        error_str << "Invalid VkBuffer: " << buffer;
+        *error = error_str.str();
+        return false;
+    }
+    // Verify that usage bits set correctly for given type
+    auto usage = buff_it->second.createInfo.usage;
+    std::string error_usage_bit;
+    switch (type) {
+    case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+        if (!(usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT)) {
+            error_usage_bit = "VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT";
+        }
+        break;
+    case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+        if (!(usage & VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT)) {
+            error_usage_bit = "VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT";
+        }
+        break;
+    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+        if (!(usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)) {
+            error_usage_bit = "VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT";
+        }
+        break;
+    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+        if (!(usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)) {
+            error_usage_bit = "VK_BUFFER_USAGE_STORAGE_BUFFER_BIT";
+        }
+        break;
+    default:
+        break;
+    }
+    if (!error_usage_bit.empty()) {
+        std::stringstream error_str;
+        error_str << "Buffer (" << buffer << ") with usage mask 0x" << usage << " being used for a descriptor update of type "
+                  << string_VkDescriptorType(type) << " does not have " << error_usage_bit << " set.";
+        *error = error_str.str();
+        return false;
+    }
+    return true;
+}
 // Verify that the contents of the update are ok, but don't perform actual update
 bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDescriptorSet *update, const uint32_t index,
                                                                std::string *error) const {
@@ -1037,9 +1086,17 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
     case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer_view = update->pTexelBufferView[di];
-            if (!buffer_view_map_->count(buffer_view)) {
+            auto buffer_view_it = buffer_view_map_->find(buffer_view);
+            if (buffer_view_it == buffer_view_map_->end()) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to texel buffer descriptor with invalid buffer view: " << buffer_view;
+                *error = error_str.str();
+                return false;
+            }
+            auto buffer = buffer_view_it->second.buffer;
+            if (!ValidateBufferUpdate(buffer, update->descriptorType, error)) {
+                std::stringstream error_str;
+                error_str << "Attempted write update to texel buffer descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
                 return false;
             }
@@ -1052,9 +1109,9 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
     case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer = update->pBufferInfo[di].buffer;
-            if (!buffer_map_->count(buffer)) {
+            if (!ValidateBufferUpdate(buffer, update->descriptorType, error)) {
                 std::stringstream error_str;
-                error_str << "Attempted write update to buffer descriptor with invalid buffer: " << buffer;
+                error_str << "Attempted write update to buffer descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
                 return false;
             }
