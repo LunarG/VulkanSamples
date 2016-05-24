@@ -1003,6 +1003,55 @@ static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id) {
     fflush(stdout);
 }
 
+struct flag_info {
+    const char *flag_name;
+    uint32_t flag_mask;
+};
+
+static void print_flags(uint32_t flags, const struct flag_info *flag_infos) {
+    const struct flag_info *flags_present[32];
+    uint32_t num_flags_present = 0;
+    // It is easier to get things right by doing an initial scan through
+    // all the bits instead of printing as we go.
+    for (; flag_infos->flag_name; flag_infos++) {
+        if (flags & flag_infos->flag_mask) {
+            flags_present[num_flags_present++] = flag_infos;
+        }
+    }
+    // Always at least show the raw hex (decimal isn't needed, since these
+    // are binary flags).
+    printf("0x%" PRIx32, flags);
+    if (num_flags_present == 0)
+        return;
+    // We have symbolic names for some of the bits, so print them.
+    // The output is a valid C expression (assuming the ->flag_name fields are
+    // correct).
+    printf(" = (");
+    uint32_t unknown_flags = flags;
+    for (uint32_t i = 0; i < num_flags_present; i++) {
+        if (i)
+            printf(" | ");
+        unknown_flags &= ~flags_present[i]->flag_mask;
+        printf("%s", flags_present[i]->flag_name);
+    }
+    // For completeness, show any bits that we don't know about.
+    if (unknown_flags != 0)
+        printf("| 0x%" PRIx32, unknown_flags);
+    printf(")");
+}
+
+static const struct flag_info vk_memory_property_flag_infos[] = {
+#define ENTRY(x)                                                               \
+    { #x, x }
+    ENTRY(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+    ENTRY(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT),
+    ENTRY(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+    ENTRY(VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
+    ENTRY(VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT),
+    {NULL, 0}
+#undef ENTRY
+};
+
 static void app_gpu_dump_memory_props(const struct app_gpu *gpu) {
     const VkPhysicalDeviceMemoryProperties *props = &gpu->memory_props;
 
@@ -1011,7 +1060,10 @@ static void app_gpu_dump_memory_props(const struct app_gpu *gpu) {
     printf("\tmemoryTypeCount       = %u\n", props->memoryTypeCount);
     for (uint32_t i = 0; i < props->memoryTypeCount; i++) {
         printf("\tmemoryTypes[%u] : \n", i);
-        printf("\t\tpropertyFlags = %u\n", props->memoryTypes[i].propertyFlags);
+        printf("\t\tpropertyFlags = ");
+        print_flags(props->memoryTypes[i].propertyFlags,
+                    vk_memory_property_flag_infos);
+        printf("\n");
         printf("\t\theapIndex     = %u\n", props->memoryTypes[i].heapIndex);
     }
     printf("\tmemoryHeapCount       = %u\n", props->memoryHeapCount);
