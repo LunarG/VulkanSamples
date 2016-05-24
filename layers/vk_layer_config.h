@@ -28,6 +28,17 @@
 extern "C" {
 #endif
 
+// Definitions for Debug Actions
+typedef enum VkLayerDbgActionBits {
+    VK_DBG_LAYER_ACTION_IGNORE = 0x00000000,
+    VK_DBG_LAYER_ACTION_CALLBACK = 0x00000001,
+    VK_DBG_LAYER_ACTION_LOG_MSG = 0x00000002,
+    VK_DBG_LAYER_ACTION_BREAK = 0x00000004,
+    VK_DBG_LAYER_ACTION_DEBUG_OUTPUT = 0x00000008,
+    VK_DBG_LAYER_ACTION_DEFAULT = 0x40000000,
+} VkLayerDbgActionBits;
+typedef VkFlags VkLayerDbgActionFlags;
+
 const std::unordered_map<std::string, VkFlags> debug_actions_option_definitions = {
     {std::string("VK_DBG_LAYER_ACTION_IGNORE"), VK_DBG_LAYER_ACTION_IGNORE},
     {std::string("VK_DBG_LAYER_ACTION_CALLBACK"), VK_DBG_LAYER_ACTION_CALLBACK},

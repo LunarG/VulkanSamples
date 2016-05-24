@@ -17,6 +17,7 @@ set(NORMAL_LOADER_SRCS
     loader.c
     loader.h
     vk_loader_platform.h
+    vk_loader_layer.h
     trampoline.c
     wsi.c
     wsi.h

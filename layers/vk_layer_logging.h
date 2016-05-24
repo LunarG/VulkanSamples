@@ -22,6 +22,7 @@
 #ifndef LAYER_LOGGING_H
 #define LAYER_LOGGING_H
 
+#include "vk_loader_layer.h"
 #include "vk_layer_config.h"
 #include "vk_layer_data.h"
 #include "vk_layer_table.h"
