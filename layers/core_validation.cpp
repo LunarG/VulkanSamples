@@ -4218,6 +4218,12 @@ static bool decrementResources(layer_data *my_data, uint32_t fenceCount, const V
                     queue_pair->second.lastFences.erase(last_fence_data);
             }
         }
+        for (auto& fence_data : my_data->fenceMap) {
+          auto prior_fence_data =
+              std::find(fence_data.second.priorFences.begin(), fence_data.second.priorFences.end(), fence_pair.first);
+          if (prior_fence_data != fence_data.second.priorFences.end())
+              fence_data.second.priorFences.erase(prior_fence_data);
+        }
     }
     return skip_call;
 }
@@ -5371,6 +5377,7 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount,
         if (fence_item != dev_data->fenceMap.end()) {
             fence_item->second.needsSignaled = true;
             fence_item->second.queues.clear();
+            fence_item->second.priorFences.clear();
             if (fence_item->second.in_use.load()) {
                 skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
