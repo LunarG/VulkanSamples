@@ -28,7 +28,10 @@
 
 ## Clone the Repository
 
-Note that the Vulkan-LoaderAndValidationLayers repo content is included within the VulkanSamples repo.
+The VulkanSamples repository also includes the Vulkan loader, validation layers, header files, and associated tests.
+These files are mirrored from this GitHub repository:
+https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers
+These components are required to enable this repository to be built standalone; that is without having to clone the Vulkan-LoaderAndValidationLayers repository.
 
 To create your local git repository of VulkanSamples:
 ```
