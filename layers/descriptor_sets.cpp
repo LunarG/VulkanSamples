@@ -545,7 +545,7 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
         }
     }
     // Update parameters all look good and descriptor updated so verify update contents
-    if (!VerifyCopyUpdateContents(update, src_set, src_start_idx, error))
+    if (!VerifyCopyUpdateContents(update, src_set, src_type, src_start_idx, error))
         return false;
 
     // All checks passed so update is good
@@ -1125,7 +1125,7 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
 }
 // Verify that the contents of the update are ok, but don't perform actual update
 bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescriptorSet *update, const DescriptorSet *src_set,
-                                                              const uint32_t index, std::string *error) const {
+                                                              VkDescriptorType type, uint32_t index, std::string *error) const {
     switch (src_set->descriptors_[index]->descriptor_class) {
     case PlainSampler: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
@@ -1161,10 +1161,10 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
             // Validate image
             auto image_view = img_samp_desc->GetImageView();
             auto image_layout = img_samp_desc->GetImageLayout();
-            if (!ValidateImageUpdate(image_view, image_layout, src_set->GetTypeFromGlobalIndex(index), image_view_map_, image_map_,
-                                     image_to_swapchain_map_, swapchain_map_, error)) {
+            if (!ValidateImageUpdate(image_view, image_layout, type, image_view_map_, image_map_, image_to_swapchain_map_,
+                                     swapchain_map_, error)) {
                 std::stringstream error_str;
-                error_str << "Attempted write update to combined image sampler descriptor failed due to: " << error->c_str();
+                error_str << "Attempted copy update to combined image sampler descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
                 return false;
             }
@@ -1175,10 +1175,10 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
             auto img_desc = static_cast<const ImageDescriptor *>(src_set->descriptors_[index + di].get());
             auto image_view = img_desc->GetImageView();
             auto image_layout = img_desc->GetImageLayout();
-            if (!ValidateImageUpdate(image_view, image_layout, src_set->GetTypeFromGlobalIndex(index), image_view_map_, image_map_,
-                                     image_to_swapchain_map_, swapchain_map_, error)) {
+            if (!ValidateImageUpdate(image_view, image_layout, type, image_view_map_, image_map_, image_to_swapchain_map_,
+                                     swapchain_map_, error)) {
                 std::stringstream error_str;
-                error_str << "Attempted write update to image descriptor failed due to: " << error->c_str();
+                error_str << "Attempted copy update to image descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
                 return false;
             }
@@ -1188,9 +1188,17 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
     case TexelBuffer: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer_view = static_cast<TexelDescriptor *>(src_set->descriptors_[index + di].get())->GetBufferView();
-            if (!buffer_view_map_->count(buffer_view)) {
+            auto bv_it = buffer_view_map_->find(buffer_view);
+            if (bv_it == buffer_view_map_->end()) {
                 std::stringstream error_str;
-                error_str << "Attempted write update to texel buffer descriptor with invalid buffer view: " << buffer_view;
+                error_str << "Attempted copy update to texel buffer descriptor with invalid buffer view: " << buffer_view;
+                *error = error_str.str();
+                return false;
+            }
+            auto buffer = bv_it->second.buffer;
+            if (!ValidateBufferUpdate(buffer, type, error)) {
+                std::stringstream error_str;
+                error_str << "Attempted copy update to texel buffer descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
                 return false;
             }
@@ -1200,9 +1208,9 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
     case GeneralBuffer: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer = static_cast<BufferDescriptor *>(src_set->descriptors_[index + di].get())->GetBuffer();
-            if (!buffer_map_->count(buffer)) {
+            if (!ValidateBufferUpdate(buffer, type, error)) {
                 std::stringstream error_str;
-                error_str << "Attempted write update to buffer descriptor with invalid buffer: " << buffer;
+                error_str << "Attempted copy update to buffer descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
                 return false;
             }
