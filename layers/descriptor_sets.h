@@ -186,6 +186,7 @@ class ImageSamplerDescriptor : public Descriptor {
     ImageSamplerDescriptor(const VkSampler *);
     void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
     void CopyUpdate(const Descriptor *) override;
+    virtual bool IsImmutableSampler() const override { return immutable_; };
     VkSampler GetSampler() const { return sampler_; }
     VkImageView GetImageView() const { return image_view_; }
     VkImageLayout GetImageLayout() const { return image_layout_; }
