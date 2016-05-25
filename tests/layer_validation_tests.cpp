@@ -9969,8 +9969,8 @@ TEST_F(VkLayerTest, InvalidImageView) {
 }
 
 TEST_F(VkLayerTest, InvalidImageViewAspect) {
-    VkResult err;
-
+    TEST_DESCRIPTION(
+        "Create an image and try to create a view with an invalid aspectMask");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "vkCreateImageView: Color image "
                                          "formats must have ONLY the "
@@ -9978,33 +9978,15 @@ TEST_F(VkLayerTest, InvalidImageViewAspect) {
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
-    // Create an image and try to create a view with an invalid aspectMask
-    VkImage image;
-
     const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
-    const int32_t tex_width = 32;
-    const int32_t tex_height = 32;
-
-    VkImageCreateInfo image_create_info = {};
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.pNext = NULL;
-    image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = tex_format;
-    image_create_info.extent.width = tex_width;
-    image_create_info.extent.height = tex_height;
-    image_create_info.extent.depth = 1;
-    image_create_info.mipLevels = 1;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-    image_create_info.flags = 0;
-
-    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
-    ASSERT_VK_SUCCESS(err);
+    VkImageObj image(m_device);
+    image.init(32, 32, tex_format, VK_IMAGE_USAGE_SAMPLED_BIT,
+               VK_IMAGE_TILING_LINEAR, 0);
+    ASSERT_TRUE(image.initialized());
 
     VkImageViewCreateInfo image_view_create_info = {};
     image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_view_create_info.image = image;
+    image_view_create_info.image = image.handle();
     image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     image_view_create_info.format = tex_format;
     image_view_create_info.subresourceRange.baseMipLevel = 0;
@@ -10014,8 +9996,7 @@ TEST_F(VkLayerTest, InvalidImageViewAspect) {
         VK_IMAGE_ASPECT_METADATA_BIT;
 
     VkImageView view;
-    err = vkCreateImageView(m_device->device(), &image_view_create_info, NULL,
-                            &view);
+    vkCreateImageView(m_device->device(), &image_view_create_info, NULL, &view);
 
     m_errorMonitor->VerifyFound();
 }
