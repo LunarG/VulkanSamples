@@ -66,7 +66,7 @@ function create_shaderc () {
    rm -rf $BASEDIR/shaderc
    echo "Creating local shaderc repository ($BASEDIR/shaderc)."
    cd $BASEDIR
-   git clone git@github.com:google/shaderc.git
+   git clone https://github.com/google/shaderc.git
    cd shaderc
    git checkout $SHADERC_REVISION
 }
