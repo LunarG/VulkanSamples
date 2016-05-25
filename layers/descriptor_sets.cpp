@@ -597,122 +597,120 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
         error_str << "Invalid VkImageView: " << image_view;
         *error = error_str.str();
         return false;
+    }
+    // Validate that imageLayout is compatible with aspect_mask and image format
+    //  and validate that image usage bits are correct for given usage
+    VkImageAspectFlags aspect_mask = image_pair->second.subresourceRange.aspectMask;
+    VkImage image = image_pair->second.image;
+    VkFormat format = VK_FORMAT_MAX_ENUM;
+    VkImageUsageFlags usage = 0;
+    auto img_pair = image_map->find(image);
+    if (img_pair != image_map->end()) {
+        format = img_pair->second.createInfo.format;
+        usage = img_pair->second.createInfo.usage;
     } else {
-        // Validate that imageLayout is compatible with aspect_mask and image format
-        //  and validate that image usage bits are correct for given usage
-        VkImageAspectFlags aspect_mask = image_pair->second.subresourceRange.aspectMask;
-        VkImage image = image_pair->second.image;
-        VkFormat format = VK_FORMAT_MAX_ENUM;
-        VkImageUsageFlags usage = 0;
-        auto img_pair = image_map->find(image);
-        if (img_pair != image_map->end()) {
-            format = img_pair->second.createInfo.format;
-            usage = img_pair->second.createInfo.usage;
-        } else {
-            // Also need to check the swapchains.
-            auto swapchain_pair = image_to_swapchain_map->find(image);
-            if (swapchain_pair != image_to_swapchain_map->end()) {
-                VkSwapchainKHR swapchain = swapchain_pair->second;
-                auto swapchain_pair = swapchain_map->find(swapchain);
-                if (swapchain_pair != swapchain_map->end()) {
-                    format = swapchain_pair->second->createInfo.imageFormat;
-                }
+        // Also need to check the swapchains.
+        auto swapchain_pair = image_to_swapchain_map->find(image);
+        if (swapchain_pair != image_to_swapchain_map->end()) {
+            VkSwapchainKHR swapchain = swapchain_pair->second;
+            auto swapchain_pair = swapchain_map->find(swapchain);
+            if (swapchain_pair != swapchain_map->end()) {
+                format = swapchain_pair->second->createInfo.imageFormat;
             }
         }
-        // First validate that format and layout are compatible
-        if (format == VK_FORMAT_MAX_ENUM) {
+    }
+    // First validate that format and layout are compatible
+    if (format == VK_FORMAT_MAX_ENUM) {
+        std::stringstream error_str;
+        error_str << "Invalid image (" << image << ") in imageView (" << image_view << ").";
+        *error = error_str.str();
+        return false;
+    }
+    bool ds = vk_format_is_depth_or_stencil(format);
+    switch (image_layout) {
+    case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        // Only Color bit must be set
+        if ((aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT) != VK_IMAGE_ASPECT_COLOR_BIT) {
             std::stringstream error_str;
-            error_str << "Invalid image (" << image << ") in imageView (" << image_view << ").";
-            *error = error_str.str();
-            return false;
-        } else {
-            bool ds = vk_format_is_depth_or_stencil(format);
-            switch (image_layout) {
-            case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-                // Only Color bit must be set
-                if ((aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT) != VK_IMAGE_ASPECT_COLOR_BIT) {
-                    std::stringstream error_str;
-                    error_str << "ImageView (" << image_view << ") uses layout VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL but does "
-                                                                "not have VK_IMAGE_ASPECT_COLOR_BIT set.";
-                    *error = error_str.str();
-                    return false;
-                }
-                // format must NOT be DS
-                if (ds) {
-                    std::stringstream error_str;
-                    error_str << "ImageView (" << image_view
-                              << ") uses layout VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL but the image format is "
-                              << string_VkFormat(format) << " which is not a color format.";
-                    *error = error_str.str();
-                    return false;
-                }
-                break;
-            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-                // Depth or stencil bit must be set, but both must NOT be set
-                if (aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) {
-                    if (aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) {
-                        // both  must NOT be set
-                        std::stringstream error_str;
-                        error_str << "ImageView (" << image_view << ") has both STENCIL and DEPTH aspects set";
-                        *error = error_str.str();
-                        return false;
-                    }
-                } else if (!(aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT)) {
-                    // Neither were set
-                    std::stringstream error_str;
-                    error_str << "ImageView (" << image_view << ") has layout " << string_VkImageLayout(image_layout)
-                              << " but does not have STENCIL or DEPTH aspects set";
-                    *error = error_str.str();
-                    return false;
-                }
-                // format must be DS
-                if (!ds) {
-                    std::stringstream error_str;
-                    error_str << "ImageView (" << image_view << ") has layout " << string_VkImageLayout(image_layout)
-                              << " but the image format is " << string_VkFormat(format) << " which is not a depth/stencil format.";
-                    *error = error_str.str();
-                    return false;
-                }
-                break;
-            default:
-                // anything to check for other layouts?
-                break;
-            }
-        }
-        // Now validate that usage flags are correctly set for given type of update
-        std::string error_usage_bit;
-        switch (type) {
-        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: {
-            if (!(usage & VK_IMAGE_USAGE_SAMPLED_BIT)) {
-                error_usage_bit = "VK_IMAGE_USAGE_SAMPLED_BIT";
-            }
-            break;
-        }
-        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
-            if (!(usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
-                error_usage_bit = "VK_IMAGE_USAGE_STORAGE_BIT";
-            }
-            break;
-        }
-        case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT: {
-            if (!(usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)) {
-                error_usage_bit = "VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT";
-            }
-            break;
-        }
-        default:
-            break;
-        }
-        if (!error_usage_bit.empty()) {
-            std::stringstream error_str;
-            error_str << "ImageView (" << image_view << ") with usage mask 0x" << usage
-                      << " being used for a descriptor update of type " << string_VkDescriptorType(type) << " does not have "
-                      << error_usage_bit << " set.";
+            error_str << "ImageView (" << image_view << ") uses layout VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL but does "
+                                                        "not have VK_IMAGE_ASPECT_COLOR_BIT set.";
             *error = error_str.str();
             return false;
         }
+        // format must NOT be DS
+        if (ds) {
+            std::stringstream error_str;
+            error_str << "ImageView (" << image_view
+                      << ") uses layout VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL but the image format is "
+                      << string_VkFormat(format) << " which is not a color format.";
+            *error = error_str.str();
+            return false;
+        }
+        break;
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+        // Depth or stencil bit must be set, but both must NOT be set
+        if (aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) {
+            if (aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) {
+                // both  must NOT be set
+                std::stringstream error_str;
+                error_str << "ImageView (" << image_view << ") has both STENCIL and DEPTH aspects set";
+                *error = error_str.str();
+                return false;
+            }
+        } else if (!(aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT)) {
+            // Neither were set
+            std::stringstream error_str;
+            error_str << "ImageView (" << image_view << ") has layout " << string_VkImageLayout(image_layout)
+                      << " but does not have STENCIL or DEPTH aspects set";
+            *error = error_str.str();
+            return false;
+        }
+        // format must be DS
+        if (!ds) {
+            std::stringstream error_str;
+            error_str << "ImageView (" << image_view << ") has layout " << string_VkImageLayout(image_layout)
+                      << " but the image format is " << string_VkFormat(format) << " which is not a depth/stencil format.";
+            *error = error_str.str();
+            return false;
+        }
+        break;
+    default:
+        // anything to check for other layouts?
+        break;
+    }
+    // Now validate that usage flags are correctly set for given type of update
+    std::string error_usage_bit;
+    switch (type) {
+    case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: {
+        if (!(usage & VK_IMAGE_USAGE_SAMPLED_BIT)) {
+            error_usage_bit = "VK_IMAGE_USAGE_SAMPLED_BIT";
+        }
+        break;
+    }
+    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
+        if (!(usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
+            error_usage_bit = "VK_IMAGE_USAGE_STORAGE_BIT";
+        }
+        break;
+    }
+    case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT: {
+        if (!(usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)) {
+            error_usage_bit = "VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT";
+        }
+        break;
+    }
+    default:
+        break;
+    }
+    if (!error_usage_bit.empty()) {
+        std::stringstream error_str;
+        error_str << "ImageView (" << image_view << ") with usage mask 0x" << usage
+                  << " being used for a descriptor update of type " << string_VkDescriptorType(type) << " does not have "
+                  << error_usage_bit << " set.";
+        *error = error_str.str();
+        return false;
     }
     return true;
 }
