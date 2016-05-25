@@ -7030,6 +7030,182 @@ TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, DSUsageBitsErrors) {
+    TEST_DESCRIPTION("Attempt to update descriptor sets for images and buffers "
+                     "that do not have correct usage bits sets.");
+    VkResult err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkDescriptorPoolSize ds_type_count[VK_DESCRIPTOR_TYPE_RANGE_SIZE] = {};
+    for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; ++i) {
+        ds_type_count[i].type = VkDescriptorType(i);
+        ds_type_count[i].descriptorCount = 1;
+    }
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ds_pool_ci.pNext = NULL;
+    ds_pool_ci.maxSets = VK_DESCRIPTOR_TYPE_RANGE_SIZE;
+    ds_pool_ci.poolSizeCount = VK_DESCRIPTOR_TYPE_RANGE_SIZE;
+    ds_pool_ci.pPoolSizes = ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err =
+        vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create 10 layouts where each has a single descriptor of different type
+    VkDescriptorSetLayoutBinding dsl_binding[VK_DESCRIPTOR_TYPE_RANGE_SIZE] =
+        {};
+    for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; ++i) {
+        dsl_binding[i].binding = 0;
+        dsl_binding[i].descriptorType = VkDescriptorType(i);
+        dsl_binding[i].descriptorCount = 1;
+        dsl_binding[i].stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding[i].pImmutableSamplers = NULL;
+    }
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = 1;
+    VkDescriptorSetLayout ds_layouts[VK_DESCRIPTOR_TYPE_RANGE_SIZE];
+    for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; ++i) {
+        ds_layout_ci.pBindings = dsl_binding + i;
+        err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci,
+                                          NULL, ds_layouts + i);
+        ASSERT_VK_SUCCESS(err);
+    }
+    VkDescriptorSet descriptor_sets[VK_DESCRIPTOR_TYPE_RANGE_SIZE] = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorSetCount = VK_DESCRIPTOR_TYPE_RANGE_SIZE;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = ds_layouts;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info,
+                                   descriptor_sets);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create a buffer & bufferView to be used for invalid updates
+    VkBufferCreateInfo buff_ci = {};
+    buff_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    // This usage is not valid for any descriptor type
+    buff_ci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    buff_ci.size = 256;
+    buff_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkBuffer buffer;
+    err = vkCreateBuffer(m_device->device(), &buff_ci, NULL, &buffer);
+    ASSERT_VK_SUCCESS(err);
+
+    VkBufferViewCreateInfo buff_view_ci = {};
+    buff_view_ci.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+    buff_view_ci.buffer = buffer;
+    buff_view_ci.format = VK_FORMAT_R8_UNORM;
+    buff_view_ci.range = VK_WHOLE_SIZE;
+    VkBufferView buff_view;
+    err =
+        vkCreateBufferView(m_device->device(), &buff_view_ci, NULL, &buff_view);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create an image to be used for invalid updates
+    VkImageCreateInfo image_ci = {};
+    image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_ci.imageType = VK_IMAGE_TYPE_2D;
+    image_ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    image_ci.extent.width = 64;
+    image_ci.extent.height = 64;
+    image_ci.extent.depth = 1;
+    image_ci.mipLevels = 1;
+    image_ci.arrayLayers = 1;
+    image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_ci.tiling = VK_IMAGE_TILING_LINEAR;
+    image_ci.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+    // This usage is not valid for any descriptor type
+    image_ci.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    image_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkImage image;
+    err = vkCreateImage(m_device->device(), &image_ci, NULL, &image);
+    ASSERT_VK_SUCCESS(err);
+    // Bind memory to image
+    VkMemoryRequirements mem_reqs;
+    VkDeviceMemory image_mem;
+    bool pass;
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 0;
+    mem_alloc.memoryTypeIndex = 0;
+    vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
+    mem_alloc.allocationSize = mem_reqs.size;
+    pass =
+        m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    ASSERT_TRUE(pass);
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &image_mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), image, image_mem, 0);
+    ASSERT_VK_SUCCESS(err);
+    // Now create view for image
+    VkImageViewCreateInfo image_view_ci = {};
+    image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_ci.image = image;
+    image_view_ci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    image_view_ci.subresourceRange.layerCount = 1;
+    image_view_ci.subresourceRange.baseArrayLayer = 0;
+    image_view_ci.subresourceRange.levelCount = 1;
+    image_view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    VkImageView image_view;
+    err = vkCreateImageView(m_device->device(), &image_view_ci, NULL,
+                            &image_view);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorBufferInfo buff_info = {};
+    buff_info.buffer = buffer;
+    VkDescriptorImageInfo img_info = {};
+    img_info.imageView = image_view;
+    VkWriteDescriptorSet descriptor_write = {};
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstBinding = 0;
+    descriptor_write.descriptorCount = 1;
+    descriptor_write.pTexelBufferView = &buff_view;
+    descriptor_write.pBufferInfo = &buff_info;
+    descriptor_write.pImageInfo = &img_info;
+
+    // These error messages align with VkDescriptorType struct
+    const char *error_msgs[] = {
+        "", // placeholder, no error for SAMPLER descriptor
+        " does not have VK_IMAGE_USAGE_SAMPLED_BIT set.",
+        " does not have VK_IMAGE_USAGE_SAMPLED_BIT set.",
+        " does not have VK_IMAGE_USAGE_STORAGE_BIT set.",
+        " does not have VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT set.",
+        " does not have VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT set.",
+        " does not have VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT set.",
+        " does not have VK_BUFFER_USAGE_STORAGE_BUFFER_BIT set.",
+        " does not have VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT set.",
+        " does not have VK_BUFFER_USAGE_STORAGE_BUFFER_BIT set.",
+        " does not have VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT set."};
+    // Start loop at 1 as SAMPLER desc type has no usage bit error
+    for (uint32_t i = 1; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; ++i) {
+        descriptor_write.descriptorType = VkDescriptorType(i);
+        descriptor_write.dstSet = descriptor_sets[i];
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             error_msgs[i]);
+
+        vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0,
+                               NULL);
+
+        m_errorMonitor->VerifyFound();
+        vkDestroyDescriptorSetLayout(m_device->device(), ds_layouts[i], NULL);
+    }
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layouts[0], NULL);
+    vkDestroyImage(m_device->device(), image, NULL);
+    vkDestroyImageView(m_device->device(), image_view, NULL);
+    vkDestroyBuffer(m_device->device(), buffer, NULL);
+    vkDestroyBufferView(m_device->device(), buff_view, NULL);
+    vkFreeDescriptorSets(m_device->device(), ds_pool,
+                         VK_DESCRIPTOR_TYPE_RANGE_SIZE, descriptor_sets);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+}
+
 TEST_F(VkLayerTest, DSTypeMismatch) {
     // Create DS w/ layout of one type and attempt Update w/ mis-matched type
     VkResult err;
