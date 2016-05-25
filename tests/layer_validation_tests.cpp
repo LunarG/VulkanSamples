@@ -11150,7 +11150,7 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError) {
     VkImage image_bad;
     VkImage image_good;
     // One bad format and one good format for Color attachment
-    const VkFormat tex_format_bad = VK_FORMAT_D32_SFLOAT_S8_UINT;
+    const VkFormat tex_format_bad = VK_FORMAT_D24_UNORM_S8_UINT;
     const VkFormat tex_format_good = VK_FORMAT_B8G8R8A8_UNORM;
     const int32_t tex_width = 32;
     const int32_t tex_height = 32;
