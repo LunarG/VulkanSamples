@@ -53,7 +53,9 @@ make
 ```
 ## Android:
 
+```
 $ cmake -DANDROID=ON -DANDROID_ABI=[armeabi-v7a|arm64-v8a| x86|x86_64|all(default)]
+```
 And import VulkanSamples/API-Samples/android/build.gradle in Android Studio.
 
 ## Windows System Requirements
@@ -81,6 +83,7 @@ cd VulkanSamples  # cd to the root of the VulkanSamples git repository
 mkdir build
 cd build
 cmake -G "Visual Studio 12 Win64" ..
+```
 
 At this point, you can use Windows Explorer to launch Visual Studio by double-clicking on the "VULKAN.sln" file in the \buil
 d folder.  
