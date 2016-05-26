@@ -3017,43 +3017,29 @@ TEST_F(VkLayerTest, TwoFencesThreeFrames) {
     }
 
     for (uint32_t frame = 0; frame < NUM_FRAMES; ++frame) {
-        // Create empty cmd buffer
-        VkCommandBufferBeginInfo cmdBufBeginDesc = {};
-        cmdBufBeginDesc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        for (uint32_t obj = 0; obj < NUM_OBJECTS; ++obj) {
+            // Create empty cmd buffer
+            VkCommandBufferBeginInfo cmdBufBeginDesc = {};
+            cmdBufBeginDesc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-        err = vkBeginCommandBuffer(cmd_buffers[0], &cmdBufBeginDesc);
-        ASSERT_VK_SUCCESS(err);
-        err = vkEndCommandBuffer(cmd_buffers[0]);
-        ASSERT_VK_SUCCESS(err);
+            err = vkBeginCommandBuffer(cmd_buffers[obj], &cmdBufBeginDesc);
+            ASSERT_VK_SUCCESS(err);
+            err = vkEndCommandBuffer(cmd_buffers[obj]);
+            ASSERT_VK_SUCCESS(err);
 
-        VkSubmitInfo submit_info = {};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &cmd_buffers[0];
-        // Submit cmd buffer and wait for fence
-        err = vkQueueSubmit(queue, 1, &submit_info, fences[0]);
-        ASSERT_VK_SUCCESS(err);
-        err = vkWaitForFences(m_device->device(), 1, &fences[0], VK_TRUE,
-                              UINT64_MAX);
-        ASSERT_VK_SUCCESS(err);
-        err = vkResetFences(m_device->device(), 1, &fences[0]);
-        ASSERT_VK_SUCCESS(err);
-
-        // 2nd cmd buffer with separate fence
-        err = vkBeginCommandBuffer(cmd_buffers[1], &cmdBufBeginDesc);
-        ASSERT_VK_SUCCESS(err);
-        err = vkEndCommandBuffer(cmd_buffers[1]);
-        ASSERT_VK_SUCCESS(err);
-        // Update submit info to refer to 2nd cmd buffer
-        submit_info.pCommandBuffers = &cmd_buffers[1];
-        // Submit 2nd cmd buffer and wait for its fence
-        err = vkQueueSubmit(queue, 1, &submit_info, fences[1]);
-        ASSERT_VK_SUCCESS(err);
-        err = vkWaitForFences(m_device->device(), 1, &fences[1], VK_TRUE,
-                              UINT64_MAX);
-        ASSERT_VK_SUCCESS(err);
-        err = vkResetFences(m_device->device(), 1, &fences[1]);
-        ASSERT_VK_SUCCESS(err);
+            VkSubmitInfo submit_info = {};
+            submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submit_info.commandBufferCount = 1;
+            submit_info.pCommandBuffers = &cmd_buffers[obj];
+            // Submit cmd buffer and wait for fence
+            err = vkQueueSubmit(queue, 1, &submit_info, fences[obj]);
+            ASSERT_VK_SUCCESS(err);
+            err = vkWaitForFences(m_device->device(), 1, &fences[obj], VK_TRUE,
+                                  UINT64_MAX);
+            ASSERT_VK_SUCCESS(err);
+            err = vkResetFences(m_device->device(), 1, &fences[obj]);
+            ASSERT_VK_SUCCESS(err);
+        }
     }
     m_errorMonitor->VerifyNotFound();
 }
