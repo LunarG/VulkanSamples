@@ -62,6 +62,42 @@ class BASE_NODE {
     std::atomic_int in_use;
 };
 
+struct DESCRIPTOR_POOL_NODE {
+    VkDescriptorPool pool;
+    uint32_t maxSets;       // Max descriptor sets allowed in this pool
+    uint32_t availableSets; // Available descriptor sets in this pool
+
+    VkDescriptorPoolCreateInfo createInfo;
+    std::unordered_set<cvdescriptorset::DescriptorSet *> sets; // Collection of all sets in this pool
+    std::vector<uint32_t> maxDescriptorTypeCount;              // Max # of descriptors of each type in this pool
+    std::vector<uint32_t> availableDescriptorTypeCount;        // Available # of descriptors of each type in this pool
+
+    DESCRIPTOR_POOL_NODE(const VkDescriptorPool pool, const VkDescriptorPoolCreateInfo *pCreateInfo)
+        : pool(pool), maxSets(pCreateInfo->maxSets), availableSets(pCreateInfo->maxSets), createInfo(*pCreateInfo),
+          maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0), availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0) {
+        if (createInfo.poolSizeCount) { // Shadow type struct from ptr into local struct
+            size_t poolSizeCountSize = createInfo.poolSizeCount * sizeof(VkDescriptorPoolSize);
+            createInfo.pPoolSizes = new VkDescriptorPoolSize[poolSizeCountSize];
+            memcpy((void *)createInfo.pPoolSizes, pCreateInfo->pPoolSizes, poolSizeCountSize);
+            // Now set max counts for each descriptor type based on count of that type times maxSets
+            uint32_t i = 0;
+            for (i = 0; i < createInfo.poolSizeCount; ++i) {
+                uint32_t typeIndex = static_cast<uint32_t>(createInfo.pPoolSizes[i].type);
+                // Same descriptor types can appear several times
+                maxDescriptorTypeCount[typeIndex] += createInfo.pPoolSizes[i].descriptorCount;
+                availableDescriptorTypeCount[typeIndex] = maxDescriptorTypeCount[typeIndex];
+            }
+        } else {
+            createInfo.pPoolSizes = NULL; // Make sure this is NULL so we don't try to clean it up
+        }
+    }
+    ~DESCRIPTOR_POOL_NODE() {
+        delete[] createInfo.pPoolSizes;
+        // TODO : pSets are currently freed in deletePools function which uses freeShadowUpdateTree function
+        //  need to migrate that struct to smart ptrs for auto-cleanup
+    }
+};
+
 class BUFFER_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
