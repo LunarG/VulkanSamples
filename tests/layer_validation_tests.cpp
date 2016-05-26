@@ -522,6 +522,8 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer,
     ds_ci.depthBoundsTestEnable = VK_FALSE;
     if (failMask & BsoFailDepthBounds) {
         ds_ci.depthBoundsTestEnable = VK_TRUE;
+        ds_ci.maxDepthBounds = 0.0f;
+        ds_ci.minDepthBounds = 0.0f;
     }
     ds_ci.stencilTestEnable = VK_TRUE;
     ds_ci.front = stencil;
@@ -3962,11 +3964,28 @@ TEST_F(VkLayerTest, DynamicScissorNotBound) {
     m_errorMonitor->VerifyFound();
 }
 
-TEST_F(VkLayerTest, DynamicColorBlendNotBound) {
+TEST_F(VkLayerTest, DynamiBlendConstantsNotBound) {
     TEST_DESCRIPTION(
-        "Run a simple draw calls to validate failure when Color Blend dynamic "
+        "Run a simple draw calls to validate failure when Blend Constants "
+        "dynamic state is required but not correctly bound.");
+    // Dynamic blend constant state
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Dynamic blend constants state not set for this command buffer");
+    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText,
+                   BsoFailBlend);
+    m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkLayerTest, DynamicDepthBoundsNotBound) {
+    TEST_DESCRIPTION(
+        "Run a simple draw calls to validate failure when Depth Bounds dynamic "
         "state is required but not correctly bound.");
-    // Dynamic blend state
+    if (!m_device->phy().features().depthBounds) {
+        printf("Device does not support depthBounds test; skipped.\n");
+        return;
+    }
+    // Dynamic depth bounds
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Dynamic depth bounds state not set for this command buffer");
