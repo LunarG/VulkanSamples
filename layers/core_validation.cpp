@@ -5869,18 +5869,18 @@ ResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, VkDescript
 // Ensure the pool contains enough descriptors and descriptor sets to satisfy
 // an allocation request. Fills requiredDescriptorsByType with the total number
 // of descriptors of each type required, for later update.
-static bool PreCallValidateAllocateDescriptorSets(layer_data *dev_data, DESCRIPTOR_POOL_NODE *pPoolNode, uint32_t count,
-                                                  std::vector<cvdescriptorset::DescriptorSetLayout const *> const & layout_nodes,
+static bool PreCallValidateAllocateDescriptorSets(const layer_data *dev_data, const DESCRIPTOR_POOL_NODE *pPoolNode, uint32_t count,
+                                                  std::vector<cvdescriptorset::DescriptorSetLayout const *> const &layout_nodes,
                                                   uint32_t requiredDescriptorsByType[]) {
     bool skipCall = false;
 
     // Track number of descriptorSets allowable in this pool
     if (pPoolNode->availableSets < count) {
         skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
-                            reinterpret_cast<uint64_t &>(pPoolNode->pool), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY, "DS",
+                            reinterpret_cast<const uint64_t &>(pPoolNode->pool), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY, "DS",
                             "Unable to allocate %u descriptorSets from pool 0x%" PRIxLEAST64
                             ". This pool only has %d descriptorSets remaining.",
-                            count, reinterpret_cast<uint64_t &>(pPoolNode->pool), pPoolNode->availableSets);
+                            count, reinterpret_cast<const uint64_t &>(pPoolNode->pool), pPoolNode->availableSets);
     }
 
     // Count total descriptors required per type
@@ -5977,48 +5977,60 @@ AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllo
     }
     return result;
 }
+// Verify state before freeing DescriptorSets
+static bool PreCallValidateFreeDescriptorSets(const layer_data *dev_data, VkDescriptorPool pool, uint32_t count,
+                                              const VkDescriptorSet *descriptor_sets) {
+    bool skip_call = false;
+    // First make sure sets being destroyed are not currently in-use
+    for (uint32_t i = 0; i < count; ++i)
+        skip_call |= validateIdleDescriptorSet(dev_data, descriptor_sets[i], "vkFreeDescriptorSets");
+
+    DESCRIPTOR_POOL_NODE *pool_node = getPoolNode(dev_data, pool);
+    if (pool_node && !(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT & pool_node->createInfo.flags)) {
+        // Can't Free from a NON_FREE pool
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+                             reinterpret_cast<uint64_t &>(pool), __LINE__, DRAWSTATE_CANT_FREE_FROM_NON_FREE_POOL, "DS",
+                             "It is invalid to call vkFreeDescriptorSets() with a pool created without setting "
+                             "VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT.");
+    }
+    return skip_call;
+}
+// Sets have been removed from the pool so update underlying state
+static void PostCallRecordFreeDescriptorSets(layer_data *dev_data, VkDescriptorPool pool, uint32_t count,
+                                             const VkDescriptorSet *descriptor_sets) {
+    DESCRIPTOR_POOL_NODE *pool_state = getPoolNode(dev_data, pool);
+    // Update available descriptor sets in pool
+    pool_state->availableSets += count;
+
+    // For each freed descriptor add its resources back into the pool as available and remove from pool and setMap
+    for (uint32_t i = 0; i < count; ++i) {
+        auto set_state = dev_data->setMap[descriptor_sets[i]];
+        uint32_t type_index = 0, descriptor_count = 0;
+        for (uint32_t j = 0; j < set_state->GetBindingCount(); ++j) {
+            type_index = static_cast<uint32_t>(set_state->GetTypeFromIndex(j));
+            descriptor_count = set_state->GetDescriptorCountFromIndex(j);
+            pool_state->availableDescriptorTypeCount[type_index] += descriptor_count;
+        }
+        freeDescriptorSet(dev_data, set_state);
+        pool_state->sets.erase(set_state);
+    }
+}
 
 VKAPI_ATTR VkResult VKAPI_CALL
 FreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet *pDescriptorSets) {
-    bool skipCall = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     // Make sure that no sets being destroyed are in-flight
     std::unique_lock<std::mutex> lock(global_lock);
-    for (uint32_t i = 0; i < count; ++i)
-        skipCall |= validateIdleDescriptorSet(dev_data, pDescriptorSets[i], "vkFreeDescriptorSets");
-    DESCRIPTOR_POOL_NODE *pPoolNode = getPoolNode(dev_data, descriptorPool);
-    if (pPoolNode && !(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT & pPoolNode->createInfo.flags)) {
-        // Can't Free from a NON_FREE pool
-        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                            (uint64_t)device, __LINE__, DRAWSTATE_CANT_FREE_FROM_NON_FREE_POOL, "DS",
-                            "It is invalid to call vkFreeDescriptorSets() with a pool created without setting "
-                            "VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT.");
-    }
+    bool skipCall = PreCallValidateFreeDescriptorSets(dev_data, descriptorPool, count, pDescriptorSets);
     lock.unlock();
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
     if (VK_SUCCESS == result) {
         lock.lock();
-
-        // Update available descriptor sets in pool
-        pPoolNode->availableSets += count;
-
-        // For each freed descriptor add its resources back into the pool as available and remove from pool and setMap
-        for (uint32_t i = 0; i < count; ++i) {
-            cvdescriptorset::DescriptorSet *pSet = dev_data->setMap[pDescriptorSets[i]]; // getSetNode() without locking
-            uint32_t typeIndex = 0, poolSizeCount = 0;
-            for (uint32_t j = 0; j < pSet->GetBindingCount(); ++j) {
-                typeIndex = static_cast<uint32_t>(pSet->GetTypeFromIndex(j));
-                poolSizeCount = pSet->GetDescriptorCountFromIndex(j);
-                pPoolNode->availableDescriptorTypeCount[typeIndex] += poolSizeCount;
-            }
-            freeDescriptorSet(dev_data, pSet);
-            pPoolNode->sets.erase(pSet);
-        }
+        PostCallRecordFreeDescriptorSets(dev_data, descriptorPool, count, pDescriptorSets);
         lock.unlock();
     }
-    // TODO : Any other clean-up or book-keeping to do here?
     return result;
 }
 // TODO : This is a Proof-of-concept for core validation architecture
