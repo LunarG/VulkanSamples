@@ -1222,3 +1222,96 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
     // All checks passed so update contents are good
     return true;
 }
+// Verify that the state at allocate time is correct, but don't actually allocate the sets yet
+bool cvdescriptorset::ValidateAllocateDescriptorSets(
+    const debug_report_data *report_data, const VkDescriptorSetAllocateInfo *p_alloc_info,
+    const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &set_layout_map,
+    const std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> &pool_map) {
+    bool skip_call = false;
+    uint32_t requiredDescriptorsByType[VK_DESCRIPTOR_TYPE_RANGE_SIZE]{};
+
+    for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
+        auto layout_it = set_layout_map.find(p_alloc_info->pSetLayouts[i]);
+        if (layout_it == set_layout_map.end()) {
+            skip_call |=
+                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
+                        reinterpret_cast<const uint64_t &>(p_alloc_info->pSetLayouts[i]), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
+                        "Unable to find set layout node for layout 0x%" PRIxLEAST64 " specified in vkAllocateDescriptorSets() call",
+                        reinterpret_cast<const uint64_t &>(p_alloc_info->pSetLayouts[i]));
+        }
+        // Count total descriptors required per type
+        for (uint32_t j = 0; j < layout_it->second->GetBindingCount(); ++j) {
+            const auto &binding_layout = layout_it->second->GetDescriptorSetLayoutBindingPtrFromIndex(j);
+            uint32_t typeIndex = static_cast<uint32_t>(binding_layout->descriptorType);
+            requiredDescriptorsByType[typeIndex] += binding_layout->descriptorCount;
+        }
+    }
+    auto pool_it = pool_map.find(p_alloc_info->descriptorPool);
+    if (pool_it == pool_map.end()) {
+        skip_call |=
+            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+                    reinterpret_cast<const uint64_t &>(p_alloc_info->descriptorPool), __LINE__, DRAWSTATE_INVALID_POOL, "DS",
+                    "Unable to find pool node for pool 0x%" PRIxLEAST64 " specified in vkAllocateDescriptorSets() call",
+                    reinterpret_cast<const uint64_t &>(p_alloc_info->descriptorPool));
+    } else { // Make sure pool has all the available descriptors before calling down chain
+        // Track number of descriptorSets allowable in this pool
+        if (pool_it->second->availableSets < p_alloc_info->descriptorSetCount) {
+            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+                                 reinterpret_cast<uint64_t &>(pool_it->second->pool), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY,
+                                 "DS", "Unable to allocate %u descriptorSets from pool 0x%" PRIxLEAST64
+                                       ". This pool only has %d descriptorSets remaining.",
+                                 p_alloc_info->descriptorSetCount, reinterpret_cast<uint64_t &>(pool_it->second->pool),
+                                 pool_it->second->availableSets);
+        }
+        // Determine whether descriptor counts are satisfiable
+        for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; i++) {
+            if (requiredDescriptorsByType[i] > pool_it->second->availableDescriptorTypeCount[i]) {
+                skip_call |=
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+                            reinterpret_cast<const uint64_t &>(pool_it->second->pool), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY,
+                            "DS", "Unable to allocate %u descriptors of type %s from pool 0x%" PRIxLEAST64
+                                  ". This pool only has %d descriptors of this type remaining.",
+                            requiredDescriptorsByType[i], string_VkDescriptorType(VkDescriptorType(i)),
+                            reinterpret_cast<uint64_t &>(pool_it->second->pool), pool_it->second->availableDescriptorTypeCount[i]);
+            }
+        }
+    }
+    return skip_call;
+}
+// Decrement allocated sets from the pool and insert new sets into set_map
+void cvdescriptorset::PerformAllocateDescriptorSets(
+    const VkDescriptorSetAllocateInfo *p_alloc_info, const VkDescriptorSet *descriptor_sets,
+    std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *pool_map,
+    std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *set_map,
+    const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &layout_map,
+    const std::unordered_map<VkBuffer, BUFFER_NODE> &buffer_map,
+    const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> &mem_obj_map,
+    const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> &buffer_view_map,
+    const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> &sampler_map,
+    const std::unordered_map<VkImageView, VkImageViewCreateInfo> &image_view_map,
+    const std::unordered_map<VkImage, IMAGE_NODE> &image_map,
+    const std::unordered_map<VkImage, VkSwapchainKHR> &image_to_swapchain_map,
+    const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> &swapchain_map) {
+    auto pool_state = (*pool_map)[p_alloc_info->descriptorPool];
+    /* Account for sets allocated from pool */
+    pool_state->availableSets -= p_alloc_info->descriptorSetCount;
+    /* Create tracking object for each descriptor set; insert into
+     * global map and the pool's set.
+     */
+    for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
+        auto layout_state = layout_map.find(p_alloc_info->pSetLayouts[i])->second;
+        // Account for individual descriptors allocated from pool
+        for (uint32_t j = 0; j < layout_state->GetBindingCount(); ++j) {
+            const auto &binding_layout = layout_state->GetDescriptorSetLayoutBindingPtrFromIndex(j);
+            uint32_t type_index = static_cast<uint32_t>(binding_layout->descriptorType);
+            pool_state->availableDescriptorTypeCount[type_index] -= binding_layout->descriptorCount;
+        }
+        auto new_ds =
+            new cvdescriptorset::DescriptorSet(descriptor_sets[i], layout_state, &buffer_map, &mem_obj_map, &buffer_view_map,
+                                               &sampler_map, &image_view_map, &image_map, &image_to_swapchain_map, &swapchain_map);
+
+        pool_state->sets.insert(new_ds);
+        new_ds->in_use.store(0);
+        (*set_map)[descriptor_sets[i]] = new_ds;
+    }
+}
