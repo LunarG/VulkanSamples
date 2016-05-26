@@ -3122,11 +3122,12 @@ static void deletePipelines(layer_data *my_data) {
 // Block of code at start here specifically for managing/tracking DSs
 
 // Return Pool node ptr for specified pool or else NULL
-static DESCRIPTOR_POOL_NODE *getPoolNode(layer_data *my_data, const VkDescriptorPool pool) {
-    if (my_data->descriptorPoolMap.find(pool) == my_data->descriptorPoolMap.end()) {
+static DESCRIPTOR_POOL_NODE *getPoolNode(const layer_data *dev_data, const VkDescriptorPool pool) {
+    auto pool_it = dev_data->descriptorPoolMap.find(pool);
+    if (pool_it == dev_data->descriptorPoolMap.end()) {
         return NULL;
     }
-    return my_data->descriptorPoolMap[pool];
+    return pool_it->second;
 }
 
 // Return false if update struct is of valid type, otherwise flag error and return code from callback
