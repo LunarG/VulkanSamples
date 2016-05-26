@@ -1715,14 +1715,9 @@ class StructWrapperGen:
                 elif self.struct_dict[s][m]['array']:
                     if not self.struct_dict[s][m]['dyn_array']:
                         # Handle static array case
-                        array_init_str = ''
-                        for i in range(int(self.struct_dict[s][m]['array_size'])):
-                            array_init_str += 'pInStruct->%s[%d], ' % (m_name, i)
-                        array_init_str = array_init_str.strip().rstrip(',')
-                        init_list += '\n\t%s{%s},' % (m_name, array_init_str)
-                        init_func_txt += '    for (uint32_t i=0; i<%s; ++i) {\n' % (self.struct_dict[s][m]['array_size'])
-                        init_func_txt += '        %s[i] = pInStruct->%s[i];\n' % (m_name, m_name)
-                        init_func_txt += '    }\n'
+                        construct_txt += '    for (uint32_t i=0; i<%s; ++i) {\n' % (self.struct_dict[s][m]['array_size'])
+                        construct_txt += '        %s[i] = pInStruct->%s[i];\n' % (m_name, m_name)
+                        construct_txt += '    }\n'
                     else:
                         # Init array ptr to NULL
                         init_list += '\n\t%s(NULL),' % (m_name)
