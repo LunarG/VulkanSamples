@@ -3411,7 +3411,7 @@ static bool validateIdleDescriptorSet(const layer_data *my_data, VkDescriptorSet
     return skip_call;
 }
 
-// Free the descriptor set, remove it from setMap and invalidate any cmd buffers that it was bound to
+// Remove set from setMap and delete the set
 static void freeDescriptorSet(layer_data *dev_data, cvdescriptorset::DescriptorSet *descriptor_set) {
     dev_data->setMap.erase(descriptor_set->GetSet());
     delete descriptor_set;
