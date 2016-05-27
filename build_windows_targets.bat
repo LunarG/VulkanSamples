@@ -17,7 +17,7 @@ REM Example:
 REM build_windows_targets.bat 64
 REM deletes build, creates build, runs CMake and compiles 64-bit Debug and Release.
 
-set do_cmake=0
+set do_cmake=1
 set do_32=1
 set do_64=1
 if "%1"=="" goto no_args

@@ -45,9 +45,16 @@ set(definitions
     PRIVATE -DVK_NO_PROTOTYPES
     PRIVATE -DGLM_FORCE_RADIANS)
 
-set(includes
-    PRIVATE ${GLMINC_PREFIX}
-    PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+if(SDK_INCLUDE_PATH)
+    set(includes
+        PRIVATE ${GLMINC_PREFIX}
+        PRIVATE ${SDK_INCLUDE_PATH}
+        PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+else()
+    set(includes
+        PRIVATE ${GLMINC_PREFIX}
+        PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+endif()
 
 set(libraries PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 

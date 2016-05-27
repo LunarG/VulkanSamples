@@ -58,9 +58,10 @@ if (NOT WIN32)
 else()
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/_run_all_tests.ps1 RUN_ALL)
+        FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/_vkvalidatelayerdoc.ps1 VALIDATE_DOC)
         add_custom_target(binary-dir-symlinks ALL
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${RUN_ALL} _run_all_tests.ps1
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${RUN_ALL} _vkvalidatelayerdoc.ps1
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${RUN_ALL} run_all_tests.ps1
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${VALIDATE_DOC} vkvalidatelayerdoc.ps1
             VERBATIM
             )
     endif()
@@ -77,7 +78,12 @@ add_executable(vk_layer_validation_tests layer_validation_tests.cpp ${COMMON_CPP
 set_target_properties(vk_layer_validation_tests
    PROPERTIES
    COMPILE_DEFINITIONS "GTEST_LINKED_AS_SHARED_LIBRARY=1")
-target_link_libraries(vk_layer_validation_tests ${LIBVK} gtest gtest_main VkLayer_utils ${GLSLANG_LIBRARIES})
+if(NOT WIN32)
+   target_link_libraries(vk_layer_validation_tests ${LIBVK} ${XCB_LIBRARIES} ${X11_LIBRARIES} gtest gtest_main VkLayer_utils ${GLSLANG_LIBRARIES})
+endif()
+if(WIN32)
+   target_link_libraries(vk_layer_validation_tests ${LIBVK} gtest gtest_main VkLayer_utils ${GLSLANG_LIBRARIES})
+endif()
 
 add_executable(vk_loader_validation_tests loader_validation_tests.cpp ${COMMON_CPP})
 set_target_properties(vk_loader_validation_tests

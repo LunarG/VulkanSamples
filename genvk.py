@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2013-2015 The Khronos Group Inc.
+# Copyright (c) 2013-2016 The Khronos Group Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ validate= False
 errFilename = None
 diagFilename = 'diag.txt'
 regFilename = 'vk.xml'
+outDir = '.'
 
 if __name__ == '__main__':
     i = 1
@@ -66,6 +67,10 @@ if __name__ == '__main__':
         elif (arg == '-validate'):
             write('Enabling group validation (-validate)', file=sys.stderr)
             validate = True
+        elif (arg == '-outdir'):
+            outDir = sys.argv[i]
+            i = i+1
+            write('Using output directory ', outDir, file=sys.stderr)
         elif (arg[0:1] == '-'):
             write('Unrecognized argument:', arg, file=sys.stderr)
             exit(1)
@@ -278,7 +283,8 @@ buildList = [
         apicall           = '',
         apientry          = 'VKAPI_CALL ',
         apientryp         = 'VKAPI_PTR *',
-        alignFuncParam    = 48)
+        alignFuncParam    = 48,
+        genDirectory      = outDir)
     ],
     [ ParamCheckerOutputGenerator,
       ParamCheckerGeneratorOptions(
@@ -299,7 +305,8 @@ buildList = [
         apicall           = 'VKAPI_ATTR ',
         apientry          = 'VKAPI_CALL ',
         apientryp         = 'VKAPI_PTR *',
-        alignFuncParam    = 48)
+        alignFuncParam    = 48,
+        genDirectory      = outDir)
     ],
     None
 ]
@@ -310,6 +317,11 @@ if (errFilename):
 else:
     errWarn = sys.stderr
 diag = open(diagFilename, 'w')
+
+# check that output directory exists
+if (not os.path.isdir(outDir)):
+    write('Output directory does not exist: ', outDir)
+    raise
 
 def genHeaders():
     # Loop over targets, building each

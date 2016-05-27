@@ -305,6 +305,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDebugReportCallback(
     if (icd) {
         storage_idx = 0;
         for (icd = inst->icds; icd; icd = icd->next) {
+            if (NULL == icd->DestroyDebugReportCallbackEXT) {
+                continue;
+            }
+
             if (icd_info[storage_idx]) {
                 icd->DestroyDebugReportCallbackEXT(
                     icd->instance, icd_info[storage_idx], pAllocator);
@@ -336,6 +340,10 @@ terminator_DestroyDebugReportCallback(VkInstance instance,
     icd_info = *(VkDebugReportCallbackEXT **)&callback;
     storage_idx = 0;
     for (icd = inst->icds; icd; icd = icd->next) {
+        if (NULL == icd->DestroyDebugReportCallbackEXT) {
+            continue;
+        }
+
         if (icd_info[storage_idx]) {
             icd->DestroyDebugReportCallbackEXT(
                 icd->instance, icd_info[storage_idx], pAllocator);

@@ -259,10 +259,10 @@ goto:eof
 
    echo Generating 32-bit Glslang CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
    cmake -G "Visual Studio %VS_VERSION%" -DCMAKE_INSTALL_PREFIX=install ..
-
+   
    echo Building 32-bit Glslang: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug
    msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
-
+   
    REM Check for existence of one lib, even though we should check for all results
    if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslang.lib (
       echo.
@@ -271,16 +271,16 @@ goto:eof
    )
    echo Building Glslang: MSBuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release
    msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
-
+   
    REM Check for existence of one lib, even though we should check for all results
    if not exist %GLSLANG_BUILD_DIR%\glslang\Release\glslang.lib (
       echo.
       echo glslang 32-bit Release build failed!
       set errorCode=1
    )
-
+   
    cd ..
-
+ 
    echo Making 64-bit glslang
    echo *************************
    mkdir build
@@ -289,10 +289,10 @@ goto:eof
 
    echo Generating 64-bit Glslang CMake files for Visual Studio %VS_VERSION% -DCMAKE_INSTALL_PREFIX=install ..
    cmake -G "Visual Studio %VS_VERSION% Win64" -DCMAKE_INSTALL_PREFIX=install ..
-
+   
    echo Building 64-bit Glslang: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
    msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
-
+   
    REM Check for existence of one lib, even though we should check for all results
    if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslang.lib (
       echo.
@@ -301,7 +301,7 @@ goto:eof
    )
    echo Building Glslang: MSBuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
    msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
-
+   
    REM Check for existence of one lib, even though we should check for all results
    if not exist %GLSLANG_BUILD_DIR%\glslang\Release\glslang.lib (
       echo.
@@ -329,20 +329,20 @@ goto:eof
    set SPIRV_TOOLS_BUILD_DIR=%SPIRV_TOOLS_DIR%\build32
 
    cd %SPIRV_TOOLS_BUILD_DIR%
-
+   
    echo Generating 32-bit spirv-tools CMake files for Visual Studio %VS_VERSION% ..
    cmake -G "Visual Studio %VS_VERSION%" ..
-
+   
    echo Building 32-bit spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug
    msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
-
+   
    REM Check for existence of one lib, even though we should check for all results
    if not exist %SPIRV_TOOLS_BUILD_DIR%\source\Debug\SPIRV-Tools.lib (
       echo.
       echo spirv-tools 32-bit Debug build failed!
       set errorCode=1
    )
-
+   
    echo Building 32-bit spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release
    msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release /verbosity:quiet
 
@@ -352,10 +352,10 @@ goto:eof
       echo spirv-tools 32-bit Release build failed!
       set errorCode=1
    )
-
+   
    cd ..
-
-   echo Making 64-bit spirv-tools
+ 
+   echo Making 64-bit spirv-tools  
    echo *************************
    mkdir build
    set SPIRV_TOOLS_BUILD_DIR=%SPIRV_TOOLS_DIR%\build
@@ -363,17 +363,17 @@ goto:eof
 
    echo Generating 64-bit spirv-tools CMake files for Visual Studio %VS_VERSION% ..
    cmake -G "Visual Studio %VS_VERSION% Win64" ..
-
+   
    echo Building 64-bit spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug
    msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
-
+   
    REM Check for existence of one lib, even though we should check for all results
    if not exist %SPIRV_TOOLS_BUILD_DIR%\source\Debug\SPIRV-Tools.lib (
       echo.
       echo spirv-tools 64-bit Debug build failed!
       set errorCode=1
    )
-
+   
    echo Building 64-bit spirv-tools: MSBuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release
    msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release /verbosity:quiet
 

@@ -169,15 +169,22 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/layers")
     set (VULKAN_LOADER ${VULKAN_LOADER_NAME})
 else()
     find_library(VULKAN_LOADER NAMES ${VULKAN_LOADER_NAME}
-                 HINTS "${PROJECT_SOURCE_DIR}/../${BINDATA_DIR}" )
+                 HINTS "${PROJECT_SOURCE_DIR}/../${BINDATA_DIR}" "${PROJECT_SOURCE_DIR}/../x86_64/lib" )
 endif()
 
 set (LIBGLM_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/libs)
 
 if(NOT WIN32 AND NOT ANDROID)
-    include_directories(
-        ${XCB_INCLUDE_DIRS}
-    )
+    if(SDK_INCLUDE_PATH)
+        include_directories(
+            ${XCB_INCLUDE_DIRS}
+            ${SDK_INCLUDE_PATH}
+        )
+    else()
+        include_directories(
+            ${XCB_INCLUDE_DIRS}
+        )
+    endif()
     link_libraries(${XCB_LIBRARIES} ${VULKAN_LOADER} m )
 endif()
 if(WIN32)
