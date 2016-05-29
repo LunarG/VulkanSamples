@@ -280,9 +280,9 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
             auto immut_sampler = p_layout_->GetImmutableSamplerPtrFromIndex(i);
             for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di) {
                 if (immut_sampler)
-                    descriptors_.emplace_back(std::unique_ptr<Descriptor>(new SamplerDescriptor(immut_sampler + di)));
+                    descriptors_.emplace_back(new SamplerDescriptor(immut_sampler + di));
                 else
-                    descriptors_.emplace_back(std::unique_ptr<Descriptor>(new SamplerDescriptor()));
+                    descriptors_.emplace_back(new SamplerDescriptor());
             }
             break;
         }
@@ -290,9 +290,9 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
             auto immut = p_layout_->GetImmutableSamplerPtrFromIndex(i);
             for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di) {
                 if (immut)
-                    descriptors_.emplace_back(std::unique_ptr<Descriptor>(new ImageSamplerDescriptor(immut + di)));
+                    descriptors_.emplace_back(new ImageSamplerDescriptor(immut + di));
                 else
-                    descriptors_.emplace_back(std::unique_ptr<Descriptor>(new ImageSamplerDescriptor()));
+                    descriptors_.emplace_back(new ImageSamplerDescriptor());
             }
             break;
         }
@@ -301,19 +301,19 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
         case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
         case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
             for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di)
-                descriptors_.emplace_back(std::unique_ptr<Descriptor>(new ImageDescriptor(type)));
+                descriptors_.emplace_back(new ImageDescriptor(type));
             break;
         case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
         case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
             for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di)
-                descriptors_.emplace_back(std::unique_ptr<Descriptor>(new TexelDescriptor(type)));
+                descriptors_.emplace_back(new TexelDescriptor(type));
             break;
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
         case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
         case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
             for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di)
-                descriptors_.emplace_back(std::unique_ptr<Descriptor>(new BufferDescriptor(type)));
+                descriptors_.emplace_back(new BufferDescriptor(type));
             break;
         default:
             assert(0); // Bad descriptor type specified
