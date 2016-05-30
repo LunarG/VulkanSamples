@@ -118,16 +118,22 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
            # If a file name contains "=", "@", or " ", or it contains less then 5 dashes or more than
            # 7 dashes, it wasn't installed by the Vulkan Run Time.
            # Note that we need to use return inside of ForEach-Object is to continue with iteration.
-           echo "Rejected $_ - bad format" >>$log
+           echo "ERROR: Rejected $_ - bad format" >>$log
            return
+       }
+       if (!$?) {
+           echo "ERROR: UpdateVulkanSysFolder object $_ is bad format" >>$log;
        }
 
        # If the corresponding vulkaninfo is not present, it wasn't installed by the Vulkan Run Time
        $vulkaninfo=$_ -replace ".dll",".exe"
        $vulkaninfo=$vulkaninfo -replace "vulkan","vulkaninfo"
        if (-not (Test-Path $vulkaninfo)) {
-           echo "Rejected $_ - vulkaninfo not present" >>$log
+           echo "ERROR: Rejected $_ - vulkaninfo not present" >>$log
            return
+       }
+       if (!$?) {
+           echo "ERROR: UpdateVulkanSysFolder failed generating vulkaninfo exe name" >>$log;
        }
 
        $major=$_.Split('-')[2]
@@ -172,27 +178,30 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
           }
        }
        echo "Version $majorOrig $minorOrig $patchOrig $buildnoOrig $prereleaseOrig $prebuildnoOrig" >>$log
+       if (!$?) {
+           echo "ERROR: UpdateVulkanSysFolder during version parsing" >>$log;
+       }
 
        # Make sure fields that are supposed to be numbers are numbers
        if (notNumeric($major)) {
-           echo "Rejected $_ - bad major" >>$log
+           echo "ERROR: Rejected $_ - bad major" >>$log
            return
        }
        if (notNumeric($minor)) {
-           echo "Rejected $_ - bad minor" >>$log
+           echo "ERROR: Rejected $_ - bad minor" >>$log
            return
        }
        if (notNumeric($patch)) {
-           echo "Rejected $_ - bad patch" >>$log
+           echo "ERROR: Rejected $_ - bad patch" >>$log
            return
        }
        if (notNumeric($buildno)) {
-           echo "Rejected $_ - bad buildno" >>$log
+           echo "ERROR: Rejected $_ - bad buildno" >>$log
            return
        }
        if (notNumeric($prebuildno)) {
            if ($prebuildno -ne "z"*10) {
-               echo "Rejected $_ - bad prebuildno" >>$log
+               echo "ERROR: Rejected $_ - bad prebuildno" >>$log
                return
            }
        }
@@ -207,6 +216,10 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
        # Add a new element to the $VulkanDllList array
        echo "Adding $_ to Vulkan dll list " >>$log
        $script:VulkanDllList+="$major=$minor=$patch=$buildno=$prebuildno=$prerelease= $_ @$majorOrig@$minorOrig@$patchOrig@$buildnoOrig@$prereleaseOrig@$prebuildnoOrig@"
+
+       if (!$?) {
+           echo "ERROR: UpdateVulkanSysFolder adding DLL $_ to list" >>$log;
+       }
    }
 
     # If $VulkanDllList contains at least one element, there's at least one vulkan*.dll file.
@@ -217,19 +230,31 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
         # Sort the list. The most recent vulkan-*.dll will be in the last element of the list.
         [array]::sort($script:VulkanDllList)
 
+        if (!$?) {
+           echo "ERROR: UpdateVulkanSysFolder sorting DLL list" >>$log;
+        }
+
         # Put the name of the most recent vulkan-*.dll in $mrVulkanDLL.
         # The most recent vulkanDLL is the second word in the last element of the
         # sorted $VulkanDllList. Copy it to $vulkandll.
         $mrVulkanDll=$script:VulkanDllList[-1].Split(' ')[1]
         echo "copy $mrVulkanDll $vulkandll" >>$log
-        copy $mrVulkanDll $vulkandll
+        Copy-Item $mrVulkanDll $vulkandll -force
+
+        if (!$?) {
+           echo "ERROR: UpdateVulkanSysFolder encountered error during copy $mrVulkanDll $vulkandll" >>$log;
+        }
 
         # Copy the most recent version of vulkaninfo-<abimajor>-*.exe to vulkaninfo.exe.
         # We create the source file name for the copy from $mrVulkanDll.
         $mrVulkaninfo=$mrVulkanDll -replace ".dll",".exe"
         $mrVulkaninfo=$mrVulkaninfo -replace "vulkan","vulkaninfo"
         echo "copy $mrVulkaninfo vulkaninfo.exe" >>$log
-        copy $mrVulkaninfo vulkaninfo.exe
+        Copy-Item $mrVulkaninfo vulkaninfo.exe -force
+
+        if (!$?) {
+           echo "ERROR: UpdateVulkanSysFolder encountered error during copy $mrVulkaninfo vulkaninfo.exe" >>$log;
+        }
 
         # Create the name used in the registry for the SDK associated with $mrVulkanDll.
         $major=$script:VulkanDllList[-1].Split('@')[1]
@@ -247,10 +272,18 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
             $sdktempname=$sdktempname + "." + $prebuildno
         }
         echo "sdkname = $sdktempname" >>$log
+
+        if (!$?) {
+           echo "ERROR: UpdateVulkanSysFolder encountered error generating temp SDK name" >>$log;
+        }
     }
 
     # Return to our previous folder
     Pop-Location
+
+    if (!$?) {
+       echo "ERROR: UpdateVulkanSysFolder popping location" >>$log;
+    }
 
     # Only update the overall script-scope SDK name if we're told to
     if ($writeSdkName -ne 0) {
@@ -265,11 +298,19 @@ if ($ossize -eq 64) {
     # Update the SYSWOW64 Vulkan DLLS/EXEs
     echo "Calling UpdateVulkanSysFolder $winfolder\SYSWOW64 0" >>$log
     UpdateVulkanSysFolder $winfolder\SYSWOW64 0
+
+    if (!$?) {
+        echo "ERROR: Calling UpdateVulkanSysFolder for 64-bit OS" >>$log
+    }
 }
 
 # Update the SYSTEM32 Vulkan DLLS/EXEs
 echo "Calling UpdateVulkanSysFolder $winfolder\SYSTEM32 1" >>$log
 UpdateVulkanSysFolder $winfolder\SYSTEM32 1
+
+if (!$?) {
+    echo "ERROR: Calling UpdateVulkanSysFolder for all OS" >>$log
+}
 
 # Create an array of vulkan sdk install dirs
 
@@ -293,6 +334,10 @@ Get-ChildItem -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Curr
            }
        }
    }
+
+if (!$?) {
+    echo "ERROR: Failed creating array of of Vulkan SDK Install dirs" >>$log
+}
 
 
 # Search list of sdk install dirs for an sdk compatible with $script:sdkname.
@@ -332,6 +377,10 @@ if ($mrVulkanDllInstallDir -eq "") {
             }
         }
     }
+
+    if (!$?) {
+        echo "ERROR: Failed searching VulkanDLLList" >>$log
+    }
 }
 
 # Add C:\Vulkan\SDK\0.9.3 to list of SDK install dirs.
@@ -360,6 +409,11 @@ Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\ExplicitLaye
           }
        }
    }
+
+if (!$?) {
+    echo "ERROR: Failed Removing old layer registry values from HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers" >>$log
+}
+
 # Remove 32-bit layer registry value if we're targeting a 64-bit OS
 if ($ossize -eq 64) {
    Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | Select-Object -ExpandProperty Property |
@@ -372,6 +426,10 @@ if ($ossize -eq 64) {
              }
           }
       }
+
+    if (!$?) {
+        echo "ERROR: Failed Removing old layer registry values from HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers" >>$log
+    }
 }
 
 
@@ -384,12 +442,20 @@ if ($mrVulkanDllInstallDir -ne "") {
     if (-not (Test-Path -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers)) {
         echo "Creating new registry key HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers" >>$log
         New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers | out-null
+
+        if (!$?) {
+            echo "ERROR: Failed creating HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers" >>$log
+        }
     }
     if ($ossize -eq 64) {
         if (-not (Test-Path -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers)) {
             echo "Creating new registry key HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers" >>$log
             New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | out-null
-       }
+
+            if (!$?) {
+                echo "ERROR: Failed creating HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers" >>$log
+            }
+        }
     }
 
 
@@ -400,6 +466,10 @@ if ($mrVulkanDllInstallDir -ne "") {
            ForEach-Object {
                echo "Creating registry value $mrVulkanDllInstallDir\Bin\$_" >>$log
                New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin\$_ -PropertyType DWord -Value 0 | out-null
+
+               if (!$?) {
+                   echo "ERROR: Failed creating $mrVulkanDllInstallDir\Bin\$_" >>$log
+               }
            }
 
         # Create registry values for the WOW6432Node registry location for 32-bit items on a 64-bit OS
@@ -407,6 +477,10 @@ if ($mrVulkanDllInstallDir -ne "") {
            ForEach-Object {
                echo "Creating WOW6432Node registry value $mrVulkanDllInstallDir\Bin32\$_" >>$log
                New-ItemProperty -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin32\$_ -PropertyType DWord -Value 0 | out-null
+
+               if (!$?) {
+                   echo "ERROR: Failed creating $mrVulkanDllInstallDir\Bin32\$_" >>$log
+               }
            }
            
     } else {
@@ -416,7 +490,11 @@ if ($mrVulkanDllInstallDir -ne "") {
            ForEach-Object {
                echo "Creating registry value $mrVulkanDllInstallDir\Bin\$_" >>$log
                New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin32\$_ -PropertyType DWord -Value 0 | out-null
-           }
+
+               if (!$?) {
+                   echo "ERROR: Failed creating $mrVulkanDllInstallDir\Bin\$_" >>$log
+               }
+            }
     
     }
 }
