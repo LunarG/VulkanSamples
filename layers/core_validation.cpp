@@ -9428,16 +9428,18 @@ static bool validateMemoryIsMapped(layer_data *my_data, const char *funcName, ui
                     "(" PRINTF_SIZE_T_SPECIFIER ").",
                     funcName, static_cast<size_t>(pMemRanges[i].offset), static_cast<size_t>(mem_element->second.memRange.offset));
             }
-            if ((mem_element->second.memRange.size != VK_WHOLE_SIZE) &&
-                ((mem_element->second.memRange.offset + mem_element->second.memRange.size) <
-                 (pMemRanges[i].offset + pMemRanges[i].size))) {
+
+            const uint64_t my_dataTerminus =
+                    (mem_element->second.memRange.size == VK_WHOLE_SIZE) ? mem_element->second.allocInfo.allocationSize :
+                                                                           (mem_element->second.memRange.offset + mem_element->second.memRange.size);
+            if (pMemRanges[i].size != VK_WHOLE_SIZE && (my_dataTerminus < (pMemRanges[i].offset + pMemRanges[i].size))) {
                 skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                     VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)pMemRanges[i].memory, __LINE__,
                                     MEMTRACK_INVALID_MAP, "MEM", "%s: Flush/Invalidate upper-bound (" PRINTF_SIZE_T_SPECIFIER
                                                                  ") exceeds the Memory Object's upper-bound "
                                                                  "(" PRINTF_SIZE_T_SPECIFIER ").",
                                     funcName, static_cast<size_t>(pMemRanges[i].offset + pMemRanges[i].size),
-                                    static_cast<size_t>(mem_element->second.memRange.offset + mem_element->second.memRange.size));
+                                    static_cast<size_t>(my_dataTerminus));
             }
         }
     }
