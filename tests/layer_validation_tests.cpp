@@ -5914,6 +5914,45 @@ TEST_F(VkLayerTest, InvalidBufferViewObject) {
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
+TEST_F(VkLayerTest, CreateBufferViewNoMemoryBoundToBuffer) {
+    TEST_DESCRIPTION("Attempt to create a buffer view with a buffer that has"
+                     " no memory bound to it.");
+
+    VkResult err;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreateBufferView called with invalid memory ");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Create a buffer with no bound memory and then attempt to create
+    // a buffer view.
+    VkBufferCreateInfo buff_ci = {};
+    buff_ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buff_ci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buff_ci.size = 256;
+    buff_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkBuffer buffer;
+    err = vkCreateBuffer(m_device->device(), &buff_ci, NULL, &buffer);
+    ASSERT_VK_SUCCESS(err);
+
+    VkBufferViewCreateInfo buff_view_ci = {};
+    buff_view_ci.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+    buff_view_ci.buffer = buffer;
+    buff_view_ci.format = VK_FORMAT_R8_UNORM;
+    buff_view_ci.range = VK_WHOLE_SIZE;
+    VkBufferView buff_view;
+    err =
+        vkCreateBufferView(m_device->device(), &buff_view_ci, NULL, &buff_view);
+
+    m_errorMonitor->VerifyFound();
+    vkDestroyBuffer(m_device->device(), buffer, NULL);
+    // If last error is success, it still created the view, so delete it.
+    if (err == VK_SUCCESS) {
+        vkDestroyBufferView(m_device->device(), buff_view, NULL);
+    }
+}
+
 TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
     // Create a descriptorSet w/ dynamic descriptor and then hit 3 offset error
     // cases:
@@ -12024,6 +12063,64 @@ TEST_F(VkLayerTest, InvalidImageView) {
 
     m_errorMonitor->VerifyFound();
     vkDestroyImage(m_device->device(), image, NULL);
+}
+
+TEST_F(VkLayerTest, CreateImageViewNoMemoryBoundToImage) {
+    VkResult err;
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "vkCreateImageView called with invalid memory ");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Create an image and try to create a view with no memory backing the image
+    VkImage image;
+
+    const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
+    const int32_t tex_width = 32;
+    const int32_t tex_height = 32;
+
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = tex_format;
+    image_create_info.extent.width = tex_width;
+    image_create_info.extent.height = tex_height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.flags = 0;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
+    ASSERT_VK_SUCCESS(err);
+
+    VkImageViewCreateInfo image_view_create_info = {};
+    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_view_create_info.image = image;
+    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    image_view_create_info.format = tex_format;
+    image_view_create_info.subresourceRange.layerCount = 1;
+    image_view_create_info.subresourceRange.baseMipLevel = 0;
+    image_view_create_info.subresourceRange.levelCount = 1;
+    image_view_create_info.subresourceRange.aspectMask =
+        VK_IMAGE_ASPECT_COLOR_BIT;
+
+    VkImageView view;
+    err = vkCreateImageView(m_device->device(), &image_view_create_info, NULL,
+                            &view);
+
+    m_errorMonitor->VerifyFound();
+    vkDestroyImage(m_device->device(), image, NULL);
+    // If last error is success, it still created the view, so delete it.
+    if (err == VK_SUCCESS) {
+        vkDestroyImageView(m_device->device(), view, NULL);
+    }
+
 }
 
 TEST_F(VkLayerTest, InvalidImageViewAspect) {

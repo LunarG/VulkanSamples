@@ -5607,18 +5607,50 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
     return result;
 }
 
+static bool PreCallValidateCreateBufferView(layer_data *dev_data, const VkBufferViewCreateInfo *pCreateInfo) {
+    bool skip_call = false;
+    BUFFER_NODE *buf_node = getBufferNode(dev_data, pCreateInfo->buffer);
+    // If this isn't a sparse buffer, it needs to have memory backing it at CreateBufferView time
+    if (0 == (static_cast<uint32_t>(buf_node->createInfo.flags) & VK_BUFFER_CREATE_SPARSE_BINDING_BIT)) {
+        if (buf_node->mem) {
+            DEVICE_MEM_INFO *pMemObjInfo = getMemObjInfo(dev_data, buf_node->mem);
+            if (!pMemObjInfo) {
+                skip_call |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                            reinterpret_cast<uint64_t &>(buf_node->mem), __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
+                            "vkCreateBufferView called with invalid memory 0x%" PRIx64 " bound to buffer 0x%" PRIx64 ".  Memory "
+                            "must be bound prior to creating a view to a non-sparse buffer.",
+                            reinterpret_cast<uint64_t &>(buf_node->mem), reinterpret_cast<const uint64_t &>(pCreateInfo->buffer));
+            }
+        } else {
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                 VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
+                                 "vkCreateBufferView called with invalid memory bound to buffer 0x%" PRIx64 ".  Memory "
+                                 "must be bound prior to creating a view to a non-sparse buffer.",
+                                 reinterpret_cast<const uint64_t &>(pCreateInfo->buffer));
+        }
+    }
+    // In order to create a valid buffer view, the buffer must have been created with at least one of the
+    // following flags:  UNIFORM_TEXEL_BUFFER_BIT or STORAGE_TEXEL_BUFFER_BIT
+    skip_call = validate_buffer_usage_flags(dev_data, pCreateInfo->buffer,
+                                            VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT,
+                                            false, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
+    return skip_call;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateBufferView(VkDevice device, const VkBufferViewCreateInfo *pCreateInfo,
                                                 const VkAllocationCallbacks *pAllocator, VkBufferView *pView) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    bool skip_call = PreCallValidateCreateBufferView(dev_data, pCreateInfo);
+    lock.unlock();
+    if (skip_call)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->CreateBufferView(device, pCreateInfo, pAllocator, pView);
     if (VK_SUCCESS == result) {
-        std::lock_guard<std::mutex> lock(global_lock);
+        lock.lock();
         dev_data->bufferViewMap[*pView] = unique_ptr<VkBufferViewCreateInfo>(new VkBufferViewCreateInfo(*pCreateInfo));
-        // In order to create a valid buffer view, the buffer must have been created with at least one of the
-        // following flags:  UNIFORM_TEXEL_BUFFER_BIT or STORAGE_TEXEL_BUFFER_BIT
-        validate_buffer_usage_flags(dev_data, pCreateInfo->buffer,
-                                    VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, false,
-                                    "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
+        lock.unlock();
     }
     return result;
 }
@@ -5680,28 +5712,56 @@ static void ResolveRemainingLevelsLayers(layer_data *dev_data, uint32_t *levels,
     }
 }
 
+static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageViewCreateInfo *pCreateInfo) {
+    bool skip_call = false;
+    skip_call |= validate_image_usage_flags(dev_data, pCreateInfo->image,
+                                            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
+                                                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                                            false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
+    IMAGE_NODE *image_node = getImageNode(dev_data, pCreateInfo->image);
+    // If this isn't a sparse image, it needs to have memory backing it at CreateImageView time
+    if (0 == (static_cast<uint32_t>(image_node->createInfo.flags) & VK_IMAGE_CREATE_SPARSE_BINDING_BIT)) {
+        if (MEMTRACKER_SWAP_CHAIN_IMAGE_KEY != image_node->mem) {
+            if (image_node->mem) {
+                DEVICE_MEM_INFO *pMemObjInfo = getMemObjInfo(dev_data, image_node->mem);
+                if (!pMemObjInfo) {
+                    skip_call |= log_msg(
+                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                        reinterpret_cast<uint64_t &>(image_node->mem), __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
+                        "vkCreateImageView called with invalid memory 0x%" PRIx64 " bound to image 0x%" PRIx64 ".  Memory "
+                        "must be bound prior to creating a view to a non-sparse image.",
+                        reinterpret_cast<uint64_t &>(image_node->mem), reinterpret_cast<const uint64_t &>(pCreateInfo->image));
+                }
+            } else {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                     VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
+                                     "vkCreateImageView called with invalid memory bound to image 0x%" PRIx64 ".  Memory "
+                                     "must be bound prior to creating a view to a non-sparse image.",
+                                     reinterpret_cast<const uint64_t &>(pCreateInfo->image));
+            }
+        }
+    }
+    return skip_call;
+}
+
+static inline void PostCallRecordCreateImageView(layer_data *dev_data, const VkImageViewCreateInfo *pCreateInfo, VkImageView *pView) {
+    dev_data->imageViewMap[*pView] = unique_ptr<VkImageViewCreateInfo>(new VkImageViewCreateInfo(*pCreateInfo));
+    ResolveRemainingLevelsLayers(dev_data, &dev_data->imageViewMap[*pView].get()->subresourceRange, pCreateInfo->image);
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageViewCreateInfo *pCreateInfo,
                                                const VkAllocationCallbacks *pAllocator, VkImageView *pView) {
-    bool skipCall = false;
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    {
-        // Validate that img has correct usage flags set
-        std::lock_guard<std::mutex> lock(global_lock);
-        skipCall |= validate_image_usage_flags(dev_data, pCreateInfo->image,
-                VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
-                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
-    }
-
-    if (!skipCall) {
-        result = dev_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pAllocator, pView);
-    }
-
+    std::unique_lock<std::mutex> lock(global_lock);
+    bool skip_call = PreCallValidateCreateImageView(dev_data, pCreateInfo);
+    lock.unlock();
+    if (skip_call)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    VkResult result = dev_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pAllocator, pView);
     if (VK_SUCCESS == result) {
-        std::lock_guard<std::mutex> lock(global_lock);
-        dev_data->imageViewMap[*pView] = unique_ptr<VkImageViewCreateInfo>(new VkImageViewCreateInfo(*pCreateInfo));
-        ResolveRemainingLevelsLayers(dev_data, &dev_data->imageViewMap[*pView].get()->subresourceRange, pCreateInfo->image);
+        lock.lock();
+        PostCallRecordCreateImageView(dev_data, pCreateInfo, pView);
+        lock.unlock();
     }
 
     return result;
