@@ -310,9 +310,6 @@ class DescriptorSet : public BASE_NODE {
     // of objects inserted
     uint32_t GetStorageUpdates(const std::unordered_set<uint32_t> &, std::unordered_set<VkBuffer> *,
                                std::unordered_set<VkImageView> *) const;
-    // For all descriptors in a set, add any buffers and images that may be updated to their respective unordered_sets & return
-    // number of objects inserted
-    uint32_t GetAllStorageUpdates(std::unordered_set<VkBuffer> *, std::unordered_set<VkImageView> *) const;
 
     // Descriptor Update functions. These functions validate state and perform update separately
     // Validate contents of a WriteUpdate

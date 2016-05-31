@@ -451,14 +451,6 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::unordered_
     }
     return num_updates;
 }
-// This is a special case for compute shaders that should eventually be removed once we have proper valid binding info for compute
-// case
-uint32_t cvdescriptorset::DescriptorSet::GetAllStorageUpdates(std::unordered_set<VkBuffer> *buffer_set,
-                                                              std::unordered_set<VkImageView> *image_set) const {
-    std::unordered_set<uint32_t> binding_set;
-    p_layout_->FillBindingSet(&binding_set);
-    return GetStorageUpdates(binding_set, buffer_set, image_set);
-}
 // Set is being deleted or updates so invalidate all bound cmd buffers
 void cvdescriptorset::DescriptorSet::InvalidateBoundCmdBuffers() {
     for (auto cb_node : bound_cmd_buffers_) {

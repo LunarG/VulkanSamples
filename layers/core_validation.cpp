@@ -2659,17 +2659,6 @@ static bool validate_and_update_drawtime_descriptor_state(
     }
     return result;
 }
-// TODO : This is a temp function that naively updates bound storage images and buffers based on which descriptor sets are bound.
-//   When validate_and_update_draw_state() handles compute shaders so that active_slots is correct for compute pipelines, this
-//   function can be killed and validate_and_update_draw_state() used instead
-static void update_shader_storage_images_and_buffers(layer_data *dev_data, GLOBAL_CB_NODE *pCB) {
-    // For the bound descriptor sets, pull off any storage images and buffers
-    //  This may be more than are actually updated depending on which are active, but for now this is a stop-gap for compute
-    //  pipelines
-    for (auto set : pCB->lastBound[VK_PIPELINE_BIND_POINT_COMPUTE].uniqueBoundSets) {
-        set->GetAllStorageUpdates(&pCB->updateBuffers, &pCB->updateImages);
-    }
-}
 
 // For given pipeline, return number of MSAA samples, or one if MSAA disabled
 static VkSampleCountFlagBits getNumSamples(PIPELINE_NODE const *pipe) {
@@ -6884,8 +6873,6 @@ VKAPI_ATTR void VKAPI_CALL CmdDispatch(VkCommandBuffer commandBuffer, uint32_t x
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skipCall |= validate_and_update_draw_state(dev_data, pCB, false, VK_PIPELINE_BIND_POINT_COMPUTE);
-        // TODO : Call below is temporary until call above can be re-enabled
-        update_shader_storage_images_and_buffers(dev_data, pCB);
         skipCall |= markStoreImagesAndBuffersAsWritten(dev_data, pCB);
         skipCall |= addCmd(dev_data, pCB, CMD_DISPATCH, "vkCmdDispatch()");
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdDispatch");
@@ -6907,8 +6894,6 @@ CmdDispatchIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         skipCall |= validate_and_update_draw_state(dev_data, pCB, false, VK_PIPELINE_BIND_POINT_COMPUTE);
-        // TODO : Call below is temporary until call above can be re-enabled
-        update_shader_storage_images_and_buffers(dev_data, pCB);
         skipCall |= markStoreImagesAndBuffersAsWritten(dev_data, pCB);
         skipCall |= addCmd(dev_data, pCB, CMD_DISPATCHINDIRECT, "vkCmdDispatchIndirect()");
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdDispatchIndirect");
