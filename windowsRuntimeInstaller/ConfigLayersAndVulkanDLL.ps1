@@ -48,7 +48,7 @@ New-Item -ItemType Directory -Force -Path $log | Out-Null
 $logascii=$log+"\ConfigLayersAndVulkanDLL.log"
 
 # Temp to be used for debugging failure to install issue
-$logascii2=$Env:Temp+"\ConfigLayersAndVulkanDLL_debug.log"
+#$logascii2=$Env:Temp+"\ConfigLayersAndVulkanDLL_debug.log"
 
 $log=$log+"\ConfigLayersAndVulkanDLL16.log"
 
@@ -565,7 +565,7 @@ Stop-Transcript
 Get-Content $log | Out-File -encoding ascii -filepath $logascii
 
 # Temp to be used for debugging failure to install issue (as VulkanRT folder might get removed)
-Get-Content $log | Out-File -encoding ascii -filepath $logascii2
+#Get-Content $log | Out-File -encoding ascii -filepath $logascii2
 
 
 # Remove the unicode log as we no longer need it.
