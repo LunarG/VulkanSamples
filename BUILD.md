@@ -155,13 +155,11 @@ Tested on OSX version 10.11.4
 ```
 - Ensure Homebrew is at the beginning of your PATH:
 ```
-export PATH=$HOME/homebrew/bin:$PATH
+export PATH=/usr/local/bin:$PATH
 ```
 - Add packages with the following (may need refinement)
 ```
-brew install cmake
-brew install python
-brew install python3
+brew install cmake python python3 git
 ```
 ### Build steps for Android
 Use the following to ensure the Android build works.
@@ -171,7 +169,7 @@ Follow the setup steps for Linux or OSX above, then from your terminal:
 cd build-android
 ./update_external_sources_android.sh
 ./android-generate.sh
-ndk-build
+ndk-build -j $(sysctl -n hw.ncpu)
 ```
 #### Windows
 Follow the setup steps for Windows above, then from Developer Command Prompt for VS2013:
