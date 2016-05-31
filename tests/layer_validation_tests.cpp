@@ -9845,6 +9845,90 @@ TEST_F(VkLayerTest, CreatePipelinePushConstantsNotInLayout) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, CreateComputePipelineMissingDescriptor) {
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Shader uses descriptor slot 0.0");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    char const *csSource =
+        "#version 450\n"
+        "\n"
+        "layout(local_size_x=1) in;\n"
+        "layout(set=0, binding=0) buffer block { vec4 x; };\n"
+        "void main(){\n"
+        "   x = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj cs(m_device, csSource, VK_SHADER_STAGE_COMPUTE_BIT, this);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    VkComputePipelineCreateInfo cpci = {
+        VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        nullptr, 0, {
+          VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+          nullptr, 0, VK_SHADER_STAGE_COMPUTE_BIT,
+          cs.handle(), "main", nullptr
+        },
+        descriptorSet.GetPipelineLayout(),
+        VK_NULL_HANDLE, -1
+    };
+
+    VkPipeline pipe;
+    VkResult err = vkCreateComputePipelines(
+        m_device->device(), VK_NULL_HANDLE, 1, &cpci, nullptr, &pipe);
+
+    m_errorMonitor->VerifyFound();
+
+    if (err == VK_SUCCESS) {
+        vkDestroyPipeline(m_device->device(), pipe, nullptr);
+    }
+}
+
+TEST_F(VkLayerTest, CreateComputePipelineMissingDescriptorUnusedPositive) {
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    char const *csSource =
+        "#version 450\n"
+        "\n"
+        "layout(local_size_x=1) in;\n"
+        "layout(set=0, binding=0) buffer block { vec4 x; };\n"
+        "void main(){\n"
+        "   // x is not used.\n"
+        "}\n";
+
+    VkShaderObj cs(m_device, csSource, VK_SHADER_STAGE_COMPUTE_BIT, this);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    VkComputePipelineCreateInfo cpci = {
+        VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        nullptr, 0, {
+          VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+          nullptr, 0, VK_SHADER_STAGE_COMPUTE_BIT,
+          cs.handle(), "main", nullptr
+        },
+        descriptorSet.GetPipelineLayout(),
+        VK_NULL_HANDLE, -1
+    };
+
+    VkPipeline pipe;
+    VkResult err = vkCreateComputePipelines(
+        m_device->device(), VK_NULL_HANDLE, 1, &cpci, nullptr, &pipe);
+
+    m_errorMonitor->VerifyNotFound();
+
+    if (err == VK_SUCCESS) {
+        vkDestroyPipeline(m_device->device(), pipe, nullptr);
+    }
+}
+
 #endif // SHADER_CHECKER_TESTS
 
 #if DEVICE_LIMITS_TESTS

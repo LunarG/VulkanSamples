@@ -5673,6 +5673,9 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
         // memcpy(&pPipeNode[i]->computePipelineCI, (const void *)&pCreateInfos[i], sizeof(VkComputePipelineCreateInfo));
 
         // TODO: Add Compute Pipeline Verification
+        skipCall |= !validate_compute_pipeline(dev_data->report_data, pPipeNode[i],
+                                               &dev_data->phys_dev_properties.features,
+                                               dev_data->shaderModuleMap);
         // skipCall |= verifyPipelineCreateState(dev_data, device, pPipeNode[i]);
     }
 
