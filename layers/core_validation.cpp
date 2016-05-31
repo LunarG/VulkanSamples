@@ -8897,11 +8897,12 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
     auto framebuffer = pRenderPassBegin ? getFramebuffer(dev_data, pRenderPassBegin->framebuffer) : nullptr;
     if (pCB) {
         if (renderPass) {
-#if MTMERGE
+            uint32_t clear_op_count = 0;
             pCB->activeFramebuffer = pRenderPassBegin->framebuffer;
             for (size_t i = 0; i < renderPass->attachments.size(); ++i) {
                 MT_FB_ATTACHMENT_INFO &fb_info = framebuffer->attachments[i];
                 if (renderPass->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+                    ++clear_op_count;
                     std::function<bool()> function = [=]() {
                         set_memory_valid(dev_data, fb_info.mem, true, fb_info.image);
                         return false;
@@ -8926,7 +8927,15 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                     pCB->validate_functions.push_back(function);
                 }
             }
-#endif
+            if (clear_op_count > pRenderPassBegin->clearValueCount) {
+                skipCall |= log_msg(
+                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                    reinterpret_cast<uint64_t &>(renderPass), __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
+                    "In vkCmdBeginRenderPass() the VkRenderPassBeginInfo struct has a clearValueCount of %u but the actual number "
+                    "of attachments in renderPass 0x%" PRIx64 " that use VK_ATTACHMENT_LOAD_OP_CLEAR is %u. The clearValueCount "
+                                                              "must therefore be greater than or equal to %u.",
+                    pRenderPassBegin->clearValueCount, reinterpret_cast<uint64_t &>(renderPass), clear_op_count, clear_op_count);
+            }
             skipCall |= VerifyRenderAreaBounds(dev_data, pRenderPassBegin);
             skipCall |= VerifyFramebufferAndRenderPassLayouts(dev_data, pCB, pRenderPassBegin);
             skipCall |= insideRenderPass(dev_data, pCB, "vkCmdBeginRenderPass");
