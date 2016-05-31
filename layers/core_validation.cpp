@@ -2784,9 +2784,10 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
     }
 
     // Now complete other state checks
-    // TODO : When Compute shaders are properly parsed, fix this section to validate them as well
     if (state.pipelineLayout) {
         string errorString;
+        auto pipelineLayout = (bindPoint == VK_PIPELINE_BIND_POINT_GRAPHICS) ? pPipe->graphicsPipelineCI.layout : pPipe->computePipelineCI.layout;
+
         // Need a vector (vs. std::set) of active Sets for dynamicOffset validation in case same set bound w/ different offsets
         vector<std::tuple<cvdescriptorset::DescriptorSet *, unordered_set<uint32_t>, std::vector<uint32_t> const *>> activeSetBindingsPairs;
         for (auto & setBindingPair : pPipe->active_slots) {
@@ -2798,7 +2799,7 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
                                   "VkPipeline 0x%" PRIxLEAST64 " uses set #%u but that set is not bound.", (uint64_t)pPipe->pipeline,
                                   setIndex);
             } else if (!verify_set_layout_compatibility(my_data, state.boundDescriptorSets[setIndex],
-                                                        pPipe->graphicsPipelineCI.layout, setIndex, errorString)) {
+                                                        pipelineLayout, setIndex, errorString)) {
                 // Set is bound but not compatible w/ overlapping pipelineLayout from PSO
                 VkDescriptorSet setHandle = state.boundDescriptorSets[setIndex]->GetSet();
                 result |=
@@ -2806,7 +2807,7 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
                             (uint64_t)setHandle, __LINE__, DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, "DS",
                             "VkDescriptorSet (0x%" PRIxLEAST64
                             ") bound as set #%u is not compatible with overlapping VkPipelineLayout 0x%" PRIxLEAST64 " due to: %s",
-                            (uint64_t)setHandle, setIndex, (uint64_t)pPipe->graphicsPipelineCI.layout, errorString.c_str());
+                            (uint64_t)setHandle, setIndex, (uint64_t)pipelineLayout, errorString.c_str());
             } else { // Valid set is bound and layout compatible, validate that it's updated
                 // Pull the set node
                 cvdescriptorset::DescriptorSet *pSet = state.boundDescriptorSets[setIndex];
