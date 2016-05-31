@@ -2681,25 +2681,75 @@ static VkSampleCountFlagBits getNumSamples(PIPELINE_NODE const *pipe) {
 }
 
 // Validate draw-time state related to the PSO
-static bool validatePipelineDrawtimeState(layer_data const *my_data, const GLOBAL_CB_NODE *pCB,
-                                          const VkPipelineBindPoint pipelineBindPoint, PIPELINE_NODE const *pPipeline) {
+static bool validatePipelineDrawtimeState(layer_data const *my_data,
+                                          LAST_BOUND_STATE const &state,
+                                          const GLOBAL_CB_NODE *pCB,
+                                          PIPELINE_NODE const *pPipeline) {
     bool skip_call = false;
-    if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
-        // Verify that any MSAA request in PSO matches sample# in bound FB
-        // Skip the check if rasterization is disabled.
-        if (!pPipeline->graphicsPipelineCI.pRasterizationState ||
-            (pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) {
-            VkSampleCountFlagBits pso_num_samples = getNumSamples(pPipeline);
-            if (pCB->activeRenderPass) {
-                const VkRenderPassCreateInfo *render_pass_info = pCB->activeRenderPass->pCreateInfo;
-                const VkSubpassDescription *subpass_desc = &render_pass_info->pSubpasses[pCB->activeSubpass];
-                VkSampleCountFlagBits subpass_num_samples = VkSampleCountFlagBits(0);
-                uint32_t i;
 
-                const safe_VkPipelineColorBlendStateCreateInfo *color_blend_state = pPipeline->graphicsPipelineCI.pColorBlendState;
-                if ((color_blend_state != NULL) && (pCB->activeSubpass == pPipeline->graphicsPipelineCI.subpass) &&
-                    (color_blend_state->attachmentCount != subpass_desc->colorAttachmentCount)) {
-                    skip_call |=
+    // Verify Vtx binding
+    if (pPipeline->vertexBindingDescriptions.size() > 0) {
+        for (size_t i = 0; i < pPipeline->vertexBindingDescriptions.size(); i++) {
+            if ((pCB->currentDrawData.buffers.size() < (i + 1)) || (pCB->currentDrawData.buffers[i] == VK_NULL_HANDLE)) {
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                  __LINE__, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
+                                  "The Pipeline State Object (0x%" PRIxLEAST64
+                                  ") expects that this Command Buffer's vertex binding Index " PRINTF_SIZE_T_SPECIFIER
+                                  " should be set via vkCmdBindVertexBuffers.",
+                                  (uint64_t)state.pipeline, i);
+            }
+        }
+    } else {
+        if (!pCB->currentDrawData.buffers.empty()) {
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0,
+                              0, __LINE__, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
+                              "Vertex buffers are bound to command buffer (0x%" PRIxLEAST64
+                              ") but no vertex buffers are attached to this Pipeline State Object (0x%" PRIxLEAST64 ").",
+                              (uint64_t)pCB->commandBuffer, (uint64_t)state.pipeline);
+        }
+    }
+    // If Viewport or scissors are dynamic, verify that dynamic count matches PSO count.
+    // Skip check if rasterization is disabled or there is no viewport.
+    if ((!pPipeline->graphicsPipelineCI.pRasterizationState ||
+         (pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) &&
+        pPipeline->graphicsPipelineCI.pViewportState) {
+        bool dynViewport = isDynamic(pPipeline, VK_DYNAMIC_STATE_VIEWPORT);
+        bool dynScissor = isDynamic(pPipeline, VK_DYNAMIC_STATE_SCISSOR);
+        if (dynViewport) {
+            if (pCB->viewports.size() != pPipeline->graphicsPipelineCI.pViewportState->viewportCount) {
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                  __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                                  "Dynamic viewportCount from vkCmdSetViewport() is " PRINTF_SIZE_T_SPECIFIER
+                                  ", but PSO viewportCount is %u. These counts must match.",
+                                  pCB->viewports.size(), pPipeline->graphicsPipelineCI.pViewportState->viewportCount);
+            }
+        }
+        if (dynScissor) {
+            if (pCB->scissors.size() != pPipeline->graphicsPipelineCI.pViewportState->scissorCount) {
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                  __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                                  "Dynamic scissorCount from vkCmdSetScissor() is " PRINTF_SIZE_T_SPECIFIER
+                                  ", but PSO scissorCount is %u. These counts must match.",
+                                  pCB->scissors.size(), pPipeline->graphicsPipelineCI.pViewportState->scissorCount);
+            }
+        }
+    }
+
+    // Verify that any MSAA request in PSO matches sample# in bound FB
+    // Skip the check if rasterization is disabled.
+    if (!pPipeline->graphicsPipelineCI.pRasterizationState ||
+        (pPipeline->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) {
+        VkSampleCountFlagBits pso_num_samples = getNumSamples(pPipeline);
+        if (pCB->activeRenderPass) {
+            const VkRenderPassCreateInfo *render_pass_info = pCB->activeRenderPass->pCreateInfo;
+            const VkSubpassDescription *subpass_desc = &render_pass_info->pSubpasses[pCB->activeSubpass];
+            VkSampleCountFlagBits subpass_num_samples = VkSampleCountFlagBits(0);
+            uint32_t i;
+
+            const safe_VkPipelineColorBlendStateCreateInfo *color_blend_state = pPipeline->graphicsPipelineCI.pColorBlendState;
+            if ((color_blend_state != NULL) && (pCB->activeSubpass == pPipeline->graphicsPipelineCI.subpass) &&
+                (color_blend_state->attachmentCount != subpass_desc->colorAttachmentCount)) {
+                skip_call |=
                         log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                                 reinterpret_cast<const uint64_t &>(pPipeline->pipeline), __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
                                 "Render pass subpass %u mismatch with blending state defined and blend state attachment "
@@ -2707,53 +2757,51 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data, const GLOBA
                                 "must be the same at draw-time.",
                                 pCB->activeSubpass, color_blend_state->attachmentCount, subpass_desc->colorAttachmentCount,
                                 reinterpret_cast<const uint64_t &>(pPipeline->pipeline));
+            }
+
+            for (i = 0; i < subpass_desc->colorAttachmentCount; i++) {
+                VkSampleCountFlagBits samples;
+
+                if (subpass_desc->pColorAttachments[i].attachment == VK_ATTACHMENT_UNUSED)
+                    continue;
+
+                samples = render_pass_info->pAttachments[subpass_desc->pColorAttachments[i].attachment].samples;
+                if (subpass_num_samples == static_cast<VkSampleCountFlagBits>(0)) {
+                    subpass_num_samples = samples;
+                } else if (subpass_num_samples != samples) {
+                    subpass_num_samples = static_cast<VkSampleCountFlagBits>(-1);
+                    break;
                 }
-
-                for (i = 0; i < subpass_desc->colorAttachmentCount; i++) {
-                    VkSampleCountFlagBits samples;
-
-                    if (subpass_desc->pColorAttachments[i].attachment == VK_ATTACHMENT_UNUSED)
-                        continue;
-
-                    samples = render_pass_info->pAttachments[subpass_desc->pColorAttachments[i].attachment].samples;
-                    if (subpass_num_samples == static_cast<VkSampleCountFlagBits>(0)) {
-                        subpass_num_samples = samples;
-                    } else if (subpass_num_samples != samples) {
-                        subpass_num_samples = static_cast<VkSampleCountFlagBits>(-1);
-                        break;
-                    }
-                }
-                if ((subpass_desc->pDepthStencilAttachment != NULL) &&
-                    (subpass_desc->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED)) {
-                    const VkSampleCountFlagBits samples =
+            }
+            if ((subpass_desc->pDepthStencilAttachment != NULL) &&
+                (subpass_desc->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED)) {
+                const VkSampleCountFlagBits samples =
                         render_pass_info->pAttachments[subpass_desc->pDepthStencilAttachment->attachment].samples;
-                    if (subpass_num_samples == static_cast<VkSampleCountFlagBits>(0))
-                        subpass_num_samples = samples;
-                    else if (subpass_num_samples != samples)
-                        subpass_num_samples = static_cast<VkSampleCountFlagBits>(-1);
-                }
+                if (subpass_num_samples == static_cast<VkSampleCountFlagBits>(0))
+                    subpass_num_samples = samples;
+                else if (subpass_num_samples != samples)
+                    subpass_num_samples = static_cast<VkSampleCountFlagBits>(-1);
+            }
 
-                if (((subpass_desc->colorAttachmentCount > 0) || (subpass_desc->pDepthStencilAttachment != NULL)) &&
-                    (pso_num_samples != subpass_num_samples)) {
-                    skip_call |=
+            if (((subpass_desc->colorAttachmentCount > 0) || (subpass_desc->pDepthStencilAttachment != NULL)) &&
+                (pso_num_samples != subpass_num_samples)) {
+                skip_call |=
                         log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                                 reinterpret_cast<const uint64_t &>(pPipeline->pipeline), __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
                                 "Num samples mismatch! At draw-time in Pipeline (0x%" PRIxLEAST64
                                 ") with %u samples while current RenderPass (0x%" PRIxLEAST64 ") w/ %u samples!",
                                 reinterpret_cast<const uint64_t &>(pPipeline->pipeline), pso_num_samples,
                                 reinterpret_cast<const uint64_t &>(pCB->activeRenderPass->renderPass), subpass_num_samples);
-                }
-            } else {
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                                     reinterpret_cast<const uint64_t &>(pPipeline->pipeline), __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
-                                     "No active render pass found at draw-time in Pipeline (0x%" PRIxLEAST64 ")!",
-                                     reinterpret_cast<const uint64_t &>(pPipeline->pipeline));
             }
+        } else {
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                                 reinterpret_cast<const uint64_t &>(pPipeline->pipeline), __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
+                                 "No active render pass found at draw-time in Pipeline (0x%" PRIxLEAST64 ")!",
+                                 reinterpret_cast<const uint64_t &>(pPipeline->pipeline));
         }
-        // TODO : Add more checks here
-    } else {
-        // TODO : Validate non-gfx pipeline updates
     }
+    // TODO : Add more checks here
+
     return skip_call;
 }
 
@@ -2775,13 +2823,6 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
     // First check flag states
     if (VK_PIPELINE_BIND_POINT_GRAPHICS == bindPoint)
         result = validate_draw_state_flags(my_data, pCB, pPipe, indexedDraw);
-    else {
-        // First block of code below to validate active sets should eventually
-        //  work for the compute case but currently doesn't so return early for now
-        // TODO : When active sets in compute shaders are correctly parsed,
-        //  stop returning early here and handle them in top block below
-        return result;
-    }
 
     // Now complete other state checks
     if (state.pipelineLayout) {
@@ -2833,59 +2874,10 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
         // For given active slots, verify any dynamic descriptors and record updated images & buffers
         result |= validate_and_update_drawtime_descriptor_state(my_data, pCB, activeSetBindingsPairs);
     }
-    // TODO : If/when compute pipelines/shaders are handled above, code below is only for gfx bind poing
-    //if (VK_PIPELINE_BIND_POINT_GRAPHICS == bindPoint) {
-    // Verify Vtx binding
-    if (pPipe->vertexBindingDescriptions.size() > 0) {
-        for (size_t i = 0; i < pPipe->vertexBindingDescriptions.size(); i++) {
-            if ((pCB->currentDrawData.buffers.size() < (i + 1)) || (pCB->currentDrawData.buffers[i] == VK_NULL_HANDLE)) {
-                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                  __LINE__, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
-                                  "The Pipeline State Object (0x%" PRIxLEAST64
-                                  ") expects that this Command Buffer's vertex binding Index " PRINTF_SIZE_T_SPECIFIER
-                                  " should be set via vkCmdBindVertexBuffers.",
-                                  (uint64_t)state.pipeline, i);
-            }
-        }
-    } else {
-        if (!pCB->currentDrawData.buffers.empty()) {
-            result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0,
-                              0, __LINE__, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
-                              "Vertex buffers are bound to command buffer (0x%" PRIxLEAST64
-                              ") but no vertex buffers are attached to this Pipeline State Object (0x%" PRIxLEAST64 ").",
-                              (uint64_t)pCB->commandBuffer, (uint64_t)state.pipeline);
-        }
-    }
-    // If Viewport or scissors are dynamic, verify that dynamic count matches PSO count.
-    // Skip check if rasterization is disabled or there is no viewport.
-    if ((!pPipe->graphicsPipelineCI.pRasterizationState ||
-         (pPipe->graphicsPipelineCI.pRasterizationState->rasterizerDiscardEnable == VK_FALSE)) &&
-        pPipe->graphicsPipelineCI.pViewportState) {
-        bool dynViewport = isDynamic(pPipe, VK_DYNAMIC_STATE_VIEWPORT);
-        bool dynScissor = isDynamic(pPipe, VK_DYNAMIC_STATE_SCISSOR);
-        if (dynViewport) {
-            if (pCB->viewports.size() != pPipe->graphicsPipelineCI.pViewportState->viewportCount) {
-                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                  __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                                  "Dynamic viewportCount from vkCmdSetViewport() is " PRINTF_SIZE_T_SPECIFIER
-                                  ", but PSO viewportCount is %u. These counts must match.",
-                                  pCB->viewports.size(), pPipe->graphicsPipelineCI.pViewportState->viewportCount);
-            }
-        }
-        if (dynScissor) {
-            if (pCB->scissors.size() != pPipe->graphicsPipelineCI.pViewportState->scissorCount) {
-                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                  __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                                  "Dynamic scissorCount from vkCmdSetScissor() is " PRINTF_SIZE_T_SPECIFIER
-                                  ", but PSO scissorCount is %u. These counts must match.",
-                                  pCB->scissors.size(), pPipe->graphicsPipelineCI.pViewportState->scissorCount);
-            }
-        }
-    }
-    //} // end of "if (VK_PIPELINE_BIND_POINT_GRAPHICS == bindPoint) {" block
 
     // Check general pipeline state that needs to be validated at drawtime
-    result |= validatePipelineDrawtimeState(my_data, pCB, bindPoint, pPipe);
+    if (VK_PIPELINE_BIND_POINT_GRAPHICS == bindPoint)
+        result |= validatePipelineDrawtimeState(my_data, state, pCB, pPipe);
 
     return result;
 }
