@@ -1,4 +1,5 @@
 # This is an example vk_layer_settings.txt file.
+#
 #  This file allows for per-layer settings which can dynamically affect layer
 #  behavior. Comments in this file are denoted with the "#" char.
 #  Settings lines are of the form "<LayerIdentifier>.<SettingName> = <SettingValue>"
@@ -26,6 +27,9 @@
 #    VK_DBG_LAYER_ACTION_CALLBACK - Call user defined callback function(s) that
 #       have been registered via the VK_EXT_LUNARG_debug_report extension. Since
 #       app must register callback, this is a NOOP for the settings file.
+#    VK_DBG_LAYER_DEBUG_OUTPUT [Windows only] - Log a txt message using the Windows
+#       OutputDebugString function -- messages will show up in Visual Studio output
+#       window, for instance.
 #    VK_DBG_LAYER_ACTION_BREAK - Trigger a breakpoint.
 #
 #   REPORT_FLAGS:
@@ -33,8 +37,9 @@
 #   <LayerIdentifier>.report_flags : This is a comma-delineated list of options telling
 #    the layer what types of messages it should report back. Options are:
 #    info - Report informational messages
-#    warn - Report warnings of using the API in an unrecommended manner which may
-#       also lead to undefined behavior
+#    warn - Report warnings from using the API in a manner which may lead to undefined
+#           behavior or to warn the user of common trouble spots. A warning does NOT
+#           necessarily signify illegal application behavior.
 #    perf - Report using the API in a way that may cause suboptimal performance
 #    error - Report errors in API usage
 #    debug - For layer development. Report messages for debugging layer behavior

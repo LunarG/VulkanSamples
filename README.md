@@ -6,11 +6,12 @@ This project provides Khronos official ICD loader and validation layers for Vulk
 
 Vulkan is an Explicit API, enabling direct control over how GPUs actually work. No (or very little) validation
 or error checking is done inside a Vulkan driver. Applications have full control and responsibility. Any errors in
-how Vulkan is used often result in a crash. This project provides standard validation layers that can be enabled to ease development by 
-helping developers verify their applications correctly use the Vulkan API.
+how Vulkan is used often result in a crash. This project provides standard validation layers that can be enabled
+to ease development by helping developers verify their applications correctly use the Vulkan API.
 
-Vulkan supports multiple GPUs and multiple global contexts (VkInstance). The ICD loader is necessary to support multiple GPUs  and the VkInstance level Vulkan commands.  Additionally, the loader manages inserting Vulkan layer libraries,
-including validation layers between the application and the ICD.
+Vulkan supports multiple GPUs and multiple global contexts (VkInstance). The ICD loader is necessary to
+support multiple GPUs  and the VkInstance level Vulkan commands.  Additionally, the loader manages inserting
+Vulkan layer libraries, including validation layers between the application and the ICD.
 
 The following components are available in this repository:
 - Vulkan header files
