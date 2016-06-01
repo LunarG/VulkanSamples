@@ -841,15 +841,16 @@ void cvdescriptorset::TexelDescriptor::CopyUpdate(const Descriptor *src) {
 // If the update hits an issue for which the callback returns "true", meaning that the call down the chain should
 //  be skipped, then true is returned.
 // If there is no issue with the update, then false is returned.
-bool cvdescriptorset::ValidateUpdateDescriptorSets(
-    const debug_report_data *report_data, const std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> &set_map,
-    uint32_t write_count, const VkWriteDescriptorSet *p_wds, uint32_t copy_count, const VkCopyDescriptorSet *p_cds) {
+bool cvdescriptorset::ValidateUpdateDescriptorSets(const debug_report_data *report_data,
+                                                   const core_validation::layer_data *dev_data, uint32_t write_count,
+                                                   const VkWriteDescriptorSet *p_wds, uint32_t copy_count,
+                                                   const VkCopyDescriptorSet *p_cds) {
     bool skip_call = false;
     // Validate Write updates
     for (uint32_t i = 0; i < write_count; i++) {
         auto dest_set = p_wds[i].dstSet;
-        auto set_pair = set_map.find(dest_set);
-        if (set_pair == set_map.end()) {
+        auto set_node = core_validation::getSetNode(dev_data, dest_set);
+        if (!set_node) {
             skip_call |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                         reinterpret_cast<uint64_t &>(dest_set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
@@ -857,7 +858,7 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(
                         reinterpret_cast<uint64_t &>(dest_set));
         } else {
             std::string error_str;
-            if (!set_pair->second->ValidateWriteUpdate(report_data, &p_wds[i], &error_str)) {
+            if (!set_node->ValidateWriteUpdate(report_data, &p_wds[i], &error_str)) {
                 skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                      reinterpret_cast<uint64_t &>(dest_set), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
                                      "vkUpdateDescriptorsSets() failed write update validation for Descriptor Set 0x%" PRIx64
@@ -870,15 +871,15 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(
     for (uint32_t i = 0; i < copy_count; ++i) {
         auto dst_set = p_cds[i].dstSet;
         auto src_set = p_cds[i].srcSet;
-        auto src_pair = set_map.find(src_set);
-        auto dst_pair = set_map.find(dst_set);
-        if (src_pair == set_map.end()) {
+        auto src_node = core_validation::getSetNode(dev_data, src_set);
+        auto dst_node = core_validation::getSetNode(dev_data, dst_set);
+        if (!src_node) {
             skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                  reinterpret_cast<uint64_t &>(src_set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
                                  "Cannot call vkUpdateDescriptorSets() to copy from descriptor set 0x%" PRIxLEAST64
                                  " that has not been allocated.",
                                  reinterpret_cast<uint64_t &>(src_set));
-        } else if (dst_pair == set_map.end()) {
+        } else if (!dst_node) {
             skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                  reinterpret_cast<uint64_t &>(dst_set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
                                  "Cannot call vkUpdateDescriptorSets() to copy to descriptor set 0x%" PRIxLEAST64
@@ -886,7 +887,7 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(
                                  reinterpret_cast<uint64_t &>(dst_set));
         } else {
             std::string error_str;
-            if (!dst_pair->second->ValidateCopyUpdate(report_data, &p_cds[i], src_pair->second, &error_str)) {
+            if (!dst_node->ValidateCopyUpdate(report_data, &p_cds[i], src_node, &error_str)) {
                 skip_call |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                             reinterpret_cast<uint64_t &>(dst_set), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
@@ -904,26 +905,26 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(
 //  with the same set of updates.
 // This is split from the validate code to allow validation prior to calling down the chain, and then update after
 //  calling down the chain.
-void cvdescriptorset::PerformUpdateDescriptorSets(
-    const std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> &set_map, uint32_t write_count,
-    const VkWriteDescriptorSet *p_wds, uint32_t copy_count, const VkCopyDescriptorSet *p_cds) {
+void cvdescriptorset::PerformUpdateDescriptorSets(const core_validation::layer_data *dev_data, uint32_t write_count,
+                                                  const VkWriteDescriptorSet *p_wds, uint32_t copy_count,
+                                                  const VkCopyDescriptorSet *p_cds) {
     // Write updates first
     uint32_t i = 0;
     for (i = 0; i < write_count; ++i) {
         auto dest_set = p_wds[i].dstSet;
-        auto set_pair = set_map.find(dest_set);
-        if (set_pair != set_map.end()) {
-            set_pair->second->PerformWriteUpdate(&p_wds[i]);
+        auto set_node = core_validation::getSetNode(dev_data, dest_set);
+        if (set_node) {
+            set_node->PerformWriteUpdate(&p_wds[i]);
         }
     }
     // Now copy updates
     for (i = 0; i < copy_count; ++i) {
         auto dst_set = p_cds[i].dstSet;
         auto src_set = p_cds[i].srcSet;
-        auto src_pair = set_map.find(src_set);
-        auto dst_pair = set_map.find(dst_set);
-        if (src_pair != set_map.end() && dst_pair != set_map.end()) {
-            dst_pair->second->PerformCopyUpdate(&p_cds[i], src_pair->second);
+        auto src_node = core_validation::getSetNode(dev_data, src_set);
+        auto dst_node = core_validation::getSetNode(dev_data, dst_set);
+        if (src_node && dst_node) {
+            dst_node->PerformCopyUpdate(&p_cds[i], src_node);
         }
     }
 }
@@ -1286,7 +1287,7 @@ bool cvdescriptorset::ValidateAllocateDescriptorSets(
 void cvdescriptorset::PerformAllocateDescriptorSets(
     const VkDescriptorSetAllocateInfo *p_alloc_info, const VkDescriptorSet *descriptor_sets,
     const AllocateDescriptorSetsData *ds_data, std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *pool_map,
-    std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *set_map,
+    std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *set_map, const core_validation::layer_data *dev_data,
     const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &layout_map,
     const std::unordered_map<VkBuffer, BUFFER_NODE> &buffer_map,
     const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> &mem_obj_map,

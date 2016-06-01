@@ -253,30 +253,27 @@ struct AllocateDescriptorSetsData {
 };
 // Helper functions for descriptor set functions that cross multiple sets
 // "Validate" will make sure an update is ok without actually performing it
-bool ValidateUpdateDescriptorSets(const debug_report_data *,
-                                  const std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> &, uint32_t,
+bool ValidateUpdateDescriptorSets(const debug_report_data *, const core_validation::layer_data *, uint32_t,
                                   const VkWriteDescriptorSet *, uint32_t, const VkCopyDescriptorSet *);
 // "Perform" does the update with the assumption that ValidateUpdateDescriptorSets() has passed for the given update
-void PerformUpdateDescriptorSets(const std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> &, uint32_t,
-                                 const VkWriteDescriptorSet *, uint32_t, const VkCopyDescriptorSet *);
+void PerformUpdateDescriptorSets(const core_validation::layer_data *, uint32_t, const VkWriteDescriptorSet *, uint32_t,
+                                 const VkCopyDescriptorSet *);
 // Validate that Allocation state is ok
 bool ValidateAllocateDescriptorSets(const debug_report_data *, const VkDescriptorSetAllocateInfo *,
                                     const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &,
                                     const std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> &,
                                     AllocateDescriptorSetsData *);
 // Update state based on allocating new descriptorsets
-void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const VkDescriptorSet *, const AllocateDescriptorSetsData *,
-                                   std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *,
-                                   std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *,
-                                   const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &,
-                                   const std::unordered_map<VkBuffer, BUFFER_NODE> &,
-                                   const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> &,
-                                   const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> &,
-                                   const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> &,
-                                   const std::unordered_map<VkImageView, VkImageViewCreateInfo> &,
-                                   const std::unordered_map<VkImage, IMAGE_NODE> &,
-                                   const std::unordered_map<VkImage, VkSwapchainKHR> &,
-                                   const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> &);
+void PerformAllocateDescriptorSets(
+    const VkDescriptorSetAllocateInfo *, const VkDescriptorSet *, const AllocateDescriptorSetsData *,
+    std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *,
+    std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *, const core_validation::layer_data *,
+    const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &,
+    const std::unordered_map<VkBuffer, BUFFER_NODE> &, const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> &,
+    const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> &,
+    const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> &,
+    const std::unordered_map<VkImageView, VkImageViewCreateInfo> &, const std::unordered_map<VkImage, IMAGE_NODE> &,
+    const std::unordered_map<VkImage, VkSwapchainKHR> &, const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> &);
 
 /*
  * DescriptorSet class

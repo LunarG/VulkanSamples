@@ -2625,11 +2625,12 @@ static bool validate_compute_pipeline(debug_report_data *report_data, PIPELINE_N
 }
 
 // Return Set node ptr for specified set or else NULL
-static cvdescriptorset::DescriptorSet *getSetNode(layer_data *my_data, const VkDescriptorSet set) {
-    if (my_data->setMap.find(set) == my_data->setMap.end()) {
+cvdescriptorset::DescriptorSet *getSetNode(const layer_data *my_data, const VkDescriptorSet set) {
+    auto set_it = my_data->setMap.find(set);
+    if (set_it == my_data->setMap.end()) {
         return NULL;
     }
-    return my_data->setMap[set];
+    return set_it->second;
 }
 // For the given command buffer, verify and update the state for activeSetBindingsPairs
 //  This includes:
@@ -5880,7 +5881,7 @@ static void PostCallRecordAllocateDescriptorSets(layer_data *dev_data, const VkD
                                                  const cvdescriptorset::AllocateDescriptorSetsData *common_data) {
     // All the updates are contained in a single cvdescriptorset function
     cvdescriptorset::PerformAllocateDescriptorSets(
-        pAllocateInfo, pDescriptorSets, common_data, &dev_data->descriptorPoolMap, &dev_data->setMap,
+        pAllocateInfo, pDescriptorSets, common_data, &dev_data->descriptorPoolMap, &dev_data->setMap, dev_data,
         dev_data->descriptorSetLayoutMap, dev_data->bufferMap, dev_data->memObjMap, dev_data->bufferViewMap, dev_data->samplerMap,
         dev_data->imageViewMap, dev_data->imageMap, dev_data->device_extensions.imageToSwapchainMap,
         dev_data->device_extensions.swapchainMap);
@@ -5976,14 +5977,14 @@ static bool PreCallValidateUpdateDescriptorSets(layer_data *dev_data, uint32_t d
     // Now make call(s) that validate state, but don't perform state updates in this function
     // Note, here DescriptorSets is unique in that we don't yet have an instance. Using a helper function in the
     //  namespace which will parse params and make calls into specific class instances
-    return cvdescriptorset::ValidateUpdateDescriptorSets(dev_data->report_data, dev_data->setMap, descriptorWriteCount,
-                                                         pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
+    return cvdescriptorset::ValidateUpdateDescriptorSets(dev_data->report_data, dev_data, descriptorWriteCount, pDescriptorWrites,
+                                                         descriptorCopyCount, pDescriptorCopies);
 }
 // PostCallRecord* handles recording state updates following call down chain to UpdateDescriptorSets()
 static void PostCallRecordUpdateDescriptorSets(layer_data *dev_data, uint32_t descriptorWriteCount,
                                                const VkWriteDescriptorSet *pDescriptorWrites, uint32_t descriptorCopyCount,
                                                const VkCopyDescriptorSet *pDescriptorCopies) {
-    cvdescriptorset::PerformUpdateDescriptorSets(dev_data->setMap, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
+    cvdescriptorset::PerformUpdateDescriptorSets(dev_data, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount,
                                                  pDescriptorCopies);
 }
 
