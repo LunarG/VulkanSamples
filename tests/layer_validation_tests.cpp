@@ -821,6 +821,11 @@ TEST_F(VkLayerTest, InvalidStructPNext) {
     vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1,
         &gp_ci, NULL, &pipeline);
     m_errorMonitor->VerifyFound();
+    vkDestroyPipelineCache(m_device->device(), pipelineCache, NULL);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+
 }
 
 TEST_F(VkLayerTest, UnrecognizedValue) {
@@ -1150,6 +1155,7 @@ TEST_F(VkLayerTest, TestAliasedMemoryTracking) {
 
     m_errorMonitor->VerifyNotFound();
 
+    vkFreeMemory(m_device->device(), mem, NULL);
     vkDestroyBuffer(m_device->device(), buffer, NULL);
     vkDestroyImage(m_device->device(), image, NULL);
 }
@@ -2096,6 +2102,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit) {
     m_errorMonitor->VerifyFound();
 
     vkDestroyImage(m_device->device(), image, NULL);
+    vkFreeMemory(m_device->device(), mem, NULL);
 }
 
 TEST_F(VkLayerTest, RebindMemory) {
@@ -2893,6 +2900,8 @@ TEST_F(VkLayerTest, QueryAndCopyMultipleCommandBuffers) {
     vkDestroyQueryPool(m_device->device(), query_pool, nullptr);
     vkFreeCommandBuffers(m_device->device(), command_pool, 2, command_buffer);
     vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+    vkDestroyBuffer(m_device->device(), buffer, NULL);
+    vkFreeMemory(m_device->device(), mem, NULL);
 
     m_errorMonitor->VerifyNotFound();
 }
@@ -3044,6 +3053,10 @@ TEST_F(VkLayerTest, TwoFencesThreeFrames) {
         }
     }
     m_errorMonitor->VerifyNotFound();
+    vkDestroyCommandPool(m_device->device(), cmd_pool, NULL);
+    for (uint32_t i = 0; i < NUM_OBJECTS; ++i) {
+        vkDestroyFence(m_device->device(), fences[i], nullptr);
+    }
 }
 // This is a positive test.  No errors should be generated.
 TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceQWI) {
@@ -3904,6 +3917,7 @@ TEST_F(VkLayerTest, TwoSubmitInfosWithSemaphoreOneQueueSubmitsOneFence) {
     vkFreeCommandBuffers(m_device->device(), command_pool, 2,
                          &command_buffer[0]);
     vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+    vkDestroySemaphore(m_device->device(), semaphore, nullptr);
 
     m_errorMonitor->VerifyNotFound();
 }
@@ -4303,12 +4317,11 @@ TEST_F(VkLayerTest, InvalidPipeline) {
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(),
                       VK_PIPELINE_BIND_POINT_GRAPHICS, bad_pipeline);
     m_errorMonitor->VerifyFound();
-
     // Now issue a draw call with no pipeline bound
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "At Draw/Dispatch time no valid VkPipeline is bound!");
-    ASSERT_NO_FATAL_FAILURE(InitState());
+
     BeginCommandBuffer();
     Draw(1, 0, 0, 0);
     m_errorMonitor->VerifyFound();
@@ -4316,7 +4329,6 @@ TEST_F(VkLayerTest, InvalidPipeline) {
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "At Draw/Dispatch time no valid VkPipeline is bound!");
-    ASSERT_NO_FATAL_FAILURE(InitState());
     BeginCommandBuffer();
     vkCmdDispatch(m_commandBuffer->GetBufferHandle(), 0, 0, 0);
     m_errorMonitor->VerifyFound();
@@ -4665,6 +4677,7 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCases) {
     vkFreeMemory(m_device->device(), mem, NULL);
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
@@ -5423,6 +5436,9 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     vkDestroyBuffer(m_device->device(), dyub, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+    vkFreeMemory(m_device->device(), imageMem, NULL);
+    vkDestroyImage(m_device->device(), image, NULL);
+    vkDestroyImageView(m_device->device(), view, NULL);
 }
 
 TEST_F(VkLayerTest, NoBeginCommandBuffer) {
@@ -6190,6 +6206,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+    vkDestroyPipeline(m_device->device(), pipeline, NULL);
 }
 // Create PSO w/o non-zero scissorCount but no scissor data
 // Then run second test where dynamic viewportCount doesn't match PSO
@@ -6364,6 +6381,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+    vkDestroyPipeline(m_device->device(), pipeline, NULL);
 }
 
 TEST_F(VkLayerTest, PSOLineWidthInvalid) {
@@ -6510,6 +6528,7 @@ TEST_F(VkLayerTest, PSOLineWidthInvalid) {
                                     &gp_ci, NULL, &pipeline);
 
     m_errorMonitor->VerifyFound();
+    vkDestroyPipelineCache(m_device->device(), pipelineCache, NULL);
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Attempt to set lineWidth to 65536");
@@ -6524,6 +6543,7 @@ TEST_F(VkLayerTest, PSOLineWidthInvalid) {
                                     &gp_ci, NULL, &pipeline);
 
     m_errorMonitor->VerifyFound();
+    vkDestroyPipelineCache(m_device->device(), pipelineCache, NULL);
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Attempt to set lineWidth to -1");
@@ -6557,6 +6577,7 @@ TEST_F(VkLayerTest, PSOLineWidthInvalid) {
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+    vkDestroyPipeline(m_device->device(), pipeline, NULL);
 }
 
 TEST_F(VkLayerTest, NullRenderPass) {
@@ -7068,6 +7089,7 @@ TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
     vkCreateBuffer(m_device->device(), &buffCI, NULL, &ib);
 
     m_errorMonitor->VerifyFound();
+    vkDestroyBuffer(m_device->device(), ib, NULL);
 }
 
 TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB) {
@@ -7257,6 +7279,7 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
     }
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layouts[0], NULL);
     vkDestroyImage(m_device->device(), image, NULL);
+    vkFreeMemory(m_device->device(), image_mem, NULL);
     vkDestroyImageView(m_device->device(), image_view, NULL);
     vkDestroyBuffer(m_device->device(), buffer, NULL);
     vkDestroyBufferView(m_device->device(), buff_view, NULL);
@@ -10344,6 +10367,7 @@ TEST_F(VkLayerTest, InvalidImageView) {
                             &view);
 
     m_errorMonitor->VerifyFound();
+    vkDestroyImage(m_device->device(), image, NULL);
 }
 
 TEST_F(VkLayerTest, InvalidImageViewAspect) {
