@@ -5869,26 +5869,30 @@ ResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, VkDescript
 // Ensure the pool contains enough descriptors and descriptor sets to satisfy
 // an allocation request. Fills requiredDescriptorsByType with the total number
 // of descriptors of each type required, for later update.
-static bool PreCallValidateAllocateDescriptorSets(layer_data *dev_data, const VkDescriptorSetAllocateInfo *pAllocateInfo) {
+static bool PreCallValidateAllocateDescriptorSets(layer_data *dev_data, const VkDescriptorSetAllocateInfo *pAllocateInfo,
+                                                  cvdescriptorset::AllocateDescriptorSetsData *common_data) {
     // All state checks for AllocateDescriptorSets is done in single function
     return cvdescriptorset::ValidateAllocateDescriptorSets(dev_data->report_data, pAllocateInfo, dev_data->descriptorSetLayoutMap,
-                                                           dev_data->descriptorPoolMap);
+                                                           dev_data->descriptorPoolMap, common_data);
 }
 // Allocation state was good and call down chain was made so update state based on allocating descriptor sets
 static void PostCallRecordAllocateDescriptorSets(layer_data *dev_data, const VkDescriptorSetAllocateInfo *pAllocateInfo,
-                                                 VkDescriptorSet *pDescriptorSets) {
+                                                 VkDescriptorSet *pDescriptorSets,
+                                                 const cvdescriptorset::AllocateDescriptorSetsData *common_data) {
     // All the updates are contained in a single cvdescriptorset function
     cvdescriptorset::PerformAllocateDescriptorSets(
-        pAllocateInfo, pDescriptorSets, &dev_data->descriptorPoolMap, &dev_data->setMap, dev_data->descriptorSetLayoutMap,
-        dev_data->bufferMap, dev_data->memObjMap, dev_data->bufferViewMap, dev_data->samplerMap, dev_data->imageViewMap,
-        dev_data->imageMap, dev_data->device_extensions.imageToSwapchainMap, dev_data->device_extensions.swapchainMap);
+        pAllocateInfo, pDescriptorSets, common_data, &dev_data->descriptorPoolMap, &dev_data->setMap,
+        dev_data->descriptorSetLayoutMap, dev_data->bufferMap, dev_data->memObjMap, dev_data->bufferViewMap, dev_data->samplerMap,
+        dev_data->imageViewMap, dev_data->imageMap, dev_data->device_extensions.imageToSwapchainMap,
+        dev_data->device_extensions.swapchainMap);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
 AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllocateInfo, VkDescriptorSet *pDescriptorSets) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
-    bool skip_call = PreCallValidateAllocateDescriptorSets(dev_data, pAllocateInfo);
+    cvdescriptorset::AllocateDescriptorSetsData common_data(pAllocateInfo->descriptorSetCount);
+    bool skip_call = PreCallValidateAllocateDescriptorSets(dev_data, pAllocateInfo, &common_data);
     lock.unlock();
 
     if (skip_call)
@@ -5898,7 +5902,7 @@ AllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo *pAllo
 
     if (VK_SUCCESS == result) {
         lock.lock();
-        PostCallRecordAllocateDescriptorSets(dev_data, pAllocateInfo, pDescriptorSets);
+        PostCallRecordAllocateDescriptorSets(dev_data, pAllocateInfo, pDescriptorSets, &common_data);
         lock.unlock();
     }
     return result;
