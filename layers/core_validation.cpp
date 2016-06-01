@@ -5865,10 +5865,9 @@ ResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, VkDescript
     }
     return result;
 }
-
 // Ensure the pool contains enough descriptors and descriptor sets to satisfy
-// an allocation request. Fills requiredDescriptorsByType with the total number
-// of descriptors of each type required, for later update.
+// an allocation request. Fills common_data with the total number of descriptors of each type required,
+// as well as DescriptorSetLayout ptrs used for later update.
 static bool PreCallValidateAllocateDescriptorSets(layer_data *dev_data, const VkDescriptorSetAllocateInfo *pAllocateInfo,
                                                   cvdescriptorset::AllocateDescriptorSetsData *common_data) {
     // All state checks for AllocateDescriptorSets is done in single function
