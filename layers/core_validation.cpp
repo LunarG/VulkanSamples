@@ -102,7 +102,7 @@ struct CMD_POOL_INFO {
 
 struct devExts {
     bool wsi_enabled;
-    unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> swapchainMap;
+    unordered_map<VkSwapchainKHR, unique_ptr<SWAPCHAIN_NODE>> swapchainMap;
     unordered_map<VkImage, VkSwapchainKHR> imageToSwapchainMap;
 };
 
@@ -299,7 +299,7 @@ SWAPCHAIN_NODE *getSwapchainNode(const layer_data *dev_data, const VkSwapchainKH
     if (swp_it == dev_data->device_extensions.swapchainMap.end()) {
         return nullptr;
     }
-    return swp_it->second;
+    return swp_it->second.get();
 }
 // Return swapchain for specified image or else NULL
 VkSwapchainKHR getSwapchainFromImage(const layer_data *dev_data, const VkImage image) {
@@ -9675,9 +9675,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     VkResult result = dev_data->device_dispatch_table->CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
 
     if (VK_SUCCESS == result) {
-        SWAPCHAIN_NODE *psc_node = new SWAPCHAIN_NODE(pCreateInfo);
         std::lock_guard<std::mutex> lock(global_lock);
-        dev_data->device_extensions.swapchainMap[*pSwapchain] = psc_node;
+        dev_data->device_extensions.swapchainMap[*pSwapchain] = unique_ptr<SWAPCHAIN_NODE>(new SWAPCHAIN_NODE(pCreateInfo));
     }
 
     return result;
@@ -9708,7 +9707,6 @@ DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocatio
                 dev_data->imageMap.erase(swapchain_image);
             }
         }
-        delete swapchain_data;
         dev_data->device_extensions.swapchainMap.erase(swapchain);
     }
     lock.unlock();
