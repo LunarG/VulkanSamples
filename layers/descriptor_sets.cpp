@@ -341,13 +341,13 @@ bool cvdescriptorset::DescriptorSet::IsCompatible(const DescriptorSetLayout *lay
 // Return true if state is acceptable, or false and write an error message into error string
 bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::unordered_set<uint32_t> &bindings,
                                                        const std::vector<uint32_t> &dynamic_offsets, std::string *error) const {
+    auto dyn_offset_index = 0;
     for (auto binding : bindings) {
         auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
         if (descriptors_[start_idx]->IsImmutableSampler()) {
             // Nothing to do for strictly immutable sampler
         } else {
             auto end_idx = p_layout_->GetGlobalEndIndexFromBinding(binding);
-            auto dyn_offset_index = 0;
             for (uint32_t i = start_idx; i <= end_idx; ++i) {
                 if (!descriptors_[i]->updated) {
                     std::stringstream error_str;
