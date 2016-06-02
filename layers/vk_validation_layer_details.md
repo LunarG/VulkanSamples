@@ -215,6 +215,7 @@ DETAILS TABLE PENDING
 | Verify Image Format Limits | Verifies that image creation parameters are with the device format limits | INVALID_FORMAT_LIMITS_VIOLATION | vkCreateImage | ImageFormatLimits | NA |
 | Verify Layout | Verifies the layouts are valid for this image operation | INVALID_LAYOUT | vkCreateImage vkCmdClearColorImage | TODO | ImageFormatLimits |
 | Verify Image Extents | Validates that image extent limits are not invalid | INVALID_EXTENTS | vkCmdCopyImage | CopyImageLayerCountMismatch | NA |
+| Verify Usage | Verifies the image was created with usage valid for this image operation | INVALID_USAGE | vkCmdClearColorImage | TODO | ClearImageErrors |
 | NA | Enum used for informational messages | NONE | | TODO | None |
 
 ### VK_LAYER_LUNARG_image Pending Work
