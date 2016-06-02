@@ -11676,6 +11676,17 @@ TEST_F(VkLayerTest, ClearImageErrors) {
 
     m_errorMonitor->VerifyFound();
 
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "vkCmdClearColorImage called with "
+                                         "image created without "
+                                         "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
+
+    vkCmdClearColorImage(m_commandBuffer->GetBufferHandle(), ds_image.handle(),
+                         VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1,
+                         &color_range);
+
+    m_errorMonitor->VerifyFound();
+
     // Call CmdClearDepthStencilImage with color image
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
