@@ -261,6 +261,14 @@ struct shader_module {
 // TODO : This can be much smarter, using separate locks for separate global data
 static std::mutex global_lock;
 
+// Return sampler node ptr for specified sampler or else NULL
+SAMPLER_NODE *getSamplerNode(const layer_data *my_data, const VkSampler sampler) {
+    auto sampler_it = my_data->samplerMap.find(sampler);
+    if (sampler_it == my_data->samplerMap.end()) {
+        return nullptr;
+    }
+    return sampler_it->second.get();
+}
 // Return buffer node ptr for specified buffer or else NULL
 BUFFER_NODE *getBufferNode(const layer_data *my_data, const VkBuffer buffer) {
     auto buff_it = my_data->bufferMap.find(buffer);
@@ -5885,7 +5893,7 @@ static void PostCallRecordAllocateDescriptorSets(layer_data *dev_data, const VkD
     // All the updates are contained in a single cvdescriptorset function
     cvdescriptorset::PerformAllocateDescriptorSets(
         pAllocateInfo, pDescriptorSets, common_data, &dev_data->descriptorPoolMap, &dev_data->setMap, dev_data,
-        dev_data->descriptorSetLayoutMap, dev_data->samplerMap, dev_data->imageViewMap, dev_data->imageMap,
+        dev_data->descriptorSetLayoutMap, dev_data->imageViewMap, dev_data->imageMap,
         dev_data->device_extensions.imageToSwapchainMap, dev_data->device_extensions.swapchainMap);
 }
 

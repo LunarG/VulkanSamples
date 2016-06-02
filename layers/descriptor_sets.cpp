@@ -265,14 +265,12 @@ cvdescriptorset::AllocateDescriptorSetsData::AllocateDescriptorSetsData(uint32_t
 
 cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const DescriptorSetLayout *layout,
                                               const core_validation::layer_data *dev_data,
-                                              const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *sampler_map,
                                               const std::unordered_map<VkImageView, VkImageViewCreateInfo> *image_view_map,
                                               const std::unordered_map<VkImage, IMAGE_NODE> *image_map,
                                               const std::unordered_map<VkImage, VkSwapchainKHR> *image_to_swapchain_map,
                                               const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *swapchain_map)
-    : some_update_(false), set_(set), p_layout_(layout), device_data_(dev_data), sampler_map_(sampler_map),
-      image_view_map_(image_view_map), image_map_(image_map), image_to_swapchain_map_(image_to_swapchain_map),
-      swapchain_map_(swapchain_map) {
+    : some_update_(false), set_(set), p_layout_(layout), device_data_(dev_data), image_view_map_(image_view_map),
+      image_map_(image_map), image_to_swapchain_map_(image_to_swapchain_map), swapchain_map_(swapchain_map) {
     // Foreach binding, create default descriptors of given type
     for (uint32_t i = 0; i < p_layout_->GetBindingCount(); ++i) {
         auto type = p_layout_->GetTypeFromIndex(i);
@@ -580,10 +578,9 @@ cvdescriptorset::SamplerDescriptor::SamplerDescriptor(const VkSampler *immut) : 
         updated = true;
     }
 }
-
-bool cvdescriptorset::ValidateSampler(const VkSampler sampler,
-                                      const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *sampler_map) {
-    return (sampler_map->count(sampler) != 0);
+// Validate given sampler. Currently this only checks to make sure it exists in the samplerMap
+bool cvdescriptorset::ValidateSampler(const VkSampler sampler, const core_validation::layer_data *dev_data) {
+    return (getSamplerNode(dev_data, sampler) != nullptr);
 }
 
 bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout image_layout, VkDescriptorType type,
@@ -1051,7 +1048,7 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
     case VK_DESCRIPTOR_TYPE_SAMPLER: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             if (!descriptors_[index + di].get()->IsImmutableSampler()) {
-                if (!ValidateSampler(update->pImageInfo[di].sampler, sampler_map_)) {
+                if (!ValidateSampler(update->pImageInfo[di].sampler, device_data_)) {
                     std::stringstream error_str;
                     error_str << "Attempted write update to sampler descriptor with invalid sampler: "
                               << update->pImageInfo[di].sampler << ".";
@@ -1131,7 +1128,7 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             if (!src_set->descriptors_[index + di]->IsImmutableSampler()) {
                 auto update_sampler = static_cast<SamplerDescriptor *>(src_set->descriptors_[index + di].get())->GetSampler();
-                if (!ValidateSampler(update_sampler, sampler_map_)) {
+                if (!ValidateSampler(update_sampler, device_data_)) {
                     std::stringstream error_str;
                     error_str << "Attempted copy update to sampler descriptor with invalid sampler: " << update_sampler << ".";
                     *error = error_str.str();
@@ -1149,7 +1146,7 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
             // First validate sampler
             if (!img_samp_desc->IsImmutableSampler()) {
                 auto update_sampler = img_samp_desc->GetSampler();
-                if (!ValidateSampler(update_sampler, sampler_map_)) {
+                if (!ValidateSampler(update_sampler, device_data_)) {
                     std::stringstream error_str;
                     error_str << "Attempted copy update to sampler descriptor with invalid sampler: " << update_sampler << ".";
                     *error = error_str.str();
@@ -1287,7 +1284,6 @@ void cvdescriptorset::PerformAllocateDescriptorSets(
     const AllocateDescriptorSetsData *ds_data, std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *pool_map,
     std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *set_map, const core_validation::layer_data *dev_data,
     const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &layout_map,
-    const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> &sampler_map,
     const std::unordered_map<VkImageView, VkImageViewCreateInfo> &image_view_map,
     const std::unordered_map<VkImage, IMAGE_NODE> &image_map,
     const std::unordered_map<VkImage, VkSwapchainKHR> &image_to_swapchain_map,
@@ -1302,8 +1298,8 @@ void cvdescriptorset::PerformAllocateDescriptorSets(
      * global map and the pool's set.
      */
     for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
-        auto new_ds = new cvdescriptorset::DescriptorSet(descriptor_sets[i], ds_data->layout_nodes[i], dev_data, &sampler_map,
-                                                         &image_view_map, &image_map, &image_to_swapchain_map, &swapchain_map);
+        auto new_ds = new cvdescriptorset::DescriptorSet(descriptor_sets[i], ds_data->layout_nodes[i], dev_data, &image_view_map,
+                                                         &image_map, &image_to_swapchain_map, &swapchain_map);
 
         pool_state->sets.insert(new_ds);
         new_ds->in_use.store(0);
