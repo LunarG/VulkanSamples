@@ -262,7 +262,7 @@ struct shader_module {
 static std::mutex global_lock;
 
 // Return ImageViewCreateInfo ptr for specified imageView or else NULL
-VkImageViewCreateInfo *getImageViewData(const layer_data *dev_data, const VkImageView image_view) {
+VkImageViewCreateInfo *getImageViewData(const layer_data *dev_data, VkImageView image_view) {
     auto iv_it = dev_data->imageViewMap.find(image_view);
     if (iv_it == dev_data->imageViewMap.end()) {
         return nullptr;
@@ -270,7 +270,7 @@ VkImageViewCreateInfo *getImageViewData(const layer_data *dev_data, const VkImag
     return iv_it->second.get();
 }
 // Return sampler node ptr for specified sampler or else NULL
-SAMPLER_NODE *getSamplerNode(const layer_data *dev_data, const VkSampler sampler) {
+SAMPLER_NODE *getSamplerNode(const layer_data *dev_data, VkSampler sampler) {
     auto sampler_it = dev_data->samplerMap.find(sampler);
     if (sampler_it == dev_data->samplerMap.end()) {
         return nullptr;
@@ -278,7 +278,7 @@ SAMPLER_NODE *getSamplerNode(const layer_data *dev_data, const VkSampler sampler
     return sampler_it->second.get();
 }
 // Return image node ptr for specified image or else NULL
-IMAGE_NODE *getImageNode(const layer_data *dev_data, const VkImage image) {
+IMAGE_NODE *getImageNode(const layer_data *dev_data, VkImage image) {
     auto img_it = dev_data->imageMap.find(image);
     if (img_it == dev_data->imageMap.end()) {
         return nullptr;
@@ -286,7 +286,7 @@ IMAGE_NODE *getImageNode(const layer_data *dev_data, const VkImage image) {
     return img_it->second.get();
 }
 // Return buffer node ptr for specified buffer or else NULL
-BUFFER_NODE *getBufferNode(const layer_data *dev_data, const VkBuffer buffer) {
+BUFFER_NODE *getBufferNode(const layer_data *dev_data, VkBuffer buffer) {
     auto buff_it = dev_data->bufferMap.find(buffer);
     if (buff_it == dev_data->bufferMap.end()) {
         return nullptr;
@@ -294,7 +294,7 @@ BUFFER_NODE *getBufferNode(const layer_data *dev_data, const VkBuffer buffer) {
     return buff_it->second.get();
 }
 // Return swapchain node for specified swapchain or else NULL
-SWAPCHAIN_NODE *getSwapchainNode(const layer_data *dev_data, const VkSwapchainKHR swapchain) {
+SWAPCHAIN_NODE *getSwapchainNode(const layer_data *dev_data, VkSwapchainKHR swapchain) {
     auto swp_it = dev_data->device_extensions.swapchainMap.find(swapchain);
     if (swp_it == dev_data->device_extensions.swapchainMap.end()) {
         return nullptr;
@@ -302,7 +302,7 @@ SWAPCHAIN_NODE *getSwapchainNode(const layer_data *dev_data, const VkSwapchainKH
     return swp_it->second.get();
 }
 // Return swapchain for specified image or else NULL
-VkSwapchainKHR getSwapchainFromImage(const layer_data *dev_data, const VkImage image) {
+VkSwapchainKHR getSwapchainFromImage(const layer_data *dev_data, VkImage image) {
     auto img_it = dev_data->device_extensions.imageToSwapchainMap.find(image);
     if (img_it == dev_data->device_extensions.imageToSwapchainMap.end()) {
         return VK_NULL_HANDLE;
@@ -310,7 +310,7 @@ VkSwapchainKHR getSwapchainFromImage(const layer_data *dev_data, const VkImage i
     return img_it->second;
 }
 // Return buffer node ptr for specified buffer or else NULL
-VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *my_data, const VkBufferView buffer_view) {
+VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *my_data, VkBufferView buffer_view) {
     auto bv_it = my_data->bufferViewMap.find(buffer_view);
     if (bv_it == my_data->bufferViewMap.end()) {
         return nullptr;
@@ -2668,7 +2668,7 @@ static bool validate_compute_pipeline(debug_report_data *report_data, PIPELINE_N
                                           &module, &entrypoint, enabledFeatures, shaderModuleMap);
 }
 // Return Set node ptr for specified set or else NULL
-cvdescriptorset::DescriptorSet *getSetNode(const layer_data *my_data, const VkDescriptorSet set) {
+cvdescriptorset::DescriptorSet *getSetNode(const layer_data *my_data, VkDescriptorSet set) {
     auto set_it = my_data->setMap.find(set);
     if (set_it == my_data->setMap.end()) {
         return NULL;

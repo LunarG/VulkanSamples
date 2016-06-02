@@ -485,15 +485,15 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
 // Fwd declarations of layer_data and helpers to look-up state from layer_data maps
 namespace core_validation {
 struct layer_data;
-cvdescriptorset::DescriptorSet *getSetNode(const layer_data *, const VkDescriptorSet);
-BUFFER_NODE *getBufferNode(const layer_data *, const VkBuffer);
-IMAGE_NODE *getImageNode(const layer_data *, const VkImage);
-DEVICE_MEM_INFO *getMemObjInfo(const layer_data *, const VkDeviceMemory);
-VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *, const VkBufferView);
-SAMPLER_NODE *getSamplerNode(const layer_data *, const VkSampler);
-VkImageViewCreateInfo *getImageViewData(const layer_data *, const VkImageView);
-VkSwapchainKHR getSwapchainFromImage(const layer_data *, const VkImage);
-SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, const VkSwapchainKHR);
+cvdescriptorset::DescriptorSet *getSetNode(const layer_data *, VkDescriptorSet);
+BUFFER_NODE *getBufferNode(const layer_data *, VkBuffer);
+IMAGE_NODE *getImageNode(const layer_data *, VkImage);
+DEVICE_MEM_INFO *getMemObjInfo(const layer_data *, VkDeviceMemory);
+VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *, VkBufferView);
+SAMPLER_NODE *getSamplerNode(const layer_data *, VkSampler);
+VkImageViewCreateInfo *getImageViewData(const layer_data *, VkImageView);
+VkSwapchainKHR getSwapchainFromImage(const layer_data *, VkImage);
+SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, VkSwapchainKHR);
 }
 
 #endif // CORE_VALIDATION_TYPES_H_
