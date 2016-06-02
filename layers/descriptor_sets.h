@@ -161,8 +161,7 @@ class Descriptor {
 // Shared helper functions - These are useful because the shared sampler image descriptor type
 //  performs common functions with both sampler and image descriptors so they can share their common functions
 bool ValidateSampler(const VkSampler, const core_validation::layer_data *);
-bool ValidateImageUpdate(VkImageView, VkImageLayout, VkDescriptorType, const core_validation::layer_data *,
-                         const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *, std::string *);
+bool ValidateImageUpdate(VkImageView, VkImageLayout, VkDescriptorType, const core_validation::layer_data *, std::string *);
 
 class SamplerDescriptor : public Descriptor {
   public:
@@ -265,8 +264,7 @@ bool ValidateAllocateDescriptorSets(const debug_report_data *, const VkDescripto
 void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const VkDescriptorSet *, const AllocateDescriptorSetsData *,
                                    std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *,
                                    std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *,
-                                   const core_validation::layer_data *,
-                                   const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> &);
+                                   const core_validation::layer_data *);
 
 /*
  * DescriptorSet class
@@ -289,8 +287,7 @@ void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const Vk
 class DescriptorSet : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
-    DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const core_validation::layer_data *,
-                  const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *);
+    DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const core_validation::layer_data *);
     ~DescriptorSet();
     // A number of common Get* functions that return data based on layout from which this set was created
     uint32_t GetTotalDescriptorCount() const { return p_layout_ ? p_layout_->GetTotalDescriptorCount() : 0; };
@@ -367,8 +364,6 @@ class DescriptorSet : public BASE_NODE {
     std::vector<std::unique_ptr<Descriptor>> descriptors_;
     // Ptrs to object containers to verify bound data
     const core_validation::layer_data *device_data_;
-    // TODO : For next 3 maps all we really need (currently) is an image to format mapping
-    const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *swapchain_map_;
 };
 }
 #endif // CORE_VALIDATION_DESCRIPTOR_SETS_H_

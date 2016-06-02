@@ -293,6 +293,14 @@ BUFFER_NODE *getBufferNode(const layer_data *dev_data, const VkBuffer buffer) {
     }
     return buff_it->second.get();
 }
+// Return swapchain node for specified swapchain or else NULL
+SWAPCHAIN_NODE *getSwapchainNode(const layer_data *dev_data, const VkSwapchainKHR swapchain) {
+    auto swp_it = dev_data->device_extensions.swapchainMap.find(swapchain);
+    if (swp_it == dev_data->device_extensions.swapchainMap.end()) {
+        return nullptr;
+    }
+    return swp_it->second;
+}
 // Return swapchain for specified image or else NULL
 VkSwapchainKHR getSwapchainFromImage(const layer_data *dev_data, const VkImage image) {
     auto img_it = dev_data->device_extensions.imageToSwapchainMap.find(image);
@@ -5915,7 +5923,7 @@ static void PostCallRecordAllocateDescriptorSets(layer_data *dev_data, const VkD
                                                  const cvdescriptorset::AllocateDescriptorSetsData *common_data) {
     // All the updates are contained in a single cvdescriptorset function
     cvdescriptorset::PerformAllocateDescriptorSets(pAllocateInfo, pDescriptorSets, common_data, &dev_data->descriptorPoolMap,
-                                                   &dev_data->setMap, dev_data, dev_data->device_extensions.swapchainMap);
+                                                   &dev_data->setMap, dev_data);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
@@ -7661,10 +7669,10 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
             } else if (dev_data->device_extensions.wsi_enabled) {
                 auto imageswap_data = getSwapchainFromImage(dev_data, mem_barrier->image);
                 if (imageswap_data) {
-                    auto swapchain_data = dev_data->device_extensions.swapchainMap.find(imageswap_data);
-                    if (swapchain_data != dev_data->device_extensions.swapchainMap.end()) {
-                        format = swapchain_data->second->createInfo.imageFormat;
-                        arrayLayers = swapchain_data->second->createInfo.imageArrayLayers;
+                    auto swapchain_data = getSwapchainNode(dev_data, imageswap_data);
+                    if (swapchain_data) {
+                        format = swapchain_data->createInfo.imageFormat;
+                        arrayLayers = swapchain_data->createInfo.imageArrayLayers;
                         mipLevels = 1;
                         imageFound = true;
                     }
@@ -9681,10 +9689,10 @@ DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocatio
     bool skipCall = false;
 
     std::unique_lock<std::mutex> lock(global_lock);
-    auto swapchain_data = dev_data->device_extensions.swapchainMap.find(swapchain);
-    if (swapchain_data != dev_data->device_extensions.swapchainMap.end()) {
-        if (swapchain_data->second->images.size() > 0) {
-            for (auto swapchain_image : swapchain_data->second->images) {
+    auto swapchain_data = getSwapchainNode(dev_data, swapchain);
+    if (swapchain_data) {
+        if (swapchain_data->images.size() > 0) {
+            for (auto swapchain_image : swapchain_data->images) {
                 auto image_sub = dev_data->imageSubresourceMap.find(swapchain_image);
                 if (image_sub != dev_data->imageSubresourceMap.end()) {
                     for (auto imgsubpair : image_sub->second) {
@@ -9700,7 +9708,7 @@ DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocatio
                 dev_data->imageMap.erase(swapchain_image);
             }
         }
-        delete swapchain_data->second;
+        delete swapchain_data;
         dev_data->device_extensions.swapchainMap.erase(swapchain);
     }
     lock.unlock();
@@ -9719,8 +9727,8 @@ GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCoun
             return result;
         std::lock_guard<std::mutex> lock(global_lock);
         const size_t count = *pCount;
-        auto swapchain_node = dev_data->device_extensions.swapchainMap[swapchain];
-        if (!swapchain_node->images.empty()) {
+        auto swapchain_node = getSwapchainNode(dev_data, swapchain);
+        if (swapchain_node && !swapchain_node->images.empty()) {
             // TODO : Not sure I like the memcmp here, but it works
             const bool mismatch = (swapchain_node->images.size() != count ||
                                    memcmp(&swapchain_node->images[0], pSwapchainImages, sizeof(swapchain_node->images[0]) * count));
@@ -9783,10 +9791,9 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
         }
         VkDeviceMemory mem;
         for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
-            auto swapchain_data = dev_data->device_extensions.swapchainMap.find(pPresentInfo->pSwapchains[i]);
-            if (swapchain_data != dev_data->device_extensions.swapchainMap.end() &&
-                pPresentInfo->pImageIndices[i] < swapchain_data->second->images.size()) {
-                VkImage image = swapchain_data->second->images[pPresentInfo->pImageIndices[i]];
+            auto swapchain_data = getSwapchainNode(dev_data, pPresentInfo->pSwapchains[i]);
+            if (swapchain_data && pPresentInfo->pImageIndices[i] < swapchain_data->images.size()) {
+                VkImage image = swapchain_data->images[pPresentInfo->pImageIndices[i]];
 #if MTMERGESOURCE
                 skip_call |=
                     get_mem_binding_from_object(dev_data, (uint64_t)(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
