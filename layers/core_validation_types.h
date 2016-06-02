@@ -488,6 +488,7 @@ struct layer_data;
 cvdescriptorset::DescriptorSet *getSetNode(const layer_data *, const VkDescriptorSet);
 BUFFER_NODE *getBufferNode(const layer_data *, const VkBuffer);
 DEVICE_MEM_INFO *getMemObjInfo(const layer_data *, const VkDeviceMemory);
+VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *, const VkBufferView);
 }
 
 #endif // CORE_VALIDATION_TYPES_H_

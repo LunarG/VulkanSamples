@@ -265,15 +265,14 @@ cvdescriptorset::AllocateDescriptorSetsData::AllocateDescriptorSetsData(uint32_t
 
 cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const DescriptorSetLayout *layout,
                                               const core_validation::layer_data *dev_data,
-                                              const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *buffer_view_map,
                                               const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *sampler_map,
                                               const std::unordered_map<VkImageView, VkImageViewCreateInfo> *image_view_map,
                                               const std::unordered_map<VkImage, IMAGE_NODE> *image_map,
                                               const std::unordered_map<VkImage, VkSwapchainKHR> *image_to_swapchain_map,
                                               const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *swapchain_map)
-    : some_update_(false), set_(set), p_layout_(layout), device_data_(dev_data), buffer_view_map_(buffer_view_map),
-      sampler_map_(sampler_map), image_view_map_(image_view_map), image_map_(image_map),
-      image_to_swapchain_map_(image_to_swapchain_map), swapchain_map_(swapchain_map) {
+    : some_update_(false), set_(set), p_layout_(layout), device_data_(dev_data), sampler_map_(sampler_map),
+      image_view_map_(image_view_map), image_map_(image_map), image_to_swapchain_map_(image_to_swapchain_map),
+      swapchain_map_(swapchain_map) {
     // Foreach binding, create default descriptors of given type
     for (uint32_t i = 0; i < p_layout_->GetBindingCount(); ++i) {
         auto type = p_layout_->GetTypeFromIndex(i);
@@ -434,9 +433,9 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::unordered_
                 for (uint32_t i = 0; i < p_layout_->GetDescriptorCountFromBinding(binding); ++i) {
                     if (descriptors_[start_idx + i]->updated) {
                         auto bufferview = static_cast<TexelDescriptor *>(descriptors_[start_idx + i].get())->GetBufferView();
-                        const auto &buff_pair = buffer_view_map_->find(bufferview);
-                        if (buff_pair != buffer_view_map_->end()) {
-                            buffer_set->insert(buff_pair->second.buffer);
+                        auto bv_info = getBufferViewInfo(device_data_, bufferview);
+                        if (bv_info) {
+                            buffer_set->insert(bv_info->buffer);
                             num_updates++;
                         }
                     }
@@ -1085,14 +1084,14 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
     case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer_view = update->pTexelBufferView[di];
-            auto buffer_view_it = buffer_view_map_->find(buffer_view);
-            if (buffer_view_it == buffer_view_map_->end()) {
+            auto bv_info = getBufferViewInfo(device_data_, buffer_view);
+            if (!bv_info) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to texel buffer descriptor with invalid buffer view: " << buffer_view;
                 *error = error_str.str();
                 return false;
             }
-            auto buffer = buffer_view_it->second.buffer;
+            auto buffer = bv_info->buffer;
             if (!ValidateBufferUpdate(buffer, update->descriptorType, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to texel buffer descriptor failed due to: " << error->c_str();
@@ -1189,14 +1188,14 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
     case TexelBuffer: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer_view = static_cast<TexelDescriptor *>(src_set->descriptors_[index + di].get())->GetBufferView();
-            auto bv_it = buffer_view_map_->find(buffer_view);
-            if (bv_it == buffer_view_map_->end()) {
+            auto bv_info = getBufferViewInfo(device_data_, buffer_view);
+            if (!bv_info) {
                 std::stringstream error_str;
                 error_str << "Attempted copy update to texel buffer descriptor with invalid buffer view: " << buffer_view;
                 *error = error_str.str();
                 return false;
             }
-            auto buffer = bv_it->second.buffer;
+            auto buffer = bv_info->buffer;
             if (!ValidateBufferUpdate(buffer, type, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted copy update to texel buffer descriptor failed due to: " << error->c_str();
@@ -1288,7 +1287,6 @@ void cvdescriptorset::PerformAllocateDescriptorSets(
     const AllocateDescriptorSetsData *ds_data, std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *pool_map,
     std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *set_map, const core_validation::layer_data *dev_data,
     const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &layout_map,
-    const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> &buffer_view_map,
     const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> &sampler_map,
     const std::unordered_map<VkImageView, VkImageViewCreateInfo> &image_view_map,
     const std::unordered_map<VkImage, IMAGE_NODE> &image_map,
@@ -1304,9 +1302,8 @@ void cvdescriptorset::PerformAllocateDescriptorSets(
      * global map and the pool's set.
      */
     for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
-        auto new_ds =
-            new cvdescriptorset::DescriptorSet(descriptor_sets[i], ds_data->layout_nodes[i], dev_data, &buffer_view_map,
-                                               &sampler_map, &image_view_map, &image_map, &image_to_swapchain_map, &swapchain_map);
+        auto new_ds = new cvdescriptorset::DescriptorSet(descriptor_sets[i], ds_data->layout_nodes[i], dev_data, &sampler_map,
+                                                         &image_view_map, &image_map, &image_to_swapchain_map, &swapchain_map);
 
         pool_state->sets.insert(new_ds);
         new_ds->in_use.store(0);

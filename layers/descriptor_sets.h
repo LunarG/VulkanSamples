@@ -269,7 +269,6 @@ void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const Vk
                                    std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *,
                                    const core_validation::layer_data *,
                                    const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &,
-                                   const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> &,
                                    const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> &,
                                    const std::unordered_map<VkImageView, VkImageViewCreateInfo> &,
                                    const std::unordered_map<VkImage, IMAGE_NODE> &,
@@ -298,7 +297,6 @@ class DescriptorSet : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
     DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const core_validation::layer_data *,
-                  const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *,
                   const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *,
                   const std::unordered_map<VkImageView, VkImageViewCreateInfo> *, const std::unordered_map<VkImage, IMAGE_NODE> *,
                   const std::unordered_map<VkImage, VkSwapchainKHR> *,

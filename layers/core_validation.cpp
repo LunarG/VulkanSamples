@@ -126,7 +126,7 @@ struct layer_data {
     unordered_map<VkSampler, unique_ptr<SAMPLER_NODE>> samplerMap;
     unordered_map<VkImageView, VkImageViewCreateInfo> imageViewMap;
     unordered_map<VkImage, IMAGE_NODE> imageMap;
-    unordered_map<VkBufferView, VkBufferViewCreateInfo> bufferViewMap;
+    unordered_map<VkBufferView, unique_ptr<VkBufferViewCreateInfo>> bufferViewMap;
     unordered_map<VkBuffer, unique_ptr<BUFFER_NODE>> bufferMap;
     unordered_map<VkPipeline, PIPELINE_NODE *> pipelineMap;
     unordered_map<VkCommandPool, CMD_POOL_INFO> commandPoolMap;
@@ -268,6 +268,14 @@ BUFFER_NODE *getBufferNode(const layer_data *my_data, const VkBuffer buffer) {
         return nullptr;
     }
     return buff_it->second.get();
+}
+// Return buffer node ptr for specified buffer or else NULL
+VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *my_data, const VkBufferView buffer_view) {
+    auto bv_it = my_data->bufferViewMap.find(buffer_view);
+    if (bv_it == my_data->bufferViewMap.end()) {
+        return nullptr;
+    }
+    return bv_it->second.get();
 }
 
 static VkDeviceMemory *get_object_mem_binding(layer_data *my_data, uint64_t handle, VkDebugReportObjectTypeEXT type) {
@@ -5420,7 +5428,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBufferView(VkDevice device, const VkBufferV
     VkResult result = dev_data->device_dispatch_table->CreateBufferView(device, pCreateInfo, pAllocator, pView);
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
-        dev_data->bufferViewMap[*pView] = VkBufferViewCreateInfo(*pCreateInfo);
+        dev_data->bufferViewMap[*pView] = unique_ptr<VkBufferViewCreateInfo>(new VkBufferViewCreateInfo(*pCreateInfo));
         // In order to create a valid buffer view, the buffer must have been created with at least one of the
         // following flags:  UNIFORM_TEXEL_BUFFER_BIT or STORAGE_TEXEL_BUFFER_BIT
         validate_buffer_usage_flags(dev_data, pCreateInfo->buffer,
@@ -5877,7 +5885,7 @@ static void PostCallRecordAllocateDescriptorSets(layer_data *dev_data, const VkD
     // All the updates are contained in a single cvdescriptorset function
     cvdescriptorset::PerformAllocateDescriptorSets(
         pAllocateInfo, pDescriptorSets, common_data, &dev_data->descriptorPoolMap, &dev_data->setMap, dev_data,
-        dev_data->descriptorSetLayoutMap, dev_data->bufferViewMap, dev_data->samplerMap, dev_data->imageViewMap, dev_data->imageMap,
+        dev_data->descriptorSetLayoutMap, dev_data->samplerMap, dev_data->imageViewMap, dev_data->imageMap,
         dev_data->device_extensions.imageToSwapchainMap, dev_data->device_extensions.swapchainMap);
 }
 
