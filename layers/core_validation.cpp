@@ -124,7 +124,7 @@ struct layer_data {
     unordered_set<VkCommandBuffer> globalInFlightCmdBuffers;
     // Layer specific data
     unordered_map<VkSampler, unique_ptr<SAMPLER_NODE>> samplerMap;
-    unordered_map<VkImageView, VkImageViewCreateInfo> imageViewMap;
+    unordered_map<VkImageView, unique_ptr<VkImageViewCreateInfo>> imageViewMap;
     unordered_map<VkImage, IMAGE_NODE> imageMap;
     unordered_map<VkBufferView, unique_ptr<VkBufferViewCreateInfo>> bufferViewMap;
     unordered_map<VkBuffer, unique_ptr<BUFFER_NODE>> bufferMap;
@@ -261,18 +261,26 @@ struct shader_module {
 // TODO : This can be much smarter, using separate locks for separate global data
 static std::mutex global_lock;
 
+// Return ImageViewCreateInfo ptr for specified imageView or else NULL
+VkImageViewCreateInfo *getImageViewData(const layer_data *dev_data, const VkImageView image_view) {
+    auto iv_it = dev_data->imageViewMap.find(image_view);
+    if (iv_it == dev_data->imageViewMap.end()) {
+        return nullptr;
+    }
+    return iv_it->second.get();
+}
 // Return sampler node ptr for specified sampler or else NULL
-SAMPLER_NODE *getSamplerNode(const layer_data *my_data, const VkSampler sampler) {
-    auto sampler_it = my_data->samplerMap.find(sampler);
-    if (sampler_it == my_data->samplerMap.end()) {
+SAMPLER_NODE *getSamplerNode(const layer_data *dev_data, const VkSampler sampler) {
+    auto sampler_it = dev_data->samplerMap.find(sampler);
+    if (sampler_it == dev_data->samplerMap.end()) {
         return nullptr;
     }
     return sampler_it->second.get();
 }
 // Return buffer node ptr for specified buffer or else NULL
-BUFFER_NODE *getBufferNode(const layer_data *my_data, const VkBuffer buffer) {
-    auto buff_it = my_data->bufferMap.find(buffer);
-    if (buff_it == my_data->bufferMap.end()) {
+BUFFER_NODE *getBufferNode(const layer_data *dev_data, const VkBuffer buffer) {
+    auto buff_it = dev_data->bufferMap.find(buffer);
+    if (buff_it == dev_data->bufferMap.end()) {
         return nullptr;
     }
     return buff_it->second.get();
@@ -3385,10 +3393,10 @@ template <class OBJECT, class LAYOUT> void SetLayout(OBJECT *pObject, VkImage im
 }
 
 void SetLayout(const layer_data *dev_data, GLOBAL_CB_NODE *pCB, VkImageView imageView, const VkImageLayout &layout) {
-    auto image_view_data = dev_data->imageViewMap.find(imageView);
-    assert(image_view_data != dev_data->imageViewMap.end());
-    const VkImage &image = image_view_data->second.image;
-    const VkImageSubresourceRange &subRange = image_view_data->second.subresourceRange;
+    auto iv_data = getImageViewData(dev_data, imageView);
+    assert(iv_data);
+    const VkImage &image = iv_data->image;
+    const VkImageSubresourceRange &subRange = iv_data->subresourceRange;
     // TODO: Do not iterate over every possibility - consolidate where possible
     for (uint32_t j = 0; j < subRange.levelCount; j++) {
         uint32_t level = subRange.baseMipLevel + j;
@@ -5523,9 +5531,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImageView(VkDevice device, const VkImageVie
 
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
-        VkImageViewCreateInfo localCI = VkImageViewCreateInfo(*pCreateInfo);
-        ResolveRemainingLevelsLayers(dev_data, &localCI.subresourceRange, pCreateInfo->image);
-        dev_data->imageViewMap[*pView] = localCI;
+        dev_data->imageViewMap[*pView] = unique_ptr<VkImageViewCreateInfo>(new VkImageViewCreateInfo(*pCreateInfo));
+        ResolveRemainingLevelsLayers(dev_data, &dev_data->imageViewMap[*pView].get()->subresourceRange, pCreateInfo->image);
     }
 
     return result;
@@ -5891,10 +5898,10 @@ static void PostCallRecordAllocateDescriptorSets(layer_data *dev_data, const VkD
                                                  VkDescriptorSet *pDescriptorSets,
                                                  const cvdescriptorset::AllocateDescriptorSetsData *common_data) {
     // All the updates are contained in a single cvdescriptorset function
-    cvdescriptorset::PerformAllocateDescriptorSets(
-        pAllocateInfo, pDescriptorSets, common_data, &dev_data->descriptorPoolMap, &dev_data->setMap, dev_data,
-        dev_data->descriptorSetLayoutMap, dev_data->imageViewMap, dev_data->imageMap,
-        dev_data->device_extensions.imageToSwapchainMap, dev_data->device_extensions.swapchainMap);
+    cvdescriptorset::PerformAllocateDescriptorSets(pAllocateInfo, pDescriptorSets, common_data, &dev_data->descriptorPoolMap,
+                                                   &dev_data->setMap, dev_data, dev_data->descriptorSetLayoutMap,
+                                                   dev_data->imageMap, dev_data->device_extensions.imageToSwapchainMap,
+                                                   dev_data->device_extensions.swapchainMap);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
@@ -6676,10 +6683,10 @@ static bool markStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_N
     bool skip_call = false;
 
     for (auto imageView : pCB->updateImages) {
-        auto iv_data = dev_data->imageViewMap.find(imageView);
-        if (iv_data == dev_data->imageViewMap.end())
+        auto iv_data = getImageViewData(dev_data, imageView);
+        if (!iv_data)
             continue;
-        VkImage image = iv_data->second.image;
+        VkImage image = iv_data->image;
         VkDeviceMemory mem;
         skip_call |=
             get_mem_binding_from_object(dev_data, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
@@ -8126,14 +8133,14 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFrameb
         }
         for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
             VkImageView view = pCreateInfo->pAttachments[i];
-            auto view_data = dev_data->imageViewMap.find(view);
-            if (view_data == dev_data->imageViewMap.end()) {
+            auto view_data = getImageViewData(dev_data, view);
+            if (!view_data) {
                 continue;
             }
             MT_FB_ATTACHMENT_INFO fb_info;
-            get_mem_binding_from_object(dev_data, (uint64_t)(view_data->second.image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+            get_mem_binding_from_object(dev_data, (uint64_t)(view_data->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                                         &fb_info.mem);
-            fb_info.image = view_data->second.image;
+            fb_info.image = view_data->image;
             fbNode.attachments.push_back(fb_info);
         }
     }
@@ -8258,19 +8265,19 @@ static bool ValidateDependencies(const layer_data *my_data, FRAMEBUFFER_NODE con
                 overlapping_attachments[j].push_back(i);
                 continue;
             }
-            auto view_data_i = my_data->imageViewMap.find(viewi);
-            auto view_data_j = my_data->imageViewMap.find(viewj);
-            if (view_data_i == my_data->imageViewMap.end() || view_data_j == my_data->imageViewMap.end()) {
+            auto view_data_i = getImageViewData(my_data, viewi);
+            auto view_data_j = getImageViewData(my_data, viewj);
+            if (!view_data_i || !view_data_j) {
                 continue;
             }
-            if (view_data_i->second.image == view_data_j->second.image &&
-                isRegionOverlapping(view_data_i->second.subresourceRange, view_data_j->second.subresourceRange)) {
+            if (view_data_i->image == view_data_j->image &&
+                isRegionOverlapping(view_data_i->subresourceRange, view_data_j->subresourceRange)) {
                 overlapping_attachments[i].push_back(j);
                 overlapping_attachments[j].push_back(i);
                 continue;
             }
-            auto image_data_i = my_data->imageMap.find(view_data_i->second.image);
-            auto image_data_j = my_data->imageMap.find(view_data_j->second.image);
+            auto image_data_i = my_data->imageMap.find(view_data_i->image);
+            auto image_data_j = my_data->imageMap.find(view_data_j->image);
             if (image_data_i == my_data->imageMap.end() || image_data_j == my_data->imageMap.end()) {
                 continue;
             }
@@ -8723,10 +8730,10 @@ static bool VerifyFramebufferAndRenderPassLayouts(layer_data *dev_data, GLOBAL_C
     }
     for (uint32_t i = 0; i < pRenderPassInfo->attachmentCount; ++i) {
         const VkImageView &image_view = framebufferInfo.pAttachments[i];
-        auto image_data = dev_data->imageViewMap.find(image_view);
-        assert(image_data != dev_data->imageViewMap.end());
-        const VkImage &image = image_data->second.image;
-        const VkImageSubresourceRange &subRange = image_data->second.subresourceRange;
+        auto image_data = getImageViewData(dev_data, image_view);
+        assert(image_data);
+        const VkImage &image = image_data->image;
+        const VkImageSubresourceRange &subRange = image_data->subresourceRange;
         IMAGE_CMD_BUF_LAYOUT_NODE newNode = {pRenderPassInfo->pAttachments[i].initialLayout,
                                              pRenderPassInfo->pAttachments[i].initialLayout};
         // TODO: Do not iterate over every possibility - consolidate where possible
