@@ -487,6 +487,7 @@ namespace core_validation {
 struct layer_data;
 cvdescriptorset::DescriptorSet *getSetNode(const layer_data *, const VkDescriptorSet);
 BUFFER_NODE *getBufferNode(const layer_data *, const VkBuffer);
+IMAGE_NODE *getImageNode(const layer_data *, const VkImage);
 DEVICE_MEM_INFO *getMemObjInfo(const layer_data *, const VkDeviceMemory);
 VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *, const VkBufferView);
 SAMPLER_NODE *getSamplerNode(const layer_data *, const VkSampler);

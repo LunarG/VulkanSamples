@@ -125,7 +125,7 @@ struct layer_data {
     // Layer specific data
     unordered_map<VkSampler, unique_ptr<SAMPLER_NODE>> samplerMap;
     unordered_map<VkImageView, unique_ptr<VkImageViewCreateInfo>> imageViewMap;
-    unordered_map<VkImage, IMAGE_NODE> imageMap;
+    unordered_map<VkImage, unique_ptr<IMAGE_NODE>> imageMap;
     unordered_map<VkBufferView, unique_ptr<VkBufferViewCreateInfo>> bufferViewMap;
     unordered_map<VkBuffer, unique_ptr<BUFFER_NODE>> bufferMap;
     unordered_map<VkPipeline, PIPELINE_NODE *> pipelineMap;
@@ -277,6 +277,14 @@ SAMPLER_NODE *getSamplerNode(const layer_data *dev_data, const VkSampler sampler
     }
     return sampler_it->second.get();
 }
+// Return image node ptr for specified image or else NULL
+IMAGE_NODE *getImageNode(const layer_data *dev_data, const VkImage image) {
+    auto img_it = dev_data->imageMap.find(image);
+    if (img_it == dev_data->imageMap.end()) {
+        return nullptr;
+    }
+    return img_it->second.get();
+}
 // Return buffer node ptr for specified buffer or else NULL
 BUFFER_NODE *getBufferNode(const layer_data *dev_data, const VkBuffer buffer) {
     auto buff_it = dev_data->bufferMap.find(buffer);
@@ -297,9 +305,9 @@ VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *my_data, const VkBuf
 static VkDeviceMemory *get_object_mem_binding(layer_data *my_data, uint64_t handle, VkDebugReportObjectTypeEXT type) {
     switch (type) {
     case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
-        auto it = my_data->imageMap.find(VkImage(handle));
-        if (it != my_data->imageMap.end())
-            return &(*it).second.mem;
+        auto img_node = getImageNode(my_data, VkImage(handle));
+        if (img_node)
+            return &img_node->mem;
         break;
     }
     case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
@@ -345,9 +353,9 @@ static bool validate_usage_flags(layer_data *my_data, VkFlags actual, VkFlags de
 static bool validate_image_usage_flags(layer_data *dev_data, VkImage image, VkFlags desired, VkBool32 strict,
                                            char const *func_name, char const *usage_string) {
     bool skipCall = false;
-    auto const image_node = dev_data->imageMap.find(image);
-    if (image_node != dev_data->imageMap.end()) {
-        skipCall = validate_usage_flags(dev_data, image_node->second.createInfo.usage, desired, strict, (uint64_t)image,
+    auto const image_node = getImageNode(dev_data, image);
+    if (image_node) {
+        skipCall = validate_usage_flags(dev_data, image_node->createInfo.usage, desired, strict, (uint64_t)image,
                                         VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "image", func_name, usage_string);
     }
     return skipCall;
@@ -387,8 +395,8 @@ static void add_mem_obj_info(layer_data *my_data, void *object, const VkDeviceMe
 static bool validate_memory_is_valid(layer_data *dev_data, VkDeviceMemory mem, const char *functionName,
                                      VkImage image = VK_NULL_HANDLE) {
     if (mem == MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
-        auto const image_node = dev_data->imageMap.find(image);
-        if (image_node != dev_data->imageMap.end() && !image_node->second.valid) {
+        auto const image_node = getImageNode(dev_data, image);
+        if (image_node && !image_node->valid) {
             return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                            (uint64_t)(mem), __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
                            "%s: Cannot read invalid swapchain image 0x%" PRIx64 ", please fill the memory before using.",
@@ -408,9 +416,9 @@ static bool validate_memory_is_valid(layer_data *dev_data, VkDeviceMemory mem, c
 
 static void set_memory_valid(layer_data *dev_data, VkDeviceMemory mem, bool valid, VkImage image = VK_NULL_HANDLE) {
     if (mem == MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
-        auto image_node = dev_data->imageMap.find(image);
-        if (image_node != dev_data->imageMap.end()) {
-            image_node->second.valid = valid;
+        auto image_node = getImageNode(dev_data, image);
+        if (image_node) {
+            image_node->valid = valid;
         }
     } else {
         DEVICE_MEM_INFO *pMemObj = getMemObjInfo(dev_data, mem);
@@ -620,9 +628,9 @@ static bool set_mem_binding(layer_data *dev_data, VkDeviceMemory mem, uint64_t h
                 // For image objects, make sure default memory state is correctly set
                 // TODO : What's the best/correct way to handle this?
                 if (VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT == type) {
-                    auto const image_node = dev_data->imageMap.find(VkImage(handle));
-                    if (image_node != dev_data->imageMap.end()) {
-                        VkImageCreateInfo ici = image_node->second.createInfo;
+                    auto const image_node = getImageNode(dev_data, VkImage(handle));
+                    if (image_node) {
+                        VkImageCreateInfo ici = image_node->createInfo;
                         if (ici.usage & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
                             // TODO::  More memory state transition stuff.
                         }
@@ -3311,13 +3319,13 @@ bool FindLayouts(const layer_data *my_data, VkImage image, std::vector<VkImageLa
     auto sub_data = my_data->imageSubresourceMap.find(image);
     if (sub_data == my_data->imageSubresourceMap.end())
         return false;
-    auto imgIt = my_data->imageMap.find(image);
-    if (imgIt == my_data->imageMap.end())
+    auto img_node = getImageNode(my_data, image);
+    if (!img_node)
         return false;
     bool ignoreGlobal = false;
     // TODO: Make this robust for >1 aspect mask. Now it will just say ignore
     // potential errors in this case.
-    if (sub_data->second.size() >= (imgIt->second.createInfo.arrayLayers * imgIt->second.createInfo.mipLevels + 1)) {
+    if (sub_data->second.size() >= (img_node->createInfo.arrayLayers * img_node->createInfo.mipLevels + 1)) {
         ignoreGlobal = true;
     }
     for (auto imgsubpair : sub_data->second) {
@@ -5068,9 +5076,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
     const auto &imageEntry = dev_data->imageMap.find(image);
     if (imageEntry != dev_data->imageMap.end()) {
         // Clean up memory mapping, bindings and range references for image
-        auto mem_info = getMemObjInfo(dev_data, imageEntry->second.mem);
+        auto mem_info = getMemObjInfo(dev_data, imageEntry->second.get()->mem);
         if (mem_info) {
-            remove_memory_ranges(reinterpret_cast<uint64_t &>(image), imageEntry->second.mem, mem_info->imageRanges);
+            remove_memory_ranges(reinterpret_cast<uint64_t &>(image), imageEntry->second.get()->mem, mem_info->imageRanges);
             clear_object_binding(dev_data, reinterpret_cast<uint64_t &>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
             mem_info->image = VK_NULL_HANDLE;
         }
@@ -5465,7 +5473,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
         IMAGE_LAYOUT_NODE image_node;
         image_node.layout = pCreateInfo->initialLayout;
         image_node.format = pCreateInfo->format;
-        dev_data->imageMap.insert(std::make_pair(*pImage, IMAGE_NODE(pCreateInfo)));
+        dev_data->imageMap.insert(std::make_pair(*pImage, unique_ptr<IMAGE_NODE>(new IMAGE_NODE(pCreateInfo))));
         ImageSubresourcePair subpair = {*pImage, false, VkImageSubresource()};
         dev_data->imageSubresourceMap[*pImage].push_back(subpair);
         dev_data->imageLayoutMap[subpair] = image_node;
@@ -5476,18 +5484,18 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
 static void ResolveRemainingLevelsLayers(layer_data *dev_data, VkImageSubresourceRange *range, VkImage image) {
     /* expects global_lock to be held by caller */
 
-    auto image_node_it = dev_data->imageMap.find(image);
-    if (image_node_it != dev_data->imageMap.end()) {
+    auto image_node = getImageNode(dev_data, image);
+    if (image_node) {
         /* If the caller used the special values VK_REMAINING_MIP_LEVELS and
          * VK_REMAINING_ARRAY_LAYERS, resolve them now in our internal state to
          * the actual values.
          */
         if (range->levelCount == VK_REMAINING_MIP_LEVELS) {
-            range->levelCount = image_node_it->second.createInfo.mipLevels - range->baseMipLevel;
+            range->levelCount = image_node->createInfo.mipLevels - range->baseMipLevel;
         }
 
         if (range->layerCount == VK_REMAINING_ARRAY_LAYERS) {
-            range->layerCount = image_node_it->second.createInfo.arrayLayers - range->baseArrayLayer;
+            range->layerCount = image_node->createInfo.arrayLayers - range->baseArrayLayer;
         }
     }
 }
@@ -5500,13 +5508,13 @@ static void ResolveRemainingLevelsLayers(layer_data *dev_data, uint32_t *levels,
 
     *levels = range.levelCount;
     *layers = range.layerCount;
-    auto image_node_it = dev_data->imageMap.find(image);
-    if (image_node_it != dev_data->imageMap.end()) {
+    auto image_node = getImageNode(dev_data, image);
+    if (image_node) {
         if (range.levelCount == VK_REMAINING_MIP_LEVELS) {
-            *levels = image_node_it->second.createInfo.mipLevels - range.baseMipLevel;
+            *levels = image_node->createInfo.mipLevels - range.baseMipLevel;
         }
         if (range.layerCount == VK_REMAINING_ARRAY_LAYERS) {
-            *layers = image_node_it->second.createInfo.arrayLayers - range.baseArrayLayer;
+            *layers = image_node->createInfo.arrayLayers - range.baseArrayLayer;
         }
     }
 }
@@ -5900,7 +5908,7 @@ static void PostCallRecordAllocateDescriptorSets(layer_data *dev_data, const VkD
     // All the updates are contained in a single cvdescriptorset function
     cvdescriptorset::PerformAllocateDescriptorSets(pAllocateInfo, pDescriptorSets, common_data, &dev_data->descriptorPoolMap,
                                                    &dev_data->setMap, dev_data, dev_data->descriptorSetLayoutMap,
-                                                   dev_data->imageMap, dev_data->device_extensions.imageToSwapchainMap,
+                                                   dev_data->device_extensions.imageToSwapchainMap,
                                                    dev_data->device_extensions.swapchainMap);
 }
 
@@ -7581,11 +7589,11 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
     }
     for (uint32_t i = 0; i < imageMemBarrierCount; ++i) {
         auto mem_barrier = &pImageMemBarriers[i];
-        auto image_data = dev_data->imageMap.find(mem_barrier->image);
-        if (image_data != dev_data->imageMap.end()) {
+        auto image_data = getImageNode(dev_data, mem_barrier->image);
+        if (image_data) {
             uint32_t src_q_f_index = mem_barrier->srcQueueFamilyIndex;
             uint32_t dst_q_f_index = mem_barrier->dstQueueFamilyIndex;
-            if (image_data->second.createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) {
+            if (image_data->createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) {
                 // srcQueueFamilyIndex and dstQueueFamilyIndex must both
                 // be VK_QUEUE_FAMILY_IGNORED
                 if ((src_q_f_index != VK_QUEUE_FAMILY_IGNORED) || (dst_q_f_index != VK_QUEUE_FAMILY_IGNORED)) {
@@ -7635,14 +7643,14 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                                                          "PREINITIALIZED.",
                         funcName);
             }
-            auto image_data = dev_data->imageMap.find(mem_barrier->image);
+            auto image_data = getImageNode(dev_data, mem_barrier->image);
             VkFormat format = VK_FORMAT_UNDEFINED;
             uint32_t arrayLayers = 0, mipLevels = 0;
             bool imageFound = false;
-            if (image_data != dev_data->imageMap.end()) {
-                format = image_data->second.createInfo.format;
-                arrayLayers = image_data->second.createInfo.arrayLayers;
-                mipLevels = image_data->second.createInfo.mipLevels;
+            if (image_data) {
+                format = image_data->createInfo.format;
+                arrayLayers = image_data->createInfo.arrayLayers;
+                mipLevels = image_data->createInfo.mipLevels;
                 imageFound = true;
             } else if (dev_data->device_extensions.wsi_enabled) {
                 auto imageswap_data = dev_data->device_extensions.imageToSwapchainMap.find(mem_barrier->image);
@@ -8276,14 +8284,13 @@ static bool ValidateDependencies(const layer_data *my_data, FRAMEBUFFER_NODE con
                 overlapping_attachments[j].push_back(i);
                 continue;
             }
-            auto image_data_i = my_data->imageMap.find(view_data_i->image);
-            auto image_data_j = my_data->imageMap.find(view_data_j->image);
-            if (image_data_i == my_data->imageMap.end() || image_data_j == my_data->imageMap.end()) {
+            auto image_data_i = getImageNode(my_data, view_data_i->image);
+            auto image_data_j = getImageNode(my_data, view_data_j->image);
+            if (!image_data_i || !image_data_j) {
                 continue;
             }
-            if (image_data_i->second.mem == image_data_j->second.mem &&
-                isRangeOverlapping(image_data_i->second.memOffset, image_data_i->second.memSize, image_data_j->second.memOffset,
-                                   image_data_j->second.memSize)) {
+            if (image_data_i->mem == image_data_j->mem && isRangeOverlapping(image_data_i->memOffset, image_data_i->memSize,
+                                                                             image_data_j->memOffset, image_data_j->memSize)) {
                 overlapping_attachments[i].push_back(j);
                 overlapping_attachments[j].push_back(i);
             }
@@ -9461,8 +9468,8 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skipCall = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    auto image_node = dev_data->imageMap.find(image);
-    if (image_node != dev_data->imageMap.end()) {
+    auto image_node = getImageNode(dev_data, image);
+    if (image_node) {
         // Track objects tied to memory
         uint64_t image_handle = reinterpret_cast<uint64_t &>(image);
         skipCall = set_mem_binding(dev_data, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory");
@@ -9485,9 +9492,9 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
             result = dev_data->device_dispatch_table->BindImageMemory(device, image, mem, memoryOffset);
             lock.lock();
             dev_data->memObjMap[mem].get()->image = image;
-            image_node->second.mem = mem;
-            image_node->second.memOffset = memoryOffset;
-            image_node->second.memSize = memRequirements.size;
+            image_node->mem = mem;
+            image_node->memOffset = memoryOffset;
+            image_node->memSize = memRequirements.size;
             lock.unlock();
         }
     } else {
@@ -9724,16 +9731,19 @@ GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCoun
             IMAGE_LAYOUT_NODE image_layout_node;
             image_layout_node.layout = VK_IMAGE_LAYOUT_UNDEFINED;
             image_layout_node.format = swapchain_node->createInfo.imageFormat;
+            // Add imageMap entries for each swapchain image
+            VkImageCreateInfo image_ci = {};
+            image_ci.mipLevels = 1;
+            image_ci.arrayLayers = swapchain_node->createInfo.imageArrayLayers;
+            image_ci.usage = swapchain_node->createInfo.imageUsage;
+            image_ci.format = swapchain_node->createInfo.imageFormat;
+            image_ci.extent.width = swapchain_node->createInfo.imageExtent.width;
+            image_ci.extent.height = swapchain_node->createInfo.imageExtent.height;
+            image_ci.sharingMode = swapchain_node->createInfo.imageSharingMode;
+            dev_data->imageMap[pSwapchainImages[i]] = unique_ptr<IMAGE_NODE>(new IMAGE_NODE(&image_ci));
             auto &image_node = dev_data->imageMap[pSwapchainImages[i]];
-            image_node.createInfo.mipLevels = 1;
-            image_node.createInfo.arrayLayers = swapchain_node->createInfo.imageArrayLayers;
-            image_node.createInfo.usage = swapchain_node->createInfo.imageUsage;
-            image_node.createInfo.format = swapchain_node->createInfo.imageFormat;
-            image_node.createInfo.extent.width = swapchain_node->createInfo.imageExtent.width;
-            image_node.createInfo.extent.height = swapchain_node->createInfo.imageExtent.height;
-            image_node.createInfo.sharingMode = swapchain_node->createInfo.imageSharingMode;
-            image_node.valid = false;
-            image_node.mem = MEMTRACKER_SWAP_CHAIN_IMAGE_KEY;
+            image_node->valid = false;
+            image_node->mem = MEMTRACKER_SWAP_CHAIN_IMAGE_KEY;
             swapchain_node->images.push_back(pSwapchainImages[i]);
             ImageSubresourcePair subpair = {pSwapchainImages[i], false, VkImageSubresource()};
             dev_data->imageSubresourceMap[pSwapchainImages[i]].push_back(subpair);

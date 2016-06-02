@@ -162,7 +162,7 @@ class Descriptor {
 //  performs common functions with both sampler and image descriptors so they can share their common functions
 bool ValidateSampler(const VkSampler, const core_validation::layer_data *);
 bool ValidateImageUpdate(VkImageView, VkImageLayout, VkDescriptorType, const core_validation::layer_data *,
-                         const std::unordered_map<VkImage, IMAGE_NODE> *, const std::unordered_map<VkImage, VkSwapchainKHR> *,
+                         const std::unordered_map<VkImage, VkSwapchainKHR> *,
                          const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *, std::string *);
 
 class SamplerDescriptor : public Descriptor {
@@ -268,7 +268,6 @@ void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const Vk
                                    std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *,
                                    const core_validation::layer_data *,
                                    const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &,
-                                   const std::unordered_map<VkImage, IMAGE_NODE> &,
                                    const std::unordered_map<VkImage, VkSwapchainKHR> &,
                                    const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> &);
 
@@ -294,7 +293,7 @@ class DescriptorSet : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
     DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const core_validation::layer_data *,
-                  const std::unordered_map<VkImage, IMAGE_NODE> *, const std::unordered_map<VkImage, VkSwapchainKHR> *,
+                  const std::unordered_map<VkImage, VkSwapchainKHR> *,
                   const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *);
     ~DescriptorSet();
     // A number of common Get* functions that return data based on layout from which this set was created
@@ -373,7 +372,6 @@ class DescriptorSet : public BASE_NODE {
     // Ptrs to object containers to verify bound data
     const core_validation::layer_data *device_data_;
     // TODO : For next 3 maps all we really need (currently) is an image to format mapping
-    const std::unordered_map<VkImage, IMAGE_NODE> *image_map_;
     const std::unordered_map<VkImage, VkSwapchainKHR> *image_to_swapchain_map_;
     const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *swapchain_map_;
 };
