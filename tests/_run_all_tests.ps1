@@ -12,6 +12,11 @@ Set-Item -path env:Path -value ($env:Path + ";..\loader\$dPath")
 Set-Item -path env:Path -value ($env:Path + ";gtest-1.7.0\$dPath")
 $env:VK_LAYER_PATH = "..\layers\$dPath"
 
+& $dPath\vk_loader_validation_tests
+if ($lastexitcode -ne 0) {
+   exit 1
+}
+
 & $dPath\vk_layer_validation_tests
 if ($lastexitcode -ne 0) {
    exit 1
