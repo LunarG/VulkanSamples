@@ -360,7 +360,7 @@ class DescriptorSet : public BASE_NODE {
     const DescriptorSetLayout *p_layout_;
     std::unordered_set<GLOBAL_CB_NODE *> bound_cmd_buffers_;
     std::vector<std::unique_ptr<Descriptor>> descriptors_;
-    // Ptrs to object containers to verify bound data
+    // Ptr to device data used for various data look-ups
     const core_validation::layer_data *device_data_;
 };
 }
