@@ -257,9 +257,7 @@ void PerformUpdateDescriptorSets(const core_validation::layer_data *, uint32_t, 
                                  const VkCopyDescriptorSet *);
 // Validate that Allocation state is ok
 bool ValidateAllocateDescriptorSets(const debug_report_data *, const VkDescriptorSetAllocateInfo *,
-                                    const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &,
-                                    const std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> &,
-                                    AllocateDescriptorSetsData *);
+                                    const core_validation::layer_data *, AllocateDescriptorSetsData *);
 // Update state based on allocating new descriptorsets
 void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const VkDescriptorSet *, const AllocateDescriptorSetsData *,
                                    std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *,

@@ -54,6 +54,7 @@
 
 // Fwd declarations
 namespace cvdescriptorset {
+class DescriptorSetLayout;
 class DescriptorSet;
 };
 
@@ -486,6 +487,8 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
 namespace core_validation {
 struct layer_data;
 cvdescriptorset::DescriptorSet *getSetNode(const layer_data *, VkDescriptorSet);
+cvdescriptorset::DescriptorSetLayout const *getDescriptorSetLayout(layer_data const *, VkDescriptorSetLayout);
+DESCRIPTOR_POOL_NODE *getPoolNode(const layer_data *, const VkDescriptorPool);
 BUFFER_NODE *getBufferNode(const layer_data *, VkBuffer);
 IMAGE_NODE *getImageNode(const layer_data *, VkImage);
 DEVICE_MEM_INFO *getMemObjInfo(const layer_data *, VkDeviceMemory);

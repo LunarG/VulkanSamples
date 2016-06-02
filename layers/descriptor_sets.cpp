@@ -1209,32 +1209,32 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
     return true;
 }
 // Verify that the state at allocate time is correct, but don't actually allocate the sets yet
-bool cvdescriptorset::ValidateAllocateDescriptorSets(
-    const debug_report_data *report_data, const VkDescriptorSetAllocateInfo *p_alloc_info,
-    const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &set_layout_map,
-    const std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> &pool_map, AllocateDescriptorSetsData *ds_data) {
+bool cvdescriptorset::ValidateAllocateDescriptorSets(const debug_report_data *report_data,
+                                                     const VkDescriptorSetAllocateInfo *p_alloc_info,
+                                                     const core_validation::layer_data *dev_data,
+                                                     AllocateDescriptorSetsData *ds_data) {
     bool skip_call = false;
 
     for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
-        auto layout_it = set_layout_map.find(p_alloc_info->pSetLayouts[i]);
-        if (layout_it == set_layout_map.end()) {
+        auto layout = getDescriptorSetLayout(dev_data, p_alloc_info->pSetLayouts[i]);
+        if (!layout) {
             skip_call |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
                         reinterpret_cast<const uint64_t &>(p_alloc_info->pSetLayouts[i]), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
                         "Unable to find set layout node for layout 0x%" PRIxLEAST64 " specified in vkAllocateDescriptorSets() call",
                         reinterpret_cast<const uint64_t &>(p_alloc_info->pSetLayouts[i]));
         } else {
-            ds_data->layout_nodes[i] = layout_it->second;
+            ds_data->layout_nodes[i] = layout;
             // Count total descriptors required per type
-            for (uint32_t j = 0; j < layout_it->second->GetBindingCount(); ++j) {
-                const auto &binding_layout = layout_it->second->GetDescriptorSetLayoutBindingPtrFromIndex(j);
+            for (uint32_t j = 0; j < layout->GetBindingCount(); ++j) {
+                const auto &binding_layout = layout->GetDescriptorSetLayoutBindingPtrFromIndex(j);
                 uint32_t typeIndex = static_cast<uint32_t>(binding_layout->descriptorType);
                 ds_data->required_descriptors_by_type[typeIndex] += binding_layout->descriptorCount;
             }
         }
     }
-    auto pool_it = pool_map.find(p_alloc_info->descriptorPool);
-    if (pool_it == pool_map.end()) {
+    auto pool_node = getPoolNode(dev_data, p_alloc_info->descriptorPool);
+    if (!pool_node) {
         skip_call |=
             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
                     reinterpret_cast<const uint64_t &>(p_alloc_info->descriptorPool), __LINE__, DRAWSTATE_INVALID_POOL, "DS",
@@ -1242,24 +1242,23 @@ bool cvdescriptorset::ValidateAllocateDescriptorSets(
                     reinterpret_cast<const uint64_t &>(p_alloc_info->descriptorPool));
     } else { // Make sure pool has all the available descriptors before calling down chain
         // Track number of descriptorSets allowable in this pool
-        if (pool_it->second->availableSets < p_alloc_info->descriptorSetCount) {
-            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
-                                 reinterpret_cast<uint64_t &>(pool_it->second->pool), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY,
-                                 "DS", "Unable to allocate %u descriptorSets from pool 0x%" PRIxLEAST64
-                                       ". This pool only has %d descriptorSets remaining.",
-                                 p_alloc_info->descriptorSetCount, reinterpret_cast<uint64_t &>(pool_it->second->pool),
-                                 pool_it->second->availableSets);
+        if (pool_node->availableSets < p_alloc_info->descriptorSetCount) {
+            skip_call |=
+                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+                        reinterpret_cast<uint64_t &>(pool_node->pool), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY, "DS",
+                        "Unable to allocate %u descriptorSets from pool 0x%" PRIxLEAST64
+                        ". This pool only has %d descriptorSets remaining.",
+                        p_alloc_info->descriptorSetCount, reinterpret_cast<uint64_t &>(pool_node->pool), pool_node->availableSets);
         }
         // Determine whether descriptor counts are satisfiable
         for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; i++) {
-            if (ds_data->required_descriptors_by_type[i] > pool_it->second->availableDescriptorTypeCount[i]) {
-                skip_call |=
-                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
-                            reinterpret_cast<const uint64_t &>(pool_it->second->pool), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY,
-                            "DS", "Unable to allocate %u descriptors of type %s from pool 0x%" PRIxLEAST64
-                                  ". This pool only has %d descriptors of this type remaining.",
-                            ds_data->required_descriptors_by_type[i], string_VkDescriptorType(VkDescriptorType(i)),
-                            reinterpret_cast<uint64_t &>(pool_it->second->pool), pool_it->second->availableDescriptorTypeCount[i]);
+            if (ds_data->required_descriptors_by_type[i] > pool_node->availableDescriptorTypeCount[i]) {
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+                                     reinterpret_cast<const uint64_t &>(pool_node->pool), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY,
+                                     "DS", "Unable to allocate %u descriptors of type %s from pool 0x%" PRIxLEAST64
+                                           ". This pool only has %d descriptors of this type remaining.",
+                                     ds_data->required_descriptors_by_type[i], string_VkDescriptorType(VkDescriptorType(i)),
+                                     reinterpret_cast<uint64_t &>(pool_node->pool), pool_node->availableDescriptorTypeCount[i]);
             }
         }
     }

@@ -2037,7 +2037,7 @@ static FRAMEBUFFER_NODE *getFramebuffer(layer_data *my_data, VkFramebuffer frame
     return &it->second;
 }
 
-static cvdescriptorset::DescriptorSetLayout const *getDescriptorSetLayout(layer_data const *my_data, VkDescriptorSetLayout dsLayout) {
+cvdescriptorset::DescriptorSetLayout const *getDescriptorSetLayout(layer_data const *my_data, VkDescriptorSetLayout dsLayout) {
     auto it = my_data->descriptorSetLayoutMap.find(dsLayout);
     if (it == my_data->descriptorSetLayoutMap.end()) {
         return nullptr;
@@ -3166,7 +3166,7 @@ static void deletePipelines(layer_data *my_data) {
 // Block of code at start here specifically for managing/tracking DSs
 
 // Return Pool node ptr for specified pool or else NULL
-static DESCRIPTOR_POOL_NODE *getPoolNode(const layer_data *dev_data, const VkDescriptorPool pool) {
+DESCRIPTOR_POOL_NODE *getPoolNode(const layer_data *dev_data, const VkDescriptorPool pool) {
     auto pool_it = dev_data->descriptorPoolMap.find(pool);
     if (pool_it == dev_data->descriptorPoolMap.end()) {
         return NULL;
@@ -5914,8 +5914,7 @@ ResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, VkDescript
 static bool PreCallValidateAllocateDescriptorSets(layer_data *dev_data, const VkDescriptorSetAllocateInfo *pAllocateInfo,
                                                   cvdescriptorset::AllocateDescriptorSetsData *common_data) {
     // All state checks for AllocateDescriptorSets is done in single function
-    return cvdescriptorset::ValidateAllocateDescriptorSets(dev_data->report_data, pAllocateInfo, dev_data->descriptorSetLayoutMap,
-                                                           dev_data->descriptorPoolMap, common_data);
+    return cvdescriptorset::ValidateAllocateDescriptorSets(dev_data->report_data, pAllocateInfo, dev_data, common_data);
 }
 // Allocation state was good and call down chain was made so update state based on allocating descriptor sets
 static void PostCallRecordAllocateDescriptorSets(layer_data *dev_data, const VkDescriptorSetAllocateInfo *pAllocateInfo,
