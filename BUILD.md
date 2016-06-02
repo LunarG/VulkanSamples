@@ -52,9 +52,6 @@ If you want to use the loader and layers that you have just built:
 export LD_LIBRARY_PATH=<path to your repository root>/dbuild/loader
 export VK_LAYER_PATH=<path to your repository root>/dbuild/layers
 ```
-Note that if you have installed the [LunarG Vulkan SDK](https://vulkan.lunarg.com),
-you will also have the SDK version of the loader and layers installed in your default system libraries.
-
 You can run the `vulkaninfo` application to see which driver, loader and layers are being used.
 
 The `LoaderAndLayerInterface` document in the `loader` folder in this repository is a specification that
