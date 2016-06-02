@@ -62,11 +62,6 @@ class BASE_NODE {
     std::atomic_int in_use;
 };
 
-namespace core_validation {
-struct layer_data;
-cvdescriptorset::DescriptorSet *getSetNode(const layer_data *, const VkDescriptorSet);
-}
-
 struct DESCRIPTOR_POOL_NODE {
     VkDescriptorPool pool;
     uint32_t maxSets;       // Max descriptor sets allowed in this pool
@@ -484,5 +479,11 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
 
     ~GLOBAL_CB_NODE();
 };
+// Fwd declarations of layer_data and helpers to look-up state from layer_data maps
+namespace core_validation {
+struct layer_data;
+cvdescriptorset::DescriptorSet *getSetNode(const layer_data *, const VkDescriptorSet);
+BUFFER_NODE *getBufferNode(const layer_data *, const VkBuffer);
+}
 
 #endif // CORE_VALIDATION_TYPES_H_

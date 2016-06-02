@@ -264,7 +264,7 @@ cvdescriptorset::AllocateDescriptorSetsData::AllocateDescriptorSetsData(uint32_t
     : required_descriptors_by_type{}, layout_nodes(count, nullptr) {}
 
 cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const DescriptorSetLayout *layout,
-                                              const std::unordered_map<VkBuffer, BUFFER_NODE> *buffer_map,
+                                              const core_validation::layer_data *dev_data,
                                               const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *memory_map,
                                               const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *buffer_view_map,
                                               const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *sampler_map,
@@ -272,7 +272,7 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
                                               const std::unordered_map<VkImage, IMAGE_NODE> *image_map,
                                               const std::unordered_map<VkImage, VkSwapchainKHR> *image_to_swapchain_map,
                                               const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *swapchain_map)
-    : some_update_(false), set_(set), p_layout_(layout), buffer_map_(buffer_map), memory_map_(memory_map),
+    : some_update_(false), set_(set), p_layout_(layout), device_data_(dev_data), memory_map_(memory_map),
       buffer_view_map_(buffer_view_map), sampler_map_(sampler_map), image_view_map_(image_view_map), image_map_(image_map),
       image_to_swapchain_map_(image_to_swapchain_map), swapchain_map_(swapchain_map) {
     // Foreach binding, create default descriptors of given type
@@ -362,27 +362,27 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::unordered_set<
                     if (GeneralBuffer == descriptors_[i]->GetClass()) {
                         // Verify that buffers are valid
                         auto buffer = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetBuffer();
-                        auto buffer_node = buffer_map_->find(buffer);
-                        if (buffer_node == buffer_map_->end()) {
+                        auto buffer_node = getBufferNode(device_data_, buffer);
+                        if (!buffer_node) {
                             std::stringstream error_str;
                             error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
                                       << " references invalid buffer " << buffer << ".";
                             *error = error_str.str();
                             return false;
                         } else {
-                            auto mem_entry = memory_map_->find(buffer_node->second.mem);
+                            auto mem_entry = memory_map_->find(buffer_node->mem);
                             if (mem_entry == memory_map_->end()) {
                                 std::stringstream error_str;
                                 error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
-                                          << " uses buffer " << buffer << " that references invalid memory "
-                                          << buffer_node->second.mem << ".";
+                                          << " uses buffer " << buffer << " that references invalid memory " << buffer_node->mem
+                                          << ".";
                                 *error = error_str.str();
                                 return false;
                             }
                         }
                         if (descriptors_[i]->IsDynamic()) {
                             // Validate that dynamic offsets are within the buffer
-                            auto buffer_size = buffer_node->second.createInfo.size;
+                            auto buffer_size = buffer_node->createInfo.size;
                             auto range = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetRange();
                             auto desc_offset = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetOffset();
                             auto dyn_offset = dynamic_offsets[dyn_offset_index++];
@@ -986,15 +986,15 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
 //  If there's an error, update the error string with details and return false, else return true
 bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkBuffer buffer, VkDescriptorType type, std::string *error) const {
     // First make sure that buffer is valid
-    auto buff_it = buffer_map_->find(buffer);
-    if (buff_it == buffer_map_->end()) {
+    auto buffer_node = getBufferNode(device_data_, buffer);
+    if (!buffer_node) {
         std::stringstream error_str;
         error_str << "Invalid VkBuffer: " << buffer;
         *error = error_str.str();
         return false;
     }
     // Verify that usage bits set correctly for given type
-    auto usage = buff_it->second.createInfo.usage;
+    auto usage = buffer_node->createInfo.usage;
     std::string error_usage_bit;
     switch (type) {
     case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
@@ -1289,7 +1289,6 @@ void cvdescriptorset::PerformAllocateDescriptorSets(
     const AllocateDescriptorSetsData *ds_data, std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *pool_map,
     std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *set_map, const core_validation::layer_data *dev_data,
     const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &layout_map,
-    const std::unordered_map<VkBuffer, BUFFER_NODE> &buffer_map,
     const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> &mem_obj_map,
     const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> &buffer_view_map,
     const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> &sampler_map,
@@ -1307,7 +1306,7 @@ void cvdescriptorset::PerformAllocateDescriptorSets(
      * global map and the pool's set.
      */
     for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
-        auto new_ds = new cvdescriptorset::DescriptorSet(descriptor_sets[i], ds_data->layout_nodes[i], &buffer_map, &mem_obj_map,
+        auto new_ds = new cvdescriptorset::DescriptorSet(descriptor_sets[i], ds_data->layout_nodes[i], dev_data, &mem_obj_map,
                                                          &buffer_view_map, &sampler_map, &image_view_map, &image_map,
                                                          &image_to_swapchain_map, &swapchain_map);
 

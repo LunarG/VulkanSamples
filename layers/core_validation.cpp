@@ -127,7 +127,7 @@ struct layer_data {
     unordered_map<VkImageView, VkImageViewCreateInfo> imageViewMap;
     unordered_map<VkImage, IMAGE_NODE> imageMap;
     unordered_map<VkBufferView, VkBufferViewCreateInfo> bufferViewMap;
-    unordered_map<VkBuffer, BUFFER_NODE> bufferMap;
+    unordered_map<VkBuffer, unique_ptr<BUFFER_NODE>> bufferMap;
     unordered_map<VkPipeline, PIPELINE_NODE *> pipelineMap;
     unordered_map<VkCommandPool, CMD_POOL_INFO> commandPoolMap;
     unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> descriptorPoolMap;
@@ -261,6 +261,15 @@ struct shader_module {
 // TODO : This can be much smarter, using separate locks for separate global data
 static std::mutex global_lock;
 
+// Return buffer node ptr for specified buffer or else NULL
+BUFFER_NODE *getBufferNode(const layer_data *my_data, const VkBuffer buffer) {
+    auto buff_it = my_data->bufferMap.find(buffer);
+    if (buff_it == my_data->bufferMap.end()) {
+        return nullptr;
+    }
+    return buff_it->second.get();
+}
+
 static VkDeviceMemory *get_object_mem_binding(layer_data *my_data, uint64_t handle, VkDebugReportObjectTypeEXT type) {
     switch (type) {
     case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
@@ -270,9 +279,9 @@ static VkDeviceMemory *get_object_mem_binding(layer_data *my_data, uint64_t hand
         break;
     }
     case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
-        auto it = my_data->bufferMap.find(VkBuffer(handle));
-        if (it != my_data->bufferMap.end())
-            return &(*it).second.mem;
+        auto buff_node = getBufferNode(my_data, VkBuffer(handle));
+        if (buff_node)
+            return &buff_node->mem;
         break;
     }
     default:
@@ -326,9 +335,9 @@ static bool validate_image_usage_flags(layer_data *dev_data, VkImage image, VkFl
 static bool validate_buffer_usage_flags(layer_data *dev_data, VkBuffer buffer, VkFlags desired, VkBool32 strict,
                                             char const *func_name, char const *usage_string) {
     bool skipCall = false;
-    auto const buffer_node = dev_data->bufferMap.find(buffer);
-    if (buffer_node != dev_data->bufferMap.end()) {
-        skipCall = validate_usage_flags(dev_data, buffer_node->second.createInfo.usage, desired, strict, (uint64_t)buffer,
+    auto buffer_node = getBufferNode(dev_data, buffer);
+    if (buffer_node) {
+        skipCall = validate_usage_flags(dev_data, buffer_node->createInfo.usage, desired, strict, (uint64_t)buffer,
                                         VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "buffer", func_name, usage_string);
     }
     return skipCall;
@@ -2623,7 +2632,6 @@ static bool validate_compute_pipeline(debug_report_data *report_data, PIPELINE_N
     return validate_pipeline_shader_stage(report_data, &pCreateInfo->stage, pPipeline,
                                           &module, &entrypoint, enabledFeatures, shaderModuleMap);
 }
-
 // Return Set node ptr for specified set or else NULL
 cvdescriptorset::DescriptorSet *getSetNode(const layer_data *my_data, const VkDescriptorSet set) {
     auto set_it = my_data->setMap.find(set);
@@ -4047,13 +4055,13 @@ static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *p
     bool skip_call = false;
     for (auto drawDataElement : pCB->drawData) {
         for (auto buffer : drawDataElement.buffers) {
-            auto buffer_data = my_data->bufferMap.find(buffer);
-            if (buffer_data == my_data->bufferMap.end()) {
+            auto buffer_node = getBufferNode(my_data, buffer);
+            if (!buffer_node) {
                 skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                      (uint64_t)(buffer), __LINE__, DRAWSTATE_INVALID_BUFFER, "DS",
                                      "Cannot submit cmd buffer using deleted buffer 0x%" PRIx64 ".", (uint64_t)(buffer));
             } else {
-                buffer_data->second.in_use.fetch_add(1);
+                buffer_node->in_use.fetch_add(1);
             }
         }
     }
@@ -4132,9 +4140,9 @@ static void decrementResources(layer_data *my_data, VkCommandBuffer cmdBuffer) {
     GLOBAL_CB_NODE *pCB = getCBNode(my_data, cmdBuffer);
     for (auto drawDataElement : pCB->drawData) {
         for (auto buffer : drawDataElement.buffers) {
-            auto buffer_data = my_data->bufferMap.find(buffer);
-            if (buffer_data != my_data->bufferMap.end()) {
-                buffer_data->second.in_use.fetch_sub(1);
+            auto buffer_node = getBufferNode(my_data, buffer);
+            if (buffer_node) {
+                buffer_node->in_use.fetch_sub(1);
             }
         }
     }
@@ -4940,13 +4948,13 @@ VKAPI_ATTR VkResult VKAPI_CALL GetQueryPoolResults(VkDevice device, VkQueryPool 
 
 static bool validateIdleBuffer(const layer_data *my_data, VkBuffer buffer) {
     bool skip_call = false;
-    auto buffer_data = my_data->bufferMap.find(buffer);
-    if (buffer_data == my_data->bufferMap.end()) {
+    auto buffer_node = getBufferNode(my_data, buffer);
+    if (!buffer_node) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                              (uint64_t)(buffer), __LINE__, DRAWSTATE_DOUBLE_DESTROY, "DS",
                              "Cannot free buffer 0x%" PRIxLEAST64 " that has not been allocated.", (uint64_t)(buffer));
     } else {
-        if (buffer_data->second.in_use.load()) {
+        if (buffer_node->in_use.load()) {
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                  (uint64_t)(buffer), __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
                                  "Cannot free buffer 0x%" PRIxLEAST64 " that is in use by a command buffer.", (uint64_t)(buffer));
@@ -5015,14 +5023,14 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
         lock.lock();
     }
     // Clean up memory binding and range information for buffer
-    const auto &bufferEntry = dev_data->bufferMap.find(buffer);
-    if (bufferEntry != dev_data->bufferMap.end()) {
-        const auto &memEntry = dev_data->memObjMap.find(bufferEntry->second.mem);
+    auto buff_it = dev_data->bufferMap.find(buffer);
+    if (buff_it != dev_data->bufferMap.end()) {
+        const auto &memEntry = dev_data->memObjMap.find(buff_it->second.get()->mem);
         if (memEntry != dev_data->memObjMap.end()) {
-            remove_memory_ranges(reinterpret_cast<uint64_t &>(buffer), bufferEntry->second.mem, memEntry->second.bufferRanges);
+            remove_memory_ranges(reinterpret_cast<uint64_t &>(buffer), buff_it->second.get()->mem, memEntry->second.bufferRanges);
         }
         clear_object_binding(dev_data, reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
-        dev_data->bufferMap.erase(bufferEntry);
+        dev_data->bufferMap.erase(buff_it);
     }
 }
 
@@ -5075,9 +5083,9 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
     uint64_t buffer_handle = (uint64_t)(buffer);
     bool skipCall =
         set_mem_binding(dev_data, mem, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory");
-    auto buffer_node = dev_data->bufferMap.find(buffer);
-    if (buffer_node != dev_data->bufferMap.end()) {
-        buffer_node->second.mem = mem;
+    auto buffer_node = getBufferNode(dev_data, buffer);
+    if (buffer_node) {
+        buffer_node->mem = mem;
         VkMemoryRequirements memRequirements;
         dev_data->device_dispatch_table->GetBufferMemoryRequirements(device, buffer, &memRequirements);
 
@@ -5101,7 +5109,7 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
                         memoryOffset, memRequirements.alignment);
         }
         // Validate device limits alignments
-        VkBufferUsageFlags usage = dev_data->bufferMap[buffer].createInfo.usage;
+        VkBufferUsageFlags usage = dev_data->bufferMap[buffer].get()->createInfo.usage;
         if (usage & (VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT)) {
             if (vk_safe_modulo(memoryOffset, dev_data->phys_dev_properties.properties.limits.minTexelBufferOffsetAlignment) != 0) {
                 skipCall |=
@@ -5414,7 +5422,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         // TODO : This doesn't create deep copy of pQueueFamilyIndices so need to fix that if/when we want that data to be valid
-        dev_data->bufferMap.insert(std::make_pair(*pBuffer, BUFFER_NODE(pCreateInfo)));
+        dev_data->bufferMap.insert(std::make_pair(*pBuffer, unique_ptr<BUFFER_NODE>(new BUFFER_NODE(pCreateInfo))));
     }
     return result;
 }
@@ -5882,7 +5890,7 @@ static void PostCallRecordAllocateDescriptorSets(layer_data *dev_data, const VkD
     // All the updates are contained in a single cvdescriptorset function
     cvdescriptorset::PerformAllocateDescriptorSets(
         pAllocateInfo, pDescriptorSets, common_data, &dev_data->descriptorPoolMap, &dev_data->setMap, dev_data,
-        dev_data->descriptorSetLayoutMap, dev_data->bufferMap, dev_data->memObjMap, dev_data->bufferViewMap, dev_data->samplerMap,
+        dev_data->descriptorSetLayoutMap, dev_data->memObjMap, dev_data->bufferViewMap, dev_data->samplerMap,
         dev_data->imageViewMap, dev_data->imageMap, dev_data->device_extensions.imageToSwapchainMap,
         dev_data->device_extensions.swapchainMap);
 }
@@ -7697,11 +7705,10 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                                  dev_data->phys_dev_properties.queue_family_properties.size());
         }
 
-        auto buffer_data = dev_data->bufferMap.find(mem_barrier->buffer);
-        if (buffer_data != dev_data->bufferMap.end()) {
-            VkDeviceSize buffer_size = (buffer_data->second.createInfo.sType == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
-                                           ? buffer_data->second.createInfo.size
-                                           : 0;
+        auto buffer_node = getBufferNode(dev_data, mem_barrier->buffer);
+        if (buffer_node) {
+            VkDeviceSize buffer_size =
+                (buffer_node->createInfo.sType == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO) ? buffer_node->createInfo.size : 0;
             if (mem_barrier->offset >= buffer_size) {
                 skip_call |= log_msg(
                     dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,

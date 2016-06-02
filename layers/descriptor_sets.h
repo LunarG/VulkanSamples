@@ -269,8 +269,7 @@ void PerformAllocateDescriptorSets(
     std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *,
     std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *, const core_validation::layer_data *,
     const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &,
-    const std::unordered_map<VkBuffer, BUFFER_NODE> &, const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> &,
-    const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> &,
+    const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> &, const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> &,
     const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> &,
     const std::unordered_map<VkImageView, VkImageViewCreateInfo> &, const std::unordered_map<VkImage, IMAGE_NODE> &,
     const std::unordered_map<VkImage, VkSwapchainKHR> &, const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> &);
@@ -296,7 +295,7 @@ void PerformAllocateDescriptorSets(
 class DescriptorSet : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
-    DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const std::unordered_map<VkBuffer, BUFFER_NODE> *,
+    DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const core_validation::layer_data *,
                   const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *,
                   const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *,
                   const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *,
@@ -378,7 +377,7 @@ class DescriptorSet : public BASE_NODE {
     std::unordered_set<GLOBAL_CB_NODE *> bound_cmd_buffers_;
     std::vector<std::unique_ptr<Descriptor>> descriptors_;
     // Ptrs to object containers to verify bound data
-    const std::unordered_map<VkBuffer, BUFFER_NODE> *buffer_map_;
+    const core_validation::layer_data *device_data_;
     const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *memory_map_;
     const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *buffer_view_map_;
     const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *sampler_map_;
