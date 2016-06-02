@@ -264,15 +264,17 @@ bool ValidateAllocateDescriptorSets(const debug_report_data *, const VkDescripto
                                     const std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> &,
                                     AllocateDescriptorSetsData *);
 // Update state based on allocating new descriptorsets
-void PerformAllocateDescriptorSets(
-    const VkDescriptorSetAllocateInfo *, const VkDescriptorSet *, const AllocateDescriptorSetsData *,
-    std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *,
-    std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *, const core_validation::layer_data *,
-    const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &,
-    const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> &, const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> &,
-    const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> &,
-    const std::unordered_map<VkImageView, VkImageViewCreateInfo> &, const std::unordered_map<VkImage, IMAGE_NODE> &,
-    const std::unordered_map<VkImage, VkSwapchainKHR> &, const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> &);
+void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const VkDescriptorSet *, const AllocateDescriptorSetsData *,
+                                   std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *,
+                                   std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *,
+                                   const core_validation::layer_data *,
+                                   const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &,
+                                   const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> &,
+                                   const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> &,
+                                   const std::unordered_map<VkImageView, VkImageViewCreateInfo> &,
+                                   const std::unordered_map<VkImage, IMAGE_NODE> &,
+                                   const std::unordered_map<VkImage, VkSwapchainKHR> &,
+                                   const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> &);
 
 /*
  * DescriptorSet class
@@ -296,7 +298,6 @@ class DescriptorSet : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
     DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const core_validation::layer_data *,
-                  const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *,
                   const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *,
                   const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *,
                   const std::unordered_map<VkImageView, VkImageViewCreateInfo> *, const std::unordered_map<VkImage, IMAGE_NODE> *,
@@ -378,7 +379,6 @@ class DescriptorSet : public BASE_NODE {
     std::vector<std::unique_ptr<Descriptor>> descriptors_;
     // Ptrs to object containers to verify bound data
     const core_validation::layer_data *device_data_;
-    const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *memory_map_;
     const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *buffer_view_map_;
     const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *sampler_map_;
     const std::unordered_map<VkImageView, VkImageViewCreateInfo> *image_view_map_;

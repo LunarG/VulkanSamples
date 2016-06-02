@@ -134,7 +134,7 @@ struct layer_data {
     unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> setMap;
     unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> descriptorSetLayoutMap;
     unordered_map<VkPipelineLayout, PIPELINE_LAYOUT_NODE> pipelineLayoutMap;
-    unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> memObjMap;
+    unordered_map<VkDeviceMemory, unique_ptr<DEVICE_MEM_INFO>> memObjMap;
     unordered_map<VkFence, FENCE_NODE> fenceMap;
     unordered_map<VkQueue, QUEUE_NODE> queueMap;
     unordered_map<VkEvent, EVENT_NODE> eventMap;
@@ -345,30 +345,19 @@ static bool validate_buffer_usage_flags(layer_data *dev_data, VkBuffer buffer, V
 
 // Return ptr to info in map container containing mem, or NULL if not found
 //  Calls to this function should be wrapped in mutex
-static DEVICE_MEM_INFO *get_mem_obj_info(layer_data *dev_data, const VkDeviceMemory mem) {
-    auto item = dev_data->memObjMap.find(mem);
-    if (item != dev_data->memObjMap.end()) {
-        return &(*item).second;
-    } else {
+DEVICE_MEM_INFO *getMemObjInfo(const layer_data *dev_data, const VkDeviceMemory mem) {
+    auto mem_it = dev_data->memObjMap.find(mem);
+    if (mem_it == dev_data->memObjMap.end()) {
         return NULL;
     }
+    return mem_it->second.get();
 }
 
 static void add_mem_obj_info(layer_data *my_data, void *object, const VkDeviceMemory mem,
                              const VkMemoryAllocateInfo *pAllocateInfo) {
     assert(object != NULL);
 
-    memcpy(&my_data->memObjMap[mem].allocInfo, pAllocateInfo, sizeof(VkMemoryAllocateInfo));
-    // TODO:  Update for real hardware, actually process allocation info structures
-    my_data->memObjMap[mem].allocInfo.pNext = NULL;
-    my_data->memObjMap[mem].object = object;
-    my_data->memObjMap[mem].mem = mem;
-    my_data->memObjMap[mem].image = VK_NULL_HANDLE;
-    my_data->memObjMap[mem].memRange.offset = 0;
-    my_data->memObjMap[mem].memRange.size = 0;
-    my_data->memObjMap[mem].pData = 0;
-    my_data->memObjMap[mem].pDriverData = 0;
-    my_data->memObjMap[mem].valid = false;
+    my_data->memObjMap[mem] = unique_ptr<DEVICE_MEM_INFO>(new DEVICE_MEM_INFO(object, mem, pAllocateInfo));
 }
 
 static bool validate_memory_is_valid(layer_data *dev_data, VkDeviceMemory mem, const char *functionName,
@@ -382,7 +371,7 @@ static bool validate_memory_is_valid(layer_data *dev_data, VkDeviceMemory mem, c
                            functionName, (uint64_t)(image));
         }
     } else {
-        DEVICE_MEM_INFO *pMemObj = get_mem_obj_info(dev_data, mem);
+        DEVICE_MEM_INFO *pMemObj = getMemObjInfo(dev_data, mem);
         if (pMemObj && !pMemObj->valid) {
             return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                            (uint64_t)(mem), __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
@@ -400,7 +389,7 @@ static void set_memory_valid(layer_data *dev_data, VkDeviceMemory mem, bool vali
             image_node->second.valid = valid;
         }
     } else {
-        DEVICE_MEM_INFO *pMemObj = get_mem_obj_info(dev_data, mem);
+        DEVICE_MEM_INFO *pMemObj = getMemObjInfo(dev_data, mem);
         if (pMemObj) {
             pMemObj->valid = valid;
         }
@@ -417,7 +406,7 @@ static bool update_cmd_buf_and_mem_references(layer_data *dev_data, const VkComm
     if (mem != MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
 
         // First update CB binding in MemObj mini CB list
-        DEVICE_MEM_INFO *pMemInfo = get_mem_obj_info(dev_data, mem);
+        DEVICE_MEM_INFO *pMemInfo = getMemObjInfo(dev_data, mem);
         if (pMemInfo) {
             pMemInfo->commandBufferBindings.insert(cb);
             // Now update CBInfo's Mem reference list
@@ -435,7 +424,7 @@ static void clear_cmd_buf_and_mem_references(layer_data *dev_data, GLOBAL_CB_NOD
     if (pCBNode) {
         if (pCBNode->memObjs.size() > 0) {
             for (auto mem : pCBNode->memObjs) {
-                DEVICE_MEM_INFO *pInfo = get_mem_obj_info(dev_data, mem);
+                DEVICE_MEM_INFO *pInfo = getMemObjInfo(dev_data, mem);
                 if (pInfo) {
                     pInfo->commandBufferBindings.erase(pCBNode->commandBuffer);
                 }
@@ -502,7 +491,7 @@ static bool deleteMemObjInfo(layer_data *my_data, void *object, VkDeviceMemory m
 static bool freeMemObjInfo(layer_data *dev_data, void *object, VkDeviceMemory mem, bool internal) {
     bool skipCall = false;
     // Parse global list to find info w/ mem
-    DEVICE_MEM_INFO *pInfo = get_mem_obj_info(dev_data, mem);
+    DEVICE_MEM_INFO *pInfo = getMemObjInfo(dev_data, mem);
     if (pInfo) {
         if (pInfo->allocInfo.allocationSize == 0 && !internal) {
             // TODO: Verify against Valid Use section
@@ -559,7 +548,7 @@ static bool clear_object_binding(layer_data *dev_data, uint64_t handle, VkDebugR
     bool skipCall = false;
     VkDeviceMemory *pMemBinding = get_object_mem_binding(dev_data, handle, type);
     if (pMemBinding) {
-        DEVICE_MEM_INFO *pMemObjInfo = get_mem_obj_info(dev_data, *pMemBinding);
+        DEVICE_MEM_INFO *pMemObjInfo = getMemObjInfo(dev_data, *pMemBinding);
         // TODO : Make sure this is a reasonable way to reset mem binding
         *pMemBinding = VK_NULL_HANDLE;
         if (pMemObjInfo) {
@@ -593,9 +582,9 @@ static bool set_mem_binding(layer_data *dev_data, VkDeviceMemory mem, uint64_t h
     } else {
         VkDeviceMemory *pMemBinding = get_object_mem_binding(dev_data, handle, type);
         assert(pMemBinding);
-        DEVICE_MEM_INFO *pMemInfo = get_mem_obj_info(dev_data, mem);
+        DEVICE_MEM_INFO *pMemInfo = getMemObjInfo(dev_data, mem);
         if (pMemInfo) {
-            DEVICE_MEM_INFO *pPrevBinding = get_mem_obj_info(dev_data, *pMemBinding);
+            DEVICE_MEM_INFO *pPrevBinding = getMemObjInfo(dev_data, *pMemBinding);
             if (pPrevBinding != NULL) {
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                     VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)mem, __LINE__, MEMTRACK_REBIND_OBJECT,
@@ -637,7 +626,7 @@ static bool set_sparse_mem_binding(layer_data *dev_data, VkDeviceMemory mem, uin
     } else {
         VkDeviceMemory *pMemBinding = get_object_mem_binding(dev_data, handle, type);
         assert(pMemBinding);
-        DEVICE_MEM_INFO *pInfo = get_mem_obj_info(dev_data, mem);
+        DEVICE_MEM_INFO *pInfo = getMemObjInfo(dev_data, mem);
         if (pInfo) {
             pInfo->objBindings.insert({handle, type});
             // Need to set mem binding for this object
@@ -665,8 +654,6 @@ static bool get_mem_binding_from_object(layer_data *dev_data, const uint64_t han
 
 // Print details of MemObjInfo list
 static void print_mem_list(layer_data *dev_data) {
-    DEVICE_MEM_INFO *pInfo = NULL;
-
     // Early out if info is not requested
     if (!(dev_data->report_data->active_flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)) {
         return;
@@ -683,17 +670,17 @@ static void print_mem_list(layer_data *dev_data) {
         return;
 
     for (auto ii = dev_data->memObjMap.begin(); ii != dev_data->memObjMap.end(); ++ii) {
-        pInfo = &(*ii).second;
+        auto mem_info = (*ii).second.get();
 
         log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                __LINE__, MEMTRACK_NONE, "MEM", "    ===MemObjInfo at 0x%p===", (void *)pInfo);
+                __LINE__, MEMTRACK_NONE, "MEM", "    ===MemObjInfo at 0x%p===", (void *)mem_info);
         log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
-                __LINE__, MEMTRACK_NONE, "MEM", "    Mem object: 0x%" PRIxLEAST64, (uint64_t)(pInfo->mem));
+                __LINE__, MEMTRACK_NONE, "MEM", "    Mem object: 0x%" PRIxLEAST64, (uint64_t)(mem_info->mem));
         log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
                 __LINE__, MEMTRACK_NONE, "MEM", "    Ref Count: " PRINTF_SIZE_T_SPECIFIER,
-                pInfo->commandBufferBindings.size() + pInfo->objBindings.size());
-        if (0 != pInfo->allocInfo.allocationSize) {
-            string pAllocInfoMsg = vk_print_vkmemoryallocateinfo(&pInfo->allocInfo, "MEM(INFO):         ");
+                mem_info->commandBufferBindings.size() + mem_info->objBindings.size());
+        if (0 != mem_info->allocInfo.allocationSize) {
+            string pAllocInfoMsg = vk_print_vkmemoryallocateinfo(&mem_info->allocInfo, "MEM(INFO):         ");
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
                     __LINE__, MEMTRACK_NONE, "MEM", "    Mem Alloc info:\n%s", pAllocInfoMsg.c_str());
         } else {
@@ -703,9 +690,9 @@ static void print_mem_list(layer_data *dev_data) {
 
         log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
                 __LINE__, MEMTRACK_NONE, "MEM", "    VK OBJECT Binding list of size " PRINTF_SIZE_T_SPECIFIER " elements:",
-                pInfo->objBindings.size());
-        if (pInfo->objBindings.size() > 0) {
-            for (auto obj : pInfo->objBindings) {
+                mem_info->objBindings.size());
+        if (mem_info->objBindings.size() > 0) {
+            for (auto obj : mem_info->objBindings) {
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                         0, __LINE__, MEMTRACK_NONE, "MEM", "       VK OBJECT 0x%" PRIx64, obj.handle);
             }
@@ -714,9 +701,9 @@ static void print_mem_list(layer_data *dev_data) {
         log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0,
                 __LINE__, MEMTRACK_NONE, "MEM",
                 "    VK Command Buffer (CB) binding list of size " PRINTF_SIZE_T_SPECIFIER " elements",
-                pInfo->commandBufferBindings.size());
-        if (pInfo->commandBufferBindings.size() > 0) {
-            for (auto cb : pInfo->commandBufferBindings) {
+                mem_info->commandBufferBindings.size());
+        if (mem_info->commandBufferBindings.size() > 0) {
+            for (auto cb : mem_info->commandBufferBindings) {
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                         0, __LINE__, MEMTRACK_NONE, "MEM", "      VK CB 0x%p", cb);
             }
@@ -3977,7 +3964,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
     DEVICE_MEM_INFO *pInfo = NULL;
     if (!dev_data->memObjMap.empty()) {
         for (auto ii = dev_data->memObjMap.begin(); ii != dev_data->memObjMap.end(); ++ii) {
-            pInfo = &(*ii).second;
+            pInfo = (*ii).second.get();
             if (pInfo->allocInfo.allocationSize != 0) {
                 // Valid Usage: All child objects created on device must have been destroyed prior to destroying device
                 skipCall |=
@@ -4612,8 +4599,9 @@ static bool validateMemRange(layer_data *my_data, VkDeviceMemory mem, VkDeviceSi
 
     auto mem_element = my_data->memObjMap.find(mem);
     if (mem_element != my_data->memObjMap.end()) {
+        auto mem_info = mem_element->second.get();
         // It is an application error to call VkMapMemory on an object that is already mapped
-        if (mem_element->second.memRange.size != 0) {
+        if (mem_info->memRange.size != 0) {
             skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                                (uint64_t)mem, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
                                "VkMapMemory: Attempting to map memory on an already-mapped object 0x%" PRIxLEAST64, (uint64_t)mem);
@@ -4621,18 +4609,20 @@ static bool validateMemRange(layer_data *my_data, VkDeviceMemory mem, VkDeviceSi
 
         // Validate that offset + size is within object's allocationSize
         if (size == VK_WHOLE_SIZE) {
-            if (offset >= mem_element->second.allocInfo.allocationSize) {
+            if (offset >= mem_info->allocInfo.allocationSize) {
                 skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                    VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)mem, __LINE__, MEMTRACK_INVALID_MAP,
-                                   "MEM", "Mapping Memory from 0x%" PRIx64 " to 0x%" PRIx64 " with size of VK_WHOLE_SIZE oversteps total array size 0x%" PRIx64, offset,
-                                   mem_element->second.allocInfo.allocationSize, mem_element->second.allocInfo.allocationSize);
+                                   "MEM", "Mapping Memory from 0x%" PRIx64 " to 0x%" PRIx64
+                                          " with size of VK_WHOLE_SIZE oversteps total array size 0x%" PRIx64,
+                                   offset, mem_info->allocInfo.allocationSize, mem_info->allocInfo.allocationSize);
             }
         } else {
-            if ((offset + size) > mem_element->second.allocInfo.allocationSize) {
-                skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                   VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)mem, __LINE__, MEMTRACK_INVALID_MAP,
-                                   "MEM", "Mapping Memory from 0x%" PRIx64 " to 0x%" PRIx64 " oversteps total array size 0x%" PRIx64, offset,
-                                   size + offset, mem_element->second.allocInfo.allocationSize);
+            if ((offset + size) > mem_info->allocInfo.allocationSize) {
+                skipCall =
+                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                            (uint64_t)mem, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
+                            "Mapping Memory from 0x%" PRIx64 " to 0x%" PRIx64 " oversteps total array size 0x%" PRIx64, offset,
+                            size + offset, mem_info->allocInfo.allocationSize);
             }
         }
     }
@@ -4640,29 +4630,27 @@ static bool validateMemRange(layer_data *my_data, VkDeviceMemory mem, VkDeviceSi
 }
 
 static void storeMemRanges(layer_data *my_data, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size) {
-    auto mem_element = my_data->memObjMap.find(mem);
-    if (mem_element != my_data->memObjMap.end()) {
-        MemRange new_range;
-        new_range.offset = offset;
-        new_range.size = size;
-        mem_element->second.memRange = new_range;
+    auto mem_info = getMemObjInfo(my_data, mem);
+    if (mem_info) {
+        mem_info->memRange.offset = offset;
+        mem_info->memRange.size = size;
     }
 }
 
 static bool deleteMemRanges(layer_data *my_data, VkDeviceMemory mem) {
     bool skipCall = false;
-    auto mem_element = my_data->memObjMap.find(mem);
-    if (mem_element != my_data->memObjMap.end()) {
-        if (!mem_element->second.memRange.size) {
+    auto mem_info = getMemObjInfo(my_data, mem);
+    if (mem_info) {
+        if (!mem_info->memRange.size) {
             // Valid Usage: memory must currently be mapped
             skipCall = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                                (uint64_t)mem, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
                                "Unmapping Memory without memory being mapped: mem obj 0x%" PRIxLEAST64, (uint64_t)mem);
         }
-        mem_element->second.memRange.size = 0;
-        if (mem_element->second.pData) {
-            free(mem_element->second.pData);
-            mem_element->second.pData = 0;
+        mem_info->memRange.size = 0;
+        if (mem_info->pData) {
+            free(mem_info->pData);
+            mem_info->pData = 0;
         }
     }
     return skipCall;
@@ -4671,20 +4659,20 @@ static bool deleteMemRanges(layer_data *my_data, VkDeviceMemory mem) {
 static char NoncoherentMemoryFillValue = 0xb;
 
 static void initializeAndTrackMemory(layer_data *dev_data, VkDeviceMemory mem, VkDeviceSize size, void **ppData) {
-    auto mem_element = dev_data->memObjMap.find(mem);
-    if (mem_element != dev_data->memObjMap.end()) {
-        mem_element->second.pDriverData = *ppData;
-        uint32_t index = mem_element->second.allocInfo.memoryTypeIndex;
+    auto mem_info = getMemObjInfo(dev_data, mem);
+    if (mem_info) {
+        mem_info->pDriverData = *ppData;
+        uint32_t index = mem_info->allocInfo.memoryTypeIndex;
         if (dev_data->phys_dev_mem_props.memoryTypes[index].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
-            mem_element->second.pData = 0;
+            mem_info->pData = 0;
         } else {
             if (size == VK_WHOLE_SIZE) {
-                size = mem_element->second.allocInfo.allocationSize;
+                size = mem_info->allocInfo.allocationSize;
             }
             size_t convSize = (size_t)(size);
-            mem_element->second.pData = malloc(2 * convSize);
-            memset(mem_element->second.pData, NoncoherentMemoryFillValue, 2 * convSize);
-            *ppData = static_cast<char *>(mem_element->second.pData) + (convSize / 2);
+            mem_info->pData = malloc(2 * convSize);
+            memset(mem_info->pData, NoncoherentMemoryFillValue, 2 * convSize);
+            *ppData = static_cast<char *>(mem_info->pData) + (convSize / 2);
         }
     }
 }
@@ -5025,9 +5013,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
     // Clean up memory binding and range information for buffer
     auto buff_it = dev_data->bufferMap.find(buffer);
     if (buff_it != dev_data->bufferMap.end()) {
-        const auto &memEntry = dev_data->memObjMap.find(buff_it->second.get()->mem);
-        if (memEntry != dev_data->memObjMap.end()) {
-            remove_memory_ranges(reinterpret_cast<uint64_t &>(buffer), buff_it->second.get()->mem, memEntry->second.bufferRanges);
+        auto mem_info = getMemObjInfo(dev_data, buff_it->second.get()->mem);
+        if (mem_info) {
+            remove_memory_ranges(reinterpret_cast<uint64_t &>(buffer), buff_it->second.get()->mem, mem_info->bufferRanges);
         }
         clear_object_binding(dev_data, reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
         dev_data->bufferMap.erase(buff_it);
@@ -5056,11 +5044,11 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
     const auto &imageEntry = dev_data->imageMap.find(image);
     if (imageEntry != dev_data->imageMap.end()) {
         // Clean up memory mapping, bindings and range references for image
-        auto memEntry = dev_data->memObjMap.find(imageEntry->second.mem);
-        if (memEntry != dev_data->memObjMap.end()) {
-            remove_memory_ranges(reinterpret_cast<uint64_t &>(image), imageEntry->second.mem, memEntry->second.imageRanges);
+        auto mem_info = getMemObjInfo(dev_data, imageEntry->second.mem);
+        if (mem_info) {
+            remove_memory_ranges(reinterpret_cast<uint64_t &>(image), imageEntry->second.mem, mem_info->imageRanges);
             clear_object_binding(dev_data, reinterpret_cast<uint64_t &>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
-            memEntry->second.image = VK_NULL_HANDLE;
+            mem_info->image = VK_NULL_HANDLE;
         }
         // Remove image from imageMap
         dev_data->imageMap.erase(imageEntry);
@@ -5090,12 +5078,11 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
         dev_data->device_dispatch_table->GetBufferMemoryRequirements(device, buffer, &memRequirements);
 
         // Track and validate bound memory range information
-        const auto &memEntry = dev_data->memObjMap.find(mem);
-        if (memEntry != dev_data->memObjMap.end()) {
+        auto mem_info = getMemObjInfo(dev_data, mem);
+        if (mem_info) {
             const MEMORY_RANGE range =
-                insert_memory_ranges(buffer_handle, mem, memoryOffset, memRequirements, memEntry->second.bufferRanges);
-            skipCall |=
-                validate_memory_range(dev_data, memEntry->second.imageRanges, range, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
+                insert_memory_ranges(buffer_handle, mem, memoryOffset, memRequirements, mem_info->bufferRanges);
+            skipCall |= validate_memory_range(dev_data, mem_info->imageRanges, range, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
         }
 
         // Validate memory requirements alignment
@@ -5890,9 +5877,8 @@ static void PostCallRecordAllocateDescriptorSets(layer_data *dev_data, const VkD
     // All the updates are contained in a single cvdescriptorset function
     cvdescriptorset::PerformAllocateDescriptorSets(
         pAllocateInfo, pDescriptorSets, common_data, &dev_data->descriptorPoolMap, &dev_data->setMap, dev_data,
-        dev_data->descriptorSetLayoutMap, dev_data->memObjMap, dev_data->bufferViewMap, dev_data->samplerMap,
-        dev_data->imageViewMap, dev_data->imageMap, dev_data->device_extensions.imageToSwapchainMap,
-        dev_data->device_extensions.swapchainMap);
+        dev_data->descriptorSetLayoutMap, dev_data->bufferViewMap, dev_data->samplerMap, dev_data->imageViewMap, dev_data->imageMap,
+        dev_data->device_extensions.imageToSwapchainMap, dev_data->device_extensions.swapchainMap);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
@@ -9284,10 +9270,10 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
 static bool ValidateMapImageLayouts(VkDevice device, VkDeviceMemory mem) {
     bool skip_call = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    auto mem_data = dev_data->memObjMap.find(mem);
-    if ((mem_data != dev_data->memObjMap.end()) && (mem_data->second.image != VK_NULL_HANDLE)) {
+    auto mem_info = getMemObjInfo(dev_data, mem);
+    if ((mem_info) && (mem_info->image != VK_NULL_HANDLE)) {
         std::vector<VkImageLayout> layouts;
-        if (FindLayouts(dev_data, mem_data->second.image, layouts)) {
+        if (FindLayouts(dev_data, mem_info->image, layouts)) {
             for (auto layout : layouts) {
                 if (layout != VK_IMAGE_LAYOUT_PREINITIALIZED && layout != VK_IMAGE_LAYOUT_GENERAL) {
                     skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
@@ -9309,7 +9295,7 @@ MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     std::unique_lock<std::mutex> lock(global_lock);
 #if MTMERGESOURCE
-    DEVICE_MEM_INFO *pMemObj = get_mem_obj_info(dev_data, mem);
+    DEVICE_MEM_INFO *pMemObj = getMemObjInfo(dev_data, mem);
     if (pMemObj) {
         pMemObj->valid = true;
         if ((dev_data->phys_dev_mem_props.memoryTypes[pMemObj->allocInfo.memoryTypeIndex].propertyFlags &
@@ -9355,20 +9341,20 @@ static bool validateMemoryIsMapped(layer_data *my_data, const char *funcName, ui
                                    const VkMappedMemoryRange *pMemRanges) {
     bool skipCall = false;
     for (uint32_t i = 0; i < memRangeCount; ++i) {
-        auto mem_element = my_data->memObjMap.find(pMemRanges[i].memory);
-        if (mem_element != my_data->memObjMap.end()) {
-            if (mem_element->second.memRange.offset > pMemRanges[i].offset) {
-                skipCall |= log_msg(
-                    my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                    (uint64_t)pMemRanges[i].memory, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
-                    "%s: Flush/Invalidate offset (" PRINTF_SIZE_T_SPECIFIER ") is less than Memory Object's offset "
-                    "(" PRINTF_SIZE_T_SPECIFIER ").",
-                    funcName, static_cast<size_t>(pMemRanges[i].offset), static_cast<size_t>(mem_element->second.memRange.offset));
+        auto mem_info = getMemObjInfo(my_data, pMemRanges[i].memory);
+        if (mem_info) {
+            if (mem_info->memRange.offset > pMemRanges[i].offset) {
+                skipCall |=
+                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                            (uint64_t)pMemRanges[i].memory, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
+                            "%s: Flush/Invalidate offset (" PRINTF_SIZE_T_SPECIFIER ") is less than Memory Object's offset "
+                            "(" PRINTF_SIZE_T_SPECIFIER ").",
+                            funcName, static_cast<size_t>(pMemRanges[i].offset), static_cast<size_t>(mem_info->memRange.offset));
             }
 
             const uint64_t my_dataTerminus =
-                    (mem_element->second.memRange.size == VK_WHOLE_SIZE) ? mem_element->second.allocInfo.allocationSize :
-                                                                           (mem_element->second.memRange.offset + mem_element->second.memRange.size);
+                    (mem_info->memRange.size == VK_WHOLE_SIZE) ? mem_info->allocInfo.allocationSize :
+                                                                           (mem_info->memRange.offset + mem_info->memRange.size);
             if (pMemRanges[i].size != VK_WHOLE_SIZE && (my_dataTerminus < (pMemRanges[i].offset + pMemRanges[i].size))) {
                 skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                     VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, (uint64_t)pMemRanges[i].memory, __LINE__,
@@ -9387,12 +9373,12 @@ static bool validateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32
                                                      const VkMappedMemoryRange *pMemRanges) {
     bool skipCall = false;
     for (uint32_t i = 0; i < memRangeCount; ++i) {
-        auto mem_element = my_data->memObjMap.find(pMemRanges[i].memory);
-        if (mem_element != my_data->memObjMap.end()) {
-            if (mem_element->second.pData) {
-                VkDeviceSize size = mem_element->second.memRange.size;
+        auto mem_info = getMemObjInfo(my_data, pMemRanges[i].memory);
+        if (mem_info) {
+            if (mem_info->pData) {
+                VkDeviceSize size = mem_info->memRange.size;
                 VkDeviceSize half_size = (size / 2);
-                char *data = static_cast<char *>(mem_element->second.pData);
+                char *data = static_cast<char *>(mem_info->pData);
                 for (auto j = 0; j < half_size; ++j) {
                     if (data[j] != NoncoherentMemoryFillValue) {
                         skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -9409,7 +9395,7 @@ static bool validateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32
                                             (uint64_t)pMemRanges[i].memory);
                     }
                 }
-                memcpy(mem_element->second.pDriverData, static_cast<void *>(data + (size_t)(half_size)), (size_t)(size));
+                memcpy(mem_info->pDriverData, static_cast<void *>(data + (size_t)(half_size)), (size_t)(size));
             }
         }
     }
@@ -9463,12 +9449,11 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
         lock.lock();
 
         // Track and validate bound memory range information
-        const auto &memEntry = dev_data->memObjMap.find(mem);
-        if (memEntry != dev_data->memObjMap.end()) {
+        auto mem_info = getMemObjInfo(dev_data, mem);
+        if (mem_info) {
             const MEMORY_RANGE range =
-                insert_memory_ranges(image_handle, mem, memoryOffset, memRequirements, memEntry->second.imageRanges);
-            skipCall |=
-                validate_memory_range(dev_data, memEntry->second.bufferRanges, range, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
+                insert_memory_ranges(image_handle, mem, memoryOffset, memRequirements, mem_info->imageRanges);
+            skipCall |= validate_memory_range(dev_data, mem_info->bufferRanges, range, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
         }
 
         print_mem_list(dev_data);
@@ -9476,7 +9461,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
         if (!skipCall) {
             result = dev_data->device_dispatch_table->BindImageMemory(device, image, mem, memoryOffset);
             lock.lock();
-            dev_data->memObjMap[mem].image = image;
+            dev_data->memObjMap[mem].get()->image = image;
             image_node->second.mem = mem;
             image_node->second.memOffset = memoryOffset;
             image_node->second.memSize = memRequirements.size;

@@ -265,15 +265,14 @@ cvdescriptorset::AllocateDescriptorSetsData::AllocateDescriptorSetsData(uint32_t
 
 cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const DescriptorSetLayout *layout,
                                               const core_validation::layer_data *dev_data,
-                                              const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *memory_map,
                                               const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *buffer_view_map,
                                               const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *sampler_map,
                                               const std::unordered_map<VkImageView, VkImageViewCreateInfo> *image_view_map,
                                               const std::unordered_map<VkImage, IMAGE_NODE> *image_map,
                                               const std::unordered_map<VkImage, VkSwapchainKHR> *image_to_swapchain_map,
                                               const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *swapchain_map)
-    : some_update_(false), set_(set), p_layout_(layout), device_data_(dev_data), memory_map_(memory_map),
-      buffer_view_map_(buffer_view_map), sampler_map_(sampler_map), image_view_map_(image_view_map), image_map_(image_map),
+    : some_update_(false), set_(set), p_layout_(layout), device_data_(dev_data), buffer_view_map_(buffer_view_map),
+      sampler_map_(sampler_map), image_view_map_(image_view_map), image_map_(image_map),
       image_to_swapchain_map_(image_to_swapchain_map), swapchain_map_(swapchain_map) {
     // Foreach binding, create default descriptors of given type
     for (uint32_t i = 0; i < p_layout_->GetBindingCount(); ++i) {
@@ -370,8 +369,8 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::unordered_set<
                             *error = error_str.str();
                             return false;
                         } else {
-                            auto mem_entry = memory_map_->find(buffer_node->mem);
-                            if (mem_entry == memory_map_->end()) {
+                            auto mem_entry = getMemObjInfo(device_data_, buffer_node->mem);
+                            if (!mem_entry) {
                                 std::stringstream error_str;
                                 error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
                                           << " uses buffer " << buffer << " that references invalid memory " << buffer_node->mem
@@ -1289,7 +1288,6 @@ void cvdescriptorset::PerformAllocateDescriptorSets(
     const AllocateDescriptorSetsData *ds_data, std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *pool_map,
     std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *set_map, const core_validation::layer_data *dev_data,
     const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &layout_map,
-    const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> &mem_obj_map,
     const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> &buffer_view_map,
     const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> &sampler_map,
     const std::unordered_map<VkImageView, VkImageViewCreateInfo> &image_view_map,
@@ -1306,9 +1304,9 @@ void cvdescriptorset::PerformAllocateDescriptorSets(
      * global map and the pool's set.
      */
     for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
-        auto new_ds = new cvdescriptorset::DescriptorSet(descriptor_sets[i], ds_data->layout_nodes[i], dev_data, &mem_obj_map,
-                                                         &buffer_view_map, &sampler_map, &image_view_map, &image_map,
-                                                         &image_to_swapchain_map, &swapchain_map);
+        auto new_ds =
+            new cvdescriptorset::DescriptorSet(descriptor_sets[i], ds_data->layout_nodes[i], dev_data, &buffer_view_map,
+                                               &sampler_map, &image_view_map, &image_map, &image_to_swapchain_map, &swapchain_map);
 
         pool_state->sets.insert(new_ds);
         new_ds->in_use.store(0);

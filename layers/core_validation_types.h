@@ -174,6 +174,9 @@ struct DEVICE_MEM_INFO {
     VkImage image; // If memory is bound to image, this will have VkImage handle, else VK_NULL_HANDLE
     MemRange memRange;
     void *pData, *pDriverData;
+    DEVICE_MEM_INFO(void *disp_object, const VkDeviceMemory in_mem, const VkMemoryAllocateInfo *p_alloc_info)
+        : object(disp_object), valid(false), mem(in_mem), allocInfo(*p_alloc_info), image(VK_NULL_HANDLE), memRange{}, pData(0),
+          pDriverData(0){};
 };
 
 class SWAPCHAIN_NODE {
@@ -484,6 +487,7 @@ namespace core_validation {
 struct layer_data;
 cvdescriptorset::DescriptorSet *getSetNode(const layer_data *, const VkDescriptorSet);
 BUFFER_NODE *getBufferNode(const layer_data *, const VkBuffer);
+DEVICE_MEM_INFO *getMemObjInfo(const layer_data *, const VkDeviceMemory);
 }
 
 #endif // CORE_VALIDATION_TYPES_H_
