@@ -267,7 +267,6 @@ void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const Vk
                                    std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *,
                                    std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *,
                                    const core_validation::layer_data *,
-                                   const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &,
                                    const std::unordered_map<VkImage, VkSwapchainKHR> &,
                                    const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> &);
 

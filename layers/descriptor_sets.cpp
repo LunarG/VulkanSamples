@@ -1280,7 +1280,6 @@ void cvdescriptorset::PerformAllocateDescriptorSets(
     const VkDescriptorSetAllocateInfo *p_alloc_info, const VkDescriptorSet *descriptor_sets,
     const AllocateDescriptorSetsData *ds_data, std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *pool_map,
     std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *set_map, const core_validation::layer_data *dev_data,
-    const std::unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> &layout_map,
     const std::unordered_map<VkImage, VkSwapchainKHR> &image_to_swapchain_map,
     const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> &swapchain_map) {
     auto pool_state = (*pool_map)[p_alloc_info->descriptorPool];

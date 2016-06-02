@@ -5907,8 +5907,7 @@ static void PostCallRecordAllocateDescriptorSets(layer_data *dev_data, const VkD
                                                  const cvdescriptorset::AllocateDescriptorSetsData *common_data) {
     // All the updates are contained in a single cvdescriptorset function
     cvdescriptorset::PerformAllocateDescriptorSets(pAllocateInfo, pDescriptorSets, common_data, &dev_data->descriptorPoolMap,
-                                                   &dev_data->setMap, dev_data, dev_data->descriptorSetLayoutMap,
-                                                   dev_data->device_extensions.imageToSwapchainMap,
+                                                   &dev_data->setMap, dev_data, dev_data->device_extensions.imageToSwapchainMap,
                                                    dev_data->device_extensions.swapchainMap);
 }
 
