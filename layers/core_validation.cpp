@@ -293,6 +293,14 @@ BUFFER_NODE *getBufferNode(const layer_data *dev_data, const VkBuffer buffer) {
     }
     return buff_it->second.get();
 }
+// Return swapchain for specified image or else NULL
+VkSwapchainKHR getSwapchainFromImage(const layer_data *dev_data, const VkImage image) {
+    auto img_it = dev_data->device_extensions.imageToSwapchainMap.find(image);
+    if (img_it == dev_data->device_extensions.imageToSwapchainMap.end()) {
+        return VK_NULL_HANDLE;
+    }
+    return img_it->second;
+}
 // Return buffer node ptr for specified buffer or else NULL
 VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *my_data, const VkBufferView buffer_view) {
     auto bv_it = my_data->bufferViewMap.find(buffer_view);
@@ -5907,8 +5915,7 @@ static void PostCallRecordAllocateDescriptorSets(layer_data *dev_data, const VkD
                                                  const cvdescriptorset::AllocateDescriptorSetsData *common_data) {
     // All the updates are contained in a single cvdescriptorset function
     cvdescriptorset::PerformAllocateDescriptorSets(pAllocateInfo, pDescriptorSets, common_data, &dev_data->descriptorPoolMap,
-                                                   &dev_data->setMap, dev_data, dev_data->device_extensions.imageToSwapchainMap,
-                                                   dev_data->device_extensions.swapchainMap);
+                                                   &dev_data->setMap, dev_data, dev_data->device_extensions.swapchainMap);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
@@ -7652,9 +7659,9 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                 mipLevels = image_data->createInfo.mipLevels;
                 imageFound = true;
             } else if (dev_data->device_extensions.wsi_enabled) {
-                auto imageswap_data = dev_data->device_extensions.imageToSwapchainMap.find(mem_barrier->image);
-                if (imageswap_data != dev_data->device_extensions.imageToSwapchainMap.end()) {
-                    auto swapchain_data = dev_data->device_extensions.swapchainMap.find(imageswap_data->second);
+                auto imageswap_data = getSwapchainFromImage(dev_data, mem_barrier->image);
+                if (imageswap_data) {
+                    auto swapchain_data = dev_data->device_extensions.swapchainMap.find(imageswap_data);
                     if (swapchain_data != dev_data->device_extensions.swapchainMap.end()) {
                         format = swapchain_data->second->createInfo.imageFormat;
                         arrayLayers = swapchain_data->second->createInfo.imageArrayLayers;

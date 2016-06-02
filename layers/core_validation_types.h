@@ -492,6 +492,7 @@ DEVICE_MEM_INFO *getMemObjInfo(const layer_data *, const VkDeviceMemory);
 VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *, const VkBufferView);
 SAMPLER_NODE *getSamplerNode(const layer_data *, const VkSampler);
 VkImageViewCreateInfo *getImageViewData(const layer_data *, const VkImageView);
+VkSwapchainKHR getSwapchainFromImage(const layer_data *, const VkImage);
 }
 
 #endif // CORE_VALIDATION_TYPES_H_
