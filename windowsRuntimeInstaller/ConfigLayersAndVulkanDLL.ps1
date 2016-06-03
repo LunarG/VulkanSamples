@@ -39,20 +39,17 @@ Param(
  [int]$ossize
 )
 
-# Clear any pre-existing errors
+# Clear any pre-existing errors and set default return value
 $Error.Clear();
+$script:scriptReturnValue=0
 
 # Start logging
-$log=$Env:Temp+"\VulkanRT"
-New-Item -ItemType Directory -Force -Path $log | Out-Null
-$logascii=$log+"\ConfigLayersAndVulkanDLL.log"
-
-# Temp to be used for debugging failure to install issue
-#$logascii2=$Env:Temp+"\ConfigLayersAndVulkanDLL_debug.log"
-
-$log=$log+"\ConfigLayersAndVulkanDLL16.log"
-
+$logascii=$Env:Temp+"\ConfigLayersAndVulkanDLL.log"
+$log=$Env:Temp+"\ConfigLayersAndVulkanDLL16.log"
 start-transcript -path $log
+
+# Ignore errors related to log file
+$Error.Clear();
 
 Write-Host "ConfigLayersAndVulkanDLL.ps1 called with inputs of : $majorabi $ossize"
 $startTime=Get-Date
@@ -69,6 +66,16 @@ function notNumeric ($x) {
         return $false
     } catch {
         return $true
+    }
+}
+
+function Get-CurrentLineNumber {
+    $MyInvocation.ScriptLineNumber
+}
+
+function setScriptReturnValue($rvalue) {
+    if ($script:scriptReturnValue -eq 0) {
+        $script:scriptReturnValue = $rvalue
     }
 }
 
@@ -209,7 +216,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
        if (notNumeric($major)) {
            Write-Warning "Ignoring $_ - bad major"
 
-           # Not a real d, so just clear it for now.
+           # Not a real error, so just clear it for now.
            $Error.Clear();
 
            # NOTE: Inside a ForEach-Object block, the 'return' call behaves like a 'continue' for a For loop
@@ -266,6 +273,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
        $script:VulkanDllList+="$major=$minor=$patch=$buildno=$prebuildno=$prerelease= $_ @$majorOrig@$minorOrig@$patchOrig@$buildnoOrig@$prereleaseOrig@$prebuildnoOrig@"
        if (!$?) {
            Write-Error "Error: UpdateVulkanSysFolder adding DLL $_ to list"
+           setScriptReturnValue(Get-CurrentLineNumber)
        }
    }
 
@@ -278,6 +286,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
         [array]::sort($script:VulkanDllList)
         if (!$?) {
            Write-Error "Error: UpdateVulkanSysFolder sorting DLL list" 
+           setScriptReturnValue(Get-CurrentLineNumber)
         }
 
         # Put the name of the most recent vulkan-*.dll in $mrVulkanDLL.
@@ -288,6 +297,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
         Copy-Item $mrVulkanDll $vulkandll -force
         if (!$?) {
            Write-Error "Error: UpdateVulkanSysFolder encountered error during copy $mrVulkanDll $vulkandll"
+           setScriptReturnValue(Get-CurrentLineNumber)
         }
 
         # Copy the most recent version of vulkaninfo-<abimajor>-*.exe to vulkaninfo.exe.
@@ -298,6 +308,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
         Copy-Item $mrVulkaninfo vulkaninfo.exe -force
         if (!$?) {
            Write-Error "Error: UpdateVulkanSysFolder encountered error during copy $mrVulkaninfo vulkaninfo.exe"
+           setScriptReturnValue(Get-CurrentLineNumber)
         }
 
         # Create the name used in the registry for the SDK associated with $mrVulkanDll.
@@ -319,6 +330,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
         Write-Host "sdkname = $sdktempname"
         if (!$?) {
            Write-Error "Error: UpdateVulkanSysFolder encountered error generating SDK name"
+           setScriptReturnValue(Get-CurrentLineNumber)
         }
     }
 
@@ -326,6 +338,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
     Pop-Location
     if (!$?) {
        Write-Error "Error: UpdateVulkanSysFolder popping location"
+       setScriptReturnValue(Get-CurrentLineNumber)
     }
 
     # Only update the overall script-scope SDK name if we're told to
@@ -343,6 +356,7 @@ if ($ossize -eq 64) {
     UpdateVulkanSysFolder $winfolder\SYSWOW64 0
     if (!$?) {
         Write-Error "Error: Calling UpdateVulkanSysFolder for 64-bit OS" 
+        setScriptReturnValue(Get-CurrentLineNumber)
     }
 }
 
@@ -351,6 +365,7 @@ Write-Host "Calling UpdateVulkanSysFolder $winfolder\SYSTEM32 1"
 UpdateVulkanSysFolder $winfolder\SYSTEM32 1
 if (!$?) {
     Write-Error "Error: Calling UpdateVulkanSysFolder for all OS"
+    setScriptReturnValue(Get-CurrentLineNumber)
 }
 
 # Create an array of vulkan sdk install dirs
@@ -358,34 +373,42 @@ if (!$?) {
 Write-Host "Creating array of of Vulkan SDK Install dirs"
 $mrVulkanDllInstallDir=""
 $VulkanSdkDirs=@()
-Get-ChildItem -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall |
-   ForEach-Object {
-       $regkey=$_ -replace ".*\\",""
-       if ($_ -match "\\VulkanSDK") {
-           # Get the install path from UninstallString
-           $tmp=Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$regkey -Name UninstallString
-           if (!$?) {
-               Write-Error "Error: Get-ItemProperty failed for Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$regkey"
-           }
-           $tmp=$tmp -replace "\\Uninstall.exe.*",""
-           $tmp=$tmp -replace ".*=.",""
-           Write-Host "Adding $tmp to VulkanSDKDirs"
-           $VulkanSdkDirs+=$tmp
-           if ($regkey -eq $script:sdkname) {
-               # Save away the sdk install dir for the the most recent vulkandll
-               Write-Host "Setting mrVulkanDllInstallDir to $tmp"
-               $mrVulkanDllInstallDir=$tmp
-           }
-       }
+$installSDKRegs = @(Get-ChildItem -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall)
+if ($installSDKRegs -ne $null) {
+   ForEach ($curSDKReg in $installSDKRegs) {
+      if ($curSDKReg -ne $null) {
+         $regkey=$curSDKReg -replace ".*\\",""
+         if ($regkey -match "VulkanSDK") {
+             # Get the install path from UninstallString
+             $tmp=Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$regkey -Name UninstallString
+             if (!$? -or $tmp -eq $null) {
+                 Write-Warning "Error: Get-ItemProperty failed for Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$regkey"
+                 $Error.Clear();
+                 continue;
+             }
+             $tmp=$tmp -replace "\\Uninstall.exe.*",""
+             $tmp=$tmp -replace ".*=.",""
+             Write-Host "Adding $tmp to VulkanSDKDirs"
+             $VulkanSdkDirs+=$tmp
+             if ($regkey -eq $script:sdkname) {
+                 # Save away the sdk install dir for the the most recent vulkandll
+                 Write-Host "Setting mrVulkanDllInstallDir to $tmp"
+                 $mrVulkanDllInstallDir=$tmp
+             }
+         }
+      }
    }
+}
 if (!$?) {
     Write-Error "Error: Failed creating array of of Vulkan SDK Install dirs"
+    setScriptReturnValue(Get-CurrentLineNumber)
 }
 
 
 # Search list of sdk install dirs for an sdk compatible with $script:sdkname.
 # We go backwards through VulkanDllList to generate SDK names, because we want the most recent SDK.
-if ($mrVulkanDllInstallDir -eq "") {
+
+if ($mrVulkanDllInstallDir -eq "" -and $script:VulkanDllList.Length -gt 0) {
     Write-Host "Searching VulkanDllList"
     ForEach ($idx in ($script:VulkanDllList.Length-1)..0) {
         $tmp=$script:VulkanDllList[$idx]
@@ -404,8 +427,8 @@ if ($mrVulkanDllInstallDir -eq "") {
         }
         Write-Host "Comparing $regEntry"
         $rval=Get-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$regEntry -ErrorAction SilentlyContinue
-        if (!$?) {
-            Write-Warning "Ignoring $regEntry because Get-ItemProperty failed to find corresponding SDK registry entry"
+        if (!$? -or $rval -eq $null) {
+            Write-Warning "Ignoring $regEntry - corresponding SDK registry entry does not exist"
             $Error.Clear();
             continue
         }
@@ -426,7 +449,8 @@ if ($mrVulkanDllInstallDir -eq "") {
         }
     }
     if (!$?) {
-        Write-Error "Error: Failed searching VulkanDLLList"
+        Write-Warning "Failed searching VulkanDLLList"
+        $Error.Clear();
     }
 }
 
@@ -446,45 +470,53 @@ $VulkanSdkDirs+="$windrive\VulkanSDK\0.9.3"
 # layers were installed that are not from an SDK, we don't mess with them.
 
 Write-Host "Removing old layer registry values from HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers"
-Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\ExplicitLayers | Select-Object -ExpandProperty Property |
-   ForEach-Object {
-       $regval=$_
-       ForEach ($sdkdir in $VulkanSdkDirs) {
-          if ($regval -like "$sdkdir\*.json") {
-              Remove-ItemProperty -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -name $regval
-              if (!$?) {
-                 Write-Error "Error: Remove-ItemProperty failed for -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -name $regval"
-              } else {
-                 Write-Host "Removed registry value $regval"
+$regkeys = @(Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\ExplicitLayers | Select-Object -ExpandProperty Property)
+if ($regkeys -ne $null) {
+   ForEach ($regval in $regkeys) {
+       if ($regval -ne $null) {
+           ForEach ($sdkdir in $VulkanSdkDirs) {
+              if ($regval -like "$sdkdir\*.json") {
+                  Remove-ItemProperty -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -name $regval
+                  if (!$?) {
+                     Write-Error "Error: Remove-ItemProperty failed for -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -name $regval"
+                  } else {
+                     Write-Host "Removed registry value $regval"
+                  }
               }
-          }
-       }
-   }
+           }
+        }
+    }
+}
 
 if (!$?) {
     Write-Error "Error: Failed Removing old layer registry values from HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers"
+    setScriptReturnValue(Get-CurrentLineNumber)
 }
 
 # Remove 32-bit layer registry value if we're targeting a 64-bit OS
 if ($ossize -eq 64) {
-   Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | Select-Object -ExpandProperty Property |
-      ForEach-Object {
-          $regval=$_
-          ForEach ($sdkdir in $VulkanSdkDirs) {
-             if ($regval -like "$sdkdir\*.json") {
-                 Remove-ItemProperty -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -name $regval
-                 if (!$?) {
-                    Write-Error "Error: Remove-ItemProperty failed for -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -name $regval"
-                 } else {
-                    Write-Host "Removed WOW6432Node registry value $regval"
+   $regkeys = @(Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | Select-Object -ExpandProperty Property)
+   if ($regkeys -ne $null) {
+      ForEach ($regval in $regkeys) {
+          if ($regval -ne $null) {
+              ForEach ($sdkdir in $VulkanSdkDirs) {
+                 if ($regval -like "$sdkdir\*.json") {
+                    Remove-ItemProperty -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -name $regval
+                    if (!$?) {
+                       Write-Error "Error: Remove-ItemProperty failed for -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -name $regval"
+                    } else {
+                       Write-Host "Removed WOW6432Node registry value $regval"
+                    }
                  }
              }
-          }
+         }
       }
+   }
 
-    if (!$?) {
-        Write-Error "Error: Failed Removing old layer registry values from HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers"
-    }
+   if (!$?) {
+      Write-Error "Error: Failed Removing old layer registry values from HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers"
+      setScriptReturnValue(Get-CurrentLineNumber)
+   }
 }
 
 
@@ -499,6 +531,7 @@ if ($mrVulkanDllInstallDir -ne "") {
         New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers | out-null
         if (!$?) {
             Write-Error "Error: Failed creating HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers"
+            setScriptReturnValue(Get-CurrentLineNumber)
         }
     }
     if ($ossize -eq 64) {
@@ -507,6 +540,7 @@ if ($mrVulkanDllInstallDir -ne "") {
             New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | out-null
             if (!$?) {
                 Write-Error "Error: Failed creating HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers"
+                setScriptReturnValue(Get-CurrentLineNumber)
             }
         }
     }
@@ -520,10 +554,12 @@ if ($mrVulkanDllInstallDir -ne "") {
                New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin\$_ -PropertyType DWord -Value 0 | out-null
                if (!$?) {
                    Write-Error "Error: Failed creating $mrVulkanDllInstallDir\Bin\$_"
+                   setScriptReturnValue(Get-CurrentLineNumber)
                }
            }
            if (!$?) {
                Write-Error "Error: Failed Get-ChildItem $mrVulkanDllInstallDir\Bin | ForEach-Object "
+               setScriptReturnValue(Get-CurrentLineNumber)
            }
 
         # Create registry values for the WOW6432Node registry location for 32-bit items on a 64-bit OS
@@ -533,10 +569,12 @@ if ($mrVulkanDllInstallDir -ne "") {
                New-ItemProperty -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin32\$_ -PropertyType DWord -Value 0 | out-null
                if (!$?) {
                    Write-Error "Error: Failed creating $mrVulkanDllInstallDir\Bin32\$_"
+                   setScriptReturnValue(Get-CurrentLineNumber)
                }
            }
            if (!$?) {
                Write-Error "Error: Failed Get-ChildItem $mrVulkanDllInstallDir\Bin32 | ForEach-Object "
+               setScriptReturnValue(Get-CurrentLineNumber)
            }
     } else {
         # Create registry values in normal registry location for 32-bit items on a 32-bit OS
@@ -546,13 +584,18 @@ if ($mrVulkanDllInstallDir -ne "") {
                New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin32\$_ -PropertyType DWord -Value 0 | out-null
                if (!$?) {
                    Write-Error "Error: Failed creating $mrVulkanDllInstallDir\Bin\$_"
+                   setScriptReturnValue(Get-CurrentLineNumber)
                }
             }
             if (!$?) {
                 Write-Error "Error: Failed Get-ChildItem $mrVulkanDllInstallDir\Bin32 | ForEach-Object "
+                setScriptReturnValue(Get-CurrentLineNumber)
             }
     }
 }
+
+# Debug - for testing handling of script failure in installer
+#setScriptReturnValue(Get-CurrentLineNumber)
 
 # Final log output
 Write-Host "ConfigLayersAndVulkanDLL.ps1 completed"
@@ -564,19 +607,16 @@ Stop-Transcript
 # Convert logfile to ascii
 Get-Content $log | Out-File -encoding ascii -filepath $logascii
 
-# Temp to be used for debugging failure to install issue (as VulkanRT folder might get removed)
-#Get-Content $log | Out-File -encoding ascii -filepath $logascii2
-
-
 # Remove the unicode log as we no longer need it.
 Remove-Item $log
 
+exit $script:scriptReturnValue
 
 # SIG # Begin signature block
 # MIIccAYJKoZIhvcNAQcCoIIcYTCCHF0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUFNNSYRu98top6sj+5PNNXfdh
-# aN+gghefMIIFKDCCBBCgAwIBAgIQA7RxzU1//sKaOyCyyw9fVDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUWzO9uMOZloqpSF0mSPfjnVcK
+# X2ygghefMIIFKDCCBBCgAwIBAgIQA7RxzU1//sKaOyCyyw9fVDANBgkqhkiG9w0B
 # AQsFADByMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMTEwLwYDVQQDEyhEaWdpQ2VydCBTSEEyIEFz
 # c3VyZWQgSUQgQ29kZSBTaWduaW5nIENBMB4XDTE2MDQwODAwMDAwMFoXDTE3MDgx
@@ -707,22 +747,22 @@ Remove-Item $log
 # aWdpQ2VydCBTSEEyIEFzc3VyZWQgSUQgQ29kZSBTaWduaW5nIENBAhADtHHNTX/+
 # wpo7ILLLD19UMAkGBSsOAwIaBQCgeDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAA
 # MBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgor
-# BgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBS1dRcwLYpAdOGb79bA8lUPXs2weTAN
-# BgkqhkiG9w0BAQEFAASCAQDaFv54IUAa3PRmDo4gr25cTzNNVRBVQn29+lBWRhL6
-# Z4xafc4dV2NuhsySyM/7CviTF/T32E9GfMUPjsje1L02FuP+xydJ/KHFba2Qe5Tm
-# rqQIQTDsdYBx4imOecLbzF8mcfMjbBTLz3YTWDShTIhTR+WqVMbzvASfJ/jUj6bP
-# wxiuHho0Gus669fK9xNrUr0Yo9Jaw82KLCsJFE/NgEV3eoNWi3ufZF4Owq+HWqLj
-# ZfzKTOb+A7oLHEfr2bX3lrwm5O/dcb4gb6dUP2m1zY6B9hPPO5lwtCVFdOShU+a4
-# Xq+MQ6RvjjXx/wRyBgF9e24k56EXce5hS9KSM/r4HJcFoYICDzCCAgsGCSqGSIb3
+# BgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTl9vUhNixlC4qK2N6ftsmXNxTB5DAN
+# BgkqhkiG9w0BAQEFAASCAQBmoK4vUOuN1W2tbF6prfT9lK/x424kuyT2GmMuBg1K
+# 2QLmoPVPFokJllqckm2snV2PrVZ2jQf1HqZfoQ9k9tJQ9Iysobsdi+Xk35m9Jhnb
+# qoDBI7HI8NVzgczSgcOGMtV1SkSHMxnobVPnqNVyD1nK6OCSIFe8lKVggiNHokxv
+# bpPOWW1oPO9eayYSoysEqwygODgV5Jr0wSVLDuoAKlnbYH4Hjvtf0JWJncm/l6ZM
+# yWIXaBUWNV6Dl2ZTeCXIlBrNxC3nfLn6uBkbox0xvcYk6tvksy7fQsSFFWYiqR26
+# 9sW4wJmqvlKO1PKNwdiGnY2fvJzffot8NPEKxbb7l2ySoYICDzCCAgsGCSqGSIb3
 # DQEJBjGCAfwwggH4AgEBMHYwYjELMAkGA1UEBhMCVVMxFTATBgNVBAoTDERpZ2lD
 # ZXJ0IEluYzEZMBcGA1UECxMQd3d3LmRpZ2ljZXJ0LmNvbTEhMB8GA1UEAxMYRGln
 # aUNlcnQgQXNzdXJlZCBJRCBDQS0xAhADAZoCOv9YsWvW1ermF/BmMAkGBSsOAwIa
 # BQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0x
-# NjA2MDExNjMwNTFaMCMGCSqGSIb3DQEJBDEWBBQTfVtazojkMGVHBXKiXef3VObs
-# mTANBgkqhkiG9w0BAQEFAASCAQCXNZHaksqQrHFmc96ks9qPT2mR35sHOOIOVCZn
-# kFPyFEjzoZmMQAhcQqHdEvgEoIr5DZ6yuLTvtu8bEN3gS2iSXD542PatUBy/DsCc
-# uFn4QFVewop/g6hPgy3VMwFWhd1t3YJ1HZtppE9N68Eth8bFODeMmc6Ogrv7oCts
-# YwjBdccKXgrdAN/2cBIZCa8+FEj+sdO0ZKToVlRivETPnI8Y/XFrrgF3+cOkDg4e
-# ZU11g/Ww9RYLdZiqIRe06pChRmHNrY5AZA9W4UgKyCQESWd8e0lLR/6uGCZulWL6
-# U3LKVUyUUP/eAHLO9iGsm3pA9L27gcnyl41UPVIqQ7VhSvrO
+# NjA2MDMxODA1NTFaMCMGCSqGSIb3DQEJBDEWBBQ8siiyF+3YjaCU9cWVOMiV0i6H
+# WjANBgkqhkiG9w0BAQEFAASCAQCcC1//Fo3cFfFAFDvhOtpcuzFn6vsIm6eGjcAD
+# l/sUEeAS69BbPrapFDxwGjMbeFWSQK0KhzbxEs5DN/5eRrj1xX9SnhunszqPCzJ7
+# 66XJvuncyzKxQvOGGMLPbGkVHsximVT0IX+pPEZS25gTLBk8e30R6w9ChgykAxbz
+# Gyi4gg8HNvk20aTydXelUA8hRYdb2dn/RLTamZjxAdmhRUyPuClgh4ZvOohILwAn
+# Egh5cdu417ircbhFIJhujK/yr2C4uJEmb+JDST96luQBKQtlg7e3OnTBYddc3YoZ
+# S5dTEsAn3PlDvkcuxg79fgK+Wf/EMOGaEv3bJaeReFcRp1l8
 # SIG # End signature block

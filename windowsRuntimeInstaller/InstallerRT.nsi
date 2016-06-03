@@ -86,10 +86,6 @@ Var IDir
 # Install count
 Var IC
 
-# Error code from powershell script
-Var PsErr
-
-
 #############################################
 # StrRep - string replace
 
@@ -238,10 +234,6 @@ Section
     # Turn on logging
     LogSet on
 
-    # Remove contents of temp dir
-    SetOutPath "$TEMP\VulkanRT"
-    RmDir /R "$TEMP\VulkanRT"
-
     # If running on a 64-bit OS machine, disable registry re-direct since we're running as a 32-bit executable.
     ${If} ${RunningX64}
 
@@ -251,15 +243,16 @@ Section
     ${Endif}
 
     # Create our temp directory, with minimal permissions
-    SetOutPath "$TEMP\VulkanRT"
-    AccessControl::DisableFileInheritance $TEMP\VulkanRT
-    AccessControl::SetFileOwner $TEMP\VulkanRT "Administrators"
-    AccessControl::ClearOnFile  $TEMP\VulkanRT "Administrators" "FullAccess"
-    AccessControl::SetOnFile    $TEMP\VulkanRT "SYSTEM" "FullAccess"
-    AccessControl::GrantOnFile  $TEMP\VulkanRT "Everyone" "ListDirectory"
-    AccessControl::GrantOnFile  $TEMP\VulkanRT "Everyone" "GenericExecute"
-    AccessControl::GrantOnFile  $TEMP\VulkanRT "Everyone" "GenericRead"
-    AccessControl::GrantOnFile  $TEMP\VulkanRT "Everyone" "ReadAttributes"
+    RmDir /R "$TEMP\VulkanRTinstall"
+    SetOutPath "$TEMP\VulkanRTinstall"
+    AccessControl::DisableFileInheritance $TEMP\VulkanRTinstall
+    AccessControl::SetFileOwner $TEMP\VulkanRTinstall "Administrators"
+    AccessControl::ClearOnFile  $TEMP\VulkanRTinstall "Administrators" "FullAccess"
+    AccessControl::SetOnFile    $TEMP\VulkanRTinstall "SYSTEM" "FullAccess"
+    AccessControl::GrantOnFile  $TEMP\VulkanRTinstall "Everyone" "ListDirectory"
+    AccessControl::GrantOnFile  $TEMP\VulkanRTinstall "Everyone" "GenericExecute"
+    AccessControl::GrantOnFile  $TEMP\VulkanRTinstall "Everyone" "GenericRead"
+    AccessControl::GrantOnFile  $TEMP\VulkanRTinstall "Everyone" "ReadAttributes"
     StrCpy $1 10
     Call CheckForError
 
@@ -418,12 +411,18 @@ Section
         # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
         # vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll, and to set up layer registry
         # entries to use layers from the corresponding SDK
-        nsExec::ExecToStack 'powershell -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File ConfigLayersAndVulkanDLL.ps1 ${VERSION_ABI_MAJOR} 64'
-        pop $PsErr
-        ${If} $PsErr != 0
+        nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -Command .\ConfigLayersAndVulkanDLL.ps1 ${VERSION_ABI_MAJOR} 64 ; exit $$LASTEXITCODE'
+        pop $0
+        Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRTinstall\ConfigLayersAndVulkanDLL.log"
+        ${If} $0 != 0
+            # PS Script failed, see if we can run a simple ps command and a simple ps script
+            nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command Write-Output Diagnostic0 | Out-File  -encoding ascii -filePath "$TEMP\VulkanRTinstall\Diagnostic0.log"'
+            File Diagnostic1.ps1
+            nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -Command .\Diagnostic1.ps1'
+            Delete Diagnostic1.ps1
             SetErrors
         ${EndIf}
-        StrCpy $1 45
+        IntOp $1 10000 + $0
         Call CheckForError
 
     # Else, running on a 32-bit OS machine
@@ -446,12 +445,18 @@ Section
         # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
         # vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll, and to set up layer registry
         # entries to use layers from the corresponding SDK
-        nsExec::ExecToStack 'powershell -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File ConfigLayersAndVulkanDLL.ps1 ${VERSION_ABI_MAJOR} 32'
-        pop $PsErr
-        ${If} $PsErr != 0
+        nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -Command .\ConfigLayersAndVulkanDLL.ps1 ${VERSION_ABI_MAJOR} 32 ; exit $$LASTEXITCODE'
+        pop $0
+        Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRTinstall\ConfigLayersAndVulkanDLL.log"
+        ${If} $0 != 0
+            # PS Script failed, see if we can run a simple ps command and a simple ps script
+            nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command Write-Output Diagnostic0 | Out-File  -encoding ascii -filePath "$TEMP\VulkanRTinstall\Diagnostic0.log"'
+            File Diagnostic1.ps1
+            nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -Command .\Diagnostic1.ps1'
+            Delete Diagnostic1.ps1
             SetErrors
         ${EndIf}
-        StrCpy $1 60
+        IntOp $1 20000 + $0
         Call CheckForError
 
     ${Endif}
@@ -462,7 +467,7 @@ Section
 
     # Finish logging and move log file to TEMP dir
     LogSet off
-    Rename "$INSTDIR\install.log" "$TEMP\VulkanRT\Install.log"
+    Rename "$INSTDIR\install.log" "$TEMP\VulkanRTinstall\Install.log"
 
 SectionEnd
 
@@ -470,12 +475,10 @@ SectionEnd
 !ifdef UNINSTALLER
 Section "uninstall"
 
-    # Remove contents of temp dir
-    SetOutPath "$TEMP\VulkanRT"
-    RmDir /R "$TEMP\VulkanRT"
-
     # Turn on logging
-    StrCpy $INSTDIR $TEMP\VulkanRT
+    RmDir /R "$TEMP\VulkanRTuninstall"
+    SetOutPath "$TEMP\VulkanRTuninstall"
+    StrCpy $INSTDIR $TEMP\VulkanRTuninstall
     LogSet on
 
     # If running on a 64-bit OS machine, disable registry re-direct since we're running as a 32-bit executable.
@@ -553,7 +556,8 @@ Section "uninstall"
         #   Copy the most recent version of vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll
         #   Copy the most recent version of vulkaninfo-<abimajor>-*.exe to vulkaninfo.exe
         #   Set up layer registry entries to use layers from the corresponding SDK
-        nsExec::ExecToStack 'powershell -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File "$IDir\ConfigLayersAndVulkanDLL.ps1" ${VERSION_ABI_MAJOR} 64'
+        nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File "$IDir\ConfigLayersAndVulkanDLL.ps1" ${VERSION_ABI_MAJOR} 64'
+        Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRTuninstall\ConfigLayersAndVulkanDLL.log"
 
     # Else, running on a 32-bit OS machine
     ${Else}
@@ -570,7 +574,8 @@ Section "uninstall"
         #   Copy the most recent version of vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll
         #   Copy the most recent version of vulkaninfo-<abimajor>-*.exe to vulkaninfo.exe
         #   Set up layer registry entries to use layers from the corresponding SDK
-        nsExec::ExecToStack 'powershell -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File "$IDir\ConfigLayersAndVulkanDLL.ps1" ${VERSION_ABI_MAJOR} 32'
+        nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -File "$IDir\ConfigLayersAndVulkanDLL.ps1" ${VERSION_ABI_MAJOR} 32'
+        Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRTuninstall\ConfigLayersAndVulkanDLL.log"
 
     ${EndIf}
 
@@ -621,7 +626,7 @@ Section "uninstall"
     StrCpy $1 80
     Call un.CheckForError
 
-    # Finish logging and move log file to TEMP dir
+    # Finish logging
     LogSet off
     Rename "$INSTDIR\install.log" "$INSTDIR\Uninstall.log"
 
@@ -667,19 +672,18 @@ Function CheckForError
 
         # Finish logging and move log file to TEMP dir
         LogSet off
-        Rename "$INSTDIR\install.log" "$TEMP\VulkanRT\install.log"
+        Rename "$INSTDIR\install.log" "$TEMP\VulkanRTinstall\install.log"
 
         # Copy the uninstaller to a temp folder of our own creation so we can completely
         # delete the old contents.
-        SetOutPath "$TEMP\VulkanRT"
-        CopyFiles "$INSTDIR\Uninstall${PRODUCTNAME}.exe" "$TEMP\VulkanRT"
+        SetOutPath "$TEMP\VulkanRTinstall"
+        CopyFiles "$INSTDIR\Uninstall${PRODUCTNAME}.exe" "$TEMP\VulkanRTinstall"
 
-        # No uninstall using the version in the temporary folder.
-        ExecWait '"$TEMP\VulkanRT\Uninstall${PRODUCTNAME}.exe" /S _?=$INSTDIR'
+        # Do uninstall using the version in the temporary folder.
+        ExecWait '"$TEMP\VulkanRTinstall\Uninstall${PRODUCTNAME}.exe" /S _?=$INSTDIR'
 
         # Delete the copy of the uninstaller we ran
-        Delete /REBOOTOK "$TEMP\VulkanRT\Uninstall${PRODUCTNAME}.exe"
-        RmDir /R /REBOOTOK "$TEMP\VulkanRT"
+        Delete /REBOOTOK "$TEMP\VulkanRTinstall\Uninstall${PRODUCTNAME}.exe"
 
         # Set an error message to output
         SetErrorLevel $1
@@ -700,8 +704,7 @@ Function un.CheckForError
 
         # Finish logging and move log file to TEMP dir
         LogSet off
-        Delete "$TEMP\VulkanRT\Uninstall.log"
-        Rename "$INSTDIR\install.log" "$TEMP\VulkanRT\Uninstall.log"
+        Delete "$TEMP\VulkanRTuninstall\Uninstall.log"
 
         Quit
     ${EndIf}
