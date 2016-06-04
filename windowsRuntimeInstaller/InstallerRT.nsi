@@ -415,6 +415,7 @@ Section
         pop $0
         Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRTinstall\ConfigLayersAndVulkanDLL.log"
         ${If} $0 != 0
+            LogText "ConfigLayersAndVulkanDLL.ps1 return value is $0"
             # PS Script failed, see if we can run a simple ps command and a simple ps script
             nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command Write-Output Diagnostic0 | Out-File  -encoding ascii -filePath "$TEMP\VulkanRTinstall\Diagnostic0.log"'
             File Diagnostic1.ps1
@@ -449,6 +450,7 @@ Section
         pop $0
         Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRTinstall\ConfigLayersAndVulkanDLL.log"
         ${If} $0 != 0
+            LogText "ConfigLayersAndVulkanDLL.ps1 return value is $0"
             # PS Script failed, see if we can run a simple ps command and a simple ps script
             nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command Write-Output Diagnostic0 | Out-File  -encoding ascii -filePath "$TEMP\VulkanRTinstall\Diagnostic0.log"'
             File Diagnostic1.ps1
@@ -628,7 +630,7 @@ Section "uninstall"
 
     # Finish logging
     LogSet off
-    Rename "$INSTDIR\install.log" "$INSTDIR\Uninstall.log"
+    Rename "$INSTDIR\install.log" "$TEMP\VulkanRTuninstall\Uninstall.log"
 
 SectionEnd
 !endif
@@ -704,7 +706,7 @@ Function un.CheckForError
 
         # Finish logging and move log file to TEMP dir
         LogSet off
-        Delete "$TEMP\VulkanRTuninstall\Uninstall.log"
+        Rename "$INSTDIR\install.log" "$TEMP\VulkanRTuninstall\Uninstall.log"
 
         Quit
     ${EndIf}
