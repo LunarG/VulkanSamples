@@ -35,7 +35,7 @@ These packages are needed to build this repository:
 sudo apt-get install git cmake build-essential bison libx11-dev libxcb1-dev
 ```
 
-Example debug build (Note that the update\_external\_sources script used below builds external tools into predefined locations. See **LVL's Dependencies** for more information and other options):
+Example debug build (Note that the update\_external\_sources script used below builds external tools into predefined locations. See **Loader and Validation Layer Dependencies** for more information and other options):
 ```
 cd Vulkan-LoaderAndValidationLayers  # cd to the root of the cloned git repository
 ./update_external_sources.sh
@@ -95,7 +95,7 @@ Windows 7+ with additional required software packages:
 - glslang is required for demos and tests.
   - [You can download and configure it (in a peer directory) here](https://github.com/KhronosGroup/glslang/blob/master/README.md)
   - A windows batch file has been included that will pull and build the correct version.  Run it from Developer Command Prompt for VS2013 like so:
-    - update\_external\_sources.bat --build-glslang (Note: see **LVL's Dependencies** below for other options)
+    - update\_external\_sources.bat --build-glslang (Note: see **Loader and Validation Layer Dependencies** below for other options)
 
 ## Windows Build - MSVC
 
@@ -103,7 +103,7 @@ Before building on Windows, you may want to modify the customize section in load
 set the version numbers and build description for your build. Doing so will set the information displayed
 for the Properites->Details tab of the loader vulkan-1.dll file that is built.
 
-Build all Windows targets after installing required software and cloning the LVL repo as described above by completing the following steps in a "Developer Command Prompt for VS2013" window (Note that the update\_external\_sources script used below builds external tools into predefined locations. See **LVL's Dependencies** for more information and other options):
+Build all Windows targets after installing required software and cloning the Loader and Validation Layer repo as described above by completing the following steps in a "Developer Command Prompt for VS2013" window (Note that the update\_external\_sources script used below builds external tools into predefined locations. See **Loader and Validation Layer Dependencies** for more information and other options):
 ```
 cd Vulkan-LoaderAndValidationLayers  # cd to the root of the cloned git repository
 update_external_sources.bat --all
@@ -180,13 +180,13 @@ ndk-build
 ## Ninja Builds - All Platforms
 The [Qt Creator IDE](https://qt.io/download-open-source/#section-2) can open a root CMakeList.txt as a project directly, and it provides tools within Creator to configure and generate Vulkan SDK build files for one to many targets concurrently, resolving configuration issues as needed. Alternatively, when invoking CMake use the -G Codeblocks Ninja option to generate Ninja build files to be used as project files for QtCreator
 
-- Follow the steps defined elsewhere for the OS using the update\_external\_sources script or as shown in **LVL's Dependencies** below
+- Follow the steps defined elsewhere for the OS using the update\_external\_sources script or as shown in **Loader and Validation Layer Dependencies** below
 - Open, configure, and build the gslang and spirv-tools CMakeList.txt files
 - Then do the same with the Vulkan-LoaderAndValidationLayers CMakeList.txt file.
 - In order to debug with QtCreator, a [Microsoft WDK: eg WDK 10](http://go.microsoft.com/fwlink/p/?LinkId=526733) is required. Note that installing the WDK breaks the MSVC vcvarsall.bat build scripts provided by MSVC, requiring that the LIB, INCLUDE, and PATH env variables be set to the WDK paths by some other means
 
-## LVL's Dependencies 
-gslang and SPIRV-Tools repos are required to build and run LVL components. They are not git sub-modules of Vulkan-LoaderAndValidationLayers but Vulkan-LoaderAndValidationLayers is linked to specific revisions of gslang and spirv-tools. These can be automatically cloned and built to predefined locations with the update\_external\_sources scripts. If a custom configuration is required, do the following steps:
+## Loader and Validation Layer Dependencies 
+gslang and SPIRV-Tools repos are required to build and run Loader and Validation Layer components. They are not git sub-modules of Vulkan-LoaderAndValidationLayers but Vulkan-LoaderAndValidationLayers is linked to specific revisions of gslang and spirv-tools. These can be automatically cloned and built to predefined locations with the update\_external\_sources scripts. If a custom configuration is required, do the following steps:
 
 1) clone the repos:
 
