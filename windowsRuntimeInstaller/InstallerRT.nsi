@@ -415,12 +415,27 @@ Section
         pop $0
         Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRTinstall\ConfigLayersAndVulkanDLL.log"
         ${If} $0 != 0
-            LogText "ConfigLayersAndVulkanDLL.ps1 return value is $0"
-            # PS Script failed, see if we can run a simple ps command and a simple ps script
+            # PS Script failed, see if we can run a ps command, a ps script, and/or a cmd copy
+            LogText "ConfigLayersAndVulkanDLL.ps1 rval1 is $0"
+            pop $1
+            LogText "ConfigLayersAndVulkanDLL.ps1 rval2 is $1"
             nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command Write-Output Diagnostic0 | Out-File  -encoding ascii -filePath "$TEMP\VulkanRTinstall\Diagnostic0.log"'
+            pop $1
+            LogText "ps cmd rval1 is $1"
+            pop $1
+            LogText "ps cmd rval2 is $1"
             File Diagnostic1.ps1
             nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -Command .\Diagnostic1.ps1'
+            pop $1
+            LogText "ps script rval1 is $1"
+            pop $1
+            LogText "ps script rval2 is $1"
             Delete Diagnostic1.ps1
+            nsExec::ExecToStack 'cmd /k copy /y nul "$TEMP\VulkanRTinstall\Diagnostic2.log"'
+            pop $1
+            LogText "cmd rval1 is $1"
+            pop $1
+            LogText "cmd rval2 is $1"
             SetErrors
         ${EndIf}
         IntOp $1 10000 + $0
@@ -630,7 +645,7 @@ Section "uninstall"
 
     # Finish logging
     LogSet off
-    Rename "$INSTDIR\install.log" "$TEMP\VulkanRTuninstall\Uninstall.log"
+    Rename "$INSTDIR\install.log" "$TEMP\VulkanRTuninstall\uninstall.log"
 
 SectionEnd
 !endif
@@ -706,7 +721,7 @@ Function un.CheckForError
 
         # Finish logging and move log file to TEMP dir
         LogSet off
-        Rename "$INSTDIR\install.log" "$TEMP\VulkanRTuninstall\Uninstall.log"
+        Rename "$INSTDIR\install.log" "$TEMP\VulkanRTuninstall\uninstall.log"
 
         Quit
     ${EndIf}
