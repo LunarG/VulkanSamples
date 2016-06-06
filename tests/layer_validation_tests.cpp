@@ -2729,10 +2729,6 @@ TEST_F(VkLayerTest, WaitEventThenSet) {
     TEST_DESCRIPTION(
         "Wait on a event then set it after the wait has been submitted.");
 
-    if ((m_device->queue_props.empty()) ||
-        (m_device->queue_props[0].queueCount < 2))
-        return;
-
     m_errorMonitor->ExpectSuccess();
 
     VkEvent event;
@@ -2760,7 +2756,7 @@ TEST_F(VkLayerTest, WaitEventThenSet) {
 
     VkQueue queue = VK_NULL_HANDLE;
     vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_,
-                     1, &queue);
+                     0, &queue);
 
     {
         VkCommandBufferBeginInfo begin_info{};
@@ -2910,10 +2906,6 @@ TEST_F(VkLayerTest, ResetEventThenSet) {
     TEST_DESCRIPTION(
         "Reset an event then set it after the reset has been submitted.");
 
-    if ((m_device->queue_props.empty()) ||
-        (m_device->queue_props[0].queueCount < 2))
-        return;
-
     m_errorMonitor->ExpectSuccess();
 
     VkEvent event;
@@ -2941,7 +2933,7 @@ TEST_F(VkLayerTest, ResetEventThenSet) {
 
     VkQueue queue = VK_NULL_HANDLE;
     vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_,
-                     1, &queue);
+                     0, &queue);
 
     {
         VkCommandBufferBeginInfo begin_info{};
