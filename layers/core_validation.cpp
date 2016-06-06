@@ -9662,6 +9662,7 @@ CreateEvent(VkDevice device, const VkEventCreateInfo *pCreateInfo, const VkAlloc
         std::lock_guard<std::mutex> lock(global_lock);
         dev_data->eventMap[*pEvent].needsSignaled = false;
         dev_data->eventMap[*pEvent].in_use.store(0);
+        dev_data->eventMap[*pEvent].write_in_use = 0;
         dev_data->eventMap[*pEvent].stageMask = VkPipelineStageFlags(0);
     }
     return result;
