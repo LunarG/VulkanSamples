@@ -60,7 +60,7 @@ if(WIN32)
 
     list(APPEND sources ShellWin32.cpp ShellWin32.h)
 else()
-    list(APPEND libraries PRIVATE -ldl)
+    list(APPEND libraries PRIVATE -ldl -lrt)
 
     find_package(XCB REQUIRED)
 
