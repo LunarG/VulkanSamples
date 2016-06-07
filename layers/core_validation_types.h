@@ -441,8 +441,6 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     std::vector<VkRect2D> scissors;
     VkRenderPassBeginInfo activeRenderPassBeginInfo;
     uint64_t fenceId;
-    VkFence lastSubmittedFence;
-    VkQueue lastSubmittedQueue;
     RENDER_PASS_NODE *activeRenderPass;
     VkSubpassContents activeSubpassContents;
     uint32_t activeSubpass;

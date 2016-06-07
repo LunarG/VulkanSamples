@@ -3675,8 +3675,6 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->activeRenderPass = nullptr;
         pCB->activeSubpassContents = VK_SUBPASS_CONTENTS_INLINE;
         pCB->activeSubpass = 0;
-        pCB->lastSubmittedFence = VK_NULL_HANDLE;
-        pCB->lastSubmittedQueue = VK_NULL_HANDLE;
         pCB->destroyedSets.clear();
         pCB->updatedSets.clear();
         pCB->destroyedFramebuffers.clear();
@@ -4582,8 +4580,6 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
             if (pCBNode) {
                 pCBNode->semaphores = semaphoreList;
                 pCBNode->submitCount++; // increment submit count
-                pCBNode->lastSubmittedFence = fence;
-                pCBNode->lastSubmittedQueue = queue;
                 skipCall |= validatePrimaryCommandBufferState(dev_data, pCBNode);
                 // Call submit-time functions to validate/update state
                 for (auto &function : pCBNode->validate_functions) {
