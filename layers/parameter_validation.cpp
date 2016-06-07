@@ -111,7 +111,7 @@ CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCre
 
     if (result == VK_SUCCESS) {
         layer_data *data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-        result = layer_create_msg_callback(data->report_data, pCreateInfo, pAllocator, pMsgCallback);
+        result = layer_create_msg_callback(data->report_data, false, pCreateInfo, pAllocator, pMsgCallback);
     }
 
     return result;
@@ -2780,12 +2780,22 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
                                              i, i);
                     }
                 }
-            } else if (pCreateInfos[i].pTessellationState->sType != VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO) {
-                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                     __LINE__, INVALID_STRUCT_STYPE, LayerName,
-                                     "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pTessellationState->sType must be "
-                                     "VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO",
-                                     i);
+            } else {
+                skip_call |=
+                    validate_struct_pnext(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pTessellationState->pNext",
+                                          NULL, pCreateInfos[i].pTessellationState->pNext, 0, NULL);
+
+                skip_call |=
+                    validate_reserved_flags(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pTessellationState->flags",
+                                            pCreateInfos[i].pTessellationState->flags);
+
+                if (pCreateInfos[i].pTessellationState->sType != VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO) {
+                    skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                         __LINE__, INVALID_STRUCT_STYPE, LayerName,
+                                         "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pTessellationState->sType must be "
+                                         "VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO",
+                                         i);
+                }
             }
 
             if (pCreateInfos[i].pViewportState == nullptr) {
@@ -2801,6 +2811,14 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
                         i, i);
                 }
             } else {
+                skip_call |=
+                    validate_struct_pnext(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pViewportState->pNext", NULL,
+                                          pCreateInfos[i].pViewportState->pNext, 0, NULL);
+
+                skip_call |=
+                    validate_reserved_flags(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pViewportState->flags",
+                                            pCreateInfos[i].pViewportState->flags);
+
                 if (pCreateInfos[i].pViewportState->sType != VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO) {
                     skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                          __LINE__, INVALID_STRUCT_STYPE, LayerName,
@@ -2879,26 +2897,181 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
                                                                "VK_FALSE, pCreateInfos[%d].pMultisampleState must not be NULL",
                                 i, i);
                 }
-            } else if (pCreateInfos[i].pMultisampleState->sType != VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO) {
-                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                     __LINE__, INVALID_STRUCT_STYPE, LayerName,
-                                     "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pMultisampleState->sType must be "
-                                     "VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO",
-                                     i);
+            } else {
+                skip_call |=
+                    validate_struct_pnext(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pMultisampleState->pNext",
+                                          NULL, pCreateInfos[i].pMultisampleState->pNext, 0, NULL);
+
+                skip_call |=
+                    validate_reserved_flags(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pMultisampleState->flags",
+                                            pCreateInfos[i].pMultisampleState->flags);
+
+                skip_call |= validate_bool32(report_data, "vkCreateGraphicsPipelines",
+                                             "pCreateInfos[i].pMultisampleState->sampleShadingEnable",
+                                             pCreateInfos[i].pMultisampleState->sampleShadingEnable);
+
+                skip_call |= validate_array(
+                    report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pMultisampleState->rasterizationSamples",
+                    "pCreateInfos[i].pMultisampleState->pSampleMask", pCreateInfos[i].pMultisampleState->rasterizationSamples,
+                    pCreateInfos[i].pMultisampleState->pSampleMask, true, false);
+
+                skip_call |= validate_bool32(report_data, "vkCreateGraphicsPipelines",
+                                             "pCreateInfos[i].pMultisampleState->alphaToCoverageEnable",
+                                             pCreateInfos[i].pMultisampleState->alphaToCoverageEnable);
+
+                skip_call |=
+                    validate_bool32(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pMultisampleState->alphaToOneEnable",
+                                    pCreateInfos[i].pMultisampleState->alphaToOneEnable);
+
+                if (pCreateInfos[i].pMultisampleState->sType != VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO) {
+                    skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                         __LINE__, INVALID_STRUCT_STYPE, LayerName,
+                                         "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pMultisampleState->sType must be "
+                                         "VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO",
+                                         i);
+                }
             }
 
             // TODO: Conditional NULL check based on rasterizerDiscardEnable and subpass
-            if ((pCreateInfos[i].pDepthStencilState != nullptr) &&
-                (pCreateInfos[i].pDepthStencilState->sType != VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO)) {
-                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                     __LINE__, INVALID_STRUCT_STYPE, LayerName,
-                                     "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pDepthStencilState->sType must be "
-                                     "VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO",
-                                     i);
+            if (pCreateInfos[i].pDepthStencilState != nullptr) {
+                skip_call |=
+                    validate_struct_pnext(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pDepthStencilState->pNext",
+                                          NULL, pCreateInfos[i].pDepthStencilState->pNext, 0, NULL);
+
+                skip_call |=
+                    validate_reserved_flags(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pDepthStencilState->flags",
+                                            pCreateInfos[i].pDepthStencilState->flags);
+
+                skip_call |=
+                    validate_bool32(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pDepthStencilState->depthTestEnable",
+                                    pCreateInfos[i].pDepthStencilState->depthTestEnable);
+
+                skip_call |= validate_bool32(report_data, "vkCreateGraphicsPipelines",
+                                             "pCreateInfos[i].pDepthStencilState->depthWriteEnable",
+                                             pCreateInfos[i].pDepthStencilState->depthWriteEnable);
+
+                skip_call |= validate_ranged_enum(
+                    report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pDepthStencilState->depthCompareOp", "VkCompareOp",
+                    VK_COMPARE_OP_BEGIN_RANGE, VK_COMPARE_OP_END_RANGE, pCreateInfos[i].pDepthStencilState->depthCompareOp);
+
+                skip_call |= validate_bool32(report_data, "vkCreateGraphicsPipelines",
+                                             "pCreateInfos[i].pDepthStencilState->depthBoundsTestEnable",
+                                             pCreateInfos[i].pDepthStencilState->depthBoundsTestEnable);
+
+                skip_call |= validate_bool32(report_data, "vkCreateGraphicsPipelines",
+                                             "pCreateInfos[i].pDepthStencilState->stencilTestEnable",
+                                             pCreateInfos[i].pDepthStencilState->stencilTestEnable);
+
+                skip_call |= validate_ranged_enum(
+                    report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pDepthStencilState->front.failOp", "VkStencilOp",
+                    VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE, pCreateInfos[i].pDepthStencilState->front.failOp);
+
+                skip_call |= validate_ranged_enum(
+                    report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pDepthStencilState->front.passOp", "VkStencilOp",
+                    VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE, pCreateInfos[i].pDepthStencilState->front.passOp);
+
+                skip_call |= validate_ranged_enum(report_data, "vkCreateGraphicsPipelines",
+                                                  "pCreateInfos[i].pDepthStencilState->front.depthFailOp", "VkStencilOp",
+                                                  VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE,
+                                                  pCreateInfos[i].pDepthStencilState->front.depthFailOp);
+
+                skip_call |= validate_ranged_enum(
+                    report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pDepthStencilState->front.compareOp", "VkCompareOp",
+                    VK_COMPARE_OP_BEGIN_RANGE, VK_COMPARE_OP_END_RANGE, pCreateInfos[i].pDepthStencilState->front.compareOp);
+
+                skip_call |= validate_ranged_enum(
+                    report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pDepthStencilState->back.failOp", "VkStencilOp",
+                    VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE, pCreateInfos[i].pDepthStencilState->back.failOp);
+
+                skip_call |= validate_ranged_enum(
+                    report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pDepthStencilState->back.passOp", "VkStencilOp",
+                    VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE, pCreateInfos[i].pDepthStencilState->back.passOp);
+
+                skip_call |= validate_ranged_enum(
+                    report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pDepthStencilState->back.depthFailOp", "VkStencilOp",
+                    VK_STENCIL_OP_BEGIN_RANGE, VK_STENCIL_OP_END_RANGE, pCreateInfos[i].pDepthStencilState->back.depthFailOp);
+
+                skip_call |= validate_ranged_enum(
+                    report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pDepthStencilState->back.compareOp", "VkCompareOp",
+                    VK_COMPARE_OP_BEGIN_RANGE, VK_COMPARE_OP_END_RANGE, pCreateInfos[i].pDepthStencilState->back.compareOp);
+
+                if (pCreateInfos[i].pDepthStencilState->sType != VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO) {
+                    skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                         __LINE__, INVALID_STRUCT_STYPE, LayerName,
+                                         "vkCreateGraphicsPipelines: parameter pCreateInfos[%d].pDepthStencilState->sType must be "
+                                         "VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO",
+                                         i);
+                }
             }
 
             // TODO: Conditional NULL check based on rasterizerDiscardEnable and subpass
             if (pCreateInfos[i].pColorBlendState != nullptr) {
+                skip_call |=
+                    validate_struct_pnext(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pColorBlendState->pNext", NULL,
+                                          pCreateInfos[i].pColorBlendState->pNext, 0, NULL);
+
+                skip_call |=
+                    validate_reserved_flags(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pColorBlendState->flags",
+                                            pCreateInfos[i].pColorBlendState->flags);
+
+                skip_call |=
+                    validate_bool32(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pColorBlendState->logicOpEnable",
+                                    pCreateInfos[i].pColorBlendState->logicOpEnable);
+
+                skip_call |= validate_array(
+                    report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pColorBlendState->attachmentCount",
+                    "pCreateInfos[i].pColorBlendState->pAttachments", pCreateInfos[i].pColorBlendState->attachmentCount,
+                    pCreateInfos[i].pColorBlendState->pAttachments, false, true);
+
+                if (pCreateInfos[i].pColorBlendState->pAttachments != NULL) {
+                    for (uint32_t attachmentIndex = 0; attachmentIndex < pCreateInfos[i].pColorBlendState->attachmentCount;
+                         ++attachmentIndex) {
+                        skip_call |= validate_bool32(report_data, "vkCreateGraphicsPipelines",
+                                                     "pCreateInfos[i].pColorBlendState->pAttachments[i].blendEnable",
+                                                     pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].blendEnable);
+
+                        skip_call |= validate_ranged_enum(
+                            report_data, "vkCreateGraphicsPipelines",
+                            "pCreateInfos[i].pColorBlendState->pAttachments[i].srcColorBlendFactor", "VkBlendFactor",
+                            VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
+                            pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].srcColorBlendFactor);
+
+                        skip_call |= validate_ranged_enum(
+                            report_data, "vkCreateGraphicsPipelines",
+                            "pCreateInfos[i].pColorBlendState->pAttachments[i].dstColorBlendFactor", "VkBlendFactor",
+                            VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
+                            pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].dstColorBlendFactor);
+
+                        skip_call |= validate_ranged_enum(
+                            report_data, "vkCreateGraphicsPipelines",
+                            "pCreateInfos[i].pColorBlendState->pAttachments[i].colorBlendOp", "VkBlendOp", VK_BLEND_OP_BEGIN_RANGE,
+                            VK_BLEND_OP_END_RANGE, pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].colorBlendOp);
+
+                        skip_call |= validate_ranged_enum(
+                            report_data, "vkCreateGraphicsPipelines",
+                            "pCreateInfos[i].pColorBlendState->pAttachments[i].srcAlphaBlendFactor", "VkBlendFactor",
+                            VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
+                            pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].srcAlphaBlendFactor);
+
+                        skip_call |= validate_ranged_enum(
+                            report_data, "vkCreateGraphicsPipelines",
+                            "pCreateInfos[i].pColorBlendState->pAttachments[i].dstAlphaBlendFactor", "VkBlendFactor",
+                            VK_BLEND_FACTOR_BEGIN_RANGE, VK_BLEND_FACTOR_END_RANGE,
+                            pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].dstAlphaBlendFactor);
+
+                        skip_call |= validate_ranged_enum(
+                            report_data, "vkCreateGraphicsPipelines",
+                            "pCreateInfos[i].pColorBlendState->pAttachments[i].alphaBlendOp", "VkBlendOp", VK_BLEND_OP_BEGIN_RANGE,
+                            VK_BLEND_OP_END_RANGE, pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].alphaBlendOp);
+
+                        skip_call |=
+                            validate_flags(report_data, "vkCreateGraphicsPipelines",
+                                           "pCreateInfos[i].pColorBlendState->pAttachments[i].colorWriteMask",
+                                           "VkColorComponentFlagBits", AllVkColorComponentFlagBits,
+                                           pCreateInfos[i].pColorBlendState->pAttachments[attachmentIndex].colorWriteMask, false);
+                    }
+                }
+
                 if (pCreateInfos[i].pColorBlendState->sType != VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO) {
                     skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                          __LINE__, INVALID_STRUCT_STYPE, LayerName,
@@ -3298,6 +3471,12 @@ UpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWri
                                          "VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, "
                                          "pDescriptorWrites[%d].pBufferInfo must not be NULL",
                                          i, i);
+                } else {
+                    for (uint32_t descriptorIndex = 0; descriptorIndex < pDescriptorWrites[i].descriptorCount; ++descriptorIndex) {
+                        skip_call |= validate_required_handle(report_data, "vkUpdateDescriptorSets",
+                                                              "pDescriptorWrites[i].pBufferInfo[i].buffer",
+                                                              pDescriptorWrites[i].pBufferInfo[descriptorIndex].buffer);
+                    }
                 }
             } else if ((pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) ||
                        (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER)) {
@@ -3515,6 +3694,12 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                                       VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO, false);
 
     if (pBeginInfo->pInheritanceInfo != NULL) {
+        skip_call |= validate_struct_pnext(report_data, "vkBeginCommandBuffer", "pBeginInfo->pInheritanceInfo->pNext", NULL,
+                                           pBeginInfo->pInheritanceInfo->pNext, 0, NULL);
+
+        skip_call |= validate_bool32(report_data, "vkBeginCommandBuffer", "pBeginInfo->pInheritanceInfo->occlusionQueryEnable",
+                                     pBeginInfo->pInheritanceInfo->occlusionQueryEnable);
+
         // TODO: This only needs to be validated when the inherited queries feature is enabled
         // skip_call |= validate_flags(report_data, "vkBeginCommandBuffer", "pBeginInfo->pInheritanceInfo->queryFlags",
         // "VkQueryControlFlagBits", AllVkQueryControlFlagBits, pBeginInfo->pInheritanceInfo->queryFlags, false);
@@ -4268,6 +4453,24 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBufferCount, c
     }
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL
+EnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
+    return util_GetLayerProperties(1, &global_layer, pCount, pProperties);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL
+EnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties *pProperties) {
+    return util_GetLayerProperties(1, &global_layer, pCount, pProperties);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL
+EnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount, VkExtensionProperties *pProperties) {
+    if (pLayerName && !strcmp(pLayerName, global_layer.layerName))
+        return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);
+
+    return VK_ERROR_LAYER_NOT_PRESENT;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
                                                                   const char *pLayerName, uint32_t *pCount,
                                                                   VkExtensionProperties *pProperties) {
@@ -4343,13 +4546,11 @@ intercept_core_instance_command(const char *name) {
         { "vkGetPhysicalDeviceSparseImageFormatProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSparseImageFormatProperties) },
         { "vkGetPhysicalDeviceQueueFamilyProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceQueueFamilyProperties) },
         { "vkGetPhysicalDeviceMemoryProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceMemoryProperties) },
+        { "vkEnumerateInstanceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateInstanceLayerProperties) },
+        { "vkEnumerateDeviceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceLayerProperties) },
+        { "vkEnumerateInstanceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateInstanceExtensionProperties) },
         { "vkEnumerateDeviceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceExtensionProperties) },
     };
-
-    // we should never be queried for these commands
-    assert(strcmp(name, "vkEnumerateInstanceLayerProperties") &&
-           strcmp(name, "vkEnumerateInstanceExtensionProperties") &&
-           strcmp(name, "vkEnumerateDeviceLayerProperties"));
 
     for (size_t i = 0; i < ARRAY_SIZE(core_instance_commands); i++) {
         if (!strcmp(core_instance_commands[i].name, name))
@@ -4513,25 +4714,26 @@ vkDebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags, VkDebu
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount, VkExtensionProperties *pProperties) {
-    return util_GetExtensionProperties(1, parameter_validation::instance_extensions, pCount, pProperties);
+    return parameter_validation::EnumerateInstanceExtensionProperties(pLayerName, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
-    return util_GetLayerProperties(1, &parameter_validation::global_layer, pCount, pProperties);
+    return parameter_validation::EnumerateInstanceLayerProperties(pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties *pProperties) {
-
-    /* parameter_validation's physical device layers are the same as global */
-    return util_GetLayerProperties(1, &parameter_validation::global_layer, pCount, pProperties);
+    // the layer command handles VK_NULL_HANDLE just fine internally
+    assert(physicalDevice == VK_NULL_HANDLE);
+    return parameter_validation::EnumerateDeviceLayerProperties(VK_NULL_HANDLE, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
                                                                                     const char *pLayerName, uint32_t *pCount,
                                                                                     VkExtensionProperties *pProperties) {
-    // the layer command handles VK_NULL_HANDLE just fine
+    // the layer command handles VK_NULL_HANDLE just fine internally
+    assert(physicalDevice == VK_NULL_HANDLE);
     return parameter_validation::EnumerateDeviceExtensionProperties(VK_NULL_HANDLE, pLayerName, pCount, pProperties);
 }
 
@@ -4540,14 +4742,5 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *funcName) {
-    if (!strcmp(funcName, "vkEnumerateInstanceLayerProperties"))
-        return reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceLayerProperties);
-    if (!strcmp(funcName, "vkEnumerateDeviceLayerProperties"))
-        return reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateDeviceLayerProperties);
-    if (!strcmp(funcName, "vkEnumerateInstanceExtensionProperties"))
-        return reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceExtensionProperties);
-    if (!strcmp(funcName, "vkGetInstanceProcAddr"))
-        return reinterpret_cast<PFN_vkVoidFunction>(vkGetInstanceProcAddr);
-
     return parameter_validation::GetInstanceProcAddr(instance, funcName);
 }

@@ -260,18 +260,12 @@ bool cvdescriptorset::DescriptorSetLayout::VerifyUpdateConsistency(uint32_t curr
     return true;
 }
 
+cvdescriptorset::AllocateDescriptorSetsData::AllocateDescriptorSetsData(uint32_t count)
+    : required_descriptors_by_type{}, layout_nodes(count, nullptr) {}
+
 cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const DescriptorSetLayout *layout,
-                                              const std::unordered_map<VkBuffer, BUFFER_NODE> *buffer_map,
-                                              const std::unordered_map<VkDeviceMemory, DEVICE_MEM_INFO> *memory_map,
-                                              const std::unordered_map<VkBufferView, VkBufferViewCreateInfo> *buffer_view_map,
-                                              const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *sampler_map,
-                                              const std::unordered_map<VkImageView, VkImageViewCreateInfo> *image_view_map,
-                                              const std::unordered_map<VkImage, IMAGE_NODE> *image_map,
-                                              const std::unordered_map<VkImage, VkSwapchainKHR> *image_to_swapchain_map,
-                                              const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *swapchain_map)
-    : some_update_(false), set_(set), p_layout_(layout), buffer_map_(buffer_map), memory_map_(memory_map),
-      buffer_view_map_(buffer_view_map), sampler_map_(sampler_map), image_view_map_(image_view_map), image_map_(image_map),
-      image_to_swapchain_map_(image_to_swapchain_map), swapchain_map_(swapchain_map) {
+                                              const core_validation::layer_data *dev_data)
+    : some_update_(false), set_(set), p_layout_(layout), device_data_(dev_data) {
     // Foreach binding, create default descriptors of given type
     for (uint32_t i = 0; i < p_layout_->GetBindingCount(); ++i) {
         auto type = p_layout_->GetTypeFromIndex(i);
@@ -280,9 +274,9 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
             auto immut_sampler = p_layout_->GetImmutableSamplerPtrFromIndex(i);
             for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di) {
                 if (immut_sampler)
-                    descriptors_.emplace_back(std::unique_ptr<Descriptor>(new SamplerDescriptor(immut_sampler + di)));
+                    descriptors_.emplace_back(new SamplerDescriptor(immut_sampler + di));
                 else
-                    descriptors_.emplace_back(std::unique_ptr<Descriptor>(new SamplerDescriptor()));
+                    descriptors_.emplace_back(new SamplerDescriptor());
             }
             break;
         }
@@ -290,9 +284,9 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
             auto immut = p_layout_->GetImmutableSamplerPtrFromIndex(i);
             for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di) {
                 if (immut)
-                    descriptors_.emplace_back(std::unique_ptr<Descriptor>(new ImageSamplerDescriptor(immut + di)));
+                    descriptors_.emplace_back(new ImageSamplerDescriptor(immut + di));
                 else
-                    descriptors_.emplace_back(std::unique_ptr<Descriptor>(new ImageSamplerDescriptor()));
+                    descriptors_.emplace_back(new ImageSamplerDescriptor());
             }
             break;
         }
@@ -301,19 +295,19 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
         case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
         case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
             for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di)
-                descriptors_.emplace_back(std::unique_ptr<Descriptor>(new ImageDescriptor(type)));
+                descriptors_.emplace_back(new ImageDescriptor(type));
             break;
         case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
         case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
             for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di)
-                descriptors_.emplace_back(std::unique_ptr<Descriptor>(new TexelDescriptor(type)));
+                descriptors_.emplace_back(new TexelDescriptor(type));
             break;
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
         case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
         case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
             for (uint32_t di = 0; di < p_layout_->GetDescriptorCountFromIndex(i); ++di)
-                descriptors_.emplace_back(std::unique_ptr<Descriptor>(new BufferDescriptor(type)));
+                descriptors_.emplace_back(new BufferDescriptor(type));
             break;
         default:
             assert(0); // Bad descriptor type specified
@@ -341,13 +335,13 @@ bool cvdescriptorset::DescriptorSet::IsCompatible(const DescriptorSetLayout *lay
 // Return true if state is acceptable, or false and write an error message into error string
 bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::unordered_set<uint32_t> &bindings,
                                                        const std::vector<uint32_t> &dynamic_offsets, std::string *error) const {
+    auto dyn_offset_index = 0;
     for (auto binding : bindings) {
         auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
         if (descriptors_[start_idx]->IsImmutableSampler()) {
             // Nothing to do for strictly immutable sampler
         } else {
             auto end_idx = p_layout_->GetGlobalEndIndexFromBinding(binding);
-            auto dyn_offset_index = 0;
             for (uint32_t i = start_idx; i <= end_idx; ++i) {
                 if (!descriptors_[i]->updated) {
                     std::stringstream error_str;
@@ -359,27 +353,27 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::unordered_set<
                     if (GeneralBuffer == descriptors_[i]->GetClass()) {
                         // Verify that buffers are valid
                         auto buffer = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetBuffer();
-                        auto buffer_node = buffer_map_->find(buffer);
-                        if (buffer_node == buffer_map_->end()) {
+                        auto buffer_node = getBufferNode(device_data_, buffer);
+                        if (!buffer_node) {
                             std::stringstream error_str;
                             error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
                                       << " references invalid buffer " << buffer << ".";
                             *error = error_str.str();
                             return false;
                         } else {
-                            auto mem_entry = memory_map_->find(buffer_node->second.mem);
-                            if (mem_entry == memory_map_->end()) {
+                            auto mem_entry = getMemObjInfo(device_data_, buffer_node->mem);
+                            if (!mem_entry) {
                                 std::stringstream error_str;
                                 error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
-                                          << " uses buffer " << buffer << " that references invalid memory "
-                                          << buffer_node->second.mem << ".";
+                                          << " uses buffer " << buffer << " that references invalid memory " << buffer_node->mem
+                                          << ".";
                                 *error = error_str.str();
                                 return false;
                             }
                         }
                         if (descriptors_[i]->IsDynamic()) {
                             // Validate that dynamic offsets are within the buffer
-                            auto buffer_size = buffer_node->second.createInfo.size;
+                            auto buffer_size = buffer_node->createInfo.size;
                             auto range = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetRange();
                             auto desc_offset = static_cast<BufferDescriptor *>(descriptors_[i].get())->GetOffset();
                             auto dyn_offset = dynamic_offsets[dyn_offset_index++];
@@ -432,9 +426,9 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::unordered_
                 for (uint32_t i = 0; i < p_layout_->GetDescriptorCountFromBinding(binding); ++i) {
                     if (descriptors_[start_idx + i]->updated) {
                         auto bufferview = static_cast<TexelDescriptor *>(descriptors_[start_idx + i].get())->GetBufferView();
-                        const auto &buff_pair = buffer_view_map_->find(bufferview);
-                        if (buff_pair != buffer_view_map_->end()) {
-                            buffer_set->insert(buff_pair->second.buffer);
+                        auto bv_info = getBufferViewInfo(device_data_, bufferview);
+                        if (bv_info) {
+                            buffer_set->insert(bv_info->buffer);
                             num_updates++;
                         }
                     }
@@ -450,14 +444,6 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::unordered_
         }
     }
     return num_updates;
-}
-// This is a special case for compute shaders that should eventually be removed once we have proper valid binding info for compute
-// case
-uint32_t cvdescriptorset::DescriptorSet::GetAllStorageUpdates(std::unordered_set<VkBuffer> *buffer_set,
-                                                              std::unordered_set<VkImageView> *image_set) const {
-    std::unordered_set<uint32_t> binding_set;
-    p_layout_->FillBindingSet(&binding_set);
-    return GetStorageUpdates(binding_set, buffer_set, image_set);
 }
 // Set is being deleted or updates so invalidate all bound cmd buffers
 void cvdescriptorset::DescriptorSet::InvalidateBoundCmdBuffers() {
@@ -553,7 +539,7 @@ bool cvdescriptorset::DescriptorSet::ValidateCopyUpdate(const debug_report_data 
         }
     }
     // Update parameters all look good and descriptor updated so verify update contents
-    if (!VerifyCopyUpdateContents(update, src_set, src_start_idx, error))
+    if (!VerifyCopyUpdateContents(update, src_set, src_type, src_start_idx, error))
         return false;
 
     // All checks passed so update is good
@@ -587,103 +573,133 @@ cvdescriptorset::SamplerDescriptor::SamplerDescriptor(const VkSampler *immut) : 
         updated = true;
     }
 }
-
-bool cvdescriptorset::ValidateSampler(const VkSampler sampler,
-                                      const std::unordered_map<VkSampler, std::unique_ptr<SAMPLER_NODE>> *sampler_map) {
-    return (sampler_map->count(sampler) != 0);
+// Validate given sampler. Currently this only checks to make sure it exists in the samplerMap
+bool cvdescriptorset::ValidateSampler(const VkSampler sampler, const core_validation::layer_data *dev_data) {
+    return (getSamplerNode(dev_data, sampler) != nullptr);
 }
 
-bool cvdescriptorset::ValidateImageUpdate(const VkImageView image_view, const VkImageLayout image_layout,
-                                          const std::unordered_map<VkImageView, VkImageViewCreateInfo> *image_view_map,
-                                          const std::unordered_map<VkImage, IMAGE_NODE> *image_map,
-                                          const std::unordered_map<VkImage, VkSwapchainKHR> *image_to_swapchain_map,
-                                          const std::unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE *> *swapchain_map,
+bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout image_layout, VkDescriptorType type,
+                                          const core_validation::layer_data *dev_data,
                                           std::string *error) {
-    auto image_pair = image_view_map->find(image_view);
-    if (image_pair == image_view_map->end()) {
+    auto iv_data = getImageViewData(dev_data, image_view);
+    if (!iv_data) {
         std::stringstream error_str;
         error_str << "Invalid VkImageView: " << image_view;
         *error = error_str.str();
         return false;
+    }
+    // Validate that imageLayout is compatible with aspect_mask and image format
+    //  and validate that image usage bits are correct for given usage
+    VkImageAspectFlags aspect_mask = iv_data->subresourceRange.aspectMask;
+    VkImage image = iv_data->image;
+    VkFormat format = VK_FORMAT_MAX_ENUM;
+    VkImageUsageFlags usage = 0;
+    auto image_node = getImageNode(dev_data, image);
+    if (image_node) {
+        format = image_node->createInfo.format;
+        usage = image_node->createInfo.usage;
     } else {
-        // Validate that imageLayout is compatible with aspect_mask and image format
-        VkImageAspectFlags aspect_mask = image_pair->second.subresourceRange.aspectMask;
-        VkImage image = image_pair->second.image;
-        VkFormat format = VK_FORMAT_MAX_ENUM;
-        auto img_pair = image_map->find(image);
-        if (img_pair != image_map->end()) {
-            format = img_pair->second.createInfo.format;
-        } else {
-            // Also need to check the swapchains.
-            auto swapchain_pair = image_to_swapchain_map->find(image);
-            if (swapchain_pair != image_to_swapchain_map->end()) {
-                VkSwapchainKHR swapchain = swapchain_pair->second;
-                auto swapchain_pair = swapchain_map->find(swapchain);
-                if (swapchain_pair != swapchain_map->end()) {
-                    format = swapchain_pair->second->createInfo.imageFormat;
-                }
+        // Also need to check the swapchains.
+        auto swapchain = getSwapchainFromImage(dev_data, image);
+        if (swapchain) {
+            auto swapchain_node = getSwapchainNode(dev_data, swapchain);
+            if (swapchain_node) {
+                format = swapchain_node->createInfo.imageFormat;
             }
         }
-        if (format == VK_FORMAT_MAX_ENUM) {
+    }
+    // First validate that format and layout are compatible
+    if (format == VK_FORMAT_MAX_ENUM) {
+        std::stringstream error_str;
+        error_str << "Invalid image (" << image << ") in imageView (" << image_view << ").";
+        *error = error_str.str();
+        return false;
+    }
+    bool ds = vk_format_is_depth_or_stencil(format);
+    switch (image_layout) {
+    case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        // Only Color bit must be set
+        if ((aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT) != VK_IMAGE_ASPECT_COLOR_BIT) {
             std::stringstream error_str;
-            error_str << "Invalid image (" << image << ") in imageView (" << image_view << ").";
+            error_str << "ImageView (" << image_view << ") uses layout VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL but does "
+                                                        "not have VK_IMAGE_ASPECT_COLOR_BIT set.";
             *error = error_str.str();
             return false;
-        } else {
-            bool ds = vk_format_is_depth_or_stencil(format);
-            switch (image_layout) {
-            case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-                // Only Color bit must be set
-                if ((aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT) != VK_IMAGE_ASPECT_COLOR_BIT) {
-                    std::stringstream error_str;
-                    error_str << "ImageView (" << image_view << ") uses layout VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL but does "
-                                                                "not have VK_IMAGE_ASPECT_COLOR_BIT set.";
-                    *error = error_str.str();
-                    return false;
-                }
-                // format must NOT be DS
-                if (ds) {
-                    std::stringstream error_str;
-                    error_str << "ImageView (" << image_view
-                              << ") uses layout VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL but the image format is "
-                              << string_VkFormat(format) << " which is not a color format.";
-                    *error = error_str.str();
-                    return false;
-                }
-                break;
-            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-                // Depth or stencil bit must be set, but both must NOT be set
-                if (aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) {
-                    if (aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) {
-                        // both  must NOT be set
-                        std::stringstream error_str;
-                        error_str << "ImageView (" << image_view << ") has both STENCIL and DEPTH aspects set";
-                        *error = error_str.str();
-                        return false;
-                    }
-                } else if (!(aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT)) {
-                    // Neither were set
-                    std::stringstream error_str;
-                    error_str << "ImageView (" << image_view << ") has layout " << string_VkImageLayout(image_layout)
-                              << " but does not have STENCIL or DEPTH aspects set";
-                    *error = error_str.str();
-                    return false;
-                }
-                // format must be DS
-                if (!ds) {
-                    std::stringstream error_str;
-                    error_str << "ImageView (" << image_view << ") has layout " << string_VkImageLayout(image_layout)
-                              << " but the image format is " << string_VkFormat(format) << " which is not a depth/stencil format.";
-                    *error = error_str.str();
-                    return false;
-                }
-                break;
-            default:
-                // anything to check for other layouts?
-                break;
-            }
         }
+        // format must NOT be DS
+        if (ds) {
+            std::stringstream error_str;
+            error_str << "ImageView (" << image_view
+                      << ") uses layout VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL but the image format is "
+                      << string_VkFormat(format) << " which is not a color format.";
+            *error = error_str.str();
+            return false;
+        }
+        break;
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+        // Depth or stencil bit must be set, but both must NOT be set
+        if (aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) {
+            if (aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) {
+                // both  must NOT be set
+                std::stringstream error_str;
+                error_str << "ImageView (" << image_view << ") has both STENCIL and DEPTH aspects set";
+                *error = error_str.str();
+                return false;
+            }
+        } else if (!(aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT)) {
+            // Neither were set
+            std::stringstream error_str;
+            error_str << "ImageView (" << image_view << ") has layout " << string_VkImageLayout(image_layout)
+                      << " but does not have STENCIL or DEPTH aspects set";
+            *error = error_str.str();
+            return false;
+        }
+        // format must be DS
+        if (!ds) {
+            std::stringstream error_str;
+            error_str << "ImageView (" << image_view << ") has layout " << string_VkImageLayout(image_layout)
+                      << " but the image format is " << string_VkFormat(format) << " which is not a depth/stencil format.";
+            *error = error_str.str();
+            return false;
+        }
+        break;
+    default:
+        // anything to check for other layouts?
+        break;
+    }
+    // Now validate that usage flags are correctly set for given type of update
+    std::string error_usage_bit;
+    switch (type) {
+    case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: {
+        if (!(usage & VK_IMAGE_USAGE_SAMPLED_BIT)) {
+            error_usage_bit = "VK_IMAGE_USAGE_SAMPLED_BIT";
+        }
+        break;
+    }
+    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
+        if (!(usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
+            error_usage_bit = "VK_IMAGE_USAGE_STORAGE_BIT";
+        }
+        break;
+    }
+    case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT: {
+        if (!(usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)) {
+            error_usage_bit = "VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT";
+        }
+        break;
+    }
+    default:
+        break;
+    }
+    if (!error_usage_bit.empty()) {
+        std::stringstream error_str;
+        error_str << "ImageView (" << image_view << ") with usage mask 0x" << usage
+                  << " being used for a descriptor update of type " << string_VkDescriptorType(type) << " does not have "
+                  << error_usage_bit << " set.";
+        *error = error_str.str();
+        return false;
     }
     return true;
 }
@@ -811,15 +827,16 @@ void cvdescriptorset::TexelDescriptor::CopyUpdate(const Descriptor *src) {
 // If the update hits an issue for which the callback returns "true", meaning that the call down the chain should
 //  be skipped, then true is returned.
 // If there is no issue with the update, then false is returned.
-bool cvdescriptorset::ValidateUpdateDescriptorSets(
-    const debug_report_data *report_data, const std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> &set_map,
-    uint32_t write_count, const VkWriteDescriptorSet *p_wds, uint32_t copy_count, const VkCopyDescriptorSet *p_cds) {
+bool cvdescriptorset::ValidateUpdateDescriptorSets(const debug_report_data *report_data,
+                                                   const core_validation::layer_data *dev_data, uint32_t write_count,
+                                                   const VkWriteDescriptorSet *p_wds, uint32_t copy_count,
+                                                   const VkCopyDescriptorSet *p_cds) {
     bool skip_call = false;
     // Validate Write updates
     for (uint32_t i = 0; i < write_count; i++) {
         auto dest_set = p_wds[i].dstSet;
-        auto set_pair = set_map.find(dest_set);
-        if (set_pair == set_map.end()) {
+        auto set_node = core_validation::getSetNode(dev_data, dest_set);
+        if (!set_node) {
             skip_call |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                         reinterpret_cast<uint64_t &>(dest_set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
@@ -827,7 +844,7 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(
                         reinterpret_cast<uint64_t &>(dest_set));
         } else {
             std::string error_str;
-            if (!set_pair->second->ValidateWriteUpdate(report_data, &p_wds[i], &error_str)) {
+            if (!set_node->ValidateWriteUpdate(report_data, &p_wds[i], &error_str)) {
                 skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                      reinterpret_cast<uint64_t &>(dest_set), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
                                      "vkUpdateDescriptorsSets() failed write update validation for Descriptor Set 0x%" PRIx64
@@ -840,15 +857,15 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(
     for (uint32_t i = 0; i < copy_count; ++i) {
         auto dst_set = p_cds[i].dstSet;
         auto src_set = p_cds[i].srcSet;
-        auto src_pair = set_map.find(src_set);
-        auto dst_pair = set_map.find(dst_set);
-        if (src_pair == set_map.end()) {
+        auto src_node = core_validation::getSetNode(dev_data, src_set);
+        auto dst_node = core_validation::getSetNode(dev_data, dst_set);
+        if (!src_node) {
             skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                  reinterpret_cast<uint64_t &>(src_set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
                                  "Cannot call vkUpdateDescriptorSets() to copy from descriptor set 0x%" PRIxLEAST64
                                  " that has not been allocated.",
                                  reinterpret_cast<uint64_t &>(src_set));
-        } else if (dst_pair == set_map.end()) {
+        } else if (!dst_node) {
             skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                  reinterpret_cast<uint64_t &>(dst_set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
                                  "Cannot call vkUpdateDescriptorSets() to copy to descriptor set 0x%" PRIxLEAST64
@@ -856,7 +873,7 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(
                                  reinterpret_cast<uint64_t &>(dst_set));
         } else {
             std::string error_str;
-            if (!dst_pair->second->ValidateCopyUpdate(report_data, &p_cds[i], src_pair->second, &error_str)) {
+            if (!dst_node->ValidateCopyUpdate(report_data, &p_cds[i], src_node, &error_str)) {
                 skip_call |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                             reinterpret_cast<uint64_t &>(dst_set), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
@@ -874,26 +891,26 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(
 //  with the same set of updates.
 // This is split from the validate code to allow validation prior to calling down the chain, and then update after
 //  calling down the chain.
-void cvdescriptorset::PerformUpdateDescriptorSets(
-    const std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> &set_map, uint32_t write_count,
-    const VkWriteDescriptorSet *p_wds, uint32_t copy_count, const VkCopyDescriptorSet *p_cds) {
+void cvdescriptorset::PerformUpdateDescriptorSets(const core_validation::layer_data *dev_data, uint32_t write_count,
+                                                  const VkWriteDescriptorSet *p_wds, uint32_t copy_count,
+                                                  const VkCopyDescriptorSet *p_cds) {
     // Write updates first
     uint32_t i = 0;
     for (i = 0; i < write_count; ++i) {
         auto dest_set = p_wds[i].dstSet;
-        auto set_pair = set_map.find(dest_set);
-        if (set_pair != set_map.end()) {
-            set_pair->second->PerformWriteUpdate(&p_wds[i]);
+        auto set_node = core_validation::getSetNode(dev_data, dest_set);
+        if (set_node) {
+            set_node->PerformWriteUpdate(&p_wds[i]);
         }
     }
     // Now copy updates
     for (i = 0; i < copy_count; ++i) {
         auto dst_set = p_cds[i].dstSet;
         auto src_set = p_cds[i].srcSet;
-        auto src_pair = set_map.find(src_set);
-        auto dst_pair = set_map.find(dst_set);
-        if (src_pair != set_map.end() && dst_pair != set_map.end()) {
-            dst_pair->second->PerformCopyUpdate(&p_cds[i], src_pair->second);
+        auto src_node = core_validation::getSetNode(dev_data, src_set);
+        auto dst_node = core_validation::getSetNode(dev_data, dst_set);
+        if (src_node && dst_node) {
+            dst_node->PerformCopyUpdate(&p_cds[i], src_node);
         }
     }
 }
@@ -915,42 +932,89 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
         error_str << "DescriptorSet " << set_ << " does not have binding " << update->dstBinding << ".";
         *error_msg = error_str.str();
         return false;
-    } else {
-        // We know that binding is valid, verify update and do update on each descriptor
-        auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
-        auto type = p_layout_->GetTypeFromBinding(update->dstBinding);
-        if (type != update->descriptorType) {
-            std::stringstream error_str;
-            error_str << "Attempting write update to descriptor set " << set_ << " binding #" << update->dstBinding << " with type "
-                      << string_VkDescriptorType(type) << " but update type is " << string_VkDescriptorType(update->descriptorType);
-            *error_msg = error_str.str();
-            return false;
-        }
-        if ((start_idx + update->descriptorCount) > p_layout_->GetTotalDescriptorCount()) {
-            std::stringstream error_str;
-            error_str << "Attempting write update to descriptor set " << set_ << " binding #" << update->dstBinding << " with "
-                      << p_layout_->GetTotalDescriptorCount() << " total descriptors but update of " << update->descriptorCount
-                      << " descriptors starting at binding offset of "
-                      << p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding)
-                      << " combined with update array element offset of " << update->dstArrayElement
-                      << " oversteps the size of this descriptor set.";
-            *error_msg = error_str.str();
-            return false;
-        }
-        // Verify consecutive bindings match (if needed)
-        if (!p_layout_->VerifyUpdateConsistency(update->dstBinding, update->dstArrayElement, update->descriptorCount,
-                                                "write update to", set_, error_msg))
-            return false;
-        // Update is within bounds and consistent so last step is to validate update contents
-        if (!VerifyWriteUpdateContents(update, start_idx, error_msg)) {
-            std::stringstream error_str;
-            error_str << "Write update to descriptor in set " << set_ << " binding #" << update->dstBinding
-                      << " failed with error message: " << error_msg->c_str();
-            *error_msg = error_str.str();
-            return false;
-        }
+    }
+    // We know that binding is valid, verify update and do update on each descriptor
+    auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding) + update->dstArrayElement;
+    auto type = p_layout_->GetTypeFromBinding(update->dstBinding);
+    if (type != update->descriptorType) {
+        std::stringstream error_str;
+        error_str << "Attempting write update to descriptor set " << set_ << " binding #" << update->dstBinding << " with type "
+                  << string_VkDescriptorType(type) << " but update type is " << string_VkDescriptorType(update->descriptorType);
+        *error_msg = error_str.str();
+        return false;
+    }
+    if ((start_idx + update->descriptorCount) > p_layout_->GetTotalDescriptorCount()) {
+        std::stringstream error_str;
+        error_str << "Attempting write update to descriptor set " << set_ << " binding #" << update->dstBinding << " with "
+                  << p_layout_->GetTotalDescriptorCount() << " total descriptors but update of " << update->descriptorCount
+                  << " descriptors starting at binding offset of " << p_layout_->GetGlobalStartIndexFromBinding(update->dstBinding)
+                  << " combined with update array element offset of " << update->dstArrayElement
+                  << " oversteps the size of this descriptor set.";
+        *error_msg = error_str.str();
+        return false;
+    }
+    // Verify consecutive bindings match (if needed)
+    if (!p_layout_->VerifyUpdateConsistency(update->dstBinding, update->dstArrayElement, update->descriptorCount, "write update to",
+                                            set_, error_msg))
+        return false;
+    // Update is within bounds and consistent so last step is to validate update contents
+    if (!VerifyWriteUpdateContents(update, start_idx, error_msg)) {
+        std::stringstream error_str;
+        error_str << "Write update to descriptor in set " << set_ << " binding #" << update->dstBinding
+                  << " failed with error message: " << error_msg->c_str();
+        *error_msg = error_str.str();
+        return false;
     }
     // All checks passed, update is clean
+    return true;
+}
+// For the given buffer, verify that its creation parameters are appropriate for the given type
+//  If there's an error, update the error string with details and return false, else return true
+bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkBuffer buffer, VkDescriptorType type, std::string *error) const {
+    // First make sure that buffer is valid
+    auto buffer_node = getBufferNode(device_data_, buffer);
+    if (!buffer_node) {
+        std::stringstream error_str;
+        error_str << "Invalid VkBuffer: " << buffer;
+        *error = error_str.str();
+        return false;
+    }
+    // Verify that usage bits set correctly for given type
+    auto usage = buffer_node->createInfo.usage;
+    std::string error_usage_bit;
+    switch (type) {
+    case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+        if (!(usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT)) {
+            error_usage_bit = "VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT";
+        }
+        break;
+    case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+        if (!(usage & VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT)) {
+            error_usage_bit = "VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT";
+        }
+        break;
+    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+        if (!(usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)) {
+            error_usage_bit = "VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT";
+        }
+        break;
+    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+        if (!(usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)) {
+            error_usage_bit = "VK_BUFFER_USAGE_STORAGE_BUFFER_BIT";
+        }
+        break;
+    default:
+        break;
+    }
+    if (!error_usage_bit.empty()) {
+        std::stringstream error_str;
+        error_str << "Buffer (" << buffer << ") with usage mask 0x" << usage << " being used for a descriptor update of type "
+                  << string_VkDescriptorType(type) << " does not have " << error_usage_bit << " set.";
+        *error = error_str.str();
+        return false;
+    }
     return true;
 }
 // Verify that the contents of the update are ok, but don't perform actual update
@@ -962,8 +1026,7 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
             // Validate image
             auto image_view = update->pImageInfo[di].imageView;
             auto image_layout = update->pImageInfo[di].imageLayout;
-            if (!ValidateImageUpdate(image_view, image_layout, image_view_map_, image_map_, image_to_swapchain_map_, swapchain_map_,
-                                     error)) {
+            if (!ValidateImageUpdate(image_view, image_layout, update->descriptorType, device_data_, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to combined image sampler descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
@@ -975,7 +1038,7 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
     case VK_DESCRIPTOR_TYPE_SAMPLER: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             if (!descriptors_[index + di].get()->IsImmutableSampler()) {
-                if (!ValidateSampler(update->pImageInfo[di].sampler, sampler_map_)) {
+                if (!ValidateSampler(update->pImageInfo[di].sampler, device_data_)) {
                     std::stringstream error_str;
                     error_str << "Attempted write update to sampler descriptor with invalid sampler: "
                               << update->pImageInfo[di].sampler << ".";
@@ -994,8 +1057,7 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto image_view = update->pImageInfo[di].imageView;
             auto image_layout = update->pImageInfo[di].imageLayout;
-            if (!ValidateImageUpdate(image_view, image_layout, image_view_map_, image_map_, image_to_swapchain_map_, swapchain_map_,
-                                     error)) {
+            if (!ValidateImageUpdate(image_view, image_layout, update->descriptorType, device_data_, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to image descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
@@ -1008,9 +1070,17 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
     case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer_view = update->pTexelBufferView[di];
-            if (!buffer_view_map_->count(buffer_view)) {
+            auto bv_info = getBufferViewInfo(device_data_, buffer_view);
+            if (!bv_info) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to texel buffer descriptor with invalid buffer view: " << buffer_view;
+                *error = error_str.str();
+                return false;
+            }
+            auto buffer = bv_info->buffer;
+            if (!ValidateBufferUpdate(buffer, update->descriptorType, error)) {
+                std::stringstream error_str;
+                error_str << "Attempted write update to texel buffer descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
                 return false;
             }
@@ -1023,9 +1093,9 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
     case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer = update->pBufferInfo[di].buffer;
-            if (!buffer_map_->count(buffer)) {
+            if (!ValidateBufferUpdate(buffer, update->descriptorType, error)) {
                 std::stringstream error_str;
-                error_str << "Attempted write update to buffer descriptor with invalid buffer: " << buffer;
+                error_str << "Attempted write update to buffer descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
                 return false;
             }
@@ -1041,13 +1111,13 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
 }
 // Verify that the contents of the update are ok, but don't perform actual update
 bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescriptorSet *update, const DescriptorSet *src_set,
-                                                              const uint32_t index, std::string *error) const {
+                                                              VkDescriptorType type, uint32_t index, std::string *error) const {
     switch (src_set->descriptors_[index]->descriptor_class) {
     case PlainSampler: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             if (!src_set->descriptors_[index + di]->IsImmutableSampler()) {
                 auto update_sampler = static_cast<SamplerDescriptor *>(src_set->descriptors_[index + di].get())->GetSampler();
-                if (!ValidateSampler(update_sampler, sampler_map_)) {
+                if (!ValidateSampler(update_sampler, device_data_)) {
                     std::stringstream error_str;
                     error_str << "Attempted copy update to sampler descriptor with invalid sampler: " << update_sampler << ".";
                     *error = error_str.str();
@@ -1065,7 +1135,7 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
             // First validate sampler
             if (!img_samp_desc->IsImmutableSampler()) {
                 auto update_sampler = img_samp_desc->GetSampler();
-                if (!ValidateSampler(update_sampler, sampler_map_)) {
+                if (!ValidateSampler(update_sampler, device_data_)) {
                     std::stringstream error_str;
                     error_str << "Attempted copy update to sampler descriptor with invalid sampler: " << update_sampler << ".";
                     *error = error_str.str();
@@ -1077,10 +1147,9 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
             // Validate image
             auto image_view = img_samp_desc->GetImageView();
             auto image_layout = img_samp_desc->GetImageLayout();
-            if (!ValidateImageUpdate(image_view, image_layout, image_view_map_, image_map_, image_to_swapchain_map_, swapchain_map_,
-                                     error)) {
+            if (!ValidateImageUpdate(image_view, image_layout, type, device_data_, error)) {
                 std::stringstream error_str;
-                error_str << "Attempted write update to combined image sampler descriptor failed due to: " << error->c_str();
+                error_str << "Attempted copy update to combined image sampler descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
                 return false;
             }
@@ -1091,10 +1160,9 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
             auto img_desc = static_cast<const ImageDescriptor *>(src_set->descriptors_[index + di].get());
             auto image_view = img_desc->GetImageView();
             auto image_layout = img_desc->GetImageLayout();
-            if (!ValidateImageUpdate(image_view, image_layout, image_view_map_, image_map_, image_to_swapchain_map_, swapchain_map_,
-                                     error)) {
+            if (!ValidateImageUpdate(image_view, image_layout, type, device_data_, error)) {
                 std::stringstream error_str;
-                error_str << "Attempted write update to image descriptor failed due to: " << error->c_str();
+                error_str << "Attempted copy update to image descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
                 return false;
             }
@@ -1104,9 +1172,17 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
     case TexelBuffer: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer_view = static_cast<TexelDescriptor *>(src_set->descriptors_[index + di].get())->GetBufferView();
-            if (!buffer_view_map_->count(buffer_view)) {
+            auto bv_info = getBufferViewInfo(device_data_, buffer_view);
+            if (!bv_info) {
                 std::stringstream error_str;
-                error_str << "Attempted write update to texel buffer descriptor with invalid buffer view: " << buffer_view;
+                error_str << "Attempted copy update to texel buffer descriptor with invalid buffer view: " << buffer_view;
+                *error = error_str.str();
+                return false;
+            }
+            auto buffer = bv_info->buffer;
+            if (!ValidateBufferUpdate(buffer, type, error)) {
+                std::stringstream error_str;
+                error_str << "Attempted copy update to texel buffer descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
                 return false;
             }
@@ -1116,9 +1192,9 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
     case GeneralBuffer: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer = static_cast<BufferDescriptor *>(src_set->descriptors_[index + di].get())->GetBuffer();
-            if (!buffer_map_->count(buffer)) {
+            if (!ValidateBufferUpdate(buffer, type, error)) {
                 std::stringstream error_str;
-                error_str << "Attempted write update to buffer descriptor with invalid buffer: " << buffer;
+                error_str << "Attempted copy update to buffer descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
                 return false;
             }
@@ -1131,4 +1207,84 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
     }
     // All checks passed so update contents are good
     return true;
+}
+// Verify that the state at allocate time is correct, but don't actually allocate the sets yet
+bool cvdescriptorset::ValidateAllocateDescriptorSets(const debug_report_data *report_data,
+                                                     const VkDescriptorSetAllocateInfo *p_alloc_info,
+                                                     const core_validation::layer_data *dev_data,
+                                                     AllocateDescriptorSetsData *ds_data) {
+    bool skip_call = false;
+
+    for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
+        auto layout = getDescriptorSetLayout(dev_data, p_alloc_info->pSetLayouts[i]);
+        if (!layout) {
+            skip_call |=
+                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
+                        reinterpret_cast<const uint64_t &>(p_alloc_info->pSetLayouts[i]), __LINE__, DRAWSTATE_INVALID_LAYOUT, "DS",
+                        "Unable to find set layout node for layout 0x%" PRIxLEAST64 " specified in vkAllocateDescriptorSets() call",
+                        reinterpret_cast<const uint64_t &>(p_alloc_info->pSetLayouts[i]));
+        } else {
+            ds_data->layout_nodes[i] = layout;
+            // Count total descriptors required per type
+            for (uint32_t j = 0; j < layout->GetBindingCount(); ++j) {
+                const auto &binding_layout = layout->GetDescriptorSetLayoutBindingPtrFromIndex(j);
+                uint32_t typeIndex = static_cast<uint32_t>(binding_layout->descriptorType);
+                ds_data->required_descriptors_by_type[typeIndex] += binding_layout->descriptorCount;
+            }
+        }
+    }
+    auto pool_node = getPoolNode(dev_data, p_alloc_info->descriptorPool);
+    if (!pool_node) {
+        skip_call |=
+            log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+                    reinterpret_cast<const uint64_t &>(p_alloc_info->descriptorPool), __LINE__, DRAWSTATE_INVALID_POOL, "DS",
+                    "Unable to find pool node for pool 0x%" PRIxLEAST64 " specified in vkAllocateDescriptorSets() call",
+                    reinterpret_cast<const uint64_t &>(p_alloc_info->descriptorPool));
+    } else { // Make sure pool has all the available descriptors before calling down chain
+        // Track number of descriptorSets allowable in this pool
+        if (pool_node->availableSets < p_alloc_info->descriptorSetCount) {
+            skip_call |=
+                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+                        reinterpret_cast<uint64_t &>(pool_node->pool), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY, "DS",
+                        "Unable to allocate %u descriptorSets from pool 0x%" PRIxLEAST64
+                        ". This pool only has %d descriptorSets remaining.",
+                        p_alloc_info->descriptorSetCount, reinterpret_cast<uint64_t &>(pool_node->pool), pool_node->availableSets);
+        }
+        // Determine whether descriptor counts are satisfiable
+        for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; i++) {
+            if (ds_data->required_descriptors_by_type[i] > pool_node->availableDescriptorTypeCount[i]) {
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,
+                                     reinterpret_cast<const uint64_t &>(pool_node->pool), __LINE__, DRAWSTATE_DESCRIPTOR_POOL_EMPTY,
+                                     "DS", "Unable to allocate %u descriptors of type %s from pool 0x%" PRIxLEAST64
+                                           ". This pool only has %d descriptors of this type remaining.",
+                                     ds_data->required_descriptors_by_type[i], string_VkDescriptorType(VkDescriptorType(i)),
+                                     reinterpret_cast<uint64_t &>(pool_node->pool), pool_node->availableDescriptorTypeCount[i]);
+            }
+        }
+    }
+    return skip_call;
+}
+// Decrement allocated sets from the pool and insert new sets into set_map
+void cvdescriptorset::PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *p_alloc_info,
+                                                    const VkDescriptorSet *descriptor_sets,
+                                                    const AllocateDescriptorSetsData *ds_data,
+                                                    std::unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> *pool_map,
+                                                    std::unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> *set_map,
+                                                    const core_validation::layer_data *dev_data) {
+    auto pool_state = (*pool_map)[p_alloc_info->descriptorPool];
+    /* Account for sets and individual descriptors allocated from pool */
+    pool_state->availableSets -= p_alloc_info->descriptorSetCount;
+    for (uint32_t i = 0; i < VK_DESCRIPTOR_TYPE_RANGE_SIZE; i++) {
+        pool_state->availableDescriptorTypeCount[i] -= ds_data->required_descriptors_by_type[i];
+    }
+    /* Create tracking object for each descriptor set; insert into
+     * global map and the pool's set.
+     */
+    for (uint32_t i = 0; i < p_alloc_info->descriptorSetCount; i++) {
+        auto new_ds = new cvdescriptorset::DescriptorSet(descriptor_sets[i], ds_data->layout_nodes[i], dev_data);
+
+        pool_state->sets.insert(new_ds);
+        new_ds->in_use.store(0);
+        (*set_map)[descriptor_sets[i]] = new_ds;
+    }
 }

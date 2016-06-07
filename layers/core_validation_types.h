@@ -54,12 +54,49 @@
 
 // Fwd declarations
 namespace cvdescriptorset {
+class DescriptorSetLayout;
 class DescriptorSet;
 };
 
 class BASE_NODE {
   public:
     std::atomic_int in_use;
+};
+
+struct DESCRIPTOR_POOL_NODE {
+    VkDescriptorPool pool;
+    uint32_t maxSets;       // Max descriptor sets allowed in this pool
+    uint32_t availableSets; // Available descriptor sets in this pool
+
+    VkDescriptorPoolCreateInfo createInfo;
+    std::unordered_set<cvdescriptorset::DescriptorSet *> sets; // Collection of all sets in this pool
+    std::vector<uint32_t> maxDescriptorTypeCount;              // Max # of descriptors of each type in this pool
+    std::vector<uint32_t> availableDescriptorTypeCount;        // Available # of descriptors of each type in this pool
+
+    DESCRIPTOR_POOL_NODE(const VkDescriptorPool pool, const VkDescriptorPoolCreateInfo *pCreateInfo)
+        : pool(pool), maxSets(pCreateInfo->maxSets), availableSets(pCreateInfo->maxSets), createInfo(*pCreateInfo),
+          maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0), availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_RANGE_SIZE, 0) {
+        if (createInfo.poolSizeCount) { // Shadow type struct from ptr into local struct
+            size_t poolSizeCountSize = createInfo.poolSizeCount * sizeof(VkDescriptorPoolSize);
+            createInfo.pPoolSizes = new VkDescriptorPoolSize[poolSizeCountSize];
+            memcpy((void *)createInfo.pPoolSizes, pCreateInfo->pPoolSizes, poolSizeCountSize);
+            // Now set max counts for each descriptor type based on count of that type times maxSets
+            uint32_t i = 0;
+            for (i = 0; i < createInfo.poolSizeCount; ++i) {
+                uint32_t typeIndex = static_cast<uint32_t>(createInfo.pPoolSizes[i].type);
+                // Same descriptor types can appear several times
+                maxDescriptorTypeCount[typeIndex] += createInfo.pPoolSizes[i].descriptorCount;
+                availableDescriptorTypeCount[typeIndex] = maxDescriptorTypeCount[typeIndex];
+            }
+        } else {
+            createInfo.pPoolSizes = NULL; // Make sure this is NULL so we don't try to clean it up
+        }
+    }
+    ~DESCRIPTOR_POOL_NODE() {
+        delete[] createInfo.pPoolSizes;
+        // TODO : pSets are currently freed in deletePools function which uses freeShadowUpdateTree function
+        //  need to migrate that struct to smart ptrs for auto-cleanup
+    }
 };
 
 class BUFFER_NODE : public BASE_NODE {
@@ -138,6 +175,9 @@ struct DEVICE_MEM_INFO {
     VkImage image; // If memory is bound to image, this will have VkImage handle, else VK_NULL_HANDLE
     MemRange memRange;
     void *pData, *pDriverData;
+    DEVICE_MEM_INFO(void *disp_object, const VkDeviceMemory in_mem, const VkMemoryAllocateInfo *p_alloc_info)
+        : object(disp_object), valid(false), mem(in_mem), allocInfo(*p_alloc_info), image(VK_NULL_HANDLE), memRange{}, pData(0),
+          pDriverData(0){};
 };
 
 class SWAPCHAIN_NODE {
@@ -443,5 +483,20 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
 
     ~GLOBAL_CB_NODE();
 };
+// Fwd declarations of layer_data and helpers to look-up state from layer_data maps
+namespace core_validation {
+struct layer_data;
+cvdescriptorset::DescriptorSet *getSetNode(const layer_data *, VkDescriptorSet);
+cvdescriptorset::DescriptorSetLayout const *getDescriptorSetLayout(layer_data const *, VkDescriptorSetLayout);
+DESCRIPTOR_POOL_NODE *getPoolNode(const layer_data *, const VkDescriptorPool);
+BUFFER_NODE *getBufferNode(const layer_data *, VkBuffer);
+IMAGE_NODE *getImageNode(const layer_data *, VkImage);
+DEVICE_MEM_INFO *getMemObjInfo(const layer_data *, VkDeviceMemory);
+VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *, VkBufferView);
+SAMPLER_NODE *getSamplerNode(const layer_data *, VkSampler);
+VkImageViewCreateInfo *getImageViewData(const layer_data *, VkImageView);
+VkSwapchainKHR getSwapchainFromImage(const layer_data *, VkImage);
+SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, VkSwapchainKHR);
+}
 
 #endif // CORE_VALIDATION_TYPES_H_

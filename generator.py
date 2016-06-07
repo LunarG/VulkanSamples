@@ -3566,10 +3566,10 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                             usedLines += self.makeStructNextCheck(valuePrefix, value, funcName, valueDisplayName)
                     else:
                         usedLines += self.makePointerCheck(valuePrefix, value, lenParam, req, cvReq, cpReq, funcName, lenDisplayName, valueDisplayName)
-                #
-                # If this is a pointer to a struct (input), see if it contains members that need to be checked
-                if value.type in self.validatedStructs and value.isconst:
-                    usedLines.append(self.expandStructPointerCode(valuePrefix, value, lenParam, funcName, valueDisplayName))
+                    #
+                    # If this is a pointer to a struct (input), see if it contains members that need to be checked
+                    if value.type in self.validatedStructs and value.isconst:
+                        usedLines.append(self.expandStructPointerCode(valuePrefix, value, lenParam, funcName, valueDisplayName))
             # Non-pointer types
             else:
                 #
@@ -3600,12 +3600,12 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     elif value.israngedenum:
                         enumRange = self.enumRanges[value.type]
                         usedLines.append('skipCall |= validate_ranged_enum(report_data, "{}", "{}", "{}", {}, {}, {}{});\n'.format(funcName, valueDisplayName, value.type, enumRange[0], enumRange[1], valuePrefix, value.name))
-                #
-                # If this is a pointer to a struct (input), see if it contains members that need to be checked
-                if value.type in self.validatedStructs:
-                    memberNamePrefix = '{}{}.'.format(valuePrefix, value.name)
-                    memberDisplayNamePrefix = '{}.'.format(valueDisplayName)
-                    usedLines.append(self.expandStructCode(self.validatedStructs[value.type], funcName, memberNamePrefix, memberDisplayNamePrefix, '', []))
+                    #
+                    # If this is a struct, see if it contains members that need to be checked
+                    if value.type in self.validatedStructs:
+                        memberNamePrefix = '{}{}.'.format(valuePrefix, value.name)
+                        memberDisplayNamePrefix = '{}.'.format(valueDisplayName)
+                        usedLines.append(self.expandStructCode(self.validatedStructs[value.type], funcName, memberNamePrefix, memberDisplayNamePrefix, '', []))
             #
             # Append the parameter check to the function body for the current command
             if usedLines:
