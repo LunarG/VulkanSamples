@@ -46,11 +46,7 @@ dbgFunc(VkDebugReportFlagsEXT msgFlags, VkDebugReportObjectTypeEXT objType,
     }
     message << "[" << pLayerPrefix << "] Code " << msgCode << " : " << pMsg;
 
-#ifdef _WIN32
-    MessageBox(NULL, message.str().c_str(), "Alert", MB_OK);
-#else
     std::cout << message.str() << std::endl;
-#endif
 
     /*
      * false indicates that layer should not bail-out of an
