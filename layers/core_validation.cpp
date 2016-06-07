@@ -2151,7 +2151,7 @@ static bool attachment_references_compatible(const uint32_t index, const VkAttac
 }
 
 // For give primary and secondary RenderPass objects, verify that they're compatible
-static bool verify_renderpass_compatibility(layer_data *my_data, const VkRenderPass primaryRP, const VkRenderPass secondaryRP,
+static bool verify_renderpass_compatibility(const layer_data *my_data, const VkRenderPass primaryRP, const VkRenderPass secondaryRP,
                                             string &errorMsg) {
     auto primary_render_pass = getRenderPass(my_data, primaryRP);
     auto secondary_render_pass = getRenderPass(my_data, secondaryRP);
@@ -2847,6 +2847,21 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
                                  reinterpret_cast<const uint64_t &>(pPipeline->pipeline), __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
                                  "No active render pass found at draw-time in Pipeline (0x%" PRIxLEAST64 ")!",
                                  reinterpret_cast<const uint64_t &>(pPipeline->pipeline));
+        }
+    }
+    // Verify that PSO creation renderPass is compatible with active renderPass
+    if (pCB->activeRenderPass) {
+        std::string err_string;
+        if (!verify_renderpass_compatibility(my_data, pCB->activeRenderPass->renderPass, pPipeline->graphicsPipelineCI.renderPass,
+                                             err_string)) {
+            // renderPass that PSO was created with must be compatible with active renderPass that PSO is being used with
+            skip_call |=
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                        reinterpret_cast<const uint64_t &>(pPipeline->pipeline), __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
+                        "At Draw time the active render pass (0x%" PRIxLEAST64 ") is incompatible w/ gfx pipeline "
+                        "(0x%" PRIxLEAST64 ") that was created w/ render pass (0x%" PRIxLEAST64 ") due to: %s",
+                        reinterpret_cast<uint64_t &>(pCB->activeRenderPass->renderPass), reinterpret_cast<uint64_t &>(pPipeline),
+                        reinterpret_cast<const uint64_t &>(pPipeline->graphicsPipelineCI.renderPass), err_string.c_str());
         }
     }
     // TODO : Add more checks here
