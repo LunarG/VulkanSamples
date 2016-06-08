@@ -8199,15 +8199,10 @@ static bool CheckDependencyExists(const layer_data *my_data, const int subpass, 
         auto prev_elem = std::find(node.prev.begin(), node.prev.end(), dependent_subpasses[k]);
         auto next_elem = std::find(node.next.begin(), node.next.end(), dependent_subpasses[k]);
         if (prev_elem == node.prev.end() && next_elem == node.next.end()) {
-            // If no dependency exits an implicit dependency still might. If so, warn and if not throw an error.
+            // If no dependency exits an implicit dependency still might. If not, throw an error.
             std::unordered_set<uint32_t> processed_nodes;
-            if (FindDependency(subpass, dependent_subpasses[k], subpass_to_node, processed_nodes) ||
-                FindDependency(dependent_subpasses[k], subpass, subpass_to_node, processed_nodes)) {
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                     __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                     "A dependency between subpasses %d and %d must exist but only an implicit one is specified.",
-                                     subpass, dependent_subpasses[k]);
-            } else {
+            if (!(FindDependency(subpass, dependent_subpasses[k], subpass_to_node, processed_nodes) ||
+                FindDependency(dependent_subpasses[k], subpass, subpass_to_node, processed_nodes))) {
                 skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
                                      __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
                                      "A dependency between subpasses %d and %d must exist but one is not specified.", subpass,
