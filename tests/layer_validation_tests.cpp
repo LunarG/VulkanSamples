@@ -2307,6 +2307,61 @@ TEST_F(VkLayerTest, ResetUnsignaledFence) {
     m_errorMonitor->VerifyNotFound();
 }
 
+TEST_F(VkLayerTest, CommandBufferSimultaneousUseSync)
+{
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkResult err;
+
+    // Record (empty!) command buffer that can be submitted multiple times
+    // simultaneously.
+    VkCommandBufferBeginInfo cbbi = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr,
+        VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, nullptr
+    };
+    m_commandBuffer->BeginCommandBuffer(&cbbi);
+    m_commandBuffer->EndCommandBuffer();
+
+    VkFenceCreateInfo fci = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0 };
+    VkFence fence;
+    err = vkCreateFence(m_device->device(), &fci, nullptr, &fence);
+    ASSERT_VK_SUCCESS(err);
+
+    VkSemaphoreCreateInfo sci = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0 };
+    VkSemaphore s1, s2;
+    err = vkCreateSemaphore(m_device->device(), &sci, nullptr, &s1);
+    ASSERT_VK_SUCCESS(err);
+    err = vkCreateSemaphore(m_device->device(), &sci, nullptr, &s2);
+    ASSERT_VK_SUCCESS(err);
+
+    // Submit CB once signaling s1, with fence so we can roll forward to its retirement.
+    VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr,
+        1, &m_commandBuffer->handle(), 1, &s1 };
+    err = vkQueueSubmit(m_device->m_queue, 1, &si, fence);
+    ASSERT_VK_SUCCESS(err);
+
+    // Submit CB again, signaling s2.
+    si.pSignalSemaphores = &s2;
+    err = vkQueueSubmit(m_device->m_queue, 1, &si, VK_NULL_HANDLE);
+    ASSERT_VK_SUCCESS(err);
+
+    // Wait for fence.
+    err = vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+    ASSERT_VK_SUCCESS(err);
+
+    // CB is still in flight from second submission, but semaphore s1 is no
+    // longer in flight. delete it.
+    vkDestroySemaphore(m_device->device(), s1, nullptr);
+
+    m_errorMonitor->VerifyNotFound();
+
+    // Force device idle and clean up remaining objects
+    vkDeviceWaitIdle(m_device->device());
+    vkDestroySemaphore(m_device->device(), s2, nullptr);
+    vkDestroyFence(m_device->device(), fence, nullptr);
+}
+
 TEST_F(VkLayerTest, InvalidUsageBits)
 {
     TEST_DESCRIPTION(
