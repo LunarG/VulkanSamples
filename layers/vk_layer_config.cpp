@@ -32,6 +32,17 @@
 
 #define MAX_CHARS_PER_LINE 4096
 
+// Flag for ONE-TIME debug output initialization
+static bool log_message_initialized = false;
+
+// Accessor functions to ensure the correct instance of the shared flag gets used
+bool LogMessageInitialized() {
+    return log_message_initialized;
+}
+void SetLogMessageInitialized() {
+    log_message_initialized = true;
+}
+
 class ConfigFile {
   public:
     ConfigFile();
