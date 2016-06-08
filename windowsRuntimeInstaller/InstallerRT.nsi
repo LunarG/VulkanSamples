@@ -239,9 +239,13 @@ Function ${un}ConfigLayersAndVulkanDLL
     ${Else}
         Strcpy $1 32
     ${Endif}
-    nsExec::ExecToStack '$WINDIR\System32\WindowsPowerShell\v1.0\powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -Command .\ConfigLayersAndVulkanDLL.ps1 ${VERSION_ABI_MAJOR} $1 ; exit $$LASTEXITCODE'
-    Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL1.${un}log"
+    nsExec::ExecToStack 'cmd /k echo $$majorabi=${VERSION_ABI_MAJOR} >"$TEMP\VulkanRT.tmp"'
+    nsExec::ExecToStack 'cmd /k echo $$ossize=$1 >>"$TEMP\VulkanRT.tmp"'
+    nsExec::ExecToStack 'cmd /k type ConfigLayersAndVulkanDLL.ps1 >>"$TEMP\VulkanRT.tmp"'
+    nsExec::ExecToStack 'cmd /k type "$TEMP\VulkanRT.tmp" | powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command -'
     pop $0
+    Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL1.${un}log"
+    Delete "$TEMP\VulkanRT.tmp"
     ${If} $0 != 0
         nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -Command .\ConfigLayersAndVulkanDLL.ps1 ${VERSION_ABI_MAJOR} $1 ; exit $$LASTEXITCODE'
         pop $0
@@ -475,12 +479,16 @@ Section
     # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
     # vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll, and to set up layer registry
     # entries to use layers from the corresponding SDK
+    SetOutPath "$INSTDIR"
     Call ConfigLayersAndVulkanDLL
     ${If} $0 != 0
+        SetOutPath "$INSTDIR"
         Call DiagConfigLayersAndVulkanDLL
         SetErrors
+        IntOp $1 10000 + $0
+    ${Else}
+        StrCpy $1 60
     ${Endif}
-    IntOp $1 10000 + $0
     Call CheckForError
 
     # We are done using ConfigLayersAndVulkanDLL.ps1, delete it. It will be re-installed
@@ -514,7 +522,7 @@ Section "uninstall"
     ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallDir"
     StrCpy $IDir $0
 
-    StrCpy $1 70
+    StrCpy $1 65
     Call un.CheckForError
 
     SetOutPath "$IDir"
@@ -536,6 +544,8 @@ Section "uninstall"
         Delete /REBOOTOK "$IDir\Instance_$IC\Uninstall${PRODUCTNAME}.exe"
         Rmdir /REBOOTOK "$IDir\Instance_$IC"
     ${Endif}
+    StrCpy $1 70
+    Call un.CheckForError
 
     # Modify registry for Programs and Features
 
@@ -552,6 +562,8 @@ Section "uninstall"
         IntOp $IC $IC - 1
         DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}"
     ${EndIf}
+    StrCpy $1 75
+    Call un.CheckForError
 
 
     # Install the ConfigLayersAndVulkanDLL.ps1 so we can run it.
@@ -585,16 +597,23 @@ Section "uninstall"
         Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
 
     ${EndIf}
+    StrCpy $1 80
+    Call un.CheckForError
 
     # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
     # vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll, and to set up layer registry
     # entries to use layers from the corresponding SDK
+    SetOutPath "$IDir"
+    #ClearErrors
     Call un.ConfigLayersAndVulkanDLL
     ${If} $0 != 0
+        SetOutPath "$IDir"
         Call un.DiagConfigLayersAndVulkanDLL
         SetErrors
+        IntOp $1 20000 + $0
+    ${Else}
+        StrCpy $1 85
     ${Endif}
-    IntOp $1 20000 + $0
     Call un.CheckForError
 
     # If Ref Count is zero, uninstall everything
@@ -613,7 +632,7 @@ Section "uninstall"
             Delete /REBOOTOK "$IDir\vulkaninfo32.exe"
         ${EndIf}
 
-        StrCpy $1 75
+        StrCpy $1 90
         Call un.CheckForError
 
         # Need to do a SetOutPath to something outside of install dir,
@@ -641,7 +660,7 @@ Section "uninstall"
 
     ${Endif}
 
-    StrCpy $1 80
+    StrCpy $1 95
     Call un.CheckForError
 
     # Finish logging
