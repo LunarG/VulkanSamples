@@ -30,6 +30,7 @@ enum DEV_LIMITS_ERROR {
     DEVLIMITS_INVALID_PHYSICAL_DEVICE,       // Invalid physical device used
     DEVLIMITS_INVALID_INHERITED_QUERY,       // Invalid use of inherited query
     DEVLIMITS_INVALID_ATTACHMENT_COUNT,      // Invalid value for the number of attachments
+    DEVLIMITS_MISSING_QUERY_COUNT,           // Did not make initial call to an API to query the count
     DEVLIMITS_MUST_QUERY_COUNT,              // Failed to make initial call to an API to query the count
     DEVLIMITS_INVALID_CALL_SEQUENCE,         // Flag generic case of an invalid call sequence by the app
     DEVLIMITS_INVALID_FEATURE_REQUESTED,     // App requested a feature not supported by physical device

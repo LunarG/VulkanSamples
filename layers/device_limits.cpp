@@ -166,15 +166,16 @@ EnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount, Vk
             my_data->instanceState->vkEnumeratePhysicalDevicesState = QUERY_COUNT;
         } else {
             if (UNCALLED == my_data->instanceState->vkEnumeratePhysicalDevicesState) {
-                // Flag error here, shouldn't be calling this without having queried count
+                // Flag warning here. You can call this without having queried the count, but it may not be
+                // robust on platforms with multiple physical devices.
                 skipCall |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, 0,
-                            __LINE__, DEVLIMITS_MUST_QUERY_COUNT, "DL",
-                            "Invalid call sequence to vkEnumeratePhysicalDevices() w/ non-NULL pPhysicalDevices. You should first "
+                    log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, 0,
+                            __LINE__, DEVLIMITS_MISSING_QUERY_COUNT, "DL",
+                            "Call sequence has vkEnumeratePhysicalDevices() w/ non-NULL pPhysicalDevices. You should first "
                             "call vkEnumeratePhysicalDevices() w/ NULL pPhysicalDevices to query pPhysicalDeviceCount.");
             } // TODO : Could also flag a warning if re-calling this function in QUERY_DETAILS state
             else if (my_data->instanceState->physicalDevicesCount != *pPhysicalDeviceCount) {
-                // TODO: Having actual count match count from app is not a requirement, so this can be a warning
+                // Having actual count match count from app is not a requirement, so this can be a warning
                 skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
                                     VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_COUNT_MISMATCH, "DL",
                                     "Call to vkEnumeratePhysicalDevices() w/ pPhysicalDeviceCount value %u, but actual count "
@@ -247,9 +248,9 @@ GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t
             // Verify that for each physical device, this function is called first with NULL pQueueFamilyProperties ptr in order to
             // get count
             if (UNCALLED == phy_dev_data->physicalDeviceState->vkGetPhysicalDeviceQueueFamilyPropertiesState) {
-                skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_MUST_QUERY_COUNT, "DL",
-                                    "Invalid call sequence to vkGetPhysicalDeviceQueueFamilyProperties() w/ non-NULL "
+                skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_MISSING_QUERY_COUNT, "DL",
+                                    "Call sequence has vkGetPhysicalDeviceQueueFamilyProperties() w/ non-NULL "
                                     "pQueueFamilyProperties. You should first call vkGetPhysicalDeviceQueueFamilyProperties() w/ "
                                     "NULL pQueueFamilyProperties to query pCount.");
             }
