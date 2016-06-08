@@ -104,17 +104,55 @@ static inline void RemoveAllMessageCallbacks(debug_report_data *debug_data, VkLa
     *list_head = NULL;
 }
 
+static inline bool OutputLogMsgHeader(const debug_report_data *debug_data, VkFlags msgFlags) {
+    bool output = false;
+    VkLayerDbgFunctionNode *pTrav =
+        (debug_data->debug_callback_list != NULL) ? debug_data->debug_callback_list : debug_data->default_debug_callback_list;
+
+    while (pTrav) {
+        const char *message_header = "Legend:\n\n"
+                               "*******************************************************************************************\n"
+                               "* Vulkan Validation Layer Debug Output                                                    *\n"
+                               "*                                                                                         *\n"
+                               "* Debug Output Type Definitions:                                                          *\n"
+                               "* ------------------------------                                                          *\n"
+                               "* ERROR: Errors are output when a validation layer detects that some application behavior *\n"
+                               "*        has violated the Vulkan Specification.  When an error is encountered it is       *\n"
+                               "*        recommended that the user callback function return 'true' for optimal            *\n"
+                               "*        validation results. Any validation error may result in undefined behavior and    *\n"
+                               "*        errors should be corrected as they are encountered for best results.             *\n"
+                               "* WARN:  Warnings are output in cases where mistakes are commonly made and do NOT         *\n"
+                               "*        necessarily indicate that an app has violated the Vulkan Specification.          *\n"
+                               "*        Warnings basically translate to 'Did you really mean to do this?'                *\n"
+                               "* PERF:  Performance Warnings are output in cases where a possible inefficiency has been  *\n"
+                               "*        detected.  These also do NOT imply that the specification was violated.          *\n"
+                               "* INFO:  These log messages are for informational purposes only. For instance, the        *\n"
+                               "*        core_validation layer can print out lists of memory objects and their bindings   *\n"
+                               "*        which may help with debugging or improving application efficiency.               *\n"
+                               "*******************************************************************************************\n";
+
+        if (pTrav->msgFlags & msgFlags) {
+            pTrav->pfnMsgCallback(VK_DEBUG_REPORT_DEBUG_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT, 0, 0,
+                VK_DEBUG_REPORT_ERROR_CALLBACK_REF_EXT, "", message_header, pTrav->pUserData);
+            output |= true;
+        }
+        pTrav = pTrav->pNext;
+    }
+    return output;
+}
+
 // Utility function to handle reporting
 static inline bool debug_report_log_msg(const debug_report_data *debug_data, VkFlags msgFlags,
                                         VkDebugReportObjectTypeEXT objectType, uint64_t srcObject, size_t location, int32_t msgCode,
                                         const char *pLayerPrefix, const char *pMsg) {
     bool bail = false;
-    VkLayerDbgFunctionNode *pTrav = NULL;
+    VkLayerDbgFunctionNode *pTrav =
+        (debug_data->debug_callback_list != NULL) ? debug_data->debug_callback_list : debug_data->default_debug_callback_list;
 
-    if (debug_data->debug_callback_list != NULL) {
-        pTrav = debug_data->debug_callback_list;
-    } else {
-        pTrav = debug_data->default_debug_callback_list;
+    if ((LogMessageInitialized() == false) && (strcmp(pLayerPrefix, "DebugReport") != 0)) {
+        if (OutputLogMsgHeader(debug_data, msgFlags) == true) {
+            SetLogMessageInitialized();
+        }
     }
 
     while (pTrav) {
@@ -151,6 +189,7 @@ debug_report_create_instance(VkLayerInstanceDispatchTable *table, VkInstance ins
             debug_data->g_DEBUG_REPORT = true;
         }
     }
+
     return debug_data;
 }
 

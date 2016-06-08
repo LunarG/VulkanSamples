@@ -63,6 +63,8 @@ VkFlags GetLayerOptionFlags(std::string _option, std::unordered_map<std::string,
 
 void setLayerOption(const char *_option, const char *_val);
 void print_msg_flags(VkFlags msgFlags, char *msg_flags);
+bool LogMessageInitialized();
+void SetLogMessageInitialized();
 
 #ifdef __cplusplus
 }

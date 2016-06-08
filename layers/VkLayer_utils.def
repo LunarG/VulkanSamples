@@ -43,3 +43,5 @@ vk_string_validate
 layer_debug_actions
 util_GetExtensionProperties
 util_GetLayerProperties
+LogMessageInitialized
+SetLogMessageInitialized
