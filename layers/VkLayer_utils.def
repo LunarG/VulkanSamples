@@ -1,0 +1,45 @@
+;;;; Begin Copyright Notice ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Vulkan
+;
+; Copyright (c) 2015-2016 The Khronos Group Inc.
+; Copyright (c) 2015-2016 Valve Corporation
+; Copyright (c) 2015-2016 LunarG, Inc.
+;
+; Licensed under the Apache License, Version 2.0 (the "License");
+; you may not use this file except in compliance with the License.
+; You may obtain a copy of the License at
+;
+;     http://www.apache.org/licenses/LICENSE-2.0
+;
+; Unless required by applicable law or agreed to in writing, software
+; distributed under the License is distributed on an "AS IS" BASIS,
+; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+; See the License for the specific language governing permissions and
+; limitations under the License.
+;
+;  Author: Mark Lobodzinski <mark@LunarG.com>
+;;;;  End Copyright Notice ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; The following is required on Windows for exporting symbols from the DLL
+
+LIBRARY VkLayer_utils
+EXPORTS
+vk_format_is_depth_or_stencil
+vk_format_is_depth_and_stencil
+vk_format_is_stencil_only
+vk_format_is_depth_only
+vk_format_is_norm
+vk_format_is_int
+vk_format_is_uint
+vk_format_is_sint
+vk_format_is_float
+vk_format_is_srgb
+vk_format_is_compressed
+vk_format_get_compatibility_class
+vk_format_get_size
+vk_format_get_channel_count
+vk_safe_modulo
+vk_string_validate
+layer_debug_actions
+util_GetExtensionProperties
+util_GetLayerProperties
