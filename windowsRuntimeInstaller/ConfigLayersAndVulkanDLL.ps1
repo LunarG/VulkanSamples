@@ -29,7 +29,7 @@
 #   - Set the layer registry entries to point to the layer json files
 #     in the Vulkan SDK associated with the most recent vulkan*dll.
 #
-# This script takes the following parameters:
+# This script can be called with the following two parameters:
 #   $majorabi : a single string number specifying the major abi version.
 #   $ossize     : an integer indicating if the target is a 64 (64) or 32 (32) bit OS.
 #
