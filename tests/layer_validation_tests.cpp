@@ -6671,6 +6671,8 @@ TEST_F(VkLayerTest, RenderPassClearOpMismatch) {
                          VK_SUBPASS_CONTENTS_INLINE);
 
     m_errorMonitor->VerifyFound();
+
+    vkDestroyRenderPass(m_device->device(), rp, NULL);
 }
 
 TEST_F(VkLayerTest, EndCommandBufferWithinRenderPass) {
