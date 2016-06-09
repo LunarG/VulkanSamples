@@ -38,7 +38,6 @@ enum DEV_LIMITS_ERROR {
     DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST,  // Invalid queue requested based on queue family properties
     DEVLIMITS_INVALID_UNIFORM_BUFFER_OFFSET, // Uniform buffer offset violates device limit granularity
     DEVLIMITS_INVALID_STORAGE_BUFFER_OFFSET, // Storage buffer offset violates device limit granularity
-    DEVLIMITS_INVALID_BUFFER_UPDATE_ALIGNMENT,  // Alignment requirement for buffer update is violated
 };
 
 enum CALL_STATE{

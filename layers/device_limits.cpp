@@ -587,61 +587,6 @@ UpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWri
     }
 }
 
-VKAPI_ATTR void VKAPI_CALL
-CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer,
-                VkDeviceSize dstOffset, VkDeviceSize dataSize, const uint32_t *pData) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-
-    // dstOffset is the byte offset into the buffer to start updating and must be a multiple of 4.
-    if (dstOffset & 3) {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
-                    DEVLIMITS_INVALID_BUFFER_UPDATE_ALIGNMENT, "DL",
-                    "vkCmdUpdateBuffer parameter, VkDeviceSize dstOffset, is not a multiple of 4")) {
-            return;
-        }
-    }
-
-    // dataSize is the number of bytes to update, which must be a multiple of 4.
-    if (dataSize & 3) {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
-                    DEVLIMITS_INVALID_BUFFER_UPDATE_ALIGNMENT, "DL",
-                    "vkCmdUpdateBuffer parameter, VkDeviceSize dataSize, is not a multiple of 4")) {
-            return;
-        }
-    }
-
-    dev_data->device_dispatch_table->CmdUpdateBuffer(commandBuffer, dstBuffer, dstOffset, dataSize, pData);
-}
-
-VKAPI_ATTR void VKAPI_CALL
-CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize size, uint32_t data) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-
-    // dstOffset is the byte offset into the buffer to start filling and must be a multiple of 4.
-    if (dstOffset & 3) {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
-                    DEVLIMITS_INVALID_BUFFER_UPDATE_ALIGNMENT, "DL",
-                    "vkCmdFillBuffer parameter, VkDeviceSize dstOffset, is not a multiple of 4")) {
-            return;
-        }
-    }
-
-    // size is the number of bytes to fill, which must be a multiple of 4.
-    if (size & 3) {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
-                    DEVLIMITS_INVALID_BUFFER_UPDATE_ALIGNMENT, "DL",
-                    "vkCmdFillBuffer parameter, VkDeviceSize size, is not a multiple of 4")) {
-            return;
-        }
-    }
-
-    dev_data->device_dispatch_table->CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
-}
-
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
                              const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pMsgCallback) {
@@ -799,9 +744,7 @@ intercept_core_device_command(const char *name) {
         { "vkAllocateCommandBuffers", reinterpret_cast<PFN_vkVoidFunction>(AllocateCommandBuffers) },
         { "vkFreeCommandBuffers", reinterpret_cast<PFN_vkVoidFunction>(FreeCommandBuffers) },
         { "vkBeginCommandBuffer", reinterpret_cast<PFN_vkVoidFunction>(BeginCommandBuffer) },
-        { "vkCmdUpdateBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdUpdateBuffer) },
         { "vkUpdateDescriptorSets", reinterpret_cast<PFN_vkVoidFunction>(UpdateDescriptorSets) },
-        { "vkCmdFillBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdFillBuffer) },
         { "vkCmdSetScissor", reinterpret_cast<PFN_vkVoidFunction>(CmdSetScissor) },
         { "vkCmdSetViewport", reinterpret_cast<PFN_vkVoidFunction>(CmdSetViewport) },
     };
