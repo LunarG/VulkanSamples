@@ -239,18 +239,27 @@ Function ${un}ConfigLayersAndVulkanDLL
     ${Else}
         Strcpy $1 32
     ${Endif}
-    nsExec::ExecToStack 'cmd /k echo $$majorabi=${VERSION_ABI_MAJOR} >"$TEMP\VulkanRT.tmp"'
-    nsExec::ExecToStack 'cmd /k echo $$ossize=$1 >>"$TEMP\VulkanRT.tmp"'
-    nsExec::ExecToStack 'cmd /k type ConfigLayersAndVulkanDLL.ps1 >>"$TEMP\VulkanRT.tmp"'
-    nsExec::ExecToStack 'cmd /k type "$TEMP\VulkanRT.tmp" | powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command -'
-    pop $0
+    nsExec::ExecToStack 'cmd /k echo $$majorabi=${VERSION_ABI_MAJOR} >"$TEMP\VulkanRT\VulkanRT.ps1"'
+    nsExec::ExecToStack 'cmd /k echo $$ossize=$1 >>"$TEMP\VulkanRT\VulkanRT.ps1"'
+    nsExec::ExecToStack 'cmd /k type ConfigLayersAndVulkanDLL.ps1 >>"$TEMP\VulkanRT\VulkanRT.ps1"'
+    nsExec::ExecToStack 'cmd /k type "$TEMP\VulkanRT\VulkanRT.ps1" | powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command -'
     Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL1.${un}log"
-    Delete "$TEMP\VulkanRT.tmp"
+    pop $0
     ${If} $0 != 0
-        nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -Command .\ConfigLayersAndVulkanDLL.ps1 ${VERSION_ABI_MAJOR} $1 ; exit $$LASTEXITCODE'
+        nsExec::ExecToStack 'cmd /k type "$TEMP\VulkanRT\VulkanRT.ps1" | "$WINDIR\System32\WindowsPowerShell\v1.0\powershell" -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command -'
         pop $0
         Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL2.${un}log"
     ${Endif}
+    ${If} $0 = 0
+        # Read the return value of the script and put it in $0, stripping trailing newline
+        FileOpen $1 "$TEMP\ConfigLayersAndVulkanDLL.stat" r
+        FileRead $1 $2
+        FileClose $1
+        ${StrRep} $3 $2 "$\n" ""
+        ${StrRep} $0 $3 "$\r" ""
+    ${Endif}
+    Delete "$TEMP\ConfigLayersAndVulkanDLL.stat"
+    Delete "$TEMP\VulkanRT\VulkanRT.ps1"
 FunctionEnd
 !macroend
 !insertmacro ConfigLayersAndVulkanDLL ""
