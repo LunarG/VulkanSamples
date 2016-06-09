@@ -175,7 +175,7 @@ The VK_LAYER_LUNARG_parameter_validation layer validates parameter values and fl
 
 | Check | Overview | ENUM * | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
-| Valid Usage | Verifies that the value of a parameter is consistent with the valid usage criteria defined in the Vulkan specification | INVALID_USAGE | | TODO | NA |
+| Valid Usage | Verifies that the value of a parameter is consistent with the valid usage criteria defined in the Vulkan specification | INVALID_USAGE | vkCmdUpdateBuffer vkCmdFillBuffer | FillBufferAlignment UpdateBufferAlignment | NA |
 | Valid VkStructureType Value | Verifies that the sType field of a Vulkan structure contains the value expected for a structure of that type | INVALID_STRUCT_STYPE | | InvalidStructSType | NA |
 | Valid Structure pNext Value | Verifies that the pNext field of a Vulkan structure references a value that is compatible with a structure of that type or is NULL when a structure of that type has no compatible pNext values | INVALID_STRUCT_PNEXT | | InvalidStructPNext | NA |
 | Required Parameter | Verifies that a required parameter was not specified as 0 or NULL | REQUIRED_PARAMETER | | RequiredParameter | NA |
@@ -306,8 +306,6 @@ For the second category of errors, VK_LAYER_LUNARG_device_limits stores its own 
 | Queue Creation | When creating/requesting queues, make sure that QueueFamilyPropertiesIndex and index/count within that queue family are valid. | INVALID_QUEUE_CREATE_REQUEST | vkGetDeviceQueue vkCreateDevice | TODO | Create focused test |
 | API Call Sequencing | This is a general error indicating that an app did not use vkGetPhysicalDevice* and other such query calls, but rather made an assumption about device capabilities. | INVALID_CALL_SEQUENCE | vkCreateDevice | TODO | Add validation test |
 | Feature Request | Attempting to vkCreateDevice with a feature that is not supported by the underlying physical device. | INVALID_FEATURE_REQUESTED | vkCreateDevice | TODO | Add validation test |
-| Alignment | When updating a buffer, data should be aligned on 4 byte boundaries  | INVALID_BUFFER_UPDATE_ALIGNMENT | vkCmdUpdateBuffer | UpdateBufferAlignment | NA |
-| Alignment | When filling a buffer, data should be aligned on 4 byte boundaries  | INVALID_BUFFER_UPDATE_ALIGNMENT | vkCmdFillBuffer | UpdateBufferAlignment | NA |
 | Storage Buffer Alignment  | Storage Buffer offsets must agree with offset alignment device limit | INVALID_STORAGE_BUFFER_OFFSET | vkBindBufferMemory vkUpdateDescriptorSets | TODO | Create test |
 | Uniform Buffer Alignment  | Uniform Buffer offsets must agree with offset alignment device limit | INVALID_UNIFORM_BUFFER_OFFSET | vkBindBufferMemory vkUpdateDescriptorSets | TODO | Create test |
 | NA | Enum used for informational messages | NONE | | TODO | None |
