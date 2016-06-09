@@ -937,6 +937,76 @@ TEST_F(VkLayerTest, FailedReturnValue) {
         m_errorMonitor->VerifyFound();
     }
 }
+
+TEST_F(VkLayerTest, UpdateBufferAlignment) {
+    TEST_DESCRIPTION("Check alignment parameters for vkCmdUpdateBuffer");
+    uint32_t updateData[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    vk_testing::Buffer buffer;
+    buffer.init_as_dst(*m_device, (VkDeviceSize)20, reqs);
+
+    BeginCommandBuffer();
+    // Introduce failure by using dstOffset that is not multiple of 4
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        " is not a multiple of 4");
+    m_commandBuffer->UpdateBuffer(buffer.handle(), 1, 4, updateData);
+    m_errorMonitor->VerifyFound();
+
+    // Introduce failure by using dataSize that is not multiple of 4
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        " is not a multiple of 4");
+    m_commandBuffer->UpdateBuffer(buffer.handle(), 0, 6, updateData);
+    m_errorMonitor->VerifyFound();
+
+    // Introduce failure by using dataSize that is < 0
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "must be greater than zero and less than or equal to 65536");
+    m_commandBuffer->UpdateBuffer(buffer.handle(), 0, -44, updateData);
+    m_errorMonitor->VerifyFound();
+
+    // Introduce failure by using dataSize that is > 65536
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "must be greater than zero and less than or equal to 65536");
+    m_commandBuffer->UpdateBuffer(buffer.handle(), 0, 80000, updateData);
+    m_errorMonitor->VerifyFound();
+
+    EndCommandBuffer();
+}
+
+TEST_F(VkLayerTest, FillBufferAlignment) {
+    TEST_DESCRIPTION("Check alignment parameters for vkCmdFillBuffer");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    vk_testing::Buffer buffer;
+    buffer.init_as_dst(*m_device, (VkDeviceSize)20, reqs);
+
+    BeginCommandBuffer();
+
+    // Introduce failure by using dstOffset that is not multiple of 4
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        " is not a multiple of 4");
+    m_commandBuffer->FillBuffer(buffer.handle(), 1, 4, 0x11111111);
+    m_errorMonitor->VerifyFound();
+
+    // Introduce failure by using size that is not multiple of 4
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        " is not a multiple of 4");
+    m_commandBuffer->FillBuffer(buffer.handle(), 0, 6, 0x11111111);
+    m_errorMonitor->VerifyFound();
+
+    // Introduce failure by using size that is zero
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "must be greater than zero");
+    m_commandBuffer->FillBuffer(buffer.handle(), 0, 0, 0x11111111);
+    m_errorMonitor->VerifyFound();
+
+    EndCommandBuffer();
+}
 #endif // PARAMETER_VALIDATION_TESTS
 
 #if MEM_TRACKER_TESTS
@@ -10255,59 +10325,6 @@ TEST_F(VkLayerTest, CreateImageLimitsViolationMinWidth) {
 
     m_errorMonitor->VerifyFound();
 }
-
-TEST_F(VkLayerTest, UpdateBufferAlignment) {
-    uint32_t updateData[] = {1, 2, 3, 4, 5, 6, 7, 8};
-
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "dstOffset, is not a multiple of 4");
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-    vk_testing::Buffer buffer;
-    buffer.init_as_dst(*m_device, (VkDeviceSize)20, reqs);
-
-    BeginCommandBuffer();
-    // Introduce failure by using offset that is not multiple of 4
-    m_commandBuffer->UpdateBuffer(buffer.handle(), 1, 4, updateData);
-    m_errorMonitor->VerifyFound();
-
-    // Introduce failure by using size that is not multiple of 4
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "dataSize, is not a multiple of 4");
-
-    m_commandBuffer->UpdateBuffer(buffer.handle(), 0, 6, updateData);
-    m_errorMonitor->VerifyFound();
-    EndCommandBuffer();
-}
-
-TEST_F(VkLayerTest, FillBufferAlignment) {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "dstOffset, is not a multiple of 4");
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-
-    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-    vk_testing::Buffer buffer;
-    buffer.init_as_dst(*m_device, (VkDeviceSize)20, reqs);
-
-    BeginCommandBuffer();
-    // Introduce failure by using offset that is not multiple of 4
-    m_commandBuffer->FillBuffer(buffer.handle(), 1, 4, 0x11111111);
-    m_errorMonitor->VerifyFound();
-
-    // Introduce failure by using size that is not multiple of 4
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "size, is not a multiple of 4");
-
-    m_commandBuffer->FillBuffer(buffer.handle(), 0, 6, 0x11111111);
-
-    m_errorMonitor->VerifyFound();
-
-    EndCommandBuffer();
-}
-
 #endif // DEVICE_LIMITS_TESTS
 
 #if IMAGE_TESTS
