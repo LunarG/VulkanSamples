@@ -34,31 +34,21 @@
 #   $ossize     : an integer indicating if the target is a 64 (64) or 32 (32) bit OS.
 #
 
-#Note that these two vars need to be prepended to this script.
-#InstallerRT.nsi does this before calling this script.
-#$majorabi=
-#$ossize=
+# majorabi and ossize are either prepended to this script or specificied as args
+Param(
+ [string]$majorabiarg,
+ [int]$ossizearg
+)
+if ($majorabi -eq $null) {
+    $majorabi=$majorabiarg
+}
+if ($ossize -eq $null) {
+    $ossize=$ossizearg
+}
 
-# Clear any pre-existing errors and set default return value
-$Error.Clear();
-$script:scriptReturnValue=0
-
-# Start logging
-$logascii=$Env:Temp+"\ConfigLayersAndVulkanDLL.log"
-$log=$Env:Temp+"\ConfigLayersAndVulkanDLL16.log"
-start-transcript -path $log
-
-# Ignore errors related to log file
-$Error.Clear();
-
-Write-Host "ConfigLayersAndVulkanDLL.ps1 called with inputs of : $majorabi $ossize"
-$startTime=Get-Date
-Write-Host "Start time : $startTime"
-
-$vulkandll = "vulkan-"+$majorabi+".dll"
-$windrive  = $env:SYSTEMDRIVE
-$winfolder = $env:SYSTEMROOT
-$script:VulkanDllList=@()
+function WriteToLog ($x) {
+    echo $x | Out-File -encoding ascii -append -filepath $script:log
+}
 
 function notNumeric ($x) {
     try {
@@ -69,15 +59,33 @@ function notNumeric ($x) {
     }
 }
 
-function Get-CurrentLineNumber {
-    $MyInvocation.ScriptLineNumber
-}
-
 function setScriptReturnValue($rvalue) {
     if ($script:scriptReturnValue -eq 0) {
         $script:scriptReturnValue = $rvalue
     }
 }
+
+# Clear any pre-existing errors and set default return value
+$Error.Clear();
+$script:scriptReturnValue=0
+
+# Start logging
+$script:log=$Env:Temp+"\ConfigLayersAndVulkanDLL.log"
+Remove-Item $script:log
+
+# Ignore errors related to log file
+$Error.Clear();
+
+WriteToLog "ConfigLayersAndVulkanDLL.ps1 called with inputs of : $majorabi $ossize"
+$startTime=Get-Date
+WriteToLog "Start time : $startTime"
+WriteToLog "Poweshell Version information:"
+WriteToLog $PsVersionTable
+
+$vulkandll = "vulkan-"+$majorabi+".dll"
+$windrive  = $env:SYSTEMDRIVE
+$winfolder = $env:SYSTEMROOT
+$script:VulkanDllList=@()
 
 # The name of the versioned vulkan dll file is one of the following:
 #
@@ -114,7 +122,7 @@ function setScriptReturnValue($rvalue) {
 
 function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
 {
-   Write-Host "UpdateVulkanSysFolder $dir $writeSdkName"
+   WriteToLog "UpdateVulkanSysFolder $dir $writeSdkName"
 
    # Push the current path on the stack and go to $dir
    Push-Location -Path $dir
@@ -126,7 +134,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
    # Find all vulkan dll files in this directory
    dir -name vulkan-$majorabi-*.dll |
    ForEach-Object {
-       Write-Host  "File $_"
+       WriteToLog  "File $_"
        if ($_ -match "=" -or
            $_ -match "@" -or
            $_ -match " " -or
@@ -137,7 +145,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
            # If a file name contains "=", "@", or " ", or it contains less then 5 dashes or more than
            # 7 dashes, it wasn't installed by the Vulkan Run Time.
            # Note that we need to use return inside of ForEach-Object is to continue with iteration.
-           Write-Warning "Ignoring $_ - bad format"
+           WriteToLog "Ignoring $_ - bad format"
 
            # Not a real error, so just clear it for now.
            $Error.Clear();
@@ -151,7 +159,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
        $vulkaninfo=$vulkaninfo -replace "vulkan","vulkaninfo"
        if (-not (Test-Path $vulkaninfo) -or
           !$?) {
-           Write-Warning "Rejected $_ - $vulkaninfo not present"
+           WriteToLog "Rejected $_ - $vulkaninfo not present"
 
            # Not a real error, so just clear it for now.
            $Error.Clear();
@@ -201,9 +209,9 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
               $prebuildno="z"*10
           }
        }
-       Write-Host "Version $majorOrig $minorOrig $patchOrig $buildnoOrig $prereleaseOrig $prebuildnoOrig"
+       WriteToLog "Version $majorOrig $minorOrig $patchOrig $buildnoOrig $prereleaseOrig $prebuildnoOrig"
        if (!$?) {
-           Write-Warning "Ignoring version $majorOrig $minorOrig $patchOrig $buildnoOrig $prereleaseOrig $prebuildnoOrig"
+           WriteToLog "Ignoring version $majorOrig $minorOrig $patchOrig $buildnoOrig $prereleaseOrig $prebuildnoOrig"
 
            # Not a real error, so just clear it for now.
            $Error.Clear();
@@ -214,7 +222,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
 
        # Make sure fields that are supposed to be numbers are numbers
        if (notNumeric($major)) {
-           Write-Warning "Ignoring $_ - bad major"
+           WriteToLog "Ignoring $_ - bad major"
 
            # Not a real error, so just clear it for now.
            $Error.Clear();
@@ -223,7 +231,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
            return
        }
        if (notNumeric($minor)) {
-           Write-Warning "Ignoring $_ - bad minor"
+           WriteToLog "Ignoring $_ - bad minor"
 
            # Not a real error, so just clear it for now.
            $Error.Clear();
@@ -232,7 +240,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
            return
        }
        if (notNumeric($patch)) {
-           Write-Warning "Ignoring $_ - bad patch"
+           WriteToLog "Ignoring $_ - bad patch"
 
            # Not a real error, so just clear it for now.
            $Error.Clear();
@@ -241,7 +249,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
            return
        }
        if (notNumeric($buildno)) {
-           Write-Warning "Ignoring $_ - bad buildno"
+           WriteToLog "Ignoring $_ - bad buildno"
 
            # Not a real error, so just clear it for now.
            $Error.Clear();
@@ -251,7 +259,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
        }
        if (notNumeric($prebuildno)) {
            if ($prebuildno -ne "z"*10) {
-               Write-Warning "Ignoring $_ - bad prebuildno"
+               WriteToLog "Ignoring $_ - bad prebuildno"
 
                # Not a real error, so just clear it for now.
                $Error.Clear();
@@ -269,11 +277,11 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
        $prebuildno = $prebuildno.padleft(10,'0')
 
        # Add a new element to the $VulkanDllList array
-       Write-Host "Adding $_ to Vulkan dll list "
+       WriteToLog "Adding $_ to Vulkan dll list "
        $script:VulkanDllList+="$major=$minor=$patch=$buildno=$prebuildno=$prerelease= $_ @$majorOrig@$minorOrig@$patchOrig@$buildnoOrig@$prereleaseOrig@$prebuildnoOrig@"
        if (!$?) {
-           Write-Error "Error: UpdateVulkanSysFolder adding DLL $_ to list"
-           setScriptReturnValue(Get-CurrentLineNumber)
+           WriteToLog "Error: UpdateVulkanSysFolder adding DLL $_ to list"
+           setScriptReturnValue(10)
        }
    }
 
@@ -285,30 +293,30 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
         # Sort the list. The most recent vulkan-*.dll will be in the last element of the list.
         [array]::sort($script:VulkanDllList)
         if (!$?) {
-           Write-Error "Error: UpdateVulkanSysFolder sorting DLL list" 
-           setScriptReturnValue(Get-CurrentLineNumber)
+           WriteToLog "Error: UpdateVulkanSysFolder sorting DLL list" 
+           setScriptReturnValue(20)
         }
 
         # Put the name of the most recent vulkan-*.dll in $mrVulkanDLL.
         # The most recent vulkanDLL is the second word in the last element of the
         # sorted $VulkanDllList. Copy it to $vulkandll.
         $mrVulkanDll=$script:VulkanDllList[-1].Split(' ')[1]
-        Write-Host "Copying $mrVulkanDll $vulkandll"
+        WriteToLog "Copying $mrVulkanDll $vulkandll"
         Copy-Item $mrVulkanDll $vulkandll -force
         if (!$?) {
-           Write-Error "Error: UpdateVulkanSysFolder encountered error during copy $mrVulkanDll $vulkandll"
-           setScriptReturnValue(Get-CurrentLineNumber)
+           WriteToLog "Error: UpdateVulkanSysFolder encountered error during copy $mrVulkanDll $vulkandll"
+           setScriptReturnValue(30)
         }
 
         # Copy the most recent version of vulkaninfo-<abimajor>-*.exe to vulkaninfo.exe.
         # We create the source file name for the copy from $mrVulkanDll.
         $mrVulkaninfo=$mrVulkanDll -replace ".dll",".exe"
         $mrVulkaninfo=$mrVulkaninfo -replace "vulkan","vulkaninfo"
-        Write-Host "Copying $mrVulkaninfo vulkaninfo.exe"
+        WriteToLog "Copying $mrVulkaninfo vulkaninfo.exe"
         Copy-Item $mrVulkaninfo vulkaninfo.exe -force
         if (!$?) {
-           Write-Error "Error: UpdateVulkanSysFolder encountered error during copy $mrVulkaninfo vulkaninfo.exe"
-           setScriptReturnValue(Get-CurrentLineNumber)
+           WriteToLog "Error: UpdateVulkanSysFolder encountered error during copy $mrVulkaninfo vulkaninfo.exe"
+           setScriptReturnValue(40)
         }
 
         # Create the name used in the registry for the SDK associated with $mrVulkanDll.
@@ -327,18 +335,18 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
             $sdktempname=$sdktempname + "." + $prebuildno
         }
 
-        Write-Host "sdkname = $sdktempname"
+        WriteToLog "sdkname = $sdktempname"
         if (!$?) {
-           Write-Error "Error: UpdateVulkanSysFolder encountered error generating SDK name"
-           setScriptReturnValue(Get-CurrentLineNumber)
+           WriteToLog "Error: UpdateVulkanSysFolder encountered error generating SDK name"
+           setScriptReturnValue(50)
         }
     }
 
     # Return to our previous folder
     Pop-Location
     if (!$?) {
-       Write-Error "Error: UpdateVulkanSysFolder popping location"
-       setScriptReturnValue(Get-CurrentLineNumber)
+       WriteToLog "Error: UpdateVulkanSysFolder popping location"
+       setScriptReturnValue(60)
     }
 
     # Only update the overall script-scope SDK name if we're told to
@@ -352,25 +360,25 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
 # We only care about SYSWOW64 if we're targeting a 64-bit OS
 if ($ossize -eq 64) {
     # Update the SYSWOW64 Vulkan DLLS/EXEs
-    Write-Host "Calling UpdateVulkanSysFolder $winfolder\SYSWOW64 0"
+    WriteToLog "Calling UpdateVulkanSysFolder $winfolder\SYSWOW64 0"
     UpdateVulkanSysFolder $winfolder\SYSWOW64 0
     if (!$?) {
-        Write-Error "Error: Calling UpdateVulkanSysFolder for 64-bit OS" 
-        setScriptReturnValue(Get-CurrentLineNumber)
+        WriteToLog "Error: Calling UpdateVulkanSysFolder for 64-bit OS" 
+        setScriptReturnValue(70)
     }
 }
 
 # Update the SYSTEM32 Vulkan DLLS/EXEs
-Write-Host "Calling UpdateVulkanSysFolder $winfolder\SYSTEM32 1"
+WriteToLog "Calling UpdateVulkanSysFolder $winfolder\SYSTEM32 1"
 UpdateVulkanSysFolder $winfolder\SYSTEM32 1
 if (!$?) {
-    Write-Error "Error: Calling UpdateVulkanSysFolder for all OS"
-    setScriptReturnValue(Get-CurrentLineNumber)
+    WriteToLog "Error: Calling UpdateVulkanSysFolder for all OS"
+    setScriptReturnValue(80)
 }
 
 # Create an array of vulkan sdk install dirs
 
-Write-Host "Creating array of of Vulkan SDK Install dirs"
+WriteToLog "Creating array of of Vulkan SDK Install dirs"
 $mrVulkanDllInstallDir=""
 $VulkanSdkDirs=@()
 $installSDKRegs = @(Get-ChildItem -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall)
@@ -382,17 +390,17 @@ if ($installSDKRegs -ne $null) {
              # Get the install path from UninstallString
              $tmp=Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$regkey -Name UninstallString
              if (!$? -or $tmp -eq $null) {
-                 Write-Warning "Error: Get-ItemProperty failed for Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$regkey"
+                 WriteToLog "Error: Get-ItemProperty failed for Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$regkey"
                  $Error.Clear();
                  continue;
              }
              $tmp=$tmp -replace "\\Uninstall.exe.*",""
              $tmp=$tmp -replace ".*=.",""
-             Write-Host "Adding $tmp to VulkanSDKDirs"
+             WriteToLog "Adding $tmp to VulkanSDKDirs"
              $VulkanSdkDirs+=$tmp
              if ($regkey -eq $script:sdkname) {
                  # Save away the sdk install dir for the the most recent vulkandll
-                 Write-Host "Setting mrVulkanDllInstallDir to $tmp"
+                 WriteToLog "Setting mrVulkanDllInstallDir to $tmp"
                  $mrVulkanDllInstallDir=$tmp
              }
          }
@@ -400,8 +408,8 @@ if ($installSDKRegs -ne $null) {
    }
 }
 if (!$?) {
-    Write-Error "Error: Failed creating array of of Vulkan SDK Install dirs"
-    setScriptReturnValue(Get-CurrentLineNumber)
+    WriteToLog "Error: Failed creating array of of Vulkan SDK Install dirs"
+    setScriptReturnValue(90)
 }
 
 
@@ -409,7 +417,7 @@ if (!$?) {
 # We go backwards through VulkanDllList to generate SDK names, because we want the most recent SDK.
 
 if ($mrVulkanDllInstallDir -eq "" -and $script:VulkanDllList.Length -gt 0) {
-    Write-Host "Searching VulkanDllList"
+    WriteToLog "Searching VulkanDllList"
     ForEach ($idx in ($script:VulkanDllList.Length-1)..0) {
         $tmp=$script:VulkanDllList[$idx]
         $vulkanDllMajor=$script:VulkanDllList[$idx].Split('@')[1]
@@ -425,10 +433,10 @@ if ($mrVulkanDllInstallDir -eq "" -and $script:VulkanDllList.Length -gt 0) {
         if ($vulkanDllPrebuildno) {
             $regEntry=$regEntry+"."+$vulkanDllPrebuildno
         }
-        Write-Host "Comparing $regEntry"
+        WriteToLog "Comparing $regEntry"
         $rval=Get-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$regEntry -ErrorAction SilentlyContinue
         if (!$? -or $rval -eq $null) {
-            Write-Warning "Ignoring $regEntry - corresponding SDK registry entry does not exist"
+            WriteToLog "Ignoring $regEntry - corresponding SDK registry entry does not exist"
             $Error.Clear();
             continue
         }
@@ -442,14 +450,14 @@ if ($mrVulkanDllInstallDir -eq "" -and $script:VulkanDllList.Length -gt 0) {
             $reMinor=$rval.Split('.')[1]
             $rePatch=$rval.Split('.')[2]
             if ($reMajor+$reMinor+$rePatch -eq $vulkanDllMajor+$vulkanDllMinor+$vulkanDllPatch) {
-                Write-Host "Setting mrVulkanDllInstallDir to $instDir"
+                WriteToLog "Setting mrVulkanDllInstallDir to $instDir"
                 $mrVulkanDllInstallDir=$instDir
                 break
             }
         }
     }
     if (!$?) {
-        Write-Warning "Failed searching VulkanDLLList"
+        WriteToLog "Failed searching VulkanDLLList"
         $Error.Clear();
     }
 }
@@ -469,7 +477,7 @@ $VulkanSdkDirs+="$windrive\VulkanSDK\0.9.3"
 # Note that we remove only those entries created by Vulkan SDKs. If other
 # layers were installed that are not from an SDK, we don't mess with them.
 
-Write-Host "Removing old layer registry values from HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers"
+WriteToLog "Removing old layer registry values from HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers"
 $regkeys = @(Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\ExplicitLayers | Select-Object -ExpandProperty Property)
 if ($regkeys -ne $null) {
    ForEach ($regval in $regkeys) {
@@ -478,9 +486,9 @@ if ($regkeys -ne $null) {
               if ($regval -like "$sdkdir\*.json") {
                   Remove-ItemProperty -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -name $regval
                   if (!$?) {
-                     Write-Error "Error: Remove-ItemProperty failed for -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -name $regval"
+                     WriteToLog "Error: Remove-ItemProperty failed for -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -name $regval"
                   } else {
-                     Write-Host "Removed registry value $regval"
+                     WriteToLog "Removed registry value $regval"
                   }
               }
            }
@@ -489,8 +497,8 @@ if ($regkeys -ne $null) {
 }
 
 if (!$?) {
-    Write-Error "Error: Failed Removing old layer registry values from HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers"
-    setScriptReturnValue(Get-CurrentLineNumber)
+    WriteToLog "Error: Failed Removing old layer registry values from HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers"
+    setScriptReturnValue(100)
 }
 
 # Remove 32-bit layer registry value if we're targeting a 64-bit OS
@@ -503,9 +511,9 @@ if ($ossize -eq 64) {
                  if ($regval -like "$sdkdir\*.json") {
                     Remove-ItemProperty -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -name $regval
                     if (!$?) {
-                       Write-Error "Error: Remove-ItemProperty failed for -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -name $regval"
+                       WriteToLog "Error: Remove-ItemProperty failed for -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -name $regval"
                     } else {
-                       Write-Host "Removed WOW6432Node registry value $regval"
+                       WriteToLog "Removed WOW6432Node registry value $regval"
                     }
                  }
              }
@@ -514,33 +522,33 @@ if ($ossize -eq 64) {
    }
 
    if (!$?) {
-      Write-Error "Error: Failed Removing old layer registry values from HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers"
-      setScriptReturnValue(Get-CurrentLineNumber)
+      WriteToLog "Error: Failed Removing old layer registry values from HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers"
+      setScriptReturnValue(110)
    }
 }
 
 
 # Create layer registry values associated with Vulkan SDK from which $mrVulkanDll is from
 
-Write-Host "Creating new layer registry values"
+WriteToLog "Creating new layer registry values"
 if ($mrVulkanDllInstallDir -ne "") {
 
     # Create registry keys if they don't exist
     if (-not (Test-Path -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers)) {
-        Write-Host "Creating new registry key HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers"
+        WriteToLog "Creating new registry key HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers"
         New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers | out-null
         if (!$?) {
-            Write-Error "Error: Failed creating HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers"
-            setScriptReturnValue(Get-CurrentLineNumber)
+            WriteToLog "Error: Failed creating HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers"
+            setScriptReturnValue(120)
         }
     }
     if ($ossize -eq 64) {
         if (-not (Test-Path -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers)) {
-            Write-Host "Creating new registry key HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers"
+            WriteToLog "Creating new registry key HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers"
             New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | out-null
             if (!$?) {
-                Write-Error "Error: Failed creating HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers"
-                setScriptReturnValue(Get-CurrentLineNumber)
+                WriteToLog "Error: Failed creating HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers"
+                setScriptReturnValue(130)
             }
         }
     }
@@ -550,64 +558,61 @@ if ($mrVulkanDllInstallDir -ne "") {
         # Create registry values in normal registry location for 64-bit items on a 64-bit OS
         Get-ChildItem $mrVulkanDllInstallDir\Bin -Filter VkLayer*json |
            ForEach-Object {
-               Write-Host "Creating registry value $mrVulkanDllInstallDir\Bin\$_"
+               WriteToLog "Creating registry value $mrVulkanDllInstallDir\Bin\$_"
                New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin\$_ -PropertyType DWord -Value 0 | out-null
                if (!$?) {
-                   Write-Error "Error: Failed creating $mrVulkanDllInstallDir\Bin\$_"
-                   setScriptReturnValue(Get-CurrentLineNumber)
+                   WriteToLog "Error: Failed creating $mrVulkanDllInstallDir\Bin\$_"
+                   setScriptReturnValue(140)
                }
            }
            if (!$?) {
-               Write-Error "Error: Failed Get-ChildItem $mrVulkanDllInstallDir\Bin | ForEach-Object "
-               setScriptReturnValue(Get-CurrentLineNumber)
+               WriteToLog "Error: Failed Get-ChildItem $mrVulkanDllInstallDir\Bin | ForEach-Object "
+               setScriptReturnValue(150)
            }
 
         # Create registry values for the WOW6432Node registry location for 32-bit items on a 64-bit OS
         Get-ChildItem $mrVulkanDllInstallDir\Bin32 -Filter VkLayer*json |
            ForEach-Object {
-               Write-Host "Creating WOW6432Node registry value $mrVulkanDllInstallDir\Bin32\$_"
+               WriteToLog "Creating WOW6432Node registry value $mrVulkanDllInstallDir\Bin32\$_"
                New-ItemProperty -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin32\$_ -PropertyType DWord -Value 0 | out-null
                if (!$?) {
-                   Write-Error "Error: Failed creating $mrVulkanDllInstallDir\Bin32\$_"
-                   setScriptReturnValue(Get-CurrentLineNumber)
+                   WriteToLog "Error: Failed creating $mrVulkanDllInstallDir\Bin32\$_"
+                   setScriptReturnValue(160)
                }
            }
            if (!$?) {
-               Write-Error "Error: Failed Get-ChildItem $mrVulkanDllInstallDir\Bin32 | ForEach-Object "
-               setScriptReturnValue(Get-CurrentLineNumber)
+               WriteToLog "Error: Failed Get-ChildItem $mrVulkanDllInstallDir\Bin32 | ForEach-Object "
+               setScriptReturnValue(170)
            }
     } else {
         # Create registry values in normal registry location for 32-bit items on a 32-bit OS
         Get-ChildItem $mrVulkanDllInstallDir\Bin32 -Filter VkLayer*json |
            ForEach-Object {
-               Write-Host "Creating registry value $mrVulkanDllInstallDir\Bin\$_"
+               WriteToLog "Creating registry value $mrVulkanDllInstallDir\Bin\$_"
                New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin32\$_ -PropertyType DWord -Value 0 | out-null
                if (!$?) {
-                   Write-Error "Error: Failed creating $mrVulkanDllInstallDir\Bin\$_"
-                   setScriptReturnValue(Get-CurrentLineNumber)
+                   WriteToLog "Error: Failed creating $mrVulkanDllInstallDir\Bin\$_"
+                   setScriptReturnValue(180)
                }
             }
             if (!$?) {
-                Write-Error "Error: Failed Get-ChildItem $mrVulkanDllInstallDir\Bin32 | ForEach-Object "
-                setScriptReturnValue(Get-CurrentLineNumber)
+                WriteToLog "Error: Failed Get-ChildItem $mrVulkanDllInstallDir\Bin32 | ForEach-Object "
+                setScriptReturnValue(190)
             }
     }
 }
 
 # Debug - for testing handling of script failure in installer
-#setScriptReturnValue(Get-CurrentLineNumber)
+#setScriptReturnValue(200)
 
 # Final log output
-Write-Host "ConfigLayersAndVulkanDLL.ps1 completed"
+WriteToLog "ConfigLayersAndVulkanDLL.ps1 completed, return status is $script:scriptReturnValue"
 $endTime=Get-Date
-Write-Host "End time: $endTime"
+WriteToLog "End time: $endTime"
 
-Stop-Transcript
-
-# Convert logfile to ascii
-Get-Content $log | Out-File -encoding ascii -filepath $logascii
-
-# Remove the unicode log as we no longer need it.
-Remove-Item $log
+# Since InstallerRT.nsi runs this script by piping it to powershell.exe, the exit status
+# doesn't seem to be available. So we put in it a file where InstallRT.nsi can retrieve it.
+$statusfile=$Env:Temp+"\ConfigLayersAndVulkanDLL.stat"
+echo $script:scriptReturnValue | Out-File -encoding ascii -filepath $statusfile
 
 exit $script:scriptReturnValue
