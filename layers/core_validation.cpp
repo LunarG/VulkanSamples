@@ -4506,19 +4506,18 @@ static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NO
     return skipCall;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL
-QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, VkFence fence) {
+static bool
+ValidateFenceForSubmit(layer_data *dev_data, VkFence fence)
+{
     bool skipCall = false;
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    std::unique_lock<std::mutex> lock(global_lock);
-    // First verify that fence is not in use
+
     if (fence != VK_NULL_HANDLE) {
-        if ((submitCount != 0) && dev_data->fenceMap[fence].in_use.load()) {
+        if (dev_data->fenceMap[fence].in_use.load()) {
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                                 (uint64_t)(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
                                 "Fence 0x%" PRIx64 " is already in use by another submission.", (uint64_t)(fence));
         }
+
         if (!dev_data->fenceMap[fence].needsSignaled) {
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                                 reinterpret_cast<uint64_t &>(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
@@ -4526,6 +4525,19 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
                                 reinterpret_cast<uint64_t &>(fence));
         }
     }
+
+    return skipCall;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL
+QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, VkFence fence) {
+    bool skipCall = false;
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    std::unique_lock<std::mutex> lock(global_lock);
+
+    skipCall |= ValidateFenceForSubmit(dev_data, fence);
+
     // TODO : Review these old print functions and clean up as appropriate
     print_mem_list(dev_data);
     printCBList(dev_data);
@@ -9548,21 +9560,8 @@ QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *p
     bool skip_call = false;
     std::unique_lock<std::mutex> lock(global_lock);
     // First verify that fence is not in use
+    skip_call |= ValidateFenceForSubmit(dev_data, fence);
     if (fence != VK_NULL_HANDLE) {
-        auto fence_data = dev_data->fenceMap.find(fence);
-        if ((bindInfoCount != 0) && fence_data->second.in_use.load()) {
-            skip_call |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                        reinterpret_cast<uint64_t &>(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
-                        "Fence 0x%" PRIx64 " is already in use by another submission.", reinterpret_cast<uint64_t &>(fence));
-        }
-        if (!fence_data->second.needsSignaled) {
-            skip_call |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                        reinterpret_cast<uint64_t &>(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
-                        "Fence 0x%" PRIxLEAST64 " submitted in SIGNALED state.  Fences must be reset before being submitted",
-                        reinterpret_cast<uint64_t &>(fence));
-        }
         trackCommandBuffers(dev_data, queue, 0, nullptr, fence);
     }
     for (uint32_t bindIdx = 0; bindIdx < bindInfoCount; ++bindIdx) {
