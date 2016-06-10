@@ -804,17 +804,6 @@ static void app_gpu_destroy(struct app_gpu *gpu) {
 
 // MS-Windows event handling function:
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    switch (uMsg) {
-    case WM_CLOSE:
-        PostQuitMessage(WM_QUIT);
-        break;
-    case WM_PAINT:
-        break;
-    case WM_SIZE:
-        break;
-    default:
-        break;
-    }
     return (DefWindowProc(hWnd, uMsg, wParam, lParam));
 }
 
