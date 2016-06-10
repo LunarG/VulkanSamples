@@ -217,7 +217,7 @@ class FENCE_NODE : public BASE_NODE {
     bool firstTimeFlag;       // Fence was created in signaled state, avoid warnings for first use
     VkFenceCreateInfo createInfo;
     std::unordered_set<VkQueue> queues;
-    std::vector<VkCommandBuffer> cmdBuffers;
+    std::vector<CB_SUBMISSION> submissions;
     bool needsSignaled;
     std::vector<VkFence> priorFences;
 
@@ -250,7 +250,7 @@ class QUEUE_NODE {
     std::list<VkCommandBuffer> pQueueCommandBuffers;
     std::list<VkDeviceMemory> pMemRefList;
 #endif
-    std::vector<VkCommandBuffer> untrackedCmdBuffers;
+    std::vector<CB_SUBMISSION> untrackedSubmissions;
     std::unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
     std::unordered_map<QueryObject, bool> queryToStateMap; // 0 is unavailable, 1 is available
 };
