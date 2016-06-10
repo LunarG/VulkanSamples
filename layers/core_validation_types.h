@@ -453,7 +453,6 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     std::unordered_set<VkFramebuffer> destroyedFramebuffers;
     std::unordered_set<VkEvent> waitedEvents;
     std::vector<VkEvent> writeEventsBeforeWait;
-    std::vector<VkSemaphore> semaphores;
     std::vector<VkEvent> events;
     std::unordered_map<QueryObject, std::unordered_set<VkEvent>> waitedEventsBeforeQueryReset;
     std::unordered_map<QueryObject, bool> queryToStateMap; // 0 is unavailable, 1 is available
