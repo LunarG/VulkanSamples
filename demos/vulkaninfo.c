@@ -18,6 +18,7 @@
  * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
  * Author: David Pinedo <david@lunarg.com>
  * Author: Mark Lobodzinski <mark@lunarg.com>
+ * Author: Rene Lindsay <rene@lunarg.com>
  */
 #include <stdlib.h>
 #include <stdio.h>
@@ -30,6 +31,10 @@
 #include <fcntl.h>
 #include <io.h>
 #endif // _WIN32
+
+#ifdef __linux__
+#include <X11/Xutil.h>
+#endif
 
 #include <vulkan/vulkan.h>
 
@@ -100,7 +105,37 @@ struct app_instance {
     uint32_t global_layer_count;
     struct layer_extension_list *global_layers;
     uint32_t global_extension_count;
-    VkExtensionProperties *global_extensions;
+    VkExtensionProperties *global_extensions;    //Instance Extensions
+
+    PFN_vkGetPhysicalDeviceSurfaceSupportKHR      vkGetPhysicalDeviceSurfaceSupportKHR;
+    PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR;
+    PFN_vkGetPhysicalDeviceSurfaceFormatsKHR      vkGetPhysicalDeviceSurfaceFormatsKHR;
+    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR vkGetPhysicalDeviceSurfacePresentModesKHR;
+
+    VkSurfaceKHR surface;
+    int width, height;
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    HINSTANCE hInstance;           // Windows Instance
+    HWND      hWnd;                // window handle
+#endif
+
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    xcb_connection_t*        xcb_connection;
+    xcb_screen_t*            xcb_screen;
+    xcb_window_t             xcb_window;
+    xcb_intern_atom_reply_t *xcb_wm_delete_window;
+#endif
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    Display* xlib_display;
+    Window   xlib_window;
+    Atom     xlib_wm_delete_window;
+#endif
+
+#ifdef VK_USE_PLATFORM_ANDROID_KHR  //TODO
+    ANativeWindow* window;
+#endif
 };
 
 struct app_gpu {
@@ -524,7 +559,7 @@ app_get_global_layer_extensions(char *layer_name, uint32_t *extension_count,
 
     /* repeat get until VK_INCOMPLETE goes away */
     do {
-        err = vkEnumerateInstanceExtensionProperties(layer_name, &ext_count,
+        err = vkEnumerateInstanceExtensionProperties(layer_name, &ext_count,  //get extension count
                                                      NULL);
         assert(!err);
 
@@ -532,16 +567,99 @@ app_get_global_layer_extensions(char *layer_name, uint32_t *extension_count,
             free(ext_ptr);
         }
         ext_ptr = malloc(ext_count * sizeof(VkExtensionProperties));
-        err = vkEnumerateInstanceExtensionProperties(layer_name, &ext_count,
+        err = vkEnumerateInstanceExtensionProperties(layer_name, &ext_count,  //get extension properties
                                                      ext_ptr);
     } while (err == VK_INCOMPLETE);
     assert(!err);
-
     *extension_count = ext_count;
     *extension_properties = ext_ptr;
 }
 
+static void app_get_instance_extensions(struct app_instance *inst) {  //get list of layer and instance extensions
+  VkResult U_ASSERT_ONLY err;
+
+  uint32_t count = 0;
+
+  /* Scan layers */
+  VkLayerProperties *global_layer_properties = NULL;
+  struct layer_extension_list *global_layers = NULL;
+
+  do {
+      err = vkEnumerateInstanceLayerProperties(&count, NULL);
+      assert(!err);
+
+      if (global_layer_properties) {
+          free(global_layer_properties);
+      }
+      global_layer_properties = malloc(sizeof(VkLayerProperties) * count);
+      assert(global_layer_properties);
+
+      if (global_layers) {
+          free(global_layers);
+      }
+      global_layers = malloc(sizeof(struct layer_extension_list) * count);
+      assert(global_layers);
+
+      err = vkEnumerateInstanceLayerProperties(&count, global_layer_properties);
+  } while (err == VK_INCOMPLETE);
+  assert(!err);
+
+  inst->global_layer_count = count;
+  inst->global_layers = global_layers;
+
+  for (uint32_t i = 0; i < inst->global_layer_count; i++) {
+      VkLayerProperties *src_info = &global_layer_properties[i];
+      struct layer_extension_list *dst_info = &inst->global_layers[i];
+      memcpy(&dst_info->layer_properties, src_info,
+             sizeof(VkLayerProperties));
+
+      /* Save away layer extension info for report */
+      app_get_global_layer_extensions(src_info->layerName,               //get Layer extensions
+                                      &dst_info->extension_count,
+                                      &dst_info->extension_properties);
+  }
+  free(global_layer_properties);
+
+  /* Collect global extensions */
+  inst->global_extension_count = 0;
+  app_get_global_layer_extensions(NULL, &inst->global_extension_count,   //get Instance extensions (first param is NULL)
+                                  &inst->global_extensions);
+
+}
+
 static void app_create_instance(struct app_instance *inst) {
+    app_get_instance_extensions(inst);                                                                  //get a list of available extensions
+
+
+    //---Build a list of extensions to load---
+    #define MAX_EXTENSIONS 4
+    uint32_t    i = 0;
+    uint32_t    ext_count = 0;
+    const char* ext_names[MAX_EXTENSIONS];  //array of string pointers to extension names
+    for (i = 0; (i < inst->global_extension_count); i++){
+        const char* found_name=inst->global_extensions[i].extensionName;
+        if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME, found_name)) ext_names[ext_count++] = VK_KHR_SURFACE_EXTENSION_NAME;
+    }
+
+    if(ext_count)
+    for (i = 0; ((i < inst->global_extension_count) && (ext_count < MAX_EXTENSIONS)); i++){
+        const char* found_name=inst->global_extensions[i].extensionName;
+#ifdef    VK_USE_PLATFORM_WIN32_KHR
+        if(!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME,   found_name)) ext_names[ext_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+#endif
+#ifdef    VK_USE_PLATFORM_XCB_KHR
+        if(!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME,     found_name)) ext_names[ext_count++] = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
+#endif
+#ifdef    VK_USE_PLATFORM_XLIB_KHR
+        if(!strcmp(VK_KHR_XLIB_SURFACE_EXTENSION_NAME,    found_name)) ext_names[ext_count++] = VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
+#endif
+#ifdef    VK_USE_PLATFORM_ANDROID_KHR
+        if(!strcmp(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME, found_name)) ext_names[ext_count++] = VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;
+#endif
+    }
+    if(ext_count<2) ext_count=0;             // Load at least 2 extensions, or none at all.
+    //----------------------------------------
+
     const VkApplicationInfo app_info = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
@@ -551,65 +669,16 @@ static void app_create_instance(struct app_instance *inst) {
         .engineVersion = 1,
         .apiVersion = VK_API_VERSION_1_0,
     };
+
     VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
         .pApplicationInfo = &app_info,
         .enabledLayerCount = 0,
         .ppEnabledLayerNames = NULL,
-        .enabledExtensionCount = 0,
-        .ppEnabledExtensionNames = NULL,
+        .enabledExtensionCount =   ext_count,
+        .ppEnabledExtensionNames = ext_names,
     };
-    VkResult U_ASSERT_ONLY err;
-
-    uint32_t count = 0;
-
-    /* Scan layers */
-    VkLayerProperties *global_layer_properties = NULL;
-    struct layer_extension_list *global_layers = NULL;
-
-    do {
-        err = vkEnumerateInstanceLayerProperties(&count, NULL);
-        assert(!err);
-
-        if (global_layer_properties) {
-            free(global_layer_properties);
-        }
-        global_layer_properties = malloc(sizeof(VkLayerProperties) * count);
-        assert(global_layer_properties);
-
-        if (global_layers) {
-            free(global_layers);
-        }
-        global_layers = malloc(sizeof(struct layer_extension_list) * count);
-        assert(global_layers);
-
-        err =
-            vkEnumerateInstanceLayerProperties(&count, global_layer_properties);
-    } while (err == VK_INCOMPLETE);
-    assert(!err);
-
-    inst->global_layer_count = count;
-    inst->global_layers = global_layers;
-
-    for (uint32_t i = 0; i < inst->global_layer_count; i++) {
-        VkLayerProperties *src_info = &global_layer_properties[i];
-        struct layer_extension_list *dst_info = &inst->global_layers[i];
-        memcpy(&dst_info->layer_properties, src_info,
-               sizeof(VkLayerProperties));
-
-        /* Save away layer extension info for report */
-        app_get_global_layer_extensions(src_info->layerName,
-                                        &dst_info->extension_count,
-                                        &dst_info->extension_properties);
-    }
-    free(global_layer_properties);
-
-    /* Collect global extensions */
-    inst->global_extension_count = 0;
-    app_get_global_layer_extensions(NULL, &inst->global_extension_count,
-                                    &inst->global_extensions);
-
 
     VkDebugReportCallbackCreateInfoEXT dbg_info;
     memset(&dbg_info, 0, sizeof(dbg_info));
@@ -620,6 +689,7 @@ static void app_create_instance(struct app_instance *inst) {
     dbg_info.pfnCallback = dbg_callback;
     inst_info.pNext = &dbg_info;
 
+    VkResult U_ASSERT_ONLY err;
     err = vkCreateInstance(&inst_info, NULL, &inst->instance);
     if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
         printf("Cannot create Vulkan instance.\n");
@@ -627,7 +697,19 @@ static void app_create_instance(struct app_instance *inst) {
     } else if (err) {
         ERR_EXIT(err);
     }
+
+    if(ext_count>0){
+    //--Load Extensions--
+#define GET_INSTANCE_PROC_ADDR(ENTRYPOINT) { inst->ENTRYPOINT = (void*)vkGetInstanceProcAddr(inst->instance, #ENTRYPOINT); }
+        GET_INSTANCE_PROC_ADDR(vkGetPhysicalDeviceSurfaceSupportKHR     )
+        GET_INSTANCE_PROC_ADDR(vkGetPhysicalDeviceSurfaceCapabilitiesKHR)
+        GET_INSTANCE_PROC_ADDR(vkGetPhysicalDeviceSurfaceFormatsKHR     )
+        GET_INSTANCE_PROC_ADDR(vkGetPhysicalDeviceSurfacePresentModesKHR)
+#undef  GET_INSTANCE_PROC_ADDR
+    }
 }
+
+//-----------------------------------------------------------
 
 static void app_destroy_instance(struct app_instance *inst) {
     free(inst->global_extensions);
@@ -691,6 +773,232 @@ static void app_gpu_destroy(struct app_gpu *gpu) {
 }
 
 // clang-format off
+
+//-----------------------------------------------------------
+
+//---------------------------Win32---------------------------
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+
+// MS-Windows event handling function:
+LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    switch (uMsg) {
+    case WM_CLOSE:
+        PostQuitMessage(WM_QUIT);
+        break;
+    case WM_PAINT:
+        break;
+    case WM_SIZE:
+        break;
+    default:
+        break;
+    }
+    return (DefWindowProc(hWnd, uMsg, wParam, lParam));
+}
+
+static void app_create_win32_window(struct app_instance *inst) {
+    inst->hInstance = GetModuleHandle(NULL);
+
+    WNDCLASSEX win_class;
+
+    // Initialize the window class structure:
+    win_class.cbSize = sizeof(WNDCLASSEX);
+    win_class.style = CS_HREDRAW | CS_VREDRAW;
+    win_class.lpfnWndProc = WndProc;
+    win_class.cbClsExtra = 0;
+    win_class.cbWndExtra = 0;
+    win_class.hInstance = inst->hInstance;
+    win_class.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+    win_class.hCursor = LoadCursor(NULL, IDC_ARROW);
+    win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+    win_class.lpszMenuName = NULL;
+    win_class.lpszClassName = APP_SHORT_NAME;
+    win_class.hIconSm = LoadIcon(NULL, IDI_WINLOGO);
+    // Register window class:
+    if (!RegisterClassEx(&win_class)) {
+        // It didn't work, so try to give a useful error:
+        printf("Unexpected error trying to start the application!\n");
+        fflush(stdout);
+        exit(1);
+    }
+    // Create window with the registered class:
+    RECT wr = { 0, 0, inst->width, inst->height };
+    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
+    inst->hWnd = CreateWindowEx(0,
+        APP_SHORT_NAME,       // class name
+        APP_SHORT_NAME,       // app name
+        //WS_VISIBLE | WS_SYSMENU |
+        WS_OVERLAPPEDWINDOW,  // window style
+        100, 100,             // x/y coords
+        wr.right - wr.left,   // width
+        wr.bottom - wr.top,   // height
+        NULL,                 // handle to parent
+        NULL,                 // handle to menu
+        inst->hInstance,      // hInstance
+        NULL);                // no extra parameters
+    if (!inst->hWnd) {
+        // It didn't work, so try to give a useful error:
+        printf("Cannot create a window in which to draw!\n");
+        fflush(stdout);
+        exit(1);
+    }
+}
+
+static void app_create_win32_surface(struct app_instance *inst, struct app_gpu *gpu) {
+    VkResult U_ASSERT_ONLY err;
+    VkWin32SurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.flags = 0;
+    createInfo.hinstance = inst->hInstance;
+    createInfo.hwnd = inst->hWnd;
+    err = vkCreateWin32SurfaceKHR(inst->instance, &createInfo, NULL, &inst->surface);    assert(!err);
+}
+
+static void app_destroy_win32_window(struct app_instance *inst) {
+    DestroyWindow(inst->hWnd);
+}
+#endif //VK_USE_PLATFORM_WIN32_KHR
+//-----------------------------------------------------------
+
+static void app_destroy_surface(struct app_instance *inst) { //same for all platforms
+    vkDestroySurfaceKHR(inst->instance, inst->surface, NULL);
+}
+
+//----------------------------XCB----------------------------
+#ifdef VK_USE_PLATFORM_XCB_KHR
+static void app_create_xcb_window(struct app_instance *inst) {
+  //--Init Connection--
+  const xcb_setup_t *setup;
+  xcb_screen_iterator_t iter;
+  int scr;
+
+  inst->xcb_connection = xcb_connect(NULL, &scr);
+  if (inst->xcb_connection == NULL) {
+      printf("Cannot find a compatible Vulkan installable client driver (ICD).\nExiting ...\n");
+      fflush(stdout);
+      exit(1);
+  }
+
+  setup = xcb_get_setup(inst->xcb_connection);
+  iter = xcb_setup_roots_iterator(setup);
+  while (scr-- > 0)
+      xcb_screen_next(&iter);
+
+  inst->xcb_screen = iter.data;
+  //-------------------
+
+  uint32_t value_mask, value_list[32];
+  inst->xcb_window = xcb_generate_id(inst->xcb_connection);
+  value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
+  value_list[0] = inst->xcb_screen->black_pixel;
+  value_list[1] = XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE |
+                  XCB_EVENT_MASK_STRUCTURE_NOTIFY;
+
+  xcb_create_window(inst->xcb_connection, XCB_COPY_FROM_PARENT, inst->xcb_window,
+                    inst->xcb_screen->root, 0, 0, inst->width, inst->height, 0,
+                    XCB_WINDOW_CLASS_INPUT_OUTPUT, inst->xcb_screen->root_visual,
+                    value_mask, value_list);
+
+  /* Magic code that will send notification when window is destroyed */
+  xcb_intern_atom_cookie_t cookie = xcb_intern_atom(inst->xcb_connection, 1, 12, "WM_PROTOCOLS");
+  xcb_intern_atom_reply_t *reply =  xcb_intern_atom_reply(inst->xcb_connection, cookie, 0);
+
+  xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(inst->xcb_connection, 0, 16, "WM_DELETE_WINDOW");
+  inst->xcb_wm_delete_window =       xcb_intern_atom_reply(inst->xcb_connection, cookie2, 0);
+  free(reply);
+
+  xcb_map_window(inst->xcb_connection, inst->xcb_window);
+
+  // Force the x/y coordinates to 100,100 results are identical in consecutive runs
+  const uint32_t coords[] = {100, 100};
+  xcb_configure_window(inst->xcb_connection, inst->xcb_window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
+}
+
+static void app_create_xcb_surface(struct app_instance *inst, struct app_gpu *gpu) {
+    VkResult U_ASSERT_ONLY err;
+    VkXcbSurfaceCreateInfoKHR xcb_createInfo;
+    xcb_createInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    xcb_createInfo.pNext      = NULL;
+    xcb_createInfo.flags      = 0;
+    xcb_createInfo.connection = inst->xcb_connection;
+    xcb_createInfo.window     = inst->xcb_window;
+    err = vkCreateXcbSurfaceKHR(inst->instance, &xcb_createInfo, NULL, &inst->surface);   assert(!err);
+}
+
+static void app_destroy_xcb_window(struct app_instance *inst) {
+    xcb_destroy_window(inst->xcb_connection, inst->xcb_window);
+    xcb_disconnect(inst->xcb_connection);
+    free(inst->xcb_wm_delete_window);
+}
+#endif //VK_USE_PLATFORM_XCB_KHR
+//-----------------------------------------------------------
+
+//----------------------------XLib---------------------------
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+static void app_create_xlib_window(struct app_instance *inst) {
+    inst->xlib_display = XOpenDisplay(NULL);
+    long visualMask = VisualScreenMask;
+    int numberOfVisuals;
+    XVisualInfo vInfoTemplate;
+    vInfoTemplate.screen = DefaultScreen(inst->xlib_display);
+    XVisualInfo *visualInfo = XGetVisualInfo(inst->xlib_display, visualMask,
+                                             &vInfoTemplate, &numberOfVisuals);
+    Colormap colormap = XCreateColormap(
+                inst->xlib_display, RootWindow(inst->xlib_display, vInfoTemplate.screen),
+                visualInfo->visual, AllocNone);
+
+    XSetWindowAttributes windowAttributes;
+    windowAttributes.colormap = colormap;
+    windowAttributes.background_pixel = 0xFFFFFFFF;
+    windowAttributes.border_pixel = 0;
+    windowAttributes.event_mask =
+            KeyPressMask | KeyReleaseMask | StructureNotifyMask | ExposureMask;
+
+    inst->xlib_window = XCreateWindow(
+                inst->xlib_display, RootWindow(inst->xlib_display, vInfoTemplate.screen), 0, 0,
+                inst->width, inst->height, 0, visualInfo->depth, InputOutput,
+                visualInfo->visual,
+                CWBackPixel | CWBorderPixel | CWEventMask | CWColormap, &windowAttributes);
+
+    XSelectInput(inst->xlib_display, inst->xlib_window, ExposureMask | KeyPressMask);
+    XMapWindow(inst->xlib_display, inst->xlib_window);
+    XFlush(inst->xlib_display);
+    inst->xlib_wm_delete_window = XInternAtom(inst->xlib_display, "WM_DELETE_WINDOW", False);
+}
+
+static void app_create_xlib_surface(struct app_instance *inst, struct app_gpu *gpu) {
+    VkResult U_ASSERT_ONLY err;
+    VkXlibSurfaceCreateInfoKHR createInfo;
+    createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext  = NULL;
+    createInfo.flags  = 0;
+    createInfo.dpy    = inst->xlib_display;
+    createInfo.window = inst->xlib_window;
+    err = vkCreateXlibSurfaceKHR(inst->instance, &createInfo, NULL, &inst->surface);    assert(!err);
+}
+
+static void app_destroy_xlib_window(struct app_instance *inst) {
+    XDestroyWindow(inst->xlib_display, inst->xlib_window);
+    XCloseDisplay(inst->xlib_display);
+}
+#endif //VK_USE_PLATFORM_XLIB_KHR
+//-----------------------------------------------------------
+
+static int app_dump_surface_formats(struct app_instance *inst, struct app_gpu *gpu){
+    // Get the list of VkFormat's that are supported:
+  VkResult U_ASSERT_ONLY err;
+  uint32_t formatCount=0;
+  err = inst->vkGetPhysicalDeviceSurfaceFormatsKHR(gpu->obj, inst->surface, &formatCount, NULL);               assert(!err);
+  VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
+  err = inst->vkGetPhysicalDeviceSurfaceFormatsKHR(gpu->obj, inst->surface, &formatCount, surfFormats);        assert(!err);
+  printf("Format count = %d\n",formatCount);
+  uint32_t i;
+  for(i=0;i<formatCount;i++) printf("\t%s\n",vk_format_string(surfFormats[i].format));
+  printf("\n");
+  fflush(stdout);
+  return formatCount;
+}
+
 static void app_dev_dump_format_props(const struct app_dev *dev, VkFormat fmt)
 {
     const VkFormatProperties *props = &dev->format_props[fmt];
@@ -995,11 +1303,15 @@ static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id) {
     const VkQueueFamilyProperties *props = &gpu->queue_props[id];
 
     printf("VkQueueFamilyProperties[%d]:\n", id);
-    printf("============================\n");
-    printf("\tqueueFlags         = %c%c%c\n",
-           (props->queueFlags & VK_QUEUE_GRAPHICS_BIT) ? 'G' : '.',
-           (props->queueFlags & VK_QUEUE_COMPUTE_BIT ) ? 'C' : '.',
-           (props->queueFlags & VK_QUEUE_TRANSFER_BIT) ? 'D' : '.');
+    printf("===========================\n");
+    char* sep=""; // separator character
+    printf("\tqueueFlags         = ");
+    if(props->queueFlags & VK_QUEUE_GRAPHICS_BIT)      { printf(  "GRAPHICS"    ); sep=" | "; }
+    if(props->queueFlags & VK_QUEUE_COMPUTE_BIT )      { printf("%sCOMPUTE" ,sep); sep=" | "; }
+    if(props->queueFlags & VK_QUEUE_TRANSFER_BIT)      { printf("%sTRANSFER",sep); sep=" | "; }
+    if(props->queueFlags & VK_QUEUE_SPARSE_BINDING_BIT){ printf("%sSPARSE"  ,sep);            }
+    printf("\n");
+
     printf("\tqueueCount         = %u\n", props->queueCount);
     printf("\ttimestampValidBits = %u\n", props->timestampValidBits);
     printf("\tminImageTransferGranularity = (%d, %d, %d)\n",
@@ -1022,7 +1334,7 @@ static void app_gpu_dump_memory_props(const struct app_gpu *gpu) {
 
         //Print each named flag, if it is set.
         VkFlags flags=props->memoryTypes[i].propertyFlags;
-#define PRINT_FLAG(FLAG) printf((flags & FLAG) ? "\t\t\t"#FLAG"\n" : "");
+#define PRINT_FLAG(FLAG) if(flags & FLAG) printf("\t\t\t"#FLAG"\n");
         PRINT_FLAG(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
         PRINT_FLAG(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
         PRINT_FLAG(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
@@ -1184,6 +1496,52 @@ int main(int argc, char **argv) {
         app_gpu_dump(&gpus[i]);
         printf("\n\n");
     }
+
+    printf("Presentable Surface formats:\n");
+    printf("============================\n");
+    inst.width =256;
+    inst.height=256;
+    int formatCount=0;
+
+    //--WIN32--
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    app_create_win32_window(&inst);
+    for (i = 0; i < gpu_count; i++) {
+        app_create_win32_surface(&inst, &gpus[i]);
+        printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
+        printf("Surface type : %s\n", VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+        formatCount+=app_dump_surface_formats(&inst, &gpus[i]);
+        app_destroy_surface(&inst);
+    }
+    app_destroy_win32_window(&inst);
+#endif
+    //--XCB--
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    app_create_xcb_window(&inst);
+    for (i = 0; i < gpu_count; i++){
+        app_create_xcb_surface(&inst,&gpus[i]);
+        printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
+        printf("Surface type : %s\n" ,VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+        formatCount+=app_dump_surface_formats(&inst,&gpus[i]);
+        app_destroy_surface(&inst);
+    }
+    app_destroy_xcb_window(&inst);
+#endif
+    //--XLIB--
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    app_create_xlib_window(&inst);
+    for (i = 0; i < gpu_count; i++){
+        app_create_xlib_surface(&inst,&gpus[i]);
+        printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
+        printf("Surface type : %s\n" ,VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+        formatCount+=app_dump_surface_formats(&inst,&gpus[i]);
+        app_destroy_surface(&inst);
+    }
+    app_destroy_xlib_window(&inst);
+#endif
+    //TODO: Android / Wayland / MIR
+    if (!formatCount) printf("None found\n");
+    //---------
 
     for (i = 0; i < gpu_count; i++)
         app_gpu_destroy(&gpus[i]);
