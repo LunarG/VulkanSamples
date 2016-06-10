@@ -4305,6 +4305,12 @@ static void updateTrackedCommandBuffers(layer_data *dev_data, VkQueue queue, VkQ
             fence_node->second.queues.insert(other_queue_data->first);
         }
     }
+    // TODO: Stealing the untracked CBs out of the signaling queue isn't really
+    // correct. A subsequent submission + wait, or a QWI on that queue, or
+    // another semaphore dependency to a third queue may /all/ provide
+    // suitable proof that the work we're stealing here has completed on the
+    // device, but we've lost that information by moving the tracking between
+    // queues.
     if (fence != VK_NULL_HANDLE) {
         auto fence_data = dev_data->fenceMap.find(fence);
         if (fence_data == dev_data->fenceMap.end()) {
