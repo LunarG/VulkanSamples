@@ -260,10 +260,15 @@ Function ${un}ConfigLayersAndVulkanDLL
 
     # Read the return value of the script and put it in $0, stripping trailing newline
     FileOpen $1 "$TEMP\ConfigLayersAndVulkanDLL.stat" r
-    FileRead $1 $2
-    FileClose $1
-    ${StrRep} $3 $2 "$\n" ""
-    ${StrRep} $0 $3 "$\r" ""
+    ${If} $1 != ""
+        FileRead $1 $2
+        FileClose $1
+        ${StrRep} $3 $2 "$\n" ""
+        ${StrRep} $0 $3 "$\r" ""
+    ${Else}
+       # error
+       StrCpy $0 -1
+    ${Endif}
 
     # Cleanup
     Delete "$TEMP\ConfigLayersAndVulkanDLL.stat"
