@@ -212,6 +212,7 @@ class FENCE_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
 
+    VkFence fence;
     VkSwapchainKHR swapchain; // Swapchain that this fence is submitted against or NULL
     bool firstTimeFlag;       // Fence was created in signaled state, avoid warnings for first use
     VkFenceCreateInfo createInfo;
@@ -241,6 +242,7 @@ class EVENT_NODE : public BASE_NODE {
 
 class QUEUE_NODE {
   public:
+    VkQueue queue;
     VkDevice device;
     std::vector<VkFence> lastFences;
 #if MTMERGE

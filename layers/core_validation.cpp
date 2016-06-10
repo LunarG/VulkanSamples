@@ -4841,6 +4841,7 @@ VKAPI_ATTR void VKAPI_CALL GetDeviceQueue(VkDevice device, uint32_t queueFamilyI
     auto result = dev_data->queues.emplace(*pQueue);
     if (result.second == true) {
         QUEUE_NODE *pQNode = &dev_data->queueMap[*pQueue];
+        pQNode->queue = *pQueue;
         pQNode->device = device;
     }
 }
@@ -5593,6 +5594,7 @@ CreateFence(VkDevice device, const VkFenceCreateInfo *pCreateInfo, const VkAlloc
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         auto &fence_node = dev_data->fenceMap[*pFence];
+        fence_node.fence = *pFence;
         fence_node.createInfo = *pCreateInfo;
         fence_node.needsSignaled = true;
         if (pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT) {
