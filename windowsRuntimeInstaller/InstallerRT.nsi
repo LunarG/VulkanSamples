@@ -248,6 +248,7 @@ Function ${un}ConfigLayersAndVulkanDLL
     # Exectute the script by piping it to powershell.exe. This gets around possible OS
     # security restrictions on running powershell scripts.
     nsExec::ExecToStack 'cmd /k type "$TEMP\VulkanRT\VulkanRT.ps1" | powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command -'
+    Delete "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL1.${un}log"
     Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL1.${un}log"
     pop $0
 
@@ -255,6 +256,7 @@ Function ${un}ConfigLayersAndVulkanDLL
     ${If} $0 != 0
         nsExec::ExecToStack 'cmd /k type "$TEMP\VulkanRT\VulkanRT.ps1" | "$WINDIR\System32\WindowsPowerShell\v1.0\powershell" -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command -'
         pop $0
+        Delete "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL2.${un}log"
         Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL2.${un}log"
     ${Endif}
 
@@ -273,6 +275,9 @@ Function ${un}ConfigLayersAndVulkanDLL
     # Cleanup
     Delete "$TEMP\ConfigLayersAndVulkanDLL.stat"
     Delete "$TEMP\VulkanRT\VulkanRT.ps1"
+
+    # Ignore errors. If something went wrong, the return value will indicate it.
+    ClearErrors
 
 FunctionEnd
 !macroend
@@ -294,6 +299,10 @@ Function ${un}DiagConfigLayersAndVulkanDLL
     nsExec::ExecToStack 'cmd /k dir "$WINDIR\System32\WindowsPowerShell\v1.0" >"$TEMP\VulkanRT\Diagnostic2.${un}log"'
     pop $1
     LogText "cmd2 rval is $1"
+    
+    # Ignore errors
+    ClearErrors
+
 FunctionEnd
 !macroend
 !insertmacro DiagConfigLayersAndVulkanDLL ""
@@ -506,7 +515,6 @@ Section
     ${If} $0 != 0
         SetOutPath "$INSTDIR"
         Call DiagConfigLayersAndVulkanDLL
-        ClearErrors
 
         # The Powershell script failed, and we don't know why.
         # Simply configure system to use our loader and vulkaninfo.
