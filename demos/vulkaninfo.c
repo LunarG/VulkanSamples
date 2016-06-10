@@ -647,7 +647,7 @@ static void app_create_instance(struct app_instance *inst) {
     for (i = 0; (i < inst->global_extension_count); i++) {
         const char *found_name = inst->global_extensions[i].extensionName;
         if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME, found_name))
-            ext_names[ext_count++] = VK_KHR_SURFACE_EXTENSION_NAME;
+            {ext_names[ext_count++] = VK_KHR_SURFACE_EXTENSION_NAME;}
     }
 
     if (ext_count)
@@ -657,19 +657,19 @@ static void app_create_instance(struct app_instance *inst) {
             const char *found_name = inst->global_extensions[i].extensionName;
 #ifdef VK_USE_PLATFORM_WIN32_KHR
             if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, found_name))
-                ext_names[ext_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+                {ext_names[ext_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;}
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
             if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME, found_name))
-                ext_names[ext_count++] = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
+                {ext_names[ext_count++] = VK_KHR_XCB_SURFACE_EXTENSION_NAME;}
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
             if (!strcmp(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, found_name))
-                ext_names[ext_count++] = VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
+                {ext_names[ext_count++] = VK_KHR_XLIB_SURFACE_EXTENSION_NAME;}
 #endif
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
             if (!strcmp(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME, found_name))
-                ext_names[ext_count++] = VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;
+                {ext_names[ext_count++] = VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;}
 #endif
         }
     // If we don't find the KHR_SURFACE extension and at least one other
