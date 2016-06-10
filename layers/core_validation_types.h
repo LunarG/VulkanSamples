@@ -480,6 +480,14 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     ~GLOBAL_CB_NODE();
 };
 
+struct CB_SUBMISSION {
+    CB_SUBMISSION(VkCommandBuffer cb, std::vector<VkSemaphore> const & semaphores)
+        : cb(cb), semaphores(semaphores) {}
+
+    VkCommandBuffer cb;
+    std::vector<VkSemaphore> semaphores;
+};
+
 // Fwd declarations of layer_data and helpers to look-up state from layer_data maps
 namespace core_validation {
 struct layer_data;
