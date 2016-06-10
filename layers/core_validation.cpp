@@ -318,6 +318,22 @@ VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *my_data, VkBufferVie
     return bv_it->second.get();
 }
 
+FENCE_NODE *getFenceNode(layer_data *dev_data, VkFence fence) {
+    auto it = dev_data->fenceMap.find(fence);
+    if (it == dev_data->fenceMap.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}
+
+QUEUE_NODE *getQueueNode(layer_data *dev_data, VkQueue queue) {
+    auto it = dev_data->queueMap.find(queue);
+    if (it == dev_data->queueMap.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}
+
 static VkDeviceMemory *get_object_mem_binding(layer_data *my_data, uint64_t handle, VkDebugReportObjectTypeEXT type) {
     switch (type) {
     case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
