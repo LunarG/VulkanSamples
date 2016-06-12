@@ -46,36 +46,33 @@ int main(int argc, char* argv[]) {
   bool result = false;
 
   const char name[] = "Test device";
-  VkJsonAllProperties device_props;
-  memcpy(device_props.properties.deviceName, name, sizeof(name));
-  device_props.properties.limits.maxImageDimension1D = 3;
-  device_props.properties.limits.maxSamplerLodBias = 3.5f;
-  device_props.properties.limits.bufferImageGranularity = 0x1ffffffffull;
-  device_props.properties.limits.maxViewportDimensions[0] = 1;
-  device_props.properties.limits.maxViewportDimensions[1] = 2;
+  VkJsonDevice device;
+  memcpy(device.properties.deviceName, name, sizeof(name));
+  device.properties.limits.maxImageDimension1D = 3;
+  device.properties.limits.maxSamplerLodBias = 3.5f;
+  device.properties.limits.bufferImageGranularity = 0x1ffffffffull;
+  device.properties.limits.maxViewportDimensions[0] = 1;
+  device.properties.limits.maxViewportDimensions[1] = 2;
   VkFormatProperties format_props = {
       VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT,
       VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT,
       VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT};
-  device_props.formats.insert(
-      std::make_pair(VK_FORMAT_R8_UNORM, format_props));
-  device_props.formats.insert(
-      std::make_pair(VK_FORMAT_R8G8_UNORM, format_props));
-  std::string json = VkJsonAllPropertiesToJson(device_props);
+  device.formats.insert(std::make_pair(VK_FORMAT_R8_UNORM, format_props));
+  device.formats.insert(std::make_pair(VK_FORMAT_R8G8_UNORM, format_props));
+  std::string json = VkJsonDeviceToJson(device);
   std::cout << json << std::endl;
 
-  VkJsonAllProperties device_props2;
-  result = VkJsonAllPropertiesFromJson(json, &device_props2, &errors);
+  VkJsonDevice device2;
+  result = VkJsonDeviceFromJson(json, &device2, &errors);
   EXPECT(result);
   if (!result)
     std::cout << "Error: " << errors << std::endl;
 
-  EXPECT(!memcmp(&device_props.properties,
-                 &device_props2.properties,
-                 sizeof(device_props.properties)));
-  for (auto& kv : device_props.formats) {
-    auto it = device_props2.formats.find(kv.first);
-    EXPECT(it != device_props2.formats.end());
+  EXPECT(!memcmp(&device.properties, &device2.properties,
+                 sizeof(device.properties)));
+  for (auto& kv : device.formats) {
+    auto it = device2.formats.find(kv.first);
+    EXPECT(it != device2.formats.end());
     EXPECT(!memcmp(&kv.second, &it->second, sizeof(kv.second)));
   }
 

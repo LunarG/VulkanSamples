@@ -23,19 +23,19 @@
 
 #include <utility>
 
-VkJsonAllProperties VkJsonGetAllProperties(VkPhysicalDevice physical_device) {
-  VkJsonAllProperties properties;
-  vkGetPhysicalDeviceProperties(physical_device, &properties.properties);
-  vkGetPhysicalDeviceFeatures(physical_device, &properties.features);
-  vkGetPhysicalDeviceMemoryProperties(physical_device, &properties.memory);
+VkJsonDevice VkJsonGetDevice(VkPhysicalDevice physical_device) {
+  VkJsonDevice device;
+  vkGetPhysicalDeviceProperties(physical_device, &device.properties);
+  vkGetPhysicalDeviceFeatures(physical_device, &device.features);
+  vkGetPhysicalDeviceMemoryProperties(physical_device, &device.memory);
 
   uint32_t queue_family_count = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count,
                                            nullptr);
   if (queue_family_count > 0) {
-    properties.queues.resize(queue_family_count);
+    device.queues.resize(queue_family_count);
     vkGetPhysicalDeviceQueueFamilyProperties(
-        physical_device, &queue_family_count, properties.queues.data());
+        physical_device, &queue_family_count, device.queues.data());
   }
 
   // Only device extensions.
@@ -44,18 +44,17 @@ VkJsonAllProperties VkJsonGetAllProperties(VkPhysicalDevice physical_device) {
   vkEnumerateDeviceExtensionProperties(physical_device, nullptr,
                                        &extension_count, nullptr);
   if (extension_count > 0) {
-    properties.extensions.resize(extension_count);
-    vkEnumerateDeviceExtensionProperties(physical_device, nullptr,
-                                         &extension_count,
-                                         properties.extensions.data());
+    device.extensions.resize(extension_count);
+    vkEnumerateDeviceExtensionProperties(
+        physical_device, nullptr, &extension_count, device.extensions.data());
   }
 
   uint32_t layer_count = 0;
   vkEnumerateDeviceLayerProperties(physical_device, &layer_count, nullptr);
   if (layer_count > 0) {
-    properties.layers.resize(layer_count);
+    device.layers.resize(layer_count);
     vkEnumerateDeviceLayerProperties(physical_device, &layer_count,
-                                     properties.layers.data());
+                                     device.layers.data());
   }
 
   VkFormatProperties format_properties = {};
@@ -67,8 +66,8 @@ VkJsonAllProperties VkJsonGetAllProperties(VkPhysicalDevice physical_device) {
     if (format_properties.linearTilingFeatures ||
         format_properties.optimalTilingFeatures ||
         format_properties.bufferFeatures) {
-      properties.formats.insert(std::make_pair(format, format_properties));
+      device.formats.insert(std::make_pair(format, format_properties));
     }
   }
-  return properties;
+  return device;
 }
