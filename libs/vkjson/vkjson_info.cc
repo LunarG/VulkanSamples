@@ -31,6 +31,7 @@
 const uint32_t unsignedNegOne = (uint32_t)(-1);
 
 struct Options {
+  bool instance = false;
   uint32_t device_index = unsignedNegOne;
   std::string device_name;
   std::string output_file;
@@ -39,7 +40,9 @@ struct Options {
 bool ParseOptions(int argc, char* argv[], Options* options) {
   for (int i = 1; i < argc; ++i) {
     std::string arg(argv[i]);
-    if (arg == "--first" || arg == "-f") {
+    if (arg == "--instance" || arg == "-i") {
+      options->instance = true;
+    } else if (arg == "--first" || arg == "-f") {
       options->device_index = 0;
     } else {
       ++i;
@@ -65,16 +68,27 @@ bool ParseOptions(int argc, char* argv[], Options* options) {
       }
     }
   }
+  if (options->instance && (options->device_index != unsignedNegOne ||
+                            !options->device_name.empty())) {
+    std::cerr << "Specifying a specific device is incompatible with dumping "
+                 "the whole instance." << std::endl;
+    return false;
+  }
   if (options->device_index != unsignedNegOne && !options->device_name.empty()) {
     std::cerr << "Must specify only one of device index and device name."
               << std::endl;
     return false;
   }
-  if (!options->output_file.empty() && options->device_index == unsignedNegOne &&
-      options->device_name.empty()) {
-    std::cerr << "Must specify device index or device name when specifying "
-                 "output file"
+  if (options->instance && options->output_file.empty()) {
+    std::cerr << "Must specify an output file when dumping the whole instance."
               << std::endl;
+    return false;
+  }
+  if (!options->output_file.empty() && !options->instance &&
+      options->device_index == unsignedNegOne && options->device_name.empty()) {
+    std::cerr << "Must specify instance, device index, or device name when "
+                 "specifying "
+                 "output file." << std::endl;
     return false;
   }
   return true;
@@ -123,13 +137,17 @@ bool Dump(const VkJsonInstance& instance, const Options& options) {
     }
   }
 
-  std::string json = VkJsonDeviceToJson(*out_device) + '\n';
+  std::string json = out_device ? VkJsonDeviceToJson(*out_device)
+                                : VkJsonInstanceToJson(instance);
   fwrite(json.data(), 1, json.size(), file);
+  fputc('\n', file);
 
   if (output_file != "-") {
     fclose(file);
-    std::cout << "Wrote file " << output_file << " for device "
-              << out_device->properties.deviceName << "." << std::endl;
+    std::cout << "Wrote file " << output_file;
+    if (out_device)
+      std::cout << " for device " << out_device->properties.deviceName;
+    std::cout << "." << std::endl;
   }
   return true;
 }
@@ -140,7 +158,8 @@ int main(int argc, char* argv[]) {
     return 1;
 
   VkJsonInstance instance = VkJsonGetInstance();
-  if (options.device_index != unsignedNegOne || !options.device_name.empty()) {
+  if (options.instance || options.device_index != unsignedNegOne ||
+      !options.device_name.empty()) {
     Dump(instance, options);
   } else {
     for (uint32_t i = 0, n = instance.devices.size(); i < n; i++) {

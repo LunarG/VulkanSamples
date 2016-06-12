@@ -45,8 +45,11 @@ int main(int argc, char* argv[]) {
   std::string errors;
   bool result = false;
 
+  VkJsonInstance instance;
+  instance.devices.resize(1);
+  VkJsonDevice& device = instance.devices[0];
+
   const char name[] = "Test device";
-  VkJsonDevice device;
   memcpy(device.properties.deviceName, name, sizeof(name));
   device.properties.limits.maxImageDimension1D = 3;
   device.properties.limits.maxSamplerLodBias = 3.5f;
@@ -59,14 +62,16 @@ int main(int argc, char* argv[]) {
       VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT};
   device.formats.insert(std::make_pair(VK_FORMAT_R8_UNORM, format_props));
   device.formats.insert(std::make_pair(VK_FORMAT_R8G8_UNORM, format_props));
-  std::string json = VkJsonDeviceToJson(device);
+
+  std::string json = VkJsonInstanceToJson(instance);
   std::cout << json << std::endl;
 
-  VkJsonDevice device2;
-  result = VkJsonDeviceFromJson(json, &device2, &errors);
+  VkJsonInstance instance2;
+  result = VkJsonInstanceFromJson(json, &instance2, &errors);
   EXPECT(result);
   if (!result)
     std::cout << "Error: " << errors << std::endl;
+  const VkJsonDevice& device2 = instance2.devices.at(0);
 
   EXPECT(!memcmp(&device.properties, &device2.properties,
                  sizeof(device.properties)));

@@ -53,6 +53,10 @@ struct VkJsonInstance {
 };
 
 VkJsonInstance VkJsonGetInstance();
+std::string VkJsonInstanceToJson(const VkJsonInstance& instance);
+bool VkJsonInstanceFromJson(const std::string& json,
+                            VkJsonInstance* instance,
+                            std::string* errors);
 
 VkJsonDevice VkJsonGetDevice(VkPhysicalDevice device);
 std::string VkJsonDeviceToJson(const VkJsonDevice& device);
