@@ -337,6 +337,10 @@ inline bool Iterate(Visitor* visitor, VkJsonDevice* device) {
          visitor->Visit("formats", &device->formats);
 }
 
+template <typename Visitor>
+inline bool Iterate(Visitor* visitor, VkJsonInstance* instance) {
+  return visitor->Visit("devices", &instance->devices);
+}
 
 template <typename T>
 using EnableForArithmetic =
@@ -661,6 +665,16 @@ template <typename T> bool VkTypeFromJson(const std::string& json,
 }
 
 }  // anonymous namespace
+
+std::string VkJsonInstanceToJson(const VkJsonInstance& instance) {
+  return VkTypeToJson(instance);
+}
+
+bool VkJsonInstanceFromJson(const std::string& json,
+                            VkJsonInstance* instance,
+                            std::string* errors) {
+  return VkTypeFromJson(json, instance, errors);
+}
 
 std::string VkJsonDeviceToJson(const VkJsonDevice& device) {
   return VkTypeToJson(device);
