@@ -327,15 +327,14 @@ inline bool Iterate(Visitor* visitor, VkFormatProperties* properties) {
 }
 
 template <typename Visitor>
-inline bool Iterate(Visitor* visitor, VkJsonAllProperties* properties) {
-  return
-    visitor->Visit("properties", &properties->properties) &&
-    visitor->Visit("features", &properties->features) &&
-    visitor->Visit("memory", &properties->memory) &&
-    visitor->Visit("queues", &properties->queues) &&
-    visitor->Visit("extensions", &properties->extensions) &&
-    visitor->Visit("layers", &properties->layers) &&
-    visitor->Visit("formats", &properties->formats);
+inline bool Iterate(Visitor* visitor, VkJsonDevice* device) {
+  return visitor->Visit("properties", &device->properties) &&
+         visitor->Visit("features", &device->features) &&
+         visitor->Visit("memory", &device->memory) &&
+         visitor->Visit("queues", &device->queues) &&
+         visitor->Visit("extensions", &device->extensions) &&
+         visitor->Visit("layers", &device->layers) &&
+         visitor->Visit("formats", &device->formats);
 }
 
 
@@ -663,15 +662,14 @@ template <typename T> bool VkTypeFromJson(const std::string& json,
 
 }  // anonymous namespace
 
-std::string VkJsonAllPropertiesToJson(
-    const VkJsonAllProperties& properties) {
-  return VkTypeToJson(properties);
+std::string VkJsonDeviceToJson(const VkJsonDevice& device) {
+  return VkTypeToJson(device);
 }
 
-bool VkJsonAllPropertiesFromJson(
-    const std::string& json, VkJsonAllProperties* properties,
-    std::string* errors) {
-  return VkTypeFromJson(json, properties, errors);
+bool VkJsonDeviceFromJson(const std::string& json,
+                          VkJsonDevice* device,
+                          std::string* errors) {
+  return VkTypeFromJson(json, device, errors);
 };
 
 std::string VkJsonImageFormatPropertiesToJson(

@@ -33,8 +33,8 @@
 #undef max
 #endif
 
-struct VkJsonAllProperties {
-  VkJsonAllProperties() {
+struct VkJsonDevice {
+  VkJsonDevice() {
           memset(&properties, 0, sizeof(VkPhysicalDeviceProperties));
           memset(&features, 0, sizeof(VkPhysicalDeviceFeatures));
           memset(&memory, 0, sizeof(VkPhysicalDeviceMemoryProperties));
@@ -48,18 +48,32 @@ struct VkJsonAllProperties {
   std::map<VkFormat, VkFormatProperties> formats;
 };
 
-VkJsonAllProperties VkJsonGetAllProperties(VkPhysicalDevice physicalDevice);
-
-std::string VkJsonAllPropertiesToJson(
-    const VkJsonAllProperties& properties);
-bool VkJsonAllPropertiesFromJson(
-    const std::string& json, VkJsonAllProperties* properties,
-    std::string* errors);
+VkJsonDevice VkJsonGetDevice(VkPhysicalDevice device);
+std::string VkJsonDeviceToJson(const VkJsonDevice& device);
+bool VkJsonDeviceFromJson(const std::string& json,
+                          VkJsonDevice* device,
+                          std::string* errors);
 
 std::string VkJsonImageFormatPropertiesToJson(
     const VkImageFormatProperties& properties);
 bool VkJsonImageFormatPropertiesFromJson(const std::string& json,
                                          VkImageFormatProperties* properties,
                                          std::string* errors);
+
+// Backward-compatibility aliases
+typedef VkJsonDevice VkJsonAllProperties;
+inline VkJsonAllProperties VkJsonGetAllProperties(
+    VkPhysicalDevice physicalDevice) {
+  return VkJsonGetDevice(physicalDevice);
+}
+inline std::string VkJsonAllPropertiesToJson(
+    const VkJsonAllProperties& properties) {
+  return VkJsonDeviceToJson(properties);
+}
+inline bool VkJsonAllPropertiesFromJson(const std::string& json,
+                                        VkJsonAllProperties* properties,
+                                        std::string* errors) {
+  return VkJsonDeviceFromJson(json, properties, errors);
+}
 
 #endif  // VKJSON_H_

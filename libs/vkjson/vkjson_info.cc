@@ -79,8 +79,8 @@ bool ParseOptions(int argc, char* argv[], Options* options) {
   return true;
 }
 
-bool DumpProperties(const VkJsonAllProperties& props, const Options& options) {
-  std::string device_name(props.properties.deviceName);
+bool DumpProperties(const VkJsonDevice& device, const Options& options) {
+  std::string device_name(device.properties.deviceName);
   std::string output_file = options.output_file;
   if (output_file.empty())
     output_file = device_name + ".json";
@@ -95,7 +95,7 @@ bool DumpProperties(const VkJsonAllProperties& props, const Options& options) {
     }
   }
 
-  std::string json = VkJsonAllPropertiesToJson(props) + '\n';
+  std::string json = VkJsonDeviceToJson(device) + '\n';
   fwrite(json.data(), 1, json.size(), file);
 
   if (output_file != "-") {
@@ -163,19 +163,19 @@ int main(int argc, char* argv[]) {
                 << std::endl;
       return 1;
     }
-    auto props = VkJsonGetAllProperties(physical_devices[options.device_index]);
-    if (!DumpProperties(props, options))
+    auto device = VkJsonGetDevice(physical_devices[options.device_index]);
+    if (!DumpProperties(device, options))
       return 1;
     return 0;
   }
 
   bool found = false;
   for (auto physical_device : physical_devices) {
-    auto props = VkJsonGetAllProperties(physical_device);
+    auto device = VkJsonGetDevice(physical_device);
     if (!options.device_name.empty() &&
-        options.device_name != props.properties.deviceName)
+        options.device_name != device.properties.deviceName)
       continue;
-    if (!DumpProperties(props, options))
+    if (!DumpProperties(device, options))
       return 1;
     found = true;
   }
