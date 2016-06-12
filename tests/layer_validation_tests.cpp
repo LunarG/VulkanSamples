@@ -4165,17 +4165,10 @@ TEST_F(VkLayerTest, DynamicStencilRefNotBound) {
 }
 
 TEST_F(VkLayerTest, CommandBufferTwoSubmits) {
-    vk_testing::Fence testFence;
-
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "was begun w/ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set, but has "
         "been submitted");
-
-    VkFenceCreateInfo fenceInfo = {};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.pNext = NULL;
-    fenceInfo.flags = 0;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
@@ -4187,8 +4180,6 @@ TEST_F(VkLayerTest, CommandBufferTwoSubmits) {
     m_commandBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color,
                                      m_stencil_clear_color, NULL);
     EndCommandBuffer();
-
-    testFence.init(*m_device, fenceInfo);
 
     // Bypass framework since it does the waits automatically
     VkResult err = VK_SUCCESS;
@@ -4203,12 +4194,12 @@ TEST_F(VkLayerTest, CommandBufferTwoSubmits) {
     submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = NULL;
 
-    err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, testFence.handle());
+    err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     ASSERT_VK_SUCCESS(err);
 
     // Cause validation error by re-submitting cmd buffer that should only be
     // submitted once
-    err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, testFence.handle());
+    err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
 
     m_errorMonitor->VerifyFound();
 }

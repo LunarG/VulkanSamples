@@ -4535,6 +4535,10 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
     auto pFence = getFenceNode(dev_data, fence);
     skipCall |= ValidateFenceForSubmit(dev_data, pFence);
 
+    if (skipCall) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+
     // TODO : Review these old print functions and clean up as appropriate
     print_mem_list(dev_data);
     printCBList(dev_data);
