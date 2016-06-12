@@ -23,6 +23,24 @@
 
 #include <utility>
 
+namespace {
+bool EnumerateExtensions(const char* layer_name,
+                         std::vector<VkExtensionProperties>* extensions) {
+  VkResult result;
+  uint32_t count = 0;
+  result = vkEnumerateInstanceExtensionProperties(layer_name, &count, nullptr);
+  if (result != VK_SUCCESS)
+    return false;
+  extensions->resize(count);
+  result = vkEnumerateInstanceExtensionProperties(layer_name, &count,
+                                                  extensions->data());
+  if (result != VK_SUCCESS)
+    return false;
+  return true;
+}
+
+}  // anonymous namespace
+
 VkJsonDevice VkJsonGetDevice(VkPhysicalDevice physical_device) {
   VkJsonDevice device;
   vkGetPhysicalDeviceProperties(physical_device, &device.properties);
@@ -74,7 +92,34 @@ VkJsonDevice VkJsonGetDevice(VkPhysicalDevice physical_device) {
 
 VkJsonInstance VkJsonGetInstance() {
   VkJsonInstance instance;
+  VkResult result;
   uint32_t count;
+
+  count = 0;
+  result = vkEnumerateInstanceLayerProperties(&count, nullptr);
+  if (result != VK_SUCCESS)
+    return VkJsonInstance();
+  if (count > 0) {
+    std::vector<VkLayerProperties> layers(count);
+    result = vkEnumerateInstanceLayerProperties(&count, layers.data());
+    if (result != VK_SUCCESS)
+      return VkJsonInstance();
+    instance.layers.reserve(count);
+    for (auto& layer : layers) {
+      instance.layers.push_back(VkJsonLayer{layer, std::vector<VkExtensionProperties>()});
+      if (!EnumerateExtensions(layer.layerName,
+                               &instance.layers.back().extensions))
+        return VkJsonInstance();
+    }
+  }
+
+  if (!EnumerateExtensions(nullptr, &instance.extensions))
+    return VkJsonInstance();
+
+  std::vector<const char*> layer_names;
+  layer_names.reserve(instance.layers.size());
+  for (auto& layer : instance.layers)
+    layer_names.push_back(layer.properties.layerName);
 
   const VkApplicationInfo app_info = {VK_STRUCTURE_TYPE_APPLICATION_INFO,
                                       nullptr,
@@ -83,16 +128,17 @@ VkJsonInstance VkJsonGetInstance() {
                                       "",
                                       0,
                                       VK_API_VERSION_1_0};
-  VkInstanceCreateInfo instance_info = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-                                        nullptr,
-                                        0,
-                                        &app_info,
-                                        0,
-                                        nullptr,
-                                        0,
-                                        nullptr};
+  VkInstanceCreateInfo instance_info = {
+      VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+      nullptr,
+      0,
+      &app_info,
+      static_cast<uint32_t>(layer_names.size()),
+      layer_names.data(),
+      0,
+      nullptr};
   VkInstance vkinstance;
-  VkResult result = vkCreateInstance(&instance_info, nullptr, &vkinstance);
+  result = vkCreateInstance(&instance_info, nullptr, &vkinstance);
   if (result != VK_SUCCESS)
     return VkJsonInstance();
 

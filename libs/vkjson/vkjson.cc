@@ -327,6 +327,12 @@ inline bool Iterate(Visitor* visitor, VkFormatProperties* properties) {
 }
 
 template <typename Visitor>
+inline bool Iterate(Visitor* visitor, VkJsonLayer* layer) {
+  return visitor->Visit("properties", &layer->properties) &&
+         visitor->Visit("extensions", &layer->extensions);
+}
+
+template <typename Visitor>
 inline bool Iterate(Visitor* visitor, VkJsonDevice* device) {
   return visitor->Visit("properties", &device->properties) &&
          visitor->Visit("features", &device->features) &&
@@ -339,7 +345,9 @@ inline bool Iterate(Visitor* visitor, VkJsonDevice* device) {
 
 template <typename Visitor>
 inline bool Iterate(Visitor* visitor, VkJsonInstance* instance) {
-  return visitor->Visit("devices", &instance->devices);
+  return visitor->Visit("layers", &instance->layers) &&
+         visitor->Visit("extensions", &instance->extensions) &&
+         visitor->Visit("devices", &instance->devices);
 }
 
 template <typename T>
