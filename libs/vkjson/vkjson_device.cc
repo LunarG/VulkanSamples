@@ -71,3 +71,48 @@ VkJsonDevice VkJsonGetDevice(VkPhysicalDevice physical_device) {
   }
   return device;
 }
+
+VkJsonInstance VkJsonGetInstance() {
+  VkJsonInstance instance;
+  uint32_t count;
+
+  const VkApplicationInfo app_info = {VK_STRUCTURE_TYPE_APPLICATION_INFO,
+                                      nullptr,
+                                      "vkjson_info",
+                                      1,
+                                      "",
+                                      0,
+                                      VK_API_VERSION_1_0};
+  VkInstanceCreateInfo instance_info = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+                                        nullptr,
+                                        0,
+                                        &app_info,
+                                        0,
+                                        nullptr,
+                                        0,
+                                        nullptr};
+  VkInstance vkinstance;
+  VkResult result = vkCreateInstance(&instance_info, nullptr, &vkinstance);
+  if (result != VK_SUCCESS)
+    return VkJsonInstance();
+
+  count = 0;
+  result = vkEnumeratePhysicalDevices(vkinstance, &count, nullptr);
+  if (result != VK_SUCCESS) {
+    vkDestroyInstance(vkinstance, nullptr);
+    return VkJsonInstance();
+  }
+  std::vector<VkPhysicalDevice> devices(count, VK_NULL_HANDLE);
+  result = vkEnumeratePhysicalDevices(vkinstance, &count, devices.data());
+  if (result != VK_SUCCESS) {
+    vkDestroyInstance(vkinstance, nullptr);
+    return VkJsonInstance();
+  }
+
+  instance.devices.reserve(devices.size());
+  for (auto device : devices)
+    instance.devices.emplace_back(VkJsonGetDevice(device));
+
+  vkDestroyInstance(vkinstance, nullptr);
+  return instance;
+}

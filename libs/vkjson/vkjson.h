@@ -48,6 +48,12 @@ struct VkJsonDevice {
   std::map<VkFormat, VkFormatProperties> formats;
 };
 
+struct VkJsonInstance {
+  std::vector<VkJsonDevice> devices;
+};
+
+VkJsonInstance VkJsonGetInstance();
+
 VkJsonDevice VkJsonGetDevice(VkPhysicalDevice device);
 std::string VkJsonDeviceToJson(const VkJsonDevice& device);
 bool VkJsonDeviceFromJson(const std::string& json,

@@ -21,6 +21,7 @@
 #define VK_PROTOTYPES
 #include "vkjson.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -79,11 +80,38 @@ bool ParseOptions(int argc, char* argv[], Options* options) {
   return true;
 }
 
-bool DumpProperties(const VkJsonDevice& device, const Options& options) {
-  std::string device_name(device.properties.deviceName);
-  std::string output_file = options.output_file;
-  if (output_file.empty())
-    output_file = device_name + ".json";
+bool Dump(const VkJsonInstance& instance, const Options& options) {
+  const VkJsonDevice* out_device = nullptr;
+  if (options.device_index != unsignedNegOne) {
+    if (static_cast<uint32_t>(options.device_index) >=
+        instance.devices.size()) {
+      std::cerr << "Error: device " << options.device_index
+                << " requested but only " << instance.devices.size()
+                << " devices found." << std::endl;
+      return false;
+    }
+    out_device = &instance.devices[options.device_index];
+  } else if (!options.device_name.empty()) {
+    for (const auto& device : instance.devices) {
+      if (device.properties.deviceName == options.device_name) {
+        out_device = &device;
+      }
+    }
+    if (!out_device) {
+      std::cerr << "Error: device '" << options.device_name
+                << "' requested but not found." << std::endl;
+      return false;
+    }
+  }
+
+  std::string output_file;
+  if (options.output_file.empty()) {
+    assert(out_device);
+    output_file.assign(out_device->properties.deviceName);
+    output_file.append(".json");
+  } else {
+    output_file = options.output_file;
+  }
   FILE* file = nullptr;
   if (output_file == "-") {
     file = stdout;
@@ -95,13 +123,13 @@ bool DumpProperties(const VkJsonDevice& device, const Options& options) {
     }
   }
 
-  std::string json = VkJsonDeviceToJson(device) + '\n';
+  std::string json = VkJsonDeviceToJson(*out_device) + '\n';
   fwrite(json.data(), 1, json.size(), file);
 
   if (output_file != "-") {
     fclose(file);
-    std::cout << "Wrote file " << output_file << " for device " << device_name
-              << "." << std::endl;
+    std::cout << "Wrote file " << output_file << " for device "
+              << out_device->properties.deviceName << "." << std::endl;
   }
   return true;
 }
@@ -111,79 +139,15 @@ int main(int argc, char* argv[]) {
   if (!ParseOptions(argc, argv, &options))
     return 1;
 
-  const VkApplicationInfo app_info = {VK_STRUCTURE_TYPE_APPLICATION_INFO,
-                                      nullptr,
-                                      "vkjson_info",
-                                      1,
-                                      "",
-                                      0,
-                                      VK_API_VERSION_1_0};
-  VkInstanceCreateInfo instance_info = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-                                        nullptr,
-                                        0,
-                                        &app_info,
-                                        0,
-                                        nullptr,
-                                        0,
-                                        nullptr};
-  VkInstance instance;
-  VkResult result = vkCreateInstance(&instance_info, nullptr, &instance);
-  if (result != VK_SUCCESS) {
-    std::cerr << "Error: vkCreateInstance failed with error: " << result
-              << "." << std::endl;
-    return 1;
-  }
-
-  uint32_t device_count = 0;
-  result = vkEnumeratePhysicalDevices(instance, &device_count, nullptr);
-  if (result != VK_SUCCESS) {
-    std::cerr << "Error: vkEnumeratePhysicalDevices failed with error "
-              << result << "." << std::endl;
-    return 1;
-  }
-  if (device_count == 0) {
-    std::cerr << "Error: no Vulkan device found.";
-    return 1;
-  }
-
-  std::vector<VkPhysicalDevice> physical_devices(device_count,
-                                                 VkPhysicalDevice());
-  result = vkEnumeratePhysicalDevices(instance, &device_count,
-                                      physical_devices.data());
-  if (result != VK_SUCCESS) {
-    std::cerr << "Error: vkEnumeratePhysicalDevices failed with error "
-              << result << std::endl;
-    return 1;
-  }
-
-  if (options.device_index != unsignedNegOne) {
-    if (static_cast<uint32_t>(options.device_index) >= device_count) {
-      std::cerr << "Error: device " << options.device_index
-                << " requested but only " << device_count << " found."
-                << std::endl;
-      return 1;
+  VkJsonInstance instance = VkJsonGetInstance();
+  if (options.device_index != unsignedNegOne || !options.device_name.empty()) {
+    Dump(instance, options);
+  } else {
+    for (uint32_t i = 0, n = instance.devices.size(); i < n; i++) {
+      options.device_index = i;
+      Dump(instance, options);
     }
-    auto device = VkJsonGetDevice(physical_devices[options.device_index]);
-    if (!DumpProperties(device, options))
-      return 1;
-    return 0;
   }
 
-  bool found = false;
-  for (auto physical_device : physical_devices) {
-    auto device = VkJsonGetDevice(physical_device);
-    if (!options.device_name.empty() &&
-        options.device_name != device.properties.deviceName)
-      continue;
-    if (!DumpProperties(device, options))
-      return 1;
-    found = true;
-  }
-
-  if (!found) {
-    std::cerr << "Error: device " << options.device_name << " not found."
-              << std::endl;
-    return 1;
-  }
   return 0;
 }
