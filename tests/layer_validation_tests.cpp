@@ -1421,6 +1421,7 @@ TEST_F(VkLayerTest, InvalidMemoryMapping) {
                       (void **)&pData);
     ASSERT_VK_SUCCESS(err);
     VkMappedMemoryRange mmr = {};
+    mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     mmr.memory = mem;
     mmr.offset = 15; // Error b/c offset less than offset of mapped mem
     m_errorMonitor->SetDesiredFailureMsg(
