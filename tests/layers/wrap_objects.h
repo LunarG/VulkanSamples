@@ -23,22 +23,6 @@
 #include <unordered_map>
 #include "vulkan/vk_layer.h"
 
-
-struct devExts {
-    bool wsi_swapchain_enabled;
-};
-struct instExts {
-    bool wsi_surface_enabled;
-    bool wsi_surf_xcb_enabled;
-    bool wsi_surf_xlib_enabled;
-    bool wsi_surf_mir_enabled;
-    bool wsi_surf_wayland_enabled;
-    bool wsi_surf_win32_enabled;
-    bool debug_report_enabled;
-};
-//TODO remove this maps and use the wrapped object Vkdevice object instead
-static std::unordered_map<void *, struct devExts> deviceExtMap;
-
 struct wrapped_phys_dev_obj {
     VkLayerInstanceDispatchTable *loader_disp;
     struct wrapped_inst_obj *inst;  // parent instance object
@@ -47,7 +31,6 @@ struct wrapped_phys_dev_obj {
 
 struct wrapped_inst_obj {
     VkLayerInstanceDispatchTable *loader_disp;
-    instExts exts;
     VkLayerInstanceDispatchTable layer_disp;    //this layer's dispatch table
     PFN_vkSetInstanceLoaderData pfn_inst_init;
     struct wrapped_phys_dev_obj *ptr_phys_devs; // any enumerated phys devs
@@ -56,7 +39,6 @@ struct wrapped_inst_obj {
 
 struct wrapped_dev_obj {
     VkLayerDispatchTable *disp;
-    devExts exts; //TODO use this
     VkLayerInstanceDispatchTable *layer_disp;  // TODO use this
     PFN_vkSetDeviceLoaderData pfn_dev_init;  //TODO use this
     void *obj;
@@ -81,12 +63,6 @@ static void create_device_register_extensions(const VkDeviceCreateInfo *pCreateI
     pDisp->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)gpa(device, "vkGetSwapchainImagesKHR");
     pDisp->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR)gpa(device, "vkAcquireNextImageKHR");
     pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR)gpa(device, "vkQueuePresentKHR");
-
-    deviceExtMap[pDisp].wsi_swapchain_enabled = false;
-    for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
-            deviceExtMap[pDisp].wsi_swapchain_enabled = true;
-    }
 }
 
 static void create_instance_register_extensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance, struct wrapped_inst_obj *inst) {
@@ -143,43 +119,4 @@ static void create_instance_register_extensions(const VkInstanceCreateInfo *pCre
         (PFN_vkDestroyDebugReportCallbackEXT)gpa(instance, "vkDestroyDebugReportCallbackEXT");
     pDisp->DebugReportMessageEXT =
         (PFN_vkDebugReportMessageEXT)gpa(instance, "vkDebugReportMessageEXT");
-
-
-    inst->exts.wsi_surface_enabled = false;
-    inst->exts.wsi_surf_xcb_enabled = false;
-    inst->exts.wsi_surf_xlib_enabled = false;
-    inst->exts.wsi_surf_mir_enabled = false;
-    inst->exts.wsi_surf_wayland_enabled = false;
-    inst->exts.wsi_surf_win32_enabled = false;
-    inst->exts.debug_report_enabled = false;
-    for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0)
-            inst->exts.wsi_surface_enabled = true;
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_DEBUG_REPORT_EXTENSION_NAME) == 0)
-            inst->exts.debug_report_enabled = true;
-#ifdef VK_USE_PLATFORM_XCB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0)
-            inst->exts.wsi_surf_xcb_enabled = true;
-#endif  // VK_USE_PLATFORM_XCB_KHR
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0)
-            inst->exts.wsi_surf_xlib_enabled = true;
-
-#endif  // VK_USE_PLATFORM_XLIB_KHR
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0)
-            inst->exts.wsi_surf_wayland_enabled = true;
-
-#endif  // VK_USE_PLATFORM_WAYLAND_KHR
-#ifdef VK_USE_PLATFORM_MIR_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0)
-            inst->exts.wsi_surf_mir_enabled = true;
-
-#endif  // VK_USE_PLATFORM_MIR_KHR
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0)
-            inst->exts.wsi_surf_win32_enabled = true;
-#endif  // VK_USE_PLATFORM_WIN32_KHR
-
-    }
 }

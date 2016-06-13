@@ -202,7 +202,6 @@ VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, const VkAllocationCa
     dispatch_key key = get_dispatch_key(device);
     VkLayerDispatchTable *pDisp  =  device_dispatch_table(device);
     pDisp->DestroyDevice(device, pAllocator);
-    deviceExtMap.erase(pDisp);
     destroy_device_dispatch_table(key);
 }
 
