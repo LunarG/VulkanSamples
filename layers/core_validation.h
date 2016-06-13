@@ -245,11 +245,6 @@ class QUEUE_NODE {
     VkQueue queue;
     VkDevice device;
     std::vector<VkFence> lastFences;
-#if MTMERGE
-    // MTMTODO : merge cmd_buffer data structs here
-    std::list<VkCommandBuffer> pQueueCommandBuffers;
-    std::list<VkDeviceMemory> pMemRefList;
-#endif
     std::vector<CB_SUBMISSION> untrackedSubmissions;
     std::unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
     std::unordered_map<QueryObject, bool> queryToStateMap; // 0 is unavailable, 1 is available
