@@ -738,42 +738,42 @@ See the section [Layer Library Manifest File](#LayerLibraryManifestFile) for mor
 
 ```
 {
-"file_format_version" : "1.0.0",
-"layer": {
-    "name": "VK_LAYER_LUNARG_overlay",
-    "type": "INSTANCE",
-    "library_path": "vkOverlayLayer.dll"
-    "api_version" : "1.0.5",
-    "implementation_version" : "2",
-    "description" : "LunarG HUD layer",
-    "functions": {
-        "vkGetInstanceProcAddr": "OverlayLayer_GetInstanceProcAddr",
-        "vkGetDeviceProcAddr": "OverlayLayer_GetDeviceProcAddr"
-    },
-    "instance_extensions": [
-        {
-            "name": "VK_EXT_debug_report",
-            "spec_version": "1"
-        },
-        {
-            "name": "VK_VENDOR_ext_x",
-            "spec_version": "3"
-         }
-    ],
-    "device_extensions": [
-        {
-            "name": "VK_EXT_debug_marker",
-            "spec_version": "1",
-            "entrypoints": ["vkCmdDbgMarkerBegin", "vkCmdDbgMarkerEnd"]
-        }
-    ],
-    "enable_environment": {
-        "ENABLE_LAYER_OVERLAY_1": "1"
-    }
-    "disable_environment": {
-        "DISABLE_LAYER_OVERLAY_1": ""
-    }
-}
+   "file_format_version" : "1.0.0",
+   "layer": {
+       "name": "VK_LAYER_LUNARG_overlay",
+       "type": "INSTANCE",
+       "library_path": "vkOverlayLayer.dll"
+       "api_version" : "1.0.5",
+       "implementation_version" : "2",
+       "description" : "LunarG HUD layer",
+       "functions": {
+           "vkGetInstanceProcAddr": "OverlayLayer_GetInstanceProcAddr",
+           "vkGetDeviceProcAddr": "OverlayLayer_GetDeviceProcAddr"
+       },
+       "instance_extensions": [
+           {
+               "name": "VK_EXT_debug_report",
+               "spec_version": "1"
+           },
+           {
+               "name": "VK_VENDOR_ext_x",
+               "spec_version": "3"
+            }
+       ],
+       "device_extensions": [
+           {
+               "name": "VK_EXT_debug_marker",
+               "spec_version": "1",
+               "entrypoints": ["vkCmdDbgMarkerBegin", "vkCmdDbgMarkerEnd"]
+           }
+       ],
+       "enable_environment": {
+           "ENABLE_LAYER_OVERLAY_1": "1"
+       }
+       "disable_environment": {
+           "DISABLE_LAYER_OVERLAY_1": ""
+       }
+   }
 }
 ```
 
@@ -785,6 +785,34 @@ provides a layer that is in the same folder hierarchy as the rest of the
 application files). If the layer is specified via a filename, the shared
 library lives in the system's DLL search path (e.g. in the
 "C:\\Windows\\System32" folder).
+
+If defining multiple layers in a single JSON file prior to "file\_format\_version"
+1.0.1, you would simply define multiple "layer" objects.  However, this is not
+valid JSON syntax.  Instead, you should now define "file\_format\_version"
+1.0.1 (or newer) and use the new "layers" array object as seen in the
+following example:
+
+```
+{
+   "file_format_version" : "1.0.1",
+   "layers": [
+      {
+           "name": "VK_LAYER_layer_name1",
+           "type": "INSTANCE",
+           ...
+      },
+      {
+           "name": "VK_LAYER_layer_name2",
+           "type": "INSTANCE",
+           ...
+      }
+   ]
+}
+```
+
+You could use the "layers" array object to define a single layer, as long as
+your "file\_format\_version" is defined to at least 1.0.1.  It is functionally the
+same as using a single "layer" object.
 
 There are no rules about the name of the text files (except the .json suffix).
 
@@ -849,42 +877,42 @@ See the section [Layer Library Manifest File](#LayerLibraryManifestFile) for mor
 
 ```
 {
-"file_format_version" : "1.0.0",
-"layer": {
-    "name": "VK_LAYER_LUNARG_overlay",
-    "type": "INSTANCE",
-    "library_path": "libvkOverlayLayer.so"
-    "api_version" : "1.0.5",
-    "implementation_version" : "2",
-    "description" : "LunarG HUD layer",
-    "functions": {
-        "vkGetInstanceProcAddr": "OverlayLayer_GetInstanceProcAddr",
-        "vkGetDeviceProcAddr": "OverlayLayer_GetDeviceProcAddr"
-    },
-    "instance_extensions": [
-        {
-            "name": "VK_EXT_debug_report",
-            "spec_version": "1"
-        },
-        {
-            "name": "VK_VENDOR_ext_x",
-            "spec_version": "3"
-         }
-    ],
-    "device_extensions": [
-        {
-            "name": "VK_EXT_debug_marker",
-            "spec_version": "1",
-            "entrypoints": ["vkCmdDbgMarkerBegin", "vkCmdDbgMarkerEnd"]
-        }
-    ],
-    "enable_environment": {
-        "ENABLE_LAYER_OVERLAY_1": "1"
-    },
-    "disable_environment": {
-        "DISABLE_LAYER_OVERLAY_1": ""
-    }
-}
+   "file_format_version" : "1.0.0",
+   "layer": {
+       "name": "VK_LAYER_LUNARG_overlay",
+       "type": "INSTANCE",
+       "library_path": "libvkOverlayLayer.so"
+       "api_version" : "1.0.5",
+       "implementation_version" : "2",
+       "description" : "LunarG HUD layer",
+       "functions": {
+           "vkGetInstanceProcAddr": "OverlayLayer_GetInstanceProcAddr",
+           "vkGetDeviceProcAddr": "OverlayLayer_GetDeviceProcAddr"
+       },
+       "instance_extensions": [
+           {
+               "name": "VK_EXT_debug_report",
+               "spec_version": "1"
+           },
+           {
+               "name": "VK_VENDOR_ext_x",
+               "spec_version": "3"
+            }
+       ],
+       "device_extensions": [
+           {
+               "name": "VK_EXT_debug_marker",
+               "spec_version": "1",
+               "entrypoints": ["vkCmdDbgMarkerBegin", "vkCmdDbgMarkerEnd"]
+           }
+       ],
+       "enable_environment": {
+           "ENABLE_LAYER_OVERLAY_1": "1"
+       },
+       "disable_environment": {
+           "DISABLE_LAYER_OVERLAY_1": ""
+       }
+   }
 }
 ```
 The "library\_path" specifies either a filename, a relative pathname, or a full
