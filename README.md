@@ -1,3 +1,6 @@
+NOTE: Recent changes have been made regarding the loading of the shared layer utilities library on Windows.
+      Please see [BUILD.md](BUILD.md) for details.
+
 # Vulkan Ecosystem Components
 
 This project provides Khronos official ICD loader and validation layers for Vulkan developers on Windows and Linux.
