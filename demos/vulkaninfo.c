@@ -824,11 +824,12 @@ static void app_create_win32_window(struct app_instance *inst) {
     win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
     win_class.lpszMenuName = NULL;
     win_class.lpszClassName = APP_SHORT_NAME;
+    win_class.hInstance = inst->hInstance;
     win_class.hIconSm = LoadIcon(NULL, IDI_WINLOGO);
     // Register window class:
     if (!RegisterClassEx(&win_class)) {
         // It didn't work, so try to give a useful error:
-        printf("Unexpected error trying to start the application!\n");
+        printf("Failed to register the window class!\n");
         fflush(stdout);
         exit(1);
     }
@@ -849,7 +850,7 @@ static void app_create_win32_window(struct app_instance *inst) {
         NULL);                // no extra parameters
     if (!inst->hWnd) {
         // It didn't work, so try to give a useful error:
-        printf("Cannot create a window in which to draw!\n");
+        printf("Failed to create a window!\n");
         fflush(stdout);
         exit(1);
     }
@@ -878,6 +879,7 @@ static void app_destroy_surface(struct app_instance *inst) { //same for all plat
 }
 
 //----------------------------XCB----------------------------
+
 #ifdef VK_USE_PLATFORM_XCB_KHR
 static void app_create_xcb_window(struct app_instance *inst) {
   //--Init Connection--
@@ -887,7 +889,7 @@ static void app_create_xcb_window(struct app_instance *inst) {
 
   inst->xcb_connection = xcb_connect(NULL, &scr);
   if (inst->xcb_connection == NULL) {
-      printf("Cannot find a compatible Vulkan installable client driver (ICD).\nExiting ...\n");
+      printf("XCB failed to connect to the X server.\nExiting ...\n");
       fflush(stdout);
       exit(1);
   }
@@ -900,17 +902,11 @@ static void app_create_xcb_window(struct app_instance *inst) {
   inst->xcb_screen = iter.data;
   //-------------------
 
-  uint32_t value_mask, value_list[32];
   inst->xcb_window = xcb_generate_id(inst->xcb_connection);
-  value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-  value_list[0] = inst->xcb_screen->black_pixel;
-  value_list[1] = XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE |
-                  XCB_EVENT_MASK_STRUCTURE_NOTIFY;
-
   xcb_create_window(inst->xcb_connection, XCB_COPY_FROM_PARENT, inst->xcb_window,
                     inst->xcb_screen->root, 0, 0, inst->width, inst->height, 0,
                     XCB_WINDOW_CLASS_INPUT_OUTPUT, inst->xcb_screen->root_visual,
-                    value_mask, value_list);
+                    0, NULL);
 
   xcb_intern_atom_cookie_t cookie = xcb_intern_atom(inst->xcb_connection, 1, 12, "WM_PROTOCOLS");
   xcb_intern_atom_reply_t *reply =  xcb_intern_atom_reply(inst->xcb_connection, cookie, 0);
@@ -942,26 +938,15 @@ static void app_create_xlib_window(struct app_instance *inst) {
     inst->xlib_display = XOpenDisplay(NULL);
     long visualMask = VisualScreenMask;
     int numberOfVisuals;
-    XVisualInfo vInfoTemplate;
+
+    XVisualInfo vInfoTemplate={};
     vInfoTemplate.screen = DefaultScreen(inst->xlib_display);
     XVisualInfo *visualInfo = XGetVisualInfo(inst->xlib_display, visualMask,
                                              &vInfoTemplate, &numberOfVisuals);
-    Colormap colormap = XCreateColormap(
-                inst->xlib_display, RootWindow(inst->xlib_display, vInfoTemplate.screen),
-                visualInfo->visual, AllocNone);
-
-    XSetWindowAttributes windowAttributes;
-    windowAttributes.colormap = colormap;
-    windowAttributes.background_pixel = 0xFFFFFFFF;
-    windowAttributes.border_pixel = 0;
-    windowAttributes.event_mask =
-            KeyPressMask | KeyReleaseMask | StructureNotifyMask | ExposureMask;
-
     inst->xlib_window = XCreateWindow(
                 inst->xlib_display, RootWindow(inst->xlib_display, vInfoTemplate.screen), 0, 0,
                 inst->width, inst->height, 0, visualInfo->depth, InputOutput,
-                visualInfo->visual,
-                CWBackPixel | CWBorderPixel | CWEventMask | CWColormap, &windowAttributes);
+                visualInfo->visual, 0, NULL);
 
     XFlush(inst->xlib_display);
 }
