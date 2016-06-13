@@ -3696,6 +3696,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->destroyedFramebuffers.clear();
         pCB->waitedEvents.clear();
         pCB->events.clear();
+        pCB->writeEventsBeforeWait.clear();
         pCB->waitedEventsBeforeQueryReset.clear();
         pCB->queryToStateMap.clear();
         pCB->activeQueries.clear();
