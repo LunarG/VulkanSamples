@@ -113,7 +113,6 @@ cd build32
 cmake -G "Visual Studio 12" ..
 msbuild ALL_BUILD.vcxproj /p:Platform=x86 /p:Configuration=Release
 ```
-
 ## Contributing
   Refer to the README.contrib file for specific info regarding contributing to
   the Vulkan samples creation effort.
