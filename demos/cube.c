@@ -2077,7 +2077,7 @@ static void demo_create_xlib_window(struct demo *demo) {
     demo->display = XOpenDisplay(NULL);
     long visualMask = VisualScreenMask;
     int numberOfVisuals;
-    XVisualInfo vInfoTemplate;
+    XVisualInfo vInfoTemplate={};
     vInfoTemplate.screen = DefaultScreen(demo->display);
     XVisualInfo *visualInfo = XGetVisualInfo(demo->display, visualMask,
                                              &vInfoTemplate, &numberOfVisuals);
@@ -2086,7 +2086,7 @@ static void demo_create_xlib_window(struct demo *demo) {
                 demo->display, RootWindow(demo->display, vInfoTemplate.screen),
                 visualInfo->visual, AllocNone);
 
-    XSetWindowAttributes windowAttributes;
+    XSetWindowAttributes windowAttributes={};
     windowAttributes.colormap = colormap;
     windowAttributes.background_pixel = 0xFFFFFFFF;
     windowAttributes.border_pixel = 0;
