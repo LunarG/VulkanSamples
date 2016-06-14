@@ -55,20 +55,20 @@ The Draw State portion of the core validation layer tracks state leading into Dr
 | DS Update Size | DS update out of bounds for given layout section. | DESCRIPTOR_UPDATE_OUT_OF_BOUNDS | vkUpdateDescriptorSets | DSUpdateOutOfBounds CopyDescriptorUpdateErrors | NA |
 | Descriptor Pool empty | Attempt to allocate descriptor type from descriptor pool when no more of that type are available to be allocated. | DESCRIPTOR_POOL_EMPTY | vkAllocateDescriptorSets | AllocDescriptorFromEmptyPool | NA |
 | Free from NON_FREE Pool | It's invalid to call vkFreeDescriptorSets() on Sets that were allocated from a Pool created with NON_FREE usage. | CANT_FREE_FROM_NON_FREE_POOL | vkFreeDescriptorSets | TODO | NA |
-| DS Update Index | DS update binding too large for layout binding count. | INVALID_UPDATE_INDEX | vkUpdateDescriptorSets | InvalidDSUpdateIndex CopyDescriptorUpdateErrors | NA |
+| DS Update Index | DS update binding too large for layout binding count. | INVALID_UPDATE_INDEX | vkUpdateDescriptorSets | InvalidDSUpdateIndex CopyDescriptorUpdateErrors DSUsageBitsErrors | NA |
 | DS Update Type | Verifies that structs in DS Update tree are properly created, currently valid, and of the right type | INVALID_UPDATE_STRUCT | vkUpdateDescriptorSets | InvalidDSUpdateStruct | NA |
 | MSAA Sample Count | Verifies that Pipeline, RenderPass, and Subpass sample counts are consistent | NUM_SAMPLES_MISMATCH | vkCmdBindPipeline vkCmdBeginRenderPass vkCmdNextSubpass | NumSamplesMismatch | NA |
-| Dynamic Viewport State Binding | Verify that viewport dynamic state bound to Cmd Buffer at Draw time | VIEWPORT_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DynamicStatesNotBound | NA |
-| Dynamic Scissor State Binding | Verify that scissor dynamic state bound to Cmd Buffer at Draw time | SCISSOR_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DynamicStatesNotBound | NA |
-| Dynamic Line Width State Binding | Verify that line width dynamic state bound to Cmd Buffer at draw time when required | LINE_WIDTH_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DynamicStatesNotBound | NA |
-| Dynamic Depth Bias State Binding | Verify that depth bias dynamic state bound when depth enabled | DEPTH_BIAS_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DynamicStatesNotBound | NA |
-| Dynamic Blend State Binding | Verify that blend dynamic state bound when color blend enabled | BLEND_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DynamicStatesNotBound | NA |
-| Dynamic Depth Bounds State Binding | Verify that depth bounds dynamic state bound when depth enabled | DEPTH_BOUNDS_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DynamicStatesNotBound | NA |
-| Dynamic Stencil State Binding | Verify that stencil dynamic state bound when depth enabled | STENCIL_NOT_BOUND | vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DynamicStatesNotBound | NA |
+| Dynamic Viewport State Binding | Verify that viewport dynamic state bound to Cmd Buffer at Draw time | VIEWPORT_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DynamicViewportNotBound | NA |
+| Dynamic Scissor State Binding | Verify that scissor dynamic state bound to Cmd Buffer at Draw time | SCISSOR_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DynamicScissorNotBound | NA |
+| Dynamic Line Width State Binding | Verify that line width dynamic state bound to Cmd Buffer at draw time when required | LINE_WIDTH_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DynamicLineWidthNotBound | NA |
+| Dynamic Depth Bias State Binding | Verify that depth bias dynamic state bound when depth enabled | DEPTH_BIAS_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DynamicDepthBiasNotBound | NA |
+| Dynamic Blend State Binding | Verify that blend dynamic state bound when color blend enabled | BLEND_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DynamiBlendConstantsNotBound | NA |
+| Dynamic Depth Bounds State Binding | Verify that depth bounds dynamic state bound when depth enabled | DEPTH_BOUNDS_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DynamicDepthBoundsNotBound | NA |
+| Dynamic Stencil State Binding | Verify that stencil dynamic state bound when depth enabled | STENCIL_NOT_BOUND | vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DynamicStencilReadNotBound DynamicStencilWriteNotBound DynamicStencilRefNotBound | NA |
 | RenderPass misuse | Tests for the following: that vkCmdDispatch, vkCmdDispatchIndirect, vkCmdCopyBuffer, vkCmdCopyImage, vkCmdBlitImage, vkCmdCopyBufferToImage, vkCmdCopyImageToBuffer, vkCmdUpdateBuffer, vkCmdFillBuffer, vkCmdClearColorImage, vkCmdClearDepthStencilImage, vkCmdResolveImage, vkCmdSetEvent, vkCmdResetEvent, vkCmdResetQueryPool, vkCmdCopyQueryPoolResults, vkCmdBeginRenderPass, vkEndCommandBuffer are not called during an active Renderpass, and that binding compute descriptor sets or pipelines does not take place during an active Renderpass  | INVALID_RENDERPASS_CMD | vkCmdBindPipeline vkCmdBindDescriptorSets vkCmdDispatch vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdResolveImage vkCmdSetEvent vkCmdResetEvent vkCmdResetQueryPool vkCmdCopyQueryPoolResults vkCmdBeginRenderPass vkEndCommandBuffer | RenderPassWithinRenderPass UpdateBufferWithinRenderPass ClearColorImageWithinRenderPass ClearDepthStencilImageWithinRenderPass FillBufferWithinRenderPass EndCommandBufferWithinRenderPass | NA |
 | Correct use of RenderPass | Validates that the following rendering commands are issued inside an active RenderPass: vkCmdDraw, vkCmdDrawIndexed, vkCmdDrawIndirect, vkCmdDrawIndexedIndirect, vkCmdClearAttachments, vkCmdNextSubpass, vkCmdEndRenderPass | NO_ACTIVE_RENDERPASS | vkCmdBindPipeline vkCmdBindDescriptorSets  vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdClearAttachments vkCmdNextSubpass vkCmdEndRenderPass | ClearColorAttachmentsOutsideRenderPass | NA |
 | Valid RenderPass | Flag error if attempt made to Begin/End/Continue a NULL or otherwise invalid RenderPass object | INVALID_RENDERPASS | vkCmdBeginRenderPass vkCmdEndRenderPass vkBeginCommandBuffer | NullRenderPass | NA |
-| RenderPass Compatibility | Verify that active renderpass is compatible with renderpass specified in secondary command buffer, and that renderpass specified for a framebuffer is compatible with renderpass specified in secondary command buffer | RENDERPASS_INCOMPATIBLE | vkCmdExecuteCommands vkBeginCommandBuffer | TODO | None |
+| RenderPass Compatibility | Verify that active renderpass is compatible with renderpass specified in secondary command buffer, and that renderpass specified for a framebuffer is compatible with renderpass specified in secondary command buffer. Also that parameters for BeginRenderpass are compatible with actual renderpass. | RENDERPASS_INCOMPATIBLE | vkCmdExecuteCommands vkBeginCommandBuffer vkCmdBeginRenderPass | RenderPassClearOpMismatch | Need to write some more tests to cover all of these cases. |
 | Framebuffer Compatibility | If a framebuffer is passed to secondary command buffer in vkBeginCommandBuffer, then it must match active renderpass (if any) at time of vkCmdExecuteCommands | FRAMEBUFFER_INCOMPATIBLE | vkCmdExecuteCommands | TODO | None |
 | DescriptorSet Updated | Warn user if DescriptorSet bound that was never updated and is not empty. Trigger error at draw time if a set being used was never updated. | DESCRIPTOR_SET_NOT_UPDATED | vkCmdBindDescriptorSets vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DescriptorSetCompatibility | NA |
 | DescriptorSet Bound | Error if DescriptorSet not bound that is used by currently bound VkPipeline at draw time | DESCRIPTOR_SET_NOT_BOUND | vkCmdBindDescriptorSets | DescriptorSetNotUpdated | NA |
@@ -109,14 +109,8 @@ The Draw State portion of the core validation layer tracks state leading into Dr
 | NA | Enum used when VK_LAYER_LUNARG_core_validation attempts to allocate memory for its own internal use and is unable to. | OUT_OF_MEMORY | | TODO | None |
 
 ### VK_LAYER_LUNARG_core_validation Draw State Pending Work
-Additional Draw State-related checks to be added:
 
- 1. Lifetime validation (See [bug 13383](https://cvs.khronos.org/bugzilla/show_bug.cgi?id=13383))
- 2. GetRenderAreaGranularity - The pname:renderPass parameter must be the same as the one given in the sname:VkRenderPassBeginInfo structure for which the render area is relevant.
- 3. Update Gfx Pipe Create Info shadowing to remove new/delete and instead use unique_ptrs for auto clean-up
- 4. Add validation for Pipeline Derivatives (see Pipeline Derivatives) section of the spec
- 
- See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
+See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 
 ### VK_LAYER_LUNARG_core_validation Shader Checker Details Table
@@ -144,10 +138,8 @@ It flags errors when inconsistencies are found across interfaces between shader 
 | NA | Enum used for informational messages | NONE | | TODO | None |
 
 ### VK_LAYER_LUNARG_core_validation Shader Checker Pending Work
-- Additional test cases for variously broken SPIRV images
-- Validation of a single SPIRV image in isolation (the spec describes many constraints)
  
- See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
+See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ### VK_LAYER_LUNARG_core_validation Memory Tracker Details Table
 The Mem Tracker portion of the VK_LAYER_LUNARG_core_validation layer tracks memory objects and references and validates that they are managed correctly by the application.  This includes tracking object bindings, memory hazards, and memory object lifetimes. Several other hazard-related issues related to command buffers, fences, and memory mapping are also validated in this layer segment.
@@ -170,12 +162,8 @@ The Mem Tracker portion of the VK_LAYER_LUNARG_core_validation layer tracks memo
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | TODO | None |
 
 ### VK_LAYER_LUNARG_core_validation Memory Tracker Pending Work and Enhancements
- See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
-1. Consolidate error messages and make them consistent
-2. Add validation for maximum memory references, maximum object counts, and object leaks
-3. Warn on image/buffer deletion if USAGE bits were set that were not needed
-4. Modify INVALID_FENCE_STATE to be WARNINGs instead of ERROR
+See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ## VK_LAYER_LUNARG_parameter_validation
 
@@ -197,19 +185,8 @@ The VK_LAYER_LUNARG_parameter_validation layer validates parameter values and fl
 | NA | Enum used for informational messages | NONE | | TODO | None |
 
 ### VK_LAYER_LUNARG_parameter_validation Pending Work
-Additional work to be done
 
- 1. Source2 was creating a VK_FORMAT_R8_SRGB texture (and image view) which was not supported by the underlying implementation (rendersystemtest imageformat test).  Checking that formats are supported by the implementation is something the validation layer could do using the VK_FORMAT_INFO_TYPE_PROPERTIES query.   There are probably a bunch of checks here you could be doing around vkCreateImage formats along with whether image/color/depth attachment views are valid.  I’m not sure how much of this is already there.
- 2. From AMD: we were using an image view with a swizzle of VK_COLOR_COMPONENT_FORMAT_A with a BC1_RGB texture, which is not valid because the texture does not have an alpha channel.  In general, should validate that the swizzles do not reference components not in the texture format.
- 3. When querying VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES must provide enough memory for all the queues on the device (not just 1 when device has multiple queues).
- 4. INT & FLOAT bordercolors. Border color int/float selection must match associated texture format.
- 5. Flag error on VkBufferCreateInfo if buffer size is 0
- 6. VkImageViewCreateInfo.format must be set
- 7. For vkCreateGraphicsPipelines, correctly handle array of pCreateInfos and array of pStages within each element of pCreatInfos
- 8. Check for valid VkIndexType in vkCmdBindIndexBuffer() should be in PreCmdBindIndexBuffer() call
- 9. Check for valid VkPipelineBindPoint in vkCmdBindPipeline() & vkCmdBindDescriptorSets() should be in PreCmdBindPipeline() & PreCmdBindDescriptorSets() calls respectively.
-
- See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
+See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ## VK_LAYER_LUNARG_image
 
@@ -232,7 +209,7 @@ DETAILS TABLE PENDING
 | Image Type Mismatch | Verify that Image commands with source and dest images use matching types | MISMATCHED_IMAGE_TYPE | vkCmdCopyImage vkCmdResolveImage | ResolveImageTypeMismatch | NA |
 | Image Format Mismatch | Verify that Image commands with source and dest images use matching formats | MISMATCHED_IMAGE_FORMAT | vkCmdCopyImage vkCmdResolveImage | CopyImageDepthStencilFormatMismatch ResolveImageFormatMismatch | NA |
 | Resolve Sample Count | Verifies that source and dest images sample counts are valid | INVALID_RESOLVE_SAMPLES | vkCmdResolveImage | ResolveImageHighSampleCount ResolveImageLowSampleCount | NA |
-| Verify Format | Verifies the formats are valid for this image operation | INVALID_FORMAT | vkCreateImageView vkCmdBlitImage | ImageLayerViewTests | NA |
+| Verify Format | Verifies the formats are valid for this image operation | INVALID_FORMAT | vkCreateImageView vkCmdBlitImage | ImageLayerViewTests ClearImageErrors | NA |
 | Verify Correct Image Filter| Verifies that specified filter is valid | INVALID_FILTER | vkCmdBlitImage | MiscImageLayerTests | NA |
 | Verify Correct Image Settings | Verifies that values are valid for a given resource or subresource | INVALID_IMAGE_RESOURCE | vkCmdPipelineBarrier | MiscImageLayerTests | NA |
 | Verify Image Format Limits | Verifies that image creation parameters are with the device format limits | INVALID_FORMAT_LIMITS_VIOLATION | vkCreateImage | ImageFormatLimits | NA |
@@ -241,7 +218,8 @@ DETAILS TABLE PENDING
 | NA | Enum used for informational messages | NONE | | TODO | None |
 
 ### VK_LAYER_LUNARG_image Pending Work
- See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
+
+See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ## VK_LAYER_LUNARG_object_tracker
 
@@ -263,12 +241,7 @@ The VK_LAYER_LUNARG_object_tracker layer maintains a record of all Vulkan object
 
 ### VK_LAYER_LUNARG_object_tracker Pending Work
 
- 1. Verify images have CmdPipelineBarrier layouts matching new layout parameters to Cmd*Image* functions
- 2. For specific object instances that are allowed to be NULL, update object validation to verify that such objects are either NULL or valid
- 3. Verify cube array VkImageView objects use subresourceRange.arraySize (or effective arraySize when VK_REMAINING_ARRAY_SLICES is specified) that is a multiple of 6. 
- 4. Make object maps specific to instance and device.  Objects may only be used with matching instance or device.
-
- See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
+See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ## VK_LAYER_GOOGLE_threading
 
@@ -304,7 +277,8 @@ It cannot insure that there is no latent race condition.
 | NA | Enum used for informational messages | NONE | | TODO | None |
 
 ### VK_LAYER_GOOGLE_threading Pending Work
- See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
+
+See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ## VK_LAYER_LUNARG_device_limits
 
@@ -338,9 +312,7 @@ For the second category of errors, VK_LAYER_LUNARG_device_limits stores its own 
 
 ### VK_LAYER_LUNARG_device_limits Pending Work
 
- 1. For all Formats, call vkGetPhysicalDeviceFormatProperties to pull their properties for the underlying device. After that point, if the app attempts to use any formats in violation of those properties, flag errors (this is done for Images).
-
- See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
+See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ## VK_LAYER_LUNARG_swapchain
 
@@ -403,24 +375,11 @@ Note: The following platform-specific functions are not mentioned above, because
 - vkGetPhysicalDeviceXlibPresentationSupportKHR
 
 ### VK_LAYER_LUNARG_Swapchain Pending Work
-Additional checks to be added to VK_LAYER_LUNARG_swapchain
 
- 1. Check that the queue used for presenting was checked/valid during vkGetPhysicalDeviceSurfaceSupportKHR.
- 2. One issue that has already come up is correct UsageFlags for WSI SwapChains and SurfaceProperties.
- 3. Tons of other stuff including semaphore and synchronization validation.
-
- See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
+See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ## VK_LAYER_GOOGLE_unique_objects
 
 ### VK_LAYER_GOOGLE_unique_objects Overview
 
-The unique_objects is not a validation layer but a helper layer that assists with validation. The Vulkan specification allows objects that have non-unique handles. This makes tracking object lifetimes difficult in that it is unclear which object is being referenced upon deletion. The unique_objects layer addresses this by wrapping all objects with a unique object representation allowing proper object lifetime tracking. This layer does no validation on its own and may not be required for the proper operation of all layers or all platforms. One sign that it is needed is the appearance of many errors from the object_tracker layer indicating the use of previously destroyed objects. For optimal effectiveness this layer should be loaded last (to reside in the layer chain closest to the display driver and farthest from the application).
-
-
-## General Pending Work
-A place to capture general validation work to be done. This includes new checks that don't clearly fit into the above layers.
-
- 1. For Upcoming Dynamic State overhaul (if approved): If dynamic state value that is consumed is never set prior to consumption, flag an error
- 2. For Upcoming Dynamic State overhaul (if approved): If dynamic state that was bound as "static" in current PSO is attempted to be set with vkCmdSet* flag an error
- 3. Need to check VkShaderCreateInfo.stage is being set properly (Issue reported by Dan G)
+The unique_objects utility layer that assists with validation. The Vulkan specification allows objects to have non-unique handles. This makes tracking object lifetimes difficult in that it is unclear which object is being referenced upon deletion. The unique_objects layer addresses this by aliasing all objects with a unique identifier allowing proper object lifetime tracking. This layer does no validation on its own and may not be required for the proper operation of all layers or all platforms. One sign that it is needed is the appearance of many errors from the object_tracker layer indicating the use of previously destroyed objects. For optimal effectiveness this layer should be loaded last (to reside in the layer chain closest to the display driver and farthest from the application).

@@ -80,8 +80,11 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth,
                    VkBool32 include_vi = true);
 void init_sampler(struct sample_info &info, VkSampler &sampler);
 void init_image(struct sample_info &info, texture_object &texObj,
-                const char *textureName);
-void init_texture(struct sample_info &info, const char *textureName = nullptr);
+                const char *textureName, VkImageUsageFlags extraUsages = 0,
+                VkFormatFeatureFlags extraFeatures = 0);
+void init_texture(struct sample_info &info, const char *textureName = nullptr,
+                  VkImageUsageFlags extraUsages = 0,
+                  VkFormatFeatureFlags extraFeatures = 0);
 void init_viewports(struct sample_info &info);
 void init_scissors(struct sample_info &info);
 void init_fence(struct sample_info &info, VkFence &fence);

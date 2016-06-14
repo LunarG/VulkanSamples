@@ -13,16 +13,21 @@ Layer libraries can be written to intercept or hook VK entry points for various
 debug and validation purposes.  One or more VK entry points can be defined in your Layer
 library.  Undefined entrypoints in the Layer library will be passed to the next Layer which
 may be the driver.  Multiple layer libraries can be chained (actually a hierarchy) together.
-`vkEnumerateInstanceLayerProperties` can be called to list the available layers and their properties.
+vkEnumerateInstanceLayerProperties can be called to list the
+available layers and their properties.  Layers can intercept all Vulkan commands
+that take a dispatchable object as it's first argument. I.e.  VkInstance, VkPhysicalDevice,
+VkDevice, VkCommandBuffer, and VkQueue.
 vkXXXXGetProcAddr is used internally by the Layers and Loader to initialize dispatch tables.
-Layers can also be activated via the `VK_INSTANCE_LAYERS` environment variable.
+Layers can also be activated via the VK_INSTANCE_LAYERS environment variable.
 
-All validation layers work with the DEBUG_REPORT extension to provide the application or user with
-validation feedback. When a validation layer is enabled, it will look at the vk_layer_settings.txt
-file to determine its behavior. Such as outputing to a file, stdout or debug output (Windows). An
-application can also register callback functions via the DEBUG_REPORT extension to receive callbacks
-when the requested validation events happen. Application callbacks happen regardless of the
-settings in the vk_layer_settings.txt file.
+All validation layers work with the DEBUG_REPORT extension to provide validation feedback.
+When a validation layer is enabled, it will look for a vk_layer_settings.txt file to define
+its loggin behavior, which can include sending output to a file, stdout, or debug output (Windows).
+Applications can also register debug callback functions via the DEBUG_REPORT extension to receive
+callbacks when validation events occur. Application callbacks are independent of settings in a
+vk_layer_settings.txt file which will be carried out separately. If no vk_layer_settings.txt
+file is present and no application callbacks are registered, error messages will be output
+through default logging callbacks.
 
 ### Layer library example code
 

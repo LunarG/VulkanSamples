@@ -1771,7 +1771,8 @@ void init_sampler(struct sample_info &info, VkSampler &sampler) {
 }
 
 void init_image(struct sample_info &info, texture_object &texObj,
-                const char *textureName) {
+                const char *textureName, VkImageUsageFlags extraUsages,
+                VkFormatFeatureFlags extraFeatures) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
     std::string filename = get_base_data_dir();
@@ -1793,10 +1794,17 @@ void init_image(struct sample_info &info, texture_object &texObj,
 
     /* See if we can use a linear tiled image for a texture, if not, we will
      * need a staging image for the texture data */
-    bool needStaging = (!(formatProps.linearTilingFeatures &
-                          VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))
-                           ? true
-                           : false;
+    VkFormatFeatureFlags allFeatures =
+        (VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | extraFeatures);
+    bool needStaging =
+        ((formatProps.linearTilingFeatures & allFeatures) != allFeatures)
+            ? true
+            : false;
+
+    if (needStaging) {
+        assert((formatProps.optimalTilingFeatures & allFeatures) ==
+               allFeatures);
+    }
 
     VkImageCreateInfo image_create_info = {};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -1811,8 +1819,9 @@ void init_image(struct sample_info &info, texture_object &texObj,
     image_create_info.samples = NUM_SAMPLES;
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-    image_create_info.usage = needStaging ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-                                          : VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.usage =
+        needStaging ? (VK_IMAGE_USAGE_TRANSFER_SRC_BIT | extraUsages)
+                    : (VK_IMAGE_USAGE_SAMPLED_BIT | extraUsages);
     image_create_info.queueFamilyIndexCount = 0;
     image_create_info.pQueueFamilyIndices = NULL;
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -2034,11 +2043,13 @@ void init_image(struct sample_info &info, texture_object &texObj,
     assert(res == VK_SUCCESS);
 }
 
-void init_texture(struct sample_info &info, const char *textureName) {
+void init_texture(struct sample_info &info, const char *textureName,
+                  VkImageUsageFlags extraUsages,
+                  VkFormatFeatureFlags extraFeatures) {
     struct texture_object texObj;
 
     /* create image */
-    init_image(info, texObj, textureName);
+    init_image(info, texObj, textureName, extraUsages, extraFeatures);
 
     /* create sampler */
     init_sampler(info, texObj.sampler);

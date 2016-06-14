@@ -34,11 +34,11 @@
 #endif
 
 // Draw State ERROR codes
-typedef enum _THREADING_CHECKER_ERROR {
+enum THREADING_CHECKER_ERROR {
     THREADING_CHECKER_NONE,                // Used for INFO & other non-error messages
     THREADING_CHECKER_MULTIPLE_THREADS,    // Object used simultaneously by multiple threads
     THREADING_CHECKER_SINGLE_THREAD_REUSE, // Object used simultaneously by recursion in single thread
-} THREADING_CHECKER_ERROR;
+};
 
 struct object_use_data {
     loader_platform_thread_id thread;
@@ -189,6 +189,8 @@ template <typename T> class counter {
 };
 
 struct layer_data {
+    VkInstance instance;
+
     debug_report_data *report_data;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
     VkLayerDispatchTable *device_dispatch_table;

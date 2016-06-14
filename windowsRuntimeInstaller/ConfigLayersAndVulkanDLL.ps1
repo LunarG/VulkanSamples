@@ -39,13 +39,21 @@ Param(
  [int]$ossize
 )
 
+# Clear any pre-existing errors and set default return value
+$Error.Clear();
+$script:scriptReturnValue=0
+
 # Start logging
-$log=$Env:Temp+"\VulkanRT"
-New-Item -ItemType Directory -Force -Path $log | Out-Null
-$logascii=$log+"\ConfigLayersAndVulkanDLL.log"
-$log=$log+"\ConfigLayersAndVulkanDLL16.log"
-echo "ConfigLayersAndVulkanDLL.ps1 $majorabi $ossize" >$log
-(Get-Date).ToString() >>$log
+$logascii=$Env:Temp+"\ConfigLayersAndVulkanDLL.log"
+$log=$Env:Temp+"\ConfigLayersAndVulkanDLL16.log"
+start-transcript -path $log
+
+# Ignore errors related to log file
+$Error.Clear();
+
+Write-Host "ConfigLayersAndVulkanDLL.ps1 called with inputs of : $majorabi $ossize"
+$startTime=Get-Date
+Write-Host "Start time : $startTime"
 
 $vulkandll = "vulkan-"+$majorabi+".dll"
 $windrive  = $env:SYSTEMDRIVE
@@ -58,6 +66,16 @@ function notNumeric ($x) {
         return $false
     } catch {
         return $true
+    }
+}
+
+function Get-CurrentLineNumber {
+    $MyInvocation.ScriptLineNumber
+}
+
+function setScriptReturnValue($rvalue) {
+    if ($script:scriptReturnValue -eq 0) {
+        $script:scriptReturnValue = $rvalue
     }
 }
 
@@ -96,7 +114,7 @@ function notNumeric ($x) {
 
 function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
 {
-   echo "UpdateVulkanSysFolder $dir $writeSdkName" >>$log
+   Write-Host "UpdateVulkanSysFolder $dir $writeSdkName"
 
    # Push the current path on the stack and go to $dir
    Push-Location -Path $dir
@@ -108,25 +126,37 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
    # Find all vulkan dll files in this directory
    dir -name vulkan-$majorabi-*.dll |
    ForEach-Object {
-       echo "File $_" >>$log
+       Write-Host  "File $_"
        if ($_ -match "=" -or
            $_ -match "@" -or
            $_ -match " " -or
-           ($_.Split('-').count -lt 6)  -or
-           ($_.Split('-').count -gt 8))
+           ($_.Split('-').count -lt 6) -or
+           ($_.Split('-').count -gt 8) -or
+           !$?)
        {
            # If a file name contains "=", "@", or " ", or it contains less then 5 dashes or more than
            # 7 dashes, it wasn't installed by the Vulkan Run Time.
            # Note that we need to use return inside of ForEach-Object is to continue with iteration.
-           echo "Rejected $_ - bad format" >>$log
+           Write-Warning "Ignoring $_ - bad format"
+
+           # Not a real error, so just clear it for now.
+           $Error.Clear();
+
+           # NOTE: Inside a ForEach-Object block, the 'return' call behaves like a 'continue' for a For loop
            return
        }
 
        # If the corresponding vulkaninfo is not present, it wasn't installed by the Vulkan Run Time
        $vulkaninfo=$_ -replace ".dll",".exe"
        $vulkaninfo=$vulkaninfo -replace "vulkan","vulkaninfo"
-       if (-not (Test-Path $vulkaninfo)) {
-           echo "Rejected $_ - vulkaninfo not present" >>$log
+       if (-not (Test-Path $vulkaninfo) -or
+          !$?) {
+           Write-Warning "Rejected $_ - $vulkaninfo not present"
+
+           # Not a real error, so just clear it for now.
+           $Error.Clear();
+
+           # NOTE: Inside a ForEach-Object block, the 'return' call behaves like a 'continue' for a For loop
            return
        }
 
@@ -171,28 +201,62 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
               $prebuildno="z"*10
           }
        }
-       echo "Version $majorOrig $minorOrig $patchOrig $buildnoOrig $prereleaseOrig $prebuildnoOrig" >>$log
+       Write-Host "Version $majorOrig $minorOrig $patchOrig $buildnoOrig $prereleaseOrig $prebuildnoOrig"
+       if (!$?) {
+           Write-Warning "Ignoring version $majorOrig $minorOrig $patchOrig $buildnoOrig $prereleaseOrig $prebuildnoOrig"
+
+           # Not a real error, so just clear it for now.
+           $Error.Clear();
+
+           # NOTE: Inside a ForEach-Object block, the 'return' call behaves like a 'continue' for a For loop
+           return
+       }
 
        # Make sure fields that are supposed to be numbers are numbers
        if (notNumeric($major)) {
-           echo "Rejected $_ - bad major" >>$log
+           Write-Warning "Ignoring $_ - bad major"
+
+           # Not a real error, so just clear it for now.
+           $Error.Clear();
+
+           # NOTE: Inside a ForEach-Object block, the 'return' call behaves like a 'continue' for a For loop
            return
        }
        if (notNumeric($minor)) {
-           echo "Rejected $_ - bad minor" >>$log
+           Write-Warning "Ignoring $_ - bad minor"
+
+           # Not a real error, so just clear it for now.
+           $Error.Clear();
+
+           # NOTE: Inside a ForEach-Object block, the 'return' call behaves like a 'continue' for a For loop
            return
        }
        if (notNumeric($patch)) {
-           echo "Rejected $_ - bad patch" >>$log
+           Write-Warning "Ignoring $_ - bad patch"
+
+           # Not a real error, so just clear it for now.
+           $Error.Clear();
+
+           # NOTE: Inside a ForEach-Object block, the 'return' call behaves like a 'continue' for a For loop
            return
        }
        if (notNumeric($buildno)) {
-           echo "Rejected $_ - bad buildno" >>$log
+           Write-Warning "Ignoring $_ - bad buildno"
+
+           # Not a real error, so just clear it for now.
+           $Error.Clear();
+
+           # NOTE: Inside a ForEach-Object block, the 'return' call behaves like a 'continue' for a For loop
            return
        }
        if (notNumeric($prebuildno)) {
            if ($prebuildno -ne "z"*10) {
-               echo "Rejected $_ - bad prebuildno" >>$log
+               Write-Warning "Ignoring $_ - bad prebuildno"
+
+               # Not a real error, so just clear it for now.
+               $Error.Clear();
+
+               # NOTE: Inside a ForEach-Object block, the 'return' call behaves like a 'continue' for a For loop
                return
            }
        }
@@ -205,8 +269,12 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
        $prebuildno = $prebuildno.padleft(10,'0')
 
        # Add a new element to the $VulkanDllList array
-       echo "Adding $_ to Vulkan dll list " >>$log
+       Write-Host "Adding $_ to Vulkan dll list "
        $script:VulkanDllList+="$major=$minor=$patch=$buildno=$prebuildno=$prerelease= $_ @$majorOrig@$minorOrig@$patchOrig@$buildnoOrig@$prereleaseOrig@$prebuildnoOrig@"
+       if (!$?) {
+           Write-Error "Error: UpdateVulkanSysFolder adding DLL $_ to list"
+           setScriptReturnValue(Get-CurrentLineNumber)
+       }
    }
 
     # If $VulkanDllList contains at least one element, there's at least one vulkan*.dll file.
@@ -216,20 +284,32 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
 
         # Sort the list. The most recent vulkan-*.dll will be in the last element of the list.
         [array]::sort($script:VulkanDllList)
+        if (!$?) {
+           Write-Error "Error: UpdateVulkanSysFolder sorting DLL list" 
+           setScriptReturnValue(Get-CurrentLineNumber)
+        }
 
         # Put the name of the most recent vulkan-*.dll in $mrVulkanDLL.
         # The most recent vulkanDLL is the second word in the last element of the
         # sorted $VulkanDllList. Copy it to $vulkandll.
         $mrVulkanDll=$script:VulkanDllList[-1].Split(' ')[1]
-        echo "copy $mrVulkanDll $vulkandll" >>$log
-        copy $mrVulkanDll $vulkandll
+        Write-Host "Copying $mrVulkanDll $vulkandll"
+        Copy-Item $mrVulkanDll $vulkandll -force
+        if (!$?) {
+           Write-Error "Error: UpdateVulkanSysFolder encountered error during copy $mrVulkanDll $vulkandll"
+           setScriptReturnValue(Get-CurrentLineNumber)
+        }
 
         # Copy the most recent version of vulkaninfo-<abimajor>-*.exe to vulkaninfo.exe.
         # We create the source file name for the copy from $mrVulkanDll.
         $mrVulkaninfo=$mrVulkanDll -replace ".dll",".exe"
         $mrVulkaninfo=$mrVulkaninfo -replace "vulkan","vulkaninfo"
-        echo "copy $mrVulkaninfo vulkaninfo.exe" >>$log
-        copy $mrVulkaninfo vulkaninfo.exe
+        Write-Host "Copying $mrVulkaninfo vulkaninfo.exe"
+        Copy-Item $mrVulkaninfo vulkaninfo.exe -force
+        if (!$?) {
+           Write-Error "Error: UpdateVulkanSysFolder encountered error during copy $mrVulkaninfo vulkaninfo.exe"
+           setScriptReturnValue(Get-CurrentLineNumber)
+        }
 
         # Create the name used in the registry for the SDK associated with $mrVulkanDll.
         $major=$script:VulkanDllList[-1].Split('@')[1]
@@ -246,11 +326,20 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
         if ($prebuildno -ne "") {
             $sdktempname=$sdktempname + "." + $prebuildno
         }
-        echo "sdkname = $sdktempname" >>$log
+
+        Write-Host "sdkname = $sdktempname"
+        if (!$?) {
+           Write-Error "Error: UpdateVulkanSysFolder encountered error generating SDK name"
+           setScriptReturnValue(Get-CurrentLineNumber)
+        }
     }
 
     # Return to our previous folder
     Pop-Location
+    if (!$?) {
+       Write-Error "Error: UpdateVulkanSysFolder popping location"
+       setScriptReturnValue(Get-CurrentLineNumber)
+    }
 
     # Only update the overall script-scope SDK name if we're told to
     if ($writeSdkName -ne 0) {
@@ -263,42 +352,64 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
 # We only care about SYSWOW64 if we're targeting a 64-bit OS
 if ($ossize -eq 64) {
     # Update the SYSWOW64 Vulkan DLLS/EXEs
-    echo "Calling UpdateVulkanSysFolder $winfolder\SYSWOW64 0" >>$log
+    Write-Host "Calling UpdateVulkanSysFolder $winfolder\SYSWOW64 0"
     UpdateVulkanSysFolder $winfolder\SYSWOW64 0
+    if (!$?) {
+        Write-Error "Error: Calling UpdateVulkanSysFolder for 64-bit OS" 
+        setScriptReturnValue(Get-CurrentLineNumber)
+    }
 }
 
 # Update the SYSTEM32 Vulkan DLLS/EXEs
-echo "Calling UpdateVulkanSysFolder $winfolder\SYSTEM32 1" >>$log
+Write-Host "Calling UpdateVulkanSysFolder $winfolder\SYSTEM32 1"
 UpdateVulkanSysFolder $winfolder\SYSTEM32 1
+if (!$?) {
+    Write-Error "Error: Calling UpdateVulkanSysFolder for all OS"
+    setScriptReturnValue(Get-CurrentLineNumber)
+}
 
 # Create an array of vulkan sdk install dirs
 
-echo "Creating array of of Vulkan SDK Install dirs" >>$log
+Write-Host "Creating array of of Vulkan SDK Install dirs"
 $mrVulkanDllInstallDir=""
 $VulkanSdkDirs=@()
-Get-ChildItem -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall |
-   ForEach-Object {
-       $regkey=$_ -replace ".*\\",""
-       if ($_ -match "\\VulkanSDK") {
-           # Get the install path from UninstallString
-           $tmp=Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$regkey -Name UninstallString
-           $tmp=$tmp -replace "\\Uninstall.exe.*",""
-           $tmp=$tmp -replace ".*=.",""
-           echo "Adding $tmp to VulkanSDKDirs" >>$log
-           $VulkanSdkDirs+=$tmp
-           if ($regkey -eq $script:sdkname) {
-               # Save away the sdk install dir for the the most recent vulkandll
-               echo "Setting mrVulkanDllInstallDir to $tmp" >>$log
-               $mrVulkanDllInstallDir=$tmp
-           }
-       }
+$installSDKRegs = @(Get-ChildItem -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall)
+if ($installSDKRegs -ne $null) {
+   ForEach ($curSDKReg in $installSDKRegs) {
+      if ($curSDKReg -ne $null) {
+         $regkey=$curSDKReg -replace ".*\\",""
+         if ($regkey -match "VulkanSDK") {
+             # Get the install path from UninstallString
+             $tmp=Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$regkey -Name UninstallString
+             if (!$? -or $tmp -eq $null) {
+                 Write-Warning "Error: Get-ItemProperty failed for Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$regkey"
+                 $Error.Clear();
+                 continue;
+             }
+             $tmp=$tmp -replace "\\Uninstall.exe.*",""
+             $tmp=$tmp -replace ".*=.",""
+             Write-Host "Adding $tmp to VulkanSDKDirs"
+             $VulkanSdkDirs+=$tmp
+             if ($regkey -eq $script:sdkname) {
+                 # Save away the sdk install dir for the the most recent vulkandll
+                 Write-Host "Setting mrVulkanDllInstallDir to $tmp"
+                 $mrVulkanDllInstallDir=$tmp
+             }
+         }
+      }
    }
+}
+if (!$?) {
+    Write-Error "Error: Failed creating array of of Vulkan SDK Install dirs"
+    setScriptReturnValue(Get-CurrentLineNumber)
+}
 
 
 # Search list of sdk install dirs for an sdk compatible with $script:sdkname.
 # We go backwards through VulkanDllList to generate SDK names, because we want the most recent SDK.
-if ($mrVulkanDllInstallDir -eq "") {
-    echo "Searching VulkanDllList" >>$log
+
+if ($mrVulkanDllInstallDir -eq "" -and $script:VulkanDllList.Length -gt 0) {
+    Write-Host "Searching VulkanDllList"
     ForEach ($idx in ($script:VulkanDllList.Length-1)..0) {
         $tmp=$script:VulkanDllList[$idx]
         $vulkanDllMajor=$script:VulkanDllList[$idx].Split('@')[1]
@@ -314,8 +425,13 @@ if ($mrVulkanDllInstallDir -eq "") {
         if ($vulkanDllPrebuildno) {
             $regEntry=$regEntry+"."+$vulkanDllPrebuildno
         }
-        echo "Comparing $regEntry" >>$log
+        Write-Host "Comparing $regEntry"
         $rval=Get-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$regEntry -ErrorAction SilentlyContinue
+        if (!$? -or $rval -eq $null) {
+            Write-Warning "Ignoring $regEntry - corresponding SDK registry entry does not exist"
+            $Error.Clear();
+            continue
+        }
         $instDir=$rval
         $instDir=$instDir -replace "\\Uninstall.exe.*",""
         $instDir=$instDir -replace ".*=.",""
@@ -326,11 +442,15 @@ if ($mrVulkanDllInstallDir -eq "") {
             $reMinor=$rval.Split('.')[1]
             $rePatch=$rval.Split('.')[2]
             if ($reMajor+$reMinor+$rePatch -eq $vulkanDllMajor+$vulkanDllMinor+$vulkanDllPatch) {
-                echo "Setting mrVulkanDllInstallDir to $instDir" >>$log
+                Write-Host "Setting mrVulkanDllInstallDir to $instDir"
                 $mrVulkanDllInstallDir=$instDir
                 break
             }
         }
+    }
+    if (!$?) {
+        Write-Warning "Failed searching VulkanDLLList"
+        $Error.Clear();
     }
 }
 
@@ -349,162 +469,259 @@ $VulkanSdkDirs+="$windrive\VulkanSDK\0.9.3"
 # Note that we remove only those entries created by Vulkan SDKs. If other
 # layers were installed that are not from an SDK, we don't mess with them.
 
-echo "Removing old layer registry values from HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers" >>$log
-Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\ExplicitLayers | Select-Object -ExpandProperty Property |
-   ForEach-Object {
-       $regval=$_
-       ForEach ($sdkdir in $VulkanSdkDirs) {
-          if ($regval -like "$sdkdir\*.json") {
-              Remove-ItemProperty -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -name $regval
-              echo "Removed registry value $regval" >>$log
-          }
-       }
-   }
+Write-Host "Removing old layer registry values from HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers"
+$regkeys = @(Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\ExplicitLayers | Select-Object -ExpandProperty Property)
+if ($regkeys -ne $null) {
+   ForEach ($regval in $regkeys) {
+       if ($regval -ne $null) {
+           ForEach ($sdkdir in $VulkanSdkDirs) {
+              if ($regval -like "$sdkdir\*.json") {
+                  Remove-ItemProperty -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -name $regval
+                  if (!$?) {
+                     Write-Error "Error: Remove-ItemProperty failed for -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -name $regval"
+                  } else {
+                     Write-Host "Removed registry value $regval"
+                  }
+              }
+           }
+        }
+    }
+}
+
+if (!$?) {
+    Write-Error "Error: Failed Removing old layer registry values from HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers"
+    setScriptReturnValue(Get-CurrentLineNumber)
+}
+
 # Remove 32-bit layer registry value if we're targeting a 64-bit OS
 if ($ossize -eq 64) {
-   Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | Select-Object -ExpandProperty Property |
-      ForEach-Object {
-          $regval=$_
-          ForEach ($sdkdir in $VulkanSdkDirs) {
-             if ($regval -like "$sdkdir\*.json") {
-                 Remove-ItemProperty -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -name $regval
-                 echo "Removed WOW6432Node registry value $regval" >>$log
+   $regkeys = @(Get-Item -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | Select-Object -ExpandProperty Property)
+   if ($regkeys -ne $null) {
+      ForEach ($regval in $regkeys) {
+          if ($regval -ne $null) {
+              ForEach ($sdkdir in $VulkanSdkDirs) {
+                 if ($regval -like "$sdkdir\*.json") {
+                    Remove-ItemProperty -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -name $regval
+                    if (!$?) {
+                       Write-Error "Error: Remove-ItemProperty failed for -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -name $regval"
+                    } else {
+                       Write-Host "Removed WOW6432Node registry value $regval"
+                    }
+                 }
              }
-          }
+         }
       }
+   }
+
+   if (!$?) {
+      Write-Error "Error: Failed Removing old layer registry values from HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers"
+      setScriptReturnValue(Get-CurrentLineNumber)
+   }
 }
 
 
 # Create layer registry values associated with Vulkan SDK from which $mrVulkanDll is from
 
-echo "Creating new layer registry values" >>$log
+Write-Host "Creating new layer registry values"
 if ($mrVulkanDllInstallDir -ne "") {
 
     # Create registry keys if they don't exist
     if (-not (Test-Path -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers)) {
-        echo "Creating new registry key HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers" >>$log
+        Write-Host "Creating new registry key HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers"
         New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers | out-null
+        if (!$?) {
+            Write-Error "Error: Failed creating HKLM\SOFTWARE\Khronos\Vulkan\ExplicitLayers"
+            setScriptReturnValue(Get-CurrentLineNumber)
+        }
     }
     if ($ossize -eq 64) {
         if (-not (Test-Path -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers)) {
-            echo "Creating new registry key HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers" >>$log
+            Write-Host "Creating new registry key HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers"
             New-Item -Force -ErrorAction SilentlyContinue -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers | out-null
-       }
+            if (!$?) {
+                Write-Error "Error: Failed creating HKLM\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers"
+                setScriptReturnValue(Get-CurrentLineNumber)
+            }
+        }
     }
 
 
     if ($ossize -eq 64) {
-    
         # Create registry values in normal registry location for 64-bit items on a 64-bit OS
         Get-ChildItem $mrVulkanDllInstallDir\Bin -Filter VkLayer*json |
            ForEach-Object {
-               echo "Creating registry value $mrVulkanDllInstallDir\Bin\$_" >>$log
+               Write-Host "Creating registry value $mrVulkanDllInstallDir\Bin\$_"
                New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin\$_ -PropertyType DWord -Value 0 | out-null
+               if (!$?) {
+                   Write-Error "Error: Failed creating $mrVulkanDllInstallDir\Bin\$_"
+                   setScriptReturnValue(Get-CurrentLineNumber)
+               }
+           }
+           if (!$?) {
+               Write-Error "Error: Failed Get-ChildItem $mrVulkanDllInstallDir\Bin | ForEach-Object "
+               setScriptReturnValue(Get-CurrentLineNumber)
            }
 
         # Create registry values for the WOW6432Node registry location for 32-bit items on a 64-bit OS
         Get-ChildItem $mrVulkanDllInstallDir\Bin32 -Filter VkLayer*json |
            ForEach-Object {
-               echo "Creating WOW6432Node registry value $mrVulkanDllInstallDir\Bin32\$_" >>$log
+               Write-Host "Creating WOW6432Node registry value $mrVulkanDllInstallDir\Bin32\$_"
                New-ItemProperty -Path HKLM:\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin32\$_ -PropertyType DWord -Value 0 | out-null
+               if (!$?) {
+                   Write-Error "Error: Failed creating $mrVulkanDllInstallDir\Bin32\$_"
+                   setScriptReturnValue(Get-CurrentLineNumber)
+               }
            }
-           
+           if (!$?) {
+               Write-Error "Error: Failed Get-ChildItem $mrVulkanDllInstallDir\Bin32 | ForEach-Object "
+               setScriptReturnValue(Get-CurrentLineNumber)
+           }
     } else {
-    
         # Create registry values in normal registry location for 32-bit items on a 32-bit OS
         Get-ChildItem $mrVulkanDllInstallDir\Bin32 -Filter VkLayer*json |
            ForEach-Object {
-               echo "Creating registry value $mrVulkanDllInstallDir\Bin\$_" >>$log
+               Write-Host "Creating registry value $mrVulkanDllInstallDir\Bin\$_"
                New-ItemProperty -Path HKLM:\SOFTWARE\Khronos\Vulkan\ExplicitLayers -Name $mrVulkanDllInstallDir\Bin32\$_ -PropertyType DWord -Value 0 | out-null
-           }
-    
+               if (!$?) {
+                   Write-Error "Error: Failed creating $mrVulkanDllInstallDir\Bin\$_"
+                   setScriptReturnValue(Get-CurrentLineNumber)
+               }
+            }
+            if (!$?) {
+                Write-Error "Error: Failed Get-ChildItem $mrVulkanDllInstallDir\Bin32 | ForEach-Object "
+                setScriptReturnValue(Get-CurrentLineNumber)
+            }
     }
 }
 
+# Debug - for testing handling of script failure in installer
+#setScriptReturnValue(Get-CurrentLineNumber)
+
 # Final log output
-echo "ConfigLayersAndVulkanDLL.ps1 completed" >>$log
-(Get-Date).ToString() >>$log
+Write-Host "ConfigLayersAndVulkanDLL.ps1 completed"
+$endTime=Get-Date
+Write-Host "End time: $endTime"
+
+Stop-Transcript
 
 # Convert logfile to ascii
-cat $log | out-File -encoding ascii -filepath $logascii
-remove-item $log
+Get-Content $log | Out-File -encoding ascii -filepath $logascii
 
+# Remove the unicode log as we no longer need it.
+Remove-Item $log
 
+exit $script:scriptReturnValue
 
 # SIG # Begin signature block
-# MIIcZgYJKoZIhvcNAQcCoIIcVzCCHFMCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
+# MIIccAYJKoZIhvcNAQcCoIIcYTCCHF0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUQ4I+TKoMwtXHArekRd5/bX04
-# sreggheVMIIFHjCCBAagAwIBAgIQDmYEpPtQ2iBY4vC2AGq6uzANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUWzO9uMOZloqpSF0mSPfjnVcK
+# X2ygghefMIIFKDCCBBCgAwIBAgIQA7RxzU1//sKaOyCyyw9fVDANBgkqhkiG9w0B
 # AQsFADByMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMTEwLwYDVQQDEyhEaWdpQ2VydCBTSEEyIEFz
-# c3VyZWQgSUQgQ29kZSBTaWduaW5nIENBMB4XDTE1MDQzMDAwMDAwMFoXDTE2MDcw
-# NjEyMDAwMFowZTELMAkGA1UEBhMCVVMxETAPBgNVBAgTCENvbG9yYWRvMRUwEwYD
+# c3VyZWQgSUQgQ29kZSBTaWduaW5nIENBMB4XDTE2MDQwODAwMDAwMFoXDTE3MDgx
+# MDEyMDAwMFowZTELMAkGA1UEBhMCVVMxETAPBgNVBAgTCENvbG9yYWRvMRUwEwYD
 # VQQHEwxGb3J0IENvbGxpbnMxFTATBgNVBAoTDEx1bmFyRywgSW5jLjEVMBMGA1UE
 # AxMMTHVuYXJHLCBJbmMuMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA
-# jaLJm/Joxsn/IeopiGY3XPeSZeIhjSjSlQUkDyIyDGcBG7CvfiSsXIw3EgdGkjQg
-# yBcW5YsPz9bPGPUjo5go7CwZaRkhW7/LmSkAlx0UAv8EMLuJrAZ3jBNZvpPPqfWd
-# zgi/Rkm2gWQ6eSKouy7IjcLk+EwkeBbB+UBnYfMp0BfCPzR3mPgGAJH6efAmEaqQ
-# FBCrX97joYgDqp3v8u42jALLl/Ict/GNMHLxP+QWagIHIICCRgS6s02OsildLF6R
-# nqJOOG/43f2qUD4Cab65kzlI+0+uQyOl1UlxNxp0XareghGTqECsYA03j64Esxyo
-# 2xrNbV2LJm9crTX6QthxywIDAQABo4IBuzCCAbcwHwYDVR0jBBgwFoAUWsS5eyoK
-# o6XqcQPAYPkt9mV1DlgwHQYDVR0OBBYEFOSdVsqodGWApfCjHtAcn8sAzLBGMA4G
+# 9g6eKks1n/j5xBMG0viQaVqoxYjNIt2sLiDhBa1JMfPVvQsclZwsJl2FHhnQEg1/
+# YLeNUqSukbgTNXTGjkvNoh/PbjjBzlxZbPwRKO8tbHMRKZJjcVkOWLLReUGHkxJ3
+# i4hD6zH0K9DKMubb0ohmaA28ALsl8d4igz78uGyqa3jNXbiyNLJhd467u2nCySdV
+# PFdXCMklePhW9VLm8VXSRDlBcx6tsaTpJr8lRZsq13xO7lwifQw1w2QRQzlnezUY
+# PVnXIz+54Nu0U6JKPaTlxgbk9SlcP4f77UJuieGQGCWh3uCcASYQgUMjisetLyFU
+# WZuPYpSbNWVksMaiIlSIuwIDAQABo4IBxTCCAcEwHwYDVR0jBBgwFoAUWsS5eyoK
+# o6XqcQPAYPkt9mV1DlgwHQYDVR0OBBYEFBP4/a3JE2uXZpm3r1yknye/WxPWMA4G
 # A1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAzB3BgNVHR8EcDBuMDWg
 # M6Axhi9odHRwOi8vY3JsMy5kaWdpY2VydC5jb20vc2hhMi1hc3N1cmVkLWNzLWcx
 # LmNybDA1oDOgMYYvaHR0cDovL2NybDQuZGlnaWNlcnQuY29tL3NoYTItYXNzdXJl
-# ZC1jcy1nMS5jcmwwQgYDVR0gBDswOTA3BglghkgBhv1sAwEwKjAoBggrBgEFBQcC
-# ARYcaHR0cHM6Ly93d3cuZGlnaWNlcnQuY29tL0NQUzCBhAYIKwYBBQUHAQEEeDB2
-# MCQGCCsGAQUFBzABhhhodHRwOi8vb2NzcC5kaWdpY2VydC5jb20wTgYIKwYBBQUH
-# MAKGQmh0dHA6Ly9jYWNlcnRzLmRpZ2ljZXJ0LmNvbS9EaWdpQ2VydFNIQTJBc3N1
-# cmVkSURDb2RlU2lnbmluZ0NBLmNydDAMBgNVHRMBAf8EAjAAMA0GCSqGSIb3DQEB
-# CwUAA4IBAQCIt1S8zfvzMQEVmdAssjrwqBaq78xhtGPLjkNF06EvtWoV6VMLI/A6
-# 45KoULsaXeYuszLxNI+OT/b4HfD0e2LxImaTDZRmCLeIs+2pMLSlWDSV4okm8Vk2
-# rObLBlgiI1x0PiMa1le9D832COWM4EJcH7pxM+9JfiHYMLlZbcfNEVgv6Dhhl4MG
-# mOTMTl7vQNNQaJ1coNVf9m5Bez1DV9Iu2Cgd8BHp1oLVCQCHjVv0Ifj48RIPi4SQ
-# khzalrnrf+L/BWRDhpLnxYasazdV5WfrMHurPuBvYUiLQNkU9SqKgRk9XrzDAfMe
-# gPbGybMr0kqtbE/A/cDcTVnvRuTZnhXSMIIFMDCCBBigAwIBAgIQBAkYG1/Vu2Z1
-# U0O1b5VQCDANBgkqhkiG9w0BAQsFADBlMQswCQYDVQQGEwJVUzEVMBMGA1UEChMM
-# RGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3d3cuZGlnaWNlcnQuY29tMSQwIgYDVQQD
-# ExtEaWdpQ2VydCBBc3N1cmVkIElEIFJvb3QgQ0EwHhcNMTMxMDIyMTIwMDAwWhcN
-# MjgxMDIyMTIwMDAwWjByMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQg
-# SW5jMRkwFwYDVQQLExB3d3cuZGlnaWNlcnQuY29tMTEwLwYDVQQDEyhEaWdpQ2Vy
-# dCBTSEEyIEFzc3VyZWQgSUQgQ29kZSBTaWduaW5nIENBMIIBIjANBgkqhkiG9w0B
-# AQEFAAOCAQ8AMIIBCgKCAQEA+NOzHH8OEa9ndwfTCzFJGc/Q+0WZsTrbRPV/5aid
-# 2zLXcep2nQUut4/6kkPApfmJ1DcZ17aq8JyGpdglrA55KDp+6dFn08b7KSfH03sj
-# lOSRI5aQd4L5oYQjZhJUM1B0sSgmuyRpwsJS8hRniolF1C2ho+mILCCVrhxKhwjf
-# DPXiTWAYvqrEsq5wMWYzcT6scKKrzn/pfMuSoeU7MRzP6vIK5Fe7SrXpdOYr/mzL
-# fnQ5Ng2Q7+S1TqSp6moKq4TzrGdOtcT3jNEgJSPrCGQ+UpbB8g8S9MWOD8Gi6CxR
-# 93O8vYWxYoNzQYIH5DiLanMg0A9kczyen6Yzqf0Z3yWT0QIDAQABo4IBzTCCAckw
-# EgYDVR0TAQH/BAgwBgEB/wIBADAOBgNVHQ8BAf8EBAMCAYYwEwYDVR0lBAwwCgYI
-# KwYBBQUHAwMweQYIKwYBBQUHAQEEbTBrMCQGCCsGAQUFBzABhhhodHRwOi8vb2Nz
-# cC5kaWdpY2VydC5jb20wQwYIKwYBBQUHMAKGN2h0dHA6Ly9jYWNlcnRzLmRpZ2lj
-# ZXJ0LmNvbS9EaWdpQ2VydEFzc3VyZWRJRFJvb3RDQS5jcnQwgYEGA1UdHwR6MHgw
-# OqA4oDaGNGh0dHA6Ly9jcmw0LmRpZ2ljZXJ0LmNvbS9EaWdpQ2VydEFzc3VyZWRJ
-# RFJvb3RDQS5jcmwwOqA4oDaGNGh0dHA6Ly9jcmwzLmRpZ2ljZXJ0LmNvbS9EaWdp
-# Q2VydEFzc3VyZWRJRFJvb3RDQS5jcmwwTwYDVR0gBEgwRjA4BgpghkgBhv1sAAIE
-# MCowKAYIKwYBBQUHAgEWHGh0dHBzOi8vd3d3LmRpZ2ljZXJ0LmNvbS9DUFMwCgYI
-# YIZIAYb9bAMwHQYDVR0OBBYEFFrEuXsqCqOl6nEDwGD5LfZldQ5YMB8GA1UdIwQY
-# MBaAFEXroq/0ksuCMS1Ri6enIZ3zbcgPMA0GCSqGSIb3DQEBCwUAA4IBAQA+7A1a
-# JLPzItEVyCx8JSl2qB1dHC06GsTvMGHXfgtg/cM9D8Svi/3vKt8gVTew4fbRknUP
-# UbRupY5a4l4kgU4QpO4/cY5jDhNLrddfRHnzNhQGivecRk5c/5CxGwcOkRX7uq+1
-# UcKNJK4kxscnKqEpKBo6cSgCPC6Ro8AlEeKcFEehemhor5unXCBc2XGxDI+7qPjF
-# Emifz0DLQESlE/DmZAwlCEIysjaKJAL+L3J+HNdJRZboWR3p+nRka7LrZkPas7CM
-# 1ekN3fYBIM6ZMWM9CBoYs4GbT8aTEAb8B4H6i9r5gkn3Ym6hU/oSlBiFLpKR6mhs
-# RDKyZqHnGKSaZFHvMIIGajCCBVKgAwIBAgIQAwGaAjr/WLFr1tXq5hfwZjANBgkq
-# hkiG9w0BAQUFADBiMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5j
-# MRkwFwYDVQQLExB3d3cuZGlnaWNlcnQuY29tMSEwHwYDVQQDExhEaWdpQ2VydCBB
-# c3N1cmVkIElEIENBLTEwHhcNMTQxMDIyMDAwMDAwWhcNMjQxMDIyMDAwMDAwWjBH
-# MQswCQYDVQQGEwJVUzERMA8GA1UEChMIRGlnaUNlcnQxJTAjBgNVBAMTHERpZ2lD
-# ZXJ0IFRpbWVzdGFtcCBSZXNwb25kZXIwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
-# ggEKAoIBAQCjZF38fLPggjXg4PbGKuZJdTvMbuBTqZ8fZFnmfGt/a4ydVfiS457V
-# WmNbAklQ2YPOb2bu3cuF6V+l+dSHdIhEOxnJ5fWRn8YUOawk6qhLLJGJzF4o9GS2
-# ULf1ErNzlgpno75hn67z/RJ4dQ6mWxT9RSOOhkRVfRiGBYxVh3lIRvfKDo2n3k5f
-# 4qi2LVkCYYhhchhoubh87ubnNC8xd4EwH7s2AY3vJ+P3mvBMMWSN4+v6GYeofs/s
-# jAw2W3rBerh4x8kGLkYQyI3oBGDbvHN0+k7Y/qpA8bLOcEaD6dpAoVk62RUJV5lW
-# MJPzyWHM0AjMa+xiQpGsAsDvpPCJEY93AgMBAAGjggM1MIIDMTAOBgNVHQ8BAf8E
-# BAMCB4AwDAYDVR0TAQH/BAIwADAWBgNVHSUBAf8EDDAKBggrBgEFBQcDCDCCAb8G
-# A1UdIASCAbYwggGyMIIBoQYJYIZIAYb9bAcBMIIBkjAoBggrBgEFBQcCARYcaHR0
-# cHM6Ly93d3cuZGlnaWNlcnQuY29tL0NQUzCCAWQGCCsGAQUFBwICMIIBVh6CAVIA
+# ZC1jcy1nMS5jcmwwTAYDVR0gBEUwQzA3BglghkgBhv1sAwEwKjAoBggrBgEFBQcC
+# ARYcaHR0cHM6Ly93d3cuZGlnaWNlcnQuY29tL0NQUzAIBgZngQwBBAEwgYQGCCsG
+# AQUFBwEBBHgwdjAkBggrBgEFBQcwAYYYaHR0cDovL29jc3AuZGlnaWNlcnQuY29t
+# ME4GCCsGAQUFBzAChkJodHRwOi8vY2FjZXJ0cy5kaWdpY2VydC5jb20vRGlnaUNl
+# cnRTSEEyQXNzdXJlZElEQ29kZVNpZ25pbmdDQS5jcnQwDAYDVR0TAQH/BAIwADAN
+# BgkqhkiG9w0BAQsFAAOCAQEAscucuwAp0HisTjMWJii1ZX5H7+GAc048OJctdrTS
+# VlUc7kJgEirXQb1TQbSevvt1wE6s3xJWUapWnYvvgEPOq036WFA+NRVoWU5eIUkG
+# MsYGXH5ASHVBH+5/13wFLC1nXTxxrQ6B19uFFr5ZpsaP93EdD5pLqRxKrqLc9Stc
+# /faupcVkclisgXOEDsCzvgGhhaFCc/RSeXOOAZg2EsJNbaydg/xyvZqPDG17NboL
+# rgrzN5r6FoCk535HuGvcpjbr60nlwwzuxwqzXuMhGUTOs5O5cPpJQt6+iXBrlBgh
+# 4jPNL+ZvFfJLDq3CUdnSh3S13GJruyTWzF2AxTeRAnw2fzCCBTAwggQYoAMCAQIC
+# EAQJGBtf1btmdVNDtW+VUAgwDQYJKoZIhvcNAQELBQAwZTELMAkGA1UEBhMCVVMx
+# FTATBgNVBAoTDERpZ2lDZXJ0IEluYzEZMBcGA1UECxMQd3d3LmRpZ2ljZXJ0LmNv
+# bTEkMCIGA1UEAxMbRGlnaUNlcnQgQXNzdXJlZCBJRCBSb290IENBMB4XDTEzMTAy
+# MjEyMDAwMFoXDTI4MTAyMjEyMDAwMFowcjELMAkGA1UEBhMCVVMxFTATBgNVBAoT
+# DERpZ2lDZXJ0IEluYzEZMBcGA1UECxMQd3d3LmRpZ2ljZXJ0LmNvbTExMC8GA1UE
+# AxMoRGlnaUNlcnQgU0hBMiBBc3N1cmVkIElEIENvZGUgU2lnbmluZyBDQTCCASIw
+# DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAPjTsxx/DhGvZ3cH0wsxSRnP0PtF
+# mbE620T1f+Wondsy13Hqdp0FLreP+pJDwKX5idQ3Gde2qvCchqXYJawOeSg6funR
+# Z9PG+yknx9N7I5TkkSOWkHeC+aGEI2YSVDNQdLEoJrskacLCUvIUZ4qJRdQtoaPp
+# iCwgla4cSocI3wz14k1gGL6qxLKucDFmM3E+rHCiq85/6XzLkqHlOzEcz+ryCuRX
+# u0q16XTmK/5sy350OTYNkO/ktU6kqepqCquE86xnTrXE94zRICUj6whkPlKWwfIP
+# EvTFjg/BougsUfdzvL2FsWKDc0GCB+Q4i2pzINAPZHM8np+mM6n9Gd8lk9ECAwEA
+# AaOCAc0wggHJMBIGA1UdEwEB/wQIMAYBAf8CAQAwDgYDVR0PAQH/BAQDAgGGMBMG
+# A1UdJQQMMAoGCCsGAQUFBwMDMHkGCCsGAQUFBwEBBG0wazAkBggrBgEFBQcwAYYY
+# aHR0cDovL29jc3AuZGlnaWNlcnQuY29tMEMGCCsGAQUFBzAChjdodHRwOi8vY2Fj
+# ZXJ0cy5kaWdpY2VydC5jb20vRGlnaUNlcnRBc3N1cmVkSURSb290Q0EuY3J0MIGB
+# BgNVHR8EejB4MDqgOKA2hjRodHRwOi8vY3JsNC5kaWdpY2VydC5jb20vRGlnaUNl
+# cnRBc3N1cmVkSURSb290Q0EuY3JsMDqgOKA2hjRodHRwOi8vY3JsMy5kaWdpY2Vy
+# dC5jb20vRGlnaUNlcnRBc3N1cmVkSURSb290Q0EuY3JsME8GA1UdIARIMEYwOAYK
+# YIZIAYb9bAACBDAqMCgGCCsGAQUFBwIBFhxodHRwczovL3d3dy5kaWdpY2VydC5j
+# b20vQ1BTMAoGCGCGSAGG/WwDMB0GA1UdDgQWBBRaxLl7KgqjpepxA8Bg+S32ZXUO
+# WDAfBgNVHSMEGDAWgBRF66Kv9JLLgjEtUYunpyGd823IDzANBgkqhkiG9w0BAQsF
+# AAOCAQEAPuwNWiSz8yLRFcgsfCUpdqgdXRwtOhrE7zBh134LYP3DPQ/Er4v97yrf
+# IFU3sOH20ZJ1D1G0bqWOWuJeJIFOEKTuP3GOYw4TS63XX0R58zYUBor3nEZOXP+Q
+# sRsHDpEV+7qvtVHCjSSuJMbHJyqhKSgaOnEoAjwukaPAJRHinBRHoXpoaK+bp1wg
+# XNlxsQyPu6j4xRJon89Ay0BEpRPw5mQMJQhCMrI2iiQC/i9yfhzXSUWW6Fkd6fp0
+# ZGuy62ZD2rOwjNXpDd32ASDOmTFjPQgaGLOBm0/GkxAG/AeB+ova+YJJ92JuoVP6
+# EpQYhS6SkepobEQysmah5xikmmRR7zCCBmowggVSoAMCAQICEAMBmgI6/1ixa9bV
+# 6uYX8GYwDQYJKoZIhvcNAQEFBQAwYjELMAkGA1UEBhMCVVMxFTATBgNVBAoTDERp
+# Z2lDZXJ0IEluYzEZMBcGA1UECxMQd3d3LmRpZ2ljZXJ0LmNvbTEhMB8GA1UEAxMY
+# RGlnaUNlcnQgQXNzdXJlZCBJRCBDQS0xMB4XDTE0MTAyMjAwMDAwMFoXDTI0MTAy
+# MjAwMDAwMFowRzELMAkGA1UEBhMCVVMxETAPBgNVBAoTCERpZ2lDZXJ0MSUwIwYD
+# VQQDExxEaWdpQ2VydCBUaW1lc3RhbXAgUmVzcG9uZGVyMIIBIjANBgkqhkiG9w0B
+# AQEFAAOCAQ8AMIIBCgKCAQEAo2Rd/Hyz4II14OD2xirmSXU7zG7gU6mfH2RZ5nxr
+# f2uMnVX4kuOe1VpjWwJJUNmDzm9m7t3LhelfpfnUh3SIRDsZyeX1kZ/GFDmsJOqo
+# SyyRicxeKPRktlC39RKzc5YKZ6O+YZ+u8/0SeHUOplsU/UUjjoZEVX0YhgWMVYd5
+# SEb3yg6Np95OX+Koti1ZAmGIYXIYaLm4fO7m5zQvMXeBMB+7NgGN7yfj95rwTDFk
+# jePr+hmHqH7P7IwMNlt6wXq4eMfJBi5GEMiN6ARg27xzdPpO2P6qQPGyznBGg+na
+# QKFZOtkVCVeZVjCT88lhzNAIzGvsYkKRrALA76TwiRGPdwIDAQABo4IDNTCCAzEw
+# DgYDVR0PAQH/BAQDAgeAMAwGA1UdEwEB/wQCMAAwFgYDVR0lAQH/BAwwCgYIKwYB
+# BQUHAwgwggG/BgNVHSAEggG2MIIBsjCCAaEGCWCGSAGG/WwHATCCAZIwKAYIKwYB
+# BQUHAgEWHGh0dHBzOi8vd3d3LmRpZ2ljZXJ0LmNvbS9DUFMwggFkBggrBgEFBQcC
+# AjCCAVYeggFSAEEAbgB5ACAAdQBzAGUAIABvAGYAIAB0AGgAaQBzACAAQwBlAHIA
+# dABpAGYAaQBjAGEAdABlACAAYwBvAG4AcwB0AGkAdAB1AHQAZQBzACAAYQBjAGMA
+# ZQBwAHQAYQBuAGMAZQAgAG8AZgAgAHQAaABlACAARABpAGcAaQBDAGUAcgB0ACAA
+# QwBQAC8AQwBQAFMAIABhAG4AZAAgAHQAaABlACAAUgBlAGwAeQBpAG4AZwAgAFAA
+# YQByAHQAeQAgAEEAZwByAGUAZQBtAGUAbgB0ACAAdwBoAGkAYwBoACAAbABpAG0A
+# aQB0ACAAbABpAGEAYgBpAGwAaQB0AHkAIABhAG4AZAAgAGEAcgBlACAAaQBuAGMA
+# bwByAHAAbwByAGEAdABlAGQAIABoAGUAcgBlAGkAbgAgAGIAeQAgAHIAZQBmAGUA
+# cgBlAG4AYwBlAC4wCwYJYIZIAYb9bAMVMB8GA1UdIwQYMBaAFBUAEisTmLKZB+0e
+# 36K+Vw0rZwLNMB0GA1UdDgQWBBRhWk0ktkkynUoqeRqDS/QeicHKfTB9BgNVHR8E
+# djB0MDigNqA0hjJodHRwOi8vY3JsMy5kaWdpY2VydC5jb20vRGlnaUNlcnRBc3N1
+# cmVkSURDQS0xLmNybDA4oDagNIYyaHR0cDovL2NybDQuZGlnaWNlcnQuY29tL0Rp
+# Z2lDZXJ0QXNzdXJlZElEQ0EtMS5jcmwwdwYIKwYBBQUHAQEEazBpMCQGCCsGAQUF
+# BzABhhhodHRwOi8vb2NzcC5kaWdpY2VydC5jb20wQQYIKwYBBQUHMAKGNWh0dHA6
+# Ly9jYWNlcnRzLmRpZ2ljZXJ0LmNvbS9EaWdpQ2VydEFzc3VyZWRJRENBLTEuY3J0
+# MA0GCSqGSIb3DQEBBQUAA4IBAQCdJX4bM02yJoFcm4bOIyAPgIfliP//sdRqLDHt
+# OhcZcRfNqRu8WhY5AJ3jbITkWkD73gYBjDf6m7GdJH7+IKRXrVu3mrBgJuppVyFd
+# NC8fcbCDlBkFazWQEKB7l8f2P+fiEUGmvWLZ8Cc9OB0obzpSCfDscGLTYkuw4HOm
+# ksDTjjHYL+NtFxMG7uQDthSr849Dp3GdId0UyhVdkkHa+Q+B0Zl0DSbEDn8btfWg
+# 8cZ3BigV6diT5VUW8LsKqxzbXEgnZsijiwoc5ZXarsQuWaBh3drzbaJh6YoLbewS
+# GL33VVRAA5Ira8JRwgpIr7DUbuD0FAo6G+OPPcqvao173NhEMIIGzTCCBbWgAwIB
+# AgIQBv35A5YDreoACus/J7u6GzANBgkqhkiG9w0BAQUFADBlMQswCQYDVQQGEwJV
+# UzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3d3cuZGlnaWNlcnQu
+# Y29tMSQwIgYDVQQDExtEaWdpQ2VydCBBc3N1cmVkIElEIFJvb3QgQ0EwHhcNMDYx
+# MTEwMDAwMDAwWhcNMjExMTEwMDAwMDAwWjBiMQswCQYDVQQGEwJVUzEVMBMGA1UE
+# ChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3d3cuZGlnaWNlcnQuY29tMSEwHwYD
+# VQQDExhEaWdpQ2VydCBBc3N1cmVkIElEIENBLTEwggEiMA0GCSqGSIb3DQEBAQUA
+# A4IBDwAwggEKAoIBAQDogi2Z+crCQpWlgHNAcNKeVlRcqcTSQQaPyTP8TUWRXIGf
+# 7Syc+BZZ3561JBXCmLm0d0ncicQK2q/LXmvtrbBxMevPOkAMRk2T7It6NggDqww0
+# /hhJgv7HxzFIgHweog+SDlDJxofrNj/YMMP/pvf7os1vcyP+rFYFkPAyIRaJxnCI
+# +QWXfaPHQ90C6Ds97bFBo+0/vtuVSMTuHrPyvAwrmdDGXRJCgeGDboJzPyZLFJCu
+# WWYKxI2+0s4Grq2Eb0iEm09AufFM8q+Y+/bOQF1c9qjxL6/siSLyaxhlscFzrdfx
+# 2M8eCnRcQrhofrfVdwonVnwPYqQ/MhRglf0HBKIJAgMBAAGjggN6MIIDdjAOBgNV
+# HQ8BAf8EBAMCAYYwOwYDVR0lBDQwMgYIKwYBBQUHAwEGCCsGAQUFBwMCBggrBgEF
+# BQcDAwYIKwYBBQUHAwQGCCsGAQUFBwMIMIIB0gYDVR0gBIIByTCCAcUwggG0Bgpg
+# hkgBhv1sAAEEMIIBpDA6BggrBgEFBQcCARYuaHR0cDovL3d3dy5kaWdpY2VydC5j
+# b20vc3NsLWNwcy1yZXBvc2l0b3J5Lmh0bTCCAWQGCCsGAQUFBwICMIIBVh6CAVIA
 # QQBuAHkAIAB1AHMAZQAgAG8AZgAgAHQAaABpAHMAIABDAGUAcgB0AGkAZgBpAGMA
 # YQB0AGUAIABjAG8AbgBzAHQAaQB0AHUAdABlAHMAIABhAGMAYwBlAHAAdABhAG4A
 # YwBlACAAbwBmACAAdABoAGUAIABEAGkAZwBpAEMAZQByAHQAIABDAFAALwBDAFAA
@@ -512,76 +729,40 @@ remove-item $log
 # QQBnAHIAZQBlAG0AZQBuAHQAIAB3AGgAaQBjAGgAIABsAGkAbQBpAHQAIABsAGkA
 # YQBiAGkAbABpAHQAeQAgAGEAbgBkACAAYQByAGUAIABpAG4AYwBvAHIAcABvAHIA
 # YQB0AGUAZAAgAGgAZQByAGUAaQBuACAAYgB5ACAAcgBlAGYAZQByAGUAbgBjAGUA
-# LjALBglghkgBhv1sAxUwHwYDVR0jBBgwFoAUFQASKxOYspkH7R7for5XDStnAs0w
-# HQYDVR0OBBYEFGFaTSS2STKdSip5GoNL9B6Jwcp9MH0GA1UdHwR2MHQwOKA2oDSG
-# Mmh0dHA6Ly9jcmwzLmRpZ2ljZXJ0LmNvbS9EaWdpQ2VydEFzc3VyZWRJRENBLTEu
-# Y3JsMDigNqA0hjJodHRwOi8vY3JsNC5kaWdpY2VydC5jb20vRGlnaUNlcnRBc3N1
-# cmVkSURDQS0xLmNybDB3BggrBgEFBQcBAQRrMGkwJAYIKwYBBQUHMAGGGGh0dHA6
-# Ly9vY3NwLmRpZ2ljZXJ0LmNvbTBBBggrBgEFBQcwAoY1aHR0cDovL2NhY2VydHMu
-# ZGlnaWNlcnQuY29tL0RpZ2lDZXJ0QXNzdXJlZElEQ0EtMS5jcnQwDQYJKoZIhvcN
-# AQEFBQADggEBAJ0lfhszTbImgVybhs4jIA+Ah+WI//+x1GosMe06FxlxF82pG7xa
-# FjkAneNshORaQPveBgGMN/qbsZ0kfv4gpFetW7easGAm6mlXIV00Lx9xsIOUGQVr
-# NZAQoHuXx/Y/5+IRQaa9YtnwJz04HShvOlIJ8OxwYtNiS7Dgc6aSwNOOMdgv420X
-# Ewbu5AO2FKvzj0OncZ0h3RTKFV2SQdr5D4HRmXQNJsQOfxu19aDxxncGKBXp2JPl
-# VRbwuwqrHNtcSCdmyKOLChzlldquxC5ZoGHd2vNtomHpigtt7BIYvfdVVEADkitr
-# wlHCCkivsNRu4PQUCjob4489yq9qjXvc2EQwggbNMIIFtaADAgECAhAG/fkDlgOt
-# 6gAK6z8nu7obMA0GCSqGSIb3DQEBBQUAMGUxCzAJBgNVBAYTAlVTMRUwEwYDVQQK
-# EwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5jb20xJDAiBgNV
-# BAMTG0RpZ2lDZXJ0IEFzc3VyZWQgSUQgUm9vdCBDQTAeFw0wNjExMTAwMDAwMDBa
-# Fw0yMTExMTAwMDAwMDBaMGIxCzAJBgNVBAYTAlVTMRUwEwYDVQQKEwxEaWdpQ2Vy
-# dCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5jb20xITAfBgNVBAMTGERpZ2lD
-# ZXJ0IEFzc3VyZWQgSUQgQ0EtMTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoC
-# ggEBAOiCLZn5ysJClaWAc0Bw0p5WVFypxNJBBo/JM/xNRZFcgZ/tLJz4FlnfnrUk
-# FcKYubR3SdyJxArar8tea+2tsHEx6886QAxGTZPsi3o2CAOrDDT+GEmC/sfHMUiA
-# fB6iD5IOUMnGh+s2P9gww/+m9/uizW9zI/6sVgWQ8DIhFonGcIj5BZd9o8dD3QLo
-# Oz3tsUGj7T++25VIxO4es/K8DCuZ0MZdEkKB4YNugnM/JksUkK5ZZgrEjb7Szgau
-# rYRvSISbT0C58Uzyr5j79s5AXVz2qPEvr+yJIvJrGGWxwXOt1/HYzx4KdFxCuGh+
-# t9V3CidWfA9ipD8yFGCV/QcEogkCAwEAAaOCA3owggN2MA4GA1UdDwEB/wQEAwIB
-# hjA7BgNVHSUENDAyBggrBgEFBQcDAQYIKwYBBQUHAwIGCCsGAQUFBwMDBggrBgEF
-# BQcDBAYIKwYBBQUHAwgwggHSBgNVHSAEggHJMIIBxTCCAbQGCmCGSAGG/WwAAQQw
-# ggGkMDoGCCsGAQUFBwIBFi5odHRwOi8vd3d3LmRpZ2ljZXJ0LmNvbS9zc2wtY3Bz
-# LXJlcG9zaXRvcnkuaHRtMIIBZAYIKwYBBQUHAgIwggFWHoIBUgBBAG4AeQAgAHUA
-# cwBlACAAbwBmACAAdABoAGkAcwAgAEMAZQByAHQAaQBmAGkAYwBhAHQAZQAgAGMA
-# bwBuAHMAdABpAHQAdQB0AGUAcwAgAGEAYwBjAGUAcAB0AGEAbgBjAGUAIABvAGYA
-# IAB0AGgAZQAgAEQAaQBnAGkAQwBlAHIAdAAgAEMAUAAvAEMAUABTACAAYQBuAGQA
-# IAB0AGgAZQAgAFIAZQBsAHkAaQBuAGcAIABQAGEAcgB0AHkAIABBAGcAcgBlAGUA
-# bQBlAG4AdAAgAHcAaABpAGMAaAAgAGwAaQBtAGkAdAAgAGwAaQBhAGIAaQBsAGkA
-# dAB5ACAAYQBuAGQAIABhAHIAZQAgAGkAbgBjAG8AcgBwAG8AcgBhAHQAZQBkACAA
-# aABlAHIAZQBpAG4AIABiAHkAIAByAGUAZgBlAHIAZQBuAGMAZQAuMAsGCWCGSAGG
-# /WwDFTASBgNVHRMBAf8ECDAGAQH/AgEAMHkGCCsGAQUFBwEBBG0wazAkBggrBgEF
-# BQcwAYYYaHR0cDovL29jc3AuZGlnaWNlcnQuY29tMEMGCCsGAQUFBzAChjdodHRw
-# Oi8vY2FjZXJ0cy5kaWdpY2VydC5jb20vRGlnaUNlcnRBc3N1cmVkSURSb290Q0Eu
-# Y3J0MIGBBgNVHR8EejB4MDqgOKA2hjRodHRwOi8vY3JsMy5kaWdpY2VydC5jb20v
-# RGlnaUNlcnRBc3N1cmVkSURSb290Q0EuY3JsMDqgOKA2hjRodHRwOi8vY3JsNC5k
-# aWdpY2VydC5jb20vRGlnaUNlcnRBc3N1cmVkSURSb290Q0EuY3JsMB0GA1UdDgQW
-# BBQVABIrE5iymQftHt+ivlcNK2cCzTAfBgNVHSMEGDAWgBRF66Kv9JLLgjEtUYun
-# pyGd823IDzANBgkqhkiG9w0BAQUFAAOCAQEARlA+ybcoJKc4HbZbKa9Sz1LpMUer
-# Vlx71Q0LQbPv7HUfdDjyslxhopyVw1Dkgrkj0bo6hnKtOHisdV0XFzRyR4WUVtHr
-# uzaEd8wkpfMEGVWp5+Pnq2LN+4stkMLA0rWUvV5PsQXSDj0aqRRbpoYxYqioM+Sb
-# OafE9c4deHaUJXPkKqvPnHZL7V/CSxbkS3BMAIke/MV5vEwSV/5f4R68Al2o/vsH
-# OE8Nxl2RuQ9nRc3Wg+3nkg2NsWmMT/tZ4CMP0qquAHzunEIOz5HXJ7cW7g/DvXwK
-# oO4sCFWFIrjrGBpN/CohrUkxg0eVd3HcsRtLSxwQnHcUwZ1PL1qVCCkQJjGCBDsw
-# ggQ3AgEBMIGGMHIxCzAJBgNVBAYTAlVTMRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMx
-# GTAXBgNVBAsTEHd3dy5kaWdpY2VydC5jb20xMTAvBgNVBAMTKERpZ2lDZXJ0IFNI
-# QTIgQXNzdXJlZCBJRCBDb2RlIFNpZ25pbmcgQ0ECEA5mBKT7UNogWOLwtgBqursw
-# CQYFKw4DAhoFAKB4MBgGCisGAQQBgjcCAQwxCjAIoAKAAKECgAAwGQYJKoZIhvcN
-# AQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUw
-# IwYJKoZIhvcNAQkEMRYEFAoOC46C6ArmxtlmLsUTidSbkN3rMA0GCSqGSIb3DQEB
-# AQUABIIBADXG8YUKEPQHyMUpBvGWwb5VeZ8oWPyiSSE649GXu5tHDn+N2lhDPngR
-# Cksh4FpF56hP4RgTzH/Nmxf2D4kZUzPCrs2Il1S+U0ZoFpoAwrN8dbnvw2Wvf7ns
-# LZHXKG9eIaMYx6r/nn+VV8qvL/25fZ8oNyIFCYy4FYRLmla5g1+Vmtg6anHj89c+
-# EMSIwR8BR5UlAagfhfKJQHYMz4xkdqMrR6ZDsMHvYjbOg3MILrrdgomH2R5JKAHK
-# IaD3EqM+Tgu8LH1MMt/hIf4RS/lgqT12qM88J64dyhquaM1BUzw5dnwb+h3aAF2O
-# ZJ4IhONECJbJf8wVT8rTUA+6uUm/Y6ihggIPMIICCwYJKoZIhvcNAQkGMYIB/DCC
-# AfgCAQEwdjBiMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkw
-# FwYDVQQLExB3d3cuZGlnaWNlcnQuY29tMSEwHwYDVQQDExhEaWdpQ2VydCBBc3N1
-# cmVkIElEIENBLTECEAMBmgI6/1ixa9bV6uYX8GYwCQYFKw4DAhoFAKBdMBgGCSqG
-# SIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTE2MDQwNzIxNTM0
-# OFowIwYJKoZIhvcNAQkEMRYEFERKj5qmhGjIIeKV/myZFhJ/EUO7MA0GCSqGSIb3
-# DQEBAQUABIIBAJYQytkxzpn/UVwVJ0tsompGzVKSEgjuqAiI2jA0LiQwWM9iBHpG
-# 8ijDH6Dh+Fqa1JSsynyFixF26SuHeDoY/LX14HhRPDEkBa70qt9h9gc/73f9AzUy
-# eSbxwRhlF/UAyk0E3fbK1of431HxfvcdhnvCIDW8orfiG5v7gS0Mub4C70TlMXTp
-# b6XT1orYqnih9j4EVCYWZwv+EsOADRHW7o1RvIC2gI2dzmAkMSEjehk3we6u8KXI
-# xkggPOXy5O8TFgFdjvKU6XaoTTCklKWFIQIRG9r5m//Qj3jwzwN/03gLPphi6zze
-# 8fAJmClDyH+kHivSSfFnFUB7elvajTvasQE=
+# LjALBglghkgBhv1sAxUwEgYDVR0TAQH/BAgwBgEB/wIBADB5BggrBgEFBQcBAQRt
+# MGswJAYIKwYBBQUHMAGGGGh0dHA6Ly9vY3NwLmRpZ2ljZXJ0LmNvbTBDBggrBgEF
+# BQcwAoY3aHR0cDovL2NhY2VydHMuZGlnaWNlcnQuY29tL0RpZ2lDZXJ0QXNzdXJl
+# ZElEUm9vdENBLmNydDCBgQYDVR0fBHoweDA6oDigNoY0aHR0cDovL2NybDMuZGln
+# aWNlcnQuY29tL0RpZ2lDZXJ0QXNzdXJlZElEUm9vdENBLmNybDA6oDigNoY0aHR0
+# cDovL2NybDQuZGlnaWNlcnQuY29tL0RpZ2lDZXJ0QXNzdXJlZElEUm9vdENBLmNy
+# bDAdBgNVHQ4EFgQUFQASKxOYspkH7R7for5XDStnAs0wHwYDVR0jBBgwFoAUReui
+# r/SSy4IxLVGLp6chnfNtyA8wDQYJKoZIhvcNAQEFBQADggEBAEZQPsm3KCSnOB22
+# WymvUs9S6TFHq1Zce9UNC0Gz7+x1H3Q48rJcYaKclcNQ5IK5I9G6OoZyrTh4rHVd
+# Fxc0ckeFlFbR67s2hHfMJKXzBBlVqefj56tizfuLLZDCwNK1lL1eT7EF0g49GqkU
+# W6aGMWKoqDPkmzmnxPXOHXh2lCVz5Cqrz5x2S+1fwksW5EtwTACJHvzFebxMElf+
+# X+EevAJdqP77BzhPDcZdkbkPZ0XN1oPt55INjbFpjE/7WeAjD9KqrgB87pxCDs+R
+# 1ye3Fu4Pw718CqDuLAhVhSK46xgaTfwqIa1JMYNHlXdx3LEbS0scEJx3FMGdTy9a
+# lQgpECYxggQ7MIIENwIBATCBhjByMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGln
+# aUNlcnQgSW5jMRkwFwYDVQQLExB3d3cuZGlnaWNlcnQuY29tMTEwLwYDVQQDEyhE
+# aWdpQ2VydCBTSEEyIEFzc3VyZWQgSUQgQ29kZSBTaWduaW5nIENBAhADtHHNTX/+
+# wpo7ILLLD19UMAkGBSsOAwIaBQCgeDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAA
+# MBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgor
+# BgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTl9vUhNixlC4qK2N6ftsmXNxTB5DAN
+# BgkqhkiG9w0BAQEFAASCAQBmoK4vUOuN1W2tbF6prfT9lK/x424kuyT2GmMuBg1K
+# 2QLmoPVPFokJllqckm2snV2PrVZ2jQf1HqZfoQ9k9tJQ9Iysobsdi+Xk35m9Jhnb
+# qoDBI7HI8NVzgczSgcOGMtV1SkSHMxnobVPnqNVyD1nK6OCSIFe8lKVggiNHokxv
+# bpPOWW1oPO9eayYSoysEqwygODgV5Jr0wSVLDuoAKlnbYH4Hjvtf0JWJncm/l6ZM
+# yWIXaBUWNV6Dl2ZTeCXIlBrNxC3nfLn6uBkbox0xvcYk6tvksy7fQsSFFWYiqR26
+# 9sW4wJmqvlKO1PKNwdiGnY2fvJzffot8NPEKxbb7l2ySoYICDzCCAgsGCSqGSIb3
+# DQEJBjGCAfwwggH4AgEBMHYwYjELMAkGA1UEBhMCVVMxFTATBgNVBAoTDERpZ2lD
+# ZXJ0IEluYzEZMBcGA1UECxMQd3d3LmRpZ2ljZXJ0LmNvbTEhMB8GA1UEAxMYRGln
+# aUNlcnQgQXNzdXJlZCBJRCBDQS0xAhADAZoCOv9YsWvW1ermF/BmMAkGBSsOAwIa
+# BQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0x
+# NjA2MDMxODA1NTFaMCMGCSqGSIb3DQEJBDEWBBQ8siiyF+3YjaCU9cWVOMiV0i6H
+# WjANBgkqhkiG9w0BAQEFAASCAQCcC1//Fo3cFfFAFDvhOtpcuzFn6vsIm6eGjcAD
+# l/sUEeAS69BbPrapFDxwGjMbeFWSQK0KhzbxEs5DN/5eRrj1xX9SnhunszqPCzJ7
+# 66XJvuncyzKxQvOGGMLPbGkVHsximVT0IX+pPEZS25gTLBk8e30R6w9ChgykAxbz
+# Gyi4gg8HNvk20aTydXelUA8hRYdb2dn/RLTamZjxAdmhRUyPuClgh4ZvOohILwAn
+# Egh5cdu417ircbhFIJhujK/yr2C4uJEmb+JDST96luQBKQtlg7e3OnTBYddc3YoZ
+# S5dTEsAn3PlDvkcuxg79fgK+Wf/EMOGaEv3bJaeReFcRp1l8
 # SIG # End signature block

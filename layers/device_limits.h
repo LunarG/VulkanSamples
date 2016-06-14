@@ -24,7 +24,7 @@
 using namespace std;
 
 // Device Limits ERROR codes
-typedef enum _DEV_LIMITS_ERROR {
+enum DEV_LIMITS_ERROR {
     DEVLIMITS_NONE,                          // Used for INFO & other non-error messages
     DEVLIMITS_INVALID_INSTANCE,              // Invalid instance used
     DEVLIMITS_INVALID_PHYSICAL_DEVICE,       // Invalid physical device used
@@ -38,22 +38,22 @@ typedef enum _DEV_LIMITS_ERROR {
     DEVLIMITS_INVALID_UNIFORM_BUFFER_OFFSET, // Uniform buffer offset violates device limit granularity
     DEVLIMITS_INVALID_STORAGE_BUFFER_OFFSET, // Storage buffer offset violates device limit granularity
     DEVLIMITS_INVALID_BUFFER_UPDATE_ALIGNMENT,  // Alignment requirement for buffer update is violated
-} DEV_LIMITS_ERROR;
+};
 
-typedef enum _CALL_STATE {
+enum CALL_STATE{
     UNCALLED,      // Function has not been called
     QUERY_COUNT,   // Function called once to query a count
     QUERY_DETAILS, // Function called w/ a count to query details
-} CALL_STATE;
+};
 
-typedef struct _INSTANCE_STATE {
+struct INSTANCE_STATE {
     // Track the call state and array size for physical devices
     CALL_STATE vkEnumeratePhysicalDevicesState;
     uint32_t physicalDevicesCount;
-    _INSTANCE_STATE() : vkEnumeratePhysicalDevicesState(UNCALLED), physicalDevicesCount(0){};
-} INSTANCE_STATE;
+    INSTANCE_STATE() : vkEnumeratePhysicalDevicesState(UNCALLED), physicalDevicesCount(0){};
+};
 
-typedef struct _PHYSICAL_DEVICE_STATE {
+struct PHYSICAL_DEVICE_STATE {
     // Track the call state and array sizes for various query functions
     CALL_STATE vkGetPhysicalDeviceQueueFamilyPropertiesState;
     uint32_t queueFamilyPropertiesCount;
@@ -62,9 +62,9 @@ typedef struct _PHYSICAL_DEVICE_STATE {
     CALL_STATE vkGetPhysicalDeviceExtensionPropertiesState;
     uint32_t deviceExtensionCount;
     CALL_STATE vkGetPhysicalDeviceFeaturesState;
-    _PHYSICAL_DEVICE_STATE()
+    PHYSICAL_DEVICE_STATE()
         : vkGetPhysicalDeviceQueueFamilyPropertiesState(UNCALLED), queueFamilyPropertiesCount(0),
           vkGetPhysicalDeviceLayerPropertiesState(UNCALLED), deviceLayerCount(0),
           vkGetPhysicalDeviceExtensionPropertiesState(UNCALLED), deviceExtensionCount(0),
           vkGetPhysicalDeviceFeaturesState(UNCALLED){};
-} PHYSICAL_DEVICE_STATE;
+};

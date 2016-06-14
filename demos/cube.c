@@ -60,7 +60,8 @@
 #ifdef _WIN32
 #define ERR_EXIT(err_msg, err_class)                                           \
     do {                                                                       \
-        MessageBox(NULL, err_msg, err_class, MB_OK);                           \
+        if (!demo->suppress_popups)                                            \
+            MessageBox(NULL, err_msg, err_class, MB_OK);                       \
         exit(1);                                                               \
     } while (0)
 
@@ -265,51 +266,6 @@ void dumpVec4(const char *note, vec4 vector) {
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
-dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-        uint64_t srcObject, size_t location, int32_t msgCode,
-        const char *pLayerPrefix, const char *pMsg, void *pUserData) {
-    char *message = (char *)malloc(strlen(pMsg) + 100);
-
-    assert(message);
-
-    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        sprintf(message, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode,
-                pMsg);
-        validation_error = 1;
-    } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-        // We know that we're submitting queues without fences, ignore this
-        // warning
-        if (strstr(pMsg,
-                   "vkQueueSubmit parameter, VkFence fence, is null pointer")) {
-            return false;
-        }
-        sprintf(message, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode,
-                pMsg);
-        validation_error = 1;
-    } else {
-        validation_error = 1;
-        return false;
-    }
-
-#ifdef _WIN32
-    MessageBox(NULL, message, "Alert", MB_OK);
-#else
-    printf("%s\n", message);
-    fflush(stdout);
-#endif
-    free(message);
-
-    /*
-     * false indicates that layer should not bail-out of an
-     * API call that had validation failures. This may mean that the
-     * app dies inside the driver due to invalid parameter(s).
-     * That's what would happen without validation layers, so we'll
-     * keep that behavior here.
-     */
-    return false;
-}
-
-VKAPI_ATTR VkBool32 VKAPI_CALL
 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
               uint64_t srcObject, size_t location, int32_t msgCode,
               const char *pLayerPrefix, const char *pMsg,
@@ -323,7 +279,7 @@ BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     return false;
 }
 
-typedef struct _SwapchainBuffers {
+typedef struct {
     VkImage image;
     VkCommandBuffer cmd;
     VkImageView view;
@@ -436,6 +392,7 @@ struct demo {
     int32_t frameCount;
     bool validate;
     bool use_break;
+    bool suppress_popups;
     PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallback;
     PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallback;
     VkDebugReportCallbackEXT msg_callback;
@@ -444,6 +401,53 @@ struct demo {
     uint32_t current_buffer;
     uint32_t queue_count;
 };
+
+VKAPI_ATTR VkBool32 VKAPI_CALL
+dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
+    uint64_t srcObject, size_t location, int32_t msgCode,
+    const char *pLayerPrefix, const char *pMsg, void *pUserData) {
+    char *message = (char *)malloc(strlen(pMsg) + 100);
+
+    assert(message);
+
+    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
+        sprintf(message, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode,
+            pMsg);
+        validation_error = 1;
+    } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
+        // We know that we're submitting queues without fences, ignore this
+        // warning
+        if (strstr(pMsg,
+            "vkQueueSubmit parameter, VkFence fence, is null pointer")) {
+            return false;
+        }
+        sprintf(message, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode,
+            pMsg);
+        validation_error = 1;
+    } else {
+        validation_error = 1;
+        return false;
+    }
+
+#ifdef _WIN32
+    struct demo *demo = (struct demo*) pUserData;
+    if (!demo->suppress_popups)
+        MessageBox(NULL, message, "Alert", MB_OK);
+#else
+    printf("%s\n", message);
+    fflush(stdout);
+#endif
+    free(message);
+
+    /*
+    * false indicates that layer should not bail-out of an
+    * API call that had validation failures. This may mean that the
+    * app dies inside the driver due to invalid parameter(s).
+    * That's what would happen without validation layers, so we'll
+    * keep that behavior here.
+    */
+    return false;
+}
 
 // Forward declaration:
 static void demo_resize(struct demo *demo);
@@ -1028,8 +1032,8 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
 #ifdef __ANDROID__
 #include <lunarg.ppm.h>
     char *cPtr;
-    cPtr = (char*)___lunarg_ppm;
-    if ((unsigned char*)cPtr >= (___lunarg_ppm + ___lunarg_ppm_len) || strncmp(cPtr, "P6\n", 3)) {
+    cPtr = (char*)lunarg_ppm;
+    if ((unsigned char*)cPtr >= (lunarg_ppm + lunarg_ppm_len) || strncmp(cPtr, "P6\n", 3)) {
         return false;
     }
     while(strncmp(cPtr++, "\n", 1));
@@ -1038,7 +1042,7 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
         return true;
     }
     while(strncmp(cPtr++, "\n", 1));
-    if ((unsigned char*)cPtr >= (___lunarg_ppm + ___lunarg_ppm_len) || strncmp(cPtr, "255\n", 4)) {
+    if ((unsigned char*)cPtr >= (lunarg_ppm + lunarg_ppm_len) || strncmp(cPtr, "255\n", 4)) {
         return false;
     }
     while(strncmp(cPtr++, "\n", 1));
@@ -1926,7 +1930,7 @@ static void demo_cleanup(struct demo *demo) {
     }
     free(demo->atom_wm_delete_window);
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-    xcb_destroy_window(demo->connection, demo->window);
+    xcb_destroy_window(demo->connection, demo->xcb_window);
     xcb_disconnect(demo->connection);
     free(demo->atom_wm_delete_window);
 #endif
@@ -2405,7 +2409,7 @@ static void demo_init_vk(struct demo *demo) {
     /* Look for instance extensions */
     VkBool32 surfaceExtFound = 0;
     VkBool32 platformSurfaceExtFound = 0;
-#if defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(VK_USE_PLATFORM_XLIB_KHR)
     VkBool32 xlibSurfaceExtFound = 0;
 #endif
     memset(demo->extension_names, 0, sizeof(demo->extension_names));
@@ -2434,17 +2438,20 @@ static void demo_init_vk(struct demo *demo) {
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
             }
-#elif defined(VK_USE_PLATFORM_IOS_MVK)
+#endif
+#if defined(VK_USE_PLATFORM_IOS_MVK)
 			if (!strcmp(VK_MVK_IOS_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
 				platformSurfaceExtFound = 1;
 				demo->extension_names[demo->enabled_extension_count++] = VK_MVK_IOS_SURFACE_EXTENSION_NAME;
 			}
-#elif defined(VK_USE_PLATFORM_OSX_MVK)
+#endif
+#if defined(VK_USE_PLATFORM_OSX_MVK)
 			if (!strcmp(VK_MVK_OSX_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
 				platformSurfaceExtFound = 1;
 				demo->extension_names[demo->enabled_extension_count++] = VK_MVK_OSX_SURFACE_EXTENSION_NAME;
 			}
-#elif defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
+#endif
+#if defined(VK_USE_PLATFORM_XLIB_KHR)
             if (!strcmp(VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
@@ -2452,14 +2459,16 @@ static void demo_init_vk(struct demo *demo) {
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
             }
-
+#endif
+#if defined(VK_USE_PLATFORM_XCB_KHR)
             if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_XCB_SURFACE_EXTENSION_NAME;
             }
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
+#endif
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
             if (!strcmp(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
@@ -2570,7 +2579,7 @@ static void demo_init_vk(struct demo *demo) {
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfo.pNext = NULL;
         dbgCreateInfo.pfnCallback = demo->use_break ? BreakCallback : dbgFunc;
-        dbgCreateInfo.pUserData = NULL;
+        dbgCreateInfo.pUserData = demo;
         dbgCreateInfo.flags =
             VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
         inst_info.pNext = &dbgCreateInfo;
@@ -2719,7 +2728,7 @@ static void demo_init_vk(struct demo *demo) {
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfo.pNext = NULL;
         dbgCreateInfo.pfnCallback = callback;
-        dbgCreateInfo.pUserData = NULL;
+        dbgCreateInfo.pUserData = demo;
         dbgCreateInfo.flags =
             VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
         err = demo->CreateDebugReportCallback(demo->inst, &dbgCreateInfo, NULL,
@@ -3015,9 +3024,13 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             i++;
             continue;
         }
+        if (strcmp(argv[i], "--suppress_popups") == 0) {
+            demo->suppress_popups = true;
+            continue;
+        }
 
         fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--break] "
-                        "[--c <framecount>]\n",
+                        "[--c <framecount>] [--suppress_popups]\n",
                 APP_SHORT_NAME);
         fflush(stderr);
         exit(1);

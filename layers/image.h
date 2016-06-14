@@ -26,7 +26,7 @@
 #include "vk_layer_logging.h"
 
 // Image ERROR codes
-typedef enum _IMAGE_ERROR {
+enum IMAGE_ERROR {
     IMAGE_NONE,                             // Used for INFO & other non-error messages
     IMAGE_FORMAT_UNSUPPORTED,               // Request to create Image or RenderPass with a format that is not supported
     IMAGE_RENDERPASS_INVALID_ATTACHMENT,    // Invalid image layouts and/or load/storeOps for an attachment when creating RenderPass
@@ -44,9 +44,9 @@ typedef enum _IMAGE_ERROR {
     IMAGE_INVALID_FORMAT_LIMITS_VIOLATION,  // Device limits for this format have been exceeded
     IMAGE_INVALID_LAYOUT,                   // Operation specifies an invalid layout
     IMAGE_INVALID_EXTENTS,                  // Operation specifies invalid image extents
-} IMAGE_ERROR;
+};
 
-typedef struct _IMAGE_STATE {
+struct IMAGE_STATE {
     uint32_t mipLevels;
     uint32_t arraySize;
     VkFormat format;
@@ -54,13 +54,13 @@ typedef struct _IMAGE_STATE {
     VkImageType imageType;
     VkExtent3D extent;
     VkImageCreateFlags flags;
-    _IMAGE_STATE()
+    IMAGE_STATE()
         : mipLevels(0), arraySize(0), format(VK_FORMAT_UNDEFINED), samples(VK_SAMPLE_COUNT_1_BIT),
           imageType(VK_IMAGE_TYPE_RANGE_SIZE), extent{}, flags(0){};
-    _IMAGE_STATE(const VkImageCreateInfo *pCreateInfo)
+    IMAGE_STATE(const VkImageCreateInfo *pCreateInfo)
         : mipLevels(pCreateInfo->mipLevels), arraySize(pCreateInfo->arrayLayers), format(pCreateInfo->format),
           samples(pCreateInfo->samples), imageType(pCreateInfo->imageType), extent(pCreateInfo->extent),
           flags(pCreateInfo->flags){};
-} IMAGE_STATE;
+};
 
 #endif // IMAGE_H

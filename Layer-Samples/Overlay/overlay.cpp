@@ -356,10 +356,10 @@ static void after_device_create(VkPhysicalDevice gpu, VkDevice device,
 
     /* ensure we can directly upload into this layout */
     assert(!layout.offset);
-    assert(layout.size == FONT_ATLAS_SIZE * FONT_ATLAS_SIZE);
+    assert(layout.size >= FONT_ATLAS_SIZE * FONT_ATLAS_SIZE);
     assert(layout.rowPitch == FONT_ATLAS_SIZE);
 
-    err = pTable->MapMemory(device, data->fontGlyphsMemory, 0, 0, 0, &bits);
+    err = pTable->MapMemory(device, data->fontGlyphsMemory, 0, VK_WHOLE_SIZE, 0, &bits);
     assert(!err);
 
     /* Load the font glyphs directly into the mapped buffer */

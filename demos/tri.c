@@ -66,7 +66,8 @@
 #ifdef _WIN32
 #define ERR_EXIT(err_msg, err_class)                                           \
     do {                                                                       \
-        MessageBox(NULL, err_msg, err_class, MB_OK);                           \
+        if (!demo->suppress_popups)                                            \
+            MessageBox(NULL, err_msg, err_class, MB_OK);                       \
         exit(1);                                                               \
     } while (0)
 #elif defined __ANDROID__
@@ -119,44 +120,6 @@ struct texture_object {
 static int validation_error = 0;
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
-dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-        uint64_t srcObject, size_t location, int32_t msgCode,
-        const char *pLayerPrefix, const char *pMsg, void *pUserData) {
-    char *message = (char *)malloc(strlen(pMsg) + 100);
-
-    assert(message);
-
-    validation_error = 1;
-
-    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        sprintf(message, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode,
-                pMsg);
-    } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-        sprintf(message, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode,
-                pMsg);
-    } else {
-        return false;
-    }
-
-#ifdef _WIN32
-    MessageBox(NULL, message, "Alert", MB_OK);
-#else
-    printf("%s\n", message);
-    fflush(stdout);
-#endif
-    free(message);
-
-    /*
-     * false indicates that layer should not bail-out of an
-     * API call that had validation failures. This may mean that the
-     * app dies inside the driver due to invalid parameter(s).
-     * That's what would happen without validation layers, so we'll
-     * keep that behavior here.
-     */
-    return false;
-}
-
-VKAPI_ATTR VkBool32 VKAPI_CALL
 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
               uint64_t srcObject, size_t location, int32_t msgCode,
               const char *pLayerPrefix, const char *pMsg,
@@ -170,7 +133,7 @@ BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     return false;
 }
 
-typedef struct _SwapchainBuffers {
+typedef struct {
     VkImage image;
     VkCommandBuffer cmd;
     VkImageView view;
@@ -195,6 +158,7 @@ struct demo {
     VkSurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;
+    bool suppress_popups;
 
     VkInstance inst;
     VkPhysicalDevice gpu;
@@ -286,6 +250,46 @@ struct demo {
     uint32_t current_buffer;
     uint32_t queue_count;
 };
+
+VKAPI_ATTR VkBool32 VKAPI_CALL
+dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
+    uint64_t srcObject, size_t location, int32_t msgCode,
+    const char *pLayerPrefix, const char *pMsg, void *pUserData) {
+    char *message = (char *)malloc(strlen(pMsg) + 100);
+
+    assert(message);
+
+    validation_error = 1;
+
+    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
+        sprintf(message, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode,
+            pMsg);
+    } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
+        sprintf(message, "WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode,
+            pMsg);
+    } else {
+        return false;
+    }
+
+#ifdef _WIN32
+    struct demo *demo = (struct demo*) pUserData;
+    if (!demo->suppress_popups)
+        MessageBox(NULL, message, "Alert", MB_OK);
+#else
+    printf("%s\n", message);
+    fflush(stdout);
+#endif
+    free(message);
+
+    /*
+    * false indicates that layer should not bail-out of an
+    * API call that had validation failures. This may mean that the
+    * app dies inside the driver due to invalid parameter(s).
+    * That's what would happen without validation layers, so we'll
+    * keep that behavior here.
+    */
+    return false;
+}
 
 // Forward declaration:
 static void demo_resize(struct demo *demo);
@@ -2150,7 +2154,7 @@ static void demo_init_vk(struct demo *demo) {
         dbgCreateInfo.flags =
             VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
         dbgCreateInfo.pfnCallback = demo->use_break ? BreakCallback : dbgFunc;
-        dbgCreateInfo.pUserData = NULL;
+        dbgCreateInfo.pUserData = demo;
         dbgCreateInfo.pNext = NULL;
         err = demo->CreateDebugReportCallback(demo->inst, &dbgCreateInfo, NULL,
                                               &demo->msg_callback);
@@ -2422,9 +2426,13 @@ static void demo_init(struct demo *demo, const int argc, const char *argv[])
             i++;
             continue;
         }
+        if (strcmp(argv[i], "--suppress_popups") == 0) {
+            demo->suppress_popups = true;
+            continue;
+        }
 
         fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--break] "
-                        "[--c <framecount>]\n",
+                        "[--c <framecount>] [--suppress_popups]\n",
                 APP_SHORT_NAME);
         fflush(stderr);
         exit(1);
