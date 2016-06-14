@@ -103,7 +103,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInstance instance, u
         if (inst->ptr_phys_devs)
             delete[] inst->ptr_phys_devs;
         inst->ptr_phys_devs = phys_devs;
-        for (int i = 0; i < *pPhysicalDeviceCount; i++) {
+        for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
             if (inst->pfn_inst_init == NULL) {
                 phys_devs[i].loader_disp = *(reinterpret_cast<VkLayerInstanceDispatchTable **> (pPhysicalDevices[i]));
             } else {
