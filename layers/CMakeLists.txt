@@ -167,9 +167,15 @@ target_include_directories(VkLayer_core_validation PRIVATE ${SPIRV_TOOLS_INCLUDE
 target_link_libraries(VkLayer_core_validation ${SPIRV_TOOLS_LIBRARIES})
 
 if (WIN32)
-    file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/VkLayer_utils.dll COPY_SRC_PATH)
-    file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/../demos/$<CONFIGURATION>/ COPY_DST_PATH)
-    file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/../tests/$<CONFIGURATION>/ COPY_DST_TEST_PATH)
+    if (CMAKE_GENERATOR MATCHES "^Visual Studio.*")
+        file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/VkLayer_utils.dll COPY_SRC_PATH)
+        file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/../demos/$<CONFIGURATION>/ COPY_DST_PATH)
+        file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/../tests/$<CONFIGURATION>/ COPY_DST_TEST_PATH)
+    else()
+        file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/VkLayer_utils.dll COPY_SRC_PATH)
+        file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/../demos/ COPY_DST_PATH)
+        file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/../tests/ COPY_DST_TEST_PATH)
+    endif()
     # Copy layer utils library to correct locations
     add_custom_command(TARGET VkLayer_utils
                        POST_BUILD
