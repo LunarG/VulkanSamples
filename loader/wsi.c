@@ -536,7 +536,7 @@ terminator_CreateWin32SurfaceKHR(VkInstance instance,
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "VK_KHR_win32_surface extension not enabled.  "
                    "vkCreateWin32SurfaceKHR not executed!\n");
-        return VK_SUCCESS;
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
     // Next, if so, proceed with the implementation of this function:
@@ -644,7 +644,7 @@ terminator_CreateMirSurfaceKHR(VkInstance instance,
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "VK_KHR_mir_surface extension not enabled.  "
                    "vkCreateMirSurfaceKHR not executed!\n");
-        return VK_SUCCESS;
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
     // Next, if so, proceed with the implementation of this function:
@@ -743,7 +743,8 @@ vkCreateWaylandSurfaceKHR(VkInstance instance,
  * This is the instance chain terminator function
  * for CreateWaylandSurfaceKHR
  */
-VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWaylandSurfaceKHR(
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_CreateWaylandSurfaceKHR(
     VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     // First, check to ensure the appropriate extension was enabled:
@@ -752,7 +753,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWaylandSurfaceKHR(
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "VK_KHR_wayland_surface extension not enabled.  "
                    "vkCreateWaylandSurfaceKHR not executed!\n");
-        return VK_SUCCESS;
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
     // Next, if so, proceed with the implementation of this function:
@@ -862,7 +863,7 @@ terminator_CreateXcbSurfaceKHR(VkInstance instance,
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "VK_KHR_xcb_surface extension not enabled.  "
                    "vkCreateXcbSurfaceKHR not executed!\n");
-        return VK_SUCCESS;
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
     // Next, if so, proceed with the implementation of this function:
@@ -973,7 +974,7 @@ terminator_CreateXlibSurfaceKHR(VkInstance instance,
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "VK_KHR_xlib_surface extension not enabled.  "
                    "vkCreateXlibSurfaceKHR not executed!\n");
-        return VK_SUCCESS;
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
     // Next, if so, proceed with the implementation of this function:
@@ -1080,7 +1081,7 @@ terminator_CreateAndroidSurfaceKHR(VkInstance instance, Window window,
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "VK_KHR_display extension not enabled.  "
                    "vkCreateAndroidSurfaceKHR not executed!\n");
-        return VK_SUCCESS;
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
     // Next, if so, proceed with the implementation of this function:
@@ -1293,7 +1294,7 @@ terminator_CreateDisplayModeKHR(VkPhysicalDevice physicalDevice,
         loader_log(ptr_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "VK_KHR_display extension not enabled.  "
                    "vkCreateDisplayModeKHR not executed!\n");
-        return VK_SUCCESS;
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
     // Next, if so, proceed with the implementation of this function:
@@ -1368,7 +1369,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayPlaneSurfaceKHR(
         loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "VK_KHR_surface extension not enabled.  "
                    "vkCreateDisplayPlaneSurfaceKHR not executed!\n");
-        return VK_SUCCESS;
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
     pIcdSurface = loader_heap_alloc(inst, sizeof(VkIcdSurfaceDisplay),
