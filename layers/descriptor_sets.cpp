@@ -665,7 +665,23 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
         }
         break;
     default:
-        // anything to check for other layouts?
+        // For other layouts if the source is ds image, both aspect bits must not be set
+        if (ds) {
+            if (aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) {
+                if (aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) {
+                    // both  must NOT be set
+                    std::stringstream error_str;
+                    error_str << "ImageView (" << image_view << ") has layout " << string_VkImageLayout(image_layout)
+                              << " and is using depth/stencil image of format " << string_VkFormat(format)
+                              << " but it has both STENCIL and DEPTH aspects set, which is illegal. When using a depth/stencil "
+                                 "image in a descriptor set, please only set either VK_IMAGE_ASPECT_DEPTH_BIT or "
+                                 "VK_IMAGE_ASPECT_STENCIL_BIT depending on whether it will be used for depth reads or stencil "
+                                 "reads respectively.";
+                    *error = error_str.str();
+                    return false;
+                }
+            }
+        }
         break;
     }
     // Now validate that usage flags are correctly set for given type of update
