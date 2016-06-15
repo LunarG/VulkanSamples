@@ -488,7 +488,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu) {
 
     uint32_t count = 0;
 
-    /* Scan layers */
+    // Scan layers
     VkLayerProperties *device_layer_properties = NULL;
     struct layer_extension_list *device_layers = NULL;
 
@@ -522,7 +522,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu) {
         memcpy(&dst_info->layer_properties, src_info,
                sizeof(VkLayerProperties));
 
-        /* Save away layer extension info for report */
+        // Save away layer extension info for report
         app_get_physical_device_layer_extensions(
             gpu, src_info->layerName, &dst_info->extension_count,
             &dst_info->extension_properties);
@@ -1194,19 +1194,19 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tmaxViewports                            = %u\n",                 limits->maxViewports                           );
     printf("\t\tmaxViewportDimensions[0]                = %u\n",                 limits->maxViewportDimensions[0]               );
     printf("\t\tmaxViewportDimensions[1]                = %u\n",                 limits->maxViewportDimensions[1]               );
-    printf("\t\tviewportBoundsRange[0]                  = %f\n",                 limits->viewportBoundsRange[0]                 );
-    printf("\t\tviewportBoundsRange[1]                  = %f\n",                 limits->viewportBoundsRange[1]                 );
+    printf("\t\tviewportBoundsRange[0]                  =%13f\n",                 limits->viewportBoundsRange[0]                 );
+    printf("\t\tviewportBoundsRange[1]                  =%13f\n",                 limits->viewportBoundsRange[1]                 );
     printf("\t\tviewportSubPixelBits                    = %u\n",                 limits->viewportSubPixelBits                   );
     printf("\t\tminMemoryMapAlignment                   = " PRINTF_SIZE_T_SPECIFIER "\n", limits->minMemoryMapAlignment         );
     printf("\t\tminTexelBufferOffsetAlignment           = 0x%" PRIxLEAST64 "\n", limits->minTexelBufferOffsetAlignment          );
     printf("\t\tminUniformBufferOffsetAlignment         = 0x%" PRIxLEAST64 "\n", limits->minUniformBufferOffsetAlignment        );
     printf("\t\tminStorageBufferOffsetAlignment         = 0x%" PRIxLEAST64 "\n", limits->minStorageBufferOffsetAlignment        );
-    printf("\t\tminTexelOffset                          = 0x%" PRIxLEAST32 "\n", limits->minTexelOffset                         );
-    printf("\t\tmaxTexelOffset                          = 0x%" PRIxLEAST32 "\n", limits->maxTexelOffset                         );
-    printf("\t\tminTexelGatherOffset                    = 0x%" PRIxLEAST32 "\n", limits->minTexelGatherOffset                   );
-    printf("\t\tmaxTexelGatherOffset                    = 0x%" PRIxLEAST32 "\n", limits->maxTexelGatherOffset                   );
-    printf("\t\tminInterpolationOffset                  = %f\n",                 limits->minInterpolationOffset                 );
-    printf("\t\tmaxInterpolationOffset                  = %f\n",                 limits->maxInterpolationOffset                 );
+    printf("\t\tminTexelOffset                          =%3d\n",                 limits->minTexelOffset                         );
+    printf("\t\tmaxTexelOffset                          =%3d\n",                 limits->maxTexelOffset                         );
+    printf("\t\tminTexelGatherOffset                    =%3d\n",                 limits->minTexelGatherOffset                   );
+    printf("\t\tmaxTexelGatherOffset                    =%3d\n",                 limits->maxTexelGatherOffset                   );
+    printf("\t\tminInterpolationOffset                  =%9f\n",                 limits->minInterpolationOffset                 );
+    printf("\t\tmaxInterpolationOffset                  =%9f\n",                 limits->maxInterpolationOffset                 );
     printf("\t\tsubPixelInterpolationOffsetBits         = %u\n",                 limits->subPixelInterpolationOffsetBits        );
     printf("\t\tmaxFramebufferWidth                     = %u\n",                 limits->maxFramebufferWidth                    );
     printf("\t\tmaxFramebufferHeight                    = %u\n",                 limits->maxFramebufferHeight                   );
