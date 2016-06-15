@@ -2319,6 +2319,43 @@ TEST_F(VkLayerTest, ResetUnsignaledFence) {
     m_errorMonitor->VerifyNotFound();
 }
 
+#if 0
+TEST_F(VkLayerTest, LongFenceChain)
+{
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkResult err;
+
+    std::vector<VkFence> fences;
+
+    const int chainLength = 32768;
+
+    for (int i = 0; i < chainLength; i++) {
+        VkFenceCreateInfo fci = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0 };
+        VkFence fence;
+        err = vkCreateFence(m_device->device(), &fci, nullptr, &fence);
+        ASSERT_VK_SUCCESS(err);
+
+        fences.push_back(fence);
+
+        VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr,
+            0, nullptr, 0, nullptr };
+        err = vkQueueSubmit(m_device->m_queue, 1, &si, fence);
+        ASSERT_VK_SUCCESS(err);
+
+    }
+
+    // BOOM, stack overflow.
+    vkWaitForFences(m_device->device(), 1, &fences.back(), VK_TRUE, UINT64_MAX);
+
+    for (auto fence : fences)
+        vkDestroyFence(m_device->device(), fence, nullptr);
+
+    m_errorMonitor->VerifyNotFound();
+}
+#endif
+
 TEST_F(VkLayerTest, CommandBufferSimultaneousUseSync)
 {
     m_errorMonitor->ExpectSuccess();
