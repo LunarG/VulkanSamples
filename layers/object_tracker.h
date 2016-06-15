@@ -289,9 +289,11 @@ static void create_instance(VkInstance dispatchable_object, VkInstance object, V
 static void create_device(VkDevice dispatchable_object, VkDevice object, VkDebugReportObjectTypeEXT objType);
 static void create_device(VkPhysicalDevice dispatchable_object, VkDevice object, VkDebugReportObjectTypeEXT objType);
 static void create_queue(VkDevice dispatchable_object, VkQueue vkObj, VkDebugReportObjectTypeEXT objType);
+static void create_display_khr(VkPhysicalDevice dispatchable_object, VkDisplayKHR vkObj, VkDebugReportObjectTypeEXT objType);
 static bool validate_image(VkQueue dispatchable_object, VkImage object, VkDebugReportObjectTypeEXT objType, bool null_allowed);
 static bool validate_instance(VkInstance dispatchable_object, VkInstance object, VkDebugReportObjectTypeEXT objType,
                                   bool null_allowed);
+static bool validate_physical_device(VkPhysicalDevice dispatchable_object, VkPhysicalDevice object, VkDebugReportObjectTypeEXT objType, bool null_allowed);
 static bool validate_device(VkDevice dispatchable_object, VkDevice object, VkDebugReportObjectTypeEXT objType,
                                 bool null_allowed);
 static bool validate_descriptor_pool(VkDevice dispatchable_object, VkDescriptorPool object, VkDebugReportObjectTypeEXT objType,
@@ -1021,6 +1023,27 @@ VkResult explicit_GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchai
             create_swapchain_image_obj(device, pSwapchainImages[i], swapchain);
         }
         lock.unlock();
+    }
+    return result;
+}
+
+VkResult VKAPI_CALL explicit_GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDevice physicalDevice, uint32_t planeIndex, uint32_t* pDisplayCount, VkDisplayKHR* pDisplays)
+{
+    bool skipCall = false;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        skipCall |= validate_physical_device(physicalDevice, physicalDevice, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, false);
+    }
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    VkResult result = get_dispatch_table(object_tracker_instance_table_map, physicalDevice)->GetDisplayPlaneSupportedDisplaysKHR(physicalDevice, planeIndex, pDisplayCount, pDisplays);
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        if (result == VK_SUCCESS) {
+            for (uint32_t idx=0; idx<*pDisplayCount; ++idx) {
+                create_display_khr(physicalDevice, pDisplays[idx], VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT);
+            }
+        }
     }
     return result;
 }

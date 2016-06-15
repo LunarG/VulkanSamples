@@ -1571,6 +1571,9 @@ class StructWrapperGen:
         for m in self.struct_dict[s]:
             if self.struct_dict[s][m]['ptr']:
                 return True
+        inclusions = ['VkDisplayPlanePropertiesKHR', 'VkDisplayModePropertiesKHR', 'VkDisplayPropertiesKHR']
+        if s in inclusions:
+            return True
         return False
 
     def _generateSafeStructHeader(self):

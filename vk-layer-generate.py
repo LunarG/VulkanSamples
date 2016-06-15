@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 #
 # VK
 #
@@ -44,7 +44,6 @@ def proto_is_global(proto):
         "EnumerateInstanceExtensionProperties",
         "EnumerateDeviceLayerProperties",
         "EnumerateDeviceExtensionProperties",
-        "CreateDisplayPlaneSurfaceKHR",
         "CreateXcbSurfaceKHR",
         "GetPhysicalDeviceXcbPresentationSupportKHR",
         "CreateXlibSurfaceKHR",
@@ -55,7 +54,14 @@ def proto_is_global(proto):
         "GetPhysicalDeviceMirPresentationSupportKHR",
         "CreateAndroidSurfaceKHR",
         "CreateWin32SurfaceKHR",
-        "GetPhysicalDeviceWin32PresentationSupportKHR"
+        "GetPhysicalDeviceWin32PresentationSupportKHR",
+        "GetPhysicalDeviceDisplayPropertiesKHR",
+        "GetPhysicalDeviceDisplayPlanePropertiesKHR",
+        "GetDisplayPlaneSupportedDisplaysKHR",
+        "GetDisplayModePropertiesKHR",
+        "CreateDisplayModeKHR",
+        "GetDisplayPlaneCapabilitiesKHR",
+        "CreateDisplayPlaneSurfaceKHR"
     ]
     if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name in global_function_names:
        return True
@@ -806,7 +812,10 @@ class ObjectTrackerSubcommand(Subcommand):
         procs_txt = []
         # First parse through funcs and gather dict of all objects seen by each call
         obj_use_dict = {}
-        proto_list = vulkan.core.protos + vulkan.ext_khr_surface.protos + vulkan.ext_khr_surface.protos + vulkan.ext_khr_win32_surface.protos + vulkan.ext_khr_device_swapchain.protos
+        proto_list = []
+        for grp in vulkan.extensions:
+            proto_list += grp.protos
+        #vulkan.core.protos + vulkan.ext_khr_surface.protos + vulkan.ext_khr_surface.protos + vulkan.ext_khr_win32_surface.protos + vulkan.ext_khr_device_swapchain.protos
         for proto in proto_list:
             disp_obj = proto.params[0].ty.strip('*').replace('const ', '')
             if disp_obj in vulkan.object_dispatch_list:
@@ -819,7 +828,7 @@ class ObjectTrackerSubcommand(Subcommand):
                     if vk_helper.is_type(base_type, 'struct'):
                         obj_use_dict[disp_obj] = self._gather_object_uses(vulkan.object_type_list, base_type, obj_use_dict[disp_obj])
         #for do in obj_use_dict:
-        #    print "Disp obj %s has uses for objs: %s" % (do, ', '.join(obj_use_dict[do]))
+        #    print("Disp obj %s has uses for objs: %s" % (do, ', '.join(obj_use_dict[do])))
 
         for o in vulkan.object_type_list:# vulkan.core.objects:
             procs_txt.append('%s' % self.lineinfo.get())
@@ -827,6 +836,8 @@ class ObjectTrackerSubcommand(Subcommand):
             name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
             if o in vulkan.object_dispatch_list:
                 procs_txt.append('static void create_%s(%s dispatchable_object, %s vkObj, VkDebugReportObjectTypeEXT objType)' % (name, o, o))
+            elif o in ['VkSurfaceKHR', 'VkDisplayKHR', 'VkDisplayModeKHR']:
+                procs_txt.append('static void create_%s(VkPhysicalDevice dispatchable_object, %s vkObj, VkDebugReportObjectTypeEXT objType)' % (name, o))
             else:
                 procs_txt.append('static void create_%s(VkDevice dispatchable_object, %s vkObj, VkDebugReportObjectTypeEXT objType)' % (name, o))
             procs_txt.append('{')
@@ -848,6 +859,8 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('%s' % self.lineinfo.get())
             if o in vulkan.object_dispatch_list:
                 procs_txt.append('static void destroy_%s(%s dispatchable_object, %s object)' % (name, o, o))
+            elif o in ['VkSurfaceKHR', 'VkDisplayKHR', 'VkDisplayModeKHR']:
+                procs_txt.append('static void destroy_%s(VkPhysicalDevice dispatchable_object, %s object)' % (name, o))
             else:
                 procs_txt.append('static void destroy_%s(VkDevice dispatchable_object, %s object)' % (name, o))
             procs_txt.append('{')
@@ -1096,8 +1109,11 @@ class ObjectTrackerSubcommand(Subcommand):
                 if array != '':
                     idx = 'idx%s' % str(array_index)
                     array_index += 1
+                    deref = ''
+                    if 'p' == array[0]:
+                        deref = '*'
                     pre_code += '%s\n' % self.lineinfo.get()
-                    pre_code += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, idx, idx, prefix, array, idx)
+                    pre_code += '%sfor (uint32_t %s=0; %s<%s%s%s; ++%s) {\n' % (indent, idx, idx, deref, prefix, array, idx)
                     indent += '    '
                     local_prefix = '%s[%s].' % (name, idx)
                 elif ptr_type:
@@ -1157,6 +1173,8 @@ class ObjectTrackerSubcommand(Subcommand):
         # Command Buffer Object doesn't follow the rule.
         obj_type_mapping['VkCommandBuffer'] = "VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT"
         obj_type_mapping['VkShaderModule'] = "VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT"
+        obj_type_mapping['VkDisplayKHR'] = "VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT"
+        obj_type_mapping['VkDisplayModeKHR'] = "VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT"
 
         explicit_object_tracker_functions = [
             "CreateInstance",
@@ -1177,7 +1195,8 @@ class ObjectTrackerSubcommand(Subcommand):
             "UnmapMemory",
             "FreeMemory",
             "DestroySwapchainKHR",
-            "GetSwapchainImagesKHR"
+            "GetSwapchainImagesKHR",
+            "GetDisplayPlaneSupportedDisplaysKHR"
         ]
         decl = proto.c_func(attr="VKAPI")
         param0_name = proto.params[0].name
@@ -1199,7 +1218,6 @@ class ObjectTrackerSubcommand(Subcommand):
                                    'AcquireNextImageKHR' : ['fence', 'semaphore' ],
                                    'UpdateDescriptorSets' : ['pTexelBufferView'],
                                    'CreateSwapchainKHR' : ['oldSwapchain'],
-                                   'CreateDisplayModeKHR': ['pAllocator'],
                                   }
         param_count = 'NONE' # keep track of arrays passed directly into API functions
         for p in proto.params:
@@ -1266,7 +1284,7 @@ class ObjectTrackerSubcommand(Subcommand):
                      '}' % (qual, decl, proto.c_call()))
             return "".join(funcs)
         # Temporarily prevent  DestroySurface call from being generated until WSI layer support is fleshed out
-        elif 'DestroyInstance' in proto.name or 'DestroyDevice' in proto.name or 'CreateDisplayModeKHR' in proto.name:
+        elif 'DestroyInstance' in proto.name or 'DestroyDevice' in proto.name:
             return ""
         else:
             if create_func:
@@ -1363,6 +1381,12 @@ class ObjectTrackerSubcommand(Subcommand):
                 'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
                 'vkGetPhysicalDeviceSurfaceFormatsKHR',
                 'vkGetPhysicalDeviceSurfacePresentModesKHR',
+                'vkGetPhysicalDeviceDisplayPropertiesKHR',
+                'vkGetPhysicalDeviceDisplayPlanePropertiesKHR',
+                'vkGetDisplayPlaneSupportedDisplaysKHR',
+                'vkGetDisplayModePropertiesKHR',
+                'vkCreateDisplayModeKHR',
+                'vkGetDisplayPlaneCapabilitiesKHR',
                 'vkCreateDisplayPlaneSurfaceKHR',
                 ]
         if self.wsi == 'Win32':
@@ -1438,13 +1462,17 @@ class UniqueObjectsSubcommand(Subcommand):
                         pre_code += '%sif (local_%s) {\n' % (indent, name)
                     indent += '    '
                 if array != '':
+                    if 'p' == array[0] and array[1] != array[1].lower(): # TODO : Not ideal way to determine ptr
+                        count_prefix = '*'
+                    else:
+                        count_prefix = ''
                     idx = 'idx%s' % str(array_index)
                     array_index += 1
                     if first_level_param and name in param_type:
-                        pre_code += '%slocal_%s = new safe_%s[%s];\n' % (indent, name, param_type[name].strip('*'), array)
+                        pre_code += '%slocal_%s = new safe_%s[%s%s];\n' % (indent, name, param_type[name].strip('*'), count_prefix, array)
                         post_code += '    if (local_%s)\n' % (name)
                         post_code += '        delete[] local_%s;\n' % (name)
-                    pre_code += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, idx, idx, prefix, array, idx)
+                    pre_code += '%sfor (uint32_t %s=0; %s<%s%s%s; ++%s) {\n' % (indent, idx, idx, count_prefix, prefix, array, idx)
                     indent += '    '
                     if first_level_param:
                         pre_code += '%slocal_%s[%s].initialize(&%s[%s]);\n' % (indent, name, idx, name, idx)
@@ -1518,14 +1546,15 @@ class UniqueObjectsSubcommand(Subcommand):
         decl = proto.c_func(attr="VKAPI")
         # A few API cases that are manual code
         # TODO : Special case Create*Pipelines funcs to handle creating multiple unique objects
-        explicit_object_tracker_functions = ['GetSwapchainImagesKHR',
+        explicit_unique_objects_functions = ['GetSwapchainImagesKHR',
                                              'CreateSwapchainKHR',
                                              'CreateInstance',
                                              'DestroyInstance',
                                              'CreateDevice',
                                              'DestroyDevice',
                                              'CreateComputePipelines',
-                                             'CreateGraphicsPipelines'
+                                             'CreateGraphicsPipelines',
+                                             'GetDisplayPlaneSupportedDisplaysKHR'
                                              ]
         # TODO : This is hacky, need to make this a more general-purpose solution for all layers
         ifdef_dict = {'CreateXcbSurfaceKHR': 'VK_USE_PLATFORM_XCB_KHR',
@@ -1538,7 +1567,7 @@ class UniqueObjectsSubcommand(Subcommand):
         # This dict stores array name and size of array
         custom_create_dict = {'pDescriptorSets' : 'pAllocateInfo->descriptorSetCount'}
         pre_call_txt += '%s\n' % (self.lineinfo.get())
-        if proto.name in explicit_object_tracker_functions:
+        if proto.name in explicit_unique_objects_functions:
             funcs.append('%s%s\n'
                      '{\n'
                      '    return explicit_%s;\n'
@@ -1638,7 +1667,11 @@ class UniqueObjectsSubcommand(Subcommand):
         call_sig = proto.c_call()
         # Replace default params with any custom local params
         for ld in local_decls:
-            call_sig = call_sig.replace(ld, '(const %s)local_%s' % (local_decls[ld], ld))
+            const_qualifier = ''
+            for p in proto.params:
+                if ld == p.name and 'const' in p.ty:
+                    const_qualifier = 'const'
+            call_sig = call_sig.replace(ld, '(%s %s)local_%s' % (const_qualifier, local_decls[ld], ld))
         if proto_is_global(proto):
             table_type = "instance"
         else:
@@ -1666,27 +1699,35 @@ class UniqueObjectsSubcommand(Subcommand):
                      ['vkCreateSwapchainKHR',
                       'vkDestroySwapchainKHR', 'vkGetSwapchainImagesKHR',
                       'vkAcquireNextImageKHR', 'vkQueuePresentKHR'])]
-        additional_instance_extensions = [
+        surface_wsi_instance_exts = [
                       'vkDestroySurfaceKHR',
                       'vkGetPhysicalDeviceSurfaceSupportKHR',
                       'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
                       'vkGetPhysicalDeviceSurfaceFormatsKHR',
-                      'vkGetPhysicalDeviceSurfacePresentModesKHR',
+                      'vkGetPhysicalDeviceSurfacePresentModesKHR']
+        display_wsi_instance_exts = [
+                      'vkGetPhysicalDeviceDisplayPropertiesKHR',
+                      'vkGetPhysicalDeviceDisplayPlanePropertiesKHR',
+                      'vkGetDisplayPlaneSupportedDisplaysKHR',
+                      'vkGetDisplayModePropertiesKHR',
+                      'vkCreateDisplayModeKHR',
+                      'vkGetDisplayPlaneCapabilitiesKHR',
                       'vkCreateDisplayPlaneSurfaceKHR']
         if self.wsi == 'Win32':
-            instance_extensions=[('wsi_enabled',
-                                  additional_instance_extensions + ['vkCreateWin32SurfaceKHR'])]
+            instance_extensions=[('wsi_enabled', surface_wsi_instance_exts),
+                                 ('display_enabled', display_wsi_instance_exts),
+                                 ('win32_enabled', ['vkCreateWin32SurfaceKHR'])]
         elif self.wsi == 'Android':
-            instance_extensions=[('wsi_enabled',
-                                  additional_instance_extensions + ['vkCreateAndroidSurfaceKHR'])]
+            instance_extensions=[('wsi_enabled', surface_wsi_instance_exts),
+                                 ('display_enabled', display_wsi_instance_exts),
+                                 ('android_enabled', ['vkCreateAndroidSurfaceKHR'])]
         elif self.wsi == 'Xcb' or self.wsi == 'Xlib' or self.wsi == 'Wayland' or self.wsi == 'Mir':
-            instance_extensions=[('wsi_enabled',
-                                  additional_instance_extensions + 
-                                  ['vkCreateXcbSurfaceKHR',
-                                   'vkCreateXlibSurfaceKHR',
-                                   'vkCreateWaylandSurfaceKHR',
-                                   'vkCreateMirSurfaceKHR'
-                                   ])]
+            instance_extensions=[('wsi_enabled', surface_wsi_instance_exts),
+                                 ('display_enabled', display_wsi_instance_exts),
+                                 ('xcb_enabled', ['vkCreateXcbSurfaceKHR']),
+                                 ('xlib_enabled', ['vkCreateXlibSurfaceKHR']),
+                                 ('wayland_enabled',  ['vkCreateWaylandSurfaceKHR']),
+                                 ('mir_enabled', ['vkCreateMirSurfaceKHR'])]
         else:
             print('Error: Undefined DisplayServer')
             instance_extensions=[]

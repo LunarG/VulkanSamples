@@ -1326,6 +1326,8 @@ object_non_dispatch_list = [
     "VkSwapchainKHR",
     "VkSurfaceKHR",
     "VkDebugReportCallbackEXT",
+    "VkDisplayKHR",
+    "VkDisplayModeKHR",
 ]
 
 object_type_list = object_dispatch_list + object_non_dispatch_list
