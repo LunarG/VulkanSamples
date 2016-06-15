@@ -4256,13 +4256,12 @@ static bool decrementResources(layer_data *my_data, uint32_t fenceCount, const V
     std::vector<std::pair<VkFence, FENCE_NODE *>> fence_pairs;
     for (uint32_t i = 0; i < fenceCount; ++i) {
         auto pFence = getFenceNode(my_data, pFences[i]);
-        if (!pFence || !pFence->needsSignaled)
-            return skip_call;
-        pFence->needsSignaled = false;
-        if (pFence->in_use.load()) {
-            fence_pairs.emplace_back(pFences[i], pFence);
-            pFence->in_use.fetch_sub(1);
-        }
+        if (!pFence || pFence->state != FENCE_INFLIGHT)
+            continue;
+
+        fence_pairs.emplace_back(pFences[i], pFence);
+        pFence->state = FENCE_RETIRED;
+
         decrementResources(my_data, static_cast<uint32_t>(pFence->priorFences.size()),
                            pFence->priorFences.data());
         for (auto & submission : pFence->submissions) {
@@ -4380,8 +4379,7 @@ SubmitFence(QUEUE_NODE *pQueue, FENCE_NODE *pFence)
     std::swap(pFence->submissions, pQueue->untrackedSubmissions);
 
     pFence->queues.insert(pQueue->queue);
-    pFence->needsSignaled = true;
-    pFence->in_use.fetch_add(1);
+    pFence->state = FENCE_INFLIGHT;
 
     pQueue->lastFences.push_back(pFence->fence);
 }
@@ -4531,13 +4529,13 @@ ValidateFenceForSubmit(layer_data *dev_data, FENCE_NODE *pFence)
     bool skipCall = false;
 
     if (pFence) {
-        if (pFence->in_use.load()) {
+        if (pFence->state == FENCE_INFLIGHT) {
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                                 (uint64_t)(pFence->fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
                                 "Fence 0x%" PRIx64 " is already in use by another submission.", (uint64_t)(pFence->fence));
         }
 
-        if (!pFence->needsSignaled) {
+        else if (pFence->state == FENCE_RETIRED) {
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                                 reinterpret_cast<uint64_t &>(pFence->fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                                 "Fence 0x%" PRIxLEAST64 " submitted in SIGNALED state.  Fences must be reset before being submitted",
@@ -4783,22 +4781,12 @@ static inline bool verifyWaitFenceState(layer_data *dev_data, VkFence fence, con
 
     auto pFence = getFenceNode(dev_data, fence);
     if (pFence) {
-        if (!pFence->firstTimeFlag) {
-            if (!pFence->needsSignaled) {
-                skipCall |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                            (uint64_t)fence, __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
-                            "%s specified fence 0x%" PRIxLEAST64 " already in SIGNALED state.", apiCall, (uint64_t)fence);
-            }
-            if (pFence->queues.empty() && !pFence->swapchain) { // Checking status of unsubmitted fence
-                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                                    reinterpret_cast<uint64_t &>(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
-                                    "%s called for fence 0x%" PRIxLEAST64 " which has not been submitted on a Queue or during "
-                                    "acquire next image.",
-                                    apiCall, reinterpret_cast<uint64_t &>(fence));
-            }
-        } else {
-            pFence->firstTimeFlag = false;
+        if (pFence->state == FENCE_UNSIGNALED) {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                                reinterpret_cast<uint64_t &>(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+                                "%s called for fence 0x%" PRIxLEAST64 " which has not been submitted on a Queue or during "
+                                "acquire next image.",
+                                apiCall, reinterpret_cast<uint64_t &>(fence));
         }
     }
     return skipCall;
@@ -4904,10 +4892,10 @@ VKAPI_ATTR void VKAPI_CALL DestroyFence(VkDevice device, VkFence fence, const Vk
     std::unique_lock<std::mutex> lock(global_lock);
     auto fence_pair = dev_data->fenceMap.find(fence);
     if (fence_pair != dev_data->fenceMap.end()) {
-        if (fence_pair->second.in_use.load()) {
+        if (fence_pair->second.state == FENCE_INFLIGHT) {
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                                 (uint64_t)(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
-                                "Fence 0x%" PRIx64 " is in use by a command buffer.", (uint64_t)(fence));
+                                "Fence 0x%" PRIx64 " is in use.", (uint64_t)(fence));
         }
         dev_data->fenceMap.erase(fence_pair);
     }
@@ -5469,15 +5457,18 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount,
     for (uint32_t i = 0; i < fenceCount; ++i) {
         auto pFence = getFenceNode(dev_data, pFences[i]);
         if (pFence) {
-            pFence->needsSignaled = true;
-            pFence->queues.clear();
-            pFence->priorFences.clear();
-            if (pFence->in_use.load()) {
+            if (pFence->state == FENCE_INFLIGHT) {
                 skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                             reinterpret_cast<const uint64_t &>(pFences[i]), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
-                            "Fence 0x%" PRIx64 " is in use by a command buffer.", reinterpret_cast<const uint64_t &>(pFences[i]));
+                            "Fence 0x%" PRIx64 " is in use.", reinterpret_cast<const uint64_t &>(pFences[i]));
             }
+            pFence->state = FENCE_UNSIGNALED;
+
+            // TODO: these should really have already been enforced on
+            // INFLIGHT->RETIRED transition.
+            pFence->queues.clear();
+            pFence->priorFences.clear();
         }
     }
     lock.unlock();
@@ -5638,12 +5629,7 @@ CreateFence(VkDevice device, const VkFenceCreateInfo *pCreateInfo, const VkAlloc
         auto &fence_node = dev_data->fenceMap[*pFence];
         fence_node.fence = *pFence;
         fence_node.createInfo = *pCreateInfo;
-        fence_node.needsSignaled = true;
-        if (pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT) {
-            fence_node.firstTimeFlag = true;
-            fence_node.needsSignaled = false;
-        }
-        fence_node.in_use.store(0);
+        fence_node.state = (pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT) ? FENCE_RETIRED : FENCE_UNSIGNALED;
     }
     return result;
 }
