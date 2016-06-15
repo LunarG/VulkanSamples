@@ -2721,6 +2721,68 @@ TEST_F(VkLayerTest, PipelineNotBound) {
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
+TEST_F(VkLayerTest, BindImageInvalidMemoryType) {
+    VkResult err;
+
+    TEST_DESCRIPTION("Test validation check for an invalid memory type index "
+                     "during bind[Buffer|Image]Memory time");
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "for this object type are not compatible with the memory");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Create an image, allocate memory, set a bad typeIndex and then try to
+    // bind it
+    VkImage image;
+    VkDeviceMemory mem;
+    VkMemoryRequirements mem_reqs;
+    const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
+    const int32_t tex_width = 32;
+    const int32_t tex_height = 32;
+
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = tex_format;
+    image_create_info.extent.width = tex_width;
+    image_create_info.extent.height = tex_height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.flags = 0;
+
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 0;
+    mem_alloc.memoryTypeIndex = 0;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
+    ASSERT_VK_SUCCESS(err);
+
+    vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
+    mem_alloc.allocationSize = mem_reqs.size;
+    // Introduce Failure, select likely invalid TypeIndex
+    mem_alloc.memoryTypeIndex = 31;
+
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkBindImageMemory(m_device->device(), image, mem, 0);
+    (void)err;
+
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyImage(m_device->device(), image, NULL);
+    vkFreeMemory(m_device->device(), mem, NULL);
+}
+
 TEST_F(VkLayerTest, BindInvalidMemory) {
     VkResult err;
     bool pass;
