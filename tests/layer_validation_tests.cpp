@@ -2411,6 +2411,41 @@ TEST_F(VkLayerTest, CommandBufferSimultaneousUseSync)
     vkDestroyFence(m_device->device(), fence, nullptr);
 }
 
+TEST_F(VkLayerTest, FenceCreateSignaledWaitHandling)
+{
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkResult err;
+
+    // A fence created signaled
+    VkFenceCreateInfo fci1 = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, VK_FENCE_CREATE_SIGNALED_BIT };
+    VkFence f1;
+    err = vkCreateFence(m_device->device(), &fci1, nullptr, &f1);
+    ASSERT_VK_SUCCESS(err);
+
+    // A fence created not
+    VkFenceCreateInfo fci2 = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0 };
+    VkFence f2;
+    err = vkCreateFence(m_device->device(), &fci2, nullptr, &f2);
+    ASSERT_VK_SUCCESS(err);
+
+    // Submit the unsignaled fence
+    VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr,
+        0, nullptr, 0, nullptr };
+    err = vkQueueSubmit(m_device->m_queue, 1, &si, f2);
+
+    // Wait on both fences, with signaled first.
+    VkFence fences[] = { f1, f2 };
+    vkWaitForFences(m_device->device(), 2, fences, VK_TRUE, UINT64_MAX);
+
+    // Should have both retired!
+    vkDestroyFence(m_device->device(), f1, nullptr);
+    vkDestroyFence(m_device->device(), f2, nullptr);
+
+    m_errorMonitor->VerifyNotFound();
+}
+
 TEST_F(VkLayerTest, InvalidUsageBits)
 {
     TEST_DESCRIPTION(
