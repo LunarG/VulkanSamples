@@ -4778,21 +4778,20 @@ static void initializeAndTrackMemory(layer_data *dev_data, VkDeviceMemory mem, V
 // Verify that state for fence being waited on is appropriate. That is,
 //  a fence being waited on should not already be signalled and
 //  it should have been submitted on a queue or during acquire next image
-static inline bool verifyWaitFenceState(VkDevice device, VkFence fence, const char *apiCall) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+static inline bool verifyWaitFenceState(layer_data *dev_data, VkFence fence, const char *apiCall) {
     bool skipCall = false;
 
-    auto pFence = getFenceNode(my_data, fence);
+    auto pFence = getFenceNode(dev_data, fence);
     if (pFence) {
         if (!pFence->firstTimeFlag) {
             if (!pFence->needsSignaled) {
                 skipCall |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                             (uint64_t)fence, __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                             "%s specified fence 0x%" PRIxLEAST64 " already in SIGNALED state.", apiCall, (uint64_t)fence);
             }
             if (pFence->queues.empty() && !pFence->swapchain) { // Checking status of unsubmitted fence
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                                     reinterpret_cast<uint64_t &>(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                                     "%s called for fence 0x%" PRIxLEAST64 " which has not been submitted on a Queue or during "
                                     "acquire next image.",
@@ -4812,7 +4811,7 @@ WaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, VkBo
     // Verify fence status of submitted fences
     std::unique_lock<std::mutex> lock(global_lock);
     for (uint32_t i = 0; i < fenceCount; i++) {
-        skip_call |= verifyWaitFenceState(device, pFences[i], "vkWaitForFences");
+        skip_call |= verifyWaitFenceState(dev_data, pFences[i], "vkWaitForFences");
     }
     lock.unlock();
     if (skip_call)
@@ -4841,7 +4840,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetFenceStatus(VkDevice device, VkFence fence) {
     bool skipCall = false;
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     std::unique_lock<std::mutex> lock(global_lock);
-    skipCall = verifyWaitFenceState(device, fence, "vkGetFenceStatus");
+    skipCall = verifyWaitFenceState(dev_data, fence, "vkGetFenceStatus");
     lock.unlock();
 
     if (skipCall)
