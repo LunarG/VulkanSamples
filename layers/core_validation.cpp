@@ -4275,12 +4275,12 @@ static bool decrementResources(layer_data *my_data, uint32_t fenceCount, const V
     }
     for (auto fence_pair : fence_pairs) {
         for (auto queue : fence_pair.second->queues) {
-            auto queue_pair = my_data->queueMap.find(queue);
-            if (queue_pair != my_data->queueMap.end()) {
+            auto pQueue = getQueueNode(my_data, queue);
+            if (pQueue) {
                 auto last_fence_data =
-                    std::find(queue_pair->second.lastFences.begin(), queue_pair->second.lastFences.end(), fence_pair.first);
-                if (last_fence_data != queue_pair->second.lastFences.end())
-                    queue_pair->second.lastFences.erase(last_fence_data);
+                    std::find(pQueue->lastFences.begin(), pQueue->lastFences.end(), fence_pair.first);
+                if (last_fence_data != pQueue->lastFences.end())
+                    pQueue->lastFences.erase(last_fence_data);
             }
         }
         for (auto& fence_data : my_data->fenceMap) {
@@ -5467,12 +5467,12 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount,
     bool skipCall = false;
     std::unique_lock<std::mutex> lock(global_lock);
     for (uint32_t i = 0; i < fenceCount; ++i) {
-        auto fence_item = dev_data->fenceMap.find(pFences[i]);
-        if (fence_item != dev_data->fenceMap.end()) {
-            fence_item->second.needsSignaled = true;
-            fence_item->second.queues.clear();
-            fence_item->second.priorFences.clear();
-            if (fence_item->second.in_use.load()) {
+        auto pFence = getFenceNode(dev_data, pFences[i]);
+        if (pFence) {
+            pFence->needsSignaled = true;
+            pFence->queues.clear();
+            pFence->priorFences.clear();
+            if (pFence->in_use.load()) {
                 skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                             reinterpret_cast<const uint64_t &>(pFences[i]), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
