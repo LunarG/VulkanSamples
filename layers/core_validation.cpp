@@ -4781,16 +4781,17 @@ static void initializeAndTrackMemory(layer_data *dev_data, VkDeviceMemory mem, V
 static inline bool verifyWaitFenceState(VkDevice device, VkFence fence, const char *apiCall) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skipCall = false;
-    auto pFenceInfo = my_data->fenceMap.find(fence);
-    if (pFenceInfo != my_data->fenceMap.end()) {
-        if (!pFenceInfo->second.firstTimeFlag) {
-            if (!pFenceInfo->second.needsSignaled) {
+
+    auto pFence = getFenceNode(my_data, fence);
+    if (pFence) {
+        if (!pFence->firstTimeFlag) {
+            if (!pFence->needsSignaled) {
                 skipCall |=
                     log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                             (uint64_t)fence, __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                             "%s specified fence 0x%" PRIxLEAST64 " already in SIGNALED state.", apiCall, (uint64_t)fence);
             }
-            if (pFenceInfo->second.queues.empty() && !pFenceInfo->second.swapchain) { // Checking status of unsubmitted fence
+            if (pFence->queues.empty() && !pFence->swapchain) { // Checking status of unsubmitted fence
                 skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                                     reinterpret_cast<uint64_t &>(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                                     "%s called for fence 0x%" PRIxLEAST64 " which has not been submitted on a Queue or during "
@@ -4798,7 +4799,7 @@ static inline bool verifyWaitFenceState(VkDevice device, VkFence fence, const ch
                                     apiCall, reinterpret_cast<uint64_t &>(fence));
             }
         } else {
-            pFenceInfo->second.firstTimeFlag = false;
+            pFence->firstTimeFlag = false;
         }
     }
     return skipCall;
