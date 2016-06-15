@@ -4255,23 +4255,23 @@ static bool decrementResources(layer_data *my_data, uint32_t fenceCount, const V
     bool skip_call = false;
     std::vector<std::pair<VkFence, FENCE_NODE *>> fence_pairs;
     for (uint32_t i = 0; i < fenceCount; ++i) {
-        auto fence_data = my_data->fenceMap.find(pFences[i]);
-        if (fence_data == my_data->fenceMap.end() || !fence_data->second.needsSignaled)
+        auto pFence = getFenceNode(my_data, pFences[i]);
+        if (!pFence || !pFence->needsSignaled)
             return skip_call;
-        fence_data->second.needsSignaled = false;
-        if (fence_data->second.in_use.load()) {
-            fence_pairs.push_back(std::make_pair(fence_data->first, &fence_data->second));
-            fence_data->second.in_use.fetch_sub(1);
+        pFence->needsSignaled = false;
+        if (pFence->in_use.load()) {
+            fence_pairs.emplace_back(pFences[i], pFence);
+            pFence->in_use.fetch_sub(1);
         }
-        decrementResources(my_data, static_cast<uint32_t>(fence_data->second.priorFences.size()),
-                           fence_data->second.priorFences.data());
-        for (auto & submission : fence_data->second.submissions) {
+        decrementResources(my_data, static_cast<uint32_t>(pFence->priorFences.size()),
+                           pFence->priorFences.data());
+        for (auto & submission : pFence->submissions) {
             decrementResources(my_data, &submission);
             skip_call |= cleanInFlightCmdBuffer(my_data, submission.cb);
             removeInFlightCmdBuffer(my_data, submission.cb);
         }
-        fence_data->second.submissions.clear();
-        fence_data->second.priorFences.clear();
+        pFence->submissions.clear();
+        pFence->priorFences.clear();
     }
     for (auto fence_pair : fence_pairs) {
         for (auto queue : fence_pair.second->queues) {
