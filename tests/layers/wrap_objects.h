@@ -55,7 +55,6 @@ static inline VkPhysicalDevice unwrap_phys_dev(const VkPhysicalDevice physical_d
 }
 
 static void create_device_register_extensions(const VkDeviceCreateInfo *pCreateInfo, VkDevice device) {
-    uint32_t i;
     VkLayerDispatchTable *pDisp = device_dispatch_table(device);
     PFN_vkGetDeviceProcAddr gpa = pDisp->GetDeviceProcAddr;
     pDisp->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR)gpa(device, "vkCreateSwapchainKHR");
@@ -66,7 +65,6 @@ static void create_device_register_extensions(const VkDeviceCreateInfo *pCreateI
 }
 
 static void create_instance_register_extensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance, struct wrapped_inst_obj *inst) {
-    uint32_t i;
     VkLayerInstanceDispatchTable *pDisp = &inst->layer_disp;
     PFN_vkGetInstanceProcAddr gpa = pDisp->GetInstanceProcAddr;
 
