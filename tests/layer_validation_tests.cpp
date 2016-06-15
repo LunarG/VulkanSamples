@@ -8723,6 +8723,116 @@ TEST_F(VkLayerTest, NumSamplesMismatch) {
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
+TEST_F(VkLayerTest, RenderPassIncompatible) {
+    TEST_DESCRIPTION("Hit RenderPass incompatible cases. "
+                     "Initial case is drawing with an active renderpass that's "
+                     "not compatible with the bound PSO's creation renderpass");
+    VkResult err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+    dsl_binding.binding = 0;
+    dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding.descriptorCount = 1;
+    dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL,
+                                      &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pNext = NULL;
+    pipeline_layout_ci.setLayoutCount = 1;
+    pipeline_layout_ci.pSetLayouts = &ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
+                                 &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkShaderObj vs(m_device, bindStateVertShaderText,
+                   VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText,
+                   VK_SHADER_STAGE_FRAGMENT_BIT,
+                   this); // We shouldn't need a fragment shader
+                          // but add it to be able to run on more devices
+    // Create a renderpass that will be incompatible with default renderpass
+    VkAttachmentReference attach = {};
+    attach.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    VkAttachmentReference color_att = {};
+    color_att.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VkSubpassDescription subpass = {};
+    subpass.inputAttachmentCount = 1;
+    subpass.pInputAttachments = &attach;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color_att;
+    VkRenderPassCreateInfo rpci = {};
+    rpci.subpassCount = 1;
+    rpci.pSubpasses = &subpass;
+    rpci.attachmentCount = 1;
+    VkAttachmentDescription attach_desc = {};
+    attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    // Format incompatible with PSO RP color attach format RGBA8_UNORM
+    attach_desc.format = VK_FORMAT_UNDEFINED;
+    rpci.pAttachments = &attach_desc;
+    rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    VkRenderPass rp;
+    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
+    VkViewport view_port = {};
+    m_viewports.push_back(view_port);
+    pipe.SetViewport(m_viewports);
+    VkRect2D rect = {};
+    m_scissors.push_back(rect);
+    pipe.SetScissor(m_scissors);
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
+
+    VkCommandBufferInheritanceInfo cbii = {};
+    cbii.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    cbii.renderPass = rp;
+    cbii.subpass = 0;
+    VkCommandBufferBeginInfo cbbi = {};
+    cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cbbi.pInheritanceInfo = &cbii;
+    vkBeginCommandBuffer(m_commandBuffer->handle(), &cbbi);
+    VkRenderPassBeginInfo rpbi = {};
+    rpbi.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    rpbi.framebuffer = m_framebuffer;
+    rpbi.renderPass = rp;
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &rpbi,
+                         VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(),
+                      VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " is incompatible w/ gfx pipeline ");
+    // Render triangle (the error should trigger on the attempt to draw).
+    Draw(3, 1, 0, 0);
+
+    // Finalize recording of the command buffer
+    EndCommandBuffer();
+
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyRenderPass(m_device->device(), rp, NULL);
+}
+
 TEST_F(VkLayerTest, NumBlendAttachMismatch) {
     // Create Pipeline where the number of blend attachments doesn't match the
     // number of color attachments.  In this case, we don't add any color
