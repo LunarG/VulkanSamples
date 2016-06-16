@@ -591,7 +591,7 @@ void VkImageObj::ImageMemoryBarrier(VkCommandBufferObj *cmd_buf,
 }
 
 void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
-                           VkImageAspectFlagBits aspect,
+                           VkImageAspectFlags aspect,
                            VkImageLayout image_layout) {
     VkFlags src_mask, dst_mask;
     const VkFlags all_cache_outputs =
@@ -665,7 +665,7 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
     m_descriptorImageInfo.imageLayout = image_layout;
 }
 
-void VkImageObj::SetLayout(VkImageAspectFlagBits aspect,
+void VkImageObj::SetLayout(VkImageAspectFlags aspect,
                            VkImageLayout image_layout) {
     VkResult U_ASSERT_ONLY err;
 
