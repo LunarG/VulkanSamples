@@ -9911,54 +9911,61 @@ GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCoun
 
 VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip_call = false;
 
-    if (pPresentInfo) {
-        std::lock_guard<std::mutex> lock(global_lock);
-        for (uint32_t i = 0; i < pPresentInfo->waitSemaphoreCount; ++i) {
-            const VkSemaphore &semaphore = pPresentInfo->pWaitSemaphores[i];
-            if (dev_data->semaphoreMap.find(semaphore) != dev_data->semaphoreMap.end()) {
-                if (dev_data->semaphoreMap[semaphore].signaled) {
-                    dev_data->semaphoreMap[semaphore].signaled = false;
-                } else {
-                    skip_call |=
-                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
-                                "Queue 0x%" PRIx64 " is waiting on semaphore 0x%" PRIx64 " that has no way to be signaled.",
-                                reinterpret_cast<uint64_t &>(queue), reinterpret_cast<const uint64_t &>(semaphore));
-                }
-            }
+    std::lock_guard<std::mutex> lock(global_lock);
+    for (uint32_t i = 0; i < pPresentInfo->waitSemaphoreCount; ++i) {
+        auto pSemaphore = getSemaphoreNode(dev_data, pPresentInfo->pWaitSemaphores[i]);
+        if (pSemaphore && !pSemaphore->signaled) {
+            skip_call |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                            VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                            "Queue 0x%" PRIx64 " is waiting on semaphore 0x%" PRIx64 " that has no way to be signaled.",
+                            reinterpret_cast<uint64_t &>(queue), reinterpret_cast<const uint64_t &>(pPresentInfo->pWaitSemaphores[i]));
         }
-        VkDeviceMemory mem;
-        for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
-            auto swapchain_data = getSwapchainNode(dev_data, pPresentInfo->pSwapchains[i]);
-            if (swapchain_data && pPresentInfo->pImageIndices[i] < swapchain_data->images.size()) {
-                VkImage image = swapchain_data->images[pPresentInfo->pImageIndices[i]];
+    }
+    VkDeviceMemory mem;
+    for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
+        auto swapchain_data = getSwapchainNode(dev_data, pPresentInfo->pSwapchains[i]);
+        if (swapchain_data && pPresentInfo->pImageIndices[i] < swapchain_data->images.size()) {
+            VkImage image = swapchain_data->images[pPresentInfo->pImageIndices[i]];
 #if MTMERGESOURCE
-                skip_call |=
+            skip_call |=
                     get_mem_binding_from_object(dev_data, (uint64_t)(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
-                skip_call |= validate_memory_is_valid(dev_data, mem, "vkQueuePresentKHR()", image);
+            skip_call |= validate_memory_is_valid(dev_data, mem, "vkQueuePresentKHR()", image);
 #endif
-                vector<VkImageLayout> layouts;
-                if (FindLayouts(dev_data, image, layouts)) {
-                    for (auto layout : layouts) {
-                        if (layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-                            skip_call |=
+            vector<VkImageLayout> layouts;
+            if (FindLayouts(dev_data, image, layouts)) {
+                for (auto layout : layouts) {
+                    if (layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+                        skip_call |=
                                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
                                         reinterpret_cast<uint64_t &>(queue), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                         "Images passed to present must be in layout "
                                         "PRESENT_SOURCE_KHR but is in %s",
                                         string_VkImageLayout(layout));
-                        }
                     }
                 }
             }
         }
     }
 
-    if (!skip_call)
-        result = dev_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
+    if (skip_call) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+
+    VkResult result = dev_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
+
+    if (result != VK_ERROR_VALIDATION_FAILED_EXT) {
+        // Semaphore waits occur before error generation, if the call reached
+        // the ICD. (Confirm?)
+        for (uint32_t i = 0; i < pPresentInfo->waitSemaphoreCount; ++i) {
+            auto pSemaphore = getSemaphoreNode(dev_data, pPresentInfo->pWaitSemaphores[i]);
+            if (pSemaphore && pSemaphore->signaled) {
+                pSemaphore->signaled = false;
+            }
+        }
+    }
 
     return result;
 }
