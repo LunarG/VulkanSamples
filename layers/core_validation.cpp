@@ -9999,7 +9999,6 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     if (result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR) {
         if (pFence) {
             pFence->state = FENCE_INFLIGHT;
-            pFence->swapchain = swapchain;
         }
 
         // A successful call to AcquireNextImageKHR counts as a signal operation on semaphore

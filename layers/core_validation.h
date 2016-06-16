@@ -213,7 +213,6 @@ enum FENCE_STATE { FENCE_UNSIGNALED, FENCE_INFLIGHT, FENCE_RETIRED };
 class FENCE_NODE {
   public:
     VkFence fence;
-    VkSwapchainKHR swapchain; // Swapchain that this fence is submitted against or NULL
     VkFenceCreateInfo createInfo;
     std::unordered_set<VkQueue> queues;
     std::vector<CB_SUBMISSION> submissions;
@@ -221,7 +220,7 @@ class FENCE_NODE {
     FENCE_STATE state;
 
     // Default constructor
-    FENCE_NODE() : swapchain(VK_NULL_HANDLE), state(FENCE_UNSIGNALED) {}
+    FENCE_NODE() : state(FENCE_UNSIGNALED) {}
 };
 
 class SEMAPHORE_NODE : public BASE_NODE {
