@@ -677,6 +677,9 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
         break;
     }
 
+    if (m_descriptorImageInfo.imageLayout == VK_IMAGE_LAYOUT_UNDEFINED)
+        src_mask = 0;
+
     ImageMemoryBarrier(cmd_buf, aspect, src_mask, dst_mask, image_layout);
     m_descriptorImageInfo.imageLayout = image_layout;
 }
