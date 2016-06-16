@@ -4484,7 +4484,6 @@ TEST_F(VkLayerTest, InvalidDescriptorSetLayout) {
     m_errorMonitor->VerifyFound();
 }
 
-/* Test crashes on multiple platforms, disabling for now
 TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
     TEST_DESCRIPTION("This test verifies some requirements of chapter 13.2.3 of the Vulkan Spec "
                      "1) A uniform buffer update must have a valid buffer index."
@@ -4502,9 +4501,6 @@ TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
     const char *immutable_ErrorMessage =
             "Attempting write update to descriptor set 0000000000000005 binding #1 "
             "with #2 descriptors being updated but this update oversteps the bounds";
-
-    const char *attachment_ErrorMessage =
-            "Attempted write update to image descriptor failed due to: ";
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, invalid_BufferInfo_ErrorMessage);
 
@@ -4529,7 +4525,7 @@ TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
     VkResult err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
-    VkDescriptorSetLayoutBinding layout_binding[4] = {};
+    VkDescriptorSetLayoutBinding layout_binding[3] = {};
     layout_binding[0].binding = 0;
     layout_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     layout_binding[0].descriptorCount = 1;
@@ -4570,11 +4566,6 @@ TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
     layout_binding[2].descriptorCount = 1;
     layout_binding[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     layout_binding[2].pImmutableSamplers = static_cast<VkSampler *>(&sampler);
-
-    layout_binding[3].binding = 3;
-    layout_binding[2].descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-    layout_binding[2].descriptorCount = 1;
-    layout_binding[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
     VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
     ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -4643,20 +4634,12 @@ TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
     m_errorMonitor->VerifyFound();
 
-    descriptor_write.dstBinding = 3;
-    descriptor_write.descriptorCount = 1;
-    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, attachment_ErrorMessage);
-    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
-    m_errorMonitor->VerifyFound();
-
     vkDestroyBuffer(m_device->device(), dyub, NULL);
     vkDestroySampler(m_device->device(), sampler, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
-*/
 
 TEST_F(VkLayerTest, InvalidPipeline) {
     // Attempt to bind an invalid Pipeline to a valid Command Buffer
