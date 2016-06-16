@@ -1685,7 +1685,7 @@ VkDepthStencilObj::VkDepthStencilObj(VkDeviceObj *device) : VkImageObj(device)  
 VkImageView *VkDepthStencilObj::BindInfo() { return &m_attachmentBindInfo; }
 
 void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
-                             VkFormat format) {
+                             VkFormat format, VkImageUsageFlags usage) {
 
     VkImageViewCreateInfo view_info = {};
 
@@ -1695,7 +1695,7 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
 
     /* create image */
     init(width, height, m_depth_stencil_fmt,
-         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+         usage,
          VK_IMAGE_TILING_OPTIMAL);
 
     SetLayout(VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
