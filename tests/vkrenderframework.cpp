@@ -30,6 +30,22 @@
         assert(fp##entrypoint != NULL);                                        \
     }
 
+//Return true if format contains depth and stencil information
+bool vk_format_is_depth_and_stencil(VkFormat format) {
+    bool is_ds = false;
+
+    switch (format) {
+    case VK_FORMAT_D16_UNORM_S8_UINT:
+    case VK_FORMAT_D24_UNORM_S8_UINT:
+    case VK_FORMAT_D32_SFLOAT_S8_UINT:
+        is_ds = true;
+        break;
+    default:
+        break;
+    }
+    return is_ds;
+}
+
 VkRenderFramework::VkRenderFramework()
     : inst(VK_NULL_HANDLE), m_device(NULL), m_commandPool(VK_NULL_HANDLE),
       m_commandBuffer(NULL), m_renderPass(VK_NULL_HANDLE),
@@ -1698,7 +1714,11 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
          usage,
          VK_IMAGE_TILING_OPTIMAL);
 
-    SetLayout(VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+    if (vk_format_is_depth_and_stencil(format))
+        aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
+
+    SetLayout(aspect, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     view_info.pNext = NULL;
