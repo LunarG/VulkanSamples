@@ -4496,11 +4496,9 @@ TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
             "VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC or "
             "VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, pDescriptorWrites[0].pBufferInfo must not be NULL";
     const char *stateFlag_ErrorMessage =
-            "Attempting write update to descriptor set 0000000000000005 binding #0 "
-            "with #2 descriptors being updated but this update oversteps the bounds";
+            "Attempting write update to descriptor set ";
     const char *immutable_ErrorMessage =
-            "Attempting write update to descriptor set 0000000000000005 binding #1 "
-            "with #2 descriptors being updated but this update oversteps the bounds";
+            "Attempting write update to descriptor set ";
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, invalid_BufferInfo_ErrorMessage);
 
@@ -4594,13 +4592,14 @@ TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    VkWriteDescriptorSet descriptor_write {};
+    VkWriteDescriptorSet descriptor_write = {};
     descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptor_write.dstSet = descriptorSet;
     descriptor_write.dstBinding = 0;
     descriptor_write.descriptorCount = 1;
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
+    // 1) The uniform buffer is intentionally invalid here
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
     m_errorMonitor->VerifyFound();
 
@@ -4624,12 +4623,21 @@ TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
     descriptor_write.pBufferInfo = &buffInfo;
     descriptor_write.descriptorCount = 2;
 
+    // 2) The stateFlags don't match between the first and second descriptor
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, stateFlag_ErrorMessage);
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
     m_errorMonitor->VerifyFound();
 
+    // 3) The second descriptor has a null_ptr pImmutableSamplers and
+    // the third descriptor contains an immutable sampler
     descriptor_write.dstBinding = 1;
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+
+
+    // Make pImageInfo index non-null to avoid complaints of it missing
+    VkDescriptorImageInfo imageInfo = {};
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    descriptor_write.pImageInfo = &imageInfo;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, immutable_ErrorMessage);
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
     m_errorMonitor->VerifyFound();
