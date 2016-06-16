@@ -311,9 +311,9 @@ class VkImageObj : public vk_testing::Image {
         return m_targetView.handle();
     }
 
-    void SetLayout(VkCommandBufferObj *cmd_buf, VkImageAspectFlagBits aspect,
+    void SetLayout(VkCommandBufferObj *cmd_buf, VkImageAspectFlags aspect,
                    VkImageLayout image_layout);
-    void SetLayout(VkImageAspectFlagBits aspect, VkImageLayout image_layout);
+    void SetLayout(VkImageAspectFlags aspect, VkImageLayout image_layout);
 
     VkImageLayout layout() const { return m_descriptorImageInfo.imageLayout; }
     uint32_t width() const { return extent().width; }
