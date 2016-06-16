@@ -334,6 +334,14 @@ QUEUE_NODE *getQueueNode(layer_data *dev_data, VkQueue queue) {
     return &it->second;
 }
 
+SEMAPHORE_NODE *getSemaphoreNode(layer_data *dev_data, VkSemaphore semaphore) {
+    auto it = dev_data->semaphoreMap.find(semaphore);
+    if (it == dev_data->semaphoreMap.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}
+
 static VkDeviceMemory *get_object_mem_binding(layer_data *my_data, uint64_t handle, VkDebugReportObjectTypeEXT type) {
     switch (type) {
     case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
