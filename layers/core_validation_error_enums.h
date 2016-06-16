@@ -137,6 +137,10 @@ enum DRAW_STATE_ERROR {
                                                 // RenderPass is active
     DRAWSTATE_NO_ACTIVE_RENDERPASS,             // Rendering cmd submitted without an active
                                                 // RenderPass
+    DRAWSTATE_INVALID_IMAGE_USAGE,              // Image attachment location conflicts with
+                                                // image's USAGE flags
+    DRAWSTATE_INVALID_ATTACHMENT_INDEX,         // Attachment reference contains an index
+                                                // that is out-of-bounds
     DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED,       // DescriptorSet bound but it was
                                                 // never updated. This is a warning
                                                 // code.
