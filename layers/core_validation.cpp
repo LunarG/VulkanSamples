@@ -9966,29 +9966,41 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
 VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout,
                                                    VkSemaphore semaphore, VkFence fence, uint32_t *pImageIndex) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skipCall = false;
 
     std::unique_lock<std::mutex> lock(global_lock);
-    if (semaphore != VK_NULL_HANDLE &&
-        dev_data->semaphoreMap.find(semaphore) != dev_data->semaphoreMap.end()) {
-        if (dev_data->semaphoreMap[semaphore].signaled) {
-            skipCall = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
-                               reinterpret_cast<const uint64_t &>(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
-                               "vkAcquireNextImageKHR: Semaphore must not be currently signaled or in a wait state");
-        }
-        dev_data->semaphoreMap[semaphore].signaled = true;
+    auto pSemaphore = getSemaphoreNode(dev_data, semaphore);
+    if (pSemaphore && pSemaphore->signaled) {
+        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
+                           reinterpret_cast<const uint64_t &>(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                           "vkAcquireNextImageKHR: Semaphore must not be currently signaled or in a wait state");
     }
-    auto fence_data = dev_data->fenceMap.find(fence);
-    if (fence_data != dev_data->fenceMap.end()) {
-        fence_data->second.swapchain = swapchain;
+
+    auto pFence = getFenceNode(dev_data, fence);
+    if (pFence) {
+        skipCall |= ValidateFenceForSubmit(dev_data, pFence);
     }
     lock.unlock();
 
-    if (!skipCall) {
-        result =
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+
+    VkResult result =
             dev_data->device_dispatch_table->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
+
+    lock.lock();
+    if (result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR) {
+        if (pFence) {
+            pFence->state = FENCE_INFLIGHT;
+            pFence->swapchain = swapchain;
+        }
+
+        // A successful call to AcquireNextImageKHR counts as a signal operation on semaphore
+        if (pSemaphore) {
+            pSemaphore->signaled = true;
+        }
     }
+    lock.unlock();
 
     return result;
 }
