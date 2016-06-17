@@ -3098,6 +3098,7 @@ TEST_F(VkLayerTest, StencilLoadOp) {
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     m_errorMonitor->VerifyNotFound();
 
+    vkQueueWaitIdle(m_device->m_queue);
     vkDestroyFence(m_device->device(), fence, nullptr);
     vkDestroyRenderPass(m_device->device(), rp, nullptr);
     vkDestroyFramebuffer(m_device->device(), fb, nullptr);
