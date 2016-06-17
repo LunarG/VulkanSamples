@@ -28,8 +28,10 @@
 #include "vk_layer_table.h"
 #include "vk_layer_utils.h"
 
+namespace object_tracker {
+
 // Object Tracker ERROR codes
-typedef enum _OBJECT_TRACK_ERROR {
+enum OBJECT_TRACK_ERROR {
     OBJTRACK_NONE,                     // Used for INFO & other non-error messages
     OBJTRACK_UNKNOWN_OBJECT,           // Updating uses of object that's not in global object list
     OBJTRACK_INTERNAL_ERROR,           // Bug with data tracking within the layer
@@ -37,11 +39,11 @@ typedef enum _OBJECT_TRACK_ERROR {
     OBJTRACK_INVALID_OBJECT,           // Object used that has never been created
     OBJTRACK_DESCRIPTOR_POOL_MISMATCH, // Descriptor Pools specified incorrectly
     OBJTRACK_COMMAND_POOL_MISMATCH,    // Command Pools specified incorrectly
-} OBJECT_TRACK_ERROR;
+};
 
 // Object Status -- used to track state of individual objects
 typedef VkFlags ObjectStatusFlags;
-typedef enum _ObjectStatusFlagBits {
+enum ObjectStatusFlagBits {
     OBJSTATUS_NONE = 0x00000000,                     // No status is set
     OBJSTATUS_FENCE_IS_SUBMITTED = 0x00000001,       // Fence has been submitted
     OBJSTATUS_VIEWPORT_BOUND = 0x00000002,           // Viewport state object has been bound
@@ -50,15 +52,15 @@ typedef enum _ObjectStatusFlagBits {
     OBJSTATUS_DEPTH_STENCIL_BOUND = 0x00000010,      // Viewport state object has been bound
     OBJSTATUS_GPU_MEM_MAPPED = 0x00000020,           // Memory object is currently mapped
     OBJSTATUS_COMMAND_BUFFER_SECONDARY = 0x00000040, // Command Buffer is of type SECONDARY
-} ObjectStatusFlagBits;
+};
 
-typedef struct _OBJTRACK_NODE {
+struct OBJTRACK_NODE {
     uint64_t vkObj;                     // Object handle
     VkDebugReportObjectTypeEXT objType; // Object type identifier
     ObjectStatusFlags status;           // Object state
     uint64_t parentObj;                 // Parent object
     uint64_t belongsTo;                 // Object Scope -- owning device/instance
-} OBJTRACK_NODE;
+};
 
 // prototype for extension functions
 uint64_t objTrackGetObjectCount(VkDevice device);
@@ -69,6 +71,8 @@ typedef uint64_t (*OBJ_TRACK_GET_OBJECT_COUNT)(VkDevice);
 typedef uint64_t (*OBJ_TRACK_GET_OBJECTS_OF_TYPE_COUNT)(VkDevice, VkDebugReportObjectTypeEXT);
 
 struct layer_data {
+    VkInstance instance;
+
     debug_report_data *report_data;
     // TODO: put instance data here
     std::vector<VkDebugReportCallbackEXT> logging_callback;
@@ -106,8 +110,6 @@ static std::mutex global_lock;
 static uint64_t numObjs[NUM_OBJECT_TYPES] = {0};
 static uint64_t numTotalObjs = 0;
 std::vector<VkQueueFamilyProperties> queue_family_properties;
-
-template layer_data *get_my_data_ptr<layer_data>(void *data_key, std::unordered_map<void *, layer_data *> &data_map);
 
 //
 // Internal Object Tracker Functions
@@ -184,10 +186,10 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreate
 }
 
 // Indicate device or instance dispatch table type
-typedef enum _DispTableType {
+enum DispTableType {
     DISP_TBL_TYPE_INSTANCE,
     DISP_TBL_TYPE_DEVICE,
-} DispTableType;
+};
 
 debug_report_data *mdd(const void *object) {
     dispatch_key key = get_dispatch_key(object);
@@ -202,20 +204,19 @@ debug_report_data *mid(VkInstance object) {
 }
 
 // For each Queue's doubly linked-list of mem refs
-typedef struct _OT_MEM_INFO {
+struct OT_MEM_INFO {
     VkDeviceMemory mem;
-    struct _OT_MEM_INFO *pNextMI;
-    struct _OT_MEM_INFO *pPrevMI;
-
-} OT_MEM_INFO;
+    OT_MEM_INFO *pNextMI;
+    OT_MEM_INFO *pPrevMI;
+};
 
 // Track Queue information
-typedef struct _OT_QUEUE_INFO {
+struct OT_QUEUE_INFO {
     OT_MEM_INFO *pMemRefList;
     uint32_t queueNodeIndex;
     VkQueue queue;
     uint32_t refCount;
-} OT_QUEUE_INFO;
+};
 
 // Global map of structures, one per queue
 std::unordered_map<VkQueue, OT_QUEUE_INFO *> queue_info_map;
@@ -618,6 +619,7 @@ VkResult explicit_CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const 
     }
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+    my_data->instance = *pInstance;
     initInstanceTable(*pInstance, fpGetInstanceProcAddr, object_tracker_instance_table_map);
     VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(object_tracker_instance_table_map, *pInstance);
 
@@ -651,12 +653,13 @@ void explicit_GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice gpu, uint3
 VkResult explicit_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator,
                                VkDevice *pDevice) {
     std::lock_guard<std::mutex> lock(global_lock);
+    layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
     VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
     assert(chain_info->u.pLayerInfo);
     PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
     PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
-    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice)fpGetInstanceProcAddr(NULL, "vkCreateDevice");
+    PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice)fpGetInstanceProcAddr(my_instance_data->instance, "vkCreateDevice");
     if (fpCreateDevice == NULL) {
         return VK_ERROR_INITIALIZATION_FAILED;
     }
@@ -669,7 +672,6 @@ VkResult explicit_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *p
         return result;
     }
 
-    layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
     my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
 
@@ -1060,3 +1062,5 @@ VkResult explicit_CreateComputePipelines(VkDevice device, VkPipelineCache pipeli
     lock.unlock();
     return result;
 }
+
+} // namespace object_tracker

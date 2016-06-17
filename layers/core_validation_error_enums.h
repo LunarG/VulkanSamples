@@ -24,7 +24,7 @@
 #define CORE_VALIDATION_ERROR_ENUMS_H_
 
 // Mem Tracker ERROR codes
-typedef enum _MEM_TRACK_ERROR {
+enum MEM_TRACK_ERROR {
     MEMTRACK_NONE,                         // Used for INFO & other non-error messages
     MEMTRACK_INVALID_CB,                   // Cmd Buffer invalid
     MEMTRACK_INVALID_MEM_OBJ,              // Invalid Memory Object
@@ -39,10 +39,11 @@ typedef enum _MEM_TRACK_ERROR {
     MEMTRACK_REBIND_OBJECT,                // Non-sparse object bindings are immutable
     MEMTRACK_INVALID_USAGE_FLAG,           // Usage flags specified at image/buffer create conflict w/ use of object
     MEMTRACK_INVALID_MAP,                  // Size flag specified at alloc is too small for mapping range
-} MEM_TRACK_ERROR;
+    MEMTRACK_INVALID_MEM_TYPE,             // Memory Type mismatch
+};
 
 // Draw State ERROR codes
-typedef enum _DRAW_STATE_ERROR {
+enum DRAW_STATE_ERROR {
     // TODO: Remove the comments here or expand them. There isn't any additional information in the
     // comments than in the name in almost all cases.
     DRAWSTATE_NONE,                          // Used for INFO & other non-error messages
@@ -136,6 +137,10 @@ typedef enum _DRAW_STATE_ERROR {
                                                 // RenderPass is active
     DRAWSTATE_NO_ACTIVE_RENDERPASS,             // Rendering cmd submitted without an active
                                                 // RenderPass
+    DRAWSTATE_INVALID_IMAGE_USAGE,              // Image attachment location conflicts with
+                                                // image's USAGE flags
+    DRAWSTATE_INVALID_ATTACHMENT_INDEX,         // Attachment reference contains an index
+                                                // that is out-of-bounds
     DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED,       // DescriptorSet bound but it was
                                                 // never updated. This is a warning
                                                 // code.
@@ -214,9 +219,9 @@ typedef enum _DRAW_STATE_ERROR {
     DRAWSTATE_INVALID_QUEUE_INDEX,           // Specified queue index exceeds number
                                              // of queried queue families
     DRAWSTATE_PUSH_CONSTANTS_ERROR,          // Push constants exceed maxPushConstantSize
-} DRAW_STATE_ERROR;
+};
 
-typedef enum _SHADER_CHECKER_ERROR {
+enum SHADER_CHECKER_ERROR {
     SHADER_CHECKER_NONE,
     SHADER_CHECKER_INTERFACE_TYPE_MISMATCH,    // Type mismatch between shader stages or shader and pipeline
     SHADER_CHECKER_OUTPUT_NOT_CONSUMED,        // Entry appears in output interface, but missing in input
@@ -234,6 +239,6 @@ typedef enum _SHADER_CHECKER_ERROR {
     SHADER_CHECKER_DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE,    // Descriptor used by shader, but not accessible from stage
     SHADER_CHECKER_FEATURE_NOT_ENABLED,                     // Shader uses capability requiring a feature not enabled on device
     SHADER_CHECKER_BAD_CAPABILITY,                          // Shader uses capability not supported by Vulkan (OpenCL features)
-} SHADER_CHECKER_ERROR;
+};
 
 #endif // CORE_VALIDATION_ERROR_ENUMS_H_

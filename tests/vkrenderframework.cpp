@@ -1313,6 +1313,9 @@ VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout,
     m_vi_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     info.pVertexInputState = &m_vi_state;
 
+    m_ia_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    info.pInputAssemblyState = &m_ia_state;
+
     info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     info.pNext = NULL;
     info.flags = 0;
@@ -1344,7 +1347,6 @@ VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout,
 
     info.renderPass = render_pass;
     info.subpass = 0;
-    info.pInputAssemblyState = &m_ia_state;
     info.pViewportState = &m_vp_state;
     info.pRasterizationState = &m_rs_state;
     info.pMultisampleState = &m_ms_state;

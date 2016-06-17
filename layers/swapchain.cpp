@@ -1486,9 +1486,9 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
                 }
             }
             // Log the message that we've built up:
-            skipCall |= debug_report_log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                             VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, (uint64_t)device, __LINE__,
-                                             SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM, LAYER_NAME, errorString.c_str());
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                reinterpret_cast<uint64_t &>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM, LAYER_NAME,
+                                "%s", errorString.c_str());
         }
         // Validate pCreateInfo->compositeAlpha has one bit set (1st two
         // lines of if-statement), which bit is also set in
@@ -1515,17 +1515,17 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
                 }
             }
             // Log the message that we've built up:
-            skipCall |= debug_report_log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                             VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, (uint64_t)device, 0,
-                                             SWAPCHAIN_CREATE_SWAP_BAD_COMPOSITE_ALPHA, LAYER_NAME, errorString.c_str());
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                reinterpret_cast<uint64_t &>(device), __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_COMPOSITE_ALPHA,
+                                LAYER_NAME, "%s", errorString.c_str());
         }
-        // Validate pCreateInfo->imageArraySize against
-        // VkSurfaceCapabilitiesKHR::maxImageArraySize:
+        // Validate pCreateInfo->imageArrayLayers against
+        // VkSurfaceCapabilitiesKHR::maxImageArrayLayers:
         if ((pCreateInfo->imageArrayLayers < 1) || (pCreateInfo->imageArrayLayers > pCapabilities->maxImageArrayLayers)) {
             skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                                  SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_SIZE, "%s() called with a non-supported "
-                                                                            "pCreateInfo->imageArraySize (i.e. %d).  "
-                                                                            "Minimum value is 1, maximum value is %d.",
+                                  SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_LAYERS, "%s() called with a non-supported "
+                                                                              "pCreateInfo->imageArrayLayers (i.e. %d).  "
+                                                                              "Minimum value is 1, maximum value is %d.",
                                   fn, pCreateInfo->imageArrayLayers, pCapabilities->maxImageArrayLayers);
         }
         // Validate pCreateInfo->imageUsage against
@@ -2099,7 +2099,7 @@ CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCre
         my_data->instance_dispatch_table->CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
-        result = layer_create_msg_callback(my_data->report_data, pCreateInfo, pAllocator, pMsgCallback);
+        result = layer_create_msg_callback(my_data->report_data, false, pCreateInfo, pAllocator, pMsgCallback);
     }
     return result;
 }
@@ -2119,6 +2119,24 @@ DebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags, VkDebugR
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     my_data->instance_dispatch_table->DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix,
                                                             pMsg);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL
+EnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
+    return util_GetLayerProperties(1, &swapchain_layer, pCount, pProperties);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL
+EnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties *pProperties) {
+    return util_GetLayerProperties(1, &swapchain_layer, pCount, pProperties);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL
+EnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount, VkExtensionProperties *pProperties) {
+    if (pLayerName && !strcmp(pLayerName, swapchain_layer.layerName))
+        return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);
+
+    return VK_ERROR_LAYER_NOT_PRESENT;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
@@ -2204,14 +2222,12 @@ intercept_core_instance_command(const char *name) {
         { "vkDestroyInstance", reinterpret_cast<PFN_vkVoidFunction>(DestroyInstance) },
         { "vkCreateDevice", reinterpret_cast<PFN_vkVoidFunction>(CreateDevice) },
         { "vkEnumeratePhysicalDevices", reinterpret_cast<PFN_vkVoidFunction>(EnumeratePhysicalDevices) },
+        { "vkEnumerateInstanceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateInstanceLayerProperties) },
+        { "vkEnumerateDeviceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceLayerProperties) },
+        { "vkEnumerateInstanceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateInstanceExtensionProperties) },
         { "vkEnumerateDeviceExtensionProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceExtensionProperties) },
         { "vkGetPhysicalDeviceQueueFamilyProperties", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceQueueFamilyProperties) },
     };
-
-    // we should never be queried for these commands
-    assert(strcmp(name, "vkEnumerateInstanceLayerProperties") &&
-           strcmp(name, "vkEnumerateInstanceExtensionProperties") &&
-           strcmp(name, "vkEnumerateDeviceLayerProperties"));
 
     for (size_t i = 0; i < ARRAY_SIZE(core_instance_commands); i++) {
         if (!strcmp(core_instance_commands[i].name, name))
@@ -2331,27 +2347,30 @@ vkDebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT flags, VkDebu
     swapchain::DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
 }
 
-// loader-layer interface v0
+// loader-layer interface v0, just wrappers since there is only a layer
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount, VkExtensionProperties *pProperties) {
-    return util_GetExtensionProperties(ARRAY_SIZE(swapchain::instance_extensions), swapchain::instance_extensions, pCount, pProperties);
+    return swapchain::EnumerateInstanceExtensionProperties(pLayerName, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateInstanceLayerProperties(uint32_t *pCount, VkLayerProperties *pProperties) {
-    return util_GetLayerProperties(1, &swapchain::swapchain_layer, pCount, pProperties);
+    return swapchain::EnumerateInstanceLayerProperties(pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties *pProperties) {
-    return util_GetLayerProperties(1, &swapchain::swapchain_layer, pCount, pProperties);
+    // the layer command handles VK_NULL_HANDLE just fine internally
+    assert(physicalDevice == VK_NULL_HANDLE);
+    return swapchain::EnumerateDeviceLayerProperties(VK_NULL_HANDLE, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
                                                                                     const char *pLayerName, uint32_t *pCount,
                                                                                     VkExtensionProperties *pProperties) {
-    // the layer command handles VK_NULL_HANDLE just fine
+    // the layer command handles VK_NULL_HANDLE just fine internally
+    assert(physicalDevice == VK_NULL_HANDLE);
     return swapchain::EnumerateDeviceExtensionProperties(VK_NULL_HANDLE, pLayerName, pCount, pProperties);
 }
 
@@ -2360,14 +2379,5 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char *funcName) {
-    if (!strcmp(funcName, "vkEnumerateInstanceLayerProperties"))
-        return reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceLayerProperties);
-    if (!strcmp(funcName, "vkEnumerateDeviceLayerProperties"))
-        return reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateDeviceLayerProperties);
-    if (!strcmp(funcName, "vkEnumerateInstanceExtensionProperties"))
-        return reinterpret_cast<PFN_vkVoidFunction>(vkEnumerateInstanceExtensionProperties);
-    if (!strcmp(funcName, "vkGetInstanceProcAddr"))
-        return reinterpret_cast<PFN_vkVoidFunction>(vkGetInstanceProcAddr);
-
     return swapchain::GetInstanceProcAddr(instance, funcName);
 }

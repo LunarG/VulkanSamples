@@ -717,8 +717,8 @@ static std::string get_result_description(VkResult result) {
         case VK_INCOMPLETE:                     return "a return array was too small for the result";
         case VK_ERROR_OUT_OF_HOST_MEMORY:       return "a host memory allocation has failed";
         case VK_ERROR_OUT_OF_DEVICE_MEMORY:     return "a device memory allocation has failed";
-        case VK_ERROR_INITIALIZATION_FAILED:    return "the logical device has been lost";
-        case VK_ERROR_DEVICE_LOST:              return "initialization of an object has failed";
+        case VK_ERROR_INITIALIZATION_FAILED:    return "initialization of an object has failed";
+        case VK_ERROR_DEVICE_LOST:              return "the logical device has been lost";
         case VK_ERROR_MEMORY_MAP_FAILED:        return "mapping of a memory object has failed";
         case VK_ERROR_LAYER_NOT_PRESENT:        return "the specified layer does not exist";
         case VK_ERROR_EXTENSION_NOT_PRESENT:    return "the specified extension does not exist";

@@ -30,8 +30,9 @@
 
 #include <vulkan/vulkan.h>
 #include "vk_loader_platform.h"
-
+#include "vk_loader_layer.h"
 #include <vulkan/vk_layer.h>
+
 #include <vulkan/vk_icd.h>
 #include <assert.h>
 

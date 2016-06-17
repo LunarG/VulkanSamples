@@ -31,9 +31,6 @@ set(LAYER_JSON_FILES
     VkLayer_device_limits
     )
 
-set(VK_LAYER_RPATH /usr/lib/x86_64-linux-gnu/vulkan/layer:/usr/lib/i386-linux-gnu/vulkan/layer)
-set(CMAKE_INSTALL_RPATH ${VK_LAYER_RPATH})
-
 if (WIN32)
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         if (CMAKE_GENERATOR MATCHES "^Visual Studio.*")
@@ -145,11 +142,10 @@ run_vk_layer_xml_generate(Threading thread_check.h)
 run_vk_layer_generate(unique_objects unique_objects.cpp)
 run_vk_layer_xml_generate(ParamChecker parameter_validation.h)
 
+
 # Layer Utils Library
-# For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search
-# path that can't be easily modified to point it to the same directory that contains the layers.
 if (WIN32)
-    add_library(VkLayer_utils STATIC vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
+    add_library(VkLayer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp VkLayer_utils.def)
 else()
     add_library(VkLayer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
     install(TARGETS VkLayer_utils DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
@@ -169,3 +165,24 @@ add_vk_layer(parameter_validation parameter_validation.cpp parameter_validation.
 target_include_directories(VkLayer_core_validation PRIVATE ${GLSLANG_SPIRV_INCLUDE_DIR})
 target_include_directories(VkLayer_core_validation PRIVATE ${SPIRV_TOOLS_INCLUDE_DIR})
 target_link_libraries(VkLayer_core_validation ${SPIRV_TOOLS_LIBRARIES})
+
+if (WIN32)
+    if (CMAKE_GENERATOR MATCHES "^Visual Studio.*")
+        file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/VkLayer_utils.dll COPY_SRC_PATH)
+        file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/../demos/$<CONFIGURATION>/ COPY_DST_PATH)
+        file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/../tests/$<CONFIGURATION>/ COPY_DST_TEST_PATH)
+    else()
+        file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/VkLayer_utils.dll COPY_SRC_PATH)
+        file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/../demos/ COPY_DST_PATH)
+        file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/../tests/ COPY_DST_TEST_PATH)
+    endif()
+    # Copy layer utils library to correct locations
+    add_custom_command(TARGET VkLayer_utils
+                       POST_BUILD
+                       COMMAND xcopy /Y /I ${COPY_SRC_PATH} ${COPY_DST_PATH}
+                       COMMENT "Copying VkLayer_utils.dll to demos dir")
+    add_custom_command(TARGET VkLayer_utils
+                       POST_BUILD
+                       COMMAND xcopy /Y /I ${COPY_SRC_PATH} ${COPY_DST_TEST_PATH}
+                       COMMENT "Copying VkLayer_utils.dll to demos dir")
+endif()

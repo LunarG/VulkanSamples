@@ -1,0 +1,11 @@
+{
+    "file_format_version" : "1.0.0",
+    "layer" : {
+        "name": "VK_LAYER_LUNARG_wrap_objects",
+        "type": "GLOBAL",
+        "library_path": "./libVkLayer_wrap_objects.so",
+        "api_version": "1.0.11",
+        "implementation_version": "1",
+        "description": "LunarG Dispatchable Object Wrapping Layer"
+    }
+}

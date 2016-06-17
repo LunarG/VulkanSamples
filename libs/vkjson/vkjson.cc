@@ -327,17 +327,28 @@ inline bool Iterate(Visitor* visitor, VkFormatProperties* properties) {
 }
 
 template <typename Visitor>
-inline bool Iterate(Visitor* visitor, VkJsonAllProperties* properties) {
-  return
-    visitor->Visit("properties", &properties->properties) &&
-    visitor->Visit("features", &properties->features) &&
-    visitor->Visit("memory", &properties->memory) &&
-    visitor->Visit("queues", &properties->queues) &&
-    visitor->Visit("extensions", &properties->extensions) &&
-    visitor->Visit("layers", &properties->layers) &&
-    visitor->Visit("formats", &properties->formats);
+inline bool Iterate(Visitor* visitor, VkJsonLayer* layer) {
+  return visitor->Visit("properties", &layer->properties) &&
+         visitor->Visit("extensions", &layer->extensions);
 }
 
+template <typename Visitor>
+inline bool Iterate(Visitor* visitor, VkJsonDevice* device) {
+  return visitor->Visit("properties", &device->properties) &&
+         visitor->Visit("features", &device->features) &&
+         visitor->Visit("memory", &device->memory) &&
+         visitor->Visit("queues", &device->queues) &&
+         visitor->Visit("extensions", &device->extensions) &&
+         visitor->Visit("layers", &device->layers) &&
+         visitor->Visit("formats", &device->formats);
+}
+
+template <typename Visitor>
+inline bool Iterate(Visitor* visitor, VkJsonInstance* instance) {
+  return visitor->Visit("layers", &instance->layers) &&
+         visitor->Visit("extensions", &instance->extensions) &&
+         visitor->Visit("devices", &instance->devices);
+}
 
 template <typename T>
 using EnableForArithmetic =
@@ -663,15 +674,24 @@ template <typename T> bool VkTypeFromJson(const std::string& json,
 
 }  // anonymous namespace
 
-std::string VkJsonAllPropertiesToJson(
-    const VkJsonAllProperties& properties) {
-  return VkTypeToJson(properties);
+std::string VkJsonInstanceToJson(const VkJsonInstance& instance) {
+  return VkTypeToJson(instance);
 }
 
-bool VkJsonAllPropertiesFromJson(
-    const std::string& json, VkJsonAllProperties* properties,
-    std::string* errors) {
-  return VkTypeFromJson(json, properties, errors);
+bool VkJsonInstanceFromJson(const std::string& json,
+                            VkJsonInstance* instance,
+                            std::string* errors) {
+  return VkTypeFromJson(json, instance, errors);
+}
+
+std::string VkJsonDeviceToJson(const VkJsonDevice& device) {
+  return VkTypeToJson(device);
+}
+
+bool VkJsonDeviceFromJson(const std::string& json,
+                          VkJsonDevice* device,
+                          std::string* errors) {
+  return VkTypeFromJson(json, device, errors);
 };
 
 std::string VkJsonImageFormatPropertiesToJson(

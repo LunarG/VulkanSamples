@@ -2,9 +2,9 @@
     "file_format_version" : "1.0.0",
     "layer" : {
         "name": "VK_LAYER_LUNARG_parameter_validation",
-        "type": "INSTANCE",
+        "type": "GLOBAL",
         "library_path": ".\\VkLayer_parameter_validation.dll",
-        "api_version": "1.0.11",
+        "api_version": "1.0.16",
         "implementation_version": "1",
         "description": "LunarG Validation Layer",
         "instance_extensions": [

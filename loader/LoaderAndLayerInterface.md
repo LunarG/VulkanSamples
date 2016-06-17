@@ -151,24 +151,26 @@ Vulkan commands, but may offer extensions that do. A common use of layers is
 for API validation. A developer can use validation layers during application
 development, but during production the layers can be disabled by the
 application. Thus, eliminating the overhead of validating the application's
-usage of the API. Layers discovered by the loader can be reported to the
-application via vkEnumerateInstanceLayerProperties and
-vkEnumerateDeviceLayerProperties, for instance and device layers respectively.
-Instance layers are enabled at vkCreateInstance; device layers are enabled at
-vkCreateDevice. For example, the ppEnabledLayerNames array in the
-VkDeviceCreateInfo structure is used by the application to list the device
-layer names to be enabled at vkCreateDevice. At vkCreateInstance and
+usage of the API. Layers discovered by the loader are reported to the
+application via vkEnumerateInstanceLayerProperties.
+Layers are enabled at vkCreateInstance and are active for all Vulkan commands
+that using the given VkIstance and any of it's child objects.
+For example, the ppEnabledLayerNames array in the
+VkInstanceCreateInfo structure is used by the application to list the
+layer names to be enabled at vkCreateInstance. At vkCreateInstance and
 vkCreateDevice, the loader will construct call chains that include the
-application specified (enabled) layers. Order is important in the
+application specified (enabled) layers.  vkCreateDevice will use the layers
+specified at vkCreateInstance. vkEnumerateDeviceLayerProperties and
+device layers are deprecated.  Order is important in the
 ppEnabledLayerNames array; array element 0 is the topmost (closest to the
 application) layer inserted in the chain and the last array element is closest
 to the driver.
 
 Developers may want to enable layers that are not enabled by the given
-application they are using. On Linux and Windows, the environment variables
-“VK\_INSTANCE\_LAYERS” and “VK\_DEVICE\_LAYERS” can be used to enable
+application they are using. On Linux and Windows, the environment variable
+“VK\_INSTANCE\_LAYERS” can be used to enable
 additional layers which are not specified (enabled) by the application at
-vkCreateInstance/vkCreateDevice. VK\_INSTANCE\_LAYERS is a colon
+vkCreateInstance. VK\_INSTANCE\_LAYERS is a colon
 (Linux)/semi-colon (Windows) separated list of layer names to enable. Order is
 relevant with the first layer in the list being the topmost layer (closest to
 the application) and the last layer in the list being the bottommost layer
@@ -180,19 +182,12 @@ layers. Layers specified via environment variable are topmost (closest to the
 application) while layers specified by the application are bottommost.
 
 An example of using these environment variables to activate the validation
-layer VK\_LAYER\_LUNARG\_param\_checker on Windows or Linux is as follows:
+layer VK\_LAYER\_LUNARG\_parameter\_validation on Windows or Linux is as follows:
 
 ```
 > $ export VK_INSTANCE_LAYERS=VK_LAYER_LUNARG_parameter_validation
 
-> $ export VK_DEVICE_LAYERS=VK_LAYER_LUNARG_parameter_validation
 ```
-
-**Note**: Many layers, including all LunarG validation layers are “global”
-(i.e. both instance and device) layers and *must* be enabled on both the
-instance and device chains to function properly. This is required for “global”
-layers regardless of which method is used to enable the layer (application or
-environment variable).
 
 Some platforms, including Linux and Windows, support layers which are enabled
 automatically by the loader rather than explicitly by the application (or via
@@ -698,6 +693,7 @@ Vulkan layer interface with the loader
 
 #### Windows
 
+<a name="ManifestFileExample"></a>
 ##### Properly-Installed Layers
 
 In order to find properly-installed layers, the Vulkan loader will use a
@@ -737,105 +733,47 @@ full pathname to the manifest file.
 The Vulkan loader will open each info file to obtain information about the
 layer, including the name or pathname of a shared library (".dll") file.
 
-This manifest file is in the JSON format and contains the following
-information:
-
-- (required) "file\_format\_version" - same as for ICDs, except that the format
-version can vary independently for ICDs and layers.
-
-- (required) "name" - layer name
-
-- (required) "type" - which layer chains should the layer be activated on.
-Allowable values are "INSTANCE", "DEVICE", "GLOBAL". Global means activate on
-both device and instance chains.
-
-- (required) "library\_path" - filename / full path / relative path to the
-library file
-
-- (required) "api\_version" - same as for ICDs.
-
-- (required) "implementation\_version" - layer version, a single number
-increasing with backward compatible changes.
-
-- (required) "description" - informative description of the layer.
-
-- (optional) "device\_extensions" or "instance\_extensions" - array of
-extension information as follows
-
-    - (required) extension "name" - Vulkan registered name
-
-    - (required) extension "spec\_version" - extension specification version, a
-single number, increasing with backward compatible changes.
-
-    - (required for device\_extensions with entry points) extension
-"entrypoints" - array of device extension entry points; not used for instance
-extensions
-
-- (sometimes required) "functions" - mapping list of function entry points. If
-multiple layers exist within the same shared library (or if a layer is in the
-same shared library as an ICD), this must be specified to allow each layer to
-have its own vkGet\*ProcAddr entry points that can be found by the loader. At
-this time, only the following two functions are required:
-
-    - "vkGetInstanceProcAddr" name
-
-    - "vkGetDeviceProcAddr" name
-
-- (optional for implicit layers) "enable\_environment" requirement(s) -
-environment variable and value required to enable an implicit layer. This
-environment variable (which should vary with each "version" of the layer, as in
-"ENABLE\_LAYER\_FOO\_1") must be set to the given value or else the implicit
-layer is not loaded. This is for application environments (e.g. Steam) which
-want to enable a layer(s) only for applications that they launch, and allows
-for applications run outside of an application environment to not get that
-implicit layer(s).
-
-- (required for implicit layers) "disable\_environment" requirement(s) -
-environment variable and value required to disable an implicit layer. Note: in
-rare cases of an application not working with an implicit layer, the
-application can set this environment variable (before calling Vulkan functions)
-in order to "blacklist" the layer. This environment variable (which should vary
-with each "version" of the layer, as in "DISABLE\_LAYER\_FOO\_1") must be set
-(not particularly to any value). If both the "enable\_environment" and
-"disable\_environment" variables are set, the implicit layer is disabled.
-
-For example:
+This manifest file is in the JSON format as shown in the following example.
+See the section [Layer Library Manifest File](#LayerLibraryManifestFile) for more information about each of the nodes in the JSON file.
 
 ```
 {
-"file_format_version" : "1.0.0",
-"layer": {
-    "name": "VK_LAYER_LUNARG_OverlayLayer",
-    "type": "DEVICE",
-    "library_path": "vkOverlayLayer.dll"
-    "api_version" : "1.0.5",
-    "implementation_version" : "2",
-    "description" : "LunarG HUD layer",
-    "functions": {
-        "vkGetInstanceProcAddr": "OverlayLayer_GetInstanceProcAddr",
-        "vkGetDeviceProcAddr": "OverlayLayer_GetDeviceProcAddr"
-    },
-    "instance_extensions": [
-        {
-            "name": "VK_debug_report_EXT",
-            "spec_version": "1"
-        },
-        {
-            "name": "VK_VENDOR_DEBUG_X",
-            "spec_version": "3"
-         }
-    ],
-    "device_extensions": [
-        {
-            "name": "VK_DEBUG_MARKER_EXT",
-            "spec_version": "1",
-            "entrypoints": ["vkCmdDbgMarkerBegin", "vkCmdDbgMarkerEnd"]
-        }
-    ],
-    "disable_environment": {
-        "DISABLE_LAYER_OVERLAY_1": ""
-    }
-}
+   "file_format_version" : "1.0.0",
+   "layer": {
+       "name": "VK_LAYER_LUNARG_overlay",
+       "type": "INSTANCE",
+       "library_path": "vkOverlayLayer.dll"
+       "api_version" : "1.0.5",
+       "implementation_version" : "2",
+       "description" : "LunarG HUD layer",
+       "functions": {
+           "vkGetInstanceProcAddr": "OverlayLayer_GetInstanceProcAddr",
+           "vkGetDeviceProcAddr": "OverlayLayer_GetDeviceProcAddr"
+       },
+       "instance_extensions": [
+           {
+               "name": "VK_EXT_debug_report",
+               "spec_version": "1"
+           },
+           {
+               "name": "VK_VENDOR_ext_x",
+               "spec_version": "3"
+            }
+       ],
+       "device_extensions": [
+           {
+               "name": "VK_EXT_debug_marker",
+               "spec_version": "1",
+               "entrypoints": ["vkCmdDbgMarkerBegin", "vkCmdDbgMarkerEnd"]
+           }
+       ],
+       "enable_environment": {
+           "ENABLE_LAYER_OVERLAY_1": "1"
+       }
+       "disable_environment": {
+           "DISABLE_LAYER_OVERLAY_1": ""
+       }
+   }
 }
 ```
 
@@ -847,6 +785,34 @@ provides a layer that is in the same folder hierarchy as the rest of the
 application files). If the layer is specified via a filename, the shared
 library lives in the system's DLL search path (e.g. in the
 "C:\\Windows\\System32" folder).
+
+If defining multiple layers in a single JSON file prior to "file\_format\_version"
+1.0.1, you would simply define multiple "layer" objects.  However, this is not
+valid JSON syntax.  Instead, you should now define "file\_format\_version"
+1.0.1 (or newer) and use the new "layers" array object as seen in the
+following example:
+
+```
+{
+   "file_format_version" : "1.0.1",
+   "layers": [
+      {
+           "name": "VK_LAYER_layer_name1",
+           "type": "INSTANCE",
+           ...
+      },
+      {
+           "name": "VK_LAYER_layer_name2",
+           "type": "INSTANCE",
+           ...
+      }
+   ]
+}
+```
+
+You could use the "layers" array object to define a single layer, as long as
+your "file\_format\_version" is defined to at least 1.0.1.  It is functionally the
+same as using a single "layer" object.
 
 There are no rules about the name of the text files (except the .json suffix).
 
@@ -906,102 +872,47 @@ installed from Linux-distribution-provided packages. The
 "/etc/vulkan/\*\_layer.d" directories are for layers that are installed from
 non-Linux-distribution-provided packages.
 
-The information file is in the JSON format and contains the following
-information:
+This manifest file is in the JSON format as shown in the following example.
+See the section [Layer Library Manifest File](#LayerLibraryManifestFile) for more information about each of the nodes in the JSON file.
 
-- (required) "file\_format\_version" – same as for ICDs, except that the format
-version can vary independently for ICDs and layers.
-
-- (required) "name" - layer name
-
-- (required) "type" - which layer chains should the layer be activated on.
-Allowable values are "INSTANCE", "DEVICE", "GLOBAL". Global means activate on
-both device and instance chains.
-
-- (required) "library\_path" - filename / full path / relative path to the text
-file
-
-- (required) "api\_version" – same as for ICDs.
-
-- (required) "implementation\_version" – layer version, a single number
-increasing with backward compatible changes.
-
-- (required) "description" – informative description of the layer.
-
-- (optional) "device\_extensions" or "instance\_extensions" - array of
-extension information as follows
-
-    - (required) extension "name" - Vulkan registered name
-
-    - (required) extension "spec\_version" - extension specification version, a
-single number, increasing with backward compatible changes.
-
-    - (required for device extensions with entry points) extension
-"entrypoints" - array of device extension entry points; not used for instance
-extensions
-
-- (sometimes required) "functions" - mapping list of function entry points. If
-multiple layers exist within the same shared library (or if a layer is in the
-same shared library as an ICD), this must be specified to allow each layer to
-have its own vkGet\*ProcAddr entry points that can be found by the loader. At
-this time, only the following two functions are required:
-    - "vkGetInstanceProcAddr" name
-    - "vkGetDeviceProcAddr" name
-
-- (optional for implicit layers) "enable\_environment" requirement(s) -
-environment variable and value required to enable an implicit layer. This
-environment variable (which should vary with each "version" of the layer, as in
-"ENABLE\_LAYER\_FOO\_1") must be set to the given value or else the implicit
-layer is not loaded. This is for application environments (e.g. Steam) which
-want to enable a layer(s) only for applications that they launch, and allows
-for applications run outside of an application environment to not get that
-implicit layer(s).
-
-- (required for implicit layers) "disable\_environment" requirement(s) -
-environment variable and value required to disable an implicit layer. Note: in
-rare cases of an application not working with an implicit layer, the
-application can set this environment variable (before calling Vulkan functions)
-in order to "blacklist" the layer. This environment variable (which should vary
-with each "version" of the layer, as in "DISABLE\_LAYER\_FOO\_1") must be set
-(not particularly to any value). If both the "enable\_environment" and
-"disable\_environment" variables are set, the implicit layer is disabled.
-
-For example:
 ```
 {
-"file_format_version" : "1.0.0",
-"layer": {
-    "name": "VK_LAYER_LUNARG_OverlayLayer",
-    "type": "DEVICE",
-    "library_path": "vkOverlayLayer.dll"
-    "api_version" : "1.0.5",
-    "implementation_version" : "2",
-    "description" : "LunarG HUD layer",
-    "functions": {
-        "vkGetInstanceProcAddr": "OverlayLayer_GetInstanceProcAddr",
-        "vkGetDeviceProcAddr": "OverlayLayer_GetDeviceProcAddr"
-    },
-    "instance_extensions": [
-        {
-            "name": "VK_debug_report_EXT",
-            "spec_version": "1"
-        },
-        {
-            "name": "VK_VENDOR_DEBUG_X",
-            "spec_version": "3"
-         }
-    ],
-    "device_extensions": [
-        {
-            "name": "VK_DEBUG_MARKER_EXT",
-            "spec_version": "1",
-            "entrypoints": ["vkCmdDbgMarkerBegin", "vkCmdDbgMarkerEnd"]
-        }
-    ],
-    "disable_environment": {
-        "DISABLE_LAYER_OVERLAY_1": ""
-    }
-}
+   "file_format_version" : "1.0.0",
+   "layer": {
+       "name": "VK_LAYER_LUNARG_overlay",
+       "type": "INSTANCE",
+       "library_path": "libvkOverlayLayer.so"
+       "api_version" : "1.0.5",
+       "implementation_version" : "2",
+       "description" : "LunarG HUD layer",
+       "functions": {
+           "vkGetInstanceProcAddr": "OverlayLayer_GetInstanceProcAddr",
+           "vkGetDeviceProcAddr": "OverlayLayer_GetDeviceProcAddr"
+       },
+       "instance_extensions": [
+           {
+               "name": "VK_EXT_debug_report",
+               "spec_version": "1"
+           },
+           {
+               "name": "VK_VENDOR_ext_x",
+               "spec_version": "3"
+            }
+       ],
+       "device_extensions": [
+           {
+               "name": "VK_EXT_debug_marker",
+               "spec_version": "1",
+               "entrypoints": ["vkCmdDbgMarkerBegin", "vkCmdDbgMarkerEnd"]
+           }
+       ],
+       "enable_environment": {
+           "ENABLE_LAYER_OVERLAY_1": "1"
+       },
+       "disable_environment": {
+           "DISABLE_LAYER_OVERLAY_1": ""
+       }
+   }
 }
 ```
 The "library\_path" specifies either a filename, a relative pathname, or a full
@@ -1040,7 +951,7 @@ NOTE: these environment variables will be ignored for suid programs.
 The recommended way to enable layers is for applications
 to programatically enable them. The layers are provided by the application
 and must live in the application's library folder. The application
-enables the layers at vkCreateInstance and vkCreateDevice as any Vulkan
+enables the layers at vkCreateInstance as any Vulkan
 application would.
 An application enabled for debug has more options. It can enumerate and enable
 layers located in /data/local/vulkan/debug.
@@ -1060,12 +971,11 @@ to layer module with the loader and or the ICD being the bottom most command.
 Call chains are constructed at both the instance level and the device level by
 the loader with cooperation from the layer libraries. Instance call chains are
 constructed by the loader when layers are enabled at vkCreateInstance. Device
-call chains are constructed by the loader when layers are enabled at
+call chains are constructed by the loader when layers are enabled, by the loader, at
 vkCreateDevice. A layer can intercept Vulkan instance commands, device commands
 or both. For a layer to intercept instance commands, it must participate in the
 instance call chain. For a layer to intercept device commands, it must
-participate in the device chain. Layers which participate in intercepting calls
-in both the instance and device chains are called global layers.
+participate in the device chain.
 
 Normally, when a layer intercepts a given Vulkan command, it will call down the
 instance or device chain as needed. The loader and all layer libraries that
@@ -1094,7 +1004,7 @@ the above lists may be extended in the future.
 #### Layer Library Interface
 
 A layer library is a container of layers.  This section defines an extensible
-manifest file interface or programming interface to discover layers contained in layer libraries.
+interface to discover layers contained in layer libraries.
 The extensible programming interface is used on Android only. For Windows and Linux,
 the layer manifest JSON files are used.
 
@@ -1121,113 +1031,151 @@ should use memory allocators if the layer is intended to run in a production
 environment, such as an implicit layer that is always enabled.  That will
 allow applications to include the layer's memory usage.
 
+`vkEnumerateInstanceLayerProperties` must enumerate and only enumerate the
+layer itself.
+
+`vkEnumerateInstanceExtensionProperties` must handle the case where
+`pLayerName` is itself.  It must return `VK_ERROR_LAYER_NOT_PRESENT`
+otherwise, including when `pLayerName` is `NULL`.
+
+`vkEnumerateDeviceLayerProperties` is deprecated and may be omitted.  The
+behavior is undefined.
+
 `vkEnumerateDeviceExtensionProperties` must handle the case where `pLayerName`
-is `NULL`, usually by chaining to other layers.
+is itself.  In other cases, it should normally chain to other layers.
 
-`vkGetInstanceProcAddr` can intercept a command by returning a function
-pointer different from what would be returned through chaining.
+`vkCreateInstance` must not generate an error for unrecognized layer names and
+extension names.  It may assume the layer names and extension names have been
+validated.
 
-`vkGetDeviceProcAddr` can intercept a command by returning a function pointer
-different from what would be returned through chaining.
+`vkGetInstanceProcAddr` intercepts a Vulkan command by returning a local entry point,
+otherwise it returns the value obtained by calling down the instance chain.
+    These commands must be intercepted
+   - vkGetInstanceProcAddr
+   - vkCreateInstance
+   - vkCreateDevice (only required for any device-level chaining)
 
-`vkCreateInstance` must not generate an error for unrecognized layer names,
-extension names, and `pNext` structs.  It may assume the layer names and
-extension names have been validated.
+   For compatibility with older layer libraries,
+   - when `pName` is `vkCreateDevice`, it ignores `instance`.
 
-`vkCreateDevice` must not generate an error for unrecognized layer names,
-extension names, and `pNext` structs.  It may assume the layer names and
-extension names have been validated.
+`vkGetDeviceProcAddr` intercepts a Vulkan command by returning a local entry point,
+otherwise it returns the value obtained by calling down the device chain.
+
+The specification requires `NULL` to be returned from `vkGetInstanceProcAddr` and
+`vkGetDeviceProcAddr` for disabled commands.  A layer may return `NULL` itself or
+rely on the following layers to do so.
 
 [\*]: The intention is for layers to have a well-defined baseline behavior.
 Some of the conventions or rules, for example, may be considered abuses of the
 specification.
 
-###### Layer Library Interface Version 0 (Android)
+##### Layer Library API Version 0
 
-An Android layer library supporting interface version 0 must define and export these
-functions, unrelated to any Vulkan command despite the names, signatures, and
-other similarities:
+A layer library supporting interface version 0 must define and export these
+introspection functions, unrelated to any Vulkan command despite the names,
+signatures, and other similarities:
 
- - `vkEnumerateInstanceLayerProperties` enumerates all instance layers in a
-   layer library.  This function never fails.
+ - `vkEnumerateInstanceLayerProperties` enumerates all layers in a layer
+   library.  This function never fails.
+
+   When a layer library contains only one layer, this function may be an alias
+   to the layer's `vkEnumerateInstanceLayerProperties`.
 
  - `vkEnumerateInstanceExtensionProperties` enumerates instance extensions of
-   instance layers in a layer library.  `pLayerName` is always a valid
-   instance layer name.  This function never fails.
+   layers in a layer library.  `pLayerName` is always a valid layer name.
+   This function never fails.
 
- - `vkEnumerateDeviceLayerProperties` enumerates all device layers in a layer
-   library.  `physicalDevice` is always `VK_NULL_HANDLE`.  This function never
-   fails.
+   When a layer library contains only one layer, this function may be an alias
+   to the layer's `vkEnumerateInstanceExtensionProperties`.
+
+ - `vkEnumerateDeviceLayerProperties` enumerates a subset (can be full,
+   proper, or empty subset) of layers in a layer library.  `physicalDevice` is
+   always `VK_NULL_HANDLE`.  This function never fails.
+
+   If a layer is not enumerated by this function, it will not participate in
+   device command interception.
 
  - `vkEnumerateDeviceExtensionProperties` enumerates device extensions of
-   device layers in a layer library.  `physicalDevice` is always
-   `VK_NULL_HANDLE`.  `pLayerName` is always a valid device layer name.  This
-   function never fails.
+   layers in a layer library.  `physicalDevice` is always `VK_NULL_HANDLE`.
+   `pLayerName` is always a valid layer name.  This function never fails.
 
- - `<layerName>GetInstanceProcAddr` behaves as if `<layerName>`'s
-   `vkGetInstanceProcAddr` is called, except
+The introspection functions are not used by the desktop loader.
 
-   - when `pName` is `vkEnumerateInstanceLayerProperties`,
-     `vkEnumerateInstanceExtensionProperties`, or
-     `vkEnumerateDeviceLayerProperties` (but _not_
-     `vkEnumerateDeviceExtensionProperties`), it returns a function pointer to
-     the function of the same name defined by this interface.
-   - when `pName` is `vkGetInstanceProcAddr`, it returns a function pointer
-     to itself.
-   - when `pName` is `vkCreateDevice`, it ignores `instance`.
-   - when `pName` is a device command defined by Vulkan 1.0 or
-     `VK_KHR_swapchain` (but _not_ other device commands), it may chain to
-     other layers without intercepting.  A loader should avoid querying such
-     device commands.
+It must also define and export these functions one for each layer in the library:
+
+ - `<layerName>GetInstanceProcAddr(instance, pName)` behaves identically to a layer's vkGetInstanceProcAddr except it is exported.
 
    When a layer library contains only one layer, this function may
    alternatively be named `vkGetInstanceProcAddr`.
 
- - `<layerName>GetDeviceProcAddr` behaves as if `<layerName>`'s
-   `vkGetDeviceProcAddr` is called.
+ - `<layerName>GetDeviceProcAddr`  behaves identically to a layer's vkGetDeviceProcAddr except it is exported.
 
    When a layer library contains only one layer, this function may
    alternatively be named `vkGetDeviceProcAddr`.
 
-All contained layers must support [`vk_layer.h`][].  They do not need to
-implement commands that are not queryable.  They are recommended not to export
-any command.
+All layers contained within a library must support [`vk_layer.h`][].  They do not need to
+implement commands that they do not intercept.  They are recommended not to export
+any commands.
 
-###### Layer Library Interface Version 0 (Windows and Linux)
+<a name="LayerLibraryManifestFile"></a>
+##### Layer Library Manifest File Version 0
 On Windows and Linux (desktop), the loader uses manifest files to discover
 layer libraries and layers.  The desktop loader doesn't directly query the
-layer library except during chaining.  On Android, the loader queries the layer libraries directly as outlined above.
+layer library except during chaining.
+On Android, the loader queries the layer libraries via the introspection functions as outlined above.
 
 The layer libraries and the manifest files must be kept in sync.
 
-The following table associates the desktop JSON nodes with the Android layer library queries. It also indicates requirements.
+The following table associates the desktop JSON nodes with the layer library introspection queries. It also indicates requirements.
 
-| Property | JSON node | Android library query | Notes |
+| Property | JSON node | Introspection query | Notes |
 |----------|-----------|-----------------------|-------|
-| layers in library | layer | vkEnumerate*LayerProperties | one node required for each layer in the library |
-|layer name | name | vkEnumerate*LayerProperties | one node is required |
-| layer type | type | vkEnumerate*LayerProperties | one node is required |
+| file version | file_format_version | N/A | one node required per JSON file |
+| layers in library | layer | vkEnumerateInstanceLayerProperties | one node required per layer |
+| layer name | name | vkEnumerateInstanceLayerProperties | one node is required |
+| layer type | type | vkEnumerate*LayerProperties | see Note 1 |
 | library location | library_path | N/A | one node is required |
-| vulkan spec version | api_version | vkEnumerate*LayerProperties | one node is required |
-| layer implementation version | api_version | vkEnumerate*LayerProperties | one node is required |
-| layer description | description | vkEnumerate*LayerProperties | one node is required |
-| chaining functions | functions | vkGet*ProcAddr | see Note 1 |
-| instance extensions | instance_extensions | vkEnumerateInstanceExtensionProperties | see Note 2 |
-| device extensions | device_extensions | vkEnumerateDeviceExtensionProperties | see Note 3 |
+| vulkan spec version | api_version | vkEnumerateInstanceLayerProperties | one node is required |
+| layer implementation version | api_version | vkEnumerateInstanceLayerProperties | see Note 2 |
+| layer description | description | vkEnumerateInstanceLayerProperties | one node is required |
+| chaining functions | functions | vkGet*ProcAddr | see Note 3 |
+| instance extensions | instance_extensions | vkEnumerateInstanceExtensionProperties | see Note 4 |
+| device extensions | device_extensions | vkEnumerateDeviceExtensionProperties | see Note 5 |
+| enable implicit | enable_environment | N/A | See Note 6 |
+| disable implicit | enable_environment | N/A | See Note 7 |
 
-Note 1: The "functions" node is required if the layer is using alternative
-names for vkGetInstanceProcAddr or vkGetDeviceProcAddr. vkGetInstanceProcAddr is
-required for all layer types. vkGetDeviceProcAddr is required for
-device or global (both instance and device) layers. See further requirements below.
+"file\_format\_version" is used to indicate the valid JSON syntax of the file.
+As nodes are added or deleted which would change the parsing of this file,
+the file_format_version should change. This version
+is NOT the same as the layer library interface version. The interface version is a superset
+of the "file_format_version" and includes the semantics of the nodes in the JSON file.
+For interface version 0 the file format version must be "1.0.0"
 
-Note 2: One "instance_extensions" node with an array of 1 or more elements
+Note 1: Prior to deprecation, the "type" node was used to indicate which layer chain(s)
+to activate the layer upon: instance, device, or both.
+Distinct instance and device layers are deprecated; there are now just layers.
+Allowable values for type (both before and after deprecation) are "INSTANCE", "GLOBAL" and, "DEVICE."
+"DEVICE" layers are skipped over by the loader as if they were not found.
+Thus, layers must have a type of "GLOBAL" or "INSTANCE" for the loader to include the layer in the enumerated instance layer list.
+
+"library\_path" is the filename, full path, or relative path to the library file.
+See [Manifest File Example](# ManifestFileExample) section for more details.
+
+Note 2: One "implementation\_version" node is required per layer. This node gives the layer version, a single number
+increasing with backward uncompatible changes.
+
+Note 3: The "functions" node is required if the layer is using alternative
+names for vkGetInstanceProcAddr or vkGetDeviceProcAddr. vkGetInstanceProcAddr and vkGetDeviceProcAddr
+are required for all layers. See further requirements in the Layer Library API section above.
+
+Note 4: One "instance_extensions" node with an array of one or more elements
 required if any instance
 extensions are supported by a layer, otherwise the node is optional.  Each
 element of the array must have the nodes "name" and "spec_version" which
 correspond to  VkExtensionProperties "extensionName" and "specVersion"
 respectively.
 
-Note 3: One "device_extensions" node with an array of 1 or more elements
+Note 5: One "device_extensions" node with an array of one or more elements
 required if any device
 extensions are supported by a layer, otherwise the node is optional.  Each
 element of the array must have the nodes "name" and "spec_version" which
@@ -1237,55 +1185,39 @@ must have the node "entrypoints" if the device extension adds Vulkan API command
 otherwise this node is not required.
 The "entrypoint" node is an array of the names of all entrypoints added by the
 supported extension.
+```
+    "device_extensions": [
+        {
+            "name": "VK_EXT_debug_marker",
+            "spec_version": "1",
+            "entrypoints": ["vkCmdDbgMarkerBegin", "vkCmdDbgMarkerEnd"]
+        }
+ ```
 
-The manifest file nodes "file_format_version", "disable_environment", and
-"enable_environment" have no corresponding equivalent in the Vulkan API nor
-in the Android layer library interface.
+Note 6: The "enable\_environment" node is only for implicit layers only. It is optional for implicit layers.
+This node gives an environment variable and value required to enable an implicit layer. This
+environment variable (which should vary with each "version" of the layer) must be set to the
+given value or else the implicit layer is not loaded. This is for application environments (e.g. Steam) which
+want to enable a layer(s) only for applications that they launch, and allows
+for applications run outside of an application environment to not get that
+implicit layer(s).
 
-"file_format_version" is used to indicate the valid JSON syntax of the file.
-As nodes are added or deleted which would change the parsing of this file,
-the file_format_version should change. This version
-is NOT the same as the interface version. The interface version is a superset
-of the "file_format_version" and includes the semantics of the nodes in the JSON file.  For interface version 0 the file format version must be "1.0.0"
+Note 7: The "disable\_environment" node is only for implicit layers only. It is required for implicit layers.
+This node gives an environment variable and value required to disable an implicit layer. In
+rare cases of an application not working with an implicit layer, the
+application can set this environment variable (before calling Vulkan commands)
+in order to "blacklist" the layer. This environment variable (which should vary
+with each "version" of the layer) must be set (not particularly to any value).
+If both the "enable\_environment" and
+"disable\_environment" variables are set, the implicit layer is disabled.
 
-"disable_environment" (required) and "enable_evironment" (optional) are for implicit layers as previously described.
-
-vkGetInstanceProcAddr requirements:
--Irregardless of the name, this function must be implemented and exported in the library for all  layers.
--This function must return
-the local entry points for all instance level Vulkan commands it intercepts. At
-a minimum, this includes vkGetInstanceProcAddr and vkCreateInstance.
-Optionally, this function may return intercepted device level
-Vulkan commands.
--Vulkan commands that a layer doesn't intercept must be passed to the next
-entity in the chain. That is, the next layer/ICD's GetInstanceProcAddr must be called.
--Currently this function must be able to handle a VkInstance parameter equal
-to NULL for instance level commands it intercepts including vkCreateDevice.
-
-VkGetDeviceProcAddr requirements:
--Irregardless of the name, a layer intercepting device level Vulkan commands
-(aka a device level layer) must implement  vkGetDeviceProcAddr type of function.
--This vkGetDeviceProcAddr type function must be exported by the layer library.
--This function must return the entry points for all device level Vulkan
-commands it intercepts. At a minimum, this includes vkGetDeviceProcAddr and vkCreateDevice.
--Vulkan commands that a layer doesn't intercept must be passed to the next
-entity in the chain. That is, the next layer/ICD's GetDeviceProcAddr must be called.
-
-There are no requirements on the names of the intercepting functions a layer
-implements except those listed above for vkGetInstanceProcAddr and
-vkGetDeviceProcAddr. Layers do not need to implement commands that are not going to be intercepted.
-
-All layers within a library must support [`vk_layer.h`][].
-[`vk_layer.h`]: ../include/vulkan/vk_layer.h
-
-#### Layer intercept requirements
+#### Layer Dispatch Interface Version 0
+##### Layer intercept requirements
 
 - Layers intercept a Vulkan command by defining a C/C++ function with signature
 identical to the Vulkan API for that command.
-- An instance layer must intercept at least vkGetInstanceProcAddr and
-vkCreateInstance.  A device layer must intercept at least vkGetInstanceProcAddr, vkGetDeviceProcAddr and vkCreateDevice.
-- Other than the two vkGet*ProcAddr, all other functions intercepted by a layer
-need NOT be exported by the layer.
+- A layer must intercept at least vkGetInstanceProcAddr and
+vkCreateInstance.  Additionally, a layer would also intercept vkGetDeviceProcAddr and vkCreateDevice to participate in the device chain.
 - For any Vulkan command a layer intercepts which has a non-void return value,
 an appropriate value must be returned by the layer intercept function.
 - The layer intercept function must call down the chain to the corresponding
@@ -1299,7 +1231,7 @@ want to add a call to vkQueueWaitIdle after calling down the chain for
 vkQueueSubmit.  Any additional calls inserted by a layer must be on the same
 chain. They should call down the chain.
 
-#### Distributed dispatching requirements
+##### Distributed dispatching requirements
 
 - For each entry point a layer intercepts, it must keep track of the entry
 point residing in the next entity in the chain it will call down into. In other
@@ -1317,7 +1249,7 @@ functions.
 vkGetDeviceProcAddr to call down the chain for unknown (i.e. non-intercepted)
 functions.
 
-#### Layer dispatch initialization
+##### Layer dispatch initialization
 
 - A layer initializes its instance dispatch table within its vkCreateInstance
 function.
@@ -1359,7 +1291,7 @@ the VkInstanceCreateInfo/VkDeviceCreateInfo structure.
 Get*ProcAddr function once for each Vulkan command needed in your dispatch
 table
 
-#### Example code for CreateInstance
+##### Example code for CreateInstance
 
 ```cpp
 VkResult vkCreateInstance(
@@ -1400,7 +1332,7 @@ VkResult vkCreateInstance(
 }
 ```
 
-#### Example code for CreateDevice
+##### Example code for CreateDevice
 
 ```cpp
 VkResult 

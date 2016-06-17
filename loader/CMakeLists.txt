@@ -17,6 +17,7 @@ set(NORMAL_LOADER_SRCS
     loader.c
     loader.h
     vk_loader_platform.h
+    vk_loader_layer.h
     trampoline.c
     wsi.c
     wsi.h
@@ -37,6 +38,14 @@ set (OPT_LOADER_SRCS
 set (LOADER_SRCS ${NORMAL_LOADER_SRCS} ${OPT_LOADER_SRCS})
 
 if (WIN32)
+    # Use static MSVCRT libraries
+    foreach(configuration in CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_RELWITHDEBINFO
+                             CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+        if(${configuration} MATCHES "/MD")
+            string(REGEX REPLACE "/MD" "/MT" ${configuration} "${${configuration}}")
+        endif()
+    endforeach()
+
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
     # Build dev_ext_trampoline.c with -O2 to allow tail-call optimization.
     # Build other C files with normal options
@@ -72,6 +81,6 @@ else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith")
 
     add_library(vulkan SHARED ${LOADER_SRCS})
-    set_target_properties(vulkan PROPERTIES SOVERSION "1" VERSION "1.0.12")
+    set_target_properties(vulkan PROPERTIES SOVERSION "1" VERSION "1.0.13")
     target_link_libraries(vulkan -ldl -lpthread -lm)
 endif()

@@ -1,7 +1,8 @@
-# Powershell script for running the vktrace trace/replay auto test
+# Powershell script for running the layer validation details doc validator
 # To run this test:
-#    cd <this-dir>
-#    powershell C:\src\LoaderAndTools\vktracereplay.ps1 [-Debug]
+#    From a Windows powershell:
+#    cd C:\src\Vulkan-LoaderAndValidationLayers\build\tests
+#    .\vkvalidatelayerdoc.ps1 [-Debug]
 
 if ($args[0] -eq "-Debug") {
     $dPath = "Debug"
