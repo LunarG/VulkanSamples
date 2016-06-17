@@ -8640,25 +8640,86 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
     return res;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
-                                                const VkAllocationCallbacks *pAllocator,
-                                                VkRenderPass *pRenderPass) {
+static bool ValidateAttachmentIndex(layer_data *dev_data, uint32_t attachment, uint32_t attachment_count, const char *type) {
     bool skip_call = false;
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    // Create DAG
-    std::vector<bool> has_self_dependency(pCreateInfo->subpassCount);
-    std::vector<DAGNode> subpass_to_node(pCreateInfo->subpassCount);
-    {
-        std::lock_guard<std::mutex> lock(global_lock);
-        skip_call |= CreatePassDAG(dev_data, device, pCreateInfo, subpass_to_node, has_self_dependency);
-        // Validate
-        skip_call |= ValidateLayouts(dev_data, device, pCreateInfo);
-        if (skip_call) {
-            return VK_ERROR_VALIDATION_FAILED_EXT;
+    if (attachment >= attachment_count && attachment != VK_ATTACHMENT_UNUSED) {
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                             DRAWSTATE_INVALID_ATTACHMENT_INDEX, "DS",
+                             "CreateRenderPass: %s attachment %d cannot be greater than the total number of attachments %d.",
+                             type, attachment, attachment_count);
+    }
+    return skip_call;
+}
+
+static bool ValidateRenderpassAttachmentUsage(layer_data *dev_data, const VkRenderPassCreateInfo *pCreateInfo) {
+    bool skip_call = false;
+    for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
+        const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
+        if (subpass.pipelineBindPoint != VK_PIPELINE_BIND_POINT_GRAPHICS) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_INVALID_RENDERPASS, "DS",
+                        "CreateRenderPass: Pipeline bind point for subpass %d must be VK_PIPELINE_BIND_POINT_GRAPHICS.", i);
+        }
+        for (uint32_t j = 0; j < subpass.preserveAttachmentCount; ++j) {
+            uint32_t attachment = subpass.pPreserveAttachments[j];
+            if (attachment == VK_ATTACHMENT_UNUSED) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                     __LINE__, DRAWSTATE_INVALID_ATTACHMENT_INDEX, "DS",
+                                     "CreateRenderPass:  Preserve attachment (%d) must not be VK_ATTACHMENT_UNUSED.", j);
+            } else {
+                skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Preserve");
+            }
+        }
+        for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
+            uint32_t attachment;
+            if (subpass.pResolveAttachments) {
+                attachment = subpass.pResolveAttachments[j].attachment;
+                skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Resolve");
+            }
+            attachment = subpass.pColorAttachments[j].attachment;
+            skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Color");
+        }
+        if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+            uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
+            skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Depth stencil");
+        }
+        for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
+            uint32_t attachment = subpass.pInputAttachments[j].attachment;
+            skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Input");
         }
     }
-    VkResult result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
+    return skip_call;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
+                                                const VkAllocationCallbacks *pAllocator, VkRenderPass *pRenderPass) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip_call = false;
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    std::unique_lock<std::mutex> lock(global_lock);
+
+    skip_call |= ValidateLayouts(dev_data, device, pCreateInfo);
+    // TODO: As part of wrapping up the mem_tracker/core_validation merge the following routine should be consolidated with
+    //       ValidateLayouts.
+    skip_call |= ValidateRenderpassAttachmentUsage(dev_data, pCreateInfo);
+
+    if (skip_call) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+
+    lock.unlock();
+    if (skip_call == false) {
+        result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
+    }
     if (VK_SUCCESS == result) {
+        lock.lock();
+
+        std::vector<bool> has_self_dependency(pCreateInfo->subpassCount);
+        std::vector<DAGNode> subpass_to_node(pCreateInfo->subpassCount);
+        skip_call |= CreatePassDAG(dev_data, device, pCreateInfo, subpass_to_node, has_self_dependency);
+
         // TODOSC : Merge in tracking of renderpass from shader_checker
         // Shadow create info and store in map
         VkRenderPassCreateInfo *localRPCI = new VkRenderPassCreateInfo(*pCreateInfo);
@@ -8729,91 +8790,34 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
         std::unordered_map<uint32_t, VkImageLayout> &attachment_first_layout = render_pass->attachment_first_layout;
         for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
             const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
-            if (subpass.pipelineBindPoint != VK_PIPELINE_BIND_POINT_GRAPHICS) {
-                skip_call |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                            DRAWSTATE_INVALID_RENDERPASS, "DS",
-                            "CreateRenderPass: Pipeline bind point for subpass %d must be VK_PIPELINE_BIND_POINT_GRAPHICS.", i);
-            }
-            for (uint32_t j = 0; j < subpass.preserveAttachmentCount; ++j) {
-                uint32_t attachment = subpass.pPreserveAttachments[j];
-                if (attachment == VK_ATTACHMENT_UNUSED) {
-                    skip_call |=
-                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                            DRAWSTATE_INVALID_ATTACHMENT_INDEX, "DS",
-                            "CreateRenderPass:  Preserve attachment (%d) must not be VK_ATTACHMENT_UNUSED.", j);
-                } else if (attachment >= pCreateInfo->attachmentCount) {
-                    skip_call |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                        DRAWSTATE_INVALID_ATTACHMENT_INDEX, "DS",
-                        "CreateRenderPass: Preserve attachment %d cannot be greater than the total number of attachments %d.",
-                        attachment, pCreateInfo->attachmentCount);
-                }
-            }
             for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
-                uint32_t attachment;
-                if (subpass.pResolveAttachments) {
-                    attachment = subpass.pResolveAttachments[j].attachment;
-                    if (attachment >= pCreateInfo->attachmentCount && attachment != VK_ATTACHMENT_UNUSED) {
-                        skip_call |= log_msg(
-                            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                            DRAWSTATE_INVALID_ATTACHMENT_INDEX, "DS",
-                            "CreateRenderPass: Resolve attachment %d cannot be greater than the total number of attachments %d.",
-                            attachment, pCreateInfo->attachmentCount);
-                        continue;
-                    }
+                uint32_t attachment = subpass.pColorAttachments[j].attachment;
+                if (!attachment_first_read.count(attachment)) {
+                    attachment_first_read.insert(std::make_pair(attachment, false));
+                    attachment_first_layout.insert(std::make_pair(attachment, subpass.pColorAttachments[j].layout));
                 }
-                attachment = subpass.pColorAttachments[j].attachment;
-                if (attachment >= pCreateInfo->attachmentCount  && attachment != VK_ATTACHMENT_UNUSED) {
-                    skip_call |=
-                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                DRAWSTATE_INVALID_ATTACHMENT_INDEX, "DS",
-                                "CreateRenderPass: Color attachment %d cannot be greater than the total number of attachments %d.",
-                                attachment, pCreateInfo->attachmentCount);
-                    continue;
-                }
-                if (attachment_first_read.count(attachment))
-                    continue;
-                attachment_first_read.insert(std::make_pair(attachment, false));
-                attachment_first_layout.insert(std::make_pair(attachment, subpass.pColorAttachments[j].layout));
             }
             if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
                 uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
-                if (attachment >= pCreateInfo->attachmentCount) {
-                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                         __LINE__, DRAWSTATE_INVALID_ATTACHMENT_INDEX, "DS",
-                                         "CreateRenderPass: Depth stencil attachment %d cannot be greater than the total number of attachments %d.",
-                                         attachment, pCreateInfo->attachmentCount);
-                    continue;
+                if (!attachment_first_read.count(attachment)) {
+                    attachment_first_read.insert(std::make_pair(attachment, false));
+                    attachment_first_layout.insert(std::make_pair(attachment, subpass.pDepthStencilAttachment->layout));
                 }
-                if (attachment_first_read.count(attachment))
-                    continue;
-                attachment_first_read.insert(std::make_pair(attachment, false));
-                attachment_first_layout.insert(std::make_pair(attachment, subpass.pDepthStencilAttachment->layout));
             }
             for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
                 uint32_t attachment = subpass.pInputAttachments[j].attachment;
-                if (attachment >= pCreateInfo->attachmentCount  && attachment != VK_ATTACHMENT_UNUSED) {
-                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                         __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                         "CreateRenderPass: Input attachment %d cannot be greater than the total number of attachments %d.",
-                                         attachment, pCreateInfo->attachmentCount);
-                    continue;
+                if (!attachment_first_read.count(attachment)) {
+                    attachment_first_read.insert(std::make_pair(attachment, true));
+                    attachment_first_layout.insert(std::make_pair(attachment, subpass.pInputAttachments[j].layout));
                 }
-                if (attachment_first_read.count(attachment))
-                    continue;
-                attachment_first_read.insert(std::make_pair(attachment, true));
-                attachment_first_layout.insert(std::make_pair(attachment, subpass.pInputAttachments[j].layout));
             }
         }
 #endif
-        {
-            std::lock_guard<std::mutex> lock(global_lock);
-            dev_data->renderPassMap[*pRenderPass] = render_pass;
-        }
+        dev_data->renderPassMap[*pRenderPass] = render_pass;
     }
     return result;
 }
+
 // Free the renderpass shadow
 static void deleteRenderPasses(layer_data *my_data) {
     if (my_data->renderPassMap.size() <= 0)
