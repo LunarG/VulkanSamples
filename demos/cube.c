@@ -1032,7 +1032,7 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
         return false;
     }
     while(strncmp(cPtr++, "\n", 1));
-    sscanf(cPtr, "%u %u", height, width);
+    sscanf(cPtr, "%u %u", width, height);
     if (rgba_data == NULL) {
         return true;
     }
@@ -1075,7 +1075,7 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
         }
     } while (!strncmp(header, "#", 1));
 
-    sscanf(header, "%u %u", height, width);
+    sscanf(header, "%u %u", width, height);
     if (rgba_data == NULL) {
         fclose(fPtr);
         return true;
