@@ -2951,11 +2951,13 @@ TEST_F(VkLayerTest, UnusedPreserveAttachment) {
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;
-    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    VkResult result = vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
 
     m_errorMonitor->VerifyFound();
 
-    vkDestroyRenderPass(m_device->device(), rp, NULL);
+    if (result == VK_SUCCESS) {
+        vkDestroyRenderPass(m_device->device(), rp, NULL);
+    }
 }
 
 TEST_F(VkLayerTest, AttachmentUsageMismatch) {
