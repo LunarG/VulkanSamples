@@ -34,6 +34,9 @@ function create_spirv-tools () {
    cd $BASEDIR/spirv-tools
    git clone https://github.com/KhronosGroup/SPIRV-Tools.git .
    git checkout $SPIRV_TOOLS_REVISION
+   mkdir -p $BASEDIR/spirv-tools/external/spirv-headers
+   cd $BASEDIR/spirv-tools/external/spirv-headers
+   git clone https://github.com/KhronosGroup/SPIRV-Headers .
 }
 
 function update_spirv-tools () {
@@ -41,6 +44,15 @@ function update_spirv-tools () {
    cd $BASEDIR/spirv-tools
    git fetch --all
    git checkout $SPIRV_TOOLS_REVISION
+   if [ ! -d "$BASEDIR/spirv-tools/external/spirv-headers" -o ! -d "$BASEDIR/spirv-tools/external/spirv-headers/.git" ]; then
+      mkdir -p $BASEDIR/spirv-tools/external/spirv-headers
+      cd $BASEDIR/spirv-tools/external/spirv-headers
+      git clone https://github.com/KhronosGroup/SPIRV-Headers .
+   else
+      cd $BASEDIR/spirv-tools/external/spirv-headers
+      git fetch --all
+      git pull
+   fi
 }
 
 function build_glslang () {
