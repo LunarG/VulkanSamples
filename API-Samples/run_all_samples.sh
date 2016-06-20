@@ -39,7 +39,7 @@ fi
 CMDDIR="$(dirname "$(readlink -f ${BASH_SOURCE[0]})")"
 
 # get the list of built samples to run
-SAMP2RUN=`find "$CMDDIR" -name *.cpp -not -path "*util*" | sort`
+SAMP2RUN=`find "$CMDDIR" -name *.cpp -not -path "*util*" -not -path "*android*" | sort`
 #echo "SAMP2RUN is $SAMP2RUN"
 
 # display short description of the sample and run it
@@ -54,7 +54,9 @@ do
 
    # run the built sample; need to remove .cpp from name
    RNAME=./${BNAME%.cpp}
+   set -e
    $RNAME $ARGS
+   set +e
    echo ""
    if ! test -z $COMPAREIMAGES; then
        GOLDNAME="golden/${RNAME}.ppm"
