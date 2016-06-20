@@ -2793,16 +2793,12 @@ TEST_F(VkLayerTest, PipelineNotBound) {
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
-#if 0 // Disabling this test for now, needs to be updated
+
 TEST_F(VkLayerTest, BindImageInvalidMemoryType) {
     VkResult err;
 
     TEST_DESCRIPTION("Test validation check for an invalid memory type index "
                      "during bind[Buffer|Image]Memory time");
-
-    m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "for this object type are not compatible with the memory");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -2841,14 +2837,27 @@ TEST_F(VkLayerTest, BindImageInvalidMemoryType) {
 
     vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
     mem_alloc.allocationSize = mem_reqs.size;
-    // TODO : This is not an ideal way to cause the error and triggers a segF
-    //  on at least one android driver when attempting to Allocate the memory.
-    //  That segF may or may not be a driver bug, but really what we want to do
-    //  here is find a device-supported memory type that is also not supported
-    //  for the particular image we're binding the memory too. If no such
-    //  type exists, then we can print a message and skip the test.
-    // Introduce Failure, select likely invalid TypeIndex
-    mem_alloc.memoryTypeIndex = 31;
+
+    // Introduce Failure, select invalid TypeIndex
+    VkPhysicalDeviceMemoryProperties memory_info;
+
+    vkGetPhysicalDeviceMemoryProperties(gpu(), &memory_info);
+    unsigned int i;
+    for (i = 0; i < memory_info.memoryTypeCount; i++) {
+        if ((mem_reqs.memoryTypeBits & (1 << i)) == 0) {
+            mem_alloc.memoryTypeIndex = i;
+            break;
+        }
+    }
+    if (i >= memory_info.memoryTypeCount) {
+        printf("No invalid memory type index could be found; skipped.\n");
+        vkDestroyImage(m_device->device(), image, NULL);
+        return;
+    }
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "for this object type are not compatible with the memory");
 
     err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
     ASSERT_VK_SUCCESS(err);
@@ -2861,7 +2870,7 @@ TEST_F(VkLayerTest, BindImageInvalidMemoryType) {
     vkDestroyImage(m_device->device(), image, NULL);
     vkFreeMemory(m_device->device(), mem, NULL);
 }
-#endif
+
 TEST_F(VkLayerTest, BindInvalidMemory) {
     VkResult err;
     bool pass;
