@@ -5979,6 +5979,22 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
+    const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
+    VkImageTiling tiling;
+    VkFormatProperties format_properties;
+    vkGetPhysicalDeviceFormatProperties(gpu(), tex_format, &format_properties);
+    if (format_properties.linearTilingFeatures &
+        VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) {
+        tiling = VK_IMAGE_TILING_LINEAR;
+    } else if (format_properties.optimalTilingFeatures &
+               VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) {
+        tiling = VK_IMAGE_TILING_OPTIMAL;
+    } else {
+        printf("Device does not support VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT; "
+               "skipped.\n");
+        return;
+    }
+
     static const uint32_t NUM_DESCRIPTOR_TYPES = 5;
     VkDescriptorPoolSize ds_type_count[NUM_DESCRIPTOR_TYPES] = {};
     ds_type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -6150,7 +6166,6 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
         buffInfo[i].range = 1024;
     }
     VkImage image;
-    const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
     const int32_t tex_width = 32;
     const int32_t tex_height = 32;
     VkImageCreateInfo image_create_info = {};
@@ -6164,8 +6179,9 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     image_create_info.mipLevels = 1;
     image_create_info.arrayLayers = 1;
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.tiling = tiling;
+    image_create_info.usage =
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
     image_create_info.flags = 0;
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
     ASSERT_VK_SUCCESS(err);
