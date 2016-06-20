@@ -708,21 +708,21 @@ void demo_update_data_buffer(struct demo *demo) {
 
 static void demo_draw(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
-    VkSemaphore presentCompleteSemaphore;
-    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo = {
+    VkSemaphore imageAcquiredSemaphore;
+    VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
         .pNext = NULL,
         .flags = 0,
     };
     VkFence nullFence = VK_NULL_HANDLE;
 
-    err = vkCreateSemaphore(demo->device, &presentCompleteSemaphoreCreateInfo,
-                            NULL, &presentCompleteSemaphore);
+    err = vkCreateSemaphore(demo->device, &imageAcquiredSemaphoreCreateInfo,
+                            NULL, &imageAcquiredSemaphore);
     assert(!err);
 
     // Get the index of the next available swapchain image:
     err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, UINT64_MAX,
-                                      presentCompleteSemaphore,
+                                      imageAcquiredSemaphore,
                                       (VkFence)0, // TODO: Show use of fence
                                       &demo->current_buffer);
     if (err == VK_ERROR_OUT_OF_DATE_KHR) {
@@ -730,7 +730,7 @@ static void demo_draw(struct demo *demo) {
         // must be recreated:
         demo_resize(demo);
         demo_draw(demo);
-        vkDestroySemaphore(demo->device, presentCompleteSemaphore, NULL);
+        vkDestroySemaphore(demo->device, imageAcquiredSemaphore, NULL);
         return;
     } else if (err == VK_SUBOPTIMAL_KHR) {
         // demo->swapchain is not as optimal as it could be, but the platform's
@@ -751,7 +751,7 @@ static void demo_draw(struct demo *demo) {
     VkSubmitInfo submit_info = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
                                 .pNext = NULL,
                                 .waitSemaphoreCount = 1,
-                                .pWaitSemaphores = &presentCompleteSemaphore,
+                                .pWaitSemaphores = &imageAcquiredSemaphore,
                                 .pWaitDstStageMask = &pipe_stage_flags,
                                 .commandBufferCount = 1,
                                 .pCommandBuffers =
@@ -786,7 +786,7 @@ static void demo_draw(struct demo *demo) {
     err = vkQueueWaitIdle(demo->queue);
     assert(err == VK_SUCCESS);
 
-    vkDestroySemaphore(demo->device, presentCompleteSemaphore, NULL);
+    vkDestroySemaphore(demo->device, imageAcquiredSemaphore, NULL);
 }
 
 static void demo_prepare_buffers(struct demo *demo) {
