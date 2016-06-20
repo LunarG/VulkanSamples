@@ -50,7 +50,7 @@ cvdescriptorset::DescriptorSetLayout::DescriptorSetLayout(debug_report_data *rep
         }
         if (p_create_info->pBindings[i].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
             p_create_info->pBindings[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
-            dynamic_descriptor_count_++;
+            dynamic_descriptor_count_ += p_create_info->pBindings[i].descriptorCount;
         }
     }
 }
