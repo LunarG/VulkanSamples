@@ -2720,7 +2720,7 @@ TEST_F(VkLayerTest, PipelineNotBound) {
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
-
+#if 0 // Disabling this test for now, needs to be updated
 TEST_F(VkLayerTest, BindImageInvalidMemoryType) {
     VkResult err;
 
@@ -2768,6 +2768,12 @@ TEST_F(VkLayerTest, BindImageInvalidMemoryType) {
 
     vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
     mem_alloc.allocationSize = mem_reqs.size;
+    // TODO : This is not an ideal way to cause the error and triggers a segF
+    //  on at least one android driver when attempting to Allocate the memory.
+    //  That segF may or may not be a driver bug, but really what we want to do
+    //  here is find a device-supported memory type that is also not supported
+    //  for the particular image we're binding the memory too. If no such
+    //  type exists, then we can print a message and skip the test.
     // Introduce Failure, select likely invalid TypeIndex
     mem_alloc.memoryTypeIndex = 31;
 
@@ -2782,7 +2788,7 @@ TEST_F(VkLayerTest, BindImageInvalidMemoryType) {
     vkDestroyImage(m_device->device(), image, NULL);
     vkFreeMemory(m_device->device(), mem, NULL);
 }
-
+#endif
 TEST_F(VkLayerTest, BindInvalidMemory) {
     VkResult err;
     bool pass;
