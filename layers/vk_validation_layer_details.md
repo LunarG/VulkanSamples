@@ -160,7 +160,7 @@ The Mem Tracker portion of the VK_LAYER_LUNARG_core_validation layer tracks memo
 | Immutable Memory Binding | Validates that non-sparse memory bindings are immutable, so objects are not re-boundt | REBIND_OBJECT | vkBindBufferMemory, vkBindImageMemory | RebindMemory | NA |
 | Image/Buffer Usage bits | Verify correct USAGE bits set based on how Images and Buffers are used | INVALID_USAGE_FLAG | vkCreateImage, vkCreateBuffer, vkCreateBufferView, vkCmdCopyBuffer, vkCmdCopyQueryPoolResults, vkCmdCopyImage, vkCmdBlitImage, vkCmdCopyBufferToImage, vkCmdCopyImageToBuffer, vkCmdUpdateBuffer, vkCmdFillBuffer  | InvalidUsageBits | NA |
 | Memory Map Range Checks | Validates that Memory Mapping Requests are valid for the Memory Object (in-range, not currently mapped on Map, currently mapped on UnMap, size is non-zero) | INVALID_MAP | vkMapMemory | InvalidMemoryMapping | NA |
-| Memory Type Index Checks | Validates that specified memory type indices are valid | INVALID_MEM_TYPE | vkBindImageMemory vkBindBufferMemory | BindImageInvalidMemoryType | NA |
+| Memory Type Index Checks | Validates that specified memory type indices are valid | INVALID_MEM_TYPE | vkBindImageMemory vkBindBufferMemory | TODO | Need to fix up and re-enable BindImageInvalidMemoryType test as noted in comment in test |
 | NA | Enum used for informational messages | NONE | | TODO | None |
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | TODO | None |
 
