@@ -4108,6 +4108,88 @@ TEST_F(VkLayerTest,
     m_errorMonitor->VerifyNotFound();
 }
 
+#if 0
+TEST_F(VkLayerTest, TwoQueuesEnsureCorrectRetirementWithWorkStolen) {
+    if ((m_device->queue_props.empty()) ||
+        (m_device->queue_props[0].queueCount < 2)) {
+        printf("Test requires two queues, skipping\n");
+        return;
+    }
+
+    VkResult err;
+
+    m_errorMonitor->ExpectSuccess();
+
+    VkQueue q0 = m_device->m_queue;
+    VkQueue q1 = nullptr;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_, 1, &q1);
+    ASSERT_NE(q1, nullptr);
+
+    // An (empty) command buffer. We must have work in the first submission --
+    // the layer treats unfenced work differently from fenced work.
+    VkCommandPoolCreateInfo cpci = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr, 0, 0 };
+    VkCommandPool pool;
+    err = vkCreateCommandPool(m_device->device(), &cpci, nullptr, &pool);
+    ASSERT_VK_SUCCESS(err);
+    VkCommandBufferAllocateInfo cbai = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr,
+        pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1
+    };
+    VkCommandBuffer cb;
+    err = vkAllocateCommandBuffers(m_device->device(), &cbai, &cb);
+    ASSERT_VK_SUCCESS(err);
+    VkCommandBufferBeginInfo cbbi = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr,
+        0, nullptr
+    };
+    err = vkBeginCommandBuffer(cb, &cbbi);
+    ASSERT_VK_SUCCESS(err);
+    err = vkEndCommandBuffer(cb);
+    ASSERT_VK_SUCCESS(err);
+
+    // A semaphore
+    VkSemaphoreCreateInfo sci = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0 };
+    VkSemaphore s;
+    err = vkCreateSemaphore(m_device->device(), &sci, nullptr, &s);
+    ASSERT_VK_SUCCESS(err);
+
+    // First submission, to q0
+    VkSubmitInfo s0 = {
+        VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr,
+        0, nullptr, nullptr,
+        1, &cb,
+        1, &s
+    };
+
+    err = vkQueueSubmit(q0, 1, &s0, VK_NULL_HANDLE);
+    ASSERT_VK_SUCCESS(err);
+
+    // Second submission, to q1, waiting on s
+    VkFlags waitmask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; // doesn't really matter what this value is.
+    VkSubmitInfo s1 = {
+        VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr,
+        1, &s, &waitmask,
+        0, nullptr,
+        0, nullptr
+    };
+
+    err = vkQueueSubmit(q1, 1, &s1, VK_NULL_HANDLE);
+    ASSERT_VK_SUCCESS(err);
+
+    // Wait for q0 idle
+    err = vkQueueWaitIdle(q0);
+    ASSERT_VK_SUCCESS(err);
+
+    // Command buffer should have been completed (it was on q0); reset the pool.
+    vkFreeCommandBuffers(m_device->device(), pool, 1, &cb);
+
+    m_errorMonitor->VerifyNotFound();
+
+    // Force device completely idle and clean up resources
+    vkDeviceWaitIdle(m_device->device());
+    vkDestroyCommandPool(m_device->device(), pool, nullptr);
+    vkDestroySemaphore(m_device->device(), s, nullptr);
+}
+#endif
+
 // This is a positive test.  No errors should be generated.
 TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFence) {
 
