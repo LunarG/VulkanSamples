@@ -157,9 +157,7 @@ struct sample_info {
     std::vector<VkExtensionProperties> instance_extension_properties;
     VkInstance inst;
 
-    std::vector<const char *> device_layer_names;
     std::vector<const char *> device_extension_names;
-    std::vector<layer_properties> device_layer_properties;
     std::vector<VkExtensionProperties> device_extension_properties;
     std::vector<VkPhysicalDevice> gpus;
     VkDevice device;

@@ -119,36 +119,6 @@ int sample_main(int argc, char *argv[]) {
 
     init_enumerate_device(info);
 
-    init_device_layer_properties(info);
-
-    /* Use standard_validation meta layer that enables all
-     * recommended validation layers
-     * Instance layers and Device layers are independent so
-     * must enable validation layers for both to see everything.
-     */
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_standard_validation");
-
-    if (!demo_check_layers(info.device_layer_properties,
-                           info.device_layer_names)) {
-        /* If standard validation is not present, search instead for the
-         * individual layers that make it up, in the correct order.
-         */
-        info.device_layer_names.clear();
-        info.device_layer_names.push_back("VK_LAYER_GOOGLE_threading");
-        info.device_layer_names.push_back(
-            "VK_LAYER_LUNARG_parameter_validation");
-        info.device_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
-        info.device_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
-        info.device_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
-        info.device_layer_names.push_back("VK_LAYER_LUNARG_image");
-        info.device_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
-        info.device_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
-
-        if (!demo_check_layers(info.device_layer_properties,
-                               info.device_layer_names)) {
-            exit(1);
-        }
-    }
     float queue_priorities[1] = { 0.0 };
     VkDeviceQueueCreateInfo queue_info = {};
 
@@ -182,9 +152,6 @@ int sample_main(int argc, char *argv[]) {
     device_info.pNext = NULL;
     device_info.queueCreateInfoCount = 1;
     device_info.pQueueCreateInfos = &queue_info;
-    device_info.enabledLayerCount = info.device_layer_names.size();
-    device_info.ppEnabledLayerNames =
-        device_info.enabledLayerCount ? info.device_layer_names.data() : NULL;
     device_info.enabledExtensionCount = info.device_extension_names.size();
     device_info.ppEnabledExtensionNames =
         device_info.enabledExtensionCount ? info.device_extension_names.data()
