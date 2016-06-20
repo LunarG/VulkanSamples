@@ -708,16 +708,20 @@ void demo_update_data_buffer(struct demo *demo) {
 
 static void demo_draw(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
-    VkSemaphore imageAcquiredSemaphore;
-    VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo = {
+    VkSemaphore imageAcquiredSemaphore, drawCompleteSemaphore;
+    VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
         .pNext = NULL,
         .flags = 0,
     };
     VkFence nullFence = VK_NULL_HANDLE;
 
-    err = vkCreateSemaphore(demo->device, &imageAcquiredSemaphoreCreateInfo,
+    err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo,
                             NULL, &imageAcquiredSemaphore);
+    assert(!err);
+
+    err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo,
+                            NULL, &drawCompleteSemaphore);
     assert(!err);
 
     // Get the index of the next available swapchain image:
@@ -731,6 +735,7 @@ static void demo_draw(struct demo *demo) {
         demo_resize(demo);
         demo_draw(demo);
         vkDestroySemaphore(demo->device, imageAcquiredSemaphore, NULL);
+        vkDestroySemaphore(demo->device, drawCompleteSemaphore, NULL);
         return;
     } else if (err == VK_SUBOPTIMAL_KHR) {
         // demo->swapchain is not as optimal as it could be, but the platform's
@@ -756,8 +761,8 @@ static void demo_draw(struct demo *demo) {
                                 .commandBufferCount = 1,
                                 .pCommandBuffers =
                                     &demo->buffers[demo->current_buffer].cmd,
-                                .signalSemaphoreCount = 0,
-                                .pSignalSemaphores = NULL};
+                                .signalSemaphoreCount = 1,
+                                .pSignalSemaphores = &drawCompleteSemaphore};
 
     err = vkQueueSubmit(demo->queue, 1, &submit_info, nullFence);
     assert(!err);
@@ -768,6 +773,8 @@ static void demo_draw(struct demo *demo) {
         .swapchainCount = 1,
         .pSwapchains = &demo->swapchain,
         .pImageIndices = &demo->current_buffer,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &drawCompleteSemaphore,
     };
 
     // TBD/TODO: SHOULD THE "present" PARAMETER BE "const" IN THE HEADER?
@@ -787,6 +794,7 @@ static void demo_draw(struct demo *demo) {
     assert(err == VK_SUCCESS);
 
     vkDestroySemaphore(demo->device, imageAcquiredSemaphore, NULL);
+    vkDestroySemaphore(demo->device, drawCompleteSemaphore, NULL);
 }
 
 static void demo_prepare_buffers(struct demo *demo) {
