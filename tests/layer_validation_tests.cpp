@@ -7314,6 +7314,29 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, RenderPassSecondaryCommandBuffersMultipleTimes) {
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    BeginCommandBuffer(); // framework implicitly begins the renderpass.
+    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle()); // end implicit.
+
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &m_renderPassBeginInfo,
+                         VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
+    m_errorMonitor->VerifyNotFound();
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &m_renderPassBeginInfo,
+                         VK_SUBPASS_CONTENTS_INLINE);
+    m_errorMonitor->VerifyNotFound();
+    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
+    m_errorMonitor->VerifyNotFound();
+
+    m_commandBuffer->EndCommandBuffer();
+    m_errorMonitor->VerifyNotFound();
+}
+
 TEST_F(VkLayerTest, RenderPassClearOpMismatch) {
     TEST_DESCRIPTION("Begin a renderPass where clearValueCount is less than"
                      "the number of renderPass attachments that use loadOp"
