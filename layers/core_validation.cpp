@@ -2134,7 +2134,7 @@ static bool validate_draw_state_flags(layer_data *dev_data, GLOBAL_CB_NODE *pCB,
 
 // Verify attachment reference compatibility according to spec
 //  If one array is larger, treat missing elements of shorter array as VK_ATTACHMENT_UNUSED & other array much match this
-//  If both AttachmentReference arrays have requested index, check their corresponding AttachementDescriptions
+//  If both AttachmentReference arrays have requested index, check their corresponding AttachmentDescriptions
 //   to make sure that format and samples counts match.
 //  If not, they are not compatible.
 static bool attachment_references_compatible(const uint32_t index, const VkAttachmentReference *pPrimary,
@@ -2156,7 +2156,12 @@ static bool attachment_references_compatible(const uint32_t index, const VkAttac
     } else if (index >= secondaryCount) { // Check primary as if secondary is VK_ATTACHMENT_UNUSED
         if (VK_ATTACHMENT_UNUSED == pPrimary[index].attachment)
             return true;
-    } else { // format and sample count must match
+    } else { // Format and sample count must match
+        if ((pPrimary[index].attachment == VK_ATTACHMENT_UNUSED) && (pSecondary[index].attachment == VK_ATTACHMENT_UNUSED)) {
+            return true;
+        } else if ((pPrimary[index].attachment == VK_ATTACHMENT_UNUSED) || (pSecondary[index].attachment == VK_ATTACHMENT_UNUSED)) {
+            return false;
+        }
         if ((pPrimaryAttachments[pPrimary[index].attachment].format ==
              pSecondaryAttachments[pSecondary[index].attachment].format) &&
             (pPrimaryAttachments[pPrimary[index].attachment].samples ==
