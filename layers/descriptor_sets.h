@@ -115,6 +115,7 @@ class DescriptorSetLayout {
     VkSampler const *GetImmutableSamplerPtrFromBinding(const uint32_t) const;
     VkSampler const *GetImmutableSamplerPtrFromIndex(const uint32_t) const;
     // For a particular binding, get the global index
+    //  These calls should be guarded by a call to "HasBinding(binding)" to verify that the given binding exists
     uint32_t GetGlobalStartIndexFromBinding(const uint32_t) const;
     uint32_t GetGlobalEndIndexFromBinding(const uint32_t) const;
     // For a particular binding starting at offset and having update_count descriptors
