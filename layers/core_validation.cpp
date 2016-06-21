@@ -5460,8 +5460,10 @@ ResetCommandPool(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetF
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skipCall = false;
 
+    std::unique_lock<std::mutex> lock(global_lock);
     auto pPool = getCommandPoolNode(dev_data, commandPool);
     skipCall |= checkCommandBuffersInFlight(dev_data, pPool, "reset command pool with");
+    lock.unlock();
 
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -5470,11 +5472,12 @@ ResetCommandPool(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetF
 
     // Reset all of the CBs allocated from this pool
     if (VK_SUCCESS == result) {
-        std::lock_guard<std::mutex> lock(global_lock);
+        lock.lock();
         clearCommandBuffersInFlight(dev_data, pPool);
         for (auto cmdBuffer : pPool->commandBuffers) {
             resetCB(dev_data, cmdBuffer);
         }
+        lock.unlock();
     }
     return result;
 }
