@@ -8872,7 +8872,6 @@ static bool ValidateRenderpassAttachmentUsage(layer_data *dev_data, const VkRend
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
                                                 const VkAllocationCallbacks *pAllocator, VkRenderPass *pRenderPass) {
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip_call = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
@@ -8882,15 +8881,14 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
     // TODO: As part of wrapping up the mem_tracker/core_validation merge the following routine should be consolidated with
     //       ValidateLayouts.
     skip_call |= ValidateRenderpassAttachmentUsage(dev_data, pCreateInfo);
+    lock.unlock();
 
     if (skip_call) {
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
-    lock.unlock();
-    if (skip_call == false) {
-        result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
-    }
+    VkResult result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
+
     if (VK_SUCCESS == result) {
         lock.lock();
 
@@ -8898,7 +8896,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
         std::vector<DAGNode> subpass_to_node(pCreateInfo->subpassCount);
         skip_call |= CreatePassDAG(dev_data, device, pCreateInfo, subpass_to_node, has_self_dependency);
 
-        // TODOSC : Merge in tracking of renderpass from shader_checker
         // Shadow create info and store in map
         VkRenderPassCreateInfo *localRPCI = new VkRenderPassCreateInfo(*pCreateInfo);
         if (pCreateInfo->pAttachments) {
