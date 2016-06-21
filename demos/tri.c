@@ -170,7 +170,7 @@ struct demo {
     uint32_t enabled_extension_count;
     uint32_t enabled_layer_count;
     char *extension_names[64];
-    char *device_validation_layers[64];
+    char *enabled_layers[64];
 
     int width, height;
     VkFormat format;
@@ -530,20 +530,24 @@ static void demo_draw_build_cmd(struct demo *demo) {
 
 static void demo_draw(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
-    VkSemaphore presentCompleteSemaphore;
-    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo = {
+    VkSemaphore imageAcquiredSemaphore, drawCompleteSemaphore;
+    VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
         .pNext = NULL,
         .flags = 0,
     };
 
-    err = vkCreateSemaphore(demo->device, &presentCompleteSemaphoreCreateInfo,
-                            NULL, &presentCompleteSemaphore);
+    err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo,
+                            NULL, &imageAcquiredSemaphore);
+    assert(!err);
+
+    err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo,
+                            NULL, &drawCompleteSemaphore);
     assert(!err);
 
     // Get the index of the next available swapchain image:
     err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, UINT64_MAX,
-                                      presentCompleteSemaphore,
+                                      imageAcquiredSemaphore,
                                       (VkFence)0, // TODO: Show use of fence
                                       &demo->current_buffer);
     if (err == VK_ERROR_OUT_OF_DATE_KHR) {
@@ -551,7 +555,8 @@ static void demo_draw(struct demo *demo) {
         // must be recreated:
         demo_resize(demo);
         demo_draw(demo);
-        vkDestroySemaphore(demo->device, presentCompleteSemaphore, NULL);
+        vkDestroySemaphore(demo->device, imageAcquiredSemaphore, NULL);
+        vkDestroySemaphore(demo->device, drawCompleteSemaphore, NULL);
         return;
     } else if (err == VK_SUBOPTIMAL_KHR) {
         // demo->swapchain is not as optimal as it could be, but the platform's
@@ -574,12 +579,12 @@ static void demo_draw(struct demo *demo) {
     VkSubmitInfo submit_info = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
                                 .pNext = NULL,
                                 .waitSemaphoreCount = 1,
-                                .pWaitSemaphores = &presentCompleteSemaphore,
+                                .pWaitSemaphores = &imageAcquiredSemaphore,
                                 .pWaitDstStageMask = &pipe_stage_flags,
                                 .commandBufferCount = 1,
                                 .pCommandBuffers = &demo->draw_cmd,
-                                .signalSemaphoreCount = 0,
-                                .pSignalSemaphores = NULL};
+                                .signalSemaphoreCount = 1,
+                                .pSignalSemaphores = &drawCompleteSemaphore};
 
     err = vkQueueSubmit(demo->queue, 1, &submit_info, nullFence);
     assert(!err);
@@ -590,6 +595,8 @@ static void demo_draw(struct demo *demo) {
         .swapchainCount = 1,
         .pSwapchains = &demo->swapchain,
         .pImageIndices = &demo->current_buffer,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &drawCompleteSemaphore,
     };
 
     // TBD/TODO: SHOULD THE "present" PARAMETER BE "const" IN THE HEADER?
@@ -608,7 +615,8 @@ static void demo_draw(struct demo *demo) {
     err = vkQueueWaitIdle(demo->queue);
     assert(err == VK_SUCCESS);
 
-    vkDestroySemaphore(demo->device, presentCompleteSemaphore, NULL);
+    vkDestroySemaphore(demo->device, imageAcquiredSemaphore, NULL);
+    vkDestroySemaphore(demo->device, drawCompleteSemaphore, NULL);
 }
 
 static void demo_prepare_buffers(struct demo *demo) {
@@ -1800,7 +1808,7 @@ static void demo_init_vk(struct demo *demo) {
     VkResult err;
     uint32_t instance_extension_count = 0;
     uint32_t instance_layer_count = 0;
-    uint32_t device_validation_layer_count = 0;
+    uint32_t validation_layer_count = 0;
     char **instance_validation_layers = NULL;
     demo->enabled_extension_count = 0;
     demo->enabled_layer_count = 0;
@@ -1838,8 +1846,8 @@ static void demo_init_vk(struct demo *demo) {
                     instance_layers);
             if (validation_found) {
                 demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers_alt1);
-                demo->device_validation_layers[0] = "VK_LAYER_LUNARG_standard_validation";
-                device_validation_layer_count = 1;
+                demo->enabled_layers[0] = "VK_LAYER_LUNARG_standard_validation";
+                validation_layer_count = 1;
             } else {
                 // use alternative set of validation layers
                 instance_validation_layers = instance_validation_layers_alt2;
@@ -1848,11 +1856,10 @@ static void demo_init_vk(struct demo *demo) {
                     ARRAY_SIZE(instance_validation_layers_alt2),
                     instance_validation_layers, instance_layer_count,
                     instance_layers);
-                device_validation_layer_count =
-                        ARRAY_SIZE(instance_validation_layers_alt2);
-                for (uint32_t i = 0; i < device_validation_layer_count; i++) {
-                    demo->device_validation_layers[i] =
-                            instance_validation_layers[i];
+                validation_layer_count =
+                    ARRAY_SIZE(instance_validation_layers_alt2);
+                for (uint32_t i = 0; i < validation_layer_count; i++) {
+                    demo->enabled_layers[i] = instance_validation_layers[i];
                 }
             }
             free(instance_layers);
@@ -2019,41 +2026,6 @@ static void demo_init_vk(struct demo *demo) {
                  "vkEnumeratePhysicalDevices Failure");
     }
 
-    /* Look for validation layers */
-    if (demo->validate) {
-        validation_found = 0;
-        demo->enabled_layer_count = 0;
-        uint32_t device_layer_count = 0;
-        err =
-                vkEnumerateDeviceLayerProperties(demo->gpu, &device_layer_count, NULL);
-        assert(!err);
-
-        if (device_layer_count > 0) {
-            VkLayerProperties *device_layers =
-                    malloc(sizeof (VkLayerProperties) * device_layer_count);
-            err = vkEnumerateDeviceLayerProperties(demo->gpu, &device_layer_count,
-                    device_layers);
-            assert(!err);
-
-
-            validation_found = demo_check_layers(device_validation_layer_count,
-                    demo->device_validation_layers,
-                    device_layer_count,
-                    device_layers);
-            demo->enabled_layer_count = device_validation_layer_count;
-
-            free(device_layers);
-        }
-
-        if (!validation_found) {
-            ERR_EXIT("vkEnumerateDeviceLayerProperties failed to find "
-                    "a required validation layer.\n\n"
-                    "Please look at the Getting Started guide for additional "
-                    "information.\n",
-                    "vkCreateDevice Failure");
-        }
-    }
-
     /* Look for device extensions */
     uint32_t device_extension_count = 0;
     VkBool32 swapchainExtFound = 0;
@@ -2196,11 +2168,8 @@ static void demo_init_device(struct demo *demo) {
         .pNext = NULL,
         .queueCreateInfoCount = 1,
         .pQueueCreateInfos = &queue,
-        .enabledLayerCount = demo->enabled_layer_count,
-        .ppEnabledLayerNames =
-            (const char *const *)((demo->validate)
-                                      ? demo->device_validation_layers
-                                      : NULL),
+        .enabledLayerCount = 0,
+        .ppEnabledLayerNames = NULL,
         .enabledExtensionCount = demo->enabled_extension_count,
         .ppEnabledExtensionNames = (const char *const *)demo->extension_names,
         .pEnabledFeatures = &features,

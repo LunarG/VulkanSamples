@@ -81,6 +81,6 @@ else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith")
 
     add_library(vulkan SHARED ${LOADER_SRCS})
-    set_target_properties(vulkan PROPERTIES SOVERSION "1" VERSION "1.0.13")
+    set_target_properties(vulkan PROPERTIES SOVERSION "1" VERSION "1.0.17")
     target_link_libraries(vulkan -ldl -lpthread -lm)
 endif()

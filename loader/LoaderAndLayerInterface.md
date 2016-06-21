@@ -33,7 +33,7 @@ Architectural overview of layers and loader
 -------------------------------------------
 
 Vulkan is a layered architecture. Layers can hook (intercept) Vulkan commands to
-achieve various functionality that a Vulkan driver (aka ICD) or loader doesn’t
+achieve various functionality that a Vulkan driver (aka ICD) or loader doesn't
 support. Functionality such as Vulkan API tracing and debugging, API usage
 validation, and other tools such as framebuffer overlays are all natural
 candidates for Vulkan layers. Layers are implemented as libraries that are
@@ -49,12 +49,12 @@ ICD being called.
 
 Vulkan uses an object model to control the scope of a particular action /
 operation.  The object to be acted on is always the first parameter of a Vulkan
-call and is a dispatchable object (see Vulkan specification section 2.2 Object
+call and is a dispatchable object (see Vulkan specification section 2.3 Object
 Model).  Under the covers, the dispatchable object handle is a pointer to a
 structure that contains a pointer to a dispatch table maintained by the loader.
 This dispatch table contains pointers to the Vulkan functions appropriate to
 that object. There are two types of dispatch tables the loader maintains,
-Instance and Device. I.e. a VkInstance object’s dispatch table will point to Vulkan
+Instance and Device. I.e. a VkInstance object's dispatch table will point to Vulkan
 functions such as vkEnumeratePhysicalDevices, vkDestroyInstance,
 vkCreateInstance, etc. Instance functions take a VkInstance or VkPhysicalDevice as
 their first argument.
@@ -73,8 +73,8 @@ created and a device call chain for each VkDevice that is created.
 
 For example, the diagram below represents what happens in the call chain for
 vkCreateInstance. After initializing the chain, the loader will call into the
-first layer’s vkCreateInstance which will call the next finally terminating in
-the loader again where this function calls every ICD’s vkCreateInstance and
+first layer's vkCreateInstance which will call the next finally terminating in
+the loader again where this function calls every ICD's vkCreateInstance and
 saves the results. This allows every enabled layer for this chain to set up
 what it needs based on the VkInstanceCreateInfo structure from the application.
 ![Instance call chain](instance_call_chain.png)
@@ -93,7 +93,7 @@ instance) can skip intercepting any given Vulkan entry point.
 Application interface to loader
 -------------------------------
 
-In this section we’ll discuss how an application interacts with the loader.
+In this section we'll discuss how an application interacts with the loader.
 
 -   Linking to loader library for core and WSI extension symbols.
 
@@ -116,7 +116,7 @@ object they are given.
 
 Applications are not required to link directly to the loader library, instead
 they can use the appropriate platform specific dynamic symbol lookup on the
-loader library to initialize the application’s own dispatch table. This allows
+loader library to initialize the application's own dispatch table. This allows
 an application to fail gracefully if the loader cannot be found, and it
 provides the fastest mechanism for the application to call Vulkan functions. An
 application will only need to query (via system calls such as dlsym()) the
@@ -134,16 +134,19 @@ library version. Vulkan versioning is such that ABI backwards compatibility is
 guaranteed for all versions with the same major number (e.g. 1.0 and 1.1). On
 Windows, the loader library encodes the ABI version in its name such that
 multiple ABI incompatible versions of the loader can peacefully coexist on a
-given system. The Vulkan loader library file name is “vulkan-&lt;ABI
-version&gt;.dll”. For example, for Vulkan version 1.X on Windows the library
+given system. The Vulkan loader library file name is "vulkan-<ABI
+version>.dll". For example, for Vulkan version 1.X on Windows the library
 filename is vulkan-1.dll. And this library file can typically be found in the
-windows/system32 directory.
+windows/system32 directory (on 64-bit Windows installs, the 32-bit version of
+the loader with the same name can be found in the windows/sysWOW64 directory).
 
 For Linux, shared libraries are versioned based on a suffix. Thus, the ABI
 number is not encoded in the base of the library filename as on Windows. On
 Linux an application wanting to link to the latest Vulkan ABI version would
 just link to the name vulkan (libvulkan.so).  A specific Vulkan ABI version can
 also be linked to by applications (e.g. libvulkan.so.1).
+
+####Layer Usage
 
 Applications desiring Vulkan functionality beyond what the core API offers may
 use various layers or extensions. A layer cannot add new or modify existing
@@ -154,13 +157,12 @@ application. Thus, eliminating the overhead of validating the application's
 usage of the API. Layers discovered by the loader are reported to the
 application via vkEnumerateInstanceLayerProperties.
 Layers are enabled at vkCreateInstance and are active for all Vulkan commands
-that using the given VkIstance and any of it's child objects.
-For example, the ppEnabledLayerNames array in the
-VkInstanceCreateInfo structure is used by the application to list the
-layer names to be enabled at vkCreateInstance. At vkCreateInstance and
-vkCreateDevice, the loader will construct call chains that include the
-application specified (enabled) layers.  vkCreateDevice will use the layers
-specified at vkCreateInstance. vkEnumerateDeviceLayerProperties and
+using the given VkIstance and any of it's child objects.  For example, the
+ppEnabledLayerNames array in the VkInstanceCreateInfo structure is used by
+the application to list the layer names to be enabled at vkCreateInstance. At
+vkCreateInstance and vkCreateDevice, the loader will construct call chains that
+include the application specified (enabled) layers.  vkCreateDevice will use the
+layers specified at vkCreateInstance. vkEnumerateDeviceLayerProperties and
 device layers are deprecated.  Order is important in the
 ppEnabledLayerNames array; array element 0 is the topmost (closest to the
 application) layer inserted in the chain and the last array element is closest
@@ -168,7 +170,7 @@ to the driver.
 
 Developers may want to enable layers that are not enabled by the given
 application they are using. On Linux and Windows, the environment variable
-“VK\_INSTANCE\_LAYERS” can be used to enable
+"VK\_INSTANCE\_LAYERS" can be used to enable
 additional layers which are not specified (enabled) by the application at
 vkCreateInstance. VK\_INSTANCE\_LAYERS is a colon
 (Linux)/semi-colon (Windows) separated list of layer names to enable. Order is
@@ -189,6 +191,8 @@ layer VK\_LAYER\_LUNARG\_parameter\_validation on Windows or Linux is as follows
 
 ```
 
+#### Implicit vs Explicit Layers
+
 Some platforms, including Linux and Windows, support layers which are enabled
 automatically by the loader rather than explicitly by the application (or via
 environment variable). Explicit layers are those layers enabled by the
@@ -203,6 +207,8 @@ effect: the layer will still be enabled implicitly by the loader.
 Extensions are optional functionality provided by a layer, the loader or an
 ICD. Extensions can modify the behavior of the Vulkan API and need to be
 specified and registered with Khronos.
+
+#### Instance/Device Extensions
 
 Instance extensions can be discovered via
 vkEnumerateInstanceExtensionProperties. Device extensions can be discovered via
@@ -230,8 +236,8 @@ entry points in addition to all core entry points.
 VkGetDeviceProcAddr is particularly interesting because it will provide the
 most efficient way to call into the ICD. For example, the diagram below shows
 what could happen if the application were to use vkGetDeviceProcAddr for the
-function “vkGetDeviceQueue” and “vkDestroyDevice” but not “vkAllocateMemory”.
-The resulting function pointer (fpGetDeviceQueue) would be the ICD’s entry
+function "vkGetDeviceQueue" and "vkDestroyDevice" but not "vkAllocateMemory".
+The resulting function pointer (fpGetDeviceQueue) would be the ICD's entry
 point if the loader and any enabled layers do not need to see that call. Even
 if an enabled layer intercepts the call (e.g. vkDestroyDevice) the loader
 trampoline code is skipped for function pointers obtained via
@@ -298,7 +304,7 @@ ICD shared library supports multiple, incompatible versions of text manifest
 file format versions, it must have multiple text info files (all of which may
 point to the same shared library).
 
-The “api\_version” specifies the major.minor.patch version number of the Vulkan
+The "api\_version" specifies the major.minor.patch version number of the Vulkan
 API that the shared library (referenced by "library\_path") was built with.
 
 There are no rules about the name of the text information files (except the
@@ -410,7 +416,7 @@ library supports multiple, incompatible versions of manifest file format
 versions, it must have multiple manifest files (all of which may point to the
 same shared library).
 
-The “api\_version” specifies the major.minor.patch version number of the Vulkan
+The "api\_version" specifies the major.minor.patch version number of the Vulkan
 API that the shared library (referenced by "library\_path") was built with.
 
 The "/usr/share/vulkan/icd.d" directory is for ICDs that are installed from
@@ -483,7 +489,7 @@ ICD interface requirements
 ----------------------------------------
 
 Generally, for all Vulkan commands issued by an application, the loader can be
-viewed as a pass through. That is, the loader generally doesn’t modified the
+viewed as a pass through. That is, the loader generally doesn't modify the
 commands or their parameters, but simply calls the ICDs entry point for that
 command. There are specific additional interface requirements an ICD needs to comply with that
 are over and above any requirements from the Vulkan specification including WSI extension specification.

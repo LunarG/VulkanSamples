@@ -1421,6 +1421,7 @@ TEST_F(VkLayerTest, InvalidMemoryMapping) {
                       (void **)&pData);
     ASSERT_VK_SUCCESS(err);
     VkMappedMemoryRange mmr = {};
+    mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     mmr.memory = mem;
     mmr.offset = 15; // Error b/c offset less than offset of mapped mem
     m_errorMonitor->SetDesiredFailureMsg(
@@ -2318,6 +2319,43 @@ TEST_F(VkLayerTest, ResetUnsignaledFence) {
     m_errorMonitor->VerifyNotFound();
 }
 
+#if 0
+TEST_F(VkLayerTest, LongFenceChain)
+{
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkResult err;
+
+    std::vector<VkFence> fences;
+
+    const int chainLength = 32768;
+
+    for (int i = 0; i < chainLength; i++) {
+        VkFenceCreateInfo fci = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0 };
+        VkFence fence;
+        err = vkCreateFence(m_device->device(), &fci, nullptr, &fence);
+        ASSERT_VK_SUCCESS(err);
+
+        fences.push_back(fence);
+
+        VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr,
+            0, nullptr, 0, nullptr };
+        err = vkQueueSubmit(m_device->m_queue, 1, &si, fence);
+        ASSERT_VK_SUCCESS(err);
+
+    }
+
+    // BOOM, stack overflow.
+    vkWaitForFences(m_device->device(), 1, &fences.back(), VK_TRUE, UINT64_MAX);
+
+    for (auto fence : fences)
+        vkDestroyFence(m_device->device(), fence, nullptr);
+
+    m_errorMonitor->VerifyNotFound();
+}
+#endif
+
 TEST_F(VkLayerTest, CommandBufferSimultaneousUseSync)
 {
     m_errorMonitor->ExpectSuccess();
@@ -2371,6 +2409,41 @@ TEST_F(VkLayerTest, CommandBufferSimultaneousUseSync)
     vkDeviceWaitIdle(m_device->device());
     vkDestroySemaphore(m_device->device(), s2, nullptr);
     vkDestroyFence(m_device->device(), fence, nullptr);
+}
+
+TEST_F(VkLayerTest, FenceCreateSignaledWaitHandling)
+{
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkResult err;
+
+    // A fence created signaled
+    VkFenceCreateInfo fci1 = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, VK_FENCE_CREATE_SIGNALED_BIT };
+    VkFence f1;
+    err = vkCreateFence(m_device->device(), &fci1, nullptr, &f1);
+    ASSERT_VK_SUCCESS(err);
+
+    // A fence created not
+    VkFenceCreateInfo fci2 = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0 };
+    VkFence f2;
+    err = vkCreateFence(m_device->device(), &fci2, nullptr, &f2);
+    ASSERT_VK_SUCCESS(err);
+
+    // Submit the unsignaled fence
+    VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr,
+        0, nullptr, 0, nullptr };
+    err = vkQueueSubmit(m_device->m_queue, 1, &si, f2);
+
+    // Wait on both fences, with signaled first.
+    VkFence fences[] = { f1, f2 };
+    vkWaitForFences(m_device->device(), 2, fences, VK_TRUE, UINT64_MAX);
+
+    // Should have both retired!
+    vkDestroyFence(m_device->device(), f1, nullptr);
+    vkDestroyFence(m_device->device(), f2, nullptr);
+
+    m_errorMonitor->VerifyNotFound();
 }
 
 TEST_F(VkLayerTest, InvalidUsageBits)
@@ -2720,7 +2793,7 @@ TEST_F(VkLayerTest, PipelineNotBound) {
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
-
+#if 0 // Disabling this test for now, needs to be updated
 TEST_F(VkLayerTest, BindImageInvalidMemoryType) {
     VkResult err;
 
@@ -2768,6 +2841,12 @@ TEST_F(VkLayerTest, BindImageInvalidMemoryType) {
 
     vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
     mem_alloc.allocationSize = mem_reqs.size;
+    // TODO : This is not an ideal way to cause the error and triggers a segF
+    //  on at least one android driver when attempting to Allocate the memory.
+    //  That segF may or may not be a driver bug, but really what we want to do
+    //  here is find a device-supported memory type that is also not supported
+    //  for the particular image we're binding the memory too. If no such
+    //  type exists, then we can print a message and skip the test.
     // Introduce Failure, select likely invalid TypeIndex
     mem_alloc.memoryTypeIndex = 31;
 
@@ -2782,7 +2861,7 @@ TEST_F(VkLayerTest, BindImageInvalidMemoryType) {
     vkDestroyImage(m_device->device(), image, NULL);
     vkFreeMemory(m_device->device(), mem, NULL);
 }
-
+#endif
 TEST_F(VkLayerTest, BindInvalidMemory) {
     VkResult err;
     bool pass;
@@ -7909,6 +7988,138 @@ TEST_F(VkLayerTest, DSUsageBitsErrors) {
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
+TEST_F(VkLayerTest, DSAspectBitsErrors) {
+    // TODO : Initially only catching case where DEPTH & STENCIL aspect bits
+    //  are set, but could expand this test to hit more cases.
+    TEST_DESCRIPTION("Attempt to update descriptor sets for images "
+                     "that do not have correct aspect bits sets.");
+    VkResult err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkDescriptorPoolSize ds_type_count = {};
+    ds_type_count.type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+    ds_type_count.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ds_pool_ci.pNext = NULL;
+    ds_pool_ci.maxSets = 5;
+    ds_pool_ci.poolSizeCount = 1;
+    ds_pool_ci.pPoolSizes = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err =
+        vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+    dsl_binding.binding = 0;
+    dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+    dsl_binding.descriptorCount = 1;
+    dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL,
+                                      &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptor_set = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info,
+                                   &descriptor_set);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create an image to be used for invalid updates
+    VkImageCreateInfo image_ci = {};
+    image_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_ci.imageType = VK_IMAGE_TYPE_2D;
+    image_ci.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    image_ci.extent.width = 64;
+    image_ci.extent.height = 64;
+    image_ci.extent.depth = 1;
+    image_ci.mipLevels = 1;
+    image_ci.arrayLayers = 1;
+    image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_ci.tiling = VK_IMAGE_TILING_LINEAR;
+    image_ci.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+    image_ci.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkImage image;
+    err = vkCreateImage(m_device->device(), &image_ci, NULL, &image);
+    ASSERT_VK_SUCCESS(err);
+    // Bind memory to image
+    VkMemoryRequirements mem_reqs;
+    VkDeviceMemory image_mem;
+    bool pass;
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 0;
+    mem_alloc.memoryTypeIndex = 0;
+    vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
+    mem_alloc.allocationSize = mem_reqs.size;
+    pass =
+        m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    ASSERT_TRUE(pass);
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &image_mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), image, image_mem, 0);
+    ASSERT_VK_SUCCESS(err);
+    // Now create view for image
+    VkImageViewCreateInfo image_view_ci = {};
+    image_view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_ci.image = image;
+    image_view_ci.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    image_view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    image_view_ci.subresourceRange.layerCount = 1;
+    image_view_ci.subresourceRange.baseArrayLayer = 0;
+    image_view_ci.subresourceRange.levelCount = 1;
+    // Setting both depth & stencil aspect bits is illegal for descriptor
+    image_view_ci.subresourceRange.aspectMask =
+        VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+
+    VkImageView image_view;
+    err = vkCreateImageView(m_device->device(), &image_view_ci, NULL,
+                            &image_view);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorImageInfo img_info = {};
+    img_info.imageView = image_view;
+    VkWriteDescriptorSet descriptor_write = {};
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstBinding = 0;
+    descriptor_write.descriptorCount = 1;
+    descriptor_write.pTexelBufferView = NULL;
+    descriptor_write.pBufferInfo = NULL;
+    descriptor_write.pImageInfo = &img_info;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+    descriptor_write.dstSet = descriptor_set;
+    const char *error_msg = " please only set either VK_IMAGE_ASPECT_DEPTH_BIT "
+                            "or VK_IMAGE_ASPECT_STENCIL_BIT ";
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         error_msg);
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+    m_errorMonitor->VerifyFound();
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyImage(m_device->device(), image, NULL);
+    vkFreeMemory(m_device->device(), image_mem, NULL);
+    vkDestroyImageView(m_device->device(), image_view, NULL);
+    vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+}
+
 TEST_F(VkLayerTest, DSTypeMismatch) {
     // Create DS w/ layout of one type and attempt Update w/ mis-matched type
     VkResult err;
@@ -8715,6 +8926,116 @@ TEST_F(VkLayerTest, NumSamplesMismatch) {
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+}
+
+TEST_F(VkLayerTest, RenderPassIncompatible) {
+    TEST_DESCRIPTION("Hit RenderPass incompatible cases. "
+                     "Initial case is drawing with an active renderpass that's "
+                     "not compatible with the bound PSO's creation renderpass");
+    VkResult err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+    dsl_binding.binding = 0;
+    dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    dsl_binding.descriptorCount = 1;
+    dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.pNext = NULL;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL,
+                                      &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pNext = NULL;
+    pipeline_layout_ci.setLayoutCount = 1;
+    pipeline_layout_ci.pSetLayouts = &ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
+                                 &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkShaderObj vs(m_device, bindStateVertShaderText,
+                   VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText,
+                   VK_SHADER_STAGE_FRAGMENT_BIT,
+                   this); // We shouldn't need a fragment shader
+                          // but add it to be able to run on more devices
+    // Create a renderpass that will be incompatible with default renderpass
+    VkAttachmentReference attach = {};
+    attach.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    VkAttachmentReference color_att = {};
+    color_att.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VkSubpassDescription subpass = {};
+    subpass.inputAttachmentCount = 1;
+    subpass.pInputAttachments = &attach;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color_att;
+    VkRenderPassCreateInfo rpci = {};
+    rpci.subpassCount = 1;
+    rpci.pSubpasses = &subpass;
+    rpci.attachmentCount = 1;
+    VkAttachmentDescription attach_desc = {};
+    attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    // Format incompatible with PSO RP color attach format RGBA8_UNORM
+    attach_desc.format = VK_FORMAT_UNDEFINED;
+    rpci.pAttachments = &attach_desc;
+    rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    VkRenderPass rp;
+    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
+    VkViewport view_port = {};
+    m_viewports.push_back(view_port);
+    pipe.SetViewport(m_viewports);
+    VkRect2D rect = {};
+    m_scissors.push_back(rect);
+    pipe.SetScissor(m_scissors);
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
+
+    VkCommandBufferInheritanceInfo cbii = {};
+    cbii.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    cbii.renderPass = rp;
+    cbii.subpass = 0;
+    VkCommandBufferBeginInfo cbbi = {};
+    cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cbbi.pInheritanceInfo = &cbii;
+    vkBeginCommandBuffer(m_commandBuffer->handle(), &cbbi);
+    VkRenderPassBeginInfo rpbi = {};
+    rpbi.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    rpbi.framebuffer = m_framebuffer;
+    rpbi.renderPass = rp;
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &rpbi,
+                         VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(),
+                      VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " is incompatible w/ gfx pipeline ");
+    // Render triangle (the error should trigger on the attempt to draw).
+    Draw(3, 1, 0, 0);
+
+    // Finalize recording of the command buffer
+    EndCommandBuffer();
+
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyRenderPass(m_device->device(), rp, NULL);
 }
 
 TEST_F(VkLayerTest, NumBlendAttachMismatch) {
