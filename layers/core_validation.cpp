@@ -4597,11 +4597,12 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
         const VkSubmitInfo *submit = &pSubmits[submit_idx];
         vector<VkSemaphore> semaphoreList;
         for (uint32_t i = 0; i < submit->waitSemaphoreCount; ++i) {
-            const VkSemaphore &semaphore = submit->pWaitSemaphores[i];
+            VkSemaphore semaphore = submit->pWaitSemaphores[i];
+            auto pSemaphore = getSemaphoreNode(dev_data, semaphore);
             semaphoreList.push_back(semaphore);
-            if (dev_data->semaphoreMap.find(semaphore) != dev_data->semaphoreMap.end()) {
-                if (dev_data->semaphoreMap[semaphore].signaled) {
-                    dev_data->semaphoreMap[semaphore].signaled = false;
+            if (pSemaphore) {
+                if (pSemaphore->signaled) {
+                    pSemaphore->signaled = false;
                 } else {
                     skipCall |=
                         log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
@@ -4609,7 +4610,7 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
                                 "Queue 0x%" PRIx64 " is waiting on semaphore 0x%" PRIx64 " that has no way to be signaled.",
                                 reinterpret_cast<uint64_t &>(queue), reinterpret_cast<const uint64_t &>(semaphore));
                 }
-                const VkQueue &other_queue = dev_data->semaphoreMap[semaphore].queue;
+                VkQueue other_queue = pSemaphore->queue;
                 if (other_queue != VK_NULL_HANDLE && !processed_other_queues.count(other_queue)) {
                     updateTrackedCommandBuffers(dev_data, queue, other_queue, fence);
                     processed_other_queues.insert(other_queue);
@@ -4617,10 +4618,11 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
             }
         }
         for (uint32_t i = 0; i < submit->signalSemaphoreCount; ++i) {
-            const VkSemaphore &semaphore = submit->pSignalSemaphores[i];
-            if (dev_data->semaphoreMap.find(semaphore) != dev_data->semaphoreMap.end()) {
+            VkSemaphore semaphore = submit->pSignalSemaphores[i];
+            auto pSemaphore = getSemaphoreNode(dev_data, semaphore);
+            if (pSemaphore) {
                 semaphoreList.push_back(semaphore);
-                if (dev_data->semaphoreMap[semaphore].signaled) {
+                if (pSemaphore->signaled) {
                     skipCall |=
                         log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
                                 reinterpret_cast<const uint64_t &>(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
@@ -4629,8 +4631,8 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
                                 reinterpret_cast<uint64_t &>(queue), reinterpret_cast<const uint64_t &>(semaphore),
                                 reinterpret_cast<uint64_t &>(dev_data->semaphoreMap[semaphore].queue));
                 } else {
-                    dev_data->semaphoreMap[semaphore].signaled = true;
-                    dev_data->semaphoreMap[semaphore].queue = queue;
+                    pSemaphore->signaled = true;
+                    pSemaphore->queue = queue;
                 }
             }
         }
@@ -9902,10 +9904,11 @@ QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *p
             }
         }
         for (uint32_t i = 0; i < bindInfo.waitSemaphoreCount; ++i) {
-            const VkSemaphore &semaphore = bindInfo.pWaitSemaphores[i];
-            if (dev_data->semaphoreMap.find(semaphore) != dev_data->semaphoreMap.end()) {
-                if (dev_data->semaphoreMap[semaphore].signaled) {
-                    dev_data->semaphoreMap[semaphore].signaled = false;
+            VkSemaphore semaphore = bindInfo.pWaitSemaphores[i];
+            auto pSemaphore = getSemaphoreNode(dev_data, semaphore);
+            if (pSemaphore) {
+                if (pSemaphore->signaled) {
+                    pSemaphore->signaled = false;
                 } else {
                     skip_call |=
                         log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
@@ -9917,9 +9920,10 @@ QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *p
             }
         }
         for (uint32_t i = 0; i < bindInfo.signalSemaphoreCount; ++i) {
-            const VkSemaphore &semaphore = bindInfo.pSignalSemaphores[i];
-            if (dev_data->semaphoreMap.find(semaphore) != dev_data->semaphoreMap.end()) {
-                if (dev_data->semaphoreMap[semaphore].signaled) {
+            VkSemaphore semaphore = bindInfo.pSignalSemaphores[i];
+            auto pSemaphore = getSemaphoreNode(dev_data, semaphore);
+            if (pSemaphore) {
+                if (pSemaphore->signaled) {
                     skip_call =
                         log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
                                 reinterpret_cast<const uint64_t &>(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
@@ -9927,7 +9931,7 @@ QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *p
                                 ", but that semaphore is already signaled.",
                                 reinterpret_cast<const uint64_t &>(queue), reinterpret_cast<const uint64_t &>(semaphore));
                 }
-                dev_data->semaphoreMap[semaphore].signaled = true;
+                pSemaphore->signaled = true;
             }
         }
     }
