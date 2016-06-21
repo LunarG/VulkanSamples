@@ -8990,11 +8990,14 @@ static bool VerifyRenderAreaBounds(const layer_data *my_data, const VkRenderPass
 // [load|store]Op flag must be checked
 // TODO: The memory valid flag in DEVICE_MEM_INFO should probably be split to track the validity of stencil memory separately.
 template <typename T> static bool FormatSpecificLoadAndStoreOpSettings(VkFormat format, T color_depth_op, T stencil_op, T op) {
+    if (color_depth_op != op && stencil_op != op) {
+        return false;
+    }
     bool check_color_depth_load_op = !vk_format_is_stencil_only(format);
     bool check_stencil_load_op = vk_format_is_depth_and_stencil(format) || !check_color_depth_load_op;
-    // For now, having either the color/depth op OR the stencil op will make the memory valid. They may need to be tracked separately
-    bool failed = ((check_stencil_load_op && (stencil_op != op)) && (check_color_depth_load_op && (color_depth_op != op)));
-    return !failed;
+
+    return (((check_color_depth_load_op == true) && (color_depth_op == op)) ||
+            ((check_stencil_load_op == true) && (stencil_op == op)));
 }
 
 VKAPI_ATTR void VKAPI_CALL
