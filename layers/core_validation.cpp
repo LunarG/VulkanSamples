@@ -5481,29 +5481,39 @@ ResetCommandPool(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetF
 
 VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skipCall = false;
     std::unique_lock<std::mutex> lock(global_lock);
     for (uint32_t i = 0; i < fenceCount; ++i) {
         auto pFence = getFenceNode(dev_data, pFences[i]);
-        if (pFence) {
-            if (pFence->state == FENCE_INFLIGHT) {
-                skipCall |=
+        if (pFence && pFence->state == FENCE_INFLIGHT) {
+            skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                             reinterpret_cast<const uint64_t &>(pFences[i]), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
                             "Fence 0x%" PRIx64 " is in use.", reinterpret_cast<const uint64_t &>(pFences[i]));
-            }
-            pFence->state = FENCE_UNSIGNALED;
-
-            // TODO: these should really have already been enforced on
-            // INFLIGHT->RETIRED transition.
-            pFence->queues.clear();
-            pFence->priorFences.clear();
         }
     }
     lock.unlock();
-    if (!skipCall)
-        result = dev_data->device_dispatch_table->ResetFences(device, fenceCount, pFences);
+
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+
+    VkResult result = dev_data->device_dispatch_table->ResetFences(device, fenceCount, pFences);
+
+    if (result == VK_SUCCESS) {
+        lock.lock();
+        for (uint32_t i = 0; i < fenceCount; ++i) {
+            auto pFence = getFenceNode(dev_data, pFences[i]);
+            if (pFence) {
+                pFence->state = FENCE_UNSIGNALED;
+                // TODO: these should really have already been enforced on
+                // INFLIGHT->RETIRED transition.
+                pFence->queues.clear();
+                pFence->priorFences.clear();
+            }
+        }
+        lock.unlock();
+    }
+
     return result;
 }
 
