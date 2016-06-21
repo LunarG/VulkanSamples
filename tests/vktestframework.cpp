@@ -598,7 +598,7 @@ char **VkTestFramework::ReadFileData(const char *fileName) {
 #endif
 
     char *fdata;
-    int count = 0;
+    size_t count = 0;
     const int maxSourceStrings = 5;
     char **return_data =
         (char **)malloc(sizeof(char *) * (maxSourceStrings + 1));
@@ -631,8 +631,8 @@ char **VkTestFramework::ReadFileData(const char *fileName) {
     } else
         m_num_shader_strings = 1;
 
-    int len = (int)(ceil)((float)count / (float)m_num_shader_strings);
-    int ptr_len = 0, i = 0;
+    size_t len = (int)(ceil)((float)count / (float)m_num_shader_strings);
+    size_t ptr_len = 0, i = 0;
     while (count > 0) {
         return_data[i] = (char *)malloc(len + 2);
         memcpy(return_data[i], fdata + ptr_len, len);
