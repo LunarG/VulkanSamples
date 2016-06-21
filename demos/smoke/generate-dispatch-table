@@ -108,7 +108,6 @@ vk_core = Extension(name='VK_core', version=0, guard=None, commands=[
     Command(name='EnumerateInstanceExtensionProperties', dispatch=None),
     Command(name='EnumerateDeviceExtensionProperties', dispatch='VkPhysicalDevice'),
     Command(name='EnumerateInstanceLayerProperties', dispatch=None),
-    Command(name='EnumerateDeviceLayerProperties', dispatch='VkPhysicalDevice'),
     Command(name='GetDeviceQueue', dispatch='VkDevice'),
     Command(name='QueueSubmit', dispatch='VkQueue'),
     Command(name='QueueWaitIdle', dispatch='VkQueue'),
