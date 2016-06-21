@@ -484,10 +484,10 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
 };
 
 struct CB_SUBMISSION {
-    CB_SUBMISSION(VkCommandBuffer cb, std::vector<VkSemaphore> const & semaphores)
-        : cb(cb), semaphores(semaphores) {}
+    CB_SUBMISSION(std::vector<VkCommandBuffer> const &cbs, std::vector<VkSemaphore> const &semaphores)
+        : cbs(cbs), semaphores(semaphores) {}
 
-    VkCommandBuffer cb;
+    std::vector<VkCommandBuffer> cbs;
     std::vector<VkSemaphore> semaphores;
 };
 

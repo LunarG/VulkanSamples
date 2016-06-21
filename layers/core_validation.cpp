@@ -4138,7 +4138,7 @@ static bool ValidateCmdBufImageLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB
 }
 
 // Track which resources are in-flight by atomically incrementing their "in_use" count
-static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *pCB, std::vector<VkSemaphore> const &semaphores) {
+static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *pCB) {
     bool skip_call = false;
     for (auto drawDataElement : pCB->drawData) {
         for (auto buffer : drawDataElement.buffers) {
@@ -4162,17 +4162,6 @@ static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *p
             } else {
                 set->in_use.fetch_add(1);
             }
-        }
-    }
-    for (auto semaphore : semaphores) {
-        auto semaphoreNode = my_data->semaphoreMap.find(semaphore);
-        if (semaphoreNode == my_data->semaphoreMap.end()) {
-            skip_call |=
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                        reinterpret_cast<uint64_t &>(semaphore), __LINE__, DRAWSTATE_INVALID_SEMAPHORE, "DS",
-                        "Cannot submit cmd buffer using deleted semaphore 0x%" PRIx64 ".", reinterpret_cast<uint64_t &>(semaphore));
-        } else {
-            semaphoreNode->second.in_use.fetch_add(1);
         }
     }
     for (auto event : pCB->events) {
@@ -4224,43 +4213,46 @@ static inline void removeInFlightCmdBuffer(layer_data *dev_data, VkCommandBuffer
 }
 
 static void decrementResources(layer_data *my_data, CB_SUBMISSION *submission) {
-    GLOBAL_CB_NODE *pCB = getCBNode(my_data, submission->cb);
-    for (auto drawDataElement : pCB->drawData) {
-        for (auto buffer : drawDataElement.buffers) {
-            auto buffer_node = getBufferNode(my_data, buffer);
-            if (buffer_node) {
-                buffer_node->in_use.fetch_sub(1);
+    for (auto cb : submission->cbs) {
+        auto pCB = getCBNode(my_data, cb);
+        for (auto drawDataElement : pCB->drawData) {
+            for (auto buffer : drawDataElement.buffers) {
+                auto buffer_node = getBufferNode(my_data, buffer);
+                if (buffer_node) {
+                    buffer_node->in_use.fetch_sub(1);
+                }
             }
         }
-    }
-    for (uint32_t i = 0; i < VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
-        for (auto set : pCB->lastBound[i].uniqueBoundSets) {
-            set->in_use.fetch_sub(1);
+        for (uint32_t i = 0; i < VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
+            for (auto set : pCB->lastBound[i].uniqueBoundSets) {
+                set->in_use.fetch_sub(1);
+            }
+        }
+        for (auto event : pCB->events) {
+            auto eventNode = my_data->eventMap.find(event);
+            if (eventNode != my_data->eventMap.end()) {
+                eventNode->second.in_use.fetch_sub(1);
+            }
+        }
+        for (auto event : pCB->writeEventsBeforeWait) {
+            auto eventNode = my_data->eventMap.find(event);
+            if (eventNode != my_data->eventMap.end()) {
+                eventNode->second.write_in_use--;
+            }
+        }
+        for (auto queryStatePair : pCB->queryToStateMap) {
+            my_data->queryToStateMap[queryStatePair.first] = queryStatePair.second;
+        }
+        for (auto eventStagePair : pCB->eventToStageMap) {
+            my_data->eventMap[eventStagePair.first].stageMask = eventStagePair.second;
         }
     }
+
     for (auto semaphore : submission->semaphores) {
-        auto semaphoreNode = my_data->semaphoreMap.find(semaphore);
-        if (semaphoreNode != my_data->semaphoreMap.end()) {
-            semaphoreNode->second.in_use.fetch_sub(1);
+        auto pSemaphore = getSemaphoreNode(my_data, semaphore);
+        if (pSemaphore) {
+            pSemaphore->in_use.fetch_sub(1);
         }
-    }
-    for (auto event : pCB->events) {
-        auto eventNode = my_data->eventMap.find(event);
-        if (eventNode != my_data->eventMap.end()) {
-            eventNode->second.in_use.fetch_sub(1);
-        }
-    }
-    for (auto event : pCB->writeEventsBeforeWait) {
-        auto eventNode = my_data->eventMap.find(event);
-        if (eventNode != my_data->eventMap.end()) {
-            eventNode->second.write_in_use--;
-        }
-    }
-    for (auto queryStatePair : pCB->queryToStateMap) {
-        my_data->queryToStateMap[queryStatePair.first] = queryStatePair.second;
-    }
-    for (auto eventStagePair : pCB->eventToStageMap) {
-        my_data->eventMap[eventStagePair.first].stageMask = eventStagePair.second;
     }
 }
 // For fenceCount fences in pFences, mark fence signaled, decrement in_use, and call
@@ -4280,8 +4272,10 @@ static bool decrementResources(layer_data *my_data, uint32_t fenceCount, const V
                            pFence->priorFences.data());
         for (auto & submission : pFence->submissions) {
             decrementResources(my_data, &submission);
-            skip_call |= cleanInFlightCmdBuffer(my_data, submission.cb);
-            removeInFlightCmdBuffer(my_data, submission.cb);
+            for (auto cb : submission.cbs) {
+                skip_call |= cleanInFlightCmdBuffer(my_data, cb);
+                removeInFlightCmdBuffer(my_data, cb);
+            }
         }
         pFence->submissions.clear();
         pFence->priorFences.clear();
@@ -4312,8 +4306,10 @@ static bool decrementResources(layer_data *my_data, VkQueue queue) {
     if (queue_data != my_data->queueMap.end()) {
         for (auto & submission : queue_data->second.untrackedSubmissions) {
             decrementResources(my_data, &submission);
-            skip_call |= cleanInFlightCmdBuffer(my_data, submission.cb);
-            removeInFlightCmdBuffer(my_data, submission.cb);
+            for (auto cb : submission.cbs) {
+                skip_call |= cleanInFlightCmdBuffer(my_data, cb);
+                removeInFlightCmdBuffer(my_data, cb);
+            }
         }
         queue_data->second.untrackedSubmissions.clear();
         skip_call |= decrementResources(my_data, static_cast<uint32_t>(queue_data->second.lastFences.size()),
@@ -4353,13 +4349,13 @@ static void updateTrackedCommandBuffers(layer_data *dev_data, VkQueue queue, VkQ
         if (fence_data == dev_data->fenceMap.end()) {
             return;
         }
-        for (auto cmdbuffer : other_queue_data->second.untrackedSubmissions) {
-            fence_data->second.submissions.push_back(cmdbuffer);
+        for (auto submission : other_queue_data->second.untrackedSubmissions) {
+            fence_data->second.submissions.push_back(submission);
         }
         other_queue_data->second.untrackedSubmissions.clear();
     } else {
-        for (auto cmdbuffer : other_queue_data->second.untrackedSubmissions) {
-            queue_data->second.untrackedSubmissions.push_back(cmdbuffer);
+        for (auto submission : other_queue_data->second.untrackedSubmissions) {
+            queue_data->second.untrackedSubmissions.push_back(submission);
         }
         other_queue_data->second.untrackedSubmissions.clear();
     }
@@ -4510,13 +4506,13 @@ static bool validateCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *pCB
     return skipCall;
 }
 
-static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *pCB, std::vector<VkSemaphore> const &semaphores) {
+static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *pCB) {
     // Track in-use for resources off of primary and any secondary CBs
-    bool skipCall = validateAndIncrementResources(dev_data, pCB, semaphores);
+    bool skipCall = validateAndIncrementResources(dev_data, pCB);
     if (!pCB->secondaryCommandBuffers.empty()) {
         for (auto secondaryCmdBuffer : pCB->secondaryCommandBuffers) {
-            skipCall |= validateAndIncrementResources(dev_data, dev_data->commandBufferMap[secondaryCmdBuffer], semaphores);
             GLOBAL_CB_NODE *pSubCB = getCBNode(dev_data, secondaryCmdBuffer);
+            skipCall |= validateAndIncrementResources(dev_data, pSubCB);
             if ((pSubCB->primaryCommandBuffer != pCB->commandBuffer) &&
                 !(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0,
@@ -4603,6 +4599,7 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
             if (pSemaphore) {
                 if (pSemaphore->signaled) {
                     pSemaphore->signaled = false;
+                    pSemaphore->in_use.fetch_add(1);
                 } else {
                     skipCall |=
                         log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
@@ -4629,27 +4626,28 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
                                 "Queue 0x%" PRIx64 " is signaling semaphore 0x%" PRIx64
                                 " that has already been signaled but not waited on by queue 0x%" PRIx64 ".",
                                 reinterpret_cast<uint64_t &>(queue), reinterpret_cast<const uint64_t &>(semaphore),
-                                reinterpret_cast<uint64_t &>(dev_data->semaphoreMap[semaphore].queue));
+                                reinterpret_cast<uint64_t &>(pSemaphore->queue));
                 } else {
                     pSemaphore->signaled = true;
                     pSemaphore->queue = queue;
+                    pSemaphore->in_use.fetch_add(1);
                 }
             }
         }
 
-        // TODO: just add one submission per VkSubmitInfo!
+        std::vector<VkCommandBuffer> cbs;
+
         for (uint32_t i = 0; i < submit->commandBufferCount; i++) {
             auto pCBNode = getCBNode(dev_data, submit->pCommandBuffers[i]);
             skipCall |= ValidateCmdBufImageLayouts(dev_data, pCBNode);
             if (pCBNode) {
-
-                submitTarget.emplace_back(pCBNode->commandBuffer, semaphoreList);
+                cbs.push_back(submit->pCommandBuffers[i]);
                 for (auto secondaryCmdBuffer : pCBNode->secondaryCommandBuffers) {
-                    submitTarget.emplace_back(secondaryCmdBuffer, semaphoreList);
+                    cbs.push_back(secondaryCmdBuffer);
                 }
 
                 pCBNode->submitCount++; // increment submit count
-                skipCall |= validatePrimaryCommandBufferState(dev_data, pCBNode, semaphoreList);
+                skipCall |= validatePrimaryCommandBufferState(dev_data, pCBNode);
                 // Call submit-time functions to validate/update state
                 for (auto &function : pCBNode->validate_functions) {
                     skipCall |= function();
@@ -4662,6 +4660,8 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
                 }
             }
         }
+
+        submitTarget.emplace_back(cbs, semaphoreList);
     }
     markCommandBuffersInFlight(dev_data, queue, submitCount, pSubmits, fence);
     lock.unlock();
