@@ -5386,8 +5386,8 @@ FreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandB
         if (cb_pair != dev_data->commandBufferMap.end()) {
             dev_data->globalInFlightCmdBuffers.erase(cb_pair->first);
             // reset prior to delete for data clean-up
-            resetCB(dev_data, (*cb_pair).second->commandBuffer);
-            delete (*cb_pair).second;
+            resetCB(dev_data, cb_pair->second->commandBuffer);
+            delete cb_pair->second;
             dev_data->commandBufferMap.erase(cb_pair);
         }
 
@@ -5546,6 +5546,7 @@ DestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocationCa
     dev_data->device_dispatch_table->DestroyRenderPass(device, renderPass, pAllocator);
     std::lock_guard<std::mutex> lock(global_lock);
     dev_data->renderPassMap.erase(renderPass);
+    // TODO: leaking all the guts of the renderpass node here!
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo,
@@ -8997,10 +8998,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
 
 // Free the renderpass shadow
 static void deleteRenderPasses(layer_data *my_data) {
-    if (my_data->renderPassMap.size() <= 0)
-        return;
-    for (auto ii = my_data->renderPassMap.begin(); ii != my_data->renderPassMap.end(); ++ii) {
-        const VkRenderPassCreateInfo *pRenderPassInfo = (*ii).second->pCreateInfo;
+    for (auto renderPass : my_data->renderPassMap) {
+        const VkRenderPassCreateInfo *pRenderPassInfo = renderPass.second->pCreateInfo;
         delete[] pRenderPassInfo->pAttachments;
         if (pRenderPassInfo->pSubpasses) {
             for (uint32_t i = 0; i < pRenderPassInfo->subpassCount; ++i) {
@@ -9020,7 +9019,7 @@ static void deleteRenderPasses(layer_data *my_data) {
         }
         delete[] pRenderPassInfo->pDependencies;
         delete pRenderPassInfo;
-        delete (*ii).second;
+        delete renderPass.second;
     }
     my_data->renderPassMap.clear();
 }
