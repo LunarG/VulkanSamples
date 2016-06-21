@@ -133,7 +133,6 @@ struct app_instance {
 #ifdef VK_USE_PLATFORM_XLIB_KHR
     Display *xlib_display;
     Window xlib_window;
-    Atom xlib_wm_delete_window;
 #endif
 
 #ifdef VK_USE_PLATFORM_ANDROID_KHR // TODO
@@ -949,8 +948,7 @@ static void app_create_xlib_window(struct app_instance *inst) {
                 inst->width, inst->height, 0, visualInfo->depth, InputOutput,
                 visualInfo->visual, 0, NULL);
 
-    XFlush(inst->xlib_display);
-    inst->xlib_wm_delete_window = XInternAtom(inst->xlib_display, "WM_DELETE_WINDOW", False);
+    XSync(inst->xlib_display,false);
 }
 
 static void app_create_xlib_surface(struct app_instance *inst, struct app_gpu *gpu) {
