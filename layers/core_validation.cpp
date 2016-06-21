@@ -9060,9 +9060,9 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
             skipCall |= VerifyFramebufferAndRenderPassLayouts(dev_data, pCB, pRenderPassBegin);
             skipCall |= insideRenderPass(dev_data, pCB, "vkCmdBeginRenderPass");
             skipCall |= ValidateDependencies(dev_data, framebuffer, renderPass);
-            pCB->activeRenderPass = renderPass;
             skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdBeginRenderPass");
             skipCall |= addCmd(dev_data, pCB, CMD_BEGINRENDERPASS, "vkCmdBeginRenderPass()");
+            pCB->activeRenderPass = renderPass;
             // This is a shallow copy as that is all that is needed for now
             pCB->activeRenderPassBeginInfo = *pRenderPassBegin;
             pCB->activeSubpass = 0;
