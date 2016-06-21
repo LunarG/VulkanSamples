@@ -321,7 +321,7 @@ struct demo {
     uint32_t enabled_extension_count;
     uint32_t enabled_layer_count;
     char *extension_names[64];
-    char *device_validation_layers[64];
+    char *enabled_layers[64];
 
     int width, height;
     VkFormat format;
@@ -2338,7 +2338,7 @@ static void demo_init_vk(struct demo *demo) {
     VkResult err;
     uint32_t instance_extension_count = 0;
     uint32_t instance_layer_count = 0;
-    uint32_t device_validation_layer_count = 0;
+    uint32_t validation_layer_count = 0;
     char **instance_validation_layers = NULL;
     demo->enabled_extension_count = 0;
     demo->enabled_layer_count = 0;
@@ -2376,8 +2376,8 @@ static void demo_init_vk(struct demo *demo) {
                     instance_layers);
             if (validation_found) {
                 demo->enabled_layer_count = ARRAY_SIZE(instance_validation_layers_alt1);
-                demo->device_validation_layers[0] = "VK_LAYER_LUNARG_standard_validation";
-                device_validation_layer_count = 1;
+                demo->enabled_layers[0] = "VK_LAYER_LUNARG_standard_validation";
+                validation_layer_count = 1;
             } else {
                 // use alternative set of validation layers
                 instance_validation_layers = instance_validation_layers_alt2;
@@ -2386,11 +2386,10 @@ static void demo_init_vk(struct demo *demo) {
                     ARRAY_SIZE(instance_validation_layers_alt2),
                     instance_validation_layers, instance_layer_count,
                     instance_layers);
-                device_validation_layer_count =
-                        ARRAY_SIZE(instance_validation_layers_alt2);
-                for (uint32_t i = 0; i < device_validation_layer_count; i++) {
-                    demo->device_validation_layers[i] =
-                            instance_validation_layers[i];
+                validation_layer_count =
+                    ARRAY_SIZE(instance_validation_layers_alt2);
+                for (uint32_t i = 0; i < validation_layer_count; i++) {
+                    demo->enabled_layers[i] = instance_validation_layers[i];
                 }
             }
             free(instance_layers);
@@ -2596,40 +2595,6 @@ static void demo_init_vk(struct demo *demo) {
                  "vkEnumeratePhysicalDevices Failure");
     }
 
-    /* Look for validation layers */
-    validation_found = 0;
-    demo->enabled_layer_count = 0;
-    uint32_t device_layer_count = 0;
-    err =
-        vkEnumerateDeviceLayerProperties(demo->gpu, &device_layer_count, NULL);
-    assert(!err);
-
-    if (device_layer_count > 0) {
-        VkLayerProperties *device_layers =
-            malloc(sizeof(VkLayerProperties) * device_layer_count);
-        err = vkEnumerateDeviceLayerProperties(demo->gpu, &device_layer_count,
-                                               device_layers);
-        assert(!err);
-
-        if (demo->validate) {
-            validation_found = demo_check_layers(device_validation_layer_count,
-                                                 demo->device_validation_layers,
-                                                 device_layer_count,
-                                                 device_layers);
-            demo->enabled_layer_count = device_validation_layer_count;
-        }
-
-        free(device_layers);
-    }
-
-    if (demo->validate && !validation_found) {
-        ERR_EXIT("vkEnumerateDeviceLayerProperties failed to find "
-                 "a required validation layer.\n\n"
-                 "Please look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateDevice Failure");
-    }
-
     /* Look for device extensions */
     uint32_t device_extension_count = 0;
     VkBool32 swapchainExtFound = 0;
@@ -2766,11 +2731,8 @@ static void demo_create_device(struct demo *demo) {
         .pNext = NULL,
         .queueCreateInfoCount = 1,
         .pQueueCreateInfos = &queue,
-        .enabledLayerCount = demo->enabled_layer_count,
-        .ppEnabledLayerNames =
-            (const char *const *)((demo->validate)
-                                      ? demo->device_validation_layers
-                                      : NULL),
+        .enabledLayerCount = 0,
+        .ppEnabledLayerNames = NULL,
         .enabledExtensionCount = demo->enabled_extension_count,
         .ppEnabledExtensionNames = (const char *const *)demo->extension_names,
         .pEnabledFeatures =
