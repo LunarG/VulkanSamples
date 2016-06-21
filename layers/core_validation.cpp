@@ -93,13 +93,6 @@ using std::unordered_set;
 // Object value will be used to identify them internally.
 static const VkDeviceMemory MEMTRACKER_SWAP_CHAIN_IMAGE_KEY = (VkDeviceMemory)(-1);
 
-// Track command pools and their command buffers
-struct CMD_POOL_INFO {
-    VkCommandPoolCreateFlags createFlags;
-    uint32_t queueFamilyIndex;
-    list<VkCommandBuffer> commandBuffers; // list container of cmd buffers allocated from this pool
-};
-
 struct devExts {
     bool wsi_enabled;
     unordered_map<VkSwapchainKHR, unique_ptr<SWAPCHAIN_NODE>> swapchainMap;
@@ -129,7 +122,7 @@ struct layer_data {
     unordered_map<VkBufferView, unique_ptr<VkBufferViewCreateInfo>> bufferViewMap;
     unordered_map<VkBuffer, unique_ptr<BUFFER_NODE>> bufferMap;
     unordered_map<VkPipeline, PIPELINE_NODE *> pipelineMap;
-    unordered_map<VkCommandPool, CMD_POOL_INFO> commandPoolMap;
+    unordered_map<VkCommandPool, COMMAND_POOL_NODE> commandPoolMap;
     unordered_map<VkDescriptorPool, DESCRIPTOR_POOL_NODE *> descriptorPoolMap;
     unordered_map<VkDescriptorSet, cvdescriptorset::DescriptorSet *> setMap;
     unordered_map<VkDescriptorSetLayout, cvdescriptorset::DescriptorSetLayout *> descriptorSetLayoutMap;
@@ -337,6 +330,14 @@ QUEUE_NODE *getQueueNode(layer_data *dev_data, VkQueue queue) {
 SEMAPHORE_NODE *getSemaphoreNode(layer_data *dev_data, VkSemaphore semaphore) {
     auto it = dev_data->semaphoreMap.find(semaphore);
     if (it == dev_data->semaphoreMap.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}
+
+COMMAND_POOL_NODE *getCommandPoolNode(layer_data *dev_data, VkCommandPool pool) {
+    auto it = dev_data->commandPoolMap.find(pool);
+    if (it == dev_data->commandPoolMap.end()) {
         return nullptr;
     }
     return &it->second;

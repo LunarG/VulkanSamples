@@ -268,3 +268,11 @@ typedef struct stencil_data {
     uint32_t writeMask;
     uint32_t reference;
 } CBStencilData;
+
+// Track command pools and their command buffers
+struct COMMAND_POOL_NODE {
+    VkCommandPoolCreateFlags createFlags;
+    uint32_t queueFamilyIndex;
+    // TODO: why is this std::list?
+    std::list<VkCommandBuffer> commandBuffers; // container of cmd buffers allocated from this pool
+};
