@@ -154,9 +154,6 @@ struct app_gpu {
     VkPhysicalDeviceFeatures features;
     VkPhysicalDevice limits;
 
-    uint32_t device_layer_count;
-    struct layer_extension_list *device_layers;
-
     uint32_t device_extension_count;
     VkExtensionProperties *device_extensions;
 
@@ -486,49 +483,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu) {
     };
     VkResult U_ASSERT_ONLY err;
 
-    uint32_t count = 0;
-
-    // Scan layers
-    VkLayerProperties *device_layer_properties = NULL;
-    struct layer_extension_list *device_layers = NULL;
-
-    do {
-        err = vkEnumerateDeviceLayerProperties(gpu->obj, &count, NULL);
-        assert(!err);
-
-        if (device_layer_properties) {
-            free(device_layer_properties);
-        }
-        device_layer_properties = malloc(sizeof(VkLayerProperties) * count);
-        assert(device_layer_properties);
-
-        if (device_layers) {
-            free(device_layers);
-        }
-        device_layers = malloc(sizeof(struct layer_extension_list) * count);
-        assert(device_layers);
-
-        err = vkEnumerateDeviceLayerProperties(gpu->obj, &count,
-                                               device_layer_properties);
-    } while (err == VK_INCOMPLETE);
-    assert(!err);
-
-    gpu->device_layer_count = count;
-    gpu->device_layers = device_layers;
-
-    for (uint32_t i = 0; i < gpu->device_layer_count; i++) {
-        VkLayerProperties *src_info = &device_layer_properties[i];
-        struct layer_extension_list *dst_info = &gpu->device_layers[i];
-        memcpy(&dst_info->layer_properties, src_info,
-               sizeof(VkLayerProperties));
-
-        // Save away layer extension info for report
-        app_get_physical_device_layer_extensions(
-            gpu, src_info->layerName, &dst_info->extension_count,
-            &dst_info->extension_properties);
-    }
-    free(device_layer_properties);
-
+    //Device extensions
     app_get_physical_device_layer_extensions(
         gpu, NULL, &gpu->device_extension_count, &gpu->device_extensions);
 
@@ -619,18 +574,17 @@ static void app_get_instance_extensions(struct app_instance *inst) {
         memcpy(&dst_info->layer_properties, src_info,
                sizeof(VkLayerProperties));
 
-        /* Save away layer extension info for report */
-        /* Gets layer extensions, if first parameter is not NULL*/
+        // Save away layer extension info for report
+        // Gets layer extensions, if first parameter is not NULL
         app_get_global_layer_extensions(src_info->layerName,
                                         &dst_info->extension_count,
                                         &dst_info->extension_properties);
     }
     free(global_layer_properties);
 
-    /* Collect global extensions */
+    // Collect global extensions
     inst->global_extension_count = 0;
-    /* Gets instance extensions, if no layer was specified in teh first
-     * paramteter */
+    // Gets instance extensions, if no layer was specified in the first paramteter
     app_get_global_layer_extensions(NULL, &inst->global_extension_count,
                                     &inst->global_extensions);
 }
@@ -948,7 +902,7 @@ static void app_create_xlib_window(struct app_instance *inst) {
                 inst->width, inst->height, 0, visualInfo->depth, InputOutput,
                 visualInfo->visual, 0, NULL);
 
-    XFlush(inst->xlib_display);
+    XSync(inst->xlib_display,false);
 }
 
 static void app_create_xlib_surface(struct app_instance *inst, struct app_gpu *gpu) {
@@ -1273,17 +1227,16 @@ app_dump_extensions(const char *indent, const char *layer_name,
     if (layer_name && (strlen(layer_name) > 0)) {
         printf("%s%s Extensions", indent, layer_name);
     } else {
-        printf("Extensions");
+        printf("%sExtensions", indent);
     }
     printf("\tcount = %d\n", extension_count);
     for (i = 0; i < extension_count; i++) {
         VkExtensionProperties const *ext_prop = &extension_properties[i];
 
         printf("%s\t", indent);
-        printf("%-32s: extension revision %2d\n", ext_prop->extensionName,
+        printf("%-36s: extension revision %2d\n", ext_prop->extensionName,
                ext_prop->specVersion);
     }
-    printf("\n");
     fflush(stdout);
 }
 
@@ -1365,36 +1318,13 @@ static void app_gpu_dump_memory_props(const struct app_gpu *gpu) {
 static void app_gpu_dump(const struct app_gpu *gpu) {
     uint32_t i;
 
-    printf("Device Extensions and layers:\n");
-    printf("=============================\n");
+    printf("\nDevice Properties and Extensions :\n");
+    printf(  "==================================\n");
     printf("GPU%u\n", gpu->id);
     app_gpu_dump_props(gpu);
     printf("\n");
     app_dump_extensions("", "Device", gpu->device_extension_count,
                         gpu->device_extensions);
-    printf("\n");
-    printf("Layers\tcount = %d\n", gpu->device_layer_count);
-    for (uint32_t i = 0; i < gpu->device_layer_count; i++) {
-        uint32_t major, minor, patch;
-        char spec_version[64], layer_version[64];
-        struct layer_extension_list const *layer_info = &gpu->device_layers[i];
-
-        extract_version(layer_info->layer_properties.specVersion, &major,
-                        &minor, &patch);
-        snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", major, minor,
-                 patch);
-        snprintf(layer_version, sizeof(layer_version), "%d",
-                 layer_info->layer_properties.implementationVersion);
-        printf("\t%s (%s) Vulkan version %s, layer version %s\n",
-               layer_info->layer_properties.layerName,
-               (char *)layer_info->layer_properties.description, spec_version,
-               layer_version);
-
-        app_dump_extensions("\t", layer_info->layer_properties.layerName,
-                            layer_info->extension_count,
-                            layer_info->extension_properties);
-        fflush(stdout);
-    }
     printf("\n");
     for (i = 0; i < gpu->queue_count; i++) {
         app_gpu_dump_queue_props(gpu, i);
@@ -1456,32 +1386,10 @@ int main(int argc, char **argv) {
 
     app_create_instance(&inst);
 
-    printf("Instance Extensions and layers:\n");
-    printf("===============================\n");
+    printf("\nInstance Extensions:\n");
+    printf(  "====================\n");
     app_dump_extensions("", "Instance", inst.global_extension_count,
                         inst.global_extensions);
-
-    printf("Instance Layers\tcount = %d\n", inst.global_layer_count);
-    for (uint32_t i = 0; i < inst.global_layer_count; i++) {
-        uint32_t major, minor, patch;
-        char spec_version[64], layer_version[64];
-        VkLayerProperties const *layer_prop =
-            &inst.global_layers[i].layer_properties;
-
-        extract_version(layer_prop->specVersion, &major, &minor, &patch);
-        snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", major, minor,
-                 patch);
-        snprintf(layer_version, sizeof(layer_version), "%d",
-                 layer_prop->implementationVersion);
-        printf("\t%s (%s) Vulkan version %s, layer version %s\n",
-               layer_prop->layerName, (char *)layer_prop->description,
-               spec_version, layer_version);
-
-        app_dump_extensions("\t",
-                            inst.global_layers[i].layer_properties.layerName,
-                            inst.global_layers[i].extension_count,
-                            inst.global_layers[i].extension_properties);
-    }
 
     err = vkEnumeratePhysicalDevices(inst.instance, &gpu_count, NULL);
     if (err)
@@ -1496,9 +1404,46 @@ int main(int argc, char **argv) {
 
     for (i = 0; i < gpu_count; i++) {
         app_gpu_init(&gpus[i], i, objs[i]);
-        app_gpu_dump(&gpus[i]);
         printf("\n\n");
     }
+
+    //---Layer-Device-Extensions---
+    printf("Layers: count = %d\n", inst.global_layer_count);
+    printf("=======\n");
+    for (uint32_t i = 0; i < inst.global_layer_count; i++) {
+        uint32_t major, minor, patch;
+        char spec_version[64], layer_version[64];
+        VkLayerProperties const *layer_prop =
+            &inst.global_layers[i].layer_properties;
+
+        extract_version(layer_prop->specVersion, &major, &minor, &patch);
+        snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", major, minor,
+                 patch);
+        snprintf(layer_version, sizeof(layer_version), "%d",
+                 layer_prop->implementationVersion);
+        printf("%s (%s) Vulkan version %s, layer version %s\n",
+               layer_prop->layerName, (char *)layer_prop->description,
+               spec_version, layer_version);
+
+        app_dump_extensions("\t","Layer",
+                            inst.global_layers[i].extension_count,
+                            inst.global_layers[i].extension_properties);
+
+        char* layerName=inst.global_layers[i].layer_properties.layerName;
+        printf("\tDevices \tcount = %d\n",gpu_count);
+        for (uint32_t j = 0; j < gpu_count; j++) {
+            printf("\t\tGPU id       : %u (%s)\n", j, gpus[j].props.deviceName);
+            uint32_t count=0;
+            VkExtensionProperties* props;
+            app_get_physical_device_layer_extensions(&gpus[j], layerName,
+                                                     &count, &props);
+            app_dump_extensions("\t\t","Layer-Device",count,props);
+            free(props);
+        }
+        printf("\n");
+    }
+    fflush(stdout);
+    //-----------------------------
 
     printf("Presentable Surface formats:\n");
     printf("============================\n");
@@ -1546,6 +1491,11 @@ int main(int argc, char **argv) {
     if (!formatCount)
         printf("None found\n");
     //---------
+
+    for (i = 0; i < gpu_count; i++) {
+        app_gpu_dump(&gpus[i]);
+        printf("\n\n");
+    }
 
     for (i = 0; i < gpu_count; i++)
         app_gpu_destroy(&gpus[i]);

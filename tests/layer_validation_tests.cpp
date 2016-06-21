@@ -7308,16 +7308,33 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass) {
     BeginCommandBuffer();
     // Just create a dummy Renderpass that's non-NULL so we can get to the
     // proper error
-    VkRenderPassBeginInfo rp_begin = {};
-    rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    rp_begin.pNext = NULL;
-    rp_begin.renderPass = renderPass();
-    rp_begin.framebuffer = framebuffer();
-
-    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &rp_begin,
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &m_renderPassBeginInfo,
                          VK_SUBPASS_CONTENTS_INLINE);
 
     m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkLayerTest, RenderPassSecondaryCommandBuffersMultipleTimes) {
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    BeginCommandBuffer(); // framework implicitly begins the renderpass.
+    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle()); // end implicit.
+
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &m_renderPassBeginInfo,
+                         VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
+    m_errorMonitor->VerifyNotFound();
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &m_renderPassBeginInfo,
+                         VK_SUBPASS_CONTENTS_INLINE);
+    m_errorMonitor->VerifyNotFound();
+    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
+    m_errorMonitor->VerifyNotFound();
+
+    m_commandBuffer->EndCommandBuffer();
+    m_errorMonitor->VerifyNotFound();
 }
 
 TEST_F(VkLayerTest, RenderPassClearOpMismatch) {
@@ -8988,8 +9005,8 @@ TEST_F(VkLayerTest, RenderPassIncompatible) {
     rpci.attachmentCount = 1;
     VkAttachmentDescription attach_desc = {};
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
-    // Format incompatible with PSO RP color attach format RGBA8_UNORM
-    attach_desc.format = VK_FORMAT_UNDEFINED;
+    // Format incompatible with PSO RP color attach format B8G8R8A8_UNORM
+    attach_desc.format = VK_FORMAT_R8G8B8A8_UNORM;
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;

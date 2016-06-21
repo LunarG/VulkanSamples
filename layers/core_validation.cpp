@@ -2134,7 +2134,7 @@ static bool validate_draw_state_flags(layer_data *dev_data, GLOBAL_CB_NODE *pCB,
 
 // Verify attachment reference compatibility according to spec
 //  If one array is larger, treat missing elements of shorter array as VK_ATTACHMENT_UNUSED & other array much match this
-//  If both AttachmentReference arrays have requested index, check their corresponding AttachementDescriptions
+//  If both AttachmentReference arrays have requested index, check their corresponding AttachmentDescriptions
 //   to make sure that format and samples counts match.
 //  If not, they are not compatible.
 static bool attachment_references_compatible(const uint32_t index, const VkAttachmentReference *pPrimary,
@@ -2156,7 +2156,12 @@ static bool attachment_references_compatible(const uint32_t index, const VkAttac
     } else if (index >= secondaryCount) { // Check primary as if secondary is VK_ATTACHMENT_UNUSED
         if (VK_ATTACHMENT_UNUSED == pPrimary[index].attachment)
             return true;
-    } else { // format and sample count must match
+    } else { // Format and sample count must match
+        if ((pPrimary[index].attachment == VK_ATTACHMENT_UNUSED) && (pSecondary[index].attachment == VK_ATTACHMENT_UNUSED)) {
+            return true;
+        } else if ((pPrimary[index].attachment == VK_ATTACHMENT_UNUSED) || (pSecondary[index].attachment == VK_ATTACHMENT_UNUSED)) {
+            return false;
+        }
         if ((pPrimaryAttachments[pPrimary[index].attachment].format ==
              pSecondaryAttachments[pSecondary[index].attachment].format) &&
             (pPrimaryAttachments[pPrimary[index].attachment].samples ==
@@ -8985,11 +8990,14 @@ static bool VerifyRenderAreaBounds(const layer_data *my_data, const VkRenderPass
 // [load|store]Op flag must be checked
 // TODO: The memory valid flag in DEVICE_MEM_INFO should probably be split to track the validity of stencil memory separately.
 template <typename T> static bool FormatSpecificLoadAndStoreOpSettings(VkFormat format, T color_depth_op, T stencil_op, T op) {
+    if (color_depth_op != op && stencil_op != op) {
+        return false;
+    }
     bool check_color_depth_load_op = !vk_format_is_stencil_only(format);
     bool check_stencil_load_op = vk_format_is_depth_and_stencil(format) || !check_color_depth_load_op;
-    // For now, having either the color/depth op OR the stencil op will make the memory valid. They may need to be tracked separately
-    bool failed = ((check_stencil_load_op && (stencil_op != op)) && (check_color_depth_load_op && (color_depth_op != op)));
-    return !failed;
+
+    return (((check_color_depth_load_op == true) && (color_depth_op == op)) ||
+            ((check_stencil_load_op == true) && (stencil_op == op)));
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -9052,9 +9060,9 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
             skipCall |= VerifyFramebufferAndRenderPassLayouts(dev_data, pCB, pRenderPassBegin);
             skipCall |= insideRenderPass(dev_data, pCB, "vkCmdBeginRenderPass");
             skipCall |= ValidateDependencies(dev_data, framebuffer, renderPass);
-            pCB->activeRenderPass = renderPass;
             skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdBeginRenderPass");
             skipCall |= addCmd(dev_data, pCB, CMD_BEGINRENDERPASS, "vkCmdBeginRenderPass()");
+            pCB->activeRenderPass = renderPass;
             // This is a shallow copy as that is all that is needed for now
             pCB->activeRenderPassBeginInfo = *pRenderPassBegin;
             pCB->activeSubpass = 0;

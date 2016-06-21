@@ -125,24 +125,24 @@ TEST(CreateDevice, ExtensionNotPresent)
     uint32_t physicalCount = 0;
     result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
     ASSERT_EQ(result, VK_SUCCESS);
-    ASSERT_GT(physicalCount, 0);
+    ASSERT_GT(physicalCount, 0u);
 
     std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
     result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
     ASSERT_EQ(result, VK_SUCCESS);
-    ASSERT_GT(physicalCount, 0);
+    ASSERT_GT(physicalCount, 0u);
 
     for(uint32_t p = 0; p < physicalCount; ++p)
     {
         uint32_t familyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, nullptr);
         ASSERT_EQ(result, VK_SUCCESS);
-        ASSERT_GT(familyCount, 0);
+        ASSERT_GT(familyCount, 0u);
 
         std::unique_ptr<VkQueueFamilyProperties[]> family(new VkQueueFamilyProperties[familyCount]);
         vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, family.get());
         ASSERT_EQ(result, VK_SUCCESS);
-        ASSERT_GT(familyCount, 0);
+        ASSERT_GT(familyCount, 0u);
 
         for(uint32_t q = 0; q < familyCount; ++q)
         {
