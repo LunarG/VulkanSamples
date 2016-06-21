@@ -902,7 +902,7 @@ static void app_create_xlib_window(struct app_instance *inst) {
                 inst->width, inst->height, 0, visualInfo->depth, InputOutput,
                 visualInfo->visual, 0, NULL);
 
-    XFlush(inst->xlib_display);
+    XSync(inst->xlib_display,false);
 }
 
 static void app_create_xlib_surface(struct app_instance *inst, struct app_gpu *gpu) {
