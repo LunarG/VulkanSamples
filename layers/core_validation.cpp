@@ -5361,14 +5361,29 @@ static void clearCommandBuffersInFlight(layer_data *dev_data, COMMAND_POOL_NODE 
 VKAPI_ATTR void VKAPI_CALL
 FreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandBufferCount, const VkCommandBuffer *pCommandBuffers) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-
     bool skip_call = false;
     std::unique_lock<std::mutex> lock(global_lock);
+
     for (uint32_t i = 0; i < commandBufferCount; i++) {
         auto cb_pair = dev_data->commandBufferMap.find(pCommandBuffers[i]);
         // Delete CB information structure, and remove from commandBufferMap
         if (cb_pair != dev_data->commandBufferMap.end()) {
             skip_call |= checkCommandBufferInFlight(dev_data, cb_pair->second, "free");
+        }
+    }
+    lock.unlock();
+
+    if (skip_call)
+        return;
+
+    dev_data->device_dispatch_table->FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
+
+    lock.lock();
+    auto pPool = getCommandPoolNode(dev_data, commandPool);
+    for (uint32_t i = 0; i < commandBufferCount; i++) {
+        auto cb_pair = dev_data->commandBufferMap.find(pCommandBuffers[i]);
+        // Delete CB information structure, and remove from commandBufferMap
+        if (cb_pair != dev_data->commandBufferMap.end()) {
             dev_data->globalInFlightCmdBuffers.erase(cb_pair->first);
             // reset prior to delete for data clean-up
             resetCB(dev_data, (*cb_pair).second->commandBuffer);
@@ -5377,13 +5392,10 @@ FreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandB
         }
 
         // Remove commandBuffer reference from commandPoolMap
-        dev_data->commandPoolMap[commandPool].commandBuffers.remove(pCommandBuffers[i]);
+        pPool->commandBuffers.remove(pCommandBuffers[i]);
     }
     printCBList(dev_data);
     lock.unlock();
-
-    if (!skip_call)
-        dev_data->device_dispatch_table->FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateCommandPool(VkDevice device, const VkCommandPoolCreateInfo *pCreateInfo,
