@@ -4501,7 +4501,9 @@ TEST_F(VkLayerTest, TwoQueueSubmitsOneQueueNullQueueSubmitWithFence) {
 
     vkQueueSubmit(m_device->m_queue, 0, NULL, fence);
 
-    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+    VkResult err =
+        vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+    ASSERT_VK_SUCCESS(err);
 
     vkDestroyFence(m_device->device(), fence, nullptr);
     vkFreeCommandBuffers(m_device->device(), command_pool, 2,
