@@ -7308,13 +7308,7 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass) {
     BeginCommandBuffer();
     // Just create a dummy Renderpass that's non-NULL so we can get to the
     // proper error
-    VkRenderPassBeginInfo rp_begin = {};
-    rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    rp_begin.pNext = NULL;
-    rp_begin.renderPass = renderPass();
-    rp_begin.framebuffer = framebuffer();
-
-    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &rp_begin,
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &m_renderPassBeginInfo,
                          VK_SUBPASS_CONTENTS_INLINE);
 
     m_errorMonitor->VerifyFound();
