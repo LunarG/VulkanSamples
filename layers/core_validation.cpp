@@ -3623,11 +3623,11 @@ static bool checkGraphicsOrComputeBit(const layer_data *my_data, VkQueueFlags fl
 
 // Add specified CMD to the CmdBuffer in given pCB, flagging errors if CB is not
 //  in the recording state or if there's an issue with the Cmd ordering
-static bool addCmd(const layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd, const char *caller_name) {
+static bool addCmd(layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd, const char *caller_name) {
     bool skipCall = false;
-    auto pool_data = my_data->commandPoolMap.find(pCB->createInfo.commandPool);
-    if (pool_data != my_data->commandPoolMap.end()) {
-        VkQueueFlags flags = my_data->phys_dev_properties.queue_family_properties[pool_data->second.queueFamilyIndex].queueFlags;
+    auto pPool = getCommandPoolNode(my_data, pCB->createInfo.commandPool);
+    if (pPool) {
+        VkQueueFlags flags = my_data->phys_dev_properties.queue_family_properties[pPool->queueFamilyIndex].queueFlags;
         switch (cmd) {
         case CMD_BINDPIPELINE:
         case CMD_BINDPIPELINEDELTA:
@@ -5342,25 +5342,19 @@ static bool checkCommandBufferInFlight(layer_data *dev_data, const GLOBAL_CB_NOD
 }
 
 // Iterate over all cmdBuffers in given commandPool and verify that each is not in use
-static bool checkCommandBuffersInFlight(layer_data *dev_data, const VkCommandPool commandPool, const char *action) {
+static bool checkCommandBuffersInFlight(layer_data *dev_data, COMMAND_POOL_NODE *pPool, const char *action) {
     bool skip_call = false;
-    auto pool_data = dev_data->commandPoolMap.find(commandPool);
-    if (pool_data != dev_data->commandPoolMap.end()) {
-        for (auto cmd_buffer : pool_data->second.commandBuffers) {
-            if (dev_data->globalInFlightCmdBuffers.count(cmd_buffer)) {
-                skip_call |= checkCommandBufferInFlight(dev_data, getCBNode(dev_data, cmd_buffer), action);
-            }
+    for (auto cmd_buffer : pPool->commandBuffers) {
+        if (dev_data->globalInFlightCmdBuffers.count(cmd_buffer)) {
+            skip_call |= checkCommandBufferInFlight(dev_data, getCBNode(dev_data, cmd_buffer), action);
         }
     }
     return skip_call;
 }
 
-static void clearCommandBuffersInFlight(layer_data *dev_data, const VkCommandPool commandPool) {
-    auto pool_data = dev_data->commandPoolMap.find(commandPool);
-    if (pool_data != dev_data->commandPoolMap.end()) {
-        for (auto cmd_buffer : pool_data->second.commandBuffers) {
-            dev_data->globalInFlightCmdBuffers.erase(cmd_buffer);
-        }
+static void clearCommandBuffersInFlight(layer_data *dev_data, COMMAND_POOL_NODE *pPool) {
+    for (auto cmd_buffer : pPool->commandBuffers) {
+        dev_data->globalInFlightCmdBuffers.erase(cmd_buffer);
     }
 }
 
@@ -5426,49 +5420,48 @@ DestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocatio
     bool skipCall = false;
     std::unique_lock<std::mutex> lock(global_lock);
     // Verify that command buffers in pool are complete (not in-flight)
-    VkBool32 result = checkCommandBuffersInFlight(dev_data, commandPool, "destroy command pool with");
-    clearCommandBuffersInFlight(dev_data, commandPool);
-    // Must remove cmdpool from cmdpoolmap, after removing all cmdbuffers in its list from the commandPoolMap
-    auto pool_it = dev_data->commandPoolMap.find(commandPool);
-    if (pool_it != dev_data->commandPoolMap.end()) {
-        for (auto cb : pool_it->second.commandBuffers) {
-            clear_cmd_buf_and_mem_references(dev_data, cb);
-            auto del_cb = dev_data->commandBufferMap.find(cb);
-            delete del_cb->second;                  // delete CB info structure
-            dev_data->commandBufferMap.erase(del_cb); // Remove this command buffer
-        }
-    }
-    dev_data->commandPoolMap.erase(commandPool);
+    auto pPool = getCommandPoolNode(dev_data, commandPool);
+    skipCall |= checkCommandBuffersInFlight(dev_data, pPool, "destroy command pool with");
 
     lock.unlock();
 
-    if (result)
+    if (skipCall)
         return;
 
-    if (!skipCall)
-        dev_data->device_dispatch_table->DestroyCommandPool(device, commandPool, pAllocator);
+    dev_data->device_dispatch_table->DestroyCommandPool(device, commandPool, pAllocator);
+
+    lock.lock();
+    // Must remove cmdpool from cmdpoolmap, after removing all cmdbuffers in its list from the commandPoolMap
+    clearCommandBuffersInFlight(dev_data, pPool);
+    for (auto cb : pPool->commandBuffers) {
+        clear_cmd_buf_and_mem_references(dev_data, cb);
+        auto del_cb = dev_data->commandBufferMap.find(cb);
+        delete del_cb->second;                  // delete CB info structure
+        dev_data->commandBufferMap.erase(del_cb); // Remove this command buffer
+    }
+    dev_data->commandPoolMap.erase(commandPool);
+    lock.unlock();
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
 ResetCommandPool(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetFlags flags) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skipCall = false;
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
 
-    if (checkCommandBuffersInFlight(dev_data, commandPool, "reset command pool with"))
+    auto pPool = getCommandPoolNode(dev_data, commandPool);
+    skipCall |= checkCommandBuffersInFlight(dev_data, pPool, "reset command pool with");
+
+    if (skipCall)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    if (!skipCall)
-        result = dev_data->device_dispatch_table->ResetCommandPool(device, commandPool, flags);
+    VkResult result = dev_data->device_dispatch_table->ResetCommandPool(device, commandPool, flags);
 
     // Reset all of the CBs allocated from this pool
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
-        clearCommandBuffersInFlight(dev_data, commandPool);
-        auto it = dev_data->commandPoolMap[commandPool].commandBuffers.begin();
-        while (it != dev_data->commandPoolMap[commandPool].commandBuffers.end()) {
-            resetCB(dev_data, (*it));
-            ++it;
+        clearCommandBuffersInFlight(dev_data, pPool);
+        for (auto cmdBuffer : pPool->commandBuffers) {
+            resetCB(dev_data, cmdBuffer);
         }
     }
     return result;
