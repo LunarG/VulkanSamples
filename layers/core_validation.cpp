@@ -6134,11 +6134,12 @@ AllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pCrea
     VkResult result = dev_data->device_dispatch_table->AllocateCommandBuffers(device, pCreateInfo, pCommandBuffer);
     if (VK_SUCCESS == result) {
         std::unique_lock<std::mutex> lock(global_lock);
-        auto const &cp_it = dev_data->commandPoolMap.find(pCreateInfo->commandPool);
-        if (cp_it != dev_data->commandPoolMap.end()) {
+        auto pPool = getCommandPoolNode(dev_data, pCreateInfo->commandPool);
+
+        if (pPool) {
             for (uint32_t i = 0; i < pCreateInfo->commandBufferCount; i++) {
                 // Add command buffer to its commandPool map
-                cp_it->second.commandBuffers.push_back(pCommandBuffer[i]);
+                pPool->commandBuffers.push_back(pCommandBuffer[i]);
                 GLOBAL_CB_NODE *pCB = new GLOBAL_CB_NODE;
                 // Add command buffer to map
                 dev_data->commandBufferMap[pCommandBuffer[i]] = pCB;
@@ -6253,7 +6254,8 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                         (uint64_t)commandBuffer);
         } else if (CB_RECORDED == pCB->state || (CB_INVALID == pCB->state && CMD_END == pCB->cmds.back().type)) {
             VkCommandPool cmdPool = pCB->createInfo.commandPool;
-            if (!(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT & dev_data->commandPoolMap[cmdPool].createFlags)) {
+            auto pPool = getCommandPoolNode(dev_data, cmdPool);
+            if (!(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT & pPool->createFlags)) {
                 skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             (uint64_t)commandBuffer, __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER_RESET, "DS",
@@ -6336,7 +6338,8 @@ ResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flag
     std::unique_lock<std::mutex> lock(global_lock);
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     VkCommandPool cmdPool = pCB->createInfo.commandPool;
-    if (!(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT & dev_data->commandPoolMap[cmdPool].createFlags)) {
+    auto pPool = getCommandPoolNode(dev_data, cmdPool);
+    if (!(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT & pPool->createFlags)) {
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                              (uint64_t)commandBuffer, __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER_RESET, "DS",
                              "Attempt to reset command buffer (0x%" PRIxLEAST64 ") created from command pool (0x%" PRIxLEAST64
