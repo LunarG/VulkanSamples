@@ -5324,7 +5324,7 @@ DestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, const Vk
 //  If this is a secondary command buffer, then make sure its primary is also in-flight
 //  If primary is not in-flight, then remove secondary from global in-flight set
 // This function is only valid at a point when cmdBuffer is being reset or freed
-static bool checkAndClearCommandBufferInFlight(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node, const char *action) {
+static bool checkCommandBufferInFlight(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node, const char *action) {
     bool skip_call = false;
     if (dev_data->globalInFlightCmdBuffers.count(cb_node->commandBuffer)) {
         // Primary CB or secondary where primary is also in-flight is an error
@@ -5335,24 +5335,32 @@ static bool checkAndClearCommandBufferInFlight(layer_data *dev_data, const GLOBA
                 reinterpret_cast<const uint64_t &>(cb_node->commandBuffer), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER_RESET, "DS",
                 "Attempt to %s command buffer (0x%" PRIxLEAST64 ") which is in use.", action,
                 reinterpret_cast<const uint64_t &>(cb_node->commandBuffer));
-        } else { // Secondary CB w/o primary in-flight, remove from in-flight
-            dev_data->globalInFlightCmdBuffers.erase(cb_node->commandBuffer);
         }
     }
     return skip_call;
 }
+
 // Iterate over all cmdBuffers in given commandPool and verify that each is not in use
-static bool checkAndClearCommandBuffersInFlight(layer_data *dev_data, const VkCommandPool commandPool, const char *action) {
+static bool checkCommandBuffersInFlight(layer_data *dev_data, const VkCommandPool commandPool, const char *action) {
     bool skip_call = false;
     auto pool_data = dev_data->commandPoolMap.find(commandPool);
     if (pool_data != dev_data->commandPoolMap.end()) {
         for (auto cmd_buffer : pool_data->second.commandBuffers) {
             if (dev_data->globalInFlightCmdBuffers.count(cmd_buffer)) {
-                skip_call |= checkAndClearCommandBufferInFlight(dev_data, getCBNode(dev_data, cmd_buffer), action);
+                skip_call |= checkCommandBufferInFlight(dev_data, getCBNode(dev_data, cmd_buffer), action);
             }
         }
     }
     return skip_call;
+}
+
+static void clearCommandBuffersInFlight(layer_data *dev_data, const VkCommandPool commandPool) {
+    auto pool_data = dev_data->commandPoolMap.find(commandPool);
+    if (pool_data != dev_data->commandPoolMap.end()) {
+        for (auto cmd_buffer : pool_data->second.commandBuffers) {
+            dev_data->globalInFlightCmdBuffers.erase(cmd_buffer);
+        }
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -5363,9 +5371,10 @@ FreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandB
     std::unique_lock<std::mutex> lock(global_lock);
     for (uint32_t i = 0; i < commandBufferCount; i++) {
         auto cb_pair = dev_data->commandBufferMap.find(pCommandBuffers[i]);
-        skip_call |= checkAndClearCommandBufferInFlight(dev_data, cb_pair->second, "free");
         // Delete CB information structure, and remove from commandBufferMap
         if (cb_pair != dev_data->commandBufferMap.end()) {
+            skip_call |= checkCommandBufferInFlight(dev_data, cb_pair->second, "free");
+            dev_data->globalInFlightCmdBuffers.erase(cb_pair->first);
             // reset prior to delete for data clean-up
             resetCB(dev_data, (*cb_pair).second->commandBuffer);
             delete (*cb_pair).second;
@@ -5416,7 +5425,8 @@ DestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocatio
     bool skipCall = false;
     std::unique_lock<std::mutex> lock(global_lock);
     // Verify that command buffers in pool are complete (not in-flight)
-    VkBool32 result = checkAndClearCommandBuffersInFlight(dev_data, commandPool, "destroy command pool with");
+    VkBool32 result = checkCommandBuffersInFlight(dev_data, commandPool, "destroy command pool with");
+    clearCommandBuffersInFlight(dev_data, commandPool);
     // Must remove cmdpool from cmdpoolmap, after removing all cmdbuffers in its list from the commandPoolMap
     auto pool_it = dev_data->commandPoolMap.find(commandPool);
     if (pool_it != dev_data->commandPoolMap.end()) {
@@ -5444,7 +5454,7 @@ ResetCommandPool(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetF
     bool skipCall = false;
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
 
-    if (checkAndClearCommandBuffersInFlight(dev_data, commandPool, "reset command pool with"))
+    if (checkCommandBuffersInFlight(dev_data, commandPool, "reset command pool with"))
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
     if (!skipCall)
@@ -5453,6 +5463,7 @@ ResetCommandPool(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetF
     // Reset all of the CBs allocated from this pool
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
+        clearCommandBuffersInFlight(dev_data, commandPool);
         auto it = dev_data->commandPoolMap[commandPool].commandBuffers.begin();
         while (it != dev_data->commandPoolMap[commandPool].commandBuffers.end()) {
             resetCB(dev_data, (*it));
@@ -6326,13 +6337,14 @@ ResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flag
                              ") that does NOT have the VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT bit set.",
                              (uint64_t)commandBuffer, (uint64_t)cmdPool);
     }
-    skip_call |= checkAndClearCommandBufferInFlight(dev_data, pCB, "reset");
+    skip_call |= checkCommandBufferInFlight(dev_data, pCB, "reset");
     lock.unlock();
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->ResetCommandBuffer(commandBuffer, flags);
     if (VK_SUCCESS == result) {
         lock.lock();
+        dev_data->globalInFlightCmdBuffers.erase(commandBuffer);
         resetCB(dev_data, commandBuffer);
         lock.unlock();
     }
