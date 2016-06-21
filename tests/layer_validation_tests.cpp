@@ -8988,8 +8988,8 @@ TEST_F(VkLayerTest, RenderPassIncompatible) {
     rpci.attachmentCount = 1;
     VkAttachmentDescription attach_desc = {};
     attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
-    // Format incompatible with PSO RP color attach format RGBA8_UNORM
-    attach_desc.format = VK_FORMAT_UNDEFINED;
+    // Format incompatible with PSO RP color attach format B8G8R8A8_UNORM
+    attach_desc.format = VK_FORMAT_R8G8B8A8_UNORM;
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;
