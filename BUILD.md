@@ -19,7 +19,7 @@ Please see the [CONTRIBUTING](CONTRIBUTING.md) file in this respository for more
 
 To create your local git repository:
 ```
-git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers
+git clone https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers 
 ```
 
 ## Linux Build
@@ -30,7 +30,7 @@ The build generates the loader, layers, and tests.
 This repo has been built and tested on Ubuntu 14.04.3 LTS, 14.10, 15.04, 15.10, and 16.04 LTS.
 It should be straightforward to use it on other Linux distros.
 
-These packages are needed to build this repository:
+These packages are needed to build this repository: 
 ```
 sudo apt-get install git cmake build-essential bison libx11-dev libxcb1-dev
 ```
@@ -60,7 +60,7 @@ packaged, and how developers can point to ICDs and layers within their builds.
 
 ## Validation Test
 
-The test executables can be found in the dbuild/tests directory.
+The test executables can be found in the dbuild/tests directory. 
 Some of the tests that are available:
 - vk\_layer\_validation\_tests: Test Vulkan layers.
 
@@ -107,12 +107,12 @@ Build all Windows targets after installing required software and cloning the Loa
 ```
 cd Vulkan-LoaderAndValidationLayers  # cd to the root of the cloned git repository
 update_external_sources.bat --all
-build_windows_targets.bat
+build_windows_targets.bat 
 ```
 
 At this point, you can use Windows Explorer to launch Visual Studio by double-clicking on the "VULKAN.sln" file in the \build folder.  Once Visual Studio comes up, you can select "Debug" or "Release" from a drop-down list.  You can start a build with either the menu (Build->Build Solution), or a keyboard shortcut (Ctrl+Shift+B).  As part of the build process, Python scripts will create additional Visual Studio files and projects, along with additional source files.  All of these auto-generated files are under the "build" folder.
 
-Vulkan programs must be able to find and use the vulkan-1.dll library. Make sure it is either installed in the system library directory (typically C:\Windows\System32), or the PATH environment variable includes the folder that it is located in.  Similarly, Vulkan layers require access to the VkLayer-utils.dll shared layer utility library. This file must be copied to the system library directory or into the directory containing the program executable.
+Vulkan programs must be able to find and use the vulkan-1.dll library. Make sure it is either installed in the C:\Windows\System32 folder, or the PATH environment variable includes the folder that it is located in.
 
 To run Vulkan programs you must tell the icd loader where to find the libraries.
 This is described in a `LoaderAndLayerInterface` document in the `loader` folder in this repository.
@@ -185,7 +185,7 @@ The [Qt Creator IDE](https://qt.io/download-open-source/#section-2) can open a r
 - Then do the same with the Vulkan-LoaderAndValidationLayers CMakeList.txt file.
 - In order to debug with QtCreator, a [Microsoft WDK: eg WDK 10](http://go.microsoft.com/fwlink/p/?LinkId=526733) is required. Note that installing the WDK breaks the MSVC vcvarsall.bat build scripts provided by MSVC, requiring that the LIB, INCLUDE, and PATH env variables be set to the WDK paths by some other means
 
-## Loader and Validation Layer Dependencies
+## Loader and Validation Layer Dependencies 
 gslang and SPIRV-Tools repos are required to build and run Loader and Validation Layer components. They are not git sub-modules of Vulkan-LoaderAndValidationLayers but Vulkan-LoaderAndValidationLayers is linked to specific revisions of gslang and spirv-tools. These can be automatically cloned and built to predefined locations with the update\_external\_sources scripts. If a custom configuration is required, do the following steps:
 
 1) clone the repos:
@@ -219,7 +219,7 @@ _on windows_
     Especially valuable are the BASH shell and git packages.
   - If you don't want to use Cygwin, there are other shells and environments that can be used.
     You can also use a Git package that doesn't come from Cygwin.
-
-- [Ninja on all platforms](https://github.com/ninja-build/ninja/releases). [The Ninja-build project](ninja-build.org). [Ninja Users Manual](ninja-build.org/manual.html)
+	
+- [Ninja on all platforms](https://github.com/ninja-build/ninja/releases). [The Ninja-build project](ninja-build.org). [Ninja Users Manual](ninja-build.org/manual.html) 
 
 - [QtCreator as IDE for CMake builds on all platforms](https://qt.io/download-open-source/#section-2)
