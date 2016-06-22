@@ -8250,21 +8250,32 @@ static bool ValidateAttachmentImageUsage(layer_data *dev_data, const VkFramebuff
     return skip_call;
 }
 
+// Validate VkFramebufferCreateInfo state prior to calling down chain to create Framebuffer object
+//  Return true if an error is encountered and callback returns true to skip call down chain
+//   false indicates that call down chain should proceed
+static bool PreCallValidateCreateFramebuffer(layer_data *dev_data, const VkFramebufferCreateInfo *pCreateInfo) {
+    // TODO : Verify that renderPass FB is created with is compatible with FB
+    bool skip_call = false;
+    skip_call |= ValidateAttachmentImageUsage(dev_data, pCreateInfo);
+    return skip_call;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo *pCreateInfo,
                                                  const VkAllocationCallbacks *pAllocator,
                                                  VkFramebuffer *pFramebuffer) {
-    bool skip_call = false;
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
-    // TODO : Verify that renderPass FB is created with is compatible with FB
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    bool skip_call = PreCallValidateCreateFramebuffer(dev_data, pCreateInfo);
+    lock.unlock();
 
-    skip_call |= ValidateAttachmentImageUsage(dev_data, pCreateInfo);
-    if (skip_call == false) {
-        result = dev_data->device_dispatch_table->CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
-    }
+    if (skip_call)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+
+    VkResult result = dev_data->device_dispatch_table->CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
+
     if (VK_SUCCESS == result) {
         // Shadow create info and store in map
-        std::lock_guard<std::mutex> lock(global_lock);
+        lock.lock();
 
         dev_data->frameBufferMap.insert(
             std::make_pair(*pFramebuffer, unique_ptr<FRAMEBUFFER_NODE>(new FRAMEBUFFER_NODE(
