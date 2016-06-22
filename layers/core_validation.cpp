@@ -8250,7 +8250,7 @@ static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebuf
                 "renderPass (0x%" PRIxLEAST64 ") being used to create Framebuffer.",
                 pCreateInfo->attachmentCount, rpci->attachmentCount, reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass));
         } else {
-            // attachmentCounts match, so make sure corresponding Formats match
+            // attachmentCounts match, so make sure corresponding attachment details line up
             const VkImageView *image_views = pCreateInfo->pAttachments;
             for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
                 VkImageViewCreateInfo *ivci = getImageViewData(dev_data, image_views[i]);
@@ -8264,11 +8264,17 @@ static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebuf
                         i, string_VkFormat(ivci->format), string_VkFormat(rpci->pAttachments[i].format),
                         reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass));
                 }
-#if 0 // Enabling 1 new check/test at a time
                 const VkImageCreateInfo *ici = &getImageNode(dev_data, ivci->image)->createInfo;
                 if (ici->samples != rpci->pAttachments[i].samples) {
-                    // TODO : ERROR
+                    skip_call |= log_msg(
+                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                        reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass), __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE,
+                        "DS", "vkCreateFramebuffer(): VkFramebufferCreateInfo attachment #%u has %s samples that do not match "
+                              "the %s samples used by the corresponding attachment for renderPass (0x%" PRIxLEAST64 ").",
+                        i, string_VkSampleCountFlagBits(ici->samples), string_VkSampleCountFlagBits(rpci->pAttachments[i].samples),
+                        reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass));
                 }
+#if 0 // Enabling 1 new check/test at a time
                 // Verify that view only has a single mip level
                 if (ivci->subresourceRange.levelCount != 1) {
                     // TODO
@@ -9973,6 +9979,7 @@ GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCoun
             image_ci.arrayLayers = swapchain_node->createInfo.imageArrayLayers;
             image_ci.usage = swapchain_node->createInfo.imageUsage;
             image_ci.format = swapchain_node->createInfo.imageFormat;
+            image_ci.samples = VK_SAMPLE_COUNT_1_BIT;
             image_ci.extent.width = swapchain_node->createInfo.imageExtent.width;
             image_ci.extent.height = swapchain_node->createInfo.imageExtent.height;
             image_ci.sharingMode = swapchain_node->createInfo.imageSharingMode;
