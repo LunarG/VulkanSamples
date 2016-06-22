@@ -3221,24 +3221,24 @@ TEST_F(VkLayerTest, UnusedPreserveAttachment) {
     }
 }
 
-TEST_F(VkLayerTest, AttachmentUsageMismatch) {
-    TEST_DESCRIPTION("Create a framebuffer where a subpass uses a color image "
-                     "in the depthStencil attachment point");
+TEST_F(VkLayerTest, FramebufferCreateErrors) {
+    TEST_DESCRIPTION("Hit errors when attempting to create a framebuffer :\n"
+                     " 1. Mismatch between fb & renderPass attachmentCount\n"
+                     " 2. Use a color image as depthStencil attachment");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "conflicts with the image's IMAGE_USAGE flags");
+        "vkCreateFramebuffer(): VkFramebufferCreateInfo attachmentCount of 2 "
+        "does not match attachmentCount of 1 of ");
 
-    // Create a renderPass with a depth-stencil attachment created with
-    // IMAGE_USAGE_COLOR_ATTACHMENT
+    // Create a renderPass with a single color attachment
     VkAttachmentReference attach = {};
     attach.layout = VK_IMAGE_LAYOUT_GENERAL;
     VkSubpassDescription subpass = {};
-    // Add our color attachment to pDepthStencilAttachment
-    subpass.pDepthStencilAttachment = &attach;
+    subpass.pColorAttachments = &attach;
     VkRenderPassCreateInfo rpci = {};
     rpci.subpassCount = 1;
     rpci.pSubpasses = &subpass;
@@ -3251,14 +3251,16 @@ TEST_F(VkLayerTest, AttachmentUsageMismatch) {
     VkResult err = vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
     ASSERT_VK_SUCCESS(err);
 
-    VkImageView imageView =
-        m_renderTargets[0]->targetView(VK_FORMAT_B8G8R8A8_UNORM);
+    VkImageView ivs[2];
+    ivs[0] = m_renderTargets[0]->targetView(VK_FORMAT_B8G8R8A8_UNORM);
+    ivs[1] = m_renderTargets[0]->targetView(VK_FORMAT_B8G8R8A8_UNORM);
     VkFramebufferCreateInfo fb_info = {};
     fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     fb_info.pNext = NULL;
     fb_info.renderPass = rp;
-    fb_info.attachmentCount = 1;
-    fb_info.pAttachments = &imageView;
+    // Set mis-matching attachmentCount
+    fb_info.attachmentCount = 2;
+    fb_info.pAttachments = ivs;
     fb_info.width = 100;
     fb_info.height = 100;
     fb_info.layers = 1;
@@ -3267,11 +3269,33 @@ TEST_F(VkLayerTest, AttachmentUsageMismatch) {
     err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
 
     m_errorMonitor->VerifyFound();
-
     if (err == VK_SUCCESS) {
         vkDestroyFramebuffer(m_device->device(), fb, NULL);
     }
     vkDestroyRenderPass(m_device->device(), rp, NULL);
+
+    // Create a renderPass with a depth-stencil attachment created with
+    // IMAGE_USAGE_COLOR_ATTACHMENT
+    // Add our color attachment to pDepthStencilAttachment
+    subpass.pDepthStencilAttachment = &attach;
+    subpass.pColorAttachments = NULL;
+    VkRenderPass rp_ds;
+    err = vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp_ds);
+    ASSERT_VK_SUCCESS(err);
+    // Set correct attachment count, but attachment has COLOR usage bit set
+    fb_info.attachmentCount = 1;
+    fb_info.renderPass = rp_ds;
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        " conflicts with the image's IMAGE_USAGE flags ");
+    err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
+
+    m_errorMonitor->VerifyFound();
+    if (err == VK_SUCCESS) {
+        vkDestroyFramebuffer(m_device->device(), fb, NULL);
+    }
+    vkDestroyRenderPass(m_device->device(), rp_ds, NULL);
 }
 
 // This is a positive test.  No errors should be generated.
