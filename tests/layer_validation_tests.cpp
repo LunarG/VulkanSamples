@@ -3224,7 +3224,8 @@ TEST_F(VkLayerTest, UnusedPreserveAttachment) {
 TEST_F(VkLayerTest, FramebufferCreateErrors) {
     TEST_DESCRIPTION("Hit errors when attempting to create a framebuffer :\n"
                      " 1. Mismatch between fb & renderPass attachmentCount\n"
-                     " 2. Use a color image as depthStencil attachment");
+                     " 2. Use a color image as depthStencil attachment\n"
+                     " 3. Mismatch fb & renderPass attachment formats\n");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -3244,7 +3245,7 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     rpci.pSubpasses = &subpass;
     rpci.attachmentCount = 1;
     VkAttachmentDescription attach_desc = {};
-    attach_desc.format = VK_FORMAT_UNDEFINED;
+    attach_desc.format = VK_FORMAT_B8G8R8A8_UNORM;
     rpci.pAttachments = &attach_desc;
     rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     VkRenderPass rp;
@@ -3296,6 +3297,28 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
         vkDestroyFramebuffer(m_device->device(), fb, NULL);
     }
     vkDestroyRenderPass(m_device->device(), rp_ds, NULL);
+
+    // Create new renderpass with alternate attachment format from fb
+    attach_desc.format = VK_FORMAT_R8G8B8A8_UNORM;
+    subpass.pDepthStencilAttachment = NULL;
+    subpass.pColorAttachments = &attach;
+    err = vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    // Cause error due to mis-matched formats between rp & fb
+    //  rp attachment 0 now has RGBA8 but corresponding fb attach is BGRA8
+    fb_info.renderPass = rp;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        " has format of VK_FORMAT_B8G8R8A8_UNORM that does not match ");
+    err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
+
+    m_errorMonitor->VerifyFound();
+    if (err == VK_SUCCESS) {
+        vkDestroyFramebuffer(m_device->device(), fb, NULL);
+    }
+
+    vkDestroyRenderPass(m_device->device(), rp, NULL);
 }
 
 // This is a positive test.  No errors should be generated.
