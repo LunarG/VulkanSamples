@@ -2480,6 +2480,8 @@ void loader_icd_scan(const struct loader_instance *inst,
             return;
         }
         char *file_vers = cJSON_Print(item);
+        loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
+                   "Found manifest file %s, version %s", file_str, file_vers);
         // Get the major/minor/and patch as integers for easier comparison
         vers_tok = strtok(file_vers, ".\"\n\r");
         if (NULL != vers_tok) {
@@ -2493,8 +2495,6 @@ void loader_icd_scan(const struct loader_instance *inst,
                 }
             }
         }
-        loader_log(inst, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, 0,
-                   "Found manifest file %s, version %s", file_str, file_vers);
         if (file_major_vers != 1 || file_minor_vers != 0 || file_patch_vers > 1)
             loader_log(inst, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "Unexpected manifest file version (expected 1.0.0 or 1.0.1), may "
