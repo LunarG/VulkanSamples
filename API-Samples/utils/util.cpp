@@ -168,8 +168,6 @@ void set_image_layout(struct sample_info &info, VkImage image,
     }
 
     if (new_image_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-        image_memory_barrier.srcAccessMask =
-            VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
         image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     }
 
