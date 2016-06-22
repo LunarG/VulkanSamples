@@ -4140,6 +4140,10 @@ static bool ValidateCmdBufImageLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB
 // Track which resources are in-flight by atomically incrementing their "in_use" count
 static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *pCB) {
     bool skip_call = false;
+
+    pCB->in_use.fetch_add(1);
+    my_data->globalInFlightCmdBuffers.insert(pCB->commandBuffer);
+
     for (auto drawDataElement : pCB->drawData) {
         for (auto buffer : drawDataElement.buffers) {
             auto buffer_node = getBufferNode(my_data, buffer);
@@ -4390,27 +4394,6 @@ SubmitFence(QUEUE_NODE *pQueue, FENCE_NODE *pFence)
     pQueue->lastFences.push_back(pFence->fence);
 }
 
-static void markCommandBuffersInFlight(layer_data *my_data, VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
-                                       VkFence fence) {
-    auto pQueue = getQueueNode(my_data, queue);
-    if (pQueue) {
-        for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
-            const VkSubmitInfo *submit = &pSubmits[submit_idx];
-            for (uint32_t i = 0; i < submit->commandBufferCount; ++i) {
-                // Add cmdBuffers to the global set and increment count
-                GLOBAL_CB_NODE *pCB = getCBNode(my_data, submit->pCommandBuffers[i]);
-                for (auto secondaryCmdBuffer : pCB->secondaryCommandBuffers) {
-                    my_data->globalInFlightCmdBuffers.insert(secondaryCmdBuffer);
-                    GLOBAL_CB_NODE *pSubCB = getCBNode(my_data, secondaryCmdBuffer);
-                    pSubCB->in_use.fetch_add(1);
-                }
-                my_data->globalInFlightCmdBuffers.insert(submit->pCommandBuffers[i]);
-                pCB->in_use.fetch_add(1);
-            }
-        }
-    }
-}
-
 static bool validateCommandBufferSimultaneousUse(layer_data *dev_data, GLOBAL_CB_NODE *pCB) {
     bool skip_call = false;
     if (dev_data->globalInFlightCmdBuffers.count(pCB->commandBuffer) &&
@@ -4504,7 +4487,14 @@ static bool validateCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *pCB
 
 static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *pCB) {
     // Track in-use for resources off of primary and any secondary CBs
-    bool skipCall = validateAndIncrementResources(dev_data, pCB);
+    bool skipCall = false;
+
+    // If USAGE_SIMULTANEOUS_USE_BIT not set then CB cannot already be executing
+    // on device
+    skipCall |= validateCommandBufferSimultaneousUse(dev_data, pCB);
+
+    skipCall |= validateAndIncrementResources(dev_data, pCB);
+
     if (!pCB->secondaryCommandBuffers.empty()) {
         for (auto secondaryCmdBuffer : pCB->secondaryCommandBuffers) {
             GLOBAL_CB_NODE *pSubCB = getCBNode(dev_data, secondaryCmdBuffer);
@@ -4522,10 +4512,9 @@ static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NO
             }
         }
     }
+
     skipCall |= validateCommandBufferState(dev_data, pCB);
-    // If USAGE_SIMULTANEOUS_USE_BIT not set then CB cannot already be executing
-    // on device
-    skipCall |= validateCommandBufferSimultaneousUse(dev_data, pCB);
+
     return skipCall;
 }
 
@@ -4659,7 +4648,6 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
 
         submitTarget.emplace_back(cbs, semaphoreList);
     }
-    markCommandBuffersInFlight(dev_data, queue, submitCount, pSubmits, fence);
     lock.unlock();
     if (!skipCall)
         result = dev_data->device_dispatch_table->QueueSubmit(queue, submitCount, pSubmits, fence);
