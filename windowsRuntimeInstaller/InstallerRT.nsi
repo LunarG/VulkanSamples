@@ -618,30 +618,43 @@ Section "uninstall"
 
         # Delete vulkaninfo.exe in C:\Windows\System32 and C:\Windows\SysWOW64
         Delete /REBOOTOK $WINDIR\SysWow64\vulkaninfo.exe
-        Delete /REBOOTOK "$WINDIR\SysWow64\vulkaninfo-$FileVersion.exe"
         Delete /REBOOTOK $WINDIR\System32\vulkaninfo.exe
-        Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
 
-        # Delete vullkan dll files: vulkan-<majorabi>.dll and vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll
+        # Delete vulkan-<majorabi>.dll in C:\Windows\System32 and C:\Windows\SysWOW64
         Delete /REBOOTOK $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
-        Delete /REBOOTOK $WINDIR\SysWow64\vulkan-$FileVersion.dll
         Delete /REBOOTOK $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
-        Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
 
     # Else, running on a 32-bit OS machine
     ${Else}
 
         # Delete vulkaninfo.exe in C:\Windows\System32
         Delete /REBOOTOK $WINDIR\System32\vulkaninfo.exe
-        Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
 
-        # Delete vullkan dll files: vulkan-<majorabi>.dll and vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll
+        # Delete vulkan-<majorabi>.dll in C:\Windows\System32
         Delete /REBOOTOK $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
-        Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
 
     ${EndIf}
     StrCpy $1 80
     Call un.CheckForError
+
+    # If Ref Count is zero, remove files in C:\Windows\System32 and C:\Windows\SysWow64
+    ${If} $IC <= 0
+
+        ${If} ${RunningX64}
+            # Delete vulkaninfo.exe in C:\Windows\System32 and C:\Windows\SysWOW64
+            Delete /REBOOTOK "$WINDIR\SysWow64\vulkaninfo-$FileVersion.exe"
+            Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
+            # Delete vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll from sys dirs
+            Delete /REBOOTOK $WINDIR\SysWow64\vulkan-$FileVersion.dll
+            Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
+        ${Else}
+            # Delete vulkaninfo.exe in C:\Windows\System32
+            Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
+            # Delete vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll from sys dir
+            Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
+        ${EndIf}
+
+    ${Endif}
 
     # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
     # vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll, and to set up layer registry
@@ -664,7 +677,7 @@ Section "uninstall"
     ${Endif}
     Call un.CheckForError
 
-    # If Ref Count is zero, uninstall everything
+    # If Ref Count is zero, remove install dir
     ${If} $IC <= 0
 
         # Remove files in install dir
