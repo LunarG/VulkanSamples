@@ -131,6 +131,7 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_FRAMEBUFFER_INCOMPATIBLE,         // Incompatible framebuffer between
                                                 // secondary cmdBuffer and active
                                                 // renderPass
+    DRAWSTATE_INVALID_FRAMEBUFFER_CREATE_INFO,  // Invalid VkFramebufferCreateInfo state
     DRAWSTATE_INVALID_RENDERPASS,               // Use of a NULL or otherwise invalid
                                                 // RenderPass object
     DRAWSTATE_INVALID_RENDERPASS_CMD,           // Invalid cmd submitted while a

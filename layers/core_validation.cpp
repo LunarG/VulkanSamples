@@ -8274,11 +8274,16 @@ static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebuf
                         i, string_VkSampleCountFlagBits(ici->samples), string_VkSampleCountFlagBits(rpci->pAttachments[i].samples),
                         reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass));
                 }
-#if 0 // Enabling 1 new check/test at a time
                 // Verify that view only has a single mip level
                 if (ivci->subresourceRange.levelCount != 1) {
-                    // TODO
+                    skip_call |= log_msg(
+                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                        reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass), __LINE__, DRAWSTATE_INVALID_FRAMEBUFFER_CREATE_INFO,
+                        "DS", "vkCreateFramebuffer(): VkFramebufferCreateInfo attachment #%u has mip levelCount of %u "
+                              "but only a single mip level (levelCount ==  1) is allowed when creating a Framebuffer.",
+                        i, ivci->subresourceRange.levelCount);
                 }
+#if 0 // Enabling 1 new check/test at a time
                 const uint32_t mip_level = ivci->subresourceRange.baseMipLevel;
                 if ((ivci->subresourceRange.layerCount < pCreateInfo->layers) ||
                     ((ici->extent.width >> mip_level) < pCreateInfo->width) ||

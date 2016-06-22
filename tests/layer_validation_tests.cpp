@@ -3226,7 +3226,8 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
                      " 1. Mismatch between fb & renderPass attachmentCount\n"
                      " 2. Use a color image as depthStencil attachment\n"
                      " 3. Mismatch fb & renderPass attachment formats\n"
-                     " 4. Mismatch fb & renderPass attachment #samples\n");
+                     " 4. Mismatch fb & renderPass attachment #samples\n"
+                     " 5. FB attachment w/ non-1 mip-levels\n");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -3340,6 +3341,44 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
         vkDestroyFramebuffer(m_device->device(), fb, NULL);
     }
 
+    vkDestroyRenderPass(m_device->device(), rp, NULL);
+
+    // Create a custom imageView with non-1 mip levels
+    VkImageObj image(m_device);
+    image.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM,
+               VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+
+    VkImageView view;
+    VkImageViewCreateInfo ivci = {};
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.image = image.handle();
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ivci.format = VK_FORMAT_B8G8R8A8_UNORM;
+    ivci.subresourceRange.layerCount = 1;
+    ivci.subresourceRange.baseMipLevel = 0;
+    // Set level count 2 (only 1 is allowed for FB attachment)
+    ivci.subresourceRange.levelCount = 2;
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    err = vkCreateImageView(m_device->device(), &ivci, NULL, &view);
+    ASSERT_VK_SUCCESS(err);
+    // Re-create renderpass to have matching sample count
+    attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    err = vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    fb_info.renderPass = rp;
+    fb_info.pAttachments = &view;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " has mip levelCount of 2 but only ");
+    err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
+
+    m_errorMonitor->VerifyFound();
+    if (err == VK_SUCCESS) {
+        vkDestroyFramebuffer(m_device->device(), fb, NULL);
+    }
+
+    vkDestroyImageView(m_device->device(), view, NULL);
     vkDestroyRenderPass(m_device->device(), rp, NULL);
 }
 
