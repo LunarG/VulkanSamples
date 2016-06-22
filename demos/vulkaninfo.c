@@ -483,7 +483,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu) {
     };
     VkResult U_ASSERT_ONLY err;
 
-    //Device extensions
+    // Device extensions
     app_get_physical_device_layer_extensions(
         gpu, NULL, &gpu->device_extension_count, &gpu->device_extensions);
 
@@ -584,7 +584,8 @@ static void app_get_instance_extensions(struct app_instance *inst) {
 
     // Collect global extensions
     inst->global_extension_count = 0;
-    // Gets instance extensions, if no layer was specified in the first paramteter
+    // Gets instance extensions, if no layer was specified in the first
+    // paramteter
     app_get_global_layer_extensions(NULL, &inst->global_extension_count,
                                     &inst->global_extensions);
 }
@@ -600,8 +601,9 @@ static void app_create_instance(struct app_instance *inst) {
                                            // extension names
     for (i = 0; (i < inst->global_extension_count); i++) {
         const char *found_name = inst->global_extensions[i].extensionName;
-        if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME, found_name))
-            {ext_names[ext_count++] = VK_KHR_SURFACE_EXTENSION_NAME;}
+        if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME, found_name)) {
+            ext_names[ext_count++] = VK_KHR_SURFACE_EXTENSION_NAME;
+        }
     }
 
     if (ext_count)
@@ -610,20 +612,24 @@ static void app_create_instance(struct app_instance *inst) {
              i++) {
             const char *found_name = inst->global_extensions[i].extensionName;
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-            if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, found_name))
-                {ext_names[ext_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;}
+            if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, found_name)) {
+                ext_names[ext_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+            }
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
-            if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME, found_name))
-                {ext_names[ext_count++] = VK_KHR_XCB_SURFACE_EXTENSION_NAME;}
+            if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME, found_name)) {
+                ext_names[ext_count++] = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
+            }
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-            if (!strcmp(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, found_name))
-                {ext_names[ext_count++] = VK_KHR_XLIB_SURFACE_EXTENSION_NAME;}
+            if (!strcmp(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, found_name)) {
+                ext_names[ext_count++] = VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
+            }
 #endif
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
-            if (!strcmp(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME, found_name))
-                {ext_names[ext_count++] = VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;}
+            if (!strcmp(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME, found_name)) {
+                ext_names[ext_count++] = VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;
+            }
 #endif
         }
     // If we don't find the KHR_SURFACE extension and at least one other
@@ -1240,6 +1246,17 @@ app_dump_extensions(const char *indent, const char *layer_name,
     fflush(stdout);
 }
 
+// Returns true if the named extension is in the list of extensions.
+static bool has_extension(const char *extension_name,
+                          const uint32_t extension_count,
+                          const VkExtensionProperties *extension_properties) {
+    for (uint32_t i = 0; i < extension_count; i++) {
+        if (!strcmp(extension_name, extension_properties[i].extensionName))
+            return true;
+    }
+    return false;
+}
+
 static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id) {
     const VkQueueFamilyProperties *props = &gpu->queue_props[id];
 
@@ -1319,7 +1336,7 @@ static void app_gpu_dump(const struct app_gpu *gpu) {
     uint32_t i;
 
     printf("\nDevice Properties and Extensions :\n");
-    printf(  "==================================\n");
+    printf("==================================\n");
     printf("GPU%u\n", gpu->id);
     app_gpu_dump_props(gpu);
     printf("\n");
@@ -1387,7 +1404,7 @@ int main(int argc, char **argv) {
     app_create_instance(&inst);
 
     printf("\nInstance Extensions:\n");
-    printf(  "====================\n");
+    printf("====================\n");
     app_dump_extensions("", "Instance", inst.global_extension_count,
                         inst.global_extensions);
 
@@ -1425,19 +1442,19 @@ int main(int argc, char **argv) {
                layer_prop->layerName, (char *)layer_prop->description,
                spec_version, layer_version);
 
-        app_dump_extensions("\t","Layer",
+        app_dump_extensions("\t", "Layer",
                             inst.global_layers[i].extension_count,
                             inst.global_layers[i].extension_properties);
 
-        char* layerName=inst.global_layers[i].layer_properties.layerName;
-        printf("\tDevices \tcount = %d\n",gpu_count);
+        char *layerName = inst.global_layers[i].layer_properties.layerName;
+        printf("\tDevices \tcount = %d\n", gpu_count);
         for (uint32_t j = 0; j < gpu_count; j++) {
             printf("\t\tGPU id       : %u (%s)\n", j, gpus[j].props.deviceName);
-            uint32_t count=0;
-            VkExtensionProperties* props;
+            uint32_t count = 0;
+            VkExtensionProperties *props;
             app_get_physical_device_layer_extensions(&gpus[j], layerName,
                                                      &count, &props);
-            app_dump_extensions("\t\t","Layer-Device",count,props);
+            app_dump_extensions("\t\t", "Layer-Device", count, props);
             free(props);
         }
         printf("\n");
@@ -1453,39 +1470,48 @@ int main(int argc, char **argv) {
 
 //--WIN32--
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    app_create_win32_window(&inst);
-    for (i = 0; i < gpu_count; i++) {
-        app_create_win32_surface(&inst, &gpus[i]);
-        printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
-        printf("Surface type : %s\n", VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-        formatCount += app_dump_surface_formats(&inst, &gpus[i]);
-        app_destroy_surface(&inst);
+    if (has_extension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+                      inst.global_extension_count, inst.global_extensions)) {
+        app_create_win32_window(&inst);
+        for (i = 0; i < gpu_count; i++) {
+            app_create_win32_surface(&inst, &gpus[i]);
+            printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
+            printf("Surface type : %s\n", VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+            formatCount += app_dump_surface_formats(&inst, &gpus[i]);
+            app_destroy_surface(&inst);
+        }
+        app_destroy_win32_window(&inst);
     }
-    app_destroy_win32_window(&inst);
 #endif
 //--XCB--
 #ifdef VK_USE_PLATFORM_XCB_KHR
-    app_create_xcb_window(&inst);
-    for (i = 0; i < gpu_count; i++) {
-        app_create_xcb_surface(&inst, &gpus[i]);
-        printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
-        printf("Surface type : %s\n", VK_KHR_XCB_SURFACE_EXTENSION_NAME);
-        formatCount += app_dump_surface_formats(&inst, &gpus[i]);
-        app_destroy_surface(&inst);
+    if (has_extension(VK_KHR_XCB_SURFACE_EXTENSION_NAME,
+                      inst.global_extension_count, inst.global_extensions)) {
+        app_create_xcb_window(&inst);
+        for (i = 0; i < gpu_count; i++) {
+            app_create_xcb_surface(&inst, &gpus[i]);
+            printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
+            printf("Surface type : %s\n", VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+            formatCount += app_dump_surface_formats(&inst, &gpus[i]);
+            app_destroy_surface(&inst);
+        }
+        app_destroy_xcb_window(&inst);
     }
-    app_destroy_xcb_window(&inst);
 #endif
 //--XLIB--
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-    app_create_xlib_window(&inst);
-    for (i = 0; i < gpu_count; i++) {
-        app_create_xlib_surface(&inst, &gpus[i]);
-        printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
-        printf("Surface type : %s\n", VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
-        formatCount += app_dump_surface_formats(&inst, &gpus[i]);
-        app_destroy_surface(&inst);
+    if (has_extension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
+                      inst.global_extension_count, inst.global_extensions)) {
+        app_create_xlib_window(&inst);
+        for (i = 0; i < gpu_count; i++) {
+            app_create_xlib_surface(&inst, &gpus[i]);
+            printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
+            printf("Surface type : %s\n", VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+            formatCount += app_dump_surface_formats(&inst, &gpus[i]);
+            app_destroy_surface(&inst);
+        }
+        app_destroy_xlib_window(&inst);
     }
-    app_destroy_xlib_window(&inst);
 #endif
     // TODO: Android / Wayland / MIR
     if (!formatCount)
