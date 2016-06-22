@@ -142,7 +142,7 @@ struct layer_data {
     unordered_map<VkQueryPool, QUERY_POOL_NODE> queryPoolMap;
     unordered_map<VkSemaphore, SEMAPHORE_NODE> semaphoreMap;
     unordered_map<VkCommandBuffer, GLOBAL_CB_NODE *> commandBufferMap;
-    unordered_map<VkFramebuffer, FRAMEBUFFER_NODE> frameBufferMap;
+    unordered_map<VkFramebuffer, unique_ptr<FRAMEBUFFER_NODE>> frameBufferMap;
     unordered_map<VkImage, vector<ImageSubresourcePair>> imageSubresourceMap;
     unordered_map<ImageSubresourcePair, IMAGE_LAYOUT_NODE> imageLayoutMap;
     unordered_map<VkRenderPass, RENDER_PASS_NODE *> renderPassMap;
@@ -2053,12 +2053,12 @@ static RENDER_PASS_NODE *getRenderPass(layer_data const *my_data, VkRenderPass r
     return it->second;
 }
 
-static FRAMEBUFFER_NODE *getFramebuffer(layer_data *my_data, VkFramebuffer framebuffer) {
+static FRAMEBUFFER_NODE *getFramebuffer(const layer_data *my_data, VkFramebuffer framebuffer) {
     auto it = my_data->frameBufferMap.find(framebuffer);
     if (it == my_data->frameBufferMap.end()) {
         return nullptr;
     }
-    return &it->second;
+    return it->second.get();
 }
 
 cvdescriptorset::DescriptorSetLayout const *getDescriptorSetLayout(layer_data const *my_data, VkDescriptorSetLayout dsLayout) {
@@ -5496,7 +5496,7 @@ DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocatio
     std::unique_lock<std::mutex> lock(global_lock);
     auto fbNode = dev_data->frameBufferMap.find(framebuffer);
     if (fbNode != dev_data->frameBufferMap.end()) {
-        for (auto cb : fbNode->second.referencingCmdBuffers) {
+        for (auto cb : fbNode->second->referencingCmdBuffers) {
             auto cbNode = dev_data->commandBufferMap.find(cb);
             if (cbNode != dev_data->commandBufferMap.end()) {
                 // Set CB as invalid and record destroyed framebuffer
@@ -5504,7 +5504,6 @@ DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocatio
                 cbNode->second->destroyedFramebuffers.insert(framebuffer);
             }
         }
-        delete [] fbNode->second.createInfo.pAttachments;
         dev_data->frameBufferMap.erase(fbNode);
     }
     lock.unlock();
@@ -8267,15 +8266,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFrameb
         // Shadow create info and store in map
         std::lock_guard<std::mutex> lock(global_lock);
 
+        dev_data->frameBufferMap.insert(
+            std::make_pair(*pFramebuffer, unique_ptr<FRAMEBUFFER_NODE>(new FRAMEBUFFER_NODE(
+                                              pCreateInfo, dev_data->renderPassMap[pCreateInfo->renderPass]->pCreateInfo))));
         auto & fbNode = dev_data->frameBufferMap[*pFramebuffer];
-        fbNode.createInfo = *pCreateInfo;
-        if (pCreateInfo->pAttachments) {
-            auto attachments = new VkImageView[pCreateInfo->attachmentCount];
-            memcpy(attachments,
-                   pCreateInfo->pAttachments,
-                   pCreateInfo->attachmentCount * sizeof(VkImageView));
-            fbNode.createInfo.pAttachments = attachments;
-        }
         for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
             VkImageView view = pCreateInfo->pAttachments[i];
             auto view_data = getImageViewData(dev_data, view);
@@ -8286,7 +8280,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFrameb
             get_mem_binding_from_object(dev_data, (uint64_t)(view_data->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                                         &fb_info.mem);
             fb_info.image = view_data->image;
-            fbNode.attachments.push_back(fb_info);
+            fbNode->attachments.push_back(fb_info);
         }
     }
     return result;
@@ -8389,7 +8383,7 @@ bool isRegionOverlapping(VkImageSubresourceRange range1, VkImageSubresourceRange
 static bool ValidateDependencies(const layer_data *my_data, FRAMEBUFFER_NODE const * framebuffer,
                                  RENDER_PASS_NODE const * renderPass) {
     bool skip_call = false;
-    const VkFramebufferCreateInfo *pFramebufferInfo = &framebuffer->createInfo;
+    const safe_VkFramebufferCreateInfo *pFramebufferInfo = &framebuffer->createInfo;
     const VkRenderPassCreateInfo *pCreateInfo = renderPass->pCreateInfo;
     auto const & subpass_to_node = renderPass->subpassToNode;
     std::vector<std::vector<uint32_t>> output_attachment_to_subpass(pCreateInfo->attachmentCount);
@@ -8875,7 +8869,7 @@ static void deleteRenderPasses(layer_data *my_data) {
 static bool VerifyFramebufferAndRenderPassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const VkRenderPassBeginInfo *pRenderPassBegin) {
     bool skip_call = false;
     const VkRenderPassCreateInfo *pRenderPassInfo = dev_data->renderPassMap[pRenderPassBegin->renderPass]->pCreateInfo;
-    const VkFramebufferCreateInfo framebufferInfo = dev_data->frameBufferMap[pRenderPassBegin->framebuffer].createInfo;
+    const safe_VkFramebufferCreateInfo framebufferInfo = dev_data->frameBufferMap[pRenderPassBegin->framebuffer]->createInfo;
     if (pRenderPassInfo->attachmentCount != framebufferInfo.attachmentCount) {
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                              DRAWSTATE_INVALID_RENDERPASS, "DS", "You cannot start a render pass using a framebuffer "
@@ -8925,7 +8919,7 @@ static void TransitionSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB, 
     if (!framebuffer)
         return;
 
-    const VkFramebufferCreateInfo &framebufferInfo = framebuffer->createInfo;
+    const safe_VkFramebufferCreateInfo &framebufferInfo = framebuffer->createInfo;
     const VkSubpassDescription &subpass = renderPass->pCreateInfo->pSubpasses[subpass_index];
     for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
         const VkImageView &image_view = framebufferInfo.pAttachments[subpass.pInputAttachments[j].attachment];
@@ -8969,7 +8963,7 @@ static void TransitionFinalSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *
 
 static bool VerifyRenderAreaBounds(const layer_data *my_data, const VkRenderPassBeginInfo *pRenderPassBegin) {
     bool skip_call = false;
-    const VkFramebufferCreateInfo *pFramebufferInfo = &my_data->frameBufferMap.at(pRenderPassBegin->framebuffer).createInfo;
+    const safe_VkFramebufferCreateInfo *pFramebufferInfo = &getFramebuffer(my_data, pRenderPassBegin->framebuffer)->createInfo;
     if (pRenderPassBegin->renderArea.offset.x < 0 ||
         (pRenderPassBegin->renderArea.offset.x + pRenderPassBegin->renderArea.extent.width) > pFramebufferInfo->width ||
         pRenderPassBegin->renderArea.offset.y < 0 ||

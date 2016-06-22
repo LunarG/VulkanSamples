@@ -255,9 +255,12 @@ class QUERY_POOL_NODE : public BASE_NODE {
 
 class FRAMEBUFFER_NODE {
   public:
-    VkFramebufferCreateInfo createInfo;
+    safe_VkFramebufferCreateInfo createInfo;
+    safe_VkRenderPassCreateInfo renderPassCreateInfo;
     std::unordered_set<VkCommandBuffer> referencingCmdBuffers;
     std::vector<MT_FB_ATTACHMENT_INFO> attachments;
+    FRAMEBUFFER_NODE(const VkFramebufferCreateInfo *pCreateInfo, const VkRenderPassCreateInfo *pRPCI)
+        : createInfo(pCreateInfo), renderPassCreateInfo(pRPCI){};
 };
 
 typedef struct stencil_data {
