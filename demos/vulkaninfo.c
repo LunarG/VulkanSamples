@@ -987,6 +987,8 @@ static void app_dev_dump_format_props(const struct app_dev *dev, VkFormat fmt)
 static void
 app_dev_dump(const struct app_dev *dev)
 {
+    printf("Format Properties:\n");
+    printf("==================");
     VkFormat fmt;
 
     for (fmt = 0; fmt < VK_FORMAT_RANGE_SIZE; fmt++) {
