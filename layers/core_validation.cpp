@@ -8230,6 +8230,12 @@ static bool MatchUsage(layer_data *dev_data, uint32_t count, const VkAttachmentR
 
 // Validate VkFramebufferCreateInfo which includes:
 // 1. attachmentCount equals renderPass attachmentCount
+// 2. corresponding framebuffer and renderpass attachments have matching formats
+// 3. corresponding framebuffer and renderpass attachments have matching sample counts
+// 4. fb attachments only have a single mip level
+// 5. fb attachment dimensions are each at least as large as the fb
+// 6. fb attachments use idenity swizzle
+// 7. fb attachments used by renderPass for color/input/ds have correct usage bit set
 static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebufferCreateInfo *pCreateInfo) {
     bool skip_call = false;
 
@@ -8243,7 +8249,46 @@ static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebuf
                 "vkCreateFramebuffer(): VkFramebufferCreateInfo attachmentCount of %u does not match attachmentCount of %u of "
                 "renderPass (0x%" PRIxLEAST64 ") being used to create Framebuffer.",
                 pCreateInfo->attachmentCount, rpci->attachmentCount, reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass));
+        } else {
+            // attachmentCounts match, so make sure corresponding Formats match
+            const VkImageView *image_views = pCreateInfo->pAttachments;
+            for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
+                VkImageViewCreateInfo *ivci = getImageViewData(dev_data, image_views[i]);
+                if (ivci->format != rpci->pAttachments[i].format) {
+                    skip_call |= log_msg(
+                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                        reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass), __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE,
+                        "DS", "vkCreateFramebuffer(): VkFramebufferCreateInfo attachment #%u has format of %s that does not match "
+                              "the format of "
+                              "%s used by the corresponding attachment for renderPass (0x%" PRIxLEAST64 ").",
+                        i, string_VkFormat(ivci->format), string_VkFormat(rpci->pAttachments[i].format),
+                        reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass));
+                }
+#if 0 // Enabling 1 new check/test at a time
+                const VkImageCreateInfo *ici = &getImageNode(dev_data, ivci->image)->createInfo;
+                if (ici->samples != rpci->pAttachments[i].samples) {
+                    // TODO : ERROR
+                }
+                // Verify that view only has a single mip level
+                if (ivci->subresourceRange.levelCount != 1) {
+                    // TODO
+                }
+                const uint32_t mip_level = ivci->subresourceRange.baseMipLevel;
+                if ((ivci->subresourceRange.layerCount < pCreateInfo->layers) ||
+                    ((ici->extent.width >> mip_level) < pCreateInfo->width) ||
+                    ((ici->extent.height >> mip_level) < pCreateInfo->height)) {
+                    // TODO
+                }
+                if ((ivci->components.r != VK_COMPONENT_SWIZZLE_IDENTITY) ||
+                    (ivci->components.r != VK_COMPONENT_SWIZZLE_IDENTITY) ||
+                    (ivci->components.r != VK_COMPONENT_SWIZZLE_IDENTITY) ||
+                    (ivci->components.r != VK_COMPONENT_SWIZZLE_IDENTITY)) {
+                    // TODO
+                }
+#endif
+            }
         }
+        // Verify correct attachment usage flags
         for (uint32_t subpass = 0; subpass < rpci->subpassCount; subpass++) {
             // Verify input attachments:
             skip_call |= MatchUsage(dev_data, rpci->pSubpasses[subpass].inputAttachmentCount,
