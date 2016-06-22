@@ -8228,11 +8228,22 @@ static bool MatchUsage(layer_data *dev_data, uint32_t count, const VkAttachmentR
     return skip_call;
 }
 
-static bool ValidateAttachmentImageUsage(layer_data *dev_data, const VkFramebufferCreateInfo *pCreateInfo) {
+// Validate VkFramebufferCreateInfo which includes:
+// 1. attachmentCount equals renderPass attachmentCount
+static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebufferCreateInfo *pCreateInfo) {
     bool skip_call = false;
 
-    const VkRenderPassCreateInfo *rpci = getRenderPass(dev_data, pCreateInfo->renderPass)->pCreateInfo;
-    if (rpci != nullptr) {
+    auto rp_node = getRenderPass(dev_data, pCreateInfo->renderPass);
+    if (rp_node) {
+        const VkRenderPassCreateInfo *rpci = rp_node->pCreateInfo;
+        if (rpci->attachmentCount != pCreateInfo->attachmentCount) {
+            skip_call |= log_msg(
+                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass), __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
+                "vkCreateFramebuffer(): VkFramebufferCreateInfo attachmentCount of %u does not match attachmentCount of %u of "
+                "renderPass (0x%" PRIxLEAST64 ") being used to create Framebuffer.",
+                pCreateInfo->attachmentCount, rpci->attachmentCount, reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass));
+        }
         for (uint32_t subpass = 0; subpass < rpci->subpassCount; subpass++) {
             // Verify input attachments:
             skip_call |= MatchUsage(dev_data, rpci->pSubpasses[subpass].inputAttachmentCount,
@@ -8246,6 +8257,12 @@ static bool ValidateAttachmentImageUsage(layer_data *dev_data, const VkFramebuff
                                         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
             }
         }
+    } else {
+        skip_call |=
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                    reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass), __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                    "vkCreateFramebuffer(): Attempt to create framebuffer with invalid renderPass (0x%" PRIxLEAST64 ").",
+                    reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass));
     }
     return skip_call;
 }
@@ -8256,7 +8273,7 @@ static bool ValidateAttachmentImageUsage(layer_data *dev_data, const VkFramebuff
 static bool PreCallValidateCreateFramebuffer(layer_data *dev_data, const VkFramebufferCreateInfo *pCreateInfo) {
     // TODO : Verify that renderPass FB is created with is compatible with FB
     bool skip_call = false;
-    skip_call |= ValidateAttachmentImageUsage(dev_data, pCreateInfo);
+    skip_call |= ValidateFramebufferCreateInfo(dev_data, pCreateInfo);
     return skip_call;
 }
 
