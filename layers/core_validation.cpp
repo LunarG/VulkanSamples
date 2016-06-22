@@ -4326,17 +4326,16 @@ static void updateTrackedCommandBuffers(layer_data *dev_data, VkQueue queue, VkQ
     if (queue == other_queue) {
         return;
     }
-    auto queue_data = dev_data->queueMap.find(queue);
-    auto other_queue_data = dev_data->queueMap.find(other_queue);
-    if (queue_data == dev_data->queueMap.end() || other_queue_data == dev_data->queueMap.end()) {
+    auto pQueue = getQueueNode(dev_data, queue);
+    auto pOtherQueue = getQueueNode(dev_data, other_queue);
+    if (!pQueue || !pOtherQueue) {
         return;
     }
-    for (auto fenceInner : other_queue_data->second.lastFences) {
-        queue_data->second.lastFences.push_back(fenceInner);
-        auto fence_node = dev_data->fenceMap.find(fenceInner);
-        if (fence_node != dev_data->fenceMap.end()) {
-            fence_node->second.queues.insert(other_queue_data->first);
-        }
+    for (auto fenceInner : pOtherQueue->lastFences) {
+        pQueue->lastFences.push_back(fenceInner);
+        auto pFenceInner = getFenceNode(dev_data, fenceInner);
+        if (pFenceInner)
+            pFenceInner->queues.insert(other_queue);
     }
     // TODO: Stealing the untracked CBs out of the signaling queue isn't really
     // correct. A subsequent submission + wait, or a QWI on that queue, or
@@ -4344,26 +4343,23 @@ static void updateTrackedCommandBuffers(layer_data *dev_data, VkQueue queue, VkQ
     // suitable proof that the work we're stealing here has completed on the
     // device, but we've lost that information by moving the tracking between
     // queues.
-    if (fence != VK_NULL_HANDLE) {
-        auto fence_data = dev_data->fenceMap.find(fence);
-        if (fence_data == dev_data->fenceMap.end()) {
-            return;
+    auto pFence = getFenceNode(dev_data, fence);
+    if (pFence) {
+        for (auto submission : pOtherQueue->untrackedSubmissions) {
+            pFence->submissions.push_back(submission);
         }
-        for (auto submission : other_queue_data->second.untrackedSubmissions) {
-            fence_data->second.submissions.push_back(submission);
-        }
-        other_queue_data->second.untrackedSubmissions.clear();
+        pOtherQueue->untrackedSubmissions.clear();
     } else {
-        for (auto submission : other_queue_data->second.untrackedSubmissions) {
-            queue_data->second.untrackedSubmissions.push_back(submission);
+        for (auto submission : pOtherQueue->untrackedSubmissions) {
+            pQueue->untrackedSubmissions.push_back(submission);
         }
-        other_queue_data->second.untrackedSubmissions.clear();
+        pOtherQueue->untrackedSubmissions.clear();
     }
-    for (auto eventStagePair : other_queue_data->second.eventToStageMap) {
-        queue_data->second.eventToStageMap[eventStagePair.first] = eventStagePair.second;
+    for (auto eventStagePair : pOtherQueue->eventToStageMap) {
+        pQueue->eventToStageMap[eventStagePair.first] = eventStagePair.second;
     }
-    for (auto queryStatePair : other_queue_data->second.queryToStateMap) {
-        queue_data->second.queryToStateMap[queryStatePair.first] = queryStatePair.second;
+    for (auto queryStatePair : pOtherQueue->queryToStateMap) {
+        pQueue->queryToStateMap[queryStatePair.first] = queryStatePair.second;
     }
 }
 
@@ -4396,14 +4392,14 @@ SubmitFence(QUEUE_NODE *pQueue, FENCE_NODE *pFence)
 
 static void markCommandBuffersInFlight(layer_data *my_data, VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
                                        VkFence fence) {
-    auto queue_data = my_data->queueMap.find(queue);
-    if (queue_data != my_data->queueMap.end()) {
+    auto pQueue = getQueueNode(my_data, queue);
+    if (pQueue) {
         for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
             const VkSubmitInfo *submit = &pSubmits[submit_idx];
             for (uint32_t i = 0; i < submit->commandBufferCount; ++i) {
                 // Add cmdBuffers to the global set and increment count
                 GLOBAL_CB_NODE *pCB = getCBNode(my_data, submit->pCommandBuffers[i]);
-                for (auto secondaryCmdBuffer : my_data->commandBufferMap[submit->pCommandBuffers[i]]->secondaryCommandBuffers) {
+                for (auto secondaryCmdBuffer : pCB->secondaryCommandBuffers) {
                     my_data->globalInFlightCmdBuffers.insert(secondaryCmdBuffer);
                     GLOBAL_CB_NODE *pSubCB = getCBNode(my_data, secondaryCmdBuffer);
                     pSubCB->in_use.fetch_add(1);
