@@ -8260,6 +8260,28 @@ static bool PreCallValidateCreateFramebuffer(layer_data *dev_data, const VkFrame
     return skip_call;
 }
 
+// CreateFramebuffer state has been validated and call down chain completed so record new framebuffer object
+static void PostCallRecordCreateFramebuffer(layer_data *dev_data, const VkFramebufferCreateInfo *pCreateInfo, VkFramebuffer fb) {
+    // Shadow create info and store in map
+    // TODO : This insert/lookup sequence is not ideal and with proper safe_* type move support can be improved w/ emplace
+    dev_data->frameBufferMap.insert(
+        std::make_pair(fb, unique_ptr<FRAMEBUFFER_NODE>(new FRAMEBUFFER_NODE(
+                                          pCreateInfo, dev_data->renderPassMap[pCreateInfo->renderPass]->pCreateInfo))));
+    auto & fbNode = dev_data->frameBufferMap[fb];
+    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
+        VkImageView view = pCreateInfo->pAttachments[i];
+        auto view_data = getImageViewData(dev_data, view);
+        if (!view_data) {
+            continue;
+        }
+        MT_FB_ATTACHMENT_INFO fb_info;
+        get_mem_binding_from_object(dev_data, (uint64_t)(view_data->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                    &fb_info.mem);
+        fb_info.image = view_data->image;
+        fbNode->attachments.push_back(fb_info);
+    }
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo *pCreateInfo,
                                                  const VkAllocationCallbacks *pAllocator,
                                                  VkFramebuffer *pFramebuffer) {
@@ -8274,25 +8296,9 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFrameb
     VkResult result = dev_data->device_dispatch_table->CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
 
     if (VK_SUCCESS == result) {
-        // Shadow create info and store in map
         lock.lock();
-
-        dev_data->frameBufferMap.insert(
-            std::make_pair(*pFramebuffer, unique_ptr<FRAMEBUFFER_NODE>(new FRAMEBUFFER_NODE(
-                                              pCreateInfo, dev_data->renderPassMap[pCreateInfo->renderPass]->pCreateInfo))));
-        auto & fbNode = dev_data->frameBufferMap[*pFramebuffer];
-        for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
-            VkImageView view = pCreateInfo->pAttachments[i];
-            auto view_data = getImageViewData(dev_data, view);
-            if (!view_data) {
-                continue;
-            }
-            MT_FB_ATTACHMENT_INFO fb_info;
-            get_mem_binding_from_object(dev_data, (uint64_t)(view_data->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                        &fb_info.mem);
-            fb_info.image = view_data->image;
-            fbNode->attachments.push_back(fb_info);
-        }
+        PostCallRecordCreateFramebuffer(dev_data, pCreateInfo, *pFramebuffer);
+        lock.unlock();
     }
     return result;
 }
