@@ -8283,17 +8283,31 @@ static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebuf
                               "but only a single mip level (levelCount ==  1) is allowed when creating a Framebuffer.",
                         i, ivci->subresourceRange.levelCount);
                 }
-#if 0 // Enabling 1 new check/test at a time
                 const uint32_t mip_level = ivci->subresourceRange.baseMipLevel;
-                if ((ivci->subresourceRange.layerCount < pCreateInfo->layers) ||
-                    ((ici->extent.width >> mip_level) < pCreateInfo->width) ||
-                    ((ici->extent.height >> mip_level) < pCreateInfo->height)) {
-                    // TODO
+                uint32_t mip_width = max(1u, ici->extent.width >> mip_level);
+                uint32_t mip_height = max(1u, ici->extent.height >> mip_level);
+                if ((ivci->subresourceRange.layerCount < pCreateInfo->layers) || (mip_width < pCreateInfo->width) ||
+                    (mip_height < pCreateInfo->height)) {
+                    skip_call |=
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                                reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass), __LINE__,
+                                DRAWSTATE_INVALID_FRAMEBUFFER_CREATE_INFO, "DS",
+                                "vkCreateFramebuffer(): VkFramebufferCreateInfo attachment #%u mip level %u has dimensions smaller "
+                                "than the corresponding "
+                                "framebuffer dimensions. Attachment dimensions must be at least as large. Here are the respective "
+                                "dimensions for "
+                                "attachment #%u, framebuffer:\n"
+                                "width: %u, %u\n"
+                                "height: %u, %u\n"
+                                "layerCount: %u, %u\n",
+                                i, ivci->subresourceRange.baseMipLevel, i, mip_width, pCreateInfo->width, mip_height,
+                                pCreateInfo->height, ivci->subresourceRange.layerCount, pCreateInfo->layers);
                 }
-                if ((ivci->components.r != VK_COMPONENT_SWIZZLE_IDENTITY) ||
-                    (ivci->components.r != VK_COMPONENT_SWIZZLE_IDENTITY) ||
-                    (ivci->components.r != VK_COMPONENT_SWIZZLE_IDENTITY) ||
-                    (ivci->components.r != VK_COMPONENT_SWIZZLE_IDENTITY)) {
+#if 0 // Enabling 1 new check/test at a time
+                if (((ivci->components.r != VK_COMPONENT_SWIZZLE_IDENTITY) && (ivci->components.r != VK_COMPONENT_SWIZZLE_R)) ||
+                    ((ivci->components.g != VK_COMPONENT_SWIZZLE_IDENTITY) && (ivci->components.g != VK_COMPONENT_SWIZZLE_G)) ||
+                    ((ivci->components.b != VK_COMPONENT_SWIZZLE_IDENTITY) && (ivci->components.b != VK_COMPONENT_SWIZZLE_B)) ||
+                    ((ivci->components.a != VK_COMPONENT_SWIZZLE_IDENTITY) && (ivci->components.a != VK_COMPONENT_SWIZZLE_A))) {
                     // TODO
                 }
 #endif
