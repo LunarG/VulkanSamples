@@ -8236,6 +8236,7 @@ static bool MatchUsage(layer_data *dev_data, uint32_t count, const VkAttachmentR
 // 5. fb attachment dimensions are each at least as large as the fb
 // 6. fb attachments use idenity swizzle
 // 7. fb attachments used by renderPass for color/input/ds have correct usage bit set
+// 8. fb dimensions are within physical device limits
 static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebufferCreateInfo *pCreateInfo) {
     bool skip_call = false;
 
@@ -8276,12 +8277,11 @@ static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebuf
                 }
                 // Verify that view only has a single mip level
                 if (ivci->subresourceRange.levelCount != 1) {
-                    skip_call |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
-                        reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass), __LINE__, DRAWSTATE_INVALID_FRAMEBUFFER_CREATE_INFO,
-                        "DS", "vkCreateFramebuffer(): VkFramebufferCreateInfo attachment #%u has mip levelCount of %u "
-                              "but only a single mip level (levelCount ==  1) is allowed when creating a Framebuffer.",
-                        i, ivci->subresourceRange.levelCount);
+                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                                         __LINE__, DRAWSTATE_INVALID_FRAMEBUFFER_CREATE_INFO, "DS",
+                                         "vkCreateFramebuffer(): VkFramebufferCreateInfo attachment #%u has mip levelCount of %u "
+                                         "but only a single mip level (levelCount ==  1) is allowed when creating a Framebuffer.",
+                                         i, ivci->subresourceRange.levelCount);
                 }
                 const uint32_t mip_level = ivci->subresourceRange.baseMipLevel;
                 uint32_t mip_width = max(1u, ici->extent.width >> mip_level);
@@ -8289,8 +8289,7 @@ static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebuf
                 if ((ivci->subresourceRange.layerCount < pCreateInfo->layers) || (mip_width < pCreateInfo->width) ||
                     (mip_height < pCreateInfo->height)) {
                     skip_call |=
-                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
-                                reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass), __LINE__,
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
                                 DRAWSTATE_INVALID_FRAMEBUFFER_CREATE_INFO, "DS",
                                 "vkCreateFramebuffer(): VkFramebufferCreateInfo attachment #%u mip level %u has dimensions smaller "
                                 "than the corresponding "
@@ -8308,8 +8307,7 @@ static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebuf
                     ((ivci->components.b != VK_COMPONENT_SWIZZLE_IDENTITY) && (ivci->components.b != VK_COMPONENT_SWIZZLE_B)) ||
                     ((ivci->components.a != VK_COMPONENT_SWIZZLE_IDENTITY) && (ivci->components.a != VK_COMPONENT_SWIZZLE_A))) {
                     skip_call |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
-                        reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass), __LINE__,
+                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
                         DRAWSTATE_INVALID_FRAMEBUFFER_CREATE_INFO, "DS",
                         "vkCreateFramebuffer(): VkFramebufferCreateInfo attachment #%u has non-identy swizzle. All framebuffer "
                         "attachments must have been created with the identity swizzle. Here are the actual swizzle values:\n"
@@ -8342,6 +8340,21 @@ static bool ValidateFramebufferCreateInfo(layer_data *dev_data, const VkFramebuf
                     reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass), __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
                     "vkCreateFramebuffer(): Attempt to create framebuffer with invalid renderPass (0x%" PRIxLEAST64 ").",
                     reinterpret_cast<const uint64_t &>(pCreateInfo->renderPass));
+    }
+    // Verify FB dimensions are within physical device limits
+    if ((pCreateInfo->height > dev_data->phys_dev_properties.properties.limits.maxFramebufferHeight) ||
+        (pCreateInfo->width > dev_data->phys_dev_properties.properties.limits.maxFramebufferWidth) ||
+        (pCreateInfo->layers > dev_data->phys_dev_properties.properties.limits.maxFramebufferLayers)) {
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
+                             DRAWSTATE_INVALID_FRAMEBUFFER_CREATE_INFO, "DS",
+                             "vkCreateFramebuffer(): Requested VkFramebufferCreateInfo dimensions exceed physical device limits. "
+                             "Here are the respective dimensions: requested, device max:\n"
+                             "width: %u, %u\n"
+                             "height: %u, %u\n"
+                             "layerCount: %u, %u\n",
+                             pCreateInfo->width, dev_data->phys_dev_properties.properties.limits.maxFramebufferWidth,
+                             pCreateInfo->height, dev_data->phys_dev_properties.properties.limits.maxFramebufferHeight,
+                             pCreateInfo->layers, dev_data->phys_dev_properties.properties.limits.maxFramebufferLayers);
     }
     return skip_call;
 }
