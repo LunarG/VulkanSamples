@@ -3229,7 +3229,8 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
                      " 4. Mismatch fb & renderPass attachment #samples\n"
                      " 5. FB attachment w/ non-1 mip-levels\n"
                      " 6. FB attachment where dimensions don't match\n"
-                     " 7. FB attachment w/o identity swizzle\n");
+                     " 7. FB attachment w/o identity swizzle\n"
+                     " 8. FB dimensions exceed physical device limits\n");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -3426,6 +3427,22 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
         vkDestroyFramebuffer(m_device->device(), fb, NULL);
     }
     vkDestroyImageView(m_device->device(), view, NULL);
+    // Request fb that exceeds max dimensions
+    // reset attachment to color attachment
+    fb_info.pAttachments = ivs;
+    fb_info.width = m_device->props.limits.maxFramebufferWidth + 1;
+    fb_info.height = m_device->props.limits.maxFramebufferHeight + 1;
+    fb_info.layers = m_device->props.limits.maxFramebufferLayers + 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " Requested VkFramebufferCreateInfo "
+                                         "dimensions exceed physical device "
+                                         "limits. ");
+    err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
+
+    m_errorMonitor->VerifyFound();
+    if (err == VK_SUCCESS) {
+        vkDestroyFramebuffer(m_device->device(), fb, NULL);
+    }
 
     vkDestroyRenderPass(m_device->device(), rp, NULL);
 }
