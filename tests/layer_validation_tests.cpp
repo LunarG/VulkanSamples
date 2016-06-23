@@ -1016,6 +1016,404 @@ TEST_F(VkLayerTest, FillBufferAlignment) {
 
     EndCommandBuffer();
 }
+
+// This is a positive test. No failures are expected.
+TEST_F(VkLayerTest, IgnoreUnrelatedDescriptor) {
+    TEST_DESCRIPTION("Ensure that the vkUpdateDescriptorSet validation code "
+                     "is ignoring VkWriteDescriptorSet members that are not "
+                     "related to the descriptor type specified by "
+                     "VkWriteDescriptorSet::descriptorType.  Correct "
+                     "validation behavior will result in the test running to "
+                     "completion without validation errors.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Image Case
+    {
+        m_errorMonitor->ExpectSuccess();
+
+        VkImage image;
+        const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
+        const int32_t tex_width = 32;
+        const int32_t tex_height = 32;
+        VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = tex_format;
+        image_create_info.extent.width = tex_width;
+        image_create_info.extent.height = tex_height;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arrayLayers = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.flags = 0;
+        VkResult err =
+            vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
+        ASSERT_VK_SUCCESS(err);
+
+        VkMemoryRequirements memory_reqs;
+        VkDeviceMemory image_memory;
+        bool pass;
+        VkMemoryAllocateInfo memory_info = {};
+        memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memory_info.pNext = NULL;
+        memory_info.allocationSize = 0;
+        memory_info.memoryTypeIndex = 0;
+        vkGetImageMemoryRequirements(m_device->device(), image, &memory_reqs);
+        memory_info.allocationSize = memory_reqs.size;
+        pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits,
+                                               &memory_info, 0);
+        ASSERT_TRUE(pass);
+        err = vkAllocateMemory(m_device->device(), &memory_info, NULL,
+                               &image_memory);
+        ASSERT_VK_SUCCESS(err);
+        err = vkBindImageMemory(m_device->device(), image, image_memory, 0);
+        ASSERT_VK_SUCCESS(err);
+
+        VkImageViewCreateInfo image_view_create_info = {};
+        image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        image_view_create_info.image = image;
+        image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        image_view_create_info.format = tex_format;
+        image_view_create_info.subresourceRange.layerCount = 1;
+        image_view_create_info.subresourceRange.baseMipLevel = 0;
+        image_view_create_info.subresourceRange.levelCount = 1;
+        image_view_create_info.subresourceRange.aspectMask =
+            VK_IMAGE_ASPECT_COLOR_BIT;
+
+        VkImageView view;
+        err = vkCreateImageView(m_device->device(), &image_view_create_info,
+                                NULL, &view);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorPoolSize ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        ds_type_count.descriptorCount = 1;
+
+        VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
+
+        VkDescriptorPool ds_pool;
+        err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL,
+                                     &ds_pool);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.binding = 0;
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        dsl_binding.descriptorCount = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+        VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType =
+            VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.bindingCount = 1;
+        ds_layout_ci.pBindings = &dsl_binding;
+        VkDescriptorSetLayout ds_layout;
+        err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci,
+                                          NULL, &ds_layout);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorSet descriptor_set;
+        VkDescriptorSetAllocateInfo alloc_info = {};
+        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.descriptorSetCount = 1;
+        alloc_info.descriptorPool = ds_pool;
+        alloc_info.pSetLayouts = &ds_layout;
+        err = vkAllocateDescriptorSets(m_device->device(), &alloc_info,
+                                       &descriptor_set);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorImageInfo image_info = {};
+        image_info.imageView = view;
+        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        VkWriteDescriptorSet descriptor_write;
+        memset(&descriptor_write, 0, sizeof(descriptor_write));
+        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_write.dstSet = descriptor_set;
+        descriptor_write.dstBinding = 0;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        descriptor_write.pImageInfo = &image_info;
+
+        // Set pBufferInfo and pTexelBufferView to invalid values, which should
+        // be
+        //  ignored for descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE.
+        // This will most likely produce a crash if the parameter_validation
+        // layer
+        // does not correctly ignore pBufferInfo.
+        descriptor_write.pBufferInfo =
+            reinterpret_cast<const VkDescriptorBufferInfo *>(0xcdcdcdcd);
+        descriptor_write.pTexelBufferView =
+            reinterpret_cast<const VkBufferView *>(0xcdcdcdcd);
+
+        vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0,
+                               NULL);
+
+        m_errorMonitor->VerifyNotFound();
+
+        vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
+        vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+        vkDestroyImageView(m_device->device(), view, NULL);
+        vkDestroyImage(m_device->device(), image, NULL);
+        vkFreeMemory(m_device->device(), image_memory, NULL);
+    }
+
+    // Buffer Case
+    {
+        m_errorMonitor->ExpectSuccess();
+
+        VkBuffer buffer;
+        uint32_t queue_family_index = 0;
+        VkBufferCreateInfo buffer_create_info = {};
+        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_create_info.size = 1024;
+        buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        buffer_create_info.queueFamilyIndexCount = 1;
+        buffer_create_info.pQueueFamilyIndices = &queue_family_index;
+
+        VkResult err = vkCreateBuffer(m_device->device(), &buffer_create_info,
+                                      NULL, &buffer);
+        ASSERT_VK_SUCCESS(err);
+
+        VkMemoryRequirements memory_reqs;
+        VkDeviceMemory buffer_memory;
+        bool pass;
+        VkMemoryAllocateInfo memory_info = {};
+        memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memory_info.pNext = NULL;
+        memory_info.allocationSize = 0;
+        memory_info.memoryTypeIndex = 0;
+
+        vkGetBufferMemoryRequirements(m_device->device(), buffer, &memory_reqs);
+        memory_info.allocationSize = memory_reqs.size;
+        pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits,
+                                               &memory_info, 0);
+        ASSERT_TRUE(pass);
+
+        err = vkAllocateMemory(m_device->device(), &memory_info, NULL,
+                               &buffer_memory);
+        ASSERT_VK_SUCCESS(err);
+        err = vkBindBufferMemory(m_device->device(), buffer, buffer_memory, 0);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorPoolSize ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.descriptorCount = 1;
+
+        VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
+
+        VkDescriptorPool ds_pool;
+        err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL,
+                                     &ds_pool);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.binding = 0;
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.descriptorCount = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+        VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType =
+            VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.bindingCount = 1;
+        ds_layout_ci.pBindings = &dsl_binding;
+        VkDescriptorSetLayout ds_layout;
+        err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci,
+                                          NULL, &ds_layout);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorSet descriptor_set;
+        VkDescriptorSetAllocateInfo alloc_info = {};
+        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.descriptorSetCount = 1;
+        alloc_info.descriptorPool = ds_pool;
+        alloc_info.pSetLayouts = &ds_layout;
+        err = vkAllocateDescriptorSets(m_device->device(), &alloc_info,
+                                       &descriptor_set);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorBufferInfo buffer_info = {};
+        buffer_info.buffer = buffer;
+        buffer_info.offset = 0;
+        buffer_info.range = 1024;
+
+        VkWriteDescriptorSet descriptor_write;
+        memset(&descriptor_write, 0, sizeof(descriptor_write));
+        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_write.dstSet = descriptor_set;
+        descriptor_write.dstBinding = 0;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptor_write.pBufferInfo = &buffer_info;
+
+        // Set pImageInfo and pTexelBufferView to invalid values, which should
+        // be
+        //  ignored for descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER.
+        // This will most likely produce a crash if the parameter_validation
+        // layer
+        // does not correctly ignore pImageInfo.
+        descriptor_write.pImageInfo =
+            reinterpret_cast<const VkDescriptorImageInfo *>(0xcdcdcdcd);
+        descriptor_write.pTexelBufferView =
+            reinterpret_cast<const VkBufferView *>(0xcdcdcdcd);
+
+        vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0,
+                               NULL);
+
+        m_errorMonitor->VerifyNotFound();
+
+        vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
+        vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        vkFreeMemory(m_device->device(), buffer_memory, NULL);
+    }
+
+    // Texel Buffer Case
+    {
+        m_errorMonitor->ExpectSuccess();
+
+        VkBuffer buffer;
+        uint32_t queue_family_index = 0;
+        VkBufferCreateInfo buffer_create_info = {};
+        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_create_info.size = 1024;
+        buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
+        buffer_create_info.queueFamilyIndexCount = 1;
+        buffer_create_info.pQueueFamilyIndices = &queue_family_index;
+
+        VkResult err = vkCreateBuffer(m_device->device(), &buffer_create_info,
+                                      NULL, &buffer);
+        ASSERT_VK_SUCCESS(err);
+
+        VkMemoryRequirements memory_reqs;
+        VkDeviceMemory buffer_memory;
+        bool pass;
+        VkMemoryAllocateInfo memory_info = {};
+        memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memory_info.pNext = NULL;
+        memory_info.allocationSize = 0;
+        memory_info.memoryTypeIndex = 0;
+
+        vkGetBufferMemoryRequirements(m_device->device(), buffer, &memory_reqs);
+        memory_info.allocationSize = memory_reqs.size;
+        pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits,
+                                               &memory_info, 0);
+        ASSERT_TRUE(pass);
+
+        err = vkAllocateMemory(m_device->device(), &memory_info, NULL,
+                               &buffer_memory);
+        ASSERT_VK_SUCCESS(err);
+        err = vkBindBufferMemory(m_device->device(), buffer, buffer_memory, 0);
+        ASSERT_VK_SUCCESS(err);
+
+        VkBufferViewCreateInfo buff_view_ci = {};
+        buff_view_ci.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+        buff_view_ci.buffer = buffer;
+        buff_view_ci.format = VK_FORMAT_R8_UNORM;
+        buff_view_ci.range = VK_WHOLE_SIZE;
+        VkBufferView buffer_view;
+        err = vkCreateBufferView(m_device->device(), &buff_view_ci, NULL,
+                                 &buffer_view);
+
+        VkDescriptorPoolSize ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        ds_type_count.descriptorCount = 1;
+
+        VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
+
+        VkDescriptorPool ds_pool;
+        err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL,
+                                     &ds_pool);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.binding = 0;
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        dsl_binding.descriptorCount = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+        VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType =
+            VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.bindingCount = 1;
+        ds_layout_ci.pBindings = &dsl_binding;
+        VkDescriptorSetLayout ds_layout;
+        err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci,
+                                          NULL, &ds_layout);
+        ASSERT_VK_SUCCESS(err);
+
+        VkDescriptorSet descriptor_set;
+        VkDescriptorSetAllocateInfo alloc_info = {};
+        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.descriptorSetCount = 1;
+        alloc_info.descriptorPool = ds_pool;
+        alloc_info.pSetLayouts = &ds_layout;
+        err = vkAllocateDescriptorSets(m_device->device(), &alloc_info,
+                                       &descriptor_set);
+        ASSERT_VK_SUCCESS(err);
+
+        VkWriteDescriptorSet descriptor_write;
+        memset(&descriptor_write, 0, sizeof(descriptor_write));
+        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_write.dstSet = descriptor_set;
+        descriptor_write.dstBinding = 0;
+        descriptor_write.descriptorCount = 1;
+        descriptor_write.descriptorType =
+            VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        descriptor_write.pTexelBufferView = &buffer_view;
+
+        // Set pImageInfo and pBufferInfo to invalid values, which should be
+        //  ignored for descriptorType ==
+        //  VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER.
+        // This will most likely produce a crash if the parameter_validation
+        // layer
+        // does not correctly ignore pImageInfo and pBufferInfo.
+        descriptor_write.pImageInfo =
+            reinterpret_cast<const VkDescriptorImageInfo *>(0xcdcdcdcd);
+        descriptor_write.pBufferInfo =
+            reinterpret_cast<const VkDescriptorBufferInfo *>(0xcdcdcdcd);
+
+        vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0,
+                               NULL);
+
+        m_errorMonitor->VerifyNotFound();
+
+        vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
+        vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+        vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+        vkDestroyBufferView(m_device->device(), buffer_view, NULL);
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        vkFreeMemory(m_device->device(), buffer_memory, NULL);
+    }
+}
 #endif // PARAMETER_VALIDATION_TESTS
 
 #if MEM_TRACKER_TESTS
