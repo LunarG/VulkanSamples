@@ -5099,14 +5099,14 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
         lock.lock();
     }
     // Clean up memory binding and range information for buffer
-    auto buff_it = dev_data->bufferMap.find(buffer);
-    if (buff_it != dev_data->bufferMap.end()) {
-        auto mem_info = getMemObjInfo(dev_data, buff_it->second.get()->mem);
+    auto buff_node = getBufferNode(dev_data, buffer);
+    if (buff_node) {
+        auto mem_info = getMemObjInfo(dev_data, buff_node->mem);
         if (mem_info) {
-            remove_memory_ranges(reinterpret_cast<uint64_t &>(buffer), buff_it->second.get()->mem, mem_info->bufferRanges);
+            remove_memory_ranges(reinterpret_cast<uint64_t &>(buffer), buff_node->mem, mem_info->bufferRanges);
         }
         clear_object_binding(dev_data, reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
-        dev_data->bufferMap.erase(buff_it);
+        dev_data->bufferMap.erase(buff_node->buffer);
     }
 }
 
@@ -5544,7 +5544,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreat
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         // TODO : This doesn't create deep copy of pQueueFamilyIndices so need to fix that if/when we want that data to be valid
-        dev_data->bufferMap.insert(std::make_pair(*pBuffer, unique_ptr<BUFFER_NODE>(new BUFFER_NODE(pCreateInfo))));
+        dev_data->bufferMap.insert(std::make_pair(*pBuffer, unique_ptr<BUFFER_NODE>(new BUFFER_NODE(*pBuffer, pCreateInfo))));
     }
     return result;
 }

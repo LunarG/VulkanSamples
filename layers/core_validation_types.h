@@ -60,7 +60,13 @@ class DescriptorSet;
 
 class BASE_NODE {
   public:
+    // Track when object is being used by an in-flight command buffer
     std::atomic_int in_use;
+    // Track command buffers that this object is bound to
+    //  binding initialized when cmd referencing object is bound to command buffer
+    //  binding removed when command buffer is reset or destroyed
+    // When an object is destroyed, any bound cbs are set to INVALID
+    std::unordered_set<VkCommandBuffer> cb_bindings;
 };
 
 struct DESCRIPTOR_POOL_NODE {
@@ -102,11 +108,17 @@ struct DESCRIPTOR_POOL_NODE {
 class BUFFER_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
+    VkBuffer buffer;
     VkDeviceMemory mem;
     VkBufferCreateInfo createInfo;
-    BUFFER_NODE() : mem(VK_NULL_HANDLE), createInfo{} { in_use.store(0); };
-    BUFFER_NODE(const VkBufferCreateInfo *pCreateInfo) : mem(VK_NULL_HANDLE), createInfo(*pCreateInfo) { in_use.store(0); };
-    BUFFER_NODE(const BUFFER_NODE &rh_obj) : mem(rh_obj.mem), createInfo(rh_obj.createInfo) { in_use.store(rh_obj.in_use.load()); };
+    BUFFER_NODE() : buffer(VK_NULL_HANDLE), mem(VK_NULL_HANDLE), createInfo{} { in_use.store(0); };
+    BUFFER_NODE(VkBuffer buff, const VkBufferCreateInfo *pCreateInfo)
+        : buffer(buff), mem(VK_NULL_HANDLE), createInfo(*pCreateInfo) {
+        in_use.store(0);
+    };
+    BUFFER_NODE(const BUFFER_NODE &rh_obj) : buffer(rh_obj.buffer), mem(rh_obj.mem), createInfo(rh_obj.createInfo) {
+        in_use.store(0);
+    };
 };
 
 struct SAMPLER_NODE {
