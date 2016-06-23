@@ -3227,7 +3227,8 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
                      " 2. Use a color image as depthStencil attachment\n"
                      " 3. Mismatch fb & renderPass attachment formats\n"
                      " 4. Mismatch fb & renderPass attachment #samples\n"
-                     " 5. FB attachment w/ non-1 mip-levels\n");
+                     " 5. FB attachment w/ non-1 mip-levels\n"
+                     " 6. FB attachment where dimensions don't match\n");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -3377,8 +3378,22 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     if (err == VK_SUCCESS) {
         vkDestroyFramebuffer(m_device->device(), fb, NULL);
     }
-
     vkDestroyImageView(m_device->device(), view, NULL);
+    // Update view to original color buffer and grow FB dimensions too big
+    fb_info.pAttachments = ivs;
+    fb_info.height = 1024;
+    fb_info.width = 1024;
+    fb_info.layers = 2;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " Attachment dimensions must be at "
+                                         "least as large. ");
+    err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
+
+    m_errorMonitor->VerifyFound();
+    if (err == VK_SUCCESS) {
+        vkDestroyFramebuffer(m_device->device(), fb, NULL);
+    }
+
     vkDestroyRenderPass(m_device->device(), rp, NULL);
 }
 
