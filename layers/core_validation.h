@@ -236,7 +236,6 @@ class EVENT_NODE : public BASE_NODE {
 class QUEUE_NODE {
   public:
     VkQueue queue;
-    VkDevice device;
     std::vector<VkFence> lastFences;
     std::vector<CB_SUBMISSION> untrackedSubmissions;
     std::unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
