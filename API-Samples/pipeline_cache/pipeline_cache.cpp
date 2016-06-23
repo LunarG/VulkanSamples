@@ -354,7 +354,7 @@ int sample_main(int argc, char *argv[]) {
     /* VULKAN_KEY_END */
 
     vkDestroyFence(info.device, drawFence, NULL);
-    vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);
+    vkDestroySemaphore(info.device, info.imageAcquiredSemaphore, NULL);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);
     destroy_textures(info);

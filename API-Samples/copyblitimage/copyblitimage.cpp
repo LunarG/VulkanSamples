@@ -80,20 +80,20 @@ int sample_main(int argc, char *argv[]) {
         (formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) &&
         "Format cannot be used as transfer source");
 
-    VkSemaphore presentCompleteSemaphore;
-    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
-    presentCompleteSemaphoreCreateInfo.sType =
+    VkSemaphore imageAcquiredSemaphore;
+    VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
+    imageAcquiredSemaphoreCreateInfo.sType =
         VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    presentCompleteSemaphoreCreateInfo.pNext = NULL;
-    presentCompleteSemaphoreCreateInfo.flags = 0;
+    imageAcquiredSemaphoreCreateInfo.pNext = NULL;
+    imageAcquiredSemaphoreCreateInfo.flags = 0;
 
-    res = vkCreateSemaphore(info.device, &presentCompleteSemaphoreCreateInfo,
-                            NULL, &presentCompleteSemaphore);
+    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo,
+                            NULL, &imageAcquiredSemaphore);
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
     res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
-                                presentCompleteSemaphore, VK_NULL_HANDLE,
+                                imageAcquiredSemaphore, VK_NULL_HANDLE,
                                 &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
@@ -149,7 +149,7 @@ int sample_main(int argc, char *argv[]) {
     submit_info.pNext = NULL;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &presentCompleteSemaphore;
+    submit_info.pWaitSemaphores = &imageAcquiredSemaphore;
     submit_info.pWaitDstStageMask = &pipe_stage_flags;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &info.cmd;
@@ -327,7 +327,7 @@ int sample_main(int argc, char *argv[]) {
     if (info.save_images)
         write_ppm(info, "copyblitimage");
 
-    vkDestroySemaphore(info.device, presentCompleteSemaphore, NULL);
+    vkDestroySemaphore(info.device, imageAcquiredSemaphore, NULL);
     vkDestroyFence(info.device, drawFence, NULL);
     vkDestroyImage(info.device, bltSrcImage, NULL);
     vkFreeMemory(info.device, dmem, NULL);

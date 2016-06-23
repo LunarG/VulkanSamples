@@ -366,7 +366,7 @@ int sample_main(int argc, char *argv[]) {
         write_ppm(info, "pipeline_derivative");
 
     vkDestroyFence(info.device, drawFence, NULL);
-    vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);
+    vkDestroySemaphore(info.device, info.imageAcquiredSemaphore, NULL);
     vkDestroyPipeline(info.device, basePipeline, NULL);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);

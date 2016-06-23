@@ -112,19 +112,19 @@ int sample_main(int argc, char *argv[]) {
     init_device_queue(info);
     init_swap_chain(info);
 
-    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
-    presentCompleteSemaphoreCreateInfo.sType =
+    VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
+    imageAcquiredSemaphoreCreateInfo.sType =
         VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    presentCompleteSemaphoreCreateInfo.pNext = NULL;
-    presentCompleteSemaphoreCreateInfo.flags = 0;
+    imageAcquiredSemaphoreCreateInfo.pNext = NULL;
+    imageAcquiredSemaphoreCreateInfo.flags = 0;
 
-    res = vkCreateSemaphore(info.device, &presentCompleteSemaphoreCreateInfo,
-                            NULL, &info.presentCompleteSemaphore);
+    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo,
+                            NULL, &info.imageAcquiredSemaphore);
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
     res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
-                                info.presentCompleteSemaphore, VK_NULL_HANDLE,
+                                info.imageAcquiredSemaphore, VK_NULL_HANDLE,
                                 &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
@@ -207,7 +207,7 @@ int sample_main(int argc, char *argv[]) {
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 1;
-    submit_info[0].pWaitSemaphores = &info.presentCompleteSemaphore;
+    submit_info[0].pWaitSemaphores = &info.imageAcquiredSemaphore;
     submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
     submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
@@ -319,7 +319,7 @@ int sample_main(int argc, char *argv[]) {
                              &threadCmdBufs[i]);
         vkDestroyCommandPool(info.device, threadCmdPools[i], NULL);
     }
-    vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);
+    vkDestroySemaphore(info.device, info.imageAcquiredSemaphore, NULL);
     vkDestroyFence(info.device, drawFence, NULL);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);

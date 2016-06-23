@@ -291,7 +291,7 @@ int sample_main(int argc, char *argv[]) {
         write_ppm(info, "push_constants");
 
     vkDestroyFence(info.device, drawFence, NULL);
-    vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);
+    vkDestroySemaphore(info.device, info.imageAcquiredSemaphore, NULL);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);
     // instead of destroy_descriptor_pool(info);
