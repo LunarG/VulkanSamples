@@ -3228,7 +3228,8 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
                      " 3. Mismatch fb & renderPass attachment formats\n"
                      " 4. Mismatch fb & renderPass attachment #samples\n"
                      " 5. FB attachment w/ non-1 mip-levels\n"
-                     " 6. FB attachment where dimensions don't match\n");
+                     " 6. FB attachment where dimensions don't match\n"
+                     " 7. FB attachment w/o identity swizzle\n");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
@@ -3393,6 +3394,38 @@ TEST_F(VkLayerTest, FramebufferCreateErrors) {
     if (err == VK_SUCCESS) {
         vkDestroyFramebuffer(m_device->device(), fb, NULL);
     }
+    // Create view attachment with non-identity swizzle
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.image = image.handle();
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ivci.format = VK_FORMAT_B8G8R8A8_UNORM;
+    ivci.subresourceRange.layerCount = 1;
+    ivci.subresourceRange.baseMipLevel = 0;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    ivci.components.r = VK_COMPONENT_SWIZZLE_G;
+    ivci.components.g = VK_COMPONENT_SWIZZLE_R;
+    ivci.components.b = VK_COMPONENT_SWIZZLE_A;
+    ivci.components.a = VK_COMPONENT_SWIZZLE_B;
+    err = vkCreateImageView(m_device->device(), &ivci, NULL, &view);
+    ASSERT_VK_SUCCESS(err);
+
+    fb_info.pAttachments = &view;
+    fb_info.height = 100;
+    fb_info.width = 100;
+    fb_info.layers = 1;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " has non-identy swizzle. All "
+                                         "framebuffer attachments must have "
+                                         "been created with the identity "
+                                         "swizzle. ");
+    err = vkCreateFramebuffer(device(), &fb_info, NULL, &fb);
+
+    m_errorMonitor->VerifyFound();
+    if (err == VK_SUCCESS) {
+        vkDestroyFramebuffer(m_device->device(), fb, NULL);
+    }
+    vkDestroyImageView(m_device->device(), view, NULL);
 
     vkDestroyRenderPass(m_device->device(), rp, NULL);
 }
