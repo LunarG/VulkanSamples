@@ -400,10 +400,10 @@ CreateAndroidSurfaceKHR(VkInstance instance, const VkAndroidSurfaceCreateInfoKHR
             skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
         }
     }
+    lock.unlock();
 
     if (!skipCall) {
         // Call down the call chain:
-        lock.unlock();
         result = my_data->instance_dispatch_table->CreateAndroidSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
         lock.lock();
 
@@ -422,6 +422,8 @@ CreateAndroidSurfaceKHR(VkInstance instance, const VkAndroidSurfaceCreateInfoKHR
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
+        lock.unlock();
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -460,10 +462,10 @@ CreateMirSurfaceKHR(VkInstance instance, const VkMirSurfaceCreateInfoKHR *pCreat
             skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
         }
     }
+    lock.unlock();
 
     if (!skipCall) {
         // Call down the call chain:
-        lock.unlock();
         result = my_data->instance_dispatch_table->CreateMirSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
         lock.lock();
 
@@ -482,6 +484,8 @@ CreateMirSurfaceKHR(VkInstance instance, const VkMirSurfaceCreateInfoKHR *pCreat
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
+        lock.unlock();
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -555,10 +559,10 @@ CreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR
             skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
         }
     }
+    lock.unlock();
 
     if (!skipCall) {
         // Call down the call chain:
-        lock.unlock();
         result = my_data->instance_dispatch_table->CreateWaylandSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
         lock.lock();
 
@@ -577,6 +581,8 @@ CreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
+        lock.unlock();
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -650,10 +656,10 @@ CreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pC
             skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
         }
     }
+    lock.unlock();
 
     if (!skipCall) {
         // Call down the call chain:
-        lock.unlock();
         result = my_data->instance_dispatch_table->CreateWin32SurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
         lock.lock();
 
@@ -672,6 +678,8 @@ CreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pC
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
+        lock.unlock();
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -743,10 +751,10 @@ CreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreat
             skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
         }
     }
+    lock.unlock();
 
     if (!skipCall) {
         // Call down the call chain:
-        lock.unlock();
         result = my_data->instance_dispatch_table->CreateXcbSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
         lock.lock();
 
@@ -765,6 +773,8 @@ CreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreat
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
+        lock.unlock();
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -838,10 +848,10 @@ CreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCre
             skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
         }
     }
+    lock.unlock();
 
     if (!skipCall) {
         // Call down the call chain:
-        lock.unlock();
         result = my_data->instance_dispatch_table->CreateXlibSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
         lock.lock();
 
@@ -860,6 +870,8 @@ CreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCre
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
         }
+        lock.unlock();
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1113,10 +1125,10 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
     if (!pSupported) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pSupported");
     }
+    lock.unlock();
 
     if (!skipCall) {
         // Call down the call chain:
-        lock.unlock();
         result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIndex, surface,
                                                                                       pSupported);
         lock.lock();
@@ -1146,6 +1158,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
                 }
             }
         }
+        lock.unlock();
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1174,10 +1188,10 @@ GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkSurfa
     if (!pSurfaceCapabilities) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pSurfaceCapabilities");
     }
+    lock.unlock();
 
     if (!skipCall) {
         // Call down the call chain:
-        lock.unlock();
         result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface,
                                                                                            pSurfaceCapabilities);
         lock.lock();
@@ -1193,6 +1207,8 @@ GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkSurfa
             // FIXME: NEED TO COPY THIS DATA, BECAUSE pSurfaceCapabilities POINTS TO APP-ALLOCATED DATA
             pPhysicalDevice->surfaceCapabilities = *pSurfaceCapabilities;
         }
+        lock.unlock();
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1238,10 +1254,10 @@ GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR
                 *pSurfaceFormatCount, pPhysicalDevice->surfaceFormatCount);
         }
     }
+    lock.unlock();
 
     if (!skipCall) {
         // Call down the call chain:
-        lock.unlock();
         result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, pSurfaceFormatCount,
                                                                                       pSurfaceFormats);
         lock.lock();
@@ -1268,6 +1284,8 @@ GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR
                 pPhysicalDevice->surfaceFormatCount = 0;
             }
         }
+        lock.unlock();
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1313,10 +1331,10 @@ GetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, VkSurfa
                 *pPresentModeCount, pPhysicalDevice->presentModeCount);
         }
     }
+    lock.unlock();
 
     if (!skipCall) {
         // Call down the call chain:
-        lock.unlock();
         result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface,
                                                                                            pPresentModeCount, pPresentModes);
         lock.lock();
@@ -1343,6 +1361,8 @@ GetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, VkSurfa
                 pPhysicalDevice->presentModeCount = 0;
             }
         }
+        lock.unlock();
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1684,10 +1704,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     bool skipCall = validateCreateSwapchainKHR(device, pCreateInfo, pSwapchain);
+    lock.unlock();
 
     if (!skipCall) {
         // Call down the call chain:
-        lock.unlock();
         result = my_data->device_dispatch_table->CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
         lock.lock();
 
@@ -1717,6 +1737,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapc
                 pSurface->swapchains[*pSwapchain] = &my_data->swapchainMap[*pSwapchain];
             }
         }
+        lock.unlock();
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1827,10 +1849,10 @@ GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSwap
                 *pSwapchainImageCount, pSwapchain->imageCount);
         }
     }
+    lock.unlock();
 
     if (!skipCall) {
         // Call down the call chain:
-        lock.unlock();
         result = my_data->device_dispatch_table->GetSwapchainImagesKHR(device, swapchain, pSwapchainImageCount, pSwapchainImages);
         lock.lock();
 
@@ -1852,6 +1874,8 @@ GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSwap
                 pSwapchain->images[i].acquiredByApp = false;
             }
         }
+        lock.unlock();
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1929,10 +1953,10 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     if (!pImageIndex) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pImageIndex");
     }
+    lock.unlock();
 
     if (!skipCall) {
         // Call down the call chain:
-        lock.unlock();
         result = my_data->device_dispatch_table->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
         lock.lock();
 
@@ -1945,6 +1969,8 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
             // Change the state of the image (now acquired by the application):
             pSwapchain->images[*pImageIndex].acquiredByApp = true;
         }
+        lock.unlock();
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -2039,10 +2065,10 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
             }
         }
     }
+    lock.unlock();
 
     if (!skipCall) {
         // Call down the call chain:
-        lock.unlock();
         result = my_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
         lock.lock();
 
@@ -2061,6 +2087,8 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
                 }
             }
         }
+        lock.unlock();
+
         return result;
     }
     return VK_ERROR_VALIDATION_FAILED_EXT;
