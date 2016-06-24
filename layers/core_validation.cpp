@@ -3775,9 +3775,9 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
 
         // Remove this cmdBuffer's reference from each FrameBuffer's CB ref list
         for (auto framebuffer : pCB->framebuffers) {
-            auto fbNode = getFramebuffer(dev_data, framebuffer);
-            if (fbNode)
-                fbNode->cb_bindings.erase(pCB->commandBuffer);
+            auto fb_node = getFramebuffer(dev_data, framebuffer);
+            if (fb_node)
+                fb_node->cb_bindings.erase(pCB->commandBuffer);
         }
         pCB->framebuffers.clear();
         pCB->activeFramebuffer = VK_NULL_HANDLE;
@@ -5527,9 +5527,9 @@ VKAPI_ATTR void VKAPI_CALL
 DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
-    auto fbNode = dev_data->frameBufferMap.find(framebuffer);
-    if (fbNode != dev_data->frameBufferMap.end()) {
-        for (auto cb : fbNode->second->cb_bindings) {
+    auto fb_node = getFramebuffer(dev_data, framebuffer);
+    if (fb_node) {
+        for (auto cb : fb_node->cb_bindings) {
             auto cb_node = getCBNode(dev_data, cb);
             if (cb_node) {
                 // Set CB as invalid and record destroyed framebuffer
@@ -5537,7 +5537,7 @@ DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocatio
                 cb_node->destroyedFramebuffers.insert(framebuffer);
             }
         }
-        dev_data->frameBufferMap.erase(fbNode);
+        dev_data->frameBufferMap.erase(fb_node->framebuffer);
     }
     lock.unlock();
     dev_data->device_dispatch_table->DestroyFramebuffer(device, framebuffer, pAllocator);
@@ -8402,7 +8402,7 @@ static bool PreCallValidateCreateFramebuffer(layer_data *dev_data, const VkFrame
 static void PostCallRecordCreateFramebuffer(layer_data *dev_data, const VkFramebufferCreateInfo *pCreateInfo, VkFramebuffer fb) {
     // Shadow create info and store in map
     std::unique_ptr<FRAMEBUFFER_NODE> fb_node(
-        new FRAMEBUFFER_NODE(pCreateInfo, dev_data->renderPassMap[pCreateInfo->renderPass]->pCreateInfo));
+        new FRAMEBUFFER_NODE(fb, pCreateInfo, dev_data->renderPassMap[pCreateInfo->renderPass]->pCreateInfo));
 
     for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
         VkImageView view = pCreateInfo->pAttachments[i];

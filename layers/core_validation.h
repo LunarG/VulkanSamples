@@ -257,12 +257,13 @@ class FRAMEBUFFER_NODE : BASE_NODE {
   public:
     using BASE_NODE::in_use;
     using BASE_NODE::cb_bindings;
+    VkFramebuffer framebuffer;
     safe_VkFramebufferCreateInfo createInfo;
     safe_VkRenderPassCreateInfo renderPassCreateInfo;
     std::unordered_set<VkCommandBuffer> referencingCmdBuffers;
     std::vector<MT_FB_ATTACHMENT_INFO> attachments;
-    FRAMEBUFFER_NODE(const VkFramebufferCreateInfo *pCreateInfo, const VkRenderPassCreateInfo *pRPCI)
-        : createInfo(pCreateInfo), renderPassCreateInfo(pRPCI){};
+    FRAMEBUFFER_NODE(VkFramebuffer fb, const VkFramebufferCreateInfo *pCreateInfo, const VkRenderPassCreateInfo *pRPCI)
+        : framebuffer(fb), createInfo(pCreateInfo), renderPassCreateInfo(pRPCI){};
 };
 
 typedef struct stencil_data {
