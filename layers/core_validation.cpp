@@ -3777,7 +3777,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         for (auto framebuffer : pCB->framebuffers) {
             auto fbNode = getFramebuffer(dev_data, framebuffer);
             if (fbNode)
-                fbNode->referencingCmdBuffers.erase(pCB->commandBuffer);
+                fbNode->cb_bindings.erase(pCB->commandBuffer);
         }
         pCB->framebuffers.clear();
         pCB->activeFramebuffer = VK_NULL_HANDLE;
@@ -5529,7 +5529,7 @@ DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocatio
     std::unique_lock<std::mutex> lock(global_lock);
     auto fbNode = dev_data->frameBufferMap.find(framebuffer);
     if (fbNode != dev_data->frameBufferMap.end()) {
-        for (auto cb : fbNode->second->referencingCmdBuffers) {
+        for (auto cb : fbNode->second->cb_bindings) {
             auto cb_node = getCBNode(dev_data, cb);
             if (cb_node) {
                 // Set CB as invalid and record destroyed framebuffer
@@ -6232,7 +6232,7 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                                             (uint64_t)(pInfo->framebuffer), (uint64_t)(fbRP), errorString.c_str());
                             }
                             // Connect this framebuffer to this cmdBuffer
-                            framebuffer->referencingCmdBuffers.insert(pCB->commandBuffer);
+                            framebuffer->cb_bindings.insert(pCB->commandBuffer);
                         }
                     }
                 }
@@ -9211,7 +9211,7 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
             pCB->activeSubpassContents = contents;
             pCB->framebuffers.insert(pRenderPassBegin->framebuffer);
             // Connect this framebuffer to this cmdBuffer
-            framebuffer->referencingCmdBuffers.insert(pCB->commandBuffer);
+            framebuffer->cb_bindings.insert(pCB->commandBuffer);
         } else {
             skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,

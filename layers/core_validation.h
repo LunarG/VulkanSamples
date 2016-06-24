@@ -253,8 +253,10 @@ class QUERY_POOL_NODE : public BASE_NODE {
     VkQueryPoolCreateInfo createInfo;
 };
 
-class FRAMEBUFFER_NODE {
+class FRAMEBUFFER_NODE : BASE_NODE {
   public:
+    using BASE_NODE::in_use;
+    using BASE_NODE::cb_bindings;
     safe_VkFramebufferCreateInfo createInfo;
     safe_VkRenderPassCreateInfo renderPassCreateInfo;
     std::unordered_set<VkCommandBuffer> referencingCmdBuffers;
