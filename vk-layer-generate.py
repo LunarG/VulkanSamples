@@ -594,6 +594,14 @@ class Subcommand(object):
                              "    return get_dispatch_table(%s_device_table_map, device)->GetDeviceProcAddr(device, funcName);\n"
                              "}\n" % (self.layer_name, self.layer_name))
 
+            # The WSI-related extensions have independent extension enables
+            wsi_sub_enables = {'WIN32': 'win32_enabled',
+                               'XLIB': 'xlib_enabled',
+                               'XCB': 'xcb_enabled',
+                               'MIR': 'mir_enabled',
+                               'WAYLAND': 'wayland_enabled',
+                               'ANDROID': 'android_enabled'}
+
             for ext_enable, ext_list in instance_extensions:
                 func_body.append('%s' % self.lineinfo.get())
                 func_body.append('static inline PFN_vkVoidFunction intercept_%s_command(const char *name, VkInstance instance)' % ext_enable)
@@ -609,8 +617,12 @@ class Subcommand(object):
                     for ext_name in ext_list:
                         if wsi_name(ext_name):
                             func_body.append('%s' % wsi_ifdef(ext_name))
-                        func_body.append('    if (!strcmp("%s", name))\n'
-                                         '        return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (ext_name, ext_name[2:]))
+                            if wsi_sub_enables[wsi_name(ext_name)]:
+                                func_body.append('    if ((instanceExtMap[pTable].%s == true) && !strcmp("%s", name))\n'
+                                                 '        return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (wsi_sub_enables[wsi_name(ext_name)], ext_name, ext_name[2:]))
+                        else:
+                            func_body.append('    if (!strcmp("%s", name))\n'
+                                             '        return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (ext_name, ext_name[2:]))
                         if wsi_name(ext_name):
                             func_body.append('%s' % wsi_endif(ext_name))
 

@@ -54,7 +54,7 @@ struct layer_data {
     layer_data() : wsi_enabled(false), gpu(VK_NULL_HANDLE){};
 };
 
-struct instExts {
+struct instance_extension_enables {
     bool wsi_enabled;
     bool xlib_enabled;
     bool xcb_enabled;
@@ -64,7 +64,7 @@ struct instExts {
     bool win32_enabled;
 };
 
-static std::unordered_map<void *, struct instExts> instanceExtMap;
+static std::unordered_map<void *, struct instance_extension_enables> instanceExtMap;
 static std::unordered_map<void *, layer_data *> layer_data_map;
 static device_table_map unique_objects_device_table_map;
 static instance_table_map unique_objects_instance_table_map;
@@ -115,6 +115,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreate
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
     instanceExtMap[pDisp] = {};
+
     for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0)
             instanceExtMap[pDisp].wsi_enabled = true;
