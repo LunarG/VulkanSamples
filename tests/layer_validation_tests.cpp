@@ -3067,7 +3067,6 @@ TEST_F(VkLayerTest, ResetUnsignaledFence) {
     m_errorMonitor->VerifyNotFound();
 }
 
-#if 0
 TEST_F(VkLayerTest, LongFenceChain)
 {
     m_errorMonitor->ExpectSuccess();
@@ -3102,7 +3101,6 @@ TEST_F(VkLayerTest, LongFenceChain)
 
     m_errorMonitor->VerifyNotFound();
 }
-#endif
 
 TEST_F(VkLayerTest, CommandBufferSimultaneousUseSync)
 {
@@ -5825,7 +5823,6 @@ TEST_F(VkLayerTest,
     m_errorMonitor->VerifyNotFound();
 }
 
-#if 0
 TEST_F(VkLayerTest, TwoQueuesEnsureCorrectRetirementWithWorkStolen) {
     if ((m_device->queue_props.empty()) ||
         (m_device->queue_props[0].queueCount < 2)) {
@@ -5905,7 +5902,6 @@ TEST_F(VkLayerTest, TwoQueuesEnsureCorrectRetirementWithWorkStolen) {
     vkDestroyCommandPool(m_device->device(), pool, nullptr);
     vkDestroySemaphore(m_device->device(), s, nullptr);
 }
-#endif
 
 // This is a positive test.  No errors should be generated.
 TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFence) {
