@@ -19,7 +19,7 @@
 ## Sample progression
   - In general, the samples are not interrelated, but there is a progression
       among some of the samples that lead to drawing a cube.  Start with the
-      instance sample, then enumerate-adv, device, initcommandbuffer, initswapchain, initdepthbuffer,
+      instance sample, then enumerate-adv, device, initswapchain, initcommandbuffer, initdepthbuffer,
       inituniformbuffer, descriptor_pipeline_layouts, initrenderpass, initshaders,
       initframebuffers, vertexbuffer, allocdescriptorsets, initpipeline, and they
       culminate in the drawcube sample.  Each sample uses utility routines from
@@ -62,14 +62,12 @@ And import VulkanSamples/API-Samples/android/build.gradle in Android Studio.
 
 Windows 7+ with additional required software packages:
 
-- Microsoft Visual Studio 2013 Professional.  Note: it is possible that lesser/older versions may work, but that has not bee
-n tested.
+- Microsoft Visual Studio 2013 Professional.  Note: it is possible that lesser/older versions may work, but that has not been tested.
 - CMake (from http://www.cmake.org/download/).  Notes:
   - Tell the installer to "Add CMake to the system PATH" environment variable.
 - Python 3 (from https://www.python.org/downloads).  Notes:
   - Select to install the optional sub-package to add Python to the system PATH environment variable.
-  - Need python3.3 or later to get the Windows py.exe launcher that is used to get python3 rather than python2 if both are i
-nstalled on Windows
+  - Need python3.3 or later to get the Windows py.exe launcher that is used to get python3 rather than python2 if both are installed on Windows
 - Git (from http://git-scm.com/download/win).
   - Tell the installer to allow it to be used for "Developer Prompt" as well as "Git Bash".
   - Tell the installer to treat line endings "as is" (i.e. both DOS and Unix-style line endings).
@@ -85,8 +83,7 @@ cd build
 cmake -G "Visual Studio 12 Win64" ..
 ```
 
-At this point, you can use Windows Explorer to launch Visual Studio by double-clicking on the "VULKAN.sln" file in the \buil
-d folder.  
+At this point, you can use Windows Explorer to launch Visual Studio by double-clicking on the "VULKAN.sln" file in the \build folder.  
 Once Visual Studio comes up, you can select "Debug" or "Release" from a drop-down list.  
 You can start a build with either the menu (Build->Build Solution), or a keyboard shortcut (Ctrl+Shift+B).
 As part of the build process, Python scripts will create additional Visual Studio files and projects,
@@ -98,8 +95,7 @@ Make sure it is either installed in the C:\Windows\System32 folder,
 or the PATH environment variable includes the folder that it is located in.
 
 ### Windows 64-bit Installation Notes
-If you plan on creating a Windows Install file (done in the windowsRuntimeInstaller sub-directory) you will need to build fo
-r both 32-bit and 64-bit Windows since both versions of EXEs and DLLs exist simultaneously on Windows 64.
+If you plan on creating a Windows Install file (done in the windowsRuntimeInstaller sub-directory) you will need to build for both 32-bit and 64-bit Windows since both versions of EXEs and DLLs exist simultaneously on Windows 64.
 
 To do this, simply create and build the release versions of each target:
 ```
