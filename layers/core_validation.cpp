@@ -709,20 +709,37 @@ static bool set_sparse_mem_binding(layer_data *dev_data, VkDeviceMemory mem, uin
     return skipCall;
 }
 
-// For given Object, get 'mem' obj that it's bound to or NULL if no binding
-static bool get_mem_binding_from_object(layer_data *dev_data, const uint64_t handle,
-                                            const VkDebugReportObjectTypeEXT type, VkDeviceMemory *mem) {
-    bool skipCall = false;
+// For handle of given object type, return memory binding
+static bool get_mem_for_type(layer_data *dev_data, uint64_t handle, VkDebugReportObjectTypeEXT type, VkDeviceMemory *mem) {
+    bool skip_call = false;
     *mem = VK_NULL_HANDLE;
-    VkDeviceMemory *pMemBinding = get_object_mem_binding(dev_data, handle, type);
-    if (pMemBinding) {
-        *mem = *pMemBinding;
-    } else {
-        skipCall = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, type, handle, __LINE__, MEMTRACK_INVALID_OBJECT,
-                           "MEM", "Trying to get mem binding for object 0x%" PRIxLEAST64 " but no such object in %s list", handle,
-                           object_type_to_string(type));
+    switch (type) {
+    case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:
+        *mem = getImageNode(dev_data, VkImage(handle))->mem;
+        break;
+    case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
+        *mem = getBufferNode(dev_data, VkBuffer(handle))->mem;
+        break;
+    default:
+        assert(0);
     }
-    return skipCall;
+    if (!*mem) {
+        skip_call = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, type, handle, __LINE__, MEMTRACK_INVALID_OBJECT,
+                            "MEM", "Trying to get mem binding for %s object 0x%" PRIxLEAST64
+                                   " but binding is NULL. Has memory been bound to this object?",
+                            object_type_to_string(type), handle);
+    }
+    return skip_call;
+}
+
+// Get memory binding for given image
+static bool getImageMemory(layer_data *dev_data, VkImage handle, VkDeviceMemory *mem) {
+    return get_mem_for_type(dev_data, reinterpret_cast<uint64_t &>(handle), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, mem);
+}
+
+// Get memory binding for given buffer
+static bool getBufferMemory(layer_data *dev_data, VkBuffer handle, VkDeviceMemory *mem) {
+    return get_mem_for_type(dev_data, reinterpret_cast<uint64_t &>(handle), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, mem);
 }
 
 // Print details of MemObjInfo list
@@ -6716,8 +6733,7 @@ CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize 
     // TODO : Somewhere need to verify that IBs have correct usage state flagged
     std::unique_lock<std::mutex> lock(global_lock);
     VkDeviceMemory mem;
-    skipCall =
-        get_mem_binding_from_object(dev_data, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
+    skipCall = getBufferMemory(dev_data, buffer, &mem);
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     if (cb_data != dev_data->commandBufferMap.end()) {
         std::function<bool()> function = [=]() { return validate_memory_is_valid(dev_data, mem, "vkCmdBindIndexBuffer()"); };
@@ -6771,7 +6787,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
     if (cb_data != dev_data->commandBufferMap.end()) {
         for (uint32_t i = 0; i < bindingCount; ++i) {
             VkDeviceMemory mem;
-            skipCall |= get_mem_binding_from_object(dev_data, (uint64_t)pBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
+            skipCall |= getBufferMemory(dev_data, pBuffers[i], &mem);
 
             std::function<bool()> function = [=]() { return validate_memory_is_valid(dev_data, mem, "vkCmdBindVertexBuffers()"); };
             cb_data->second->validate_functions.push_back(function);
@@ -6796,8 +6812,7 @@ static bool markStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_N
             continue;
         VkImage image = iv_data->image;
         VkDeviceMemory mem;
-        skip_call |=
-            get_mem_binding_from_object(dev_data, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
+        skip_call |= getImageMemory(dev_data, image, &mem);
         std::function<bool()> function = [=]() {
             set_memory_valid(dev_data, mem, true, image);
             return false;
@@ -6806,8 +6821,7 @@ static bool markStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_N
     }
     for (auto buffer : pCB->updateBuffers) {
         VkDeviceMemory mem;
-        skip_call |= get_mem_binding_from_object(dev_data, (uint64_t)buffer,
-                                                 VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
+        skip_call |= getBufferMemory(dev_data, buffer, &mem);
         std::function<bool()> function = [=]() {
             set_memory_valid(dev_data, mem, true);
             return false;
@@ -6878,8 +6892,7 @@ CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize off
     std::unique_lock<std::mutex> lock(global_lock);
     VkDeviceMemory mem;
     // MTMTODO : merge with code below
-    skipCall =
-        get_mem_binding_from_object(dev_data, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
+    skipCall = getBufferMemory(dev_data, buffer, &mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, mem, "vkCmdDrawIndirect");
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
@@ -6909,8 +6922,7 @@ CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceS
     std::unique_lock<std::mutex> lock(global_lock);
     VkDeviceMemory mem;
     // MTMTODO : merge with code below
-    skipCall =
-        get_mem_binding_from_object(dev_data, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
+    skipCall = getBufferMemory(dev_data, buffer, &mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, mem, "vkCmdDrawIndexedIndirect");
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
@@ -6956,8 +6968,7 @@ CmdDispatchIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     VkDeviceMemory mem;
-    skipCall =
-        get_mem_binding_from_object(dev_data, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
+    skipCall = getBufferMemory(dev_data, buffer, &mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, mem, "vkCmdDispatchIndirect");
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
@@ -6977,9 +6988,9 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     VkDeviceMemory src_mem, dst_mem;
-    skipCall = get_mem_binding_from_object(dev_data, (uint64_t)srcBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &src_mem);
+    skipCall = getBufferMemory(dev_data, srcBuffer, &src_mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, src_mem, "vkCmdCopyBuffer");
-    skipCall |= get_mem_binding_from_object(dev_data, (uint64_t)dstBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &dst_mem);
+    skipCall |= getBufferMemory(dev_data, dstBuffer, &dst_mem);
 
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, dst_mem, "vkCmdCopyBuffer");
     // Validate that SRC & DST buffers have correct usage flags set
@@ -7090,10 +7101,10 @@ CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
     std::unique_lock<std::mutex> lock(global_lock);
     VkDeviceMemory src_mem, dst_mem;
     // Validate that src & dst images have correct usage flags set
-    skipCall = get_mem_binding_from_object(dev_data, (uint64_t)srcImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &src_mem);
+    skipCall = getImageMemory(dev_data, srcImage, &src_mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, src_mem, "vkCmdCopyImage");
 
-    skipCall |= get_mem_binding_from_object(dev_data, (uint64_t)dstImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &dst_mem);
+    skipCall |= getImageMemory(dev_data, dstImage, &dst_mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, dst_mem, "vkCmdCopyImage");
     skipCall |= validate_image_usage_flags(dev_data, srcImage, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true,
                                            "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
@@ -7132,10 +7143,10 @@ CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
     std::unique_lock<std::mutex> lock(global_lock);
     VkDeviceMemory src_mem, dst_mem;
     // Validate that src & dst images have correct usage flags set
-    skipCall = get_mem_binding_from_object(dev_data, (uint64_t)srcImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &src_mem);
+    skipCall = getImageMemory(dev_data, srcImage, &src_mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, src_mem, "vkCmdBlitImage");
 
-    skipCall |= get_mem_binding_from_object(dev_data, (uint64_t)dstImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &dst_mem);
+    skipCall |= getImageMemory(dev_data, dstImage, &dst_mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, dst_mem, "vkCmdBlitImage");
     skipCall |= validate_image_usage_flags(dev_data, srcImage, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true,
                                            "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
@@ -7170,10 +7181,10 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     VkDeviceMemory dst_mem, src_mem;
-    skipCall = get_mem_binding_from_object(dev_data, (uint64_t)dstImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &dst_mem);
+    skipCall = getImageMemory(dev_data, dstImage, &dst_mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, dst_mem, "vkCmdCopyBufferToImage");
 
-    skipCall |= get_mem_binding_from_object(dev_data, (uint64_t)srcBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &src_mem);
+    skipCall |= getBufferMemory(dev_data, srcBuffer, &src_mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, src_mem, "vkCmdCopyBufferToImage");
     // Validate that src buff & dst image have correct usage flags set
     skipCall |= validate_buffer_usage_flags(dev_data, srcBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, "vkCmdCopyBufferToImage()",
@@ -7209,10 +7220,10 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     VkDeviceMemory src_mem, dst_mem;
-    skipCall = get_mem_binding_from_object(dev_data, (uint64_t)srcImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &src_mem);
+    skipCall = getImageMemory(dev_data, srcImage, &src_mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, src_mem, "vkCmdCopyImageToBuffer");
 
-    skipCall |= get_mem_binding_from_object(dev_data, (uint64_t)dstBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &dst_mem);
+    skipCall |= getBufferMemory(dev_data, dstBuffer, &dst_mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, dst_mem, "vkCmdCopyImageToBuffer");
     // Validate that dst buff & src image have correct usage flags set
     skipCall |= validate_image_usage_flags(dev_data, srcImage, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true, "vkCmdCopyImageToBuffer()",
@@ -7250,8 +7261,7 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     VkDeviceMemory mem;
-    skipCall =
-        get_mem_binding_from_object(dev_data, (uint64_t)dstBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
+    skipCall = getBufferMemory(dev_data, dstBuffer, &mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, mem, "vkCmdUpdateBuffer");
     // Validate that dst buff has correct usage flags set
     skipCall |= validate_buffer_usage_flags(dev_data, dstBuffer, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, "vkCmdUpdateBuffer()",
@@ -7279,8 +7289,7 @@ CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize ds
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     VkDeviceMemory mem;
-    skipCall =
-        get_mem_binding_from_object(dev_data, (uint64_t)dstBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
+    skipCall = getBufferMemory(dev_data, dstBuffer, &mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, mem, "vkCmdFillBuffer");
     // Validate that dst buff has correct usage flags set
     skipCall |= validate_buffer_usage_flags(dev_data, dstBuffer, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, "vkCmdFillBuffer()",
@@ -7380,7 +7389,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkI
     std::unique_lock<std::mutex> lock(global_lock);
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
     VkDeviceMemory mem;
-    skipCall = get_mem_binding_from_object(dev_data, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
+    skipCall = getImageMemory(dev_data, image, &mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, mem, "vkCmdClearColorImage");
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     if (cb_data != dev_data->commandBufferMap.end()) {
@@ -7407,7 +7416,7 @@ CmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageL
     std::unique_lock<std::mutex> lock(global_lock);
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
     VkDeviceMemory mem;
-    skipCall = get_mem_binding_from_object(dev_data, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
+    skipCall = getImageMemory(dev_data, image, &mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, mem, "vkCmdClearDepthStencilImage");
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     if (cb_data != dev_data->commandBufferMap.end()) {
@@ -7433,10 +7442,10 @@ CmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout s
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     VkDeviceMemory src_mem, dst_mem;
-    skipCall = get_mem_binding_from_object(dev_data, (uint64_t)srcImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &src_mem);
+    skipCall = getImageMemory(dev_data, srcImage, &src_mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, src_mem, "vkCmdResolveImage");
 
-    skipCall |= get_mem_binding_from_object(dev_data, (uint64_t)dstImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &dst_mem);
+    skipCall |= getImageMemory(dev_data, dstImage, &dst_mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, dst_mem, "vkCmdResolveImage");
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
     if (cb_data != dev_data->commandBufferMap.end()) {
@@ -8072,8 +8081,7 @@ CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, ui
 #if MTMERGESOURCE
     VkDeviceMemory mem;
     auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
-    skipCall |=
-        get_mem_binding_from_object(dev_data, (uint64_t)dstBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
+    skipCall |= getBufferMemory(dev_data, dstBuffer, &mem);
     if (cb_data != dev_data->commandBufferMap.end()) {
         std::function<bool()> function = [=]() {
             set_memory_valid(dev_data, mem, true);
@@ -8403,8 +8411,7 @@ static void PostCallRecordCreateFramebuffer(layer_data *dev_data, const VkFrameb
             continue;
         }
         MT_FB_ATTACHMENT_INFO fb_info;
-        get_mem_binding_from_object(dev_data, (uint64_t)(view_data->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                    &fb_info.mem);
+        getImageMemory(dev_data, view_data->image, &fb_info.mem);
         fb_info.image = view_data->image;
         fb_node->attachments.push_back(fb_info);
     }
@@ -10076,8 +10083,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
         if (swapchain_data && pPresentInfo->pImageIndices[i] < swapchain_data->images.size()) {
             VkImage image = swapchain_data->images[pPresentInfo->pImageIndices[i]];
 #if MTMERGESOURCE
-            skip_call |=
-                    get_mem_binding_from_object(dev_data, (uint64_t)(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
+            skip_call |= getImageMemory(dev_data, image, &mem);
             skip_call |= validate_memory_is_valid(dev_data, mem, "vkQueuePresentKHR()", image);
 #endif
             vector<VkImageLayout> layouts;
