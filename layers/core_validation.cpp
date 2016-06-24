@@ -5368,10 +5368,10 @@ FreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandB
     std::unique_lock<std::mutex> lock(global_lock);
 
     for (uint32_t i = 0; i < commandBufferCount; i++) {
-        auto cb_pair = dev_data->commandBufferMap.find(pCommandBuffers[i]);
+        auto cb_node = getCBNode(dev_data, pCommandBuffers[i]);
         // Delete CB information structure, and remove from commandBufferMap
-        if (cb_pair != dev_data->commandBufferMap.end()) {
-            skip_call |= checkCommandBufferInFlight(dev_data, cb_pair->second, "free");
+        if (cb_node) {
+            skip_call |= checkCommandBufferInFlight(dev_data, cb_node, "free");
         }
     }
     lock.unlock();
@@ -5384,14 +5384,14 @@ FreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandB
     lock.lock();
     auto pPool = getCommandPoolNode(dev_data, commandPool);
     for (uint32_t i = 0; i < commandBufferCount; i++) {
-        auto cb_pair = dev_data->commandBufferMap.find(pCommandBuffers[i]);
+        auto cb_node = getCBNode(dev_data, pCommandBuffers[i]);
         // Delete CB information structure, and remove from commandBufferMap
-        if (cb_pair != dev_data->commandBufferMap.end()) {
-            dev_data->globalInFlightCmdBuffers.erase(cb_pair->first);
+        if (cb_node) {
+            dev_data->globalInFlightCmdBuffers.erase(cb_node->commandBuffer);
             // reset prior to delete for data clean-up
-            resetCB(dev_data, cb_pair->second->commandBuffer);
-            delete cb_pair->second;
-            dev_data->commandBufferMap.erase(cb_pair);
+            resetCB(dev_data, cb_node->commandBuffer);
+            dev_data->commandBufferMap.erase(cb_node->commandBuffer);
+            delete cb_node;
         }
 
         // Remove commandBuffer reference from commandPoolMap
@@ -5446,13 +5446,13 @@ DestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocatio
     dev_data->device_dispatch_table->DestroyCommandPool(device, commandPool, pAllocator);
 
     lock.lock();
-    // Must remove cmdpool from cmdpoolmap, after removing all cmdbuffers in its list from the commandPoolMap
+    // Must remove cmdpool from cmdpoolmap, after removing all cmdbuffers in its list from the commandBufferMap
     clearCommandBuffersInFlight(dev_data, pPool);
     for (auto cb : pPool->commandBuffers) {
         clear_cmd_buf_and_mem_references(dev_data, cb);
-        auto del_cb = dev_data->commandBufferMap.find(cb);
-        delete del_cb->second;                  // delete CB info structure
-        dev_data->commandBufferMap.erase(del_cb); // Remove this command buffer
+        auto cb_node = getCBNode(dev_data, cb);
+        dev_data->commandBufferMap.erase(cb); // Remove this command buffer
+        delete cb_node;                       // delete CB info structure
     }
     dev_data->commandPoolMap.erase(commandPool);
     lock.unlock();
@@ -5530,11 +5530,11 @@ DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocatio
     auto fbNode = dev_data->frameBufferMap.find(framebuffer);
     if (fbNode != dev_data->frameBufferMap.end()) {
         for (auto cb : fbNode->second->referencingCmdBuffers) {
-            auto cbNode = dev_data->commandBufferMap.find(cb);
-            if (cbNode != dev_data->commandBufferMap.end()) {
+            auto cb_node = getCBNode(dev_data, cb);
+            if (cb_node) {
                 // Set CB as invalid and record destroyed framebuffer
-                cbNode->second->state = CB_INVALID;
-                cbNode->second->destroyedFramebuffers.insert(framebuffer);
+                cb_node->state = CB_INVALID;
+                cb_node->destroyedFramebuffers.insert(framebuffer);
             }
         }
         dev_data->frameBufferMap.erase(fbNode);
@@ -6734,11 +6734,11 @@ CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize 
     std::unique_lock<std::mutex> lock(global_lock);
     VkDeviceMemory mem;
     skipCall = getBufferMemory(dev_data, buffer, &mem);
-    auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
-    if (cb_data != dev_data->commandBufferMap.end()) {
+    auto cb_node = getCBNode(dev_data, commandBuffer);
+    if (cb_node) {
         std::function<bool()> function = [=]() { return validate_memory_is_valid(dev_data, mem, "vkCmdBindIndexBuffer()"); };
-        cb_data->second->validate_functions.push_back(function);
-        skipCall |= addCmd(dev_data, cb_data->second, CMD_BINDINDEXBUFFER, "vkCmdBindIndexBuffer()");
+        cb_node->validate_functions.push_back(function);
+        skipCall |= addCmd(dev_data, cb_node, CMD_BINDINDEXBUFFER, "vkCmdBindIndexBuffer()");
         VkDeviceSize offset_align = 0;
         switch (indexType) {
         case VK_INDEX_TYPE_UINT16:
@@ -6757,7 +6757,7 @@ CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize 
                                 "vkCmdBindIndexBuffer() offset (0x%" PRIxLEAST64 ") does not fall on alignment (%s) boundary.",
                                 offset, string_VkIndexType(indexType));
         }
-        cb_data->second->status |= CBSTATUS_INDEX_BUFFER_BOUND;
+        cb_node->status |= CBSTATUS_INDEX_BUFFER_BOUND;
     }
     lock.unlock();
     if (!skipCall)
@@ -6783,17 +6783,17 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     // TODO : Somewhere need to verify that VBs have correct usage state flagged
     std::unique_lock<std::mutex> lock(global_lock);
-    auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
-    if (cb_data != dev_data->commandBufferMap.end()) {
+    auto cb_node = getCBNode(dev_data, commandBuffer);
+    if (cb_node) {
         for (uint32_t i = 0; i < bindingCount; ++i) {
             VkDeviceMemory mem;
             skipCall |= getBufferMemory(dev_data, pBuffers[i], &mem);
 
             std::function<bool()> function = [=]() { return validate_memory_is_valid(dev_data, mem, "vkCmdBindVertexBuffers()"); };
-            cb_data->second->validate_functions.push_back(function);
+            cb_node->validate_functions.push_back(function);
         }
-        addCmd(dev_data, cb_data->second, CMD_BINDVERTEXBUFFER, "vkCmdBindVertexBuffer()");
-        updateResourceTracking(cb_data->second, firstBinding, bindingCount, pBuffers);
+        addCmd(dev_data, cb_node, CMD_BINDVERTEXBUFFER, "vkCmdBindVertexBuffer()");
+        updateResourceTracking(cb_node, firstBinding, bindingCount, pBuffers);
     } else {
         skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdBindVertexBuffer()");
     }
@@ -6998,18 +6998,18 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
                                             "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
     skipCall |= validate_buffer_usage_flags(dev_data, dstBuffer, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
                                             "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
-    auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
-    if (cb_data != dev_data->commandBufferMap.end()) {
+    auto cb_node = getCBNode(dev_data, commandBuffer);
+    if (cb_node) {
         std::function<bool()> function = [=]() { return validate_memory_is_valid(dev_data, src_mem, "vkCmdCopyBuffer()"); };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
         function = [=]() {
             set_memory_valid(dev_data, dst_mem, true);
             return false;
         };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
 
-        skipCall |= addCmd(dev_data, cb_data->second, CMD_COPYBUFFER, "vkCmdCopyBuffer()");
-        skipCall |= insideRenderPass(dev_data, cb_data->second, "vkCmdCopyBuffer");
+        skipCall |= addCmd(dev_data, cb_node, CMD_COPYBUFFER, "vkCmdCopyBuffer()");
+        skipCall |= insideRenderPass(dev_data, cb_node, "vkCmdCopyBuffer");
     }
     lock.unlock();
     if (!skipCall)
@@ -7110,20 +7110,20 @@ CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
                                            "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
     skipCall |= validate_image_usage_flags(dev_data, dstImage, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true,
                                            "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
-    auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
-    if (cb_data != dev_data->commandBufferMap.end()) {
+    auto cb_node = getCBNode(dev_data, commandBuffer);
+    if (cb_node) {
         std::function<bool()> function = [=]() {
             return validate_memory_is_valid(dev_data, src_mem, "vkCmdCopyImage()", srcImage);
         };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
         function = [=]() {
             set_memory_valid(dev_data, dst_mem, true, dstImage);
             return false;
         };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
 
-        skipCall |= addCmd(dev_data, cb_data->second, CMD_COPYIMAGE, "vkCmdCopyImage()");
-        skipCall |= insideRenderPass(dev_data, cb_data->second, "vkCmdCopyImage");
+        skipCall |= addCmd(dev_data, cb_node, CMD_COPYIMAGE, "vkCmdCopyImage()");
+        skipCall |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImage");
         for (uint32_t i = 0; i < regionCount; ++i) {
             skipCall |= VerifySourceImageLayout(commandBuffer, srcImage, pRegions[i].srcSubresource, srcImageLayout);
             skipCall |= VerifyDestImageLayout(commandBuffer, dstImage, pRegions[i].dstSubresource, dstImageLayout);
@@ -7153,20 +7153,20 @@ CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
     skipCall |= validate_image_usage_flags(dev_data, dstImage, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true,
                                            "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
 
-    auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
-    if (cb_data != dev_data->commandBufferMap.end()) {
+    auto cb_node = getCBNode(dev_data, commandBuffer);
+    if (cb_node) {
         std::function<bool()> function = [=]() {
             return validate_memory_is_valid(dev_data, src_mem, "vkCmdBlitImage()", srcImage);
         };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
         function = [=]() {
             set_memory_valid(dev_data, dst_mem, true, dstImage);
             return false;
         };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
 
-        skipCall |= addCmd(dev_data, cb_data->second, CMD_BLITIMAGE, "vkCmdBlitImage()");
-        skipCall |= insideRenderPass(dev_data, cb_data->second, "vkCmdBlitImage");
+        skipCall |= addCmd(dev_data, cb_node, CMD_BLITIMAGE, "vkCmdBlitImage()");
+        skipCall |= insideRenderPass(dev_data, cb_node, "vkCmdBlitImage");
     }
     lock.unlock();
     if (!skipCall)
@@ -7191,18 +7191,18 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
                                             "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
     skipCall |= validate_image_usage_flags(dev_data, dstImage, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true, "vkCmdCopyBufferToImage()",
                                            "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
-    auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
-    if (cb_data != dev_data->commandBufferMap.end()) {
+    auto cb_node = getCBNode(dev_data, commandBuffer);
+    if (cb_node) {
         std::function<bool()> function = [=]() {
             set_memory_valid(dev_data, dst_mem, true, dstImage);
             return false;
         };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
         function = [=]() { return validate_memory_is_valid(dev_data, src_mem, "vkCmdCopyBufferToImage()"); };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
 
-        skipCall |= addCmd(dev_data, cb_data->second, CMD_COPYBUFFERTOIMAGE, "vkCmdCopyBufferToImage()");
-        skipCall |= insideRenderPass(dev_data, cb_data->second, "vkCmdCopyBufferToImage");
+        skipCall |= addCmd(dev_data, cb_node, CMD_COPYBUFFERTOIMAGE, "vkCmdCopyBufferToImage()");
+        skipCall |= insideRenderPass(dev_data, cb_node, "vkCmdCopyBufferToImage");
         for (uint32_t i = 0; i < regionCount; ++i) {
             skipCall |= VerifyDestImageLayout(commandBuffer, dstImage, pRegions[i].imageSubresource, dstImageLayout);
         }
@@ -7231,20 +7231,20 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
     skipCall |= validate_buffer_usage_flags(dev_data, dstBuffer, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, "vkCmdCopyImageToBuffer()",
                                             "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
 
-    auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
-    if (cb_data != dev_data->commandBufferMap.end()) {
+    auto cb_node = getCBNode(dev_data, commandBuffer);
+    if (cb_node) {
         std::function<bool()> function = [=]() {
             return validate_memory_is_valid(dev_data, src_mem, "vkCmdCopyImageToBuffer()", srcImage);
         };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
         function = [=]() {
             set_memory_valid(dev_data, dst_mem, true);
             return false;
         };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
 
-        skipCall |= addCmd(dev_data, cb_data->second, CMD_COPYIMAGETOBUFFER, "vkCmdCopyImageToBuffer()");
-        skipCall |= insideRenderPass(dev_data, cb_data->second, "vkCmdCopyImageToBuffer");
+        skipCall |= addCmd(dev_data, cb_node, CMD_COPYIMAGETOBUFFER, "vkCmdCopyImageToBuffer()");
+        skipCall |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImageToBuffer");
         for (uint32_t i = 0; i < regionCount; ++i) {
             skipCall |= VerifySourceImageLayout(commandBuffer, srcImage, pRegions[i].imageSubresource, srcImageLayout);
         }
@@ -7267,16 +7267,16 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
     skipCall |= validate_buffer_usage_flags(dev_data, dstBuffer, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, "vkCmdUpdateBuffer()",
                                             "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
 
-    auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
-    if (cb_data != dev_data->commandBufferMap.end()) {
+    auto cb_node = getCBNode(dev_data, commandBuffer);
+    if (cb_node) {
         std::function<bool()> function = [=]() {
             set_memory_valid(dev_data, mem, true);
             return false;
         };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
 
-        skipCall |= addCmd(dev_data, cb_data->second, CMD_UPDATEBUFFER, "vkCmdUpdateBuffer()");
-        skipCall |= insideRenderPass(dev_data, cb_data->second, "vkCmdCopyUpdateBuffer");
+        skipCall |= addCmd(dev_data, cb_node, CMD_UPDATEBUFFER, "vkCmdUpdateBuffer()");
+        skipCall |= insideRenderPass(dev_data, cb_node, "vkCmdCopyUpdateBuffer");
     }
     lock.unlock();
     if (!skipCall)
@@ -7295,16 +7295,16 @@ CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize ds
     skipCall |= validate_buffer_usage_flags(dev_data, dstBuffer, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, "vkCmdFillBuffer()",
                                             "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
 
-    auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
-    if (cb_data != dev_data->commandBufferMap.end()) {
+    auto cb_node = getCBNode(dev_data, commandBuffer);
+    if (cb_node) {
         std::function<bool()> function = [=]() {
             set_memory_valid(dev_data, mem, true);
             return false;
         };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
 
-        skipCall |= addCmd(dev_data, cb_data->second, CMD_FILLBUFFER, "vkCmdFillBuffer()");
-        skipCall |= insideRenderPass(dev_data, cb_data->second, "vkCmdCopyFillBuffer");
+        skipCall |= addCmd(dev_data, cb_node, CMD_FILLBUFFER, "vkCmdFillBuffer()");
+        skipCall |= insideRenderPass(dev_data, cb_node, "vkCmdCopyFillBuffer");
     }
     lock.unlock();
     if (!skipCall)
@@ -7391,16 +7391,16 @@ VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkI
     VkDeviceMemory mem;
     skipCall = getImageMemory(dev_data, image, &mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, mem, "vkCmdClearColorImage");
-    auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
-    if (cb_data != dev_data->commandBufferMap.end()) {
+    auto cb_node = getCBNode(dev_data, commandBuffer);
+    if (cb_node) {
         std::function<bool()> function = [=]() {
             set_memory_valid(dev_data, mem, true, image);
             return false;
         };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
 
-        skipCall |= addCmd(dev_data, cb_data->second, CMD_CLEARCOLORIMAGE, "vkCmdClearColorImage()");
-        skipCall |= insideRenderPass(dev_data, cb_data->second, "vkCmdClearColorImage");
+        skipCall |= addCmd(dev_data, cb_node, CMD_CLEARCOLORIMAGE, "vkCmdClearColorImage()");
+        skipCall |= insideRenderPass(dev_data, cb_node, "vkCmdClearColorImage");
     }
     lock.unlock();
     if (!skipCall)
@@ -7418,16 +7418,16 @@ CmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageL
     VkDeviceMemory mem;
     skipCall = getImageMemory(dev_data, image, &mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, mem, "vkCmdClearDepthStencilImage");
-    auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
-    if (cb_data != dev_data->commandBufferMap.end()) {
+    auto cb_node = getCBNode(dev_data, commandBuffer);
+    if (cb_node) {
         std::function<bool()> function = [=]() {
             set_memory_valid(dev_data, mem, true, image);
             return false;
         };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
 
-        skipCall |= addCmd(dev_data, cb_data->second, CMD_CLEARDEPTHSTENCILIMAGE, "vkCmdClearDepthStencilImage()");
-        skipCall |= insideRenderPass(dev_data, cb_data->second, "vkCmdClearDepthStencilImage");
+        skipCall |= addCmd(dev_data, cb_node, CMD_CLEARDEPTHSTENCILIMAGE, "vkCmdClearDepthStencilImage()");
+        skipCall |= insideRenderPass(dev_data, cb_node, "vkCmdClearDepthStencilImage");
     }
     lock.unlock();
     if (!skipCall)
@@ -7447,20 +7447,20 @@ CmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout s
 
     skipCall |= getImageMemory(dev_data, dstImage, &dst_mem);
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, dst_mem, "vkCmdResolveImage");
-    auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
-    if (cb_data != dev_data->commandBufferMap.end()) {
+    auto cb_node = getCBNode(dev_data, commandBuffer);
+    if (cb_node) {
         std::function<bool()> function = [=]() {
             return validate_memory_is_valid(dev_data, src_mem, "vkCmdResolveImage()", srcImage);
         };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
         function = [=]() {
             set_memory_valid(dev_data, dst_mem, true, dstImage);
             return false;
         };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
 
-        skipCall |= addCmd(dev_data, cb_data->second, CMD_RESOLVEIMAGE, "vkCmdResolveImage()");
-        skipCall |= insideRenderPass(dev_data, cb_data->second, "vkCmdResolveImage");
+        skipCall |= addCmd(dev_data, cb_node, CMD_RESOLVEIMAGE, "vkCmdResolveImage()");
+        skipCall |= insideRenderPass(dev_data, cb_node, "vkCmdResolveImage");
     }
     lock.unlock();
     if (!skipCall)
@@ -8080,14 +8080,14 @@ CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, ui
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
 #if MTMERGESOURCE
     VkDeviceMemory mem;
-    auto cb_data = dev_data->commandBufferMap.find(commandBuffer);
+    auto cb_node = getCBNode(dev_data, commandBuffer);
     skipCall |= getBufferMemory(dev_data, dstBuffer, &mem);
-    if (cb_data != dev_data->commandBufferMap.end()) {
+    if (cb_node) {
         std::function<bool()> function = [=]() {
             set_memory_valid(dev_data, mem, true);
             return false;
         };
-        cb_data->second->validate_functions.push_back(function);
+        cb_node->validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(dev_data, commandBuffer, mem, "vkCmdCopyQueryPoolResults");
     // Validate that DST buffer has correct usage flags set
