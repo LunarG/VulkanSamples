@@ -58,6 +58,8 @@ class DescriptorSetLayout;
 class DescriptorSet;
 };
 
+struct GLOBAL_CB_NODE;
+
 class BASE_NODE {
   public:
     // Track when object is being used by an in-flight command buffer
@@ -66,7 +68,7 @@ class BASE_NODE {
     //  binding initialized when cmd referencing object is bound to command buffer
     //  binding removed when command buffer is reset or destroyed
     // When an object is destroyed, any bound cbs are set to INVALID
-    std::unordered_set<VkCommandBuffer> cb_bindings;
+    std::unordered_set<GLOBAL_CB_NODE *> cb_bindings;
 };
 
 struct DESCRIPTOR_POOL_NODE {

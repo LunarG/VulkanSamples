@@ -3777,7 +3777,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         for (auto framebuffer : pCB->framebuffers) {
             auto fb_node = getFramebuffer(dev_data, framebuffer);
             if (fb_node)
-                fb_node->cb_bindings.erase(pCB->commandBuffer);
+                fb_node->cb_bindings.erase(pCB);
         }
         pCB->framebuffers.clear();
         pCB->activeFramebuffer = VK_NULL_HANDLE;
@@ -5529,13 +5529,10 @@ DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocatio
     std::unique_lock<std::mutex> lock(global_lock);
     auto fb_node = getFramebuffer(dev_data, framebuffer);
     if (fb_node) {
-        for (auto cb : fb_node->cb_bindings) {
-            auto cb_node = getCBNode(dev_data, cb);
-            if (cb_node) {
-                // Set CB as invalid and record destroyed framebuffer
-                cb_node->state = CB_INVALID;
-                cb_node->destroyedFramebuffers.insert(framebuffer);
-            }
+        for (auto cb_node : fb_node->cb_bindings) {
+            // Set CB as invalid and record destroyed framebuffer
+            cb_node->state = CB_INVALID;
+            cb_node->destroyedFramebuffers.insert(framebuffer);
         }
         dev_data->frameBufferMap.erase(fb_node->framebuffer);
     }
@@ -6232,7 +6229,7 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                                             (uint64_t)(pInfo->framebuffer), (uint64_t)(fbRP), errorString.c_str());
                             }
                             // Connect this framebuffer to this cmdBuffer
-                            framebuffer->cb_bindings.insert(pCB->commandBuffer);
+                            framebuffer->cb_bindings.insert(pCB);
                         }
                     }
                 }
@@ -9211,7 +9208,7 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
             pCB->activeSubpassContents = contents;
             pCB->framebuffers.insert(pRenderPassBegin->framebuffer);
             // Connect this framebuffer to this cmdBuffer
-            framebuffer->cb_bindings.insert(pCB->commandBuffer);
+            framebuffer->cb_bindings.insert(pCB);
         } else {
             skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
