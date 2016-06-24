@@ -607,6 +607,10 @@ static const char *object_type_to_string(VkDebugReportObjectTypeEXT type) {
         return "buffer";
     case VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT:
         return "swapchain";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT:
+        return "descriptor set";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT:
+        return "buffer";
     default:
         return "unknown";
     }
@@ -3746,9 +3750,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->activeRenderPass = nullptr;
         pCB->activeSubpassContents = VK_SUBPASS_CONTENTS_INLINE;
         pCB->activeSubpass = 0;
-        pCB->destroyedSets.clear();
-        pCB->updatedSets.clear();
-        pCB->destroyedFramebuffers.clear();
+        pCB->broken_bindings.clear();
         pCB->waitedEvents.clear();
         pCB->events.clear();
         pCB->writeEventsBeforeWait.clear();
@@ -4438,58 +4440,18 @@ static bool validateCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *pCB
     if (CB_RECORDED != pCB->state) {
         if (CB_INVALID == pCB->state) {
             // Inform app of reason CB invalid
-            bool causeReported = false;
-            if (!pCB->destroyedSets.empty()) {
-                std::stringstream set_string;
-                for (auto set : pCB->destroyedSets)
-                    set_string << " " << set;
-
-                skipCall |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
-                            "You are submitting command buffer 0x%" PRIxLEAST64
-                            " that is invalid because it had the following bound descriptor set(s) destroyed: %s",
-                            (uint64_t)(pCB->commandBuffer), set_string.str().c_str());
-                causeReported = true;
-            }
-            if (!pCB->updatedSets.empty()) {
-                std::stringstream set_string;
-                for (auto set : pCB->updatedSets)
-                    set_string << " " << set;
-
-                skipCall |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            (uint64_t)(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
-                            "You are submitting command buffer 0x%" PRIxLEAST64
-                            " that is invalid because it had the following bound descriptor set(s) updated: %s",
-                            (uint64_t)(pCB->commandBuffer), set_string.str().c_str());
-                causeReported = true;
-            }
-            if (!pCB->destroyedFramebuffers.empty()) {
-                std::stringstream fb_string;
-                for (auto fb : pCB->destroyedFramebuffers)
-                    fb_string << " " << fb;
+            for (auto obj : pCB->broken_bindings) {
+                const char *type_str = object_type_to_string(obj.type);
+                // Descriptor sets are a special case that can be either destroyed or updated to invalidated a CB
+                const char *cause_str =
+                    (obj.type == VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT) ? "destroyed or updated" : "destroyed";
 
                 skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                             reinterpret_cast<uint64_t &>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
-                            "You are submitting command buffer 0x%" PRIxLEAST64 " that is invalid because it had the following "
-                            "referenced framebuffers destroyed: %s",
-                            reinterpret_cast<uint64_t &>(pCB->commandBuffer), fb_string.str().c_str());
-                causeReported = true;
-            }
-            // TODO : This is defensive programming to make sure an error is
-            //  flagged if we hit this INVALID cmd buffer case and none of the
-            //  above cases are hit. As the number of INVALID cases grows, this
-            //  code should be updated to seemlessly handle all the cases.
-            if (!causeReported) {
-                skipCall |= log_msg(
-                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                    reinterpret_cast<uint64_t &>(pCB->commandBuffer), __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
-                    "You are submitting command buffer 0x%" PRIxLEAST64 " that is invalid due to an unknown cause. Validation "
-                    "should "
-                    "be improved to report the exact cause.",
-                    reinterpret_cast<uint64_t &>(pCB->commandBuffer));
+                            "You are submitting command buffer 0x%" PRIxLEAST64 " that is invalid because bound %s 0x%" PRIxLEAST64
+                            " was %s.",
+                            reinterpret_cast<uint64_t &>(pCB->commandBuffer), type_str, obj.handle, cause_str);
             }
         } else { // Flag error for using CB w/o vkEndCommandBuffer() called
             skipCall |=
@@ -5523,17 +5485,22 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount,
     return result;
 }
 
+// For given cb_nodes, invalidate them and track object causing invalidation
+void invalidateCommandBuffers(std::unordered_set<GLOBAL_CB_NODE *> cb_nodes, VK_OBJECT obj) {
+    for (auto cb_node : cb_nodes) {
+        cb_node->state = CB_INVALID;
+        cb_node->broken_bindings.push_back(obj);
+    }
+}
+
 VKAPI_ATTR void VKAPI_CALL
 DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     auto fb_node = getFramebuffer(dev_data, framebuffer);
     if (fb_node) {
-        for (auto cb_node : fb_node->cb_bindings) {
-            // Set CB as invalid and record destroyed framebuffer
-            cb_node->state = CB_INVALID;
-            cb_node->destroyedFramebuffers.insert(framebuffer);
-        }
+        invalidateCommandBuffers(fb_node->cb_bindings,
+                                 {reinterpret_cast<uint64_t &>(fb_node->framebuffer), VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT});
         dev_data->frameBufferMap.erase(fb_node->framebuffer);
     }
     lock.unlock();

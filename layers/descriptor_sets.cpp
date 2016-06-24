@@ -321,7 +321,7 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
 cvdescriptorset::DescriptorSet::~DescriptorSet() {
     InvalidateBoundCmdBuffers();
     // Remove link to any cmd buffers
-    for (auto cb : bound_cmd_buffers_) {
+    for (auto cb : cb_bindings) {
         for (uint32_t i=0; i<VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
             cb->lastBound[i].uniqueBoundSets.erase(this);
         }
@@ -460,9 +460,8 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::unordered_
 }
 // Set is being deleted or updates so invalidate all bound cmd buffers
 void cvdescriptorset::DescriptorSet::InvalidateBoundCmdBuffers() {
-    for (auto cb_node : bound_cmd_buffers_) {
-        cb_node->state = CB_INVALID;
-    }
+    core_validation::invalidateCommandBuffers(cb_bindings,
+                                              {reinterpret_cast<uint64_t &>(set_), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT});
 }
 // Perform write update in given update struct
 void cvdescriptorset::DescriptorSet::PerformWriteUpdate(const VkWriteDescriptorSet *update) {

@@ -71,6 +71,12 @@ class BASE_NODE {
     std::unordered_set<GLOBAL_CB_NODE *> cb_bindings;
 };
 
+// Generic wrapper for vulkan objects
+struct VK_OBJECT {
+    uint64_t handle;
+    VkDebugReportObjectTypeEXT type;
+};
+
 struct DESCRIPTOR_POOL_NODE {
     VkDescriptorPool pool;
     uint32_t maxSets;       // Max descriptor sets allowed in this pool
@@ -462,13 +468,9 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     uint32_t activeSubpass;
     VkFramebuffer activeFramebuffer;
     std::unordered_set<VkFramebuffer> framebuffers;
-    // Track descriptor sets that are destroyed or updated while bound to CB
-    // TODO : These data structures relate to tracking resources that invalidate
-    //  a cmd buffer that references them. Need to unify how we handle these
-    //  cases so we don't have different tracking data for each type.
-    std::unordered_set<cvdescriptorset::DescriptorSet *> destroyedSets;
-    std::unordered_set<cvdescriptorset::DescriptorSet *> updatedSets;
-    std::unordered_set<VkFramebuffer> destroyedFramebuffers;
+    // Unified data struct to track dependencies that have been broken
+    //  These are either destroyed objects, or updated descriptor sets
+    std::vector<VK_OBJECT> broken_bindings;
     std::unordered_set<VkEvent> waitedEvents;
     std::vector<VkEvent> writeEventsBeforeWait;
     std::vector<VkEvent> events;
@@ -519,6 +521,7 @@ SAMPLER_NODE *getSamplerNode(const layer_data *, VkSampler);
 VkImageViewCreateInfo *getImageViewData(const layer_data *, VkImageView);
 VkSwapchainKHR getSwapchainFromImage(const layer_data *, VkImage);
 SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, VkSwapchainKHR);
+void invalidateCommandBuffers(std::unordered_set<GLOBAL_CB_NODE *>, VK_OBJECT);
 }
 
 #endif // CORE_VALIDATION_TYPES_H_
