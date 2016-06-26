@@ -21,6 +21,7 @@
  * Author: Ian Elliott <ian@LunarG.com>
  * Author: Jon Ashburn <jon@lunarg.com>
  * Author: Piers Daniell <pdaniell@nvidia.com>
+ * Author: Gwan-gyeong Mun <elongbug@gmail.com>
  */
 /*
  * Draw a textured triangle with depth testing.  This is written against Intel
@@ -61,6 +62,12 @@
 #define U_ASSERT_ONLY __attribute__((unused))
 #else
 #define U_ASSERT_ONLY
+#endif
+
+#if defined(__GNUC__)
+#define UNUSED __attribute__((unused))
+#else
+#define UNUSED
 #endif
 
 #ifdef _WIN32
@@ -150,6 +157,13 @@ struct demo {
     xcb_screen_t *screen;
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    struct wl_display *display;
+    struct wl_registry *registry;
+    struct wl_compositor *compositor;
+    struct wl_surface *window;
+    struct wl_shell *shell;
+    struct wl_shell_surface *shell_surface;
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     ANativeWindow* window;
 #endif
@@ -1764,6 +1778,63 @@ static void demo_create_window(struct demo *demo) {
 
     xcb_map_window(demo->connection, demo->window);
 }
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+static void demo_run(struct demo *demo) {
+
+    while (!demo->quit) {
+        demo_draw(demo);
+
+        if (demo->depthStencil > 0.99f)
+            demo->depthIncrement = -0.001f;
+        if (demo->depthStencil < 0.8f)
+            demo->depthIncrement = 0.001f;
+
+        demo->depthStencil += demo->depthIncrement;
+
+        // Wait for work to finish before updating MVP.
+        vkDeviceWaitIdle(demo->device);
+        demo->curFrame++;
+        if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
+            demo->quit = true;
+    }
+}
+
+static void handle_ping(void *data UNUSED,
+                        struct wl_shell_surface *shell_surface,
+                        uint32_t serial) {
+    wl_shell_surface_pong(shell_surface, serial);
+}
+
+static void handle_configure(void *data UNUSED,
+                             struct wl_shell_surface *shell_surface UNUSED,
+                             uint32_t edges UNUSED, int32_t width UNUSED,
+                             int32_t height UNUSED) {}
+
+static void handle_popup_done(void *data UNUSED,
+                              struct wl_shell_surface *shell_surface UNUSED) {}
+
+static const struct wl_shell_surface_listener shell_surface_listener = {
+    handle_ping, handle_configure, handle_popup_done};
+
+static void demo_create_window(struct demo *demo) {
+    demo->window = wl_compositor_create_surface(demo->compositor);
+    if (!demo->window) {
+        printf("Can not create wayland_surface from compositor!\n");
+        fflush(stdout);
+        exit(1);
+    }
+
+    demo->shell_surface = wl_shell_get_shell_surface(demo->shell, demo->window);
+    if (!demo->shell_surface) {
+        printf("Can not get shell_surface from wayland_surface!\n");
+        fflush(stdout);
+        exit(1);
+    }
+    wl_shell_surface_add_listener(demo->shell_surface, &shell_surface_listener,
+                                  demo);
+    wl_shell_surface_set_toplevel(demo->shell_surface);
+    wl_shell_surface_set_title(demo->shell_surface, APP_SHORT_NAME);
+}
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
 static void demo_run(struct demo *demo) {
     if (!demo->prepared)
@@ -1910,6 +1981,13 @@ static void demo_init_vk(struct demo *demo) {
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_XCB_SURFACE_EXTENSION_NAME;
             }
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+            if (!strcmp(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
+                        instance_extensions[i].extensionName)) {
+                platformSurfaceExtFound = 1;
+                demo->extension_names[demo->enabled_extension_count++] =
+                    VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
+            }
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
             if (!strcmp(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
@@ -1952,6 +2030,14 @@ static void demo_init_vk(struct demo *demo) {
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_XCB_SURFACE_EXTENSION_NAME
+                 " extension.\n\nDo you have a compatible "
+                 "Vulkan installable client driver (ICD) installed?\nPlease "
+                 "look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateInstance Failure");
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
+                 "the " VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
                  " extension.\n\nDo you have a compatible "
                  "Vulkan installable client driver (ICD) installed?\nPlease "
                  "look at the Getting Started guide for additional "
@@ -2203,6 +2289,16 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     createInfo.window = demo->window;
 
     err = vkCreateXcbSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    VkWaylandSurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.flags = 0;
+    createInfo.display = demo->display;
+    createInfo.surface = demo->window;
+
+    err = vkCreateWaylandSurfaceKHR(demo->inst, &createInfo, NULL,
+                                    &demo->surface);
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     VkAndroidSurfaceCreateInfoKHR createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
@@ -2302,6 +2398,29 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     vkGetPhysicalDeviceMemoryProperties(demo->gpu, &demo->memory_properties);
 }
 
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR) && !defined(VK_USE_PLATFORM_XCB_KHR)
+static void registry_handle_global(void *data, struct wl_registry *registry,
+                                   uint32_t name, const char *interface,
+                                   uint32_t version UNUSED) {
+    struct demo *demo = data;
+    if (strcmp(interface, "wl_compositor") == 0) {
+        demo->compositor =
+            wl_registry_bind(registry, name, &wl_compositor_interface, 3);
+        /* Todo: When xdg_shell protocol has stablized, we should move wl_shell
+         * tp xdg_shell */
+    } else if (strcmp(interface, "wl_shell") == 0) {
+        demo->shell = wl_registry_bind(registry, name, &wl_shell_interface, 1);
+    }
+}
+
+static void registry_handle_global_remove(void *data UNUSED,
+                                          struct wl_registry *registry UNUSED,
+                                          uint32_t name UNUSED) {}
+
+static const struct wl_registry_listener registry_listener = {
+    registry_handle_global, registry_handle_global_remove};
+#endif
+
 static void demo_init_connection(struct demo *demo) {
 #if defined(VK_USE_PLATFORM_XCB_KHR)
     const xcb_setup_t *setup;
@@ -2322,6 +2441,19 @@ static void demo_init_connection(struct demo *demo) {
         xcb_screen_next(&iter);
 
     demo->screen = iter.data;
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    demo->display = wl_display_connect(NULL);
+
+    if (demo->display == NULL) {
+        printf("Cannot find a compatible Vulkan installable client driver "
+               "(ICD).\nExiting ...\n");
+        fflush(stdout);
+        exit(1);
+    }
+
+    demo->registry = wl_display_get_registry(demo->display);
+    wl_registry_add_listener(demo->registry, &registry_listener, demo);
+    wl_display_dispatch(demo->display);
 #endif // _WIN32
 }
 
@@ -2426,6 +2558,13 @@ static void demo_cleanup(struct demo *demo) {
     xcb_destroy_window(demo->connection, demo->window);
     xcb_disconnect(demo->connection);
     free(demo->atom_wm_delete_window);
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    wl_shell_surface_destroy(demo->shell_surface);
+    wl_surface_destroy(demo->window);
+    wl_shell_destroy(demo->shell);
+    wl_compositor_destroy(demo->compositor);
+    wl_registry_destroy(demo->registry);
+    wl_display_disconnect(demo->display);
 #endif
 }
 
@@ -2635,7 +2774,7 @@ void android_main(struct android_app *app)
 
 }
 
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
+#elif defined(VK_USE_PLATFORM_XCB_KHR) | defined(VK_USE_PLATFORM_WAYLAND_KHR)
 
 int main(const int argc, const char *argv[]) {
     struct demo demo;
