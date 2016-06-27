@@ -222,6 +222,7 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_PUSH_CONSTANTS_ERROR,          // Push constants exceed maxPushConstantSize
 };
 
+// Shader Checker ERROR codes
 enum SHADER_CHECKER_ERROR {
     SHADER_CHECKER_NONE,
     SHADER_CHECKER_INTERFACE_TYPE_MISMATCH,    // Type mismatch between shader stages or shader and pipeline
@@ -242,4 +243,20 @@ enum SHADER_CHECKER_ERROR {
     SHADER_CHECKER_BAD_CAPABILITY,                          // Shader uses capability not supported by Vulkan (OpenCL features)
 };
 
+// Device Limits ERROR codes
+enum DEV_LIMITS_ERROR {
+    DEVLIMITS_NONE,                          // Used for INFO & other non-error messages
+    DEVLIMITS_INVALID_INSTANCE,              // Invalid instance used
+    DEVLIMITS_INVALID_PHYSICAL_DEVICE,       // Invalid physical device used
+    DEVLIMITS_INVALID_INHERITED_QUERY,       // Invalid use of inherited query
+    DEVLIMITS_INVALID_ATTACHMENT_COUNT,      // Invalid value for the number of attachments
+    DEVLIMITS_MISSING_QUERY_COUNT,           // Did not make initial call to an API to query the count
+    DEVLIMITS_MUST_QUERY_COUNT,              // Failed to make initial call to an API to query the count
+    DEVLIMITS_INVALID_CALL_SEQUENCE,         // Flag generic case of an invalid call sequence by the app
+    DEVLIMITS_INVALID_FEATURE_REQUESTED,     // App requested a feature not supported by physical device
+    DEVLIMITS_COUNT_MISMATCH,                // App requesting a count value different than actual value
+    DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST,  // Invalid queue requested based on queue family properties
+    DEVLIMITS_INVALID_UNIFORM_BUFFER_OFFSET, // Uniform buffer offset violates device limit granularity
+    DEVLIMITS_INVALID_STORAGE_BUFFER_OFFSET, // Storage buffer offset violates device limit granularity
+};
 #endif // CORE_VALIDATION_ERROR_ENUMS_H_
