@@ -67,8 +67,10 @@ struct layer_data {
     // Device Data
     // Map for queue family index to queue count
     std::unordered_map<uint32_t, uint32_t> queueFamilyIndexMap;
+    VkPhysicalDeviceLimits device_limits;
 
-    layer_data() : report_data(nullptr), num_tmp_callbacks(0), tmp_dbg_create_infos(nullptr), tmp_callbacks(nullptr){};
+    layer_data()
+        : report_data(nullptr), num_tmp_callbacks(0), tmp_dbg_create_infos(nullptr), tmp_callbacks(nullptr), device_limits{} {};
 };
 
 static std::unordered_map<void *, layer_data *> layer_data_map;
@@ -1640,15 +1642,20 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice,
             my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
             initDeviceTable(*pDevice, fpGetDeviceProcAddr, pc_device_table_map);
 
+
             uint32_t count;
-            get_dispatch_table(pc_instance_table_map, physicalDevice)
-                ->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, nullptr);
+            VkLayerInstanceDispatchTable *instance_dispatch_table = get_dispatch_table(pc_instance_table_map, physicalDevice);
+            instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, nullptr);
             std::vector<VkQueueFamilyProperties> properties(count);
-            get_dispatch_table(pc_instance_table_map, physicalDevice)
-                ->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, &properties[0]);
+            instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, &properties[0]);
 
             validateDeviceCreateInfo(physicalDevice, pCreateInfo, properties);
             storeCreateDeviceData(*pDevice, pCreateInfo);
+
+            // Query and save physical device limits for this device
+            VkPhysicalDeviceProperties device_properties = {};
+            instance_dispatch_table->GetPhysicalDeviceProperties(physicalDevice, &device_properties);
+            memcpy(&my_device_data->device_limits, &device_properties.limits, sizeof(VkPhysicalDeviceLimits));
         }
     }
 
