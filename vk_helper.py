@@ -1644,6 +1644,7 @@ class StructWrapperGen:
                 ss_src.append('#ifdef %s' % ifdef_dict[s])
             ss_name = self._getSafeStructName(s)
             init_list = '' # list of members in struct constructor initializer
+            default_init_list = '' # Default constructor just inits ptrs to nullptr in initializer
             init_func_txt = '' # Txt for initialize() function that takes struct ptr and inits members
             construct_txt = '' # Body of constuctor as well as body of initialize() func following init_func_txt
             destruct_txt = ''
@@ -1698,6 +1699,7 @@ class StructWrapperGen:
                         init_list += '\n\t%s(pInStruct->%s),' % (m_name, m_name)
                         init_func_txt += '    %s = pInStruct->%s;\n' % (m_name, m_name)
                     else:
+                        default_init_list += '\n\t%s(nullptr),' % (m_name)
                         init_list += '\n\t%s(nullptr),' % (m_name)
                         init_func_txt += '    %s = nullptr;\n' % (m_name)
                         if 'pNext' != m_name and 'void' not in m_type:
@@ -1723,8 +1725,9 @@ class StructWrapperGen:
                         construct_txt += '    }\n'
                     else:
                         # Init array ptr to NULL
-                        init_list += '\n\t%s(NULL),' % (m_name)
-                        init_func_txt += '    %s = NULL;\n' % (m_name)
+                        default_init_list += '\n\t%s(nullptr),' % (m_name)
+                        init_list += '\n\t%s(nullptr),' % (m_name)
+                        init_func_txt += '    %s = nullptr;\n' % (m_name)
                         array_element = 'pInStruct->%s[i]' % (m_name)
                         if is_type(self.struct_dict[s][m]['type'], 'struct') and self._hasSafeStruct(self.struct_dict[s][m]['type']):
                             array_element = '%s(&pInStruct->%s[i])' % (self._getSafeStructName(self.struct_dict[s][m]['type']), m_name)
@@ -1757,7 +1760,9 @@ class StructWrapperGen:
             if s in custom_construct_txt:
                 construct_txt = custom_construct_txt[s]
             ss_src.append("\n%s::%s(const %s* pInStruct) : %s\n{\n%s}" % (ss_name, ss_name, s, init_list, construct_txt))
-            ss_src.append("\n%s::%s() {}" % (ss_name, ss_name))
+            if '' != default_init_list:
+                default_init_list = " : %s" % (default_init_list[:-1])
+            ss_src.append("\n%s::%s()%s\n{}" % (ss_name, ss_name, default_init_list))
             # Create slight variation of init and construct txt for copy constructor that takes a src object reference vs. struct ptr
             copy_construct_init = init_func_txt.replace('pInStruct->', 'src.')
             copy_construct_txt = construct_txt.replace(' (pInStruct->', ' (src.') # Exclude 'if' blocks from next line
