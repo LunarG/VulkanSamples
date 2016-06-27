@@ -147,6 +147,7 @@ struct layer_data {
     // Device specific data
     PHYS_DEV_PROPERTIES_NODE phys_dev_properties;
     VkPhysicalDeviceMemoryProperties phys_dev_mem_props;
+    VkPhysicalDeviceFeatures physical_device_features;
     unique_ptr<PHYSICAL_DEVICE_STATE> physicalDeviceState;
 
     layer_data()
@@ -3992,9 +3993,50 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo
     }
 }
 
+// Verify that features have been queried and that they are available
+static bool ValidateRequestedFeatures(layer_data *phy_dev_data, const VkPhysicalDeviceFeatures *requested_features) {
+    bool skip_call = false;
+
+    VkBool32 *actual = (VkBool32 *)&(phy_dev_data->physical_device_features);
+    VkBool32 *requested = (VkBool32 *)requested_features;
+    // TODO : This is a nice, compact way to loop through struct, but a bad way to report issues
+    //  Need to provide the struct member name with the issue. To do that seems like we'll
+    //  have to loop through each struct member which should be done w/ codegen to keep in synch.
+    uint32_t errors = 0;
+    uint32_t total_bools = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
+    for (uint32_t i = 0; i < total_bools; i++) {
+        if (requested[i] > actual[i]) {
+            // TODO: Add index to struct member name helper to be able to include a feature name
+            skip_call |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_INVALID_FEATURE_REQUESTED,
+                "DL", "While calling vkCreateDevice(), requesting feature #%u in VkPhysicalDeviceFeatures struct, "
+                "which is not available on this device.",
+                i);
+            errors++;
+        }
+    }
+    if (errors && (UNCALLED == phy_dev_data->physicalDeviceState->vkGetPhysicalDeviceFeaturesState)) {
+        // If user didn't request features, notify them that they should
+        // TODO: Verify this against the spec. I believe this is an invalid use of the API and should return an error
+        skip_call |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+            VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_INVALID_FEATURE_REQUESTED, "DL",
+            "You requested features that are unavailable on this device. You should first query feature "
+            "availability by calling vkGetPhysicalDeviceFeatures().");
+    }
+    return skip_call;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *pCreateInfo,
                                             const VkAllocationCallbacks *pAllocator, VkDevice *pDevice) {
     layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
+    bool skip_call = false;
+
+    // Check that any requested features are available
+    if (pCreateInfo->pEnabledFeatures) {
+        skip_call |= ValidateRequestedFeatures(my_instance_data, pCreateInfo->pEnabledFeatures);
+    }
+
+
     VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
     assert(chain_info->u.pLayerInfo);
@@ -10130,6 +10172,58 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
     return result;
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
+                                                        VkPhysicalDevice *pPhysicalDevices) {
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    if (my_data->instance_state) {
+        // For this instance, flag when vkEnumeratePhysicalDevices goes to QUERY_COUNT and then QUERY_DETAILS
+        if (NULL == pPhysicalDevices) {
+            my_data->instance_state->vkEnumeratePhysicalDevicesState = QUERY_COUNT;
+        } else {
+            if (UNCALLED == my_data->instance_state->vkEnumeratePhysicalDevicesState) {
+                // Flag warning here. You can call this without having queried the count, but it may not be
+                // robust on platforms with multiple physical devices.
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                                    0, __LINE__, DEVLIMITS_MISSING_QUERY_COUNT, "DL",
+                                    "Call sequence has vkEnumeratePhysicalDevices() w/ non-NULL pPhysicalDevices. You should first "
+                                    "call vkEnumeratePhysicalDevices() w/ NULL pPhysicalDevices to query pPhysicalDeviceCount.");
+            } // TODO : Could also flag a warning if re-calling this function in QUERY_DETAILS state
+            else if (my_data->instance_state->physicalDevicesCount != *pPhysicalDeviceCount) {
+                // Having actual count match count from app is not a requirement, so this can be a warning
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_COUNT_MISMATCH, "DL",
+                                    "Call to vkEnumeratePhysicalDevices() w/ pPhysicalDeviceCount value %u, but actual count "
+                                    "supported by this instance is %u.",
+                                    *pPhysicalDeviceCount, my_data->instance_state->physicalDevicesCount);
+            }
+            my_data->instance_state->vkEnumeratePhysicalDevicesState = QUERY_DETAILS;
+        }
+        if (skipCall) {
+            return VK_ERROR_VALIDATION_FAILED_EXT;
+        }
+        VkResult result =
+            my_data->instance_dispatch_table->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
+        if (NULL == pPhysicalDevices) {
+            my_data->instance_state->physicalDevicesCount = *pPhysicalDeviceCount;
+        } else { // Save physical devices
+            for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
+                layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(pPhysicalDevices[i]), layer_data_map);
+                phy_dev_data->physicalDeviceState = unique_ptr<PHYSICAL_DEVICE_STATE>(new PHYSICAL_DEVICE_STATE());
+                // Init actual features for each physical device
+                my_data->instance_dispatch_table->GetPhysicalDeviceFeatures(pPhysicalDevices[i],
+                                                                            &phy_dev_data->physical_device_features);
+            }
+        }
+        return result;
+    } else {
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, 0, __LINE__,
+                DEVLIMITS_INVALID_INSTANCE, "DL", "Invalid instance (0x%" PRIxLEAST64 ") passed into vkEnumeratePhysicalDevices().",
+                (uint64_t)instance);
+    }
+    return VK_ERROR_VALIDATION_FAILED_EXT;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
                              const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pMsgCallback) {
@@ -10256,6 +10350,7 @@ intercept_core_instance_command(const char *name) {
         { "vkGetDeviceProcAddr", reinterpret_cast<PFN_vkVoidFunction>(GetDeviceProcAddr) },
         { "vkCreateInstance", reinterpret_cast<PFN_vkVoidFunction>(CreateInstance) },
         { "vkCreateDevice", reinterpret_cast<PFN_vkVoidFunction>(CreateDevice) },
+        { "vkEnumeratePhysicalDevices", reinterpret_cast<PFN_vkVoidFunction>(EnumeratePhysicalDevices) },
         { "vkDestroyInstance", reinterpret_cast<PFN_vkVoidFunction>(DestroyInstance) },
         { "vkEnumerateInstanceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateInstanceLayerProperties) },
         { "vkEnumerateDeviceLayerProperties", reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceLayerProperties) },
