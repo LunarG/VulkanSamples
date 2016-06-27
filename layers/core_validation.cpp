@@ -1776,12 +1776,14 @@ static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipe
 }
 
 static bool validate_fs_outputs_against_render_pass(debug_report_data *report_data, shader_module const *fs,
-                                                    spirv_inst_iter entrypoint, RENDER_PASS_NODE const *rp, uint32_t subpass) {
+                                                    spirv_inst_iter entrypoint, VkRenderPassCreateInfo const *rpci,
+                                                    uint32_t subpass_index) {
     std::map<location_t, interface_var> outputs;
     std::map<uint32_t, VkFormat> color_attachments;
-    for (auto i = 0u; i < rp->subpassColorFormats[subpass].size(); i++) {
-        if (rp->subpassColorFormats[subpass][i] != VK_FORMAT_UNDEFINED) {
-            color_attachments[i] = rp->subpassColorFormats[subpass][i];
+    auto subpass = rpci->pSubpasses[subpass_index];
+    for (auto i = 0u; i < subpass.colorAttachmentCount; ++i) {
+        if (rpci->pAttachments[subpass.pColorAttachments[i].attachment].format != VK_FORMAT_UNDEFINED) {
+            color_attachments[i] = rpci->pAttachments[subpass.pColorAttachments[i].attachment].format;
         }
     }
 
@@ -2202,11 +2204,10 @@ static bool attachment_references_compatible(const uint32_t index, const VkAttac
     return false;
 }
 
-// For given primary and secondary RenderPass objects, verify that they're compatible
-static bool verify_renderpass_compatibility(const layer_data *my_data, const VkRenderPass primaryRP, const VkRenderPass secondaryRP,
-                                            string &errorMsg) {
+// For given primary RenderPass object and secondry RenderPassCreateInfo, verify that they're compatible
+static bool verify_renderpass_compatibility(const layer_data *my_data, const VkRenderPass primaryRP,
+                                            const VkRenderPassCreateInfo *secondaryRPCI, string &errorMsg) {
     auto primary_render_pass = getRenderPass(my_data, primaryRP);
-    auto secondary_render_pass = getRenderPass(my_data, secondaryRP);
 
     if (!primary_render_pass) {
         stringstream errorStr;
@@ -2215,18 +2216,7 @@ static bool verify_renderpass_compatibility(const layer_data *my_data, const VkR
         return false;
     }
 
-    if (!secondary_render_pass) {
-        stringstream errorStr;
-        errorStr << "invalid VkRenderPass (" << secondaryRP << ")";
-        errorMsg = errorStr.str();
-        return false;
-    }
-    // Trivial pass case is exact same RP
-    if (primaryRP == secondaryRP) {
-        return true;
-    }
     const VkRenderPassCreateInfo *primaryRPCI = primary_render_pass->pCreateInfo;
-    const VkRenderPassCreateInfo *secondaryRPCI = secondary_render_pass->pCreateInfo;
     if (primaryRPCI->subpassCount != secondaryRPCI->subpassCount) {
         stringstream errorStr;
         errorStr << "RenderPass for primary cmdBuffer has " << primaryRPCI->subpassCount
@@ -2284,6 +2274,25 @@ static bool verify_renderpass_compatibility(const layer_data *my_data, const VkR
         }
     }
     return true;
+}
+
+// For given primary and secondary RenderPass objects, verify that they're compatible
+static bool verify_renderpass_compatibility(const layer_data *dev_data, const VkRenderPass primaryRP,
+                                            const VkRenderPass secondaryRP, string &errorMsg) {
+    // Handle trivial match case first
+    if (primaryRP == secondaryRP)
+        return true;
+
+    auto secondary_render_pass = getRenderPass(dev_data, secondaryRP);
+
+    if (!secondary_render_pass) {
+        stringstream errorStr;
+        errorStr << "invalid VkRenderPass (" << secondaryRP << ")";
+        errorMsg = errorStr.str();
+        return false;
+    }
+    const VkRenderPassCreateInfo *secondaryRPCI = secondary_render_pass->pCreateInfo;
+    return verify_renderpass_compatibility(dev_data, primaryRP, secondaryRPCI, errorMsg);
 }
 
 // For given cvdescriptorset::DescriptorSet, verify that its Set is compatible w/ the setLayout corresponding to
@@ -2717,9 +2726,9 @@ static bool validate_and_capture_pipeline_shader_state(debug_report_data *report
         }
     }
 
-    if (shaders[fragment_stage] && pPipeline->renderPass) {
+    if (shaders[fragment_stage]) {
         pass &= validate_fs_outputs_against_render_pass(report_data, shaders[fragment_stage], entrypoints[fragment_stage],
-                                                        pPipeline->renderPass, pCreateInfo->subpass);
+                                                        pPipeline->render_pass_ci.ptr(), pCreateInfo->subpass);
     }
 
     return pass;
@@ -2892,7 +2901,7 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
     // Verify that PSO creation renderPass is compatible with active renderPass
     if (pCB->activeRenderPass) {
         std::string err_string;
-        if (!verify_renderpass_compatibility(my_data, pCB->activeRenderPass->renderPass, pPipeline->graphicsPipelineCI.renderPass,
+        if (!verify_renderpass_compatibility(my_data, pCB->activeRenderPass->renderPass, pPipeline->render_pass_ci.ptr(),
                                              err_string)) {
             // renderPass that PSO was created with must be compatible with active renderPass that PSO is being used with
             skip_call |=
@@ -5851,7 +5860,7 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
     for (i = 0; i < count; i++) {
         pPipeNode[i] = new PIPELINE_NODE;
         pPipeNode[i]->initGraphicsPipeline(&pCreateInfos[i]);
-        pPipeNode[i]->renderPass = getRenderPass(dev_data, pCreateInfos[i].renderPass);
+        pPipeNode[i]->render_pass_ci.initialize(getRenderPass(dev_data, pCreateInfos[i].renderPass)->pCreateInfo);
         pPipeNode[i]->pipelineLayout = getPipelineLayout(dev_data, pCreateInfos[i].layout);
 
         skipCall |= verifyPipelineCreateState(dev_data, device, pPipeNode, i);
