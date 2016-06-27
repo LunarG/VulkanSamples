@@ -105,6 +105,8 @@ struct shader_module;
 // TODO : Split this into separate structs for instance and device level data?
 struct layer_data {
     VkInstance instance;
+    unique_ptr<INSTANCE_STATE> instance_state;
+
 
     debug_report_data *report_data;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
@@ -145,10 +147,11 @@ struct layer_data {
     // Device specific data
     PHYS_DEV_PROPERTIES_NODE phys_dev_properties;
     VkPhysicalDeviceMemoryProperties phys_dev_mem_props;
+    unique_ptr<PHYSICAL_DEVICE_STATE> physicalDeviceState;
 
     layer_data()
-        : report_data(nullptr), device_dispatch_table(nullptr), instance_dispatch_table(nullptr), device_extensions(),
-          device(VK_NULL_HANDLE), phys_dev_properties{}, phys_dev_mem_props{} {};
+        : instance_state(nullptr), report_data(nullptr), device_dispatch_table(nullptr), instance_dispatch_table(nullptr),
+          device_extensions(), device(VK_NULL_HANDLE), phys_dev_properties{}, phys_dev_mem_props{}, physicalDeviceState(nullptr){};
 };
 
 // TODO : Do we need to guard access to layer_data_map w/ lock?
@@ -3939,7 +3942,7 @@ CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallba
                                      pCreateInfo->ppEnabledExtensionNames);
 
     init_core_validation(instance_data, pAllocator);
-
+    instance_data->instance_state = unique_ptr<INSTANCE_STATE>(new INSTANCE_STATE());
     ValidateLayerOrdering(*pCreateInfo);
 
     return result;
