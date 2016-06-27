@@ -39,7 +39,7 @@ fi
 CMDDIR="$(dirname "$(readlink -f ${BASH_SOURCE[0]})")"
 
 # get the list of built samples to run
-SAMP2RUN=`find "$CMDDIR" -name *.cpp -not -path "*util*" | sort`
+SAMP2RUN=`find "$CMDDIR" -name *.cpp -not -path "*util*" -not -path "*android*" -not -path "*CMakeFiles*" | sort`
 #echo "SAMP2RUN is $SAMP2RUN"
 
 # display short description of the sample and run it

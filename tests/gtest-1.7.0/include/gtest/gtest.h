@@ -1445,12 +1445,21 @@ AssertionResult CmpHelperEQ(const char* expected_expression,
                                 // signed/unsigned mismatch.
 #endif
 
+#if defined(__GNUC__) || defined(__GNUG__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#endif
+
   if (expected == actual) {
     return AssertionSuccess();
   }
 
 #ifdef _MSC_VER
 # pragma warning(pop)          // Restores the warning state.
+#endif
+
+#if defined(__GNUC__) || defined(__GNUG__)
+#pragma GCC diagnostic pop
 #endif
 
   return EqFailure(expected_expression,

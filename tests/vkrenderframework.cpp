@@ -30,6 +30,22 @@
         assert(fp##entrypoint != NULL);                                        \
     }
 
+//Return true if format contains depth and stencil information
+bool vk_format_is_depth_and_stencil(VkFormat format) {
+    bool is_ds = false;
+
+    switch (format) {
+    case VK_FORMAT_D16_UNORM_S8_UINT:
+    case VK_FORMAT_D24_UNORM_S8_UINT:
+    case VK_FORMAT_D32_SFLOAT_S8_UINT:
+        is_ds = true;
+        break;
+    default:
+        break;
+    }
+    return is_ds;
+}
+
 VkRenderFramework::VkRenderFramework()
     : inst(VK_NULL_HANDLE), m_device(NULL), m_commandPool(VK_NULL_HANDLE),
       m_commandBuffer(NULL), m_renderPass(VK_NULL_HANDLE),
@@ -591,7 +607,7 @@ void VkImageObj::ImageMemoryBarrier(VkCommandBufferObj *cmd_buf,
 }
 
 void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
-                           VkImageAspectFlagBits aspect,
+                           VkImageAspectFlags aspect,
                            VkImageLayout image_layout) {
     VkFlags src_mask, dst_mask;
     const VkFlags all_cache_outputs =
@@ -661,11 +677,14 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
         break;
     }
 
+    if (m_descriptorImageInfo.imageLayout == VK_IMAGE_LAYOUT_UNDEFINED)
+        src_mask = 0;
+
     ImageMemoryBarrier(cmd_buf, aspect, src_mask, dst_mask, image_layout);
     m_descriptorImageInfo.imageLayout = image_layout;
 }
 
-void VkImageObj::SetLayout(VkImageAspectFlagBits aspect,
+void VkImageObj::SetLayout(VkImageAspectFlags aspect,
                            VkImageLayout image_layout) {
     VkResult U_ASSERT_ONLY err;
 
@@ -1218,13 +1237,12 @@ void VkPipelineObj::AddShader(VkShaderObj *shader) {
 }
 
 void VkPipelineObj::AddVertexInputAttribs(
-    VkVertexInputAttributeDescription *vi_attrib, int count) {
+    VkVertexInputAttributeDescription *vi_attrib, unsigned count) {
     m_vi_state.pVertexAttributeDescriptions = vi_attrib;
     m_vi_state.vertexAttributeDescriptionCount = count;
 }
 
-void VkPipelineObj::AddVertexInputBindings(
-    VkVertexInputBindingDescription *vi_binding, int count) {
+void VkPipelineObj::AddVertexInputBindings(VkVertexInputBindingDescription *vi_binding, unsigned count) {
     m_vi_state.pVertexBindingDescriptions = vi_binding;
     m_vi_state.vertexBindingDescriptionCount = count;
 }
@@ -1621,12 +1639,12 @@ void VkCommandBufferObj::Draw(uint32_t vertexCount, uint32_t instanceCount,
     vkCmdDraw(handle(), vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
-void VkCommandBufferObj::QueueCommandBuffer() {
+void VkCommandBufferObj::QueueCommandBuffer(bool checkSuccess) {
     VkFence nullFence = {VK_NULL_HANDLE};
-    QueueCommandBuffer(nullFence);
+    QueueCommandBuffer(nullFence, checkSuccess);
 }
 
-void VkCommandBufferObj::QueueCommandBuffer(VkFence fence) {
+void VkCommandBufferObj::QueueCommandBuffer(VkFence fence, bool checkSuccess) {
     VkResult err = VK_SUCCESS;
 
     // submit the command buffer to the universal queue
@@ -1642,10 +1660,14 @@ void VkCommandBufferObj::QueueCommandBuffer(VkFence fence) {
     submit_info.pSignalSemaphores = NULL;
 
     err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
-    ASSERT_VK_SUCCESS(err);
+    if (checkSuccess) {
+        ASSERT_VK_SUCCESS(err);
+    }
 
     err = vkQueueWaitIdle(m_device->m_queue);
-    ASSERT_VK_SUCCESS(err);
+    if (checkSuccess) {
+        ASSERT_VK_SUCCESS(err);
+    }
 
     // Wait for work to finish before cleaning up.
     vkDeviceWaitIdle(m_device->device());
@@ -1685,7 +1707,7 @@ VkDepthStencilObj::VkDepthStencilObj(VkDeviceObj *device) : VkImageObj(device)  
 VkImageView *VkDepthStencilObj::BindInfo() { return &m_attachmentBindInfo; }
 
 void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
-                             VkFormat format) {
+                             VkFormat format, VkImageUsageFlags usage) {
 
     VkImageViewCreateInfo view_info = {};
 
@@ -1695,10 +1717,14 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
 
     /* create image */
     init(width, height, m_depth_stencil_fmt,
-         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+         usage,
          VK_IMAGE_TILING_OPTIMAL);
 
-    SetLayout(VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+    if (vk_format_is_depth_and_stencil(format))
+        aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
+
+    SetLayout(aspect, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     view_info.pNext = NULL;
@@ -1716,3 +1742,5 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
 
     m_attachmentBindInfo = m_imageView.handle();
 }
+
+unsigned cVertices::BindIdGenerator;

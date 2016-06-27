@@ -407,7 +407,7 @@ int sample_main(int argc, char *argv[]) {
         write_ppm(info, "spirv_specialization");
 
     vkDestroyFence(info.device, drawFence, NULL);
-    vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);
+    vkDestroySemaphore(info.device, info.imageAcquiredSemaphore, NULL);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);
     destroy_textures(info);

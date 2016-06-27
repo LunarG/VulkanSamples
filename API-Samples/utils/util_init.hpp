@@ -31,7 +31,6 @@ VkResult init_global_layer_properties(sample_info &info);
 
 VkResult init_device_extension_properties(struct sample_info &info,
                                           layer_properties &layer_props);
-VkResult init_device_layer_properties(struct sample_info &info);
 
 void init_instance_extension_names(struct sample_info &info);
 VkResult init_instance(struct sample_info &info,

@@ -45,7 +45,7 @@ enum SWAPCHAIN_ERROR {
     SWAPCHAIN_CREATE_SWAP_EXTENTS_NO_MATCH_WIN, // Called vkCreateSwapchainKHR() with imageExtent that doesn't match window's extent
     SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM,    // Called vkCreateSwapchainKHR() with a non-supported preTransform
     SWAPCHAIN_CREATE_SWAP_BAD_COMPOSITE_ALPHA,  // Called vkCreateSwapchainKHR() with a non-supported compositeAlpha
-    SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_SIZE,   // Called vkCreateSwapchainKHR() with a non-supported imageArraySize
+    SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_LAYERS, // Called vkCreateSwapchainKHR() with a non-supported imageArrayLayers
     SWAPCHAIN_CREATE_SWAP_BAD_IMG_USAGE_FLAGS,  // Called vkCreateSwapchainKHR() with a non-supported imageUsageFlags
     SWAPCHAIN_CREATE_SWAP_BAD_IMG_COLOR_SPACE,  // Called vkCreateSwapchainKHR() with a non-supported imageColorSpace
     SWAPCHAIN_CREATE_SWAP_BAD_IMG_FORMAT,       // Called vkCreateSwapchainKHR() with a non-supported imageFormat

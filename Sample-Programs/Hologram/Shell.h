@@ -99,7 +99,6 @@ protected:
     std::vector<const char *> instance_layers_;
     std::vector<const char *> instance_extensions_;
 
-    std::vector<const char *> device_layers_;
     std::vector<const char *> device_extensions_;
 
 private:

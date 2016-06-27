@@ -230,23 +230,55 @@ VIAddVersionKey  "LegalCopyright" ""
 
 
 # Function to run ConfigLayersAndVulkanDll ps script.
-# We define it as a macro so we can create an install and uninstall version.
 # Return value is in $0 - 0 is success, all else is failure.
 !macro ConfigLayersAndVulkanDLL un
 Function ${un}ConfigLayersAndVulkanDLL
+
     ${If} ${RunningX64}
         Strcpy $1 64
     ${Else}
         Strcpy $1 32
     ${Endif}
-    nsExec::ExecToStack '$WINDIR\System32\WindowsPowerShell\v1.0\powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -Command .\ConfigLayersAndVulkanDLL.ps1 ${VERSION_ABI_MAJOR} $1 ; exit $$LASTEXITCODE'
+
+    # Create the script, the first two lines are the majorabi and ossize.
+    nsExec::ExecToStack 'cmd /k echo $$majorabi=${VERSION_ABI_MAJOR} >"$TEMP\VulkanRT\VulkanRT.ps1"'
+    nsExec::ExecToStack 'cmd /k echo $$ossize=$1 >>"$TEMP\VulkanRT\VulkanRT.ps1"'
+    nsExec::ExecToStack 'cmd /k type ConfigLayersAndVulkanDLL.ps1 >>"$TEMP\VulkanRT\VulkanRT.ps1"'
+
+    # Exectute the script by piping it to powershell.exe. This gets around possible OS
+    # security restrictions on running powershell scripts.
+    nsExec::ExecToStack 'cmd /k type "$TEMP\VulkanRT\VulkanRT.ps1" | powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command -'
+    Delete "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL1.${un}log"
     Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL1.${un}log"
     pop $0
+
+    # If it failed, try again, with a full path to powershell.exe
     ${If} $0 != 0
-        nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -ExecutionPolicy RemoteSigned -Command .\ConfigLayersAndVulkanDLL.ps1 ${VERSION_ABI_MAJOR} $1 ; exit $$LASTEXITCODE'
+        nsExec::ExecToStack 'cmd /k type "$TEMP\VulkanRT\VulkanRT.ps1" | "$WINDIR\System32\WindowsPowerShell\v1.0\powershell" -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command -'
         pop $0
+        Delete "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL2.${un}log"
         Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL2.${un}log"
     ${Endif}
+
+    # Read the return value of the script and put it in $0, stripping trailing newline
+    FileOpen $1 "$TEMP\ConfigLayersAndVulkanDLL.stat" r
+    ${If} $1 != ""
+        FileRead $1 $2
+        FileClose $1
+        ${StrRep} $3 $2 "$\n" ""
+        ${StrRep} $0 $3 "$\r" ""
+    ${Else}
+       # error
+       StrCpy $0 -1
+    ${Endif}
+
+    # Cleanup
+    Delete "$TEMP\ConfigLayersAndVulkanDLL.stat"
+    Delete "$TEMP\VulkanRT\VulkanRT.ps1"
+
+    # Ignore errors. If something went wrong, the return value will indicate it.
+    ClearErrors
+
 FunctionEnd
 !macroend
 !insertmacro ConfigLayersAndVulkanDLL ""
@@ -254,7 +286,6 @@ FunctionEnd
 
 
 # Function to run diagnostics if ConfigLayersAndVulkanDll ps script failed.
-# We define it as a macro so we can create an install and uninstall version.
 # On entry $0, contains the return value from ConfigLayersAndVulkanDll.ps1. It shouldn't be changed.
 !macro DiagConfigLayersAndVulkanDLL un
 Function ${un}DiagConfigLayersAndVulkanDLL
@@ -268,6 +299,10 @@ Function ${un}DiagConfigLayersAndVulkanDLL
     nsExec::ExecToStack 'cmd /k dir "$WINDIR\System32\WindowsPowerShell\v1.0" >"$TEMP\VulkanRT\Diagnostic2.${un}log"'
     pop $1
     LogText "cmd2 rval is $1"
+    
+    # Ignore errors
+    ClearErrors
+
 FunctionEnd
 !macroend
 !insertmacro DiagConfigLayersAndVulkanDLL ""
@@ -475,12 +510,28 @@ Section
     # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
     # vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll, and to set up layer registry
     # entries to use layers from the corresponding SDK
+    SetOutPath "$INSTDIR"
     Call ConfigLayersAndVulkanDLL
     ${If} $0 != 0
+        SetOutPath "$INSTDIR"
         Call DiagConfigLayersAndVulkanDLL
-        SetErrors
+
+        # The Powershell script failed, and we don't know why.
+        # Simply configure system to use our loader and vulkaninfo.
+        MessageBox MB_OK "Warning!$\n$\nPowershell script called by VulkanRT Installer failed with error $0. Is Powershell installed on your system?$\n$\nWill configure system with Vulkan $FileVersion." /SD IDOK
+        ${If} ${RunningX64}
+            Delete  $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
+            Delete  $WINDIR\SysWow64\vulkaninfo.exe
+            CopyFiles /SILENT $WINDIR\SysWow64\vulkan-$FileVersion.dll $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
+            CopyFiles /SILENT $WINDIR\SysWow64\vulkaninfo-$FileVersion.exe $WINDIR\SysWow64\vulkaninfo.exe
+        ${Endif}
+        Delete  $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
+        Delete  $WINDIR\System32\vulkaninfo.exe
+        CopyFiles /SILENT $WINDIR\System32\vulkan-$FileVersion.dll $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
+        CopyFiles /SILENT $WINDIR\System32\vulkaninfo-$FileVersion.exe $WINDIR\System32\vulkaninfo.exe
+        ClearErrors
     ${Endif}
-    IntOp $1 10000 + $0
+    StrCpy $1 60
     Call CheckForError
 
     # We are done using ConfigLayersAndVulkanDLL.ps1, delete it. It will be re-installed
@@ -514,7 +565,7 @@ Section "uninstall"
     ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "InstallDir"
     StrCpy $IDir $0
 
-    StrCpy $1 70
+    StrCpy $1 65
     Call un.CheckForError
 
     SetOutPath "$IDir"
@@ -536,6 +587,8 @@ Section "uninstall"
         Delete /REBOOTOK "$IDir\Instance_$IC\Uninstall${PRODUCTNAME}.exe"
         Rmdir /REBOOTOK "$IDir\Instance_$IC"
     ${Endif}
+    StrCpy $1 70
+    Call un.CheckForError
 
     # Modify registry for Programs and Features
 
@@ -552,6 +605,8 @@ Section "uninstall"
         IntOp $IC $IC - 1
         DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}"
     ${EndIf}
+    StrCpy $1 75
+    Call un.CheckForError
 
 
     # Install the ConfigLayersAndVulkanDLL.ps1 so we can run it.
@@ -563,41 +618,66 @@ Section "uninstall"
 
         # Delete vulkaninfo.exe in C:\Windows\System32 and C:\Windows\SysWOW64
         Delete /REBOOTOK $WINDIR\SysWow64\vulkaninfo.exe
-        Delete /REBOOTOK "$WINDIR\SysWow64\vulkaninfo-$FileVersion.exe"
         Delete /REBOOTOK $WINDIR\System32\vulkaninfo.exe
-        Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
 
-        # Delete vullkan dll files: vulkan-<majorabi>.dll and vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll
+        # Delete vulkan-<majorabi>.dll in C:\Windows\System32 and C:\Windows\SysWOW64
         Delete /REBOOTOK $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
-        Delete /REBOOTOK $WINDIR\SysWow64\vulkan-$FileVersion.dll
         Delete /REBOOTOK $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
-        Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
 
     # Else, running on a 32-bit OS machine
     ${Else}
 
         # Delete vulkaninfo.exe in C:\Windows\System32
         Delete /REBOOTOK $WINDIR\System32\vulkaninfo.exe
-        Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
 
-        # Delete vullkan dll files: vulkan-<majorabi>.dll and vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll
+        # Delete vulkan-<majorabi>.dll in C:\Windows\System32
         Delete /REBOOTOK $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
-        Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
 
     ${EndIf}
+    StrCpy $1 80
+    Call un.CheckForError
+
+    # If Ref Count is zero, remove files in C:\Windows\System32 and C:\Windows\SysWow64
+    ${If} $IC <= 0
+
+        ${If} ${RunningX64}
+            # Delete vulkaninfo.exe in C:\Windows\System32 and C:\Windows\SysWOW64
+            Delete /REBOOTOK "$WINDIR\SysWow64\vulkaninfo-$FileVersion.exe"
+            Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
+            # Delete vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll from sys dirs
+            Delete /REBOOTOK $WINDIR\SysWow64\vulkan-$FileVersion.dll
+            Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
+        ${Else}
+            # Delete vulkaninfo.exe in C:\Windows\System32
+            Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
+            # Delete vulkan-<majorabi>-<major>-<minor>-<patch>-<buildno>.dll from sys dir
+            Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
+        ${EndIf}
+
+    ${Endif}
 
     # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
     # vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll, and to set up layer registry
     # entries to use layers from the corresponding SDK
+    SetOutPath "$IDir"
     Call un.ConfigLayersAndVulkanDLL
     ${If} $0 != 0
+        SetOutPath "$IDir"
         Call un.DiagConfigLayersAndVulkanDLL
-        SetErrors
+        MessageBox MB_OK "Warning!$\n$\nPowershell script called by VulkanRT Uninstaller failed with error $0. Is Powershell installed on your system?$\n$\nVulkan $FileVersion has been uninstalled from your system." /SD IDOK
+        ${If} ${RunningX64}
+            Delete  $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
+            Delete  $WINDIR\SysWow64\vulkaninfo.exe
+        ${Endif}
+        Delete  $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
+        Delete  $WINDIR\System32\vulkaninfo.exe
+        ClearErrors
+    ${Else}
+        StrCpy $1 85
     ${Endif}
-    IntOp $1 20000 + $0
     Call un.CheckForError
 
-    # If Ref Count is zero, uninstall everything
+    # If Ref Count is zero, remove install dir
     ${If} $IC <= 0
 
         # Remove files in install dir
@@ -613,7 +693,7 @@ Section "uninstall"
             Delete /REBOOTOK "$IDir\vulkaninfo32.exe"
         ${EndIf}
 
-        StrCpy $1 75
+        StrCpy $1 90
         Call un.CheckForError
 
         # Need to do a SetOutPath to something outside of install dir,
@@ -641,7 +721,7 @@ Section "uninstall"
 
     ${Endif}
 
-    StrCpy $1 80
+    StrCpy $1 95
     Call un.CheckForError
 
     # Finish logging

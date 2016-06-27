@@ -33,16 +33,10 @@ int sample_main(int argc, char *argv[]) {
     struct sample_info info = {};
     char sample_title[] = "Command Buffer Sample";
 
-    init_global_layer_properties(info);
-    init_instance_extension_names(info);
-    init_device_extension_names(info);
     init_instance(info, sample_title);
     init_enumerate_device(info);
-    init_window_size(info, 500, 500);
-    init_connection(info);
-    init_window(info);
-    init_swapchain_extension(info);
     init_device(info);
+    init_queue_family_index(info);
 
     /* VULKAN_KEY_START */
 
@@ -74,7 +68,6 @@ int sample_main(int argc, char *argv[]) {
     vkFreeCommandBuffers(info.device, info.cmd_pool, 1, cmd_bufs);
     vkDestroyCommandPool(info.device, info.cmd_pool, NULL);
     destroy_device(info);
-    destroy_window(info);
     destroy_instance(info);
     return 0;
 }

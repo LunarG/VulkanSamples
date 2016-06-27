@@ -212,7 +212,7 @@ goto:eof
 
 :create_shaderc
    echo.
-   echo Creating local shaderc repository %SHADERC_DIR%)
+   echo Creating local shaderc repository %SHADERC_DIR%
    mkdir %SHADERC_DIR%
    cd %SHADERC_DIR%
    git clone git@github.com:google/shaderc.git .

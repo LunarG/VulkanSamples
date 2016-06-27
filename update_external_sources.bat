@@ -228,6 +228,14 @@ goto:eof
       echo spirv-tools source download failed!
       set errorCode=1
    )
+   mkdir %SPIRV_TOOLS_DIR%\external
+   mkdir %SPIRV_TOOLS_DIR%\external\spirv-headers
+   cd %SPIRV_TOOLS_DIR%\external\spirv-headers
+   git clone https://github.com/KhronosGroup/SPIRV-HEADERS.git .
+   if not exist %SPIRV_TOOLS_DIR%\external\spirv-headers\README.md (
+      echo spirv-headers download failed!
+      set errorCode=1
+   )
 goto:eof
 
 :update_spirv-tools
@@ -236,6 +244,16 @@ goto:eof
    cd %SPIRV_TOOLS_DIR%
    git fetch --all
    git checkout %SPIRV_TOOLS_REVISION%
+   if not exist %SPIRV_TOOLS_DIR%\external\spirv-headers\README.md (
+      mkdir %SPIRV_TOOLS_DIR%\external
+      mkdir %SPIRV_TOOLS_DIR%\external\spirv-headers
+      cd %SPIRV_TOOLS_DIR%\external\spirv-headers
+      git clone https://github.com/KhronosGroup/SPIRV-HEADERS.git .
+      goto:eof
+   )
+   cd %SPIRV_TOOLS_DIR%\external\spirv-headers
+   git fetch --all
+   git pull
 goto:eof
 
 :build_glslang

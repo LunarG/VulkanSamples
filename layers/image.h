@@ -44,6 +44,7 @@ enum IMAGE_ERROR {
     IMAGE_INVALID_FORMAT_LIMITS_VIOLATION,  // Device limits for this format have been exceeded
     IMAGE_INVALID_LAYOUT,                   // Operation specifies an invalid layout
     IMAGE_INVALID_EXTENTS,                  // Operation specifies invalid image extents
+    IMAGE_INVALID_USAGE,                    // Image was created without necessary usage for operation
 };
 
 struct IMAGE_STATE {
@@ -54,13 +55,14 @@ struct IMAGE_STATE {
     VkImageType imageType;
     VkExtent3D extent;
     VkImageCreateFlags flags;
+    VkImageUsageFlags usage;
     IMAGE_STATE()
         : mipLevels(0), arraySize(0), format(VK_FORMAT_UNDEFINED), samples(VK_SAMPLE_COUNT_1_BIT),
-          imageType(VK_IMAGE_TYPE_RANGE_SIZE), extent{}, flags(0){};
+          imageType(VK_IMAGE_TYPE_RANGE_SIZE), extent{}, flags(0), usage(0){};
     IMAGE_STATE(const VkImageCreateInfo *pCreateInfo)
         : mipLevels(pCreateInfo->mipLevels), arraySize(pCreateInfo->arrayLayers), format(pCreateInfo->format),
-          samples(pCreateInfo->samples), imageType(pCreateInfo->imageType), extent(pCreateInfo->extent),
-          flags(pCreateInfo->flags){};
+          samples(pCreateInfo->samples), imageType(pCreateInfo->imageType), extent(pCreateInfo->extent), flags(pCreateInfo->flags),
+          usage(pCreateInfo->usage){};
 };
 
 #endif // IMAGE_H

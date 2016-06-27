@@ -34,9 +34,7 @@ Shell::Shell(Game &game)
 
     // require "standard" validation layers
     if (settings_.validate) {
-        device_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
         instance_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
-
         instance_extensions_.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
     }
 }
@@ -132,25 +130,6 @@ void Shell::assert_all_instance_extensions() const
     }
 }
 
-bool Shell::has_all_device_layers(VkPhysicalDevice phy) const
-{
-    // enumerate device layers
-    std::vector<VkLayerProperties> layers;
-    vk::enumerate(phy, layers);
-
-    std::set<std::string> layer_names;
-    for (const auto &layer : layers)
-        layer_names.insert(layer.layerName);
-
-    // all listed device layers are required
-    for (const auto &name : device_layers_) {
-        if (layer_names.find(name) == layer_names.end())
-            return false;
-    }
-
-    return true;
-}
-
 bool Shell::has_all_device_extensions(VkPhysicalDevice phy) const
 {
     // enumerate device extensions
@@ -223,7 +202,7 @@ void Shell::init_physical_dev()
 
     ctx_.physical_dev = VK_NULL_HANDLE;
     for (auto phy : phys) {
-        if (!has_all_device_layers(phy) || !has_all_device_extensions(phy))
+        if (!has_all_device_extensions(phy))
             continue;
 
         // get queue properties
@@ -321,8 +300,6 @@ void Shell::create_dev()
 
     dev_info.pQueueCreateInfos = queue_info.data();
 
-    dev_info.enabledLayerCount = static_cast<uint32_t>(device_layers_.size());
-    dev_info.ppEnabledLayerNames = device_layers_.data();
     dev_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions_.size());
     dev_info.ppEnabledExtensionNames = device_extensions_.data();
 

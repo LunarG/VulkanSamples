@@ -4,13 +4,13 @@
         "name": "VK_LAYER_GOOGLE_threading",
         "type": "GLOBAL",
         "library_path": "./libVkLayer_threading.so",
-        "api_version": "1.0.13",
+        "api_version": "1.0.17",
         "implementation_version": "1",
         "description": "Google Validation Layer",
         "instance_extensions": [
              {
                  "name": "VK_EXT_debug_report",
-                 "spec_version": "2"
+                 "spec_version": "3"
              }
          ]
     }

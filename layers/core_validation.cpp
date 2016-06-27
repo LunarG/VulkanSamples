@@ -318,6 +318,30 @@ VkBufferViewCreateInfo *getBufferViewInfo(const layer_data *my_data, VkBufferVie
     return bv_it->second.get();
 }
 
+FENCE_NODE *getFenceNode(layer_data *dev_data, VkFence fence) {
+    auto it = dev_data->fenceMap.find(fence);
+    if (it == dev_data->fenceMap.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}
+
+QUEUE_NODE *getQueueNode(layer_data *dev_data, VkQueue queue) {
+    auto it = dev_data->queueMap.find(queue);
+    if (it == dev_data->queueMap.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}
+
+SEMAPHORE_NODE *getSemaphoreNode(layer_data *dev_data, VkSemaphore semaphore) {
+    auto it = dev_data->semaphoreMap.find(semaphore);
+    if (it == dev_data->semaphoreMap.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}
+
 static VkDeviceMemory *get_object_mem_binding(layer_data *my_data, uint64_t handle, VkDebugReportObjectTypeEXT type) {
     switch (type) {
     case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
@@ -2110,20 +2134,34 @@ static bool validate_draw_state_flags(layer_data *dev_data, GLOBAL_CB_NODE *pCB,
 
 // Verify attachment reference compatibility according to spec
 //  If one array is larger, treat missing elements of shorter array as VK_ATTACHMENT_UNUSED & other array much match this
-//  If both AttachmentReference arrays have requested index, check their corresponding AttachementDescriptions
+//  If both AttachmentReference arrays have requested index, check their corresponding AttachmentDescriptions
 //   to make sure that format and samples counts match.
 //  If not, they are not compatible.
 static bool attachment_references_compatible(const uint32_t index, const VkAttachmentReference *pPrimary,
                                              const uint32_t primaryCount, const VkAttachmentDescription *pPrimaryAttachments,
                                              const VkAttachmentReference *pSecondary, const uint32_t secondaryCount,
                                              const VkAttachmentDescription *pSecondaryAttachments) {
+    // Check potential NULL cases first to avoid nullptr issues later
+    if (pPrimary == nullptr) {
+        if (pSecondary == nullptr) {
+            return true;
+        }
+        return false;
+    } else if (pSecondary == nullptr) {
+        return false;
+    }
     if (index >= primaryCount) { // Check secondary as if primary is VK_ATTACHMENT_UNUSED
         if (VK_ATTACHMENT_UNUSED == pSecondary[index].attachment)
             return true;
     } else if (index >= secondaryCount) { // Check primary as if secondary is VK_ATTACHMENT_UNUSED
         if (VK_ATTACHMENT_UNUSED == pPrimary[index].attachment)
             return true;
-    } else { // format and sample count must match
+    } else { // Format and sample count must match
+        if ((pPrimary[index].attachment == VK_ATTACHMENT_UNUSED) && (pSecondary[index].attachment == VK_ATTACHMENT_UNUSED)) {
+            return true;
+        } else if ((pPrimary[index].attachment == VK_ATTACHMENT_UNUSED) || (pSecondary[index].attachment == VK_ATTACHMENT_UNUSED)) {
+            return false;
+        }
         if ((pPrimaryAttachments[pPrimary[index].attachment].format ==
              pSecondaryAttachments[pSecondary[index].attachment].format) &&
             (pPrimaryAttachments[pPrimary[index].attachment].samples ==
@@ -2134,8 +2172,8 @@ static bool attachment_references_compatible(const uint32_t index, const VkAttac
     return false;
 }
 
-// For give primary and secondary RenderPass objects, verify that they're compatible
-static bool verify_renderpass_compatibility(layer_data *my_data, const VkRenderPass primaryRP, const VkRenderPass secondaryRP,
+// For given primary and secondary RenderPass objects, verify that they're compatible
+static bool verify_renderpass_compatibility(const layer_data *my_data, const VkRenderPass primaryRP, const VkRenderPass secondaryRP,
                                             string &errorMsg) {
     auto primary_render_pass = getRenderPass(my_data, primaryRP);
     auto secondary_render_pass = getRenderPass(my_data, secondaryRP);
@@ -2831,6 +2869,21 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
                                  reinterpret_cast<const uint64_t &>(pPipeline->pipeline), __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
                                  "No active render pass found at draw-time in Pipeline (0x%" PRIxLEAST64 ")!",
                                  reinterpret_cast<const uint64_t &>(pPipeline->pipeline));
+        }
+    }
+    // Verify that PSO creation renderPass is compatible with active renderPass
+    if (pCB->activeRenderPass) {
+        std::string err_string;
+        if (!verify_renderpass_compatibility(my_data, pCB->activeRenderPass->renderPass, pPipeline->graphicsPipelineCI.renderPass,
+                                             err_string)) {
+            // renderPass that PSO was created with must be compatible with active renderPass that PSO is being used with
+            skip_call |=
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                        reinterpret_cast<const uint64_t &>(pPipeline->pipeline), __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
+                        "At Draw time the active render pass (0x%" PRIxLEAST64 ") is incompatible w/ gfx pipeline "
+                        "(0x%" PRIxLEAST64 ") that was created w/ render pass (0x%" PRIxLEAST64 ") due to: %s",
+                        reinterpret_cast<uint64_t &>(pCB->activeRenderPass->renderPass), reinterpret_cast<uint64_t &>(pPipeline),
+                        reinterpret_cast<const uint64_t &>(pPipeline->graphicsPipelineCI.renderPass), err_string.c_str());
         }
     }
     // TODO : Add more checks here
@@ -3675,14 +3728,12 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->activeRenderPass = nullptr;
         pCB->activeSubpassContents = VK_SUBPASS_CONTENTS_INLINE;
         pCB->activeSubpass = 0;
-        pCB->lastSubmittedFence = VK_NULL_HANDLE;
-        pCB->lastSubmittedQueue = VK_NULL_HANDLE;
         pCB->destroyedSets.clear();
         pCB->updatedSets.clear();
         pCB->destroyedFramebuffers.clear();
         pCB->waitedEvents.clear();
-        pCB->semaphores.clear();
         pCB->events.clear();
+        pCB->writeEventsBeforeWait.clear();
         pCB->waitedEventsBeforeQueryReset.clear();
         pCB->queryToStateMap.clear();
         pCB->activeQueries.clear();
@@ -4086,7 +4137,7 @@ static bool ValidateCmdBufImageLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB
 }
 
 // Track which resources are in-flight by atomically incrementing their "in_use" count
-static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *pCB) {
+static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *pCB, std::vector<VkSemaphore> const &semaphores) {
     bool skip_call = false;
     for (auto drawDataElement : pCB->drawData) {
         for (auto buffer : drawDataElement.buffers) {
@@ -4112,7 +4163,7 @@ static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *p
             }
         }
     }
-    for (auto semaphore : pCB->semaphores) {
+    for (auto semaphore : semaphores) {
         auto semaphoreNode = my_data->semaphoreMap.find(semaphore);
         if (semaphoreNode == my_data->semaphoreMap.end()) {
             skip_call |=
@@ -4171,8 +4222,8 @@ static inline void removeInFlightCmdBuffer(layer_data *dev_data, VkCommandBuffer
     }
 }
 
-static void decrementResources(layer_data *my_data, VkCommandBuffer cmdBuffer) {
-    GLOBAL_CB_NODE *pCB = getCBNode(my_data, cmdBuffer);
+static void decrementResources(layer_data *my_data, CB_SUBMISSION *submission) {
+    GLOBAL_CB_NODE *pCB = getCBNode(my_data, submission->cb);
     for (auto drawDataElement : pCB->drawData) {
         for (auto buffer : drawDataElement.buffers) {
             auto buffer_node = getBufferNode(my_data, buffer);
@@ -4186,7 +4237,7 @@ static void decrementResources(layer_data *my_data, VkCommandBuffer cmdBuffer) {
             set->in_use.fetch_sub(1);
         }
     }
-    for (auto semaphore : pCB->semaphores) {
+    for (auto semaphore : submission->semaphores) {
         auto semaphoreNode = my_data->semaphoreMap.find(semaphore);
         if (semaphoreNode != my_data->semaphoreMap.end()) {
             semaphoreNode->second.in_use.fetch_sub(1);
@@ -4217,32 +4268,31 @@ static bool decrementResources(layer_data *my_data, uint32_t fenceCount, const V
     bool skip_call = false;
     std::vector<std::pair<VkFence, FENCE_NODE *>> fence_pairs;
     for (uint32_t i = 0; i < fenceCount; ++i) {
-        auto fence_data = my_data->fenceMap.find(pFences[i]);
-        if (fence_data == my_data->fenceMap.end() || !fence_data->second.needsSignaled)
-            return skip_call;
-        fence_data->second.needsSignaled = false;
-        if (fence_data->second.in_use.load()) {
-            fence_pairs.push_back(std::make_pair(fence_data->first, &fence_data->second));
-            fence_data->second.in_use.fetch_sub(1);
+        auto pFence = getFenceNode(my_data, pFences[i]);
+        if (!pFence || pFence->state != FENCE_INFLIGHT)
+            continue;
+
+        fence_pairs.emplace_back(pFences[i], pFence);
+        pFence->state = FENCE_RETIRED;
+
+        decrementResources(my_data, static_cast<uint32_t>(pFence->priorFences.size()),
+                           pFence->priorFences.data());
+        for (auto & submission : pFence->submissions) {
+            decrementResources(my_data, &submission);
+            skip_call |= cleanInFlightCmdBuffer(my_data, submission.cb);
+            removeInFlightCmdBuffer(my_data, submission.cb);
         }
-        decrementResources(my_data, static_cast<uint32_t>(fence_data->second.priorFences.size()),
-                           fence_data->second.priorFences.data());
-        for (auto cmdBuffer : fence_data->second.cmdBuffers) {
-            decrementResources(my_data, cmdBuffer);
-            skip_call |= cleanInFlightCmdBuffer(my_data, cmdBuffer);
-            removeInFlightCmdBuffer(my_data, cmdBuffer);
-        }
-        fence_data->second.cmdBuffers.clear();
-        fence_data->second.priorFences.clear();
+        pFence->submissions.clear();
+        pFence->priorFences.clear();
     }
     for (auto fence_pair : fence_pairs) {
         for (auto queue : fence_pair.second->queues) {
-            auto queue_pair = my_data->queueMap.find(queue);
-            if (queue_pair != my_data->queueMap.end()) {
+            auto pQueue = getQueueNode(my_data, queue);
+            if (pQueue) {
                 auto last_fence_data =
-                    std::find(queue_pair->second.lastFences.begin(), queue_pair->second.lastFences.end(), fence_pair.first);
-                if (last_fence_data != queue_pair->second.lastFences.end())
-                    queue_pair->second.lastFences.erase(last_fence_data);
+                    std::find(pQueue->lastFences.begin(), pQueue->lastFences.end(), fence_pair.first);
+                if (last_fence_data != pQueue->lastFences.end())
+                    pQueue->lastFences.erase(last_fence_data);
             }
         }
         for (auto& fence_data : my_data->fenceMap) {
@@ -4259,12 +4309,12 @@ static bool decrementResources(layer_data *my_data, VkQueue queue) {
     bool skip_call = false;
     auto queue_data = my_data->queueMap.find(queue);
     if (queue_data != my_data->queueMap.end()) {
-        for (auto cmdBuffer : queue_data->second.untrackedCmdBuffers) {
-            decrementResources(my_data, cmdBuffer);
-            skip_call |= cleanInFlightCmdBuffer(my_data, cmdBuffer);
-            removeInFlightCmdBuffer(my_data, cmdBuffer);
+        for (auto & submission : queue_data->second.untrackedSubmissions) {
+            decrementResources(my_data, &submission);
+            skip_call |= cleanInFlightCmdBuffer(my_data, submission.cb);
+            removeInFlightCmdBuffer(my_data, submission.cb);
         }
-        queue_data->second.untrackedCmdBuffers.clear();
+        queue_data->second.untrackedSubmissions.clear();
         skip_call |= decrementResources(my_data, static_cast<uint32_t>(queue_data->second.lastFences.size()),
                                         queue_data->second.lastFences.data());
     }
@@ -4291,20 +4341,26 @@ static void updateTrackedCommandBuffers(layer_data *dev_data, VkQueue queue, VkQ
             fence_node->second.queues.insert(other_queue_data->first);
         }
     }
+    // TODO: Stealing the untracked CBs out of the signaling queue isn't really
+    // correct. A subsequent submission + wait, or a QWI on that queue, or
+    // another semaphore dependency to a third queue may /all/ provide
+    // suitable proof that the work we're stealing here has completed on the
+    // device, but we've lost that information by moving the tracking between
+    // queues.
     if (fence != VK_NULL_HANDLE) {
         auto fence_data = dev_data->fenceMap.find(fence);
         if (fence_data == dev_data->fenceMap.end()) {
             return;
         }
-        for (auto cmdbuffer : other_queue_data->second.untrackedCmdBuffers) {
-            fence_data->second.cmdBuffers.push_back(cmdbuffer);
+        for (auto cmdbuffer : other_queue_data->second.untrackedSubmissions) {
+            fence_data->second.submissions.push_back(cmdbuffer);
         }
-        other_queue_data->second.untrackedCmdBuffers.clear();
+        other_queue_data->second.untrackedSubmissions.clear();
     } else {
-        for (auto cmdbuffer : other_queue_data->second.untrackedCmdBuffers) {
-            queue_data->second.untrackedCmdBuffers.push_back(cmdbuffer);
+        for (auto cmdbuffer : other_queue_data->second.untrackedSubmissions) {
+            queue_data->second.untrackedSubmissions.push_back(cmdbuffer);
         }
-        other_queue_data->second.untrackedCmdBuffers.clear();
+        other_queue_data->second.untrackedSubmissions.clear();
     }
     for (auto eventStagePair : other_queue_data->second.eventToStageMap) {
         queue_data->second.eventToStageMap[eventStagePair.first] = eventStagePair.second;
@@ -4322,51 +4378,23 @@ static void updateTrackedCommandBuffers(layer_data *dev_data, VkQueue queue, VkQ
 // waited on, prior fences on that queue are also considered to have been waited on. When a fence is
 // waited on (either via a queue, device or fence), we free the cmd buffers for that fence and
 // recursively call with the prior fences.
-static void trackCommandBuffers(layer_data *my_data, VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
-                                VkFence fence) {
-    auto queue_data = my_data->queueMap.find(queue);
-    if (fence != VK_NULL_HANDLE) {
-        vector<VkFence> prior_fences;
-        auto fence_data = my_data->fenceMap.find(fence);
-        if (fence_data == my_data->fenceMap.end()) {
-            return;
-        }
-        fence_data->second.cmdBuffers.clear();
-        if (queue_data != my_data->queueMap.end()) {
-            prior_fences = queue_data->second.lastFences;
-            queue_data->second.lastFences.clear();
-            queue_data->second.lastFences.push_back(fence);
-            for (auto cmdbuffer : queue_data->second.untrackedCmdBuffers) {
-                fence_data->second.cmdBuffers.push_back(cmdbuffer);
-            }
-            queue_data->second.untrackedCmdBuffers.clear();
-        }
-        fence_data->second.priorFences = prior_fences;
-        fence_data->second.needsSignaled = true;
-        fence_data->second.queues.insert(queue);
-        fence_data->second.in_use.fetch_add(1);
-        for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
-            const VkSubmitInfo *submit = &pSubmits[submit_idx];
-            for (uint32_t i = 0; i < submit->commandBufferCount; ++i) {
-                for (auto secondaryCmdBuffer : my_data->commandBufferMap[submit->pCommandBuffers[i]]->secondaryCommandBuffers) {
-                    fence_data->second.cmdBuffers.push_back(secondaryCmdBuffer);
-                }
-                fence_data->second.cmdBuffers.push_back(submit->pCommandBuffers[i]);
-            }
-        }
-    } else {
-        if (queue_data != my_data->queueMap.end()) {
-            for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
-                const VkSubmitInfo *submit = &pSubmits[submit_idx];
-                for (uint32_t i = 0; i < submit->commandBufferCount; ++i) {
-                    for (auto secondaryCmdBuffer : my_data->commandBufferMap[submit->pCommandBuffers[i]]->secondaryCommandBuffers) {
-                        queue_data->second.untrackedCmdBuffers.push_back(secondaryCmdBuffer);
-                    }
-                    queue_data->second.untrackedCmdBuffers.push_back(submit->pCommandBuffers[i]);
-                }
-            }
-        }
-    }
+
+
+// Submit a fence to a queue, delimiting previous fences and previous untracked
+// work by it.
+static void
+SubmitFence(QUEUE_NODE *pQueue, FENCE_NODE *pFence)
+{
+    assert(!pFence->priorFences.size());
+    assert(!pFence->submissions.size());
+
+    std::swap(pFence->priorFences, pQueue->lastFences);
+    std::swap(pFence->submissions, pQueue->untrackedSubmissions);
+
+    pFence->queues.insert(pQueue->queue);
+    pFence->state = FENCE_INFLIGHT;
+
+    pQueue->lastFences.push_back(pFence->fence);
 }
 
 static void markCommandBuffersInFlight(layer_data *my_data, VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits,
@@ -4481,12 +4509,12 @@ static bool validateCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *pCB
     return skipCall;
 }
 
-static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *pCB) {
+static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NODE *pCB, std::vector<VkSemaphore> const &semaphores) {
     // Track in-use for resources off of primary and any secondary CBs
-    bool skipCall = validateAndIncrementResources(dev_data, pCB);
+    bool skipCall = validateAndIncrementResources(dev_data, pCB, semaphores);
     if (!pCB->secondaryCommandBuffers.empty()) {
         for (auto secondaryCmdBuffer : pCB->secondaryCommandBuffers) {
-            skipCall |= validateAndIncrementResources(dev_data, dev_data->commandBufferMap[secondaryCmdBuffer]);
+            skipCall |= validateAndIncrementResources(dev_data, dev_data->commandBufferMap[secondaryCmdBuffer], semaphores);
             GLOBAL_CB_NODE *pSubCB = getCBNode(dev_data, secondaryCmdBuffer);
             if ((pSubCB->primaryCommandBuffer != pCB->commandBuffer) &&
                 !(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
@@ -4508,31 +4536,60 @@ static bool validatePrimaryCommandBufferState(layer_data *dev_data, GLOBAL_CB_NO
     return skipCall;
 }
 
+static bool
+ValidateFenceForSubmit(layer_data *dev_data, FENCE_NODE *pFence)
+{
+    bool skipCall = false;
+
+    if (pFence) {
+        if (pFence->state == FENCE_INFLIGHT) {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                                (uint64_t)(pFence->fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
+                                "Fence 0x%" PRIx64 " is already in use by another submission.", (uint64_t)(pFence->fence));
+        }
+
+        else if (pFence->state == FENCE_RETIRED) {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                                reinterpret_cast<uint64_t &>(pFence->fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+                                "Fence 0x%" PRIxLEAST64 " submitted in SIGNALED state.  Fences must be reset before being submitted",
+                                reinterpret_cast<uint64_t &>(pFence->fence));
+        }
+    }
+
+    return skipCall;
+}
+
+
 VKAPI_ATTR VkResult VKAPI_CALL
 QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, VkFence fence) {
     bool skipCall = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     std::unique_lock<std::mutex> lock(global_lock);
-    // First verify that fence is not in use
-    if (fence != VK_NULL_HANDLE) {
-        if ((submitCount != 0) && dev_data->fenceMap[fence].in_use.load()) {
-            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                                (uint64_t)(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
-                                "Fence 0x%" PRIx64 " is already in use by another submission.", (uint64_t)(fence));
-        }
-        if (!dev_data->fenceMap[fence].needsSignaled) {
-            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                                reinterpret_cast<uint64_t &>(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
-                                "Fence 0x%" PRIxLEAST64 " submitted in SIGNALED state.  Fences must be reset before being submitted",
-                                reinterpret_cast<uint64_t &>(fence));
-        }
+
+    auto pQueue = getQueueNode(dev_data, queue);
+    auto pFence = getFenceNode(dev_data, fence);
+    skipCall |= ValidateFenceForSubmit(dev_data, pFence);
+
+    if (skipCall) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
+
     // TODO : Review these old print functions and clean up as appropriate
     print_mem_list(dev_data);
     printCBList(dev_data);
-    // Update cmdBuffer-related data structs and mark fence in-use
-    trackCommandBuffers(dev_data, queue, submitCount, pSubmits, fence);
+
+    // Mark the fence in-use.
+    if (pFence) {
+        SubmitFence(pQueue, pFence);
+    }
+
+    // If a fence is supplied, all the command buffers for this call will be
+    // delimited by that fence. Otherwise, they go in the untracked portion of
+    // the queue, and may end up being delimited by a fence supplied in a
+    // subsequent submission.
+    auto & submitTarget = pFence ? pFence->submissions : pQueue->untrackedSubmissions;
+
     // Now verify each individual submit
     std::unordered_set<VkQueue> processed_other_queues;
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
@@ -4576,15 +4633,20 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
                 }
             }
         }
+
+        // TODO: just add one submission per VkSubmitInfo!
         for (uint32_t i = 0; i < submit->commandBufferCount; i++) {
             auto pCBNode = getCBNode(dev_data, submit->pCommandBuffers[i]);
             skipCall |= ValidateCmdBufImageLayouts(dev_data, pCBNode);
             if (pCBNode) {
-                pCBNode->semaphores = semaphoreList;
+
+                submitTarget.emplace_back(pCBNode->commandBuffer, semaphoreList);
+                for (auto secondaryCmdBuffer : pCBNode->secondaryCommandBuffers) {
+                    submitTarget.emplace_back(secondaryCmdBuffer, semaphoreList);
+                }
+
                 pCBNode->submitCount++; // increment submit count
-                pCBNode->lastSubmittedFence = fence;
-                pCBNode->lastSubmittedQueue = queue;
-                skipCall |= validatePrimaryCommandBufferState(dev_data, pCBNode);
+                skipCall |= validatePrimaryCommandBufferState(dev_data, pCBNode, semaphoreList);
                 // Call submit-time functions to validate/update state
                 for (auto &function : pCBNode->validate_functions) {
                     skipCall |= function();
@@ -4727,27 +4789,17 @@ static void initializeAndTrackMemory(layer_data *dev_data, VkDeviceMemory mem, V
 // Verify that state for fence being waited on is appropriate. That is,
 //  a fence being waited on should not already be signalled and
 //  it should have been submitted on a queue or during acquire next image
-static inline bool verifyWaitFenceState(VkDevice device, VkFence fence, const char *apiCall) {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+static inline bool verifyWaitFenceState(layer_data *dev_data, VkFence fence, const char *apiCall) {
     bool skipCall = false;
-    auto pFenceInfo = my_data->fenceMap.find(fence);
-    if (pFenceInfo != my_data->fenceMap.end()) {
-        if (!pFenceInfo->second.firstTimeFlag) {
-            if (!pFenceInfo->second.needsSignaled) {
-                skipCall |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                            (uint64_t)fence, __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
-                            "%s specified fence 0x%" PRIxLEAST64 " already in SIGNALED state.", apiCall, (uint64_t)fence);
-            }
-            if (pFenceInfo->second.queues.empty() && !pFenceInfo->second.swapchain) { // Checking status of unsubmitted fence
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                                    reinterpret_cast<uint64_t &>(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
-                                    "%s called for fence 0x%" PRIxLEAST64 " which has not been submitted on a Queue or during "
-                                    "acquire next image.",
-                                    apiCall, reinterpret_cast<uint64_t &>(fence));
-            }
-        } else {
-            pFenceInfo->second.firstTimeFlag = false;
+
+    auto pFence = getFenceNode(dev_data, fence);
+    if (pFence) {
+        if (pFence->state == FENCE_UNSIGNALED) {
+            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
+                                reinterpret_cast<uint64_t &>(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+                                "%s called for fence 0x%" PRIxLEAST64 " which has not been submitted on a Queue or during "
+                                "acquire next image.",
+                                apiCall, reinterpret_cast<uint64_t &>(fence));
         }
     }
     return skipCall;
@@ -4760,7 +4812,7 @@ WaitForFences(VkDevice device, uint32_t fenceCount, const VkFence *pFences, VkBo
     // Verify fence status of submitted fences
     std::unique_lock<std::mutex> lock(global_lock);
     for (uint32_t i = 0; i < fenceCount; i++) {
-        skip_call |= verifyWaitFenceState(device, pFences[i], "vkWaitForFences");
+        skip_call |= verifyWaitFenceState(dev_data, pFences[i], "vkWaitForFences");
     }
     lock.unlock();
     if (skip_call)
@@ -4789,7 +4841,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetFenceStatus(VkDevice device, VkFence fence) {
     bool skipCall = false;
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     std::unique_lock<std::mutex> lock(global_lock);
-    skipCall = verifyWaitFenceState(device, fence, "vkGetFenceStatus");
+    skipCall = verifyWaitFenceState(dev_data, fence, "vkGetFenceStatus");
     lock.unlock();
 
     if (skipCall)
@@ -4817,6 +4869,7 @@ VKAPI_ATTR void VKAPI_CALL GetDeviceQueue(VkDevice device, uint32_t queueFamilyI
     auto result = dev_data->queues.emplace(*pQueue);
     if (result.second == true) {
         QUEUE_NODE *pQNode = &dev_data->queueMap[*pQueue];
+        pQNode->queue = *pQueue;
         pQNode->device = device;
     }
 }
@@ -4852,10 +4905,10 @@ VKAPI_ATTR void VKAPI_CALL DestroyFence(VkDevice device, VkFence fence, const Vk
     std::unique_lock<std::mutex> lock(global_lock);
     auto fence_pair = dev_data->fenceMap.find(fence);
     if (fence_pair != dev_data->fenceMap.end()) {
-        if (fence_pair->second.in_use.load()) {
+        if (fence_pair->second.state == FENCE_INFLIGHT) {
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                                 (uint64_t)(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
-                                "Fence 0x%" PRIx64 " is in use by a command buffer.", (uint64_t)(fence));
+                                "Fence 0x%" PRIx64 " is in use.", (uint64_t)(fence));
         }
         dev_data->fenceMap.erase(fence_pair);
     }
@@ -5110,6 +5163,20 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
     }
 }
 
+static bool ValidateMemoryTypes(const layer_data *dev_data, const DEVICE_MEM_INFO *mem_info, const uint32_t memory_type_bits,
+                                  const char *funcName) {
+    bool skip_call = false;
+    if (((1 << mem_info->allocInfo.memoryTypeIndex) & memory_type_bits) == 0) {
+        skip_call = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                            reinterpret_cast<const uint64_t &>(mem_info->mem), __LINE__, MEMTRACK_INVALID_MEM_TYPE, "MT",
+                            "%s(): MemoryRequirements->memoryTypeBits (0x%X) for this object type are not compatible with the memory "
+                            "type (0x%X) of this memory object 0x%" PRIx64 ".",
+                            funcName, memory_type_bits, mem_info->allocInfo.memoryTypeIndex,
+                            reinterpret_cast<const uint64_t &>(mem_info->mem));
+    }
+    return skip_call;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL
 BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize memoryOffset) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -5131,6 +5198,7 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
             const MEMORY_RANGE range =
                 insert_memory_ranges(buffer_handle, mem, memoryOffset, memRequirements, mem_info->bufferRanges);
             skipCall |= validate_memory_range(dev_data, mem_info->imageRanges, range, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
+            skipCall |= ValidateMemoryTypes(dev_data, mem_info, memRequirements.memoryTypeBits, "BindBufferMemory");
         }
 
         // Validate memory requirements alignment
@@ -5400,17 +5468,20 @@ VKAPI_ATTR VkResult VKAPI_CALL ResetFences(VkDevice device, uint32_t fenceCount,
     bool skipCall = false;
     std::unique_lock<std::mutex> lock(global_lock);
     for (uint32_t i = 0; i < fenceCount; ++i) {
-        auto fence_item = dev_data->fenceMap.find(pFences[i]);
-        if (fence_item != dev_data->fenceMap.end()) {
-            fence_item->second.needsSignaled = true;
-            fence_item->second.queues.clear();
-            fence_item->second.priorFences.clear();
-            if (fence_item->second.in_use.load()) {
+        auto pFence = getFenceNode(dev_data, pFences[i]);
+        if (pFence) {
+            if (pFence->state == FENCE_INFLIGHT) {
                 skipCall |=
                     log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
                             reinterpret_cast<const uint64_t &>(pFences[i]), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
-                            "Fence 0x%" PRIx64 " is in use by a command buffer.", reinterpret_cast<const uint64_t &>(pFences[i]));
+                            "Fence 0x%" PRIx64 " is in use.", reinterpret_cast<const uint64_t &>(pFences[i]));
             }
+            pFence->state = FENCE_UNSIGNALED;
+
+            // TODO: these should really have already been enforced on
+            // INFLIGHT->RETIRED transition.
+            pFence->queues.clear();
+            pFence->priorFences.clear();
         }
     }
     lock.unlock();
@@ -5569,13 +5640,9 @@ CreateFence(VkDevice device, const VkFenceCreateInfo *pCreateInfo, const VkAlloc
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         auto &fence_node = dev_data->fenceMap[*pFence];
+        fence_node.fence = *pFence;
         fence_node.createInfo = *pCreateInfo;
-        fence_node.needsSignaled = true;
-        if (pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT) {
-            fence_node.firstTimeFlag = true;
-            fence_node.needsSignaled = false;
-        }
-        fence_node.in_use.store(0);
+        fence_node.state = (pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT) ? FENCE_RETIRED : FENCE_UNSIGNALED;
     }
     return result;
 }
@@ -7789,10 +7856,10 @@ bool validateEventStageMask(VkQueue queue, GLOBAL_CB_NODE *pCB, uint32_t eventCo
     if (sourceStageMask != stageMask && sourceStageMask != (stageMask | VK_PIPELINE_STAGE_HOST_BIT)) {
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                              DRAWSTATE_INVALID_EVENT, "DS", "Submitting cmdbuffer with call to VkCmdWaitEvents "
-                                                            "using srcStageMask 0x%x which must be the bitwise "
+                                                            "using srcStageMask 0x%X which must be the bitwise "
                                                             "OR of the stageMask parameters used in calls to "
                                                             "vkCmdSetEvent and VK_PIPELINE_STAGE_HOST_BIT if "
-                                                            "used with vkSetEvent but instead is 0x%x.",
+                                                            "used with vkSetEvent but instead is 0x%X.",
                              sourceStageMask, stageMask);
     }
     return skip_call;
@@ -8134,11 +8201,68 @@ CmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelin
         dev_data->device_dispatch_table->CmdWriteTimestamp(commandBuffer, pipelineStage, queryPool, slot);
 }
 
+static bool MatchUsage(layer_data *dev_data, uint32_t count, const VkAttachmentReference *attachments,
+                       const VkFramebufferCreateInfo *fbci, VkImageUsageFlagBits usage_flag) {
+    bool skip_call = false;
+
+    for (uint32_t attach = 0; attach < count; attach++) {
+        if (attachments[attach].attachment != VK_ATTACHMENT_UNUSED) {
+            // Attachment counts are verified elsewhere, but prevent an invalid access
+            if (attachments[attach].attachment < fbci->attachmentCount) {
+                const VkImageView *image_view = &fbci->pAttachments[attachments[attach].attachment];
+                VkImageViewCreateInfo *ivci = getImageViewData(dev_data, *image_view);
+                if (ivci != nullptr) {
+                    const VkImageCreateInfo *ici = &getImageNode(dev_data, ivci->image)->createInfo;
+                    if (ici != nullptr) {
+                        if ((ici->usage & usage_flag) == 0) {
+                            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                                 (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_IMAGE_USAGE, "DS",
+                                                 "vkCreateFramebuffer:  Framebuffer Attachment (%d) conflicts with the image's "
+                                                 "IMAGE_USAGE flags (%s).",
+                                                 attachments[attach].attachment, string_VkImageUsageFlagBits(usage_flag));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return skip_call;
+}
+
+static bool ValidateAttachmentImageUsage(layer_data *dev_data, const VkFramebufferCreateInfo *pCreateInfo) {
+    bool skip_call = false;
+
+    const VkRenderPassCreateInfo *rpci = getRenderPass(dev_data, pCreateInfo->renderPass)->pCreateInfo;
+    if (rpci != nullptr) {
+        for (uint32_t subpass = 0; subpass < rpci->subpassCount; subpass++) {
+            // Verify input attachments:
+            skip_call |= MatchUsage(dev_data, rpci->pSubpasses[subpass].inputAttachmentCount,
+                                    rpci->pSubpasses[subpass].pInputAttachments, pCreateInfo, VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
+            // Verify color attachments:
+            skip_call |= MatchUsage(dev_data, rpci->pSubpasses[subpass].colorAttachmentCount,
+                                    rpci->pSubpasses[subpass].pColorAttachments, pCreateInfo, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+            // Verify depth/stencil attachments:
+            if (rpci->pSubpasses[subpass].pDepthStencilAttachment != nullptr) {
+                skip_call |= MatchUsage(dev_data, 1, rpci->pSubpasses[subpass].pDepthStencilAttachment, pCreateInfo,
+                                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+            }
+        }
+    }
+    return skip_call;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo *pCreateInfo,
                                                  const VkAllocationCallbacks *pAllocator,
                                                  VkFramebuffer *pFramebuffer) {
+    bool skip_call = false;
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    // TODO : Verify that renderPass FB is created with is compatible with FB
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
+
+    skip_call |= ValidateAttachmentImageUsage(dev_data, pCreateInfo);
+    if (skip_call == false) {
+        result = dev_data->device_dispatch_table->CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
+    }
     if (VK_SUCCESS == result) {
         // Shadow create info and store in map
         std::lock_guard<std::mutex> lock(global_lock);
@@ -8199,15 +8323,10 @@ static bool CheckDependencyExists(const layer_data *my_data, const int subpass, 
         auto prev_elem = std::find(node.prev.begin(), node.prev.end(), dependent_subpasses[k]);
         auto next_elem = std::find(node.next.begin(), node.next.end(), dependent_subpasses[k]);
         if (prev_elem == node.prev.end() && next_elem == node.next.end()) {
-            // If no dependency exits an implicit dependency still might. If so, warn and if not throw an error.
+            // If no dependency exits an implicit dependency still might. If not, throw an error.
             std::unordered_set<uint32_t> processed_nodes;
-            if (FindDependency(subpass, dependent_subpasses[k], subpass_to_node, processed_nodes) ||
-                FindDependency(dependent_subpasses[k], subpass, subpass_to_node, processed_nodes)) {
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                     __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                     "A dependency between subpasses %d and %d must exist but only an implicit one is specified.",
-                                     subpass, dependent_subpasses[k]);
-            } else {
+            if (!(FindDependency(subpass, dependent_subpasses[k], subpass_to_node, processed_nodes) ||
+                FindDependency(dependent_subpasses[k], subpass, subpass_to_node, processed_nodes))) {
                 skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
                                      __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
                                      "A dependency between subpasses %d and %d must exist but one is not specified.", subpass,
@@ -8545,25 +8664,86 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateShaderModule(VkDevice device, const VkShade
     return res;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
-                                                const VkAllocationCallbacks *pAllocator,
-                                                VkRenderPass *pRenderPass) {
+static bool ValidateAttachmentIndex(layer_data *dev_data, uint32_t attachment, uint32_t attachment_count, const char *type) {
     bool skip_call = false;
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    // Create DAG
-    std::vector<bool> has_self_dependency(pCreateInfo->subpassCount);
-    std::vector<DAGNode> subpass_to_node(pCreateInfo->subpassCount);
-    {
-        std::lock_guard<std::mutex> lock(global_lock);
-        skip_call |= CreatePassDAG(dev_data, device, pCreateInfo, subpass_to_node, has_self_dependency);
-        // Validate
-        skip_call |= ValidateLayouts(dev_data, device, pCreateInfo);
-        if (skip_call) {
-            return VK_ERROR_VALIDATION_FAILED_EXT;
+    if (attachment >= attachment_count && attachment != VK_ATTACHMENT_UNUSED) {
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                             DRAWSTATE_INVALID_ATTACHMENT_INDEX, "DS",
+                             "CreateRenderPass: %s attachment %d cannot be greater than the total number of attachments %d.",
+                             type, attachment, attachment_count);
+    }
+    return skip_call;
+}
+
+static bool ValidateRenderpassAttachmentUsage(layer_data *dev_data, const VkRenderPassCreateInfo *pCreateInfo) {
+    bool skip_call = false;
+    for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
+        const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
+        if (subpass.pipelineBindPoint != VK_PIPELINE_BIND_POINT_GRAPHICS) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_INVALID_RENDERPASS, "DS",
+                        "CreateRenderPass: Pipeline bind point for subpass %d must be VK_PIPELINE_BIND_POINT_GRAPHICS.", i);
+        }
+        for (uint32_t j = 0; j < subpass.preserveAttachmentCount; ++j) {
+            uint32_t attachment = subpass.pPreserveAttachments[j];
+            if (attachment == VK_ATTACHMENT_UNUSED) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                     __LINE__, DRAWSTATE_INVALID_ATTACHMENT_INDEX, "DS",
+                                     "CreateRenderPass:  Preserve attachment (%d) must not be VK_ATTACHMENT_UNUSED.", j);
+            } else {
+                skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Preserve");
+            }
+        }
+        for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
+            uint32_t attachment;
+            if (subpass.pResolveAttachments) {
+                attachment = subpass.pResolveAttachments[j].attachment;
+                skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Resolve");
+            }
+            attachment = subpass.pColorAttachments[j].attachment;
+            skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Color");
+        }
+        if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+            uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
+            skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Depth stencil");
+        }
+        for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
+            uint32_t attachment = subpass.pInputAttachments[j].attachment;
+            skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Input");
         }
     }
-    VkResult result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
+    return skip_call;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
+                                                const VkAllocationCallbacks *pAllocator, VkRenderPass *pRenderPass) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip_call = false;
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    std::unique_lock<std::mutex> lock(global_lock);
+
+    skip_call |= ValidateLayouts(dev_data, device, pCreateInfo);
+    // TODO: As part of wrapping up the mem_tracker/core_validation merge the following routine should be consolidated with
+    //       ValidateLayouts.
+    skip_call |= ValidateRenderpassAttachmentUsage(dev_data, pCreateInfo);
+
+    if (skip_call) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+
+    lock.unlock();
+    if (skip_call == false) {
+        result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
+    }
     if (VK_SUCCESS == result) {
+        lock.lock();
+
+        std::vector<bool> has_self_dependency(pCreateInfo->subpassCount);
+        std::vector<DAGNode> subpass_to_node(pCreateInfo->subpassCount);
+        skip_call |= CreatePassDAG(dev_data, device, pCreateInfo, subpass_to_node, has_self_dependency);
+
         // TODOSC : Merge in tracking of renderpass from shader_checker
         // Shadow create info and store in map
         VkRenderPassCreateInfo *localRPCI = new VkRenderPassCreateInfo(*pCreateInfo);
@@ -8624,91 +8804,44 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
             MT_PASS_ATTACHMENT_INFO pass_info;
             pass_info.load_op = desc.loadOp;
             pass_info.store_op = desc.storeOp;
+            pass_info.stencil_load_op = desc.stencilLoadOp;
+            pass_info.stencil_store_op = desc.stencilStoreOp;
             pass_info.attachment = i;
             render_pass->attachments.push_back(pass_info);
         }
         // TODO: Maybe fill list and then copy instead of locking
         std::unordered_map<uint32_t, bool> &attachment_first_read = render_pass->attachment_first_read;
-        std::unordered_map<uint32_t, VkImageLayout> &attachment_first_layout =
-            render_pass->attachment_first_layout;
+        std::unordered_map<uint32_t, VkImageLayout> &attachment_first_layout = render_pass->attachment_first_layout;
         for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
             const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
-            if (subpass.pipelineBindPoint != VK_PIPELINE_BIND_POINT_GRAPHICS) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                     __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                     "Pipeline bind point for subpass %d must be VK_PIPELINE_BIND_POINT_GRAPHICS.", i);
-            }
-            for (uint32_t j = 0; j < subpass.preserveAttachmentCount; ++j) {
-                uint32_t attachment = subpass.pPreserveAttachments[j];
-                if (attachment >= pCreateInfo->attachmentCount) {
-                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                         __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                         "Preserve attachment %d cannot be greater than the total number of attachments %d.",
-                                         attachment, pCreateInfo->attachmentCount);
-                }
-            }
             for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
-                uint32_t attachment;
-                if (subpass.pResolveAttachments) {
-                    attachment = subpass.pResolveAttachments[j].attachment;
-                    if (attachment >= pCreateInfo->attachmentCount && attachment != VK_ATTACHMENT_UNUSED) {
-                        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                             __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                             "Color attachment %d cannot be greater than the total number of attachments %d.",
-                                             attachment, pCreateInfo->attachmentCount);
-                        continue;
-                    }
+                uint32_t attachment = subpass.pColorAttachments[j].attachment;
+                if (!attachment_first_read.count(attachment)) {
+                    attachment_first_read.insert(std::make_pair(attachment, false));
+                    attachment_first_layout.insert(std::make_pair(attachment, subpass.pColorAttachments[j].layout));
                 }
-                attachment = subpass.pColorAttachments[j].attachment;
-                if (attachment >= pCreateInfo->attachmentCount) {
-                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                         __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                         "Color attachment %d cannot be greater than the total number of attachments %d.",
-                                         attachment, pCreateInfo->attachmentCount);
-                    continue;
-                }
-                if (attachment_first_read.count(attachment))
-                    continue;
-                attachment_first_read.insert(std::make_pair(attachment, false));
-                attachment_first_layout.insert(std::make_pair(attachment, subpass.pColorAttachments[j].layout));
             }
             if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
                 uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
-                if (attachment >= pCreateInfo->attachmentCount) {
-                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                         __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                         "Depth stencil attachment %d cannot be greater than the total number of attachments %d.",
-                                         attachment, pCreateInfo->attachmentCount);
-                    continue;
+                if (!attachment_first_read.count(attachment)) {
+                    attachment_first_read.insert(std::make_pair(attachment, false));
+                    attachment_first_layout.insert(std::make_pair(attachment, subpass.pDepthStencilAttachment->layout));
                 }
-                if (attachment_first_read.count(attachment))
-                    continue;
-                attachment_first_read.insert(std::make_pair(attachment, false));
-                attachment_first_layout.insert(std::make_pair(attachment, subpass.pDepthStencilAttachment->layout));
             }
             for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
                 uint32_t attachment = subpass.pInputAttachments[j].attachment;
-                if (attachment >= pCreateInfo->attachmentCount) {
-                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                         __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                         "Input attachment %d cannot be greater than the total number of attachments %d.",
-                                         attachment, pCreateInfo->attachmentCount);
-                    continue;
+                if (!attachment_first_read.count(attachment)) {
+                    attachment_first_read.insert(std::make_pair(attachment, true));
+                    attachment_first_layout.insert(std::make_pair(attachment, subpass.pInputAttachments[j].layout));
                 }
-                if (attachment_first_read.count(attachment))
-                    continue;
-                attachment_first_read.insert(std::make_pair(attachment, true));
-                attachment_first_layout.insert(std::make_pair(attachment, subpass.pInputAttachments[j].layout));
             }
         }
 #endif
-        {
-            std::lock_guard<std::mutex> lock(global_lock);
-            dev_data->renderPassMap[*pRenderPass] = render_pass;
-        }
+        dev_data->renderPassMap[*pRenderPass] = render_pass;
     }
     return result;
 }
+
 // Free the renderpass shadow
 static void deleteRenderPasses(layer_data *my_data) {
     if (my_data->renderPassMap.size() <= 0)
@@ -8853,6 +8986,20 @@ static bool VerifyRenderAreaBounds(const layer_data *my_data, const VkRenderPass
     return skip_call;
 }
 
+// If this is a stencil format, make sure the stencil[Load|Store]Op flag is checked, while if it is a depth/color attachment the
+// [load|store]Op flag must be checked
+// TODO: The memory valid flag in DEVICE_MEM_INFO should probably be split to track the validity of stencil memory separately.
+template <typename T> static bool FormatSpecificLoadAndStoreOpSettings(VkFormat format, T color_depth_op, T stencil_op, T op) {
+    if (color_depth_op != op && stencil_op != op) {
+        return false;
+    }
+    bool check_color_depth_load_op = !vk_format_is_stencil_only(format);
+    bool check_stencil_load_op = vk_format_is_depth_and_stencil(format) || !check_color_depth_load_op;
+
+    return (((check_color_depth_load_op == true) && (color_depth_op == op)) ||
+            ((check_stencil_load_op == true) && (stencil_op == op)));
+}
+
 VKAPI_ATTR void VKAPI_CALL
 CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *pRenderPassBegin, VkSubpassContents contents) {
     bool skipCall = false;
@@ -8867,20 +9014,27 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
             pCB->activeFramebuffer = pRenderPassBegin->framebuffer;
             for (size_t i = 0; i < renderPass->attachments.size(); ++i) {
                 MT_FB_ATTACHMENT_INFO &fb_info = framebuffer->attachments[i];
-                if (renderPass->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+                VkFormat format = renderPass->pCreateInfo->pAttachments[renderPass->attachments[i].attachment].format;
+                if (FormatSpecificLoadAndStoreOpSettings(format, renderPass->attachments[i].load_op,
+                                                         renderPass->attachments[i].stencil_load_op,
+                                                         VK_ATTACHMENT_LOAD_OP_CLEAR)) {
                     ++clear_op_count;
                     std::function<bool()> function = [=]() {
                         set_memory_valid(dev_data, fb_info.mem, true, fb_info.image);
                         return false;
                     };
                     pCB->validate_functions.push_back(function);
-                } else if (renderPass->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_DONT_CARE) {
+                } else if (FormatSpecificLoadAndStoreOpSettings(format, renderPass->attachments[i].load_op,
+                                                                renderPass->attachments[i].stencil_load_op,
+                                                                VK_ATTACHMENT_LOAD_OP_DONT_CARE)) {
                     std::function<bool()> function = [=]() {
                         set_memory_valid(dev_data, fb_info.mem, false, fb_info.image);
                         return false;
                     };
                     pCB->validate_functions.push_back(function);
-                } else if (renderPass->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_LOAD) {
+                } else if (FormatSpecificLoadAndStoreOpSettings(format, renderPass->attachments[i].load_op,
+                                                                renderPass->attachments[i].stencil_load_op,
+                                                                VK_ATTACHMENT_LOAD_OP_LOAD)) {
                     std::function<bool()> function = [=]() {
                         return validate_memory_is_valid(dev_data, fb_info.mem, "vkCmdBeginRenderPass()", fb_info.image);
                     };
@@ -8899,16 +9053,16 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                     reinterpret_cast<uint64_t &>(renderPass), __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
                     "In vkCmdBeginRenderPass() the VkRenderPassBeginInfo struct has a clearValueCount of %u but the actual number "
                     "of attachments in renderPass 0x%" PRIx64 " that use VK_ATTACHMENT_LOAD_OP_CLEAR is %u. The clearValueCount "
-                                                              "must therefore be greater than or equal to %u.",
+                    "must therefore be greater than or equal to %u.",
                     pRenderPassBegin->clearValueCount, reinterpret_cast<uint64_t &>(renderPass), clear_op_count, clear_op_count);
             }
             skipCall |= VerifyRenderAreaBounds(dev_data, pRenderPassBegin);
             skipCall |= VerifyFramebufferAndRenderPassLayouts(dev_data, pCB, pRenderPassBegin);
             skipCall |= insideRenderPass(dev_data, pCB, "vkCmdBeginRenderPass");
             skipCall |= ValidateDependencies(dev_data, framebuffer, renderPass);
-            pCB->activeRenderPass = renderPass;
             skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdBeginRenderPass");
             skipCall |= addCmd(dev_data, pCB, CMD_BEGINRENDERPASS, "vkCmdBeginRenderPass()");
+            pCB->activeRenderPass = renderPass;
             // This is a shallow copy as that is all that is needed for now
             pCB->activeRenderPassBeginInfo = *pRenderPassBegin;
             pCB->activeSubpass = 0;
@@ -8957,13 +9111,17 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
         if (pRPNode) {
             for (size_t i = 0; i < pRPNode->attachments.size(); ++i) {
                 MT_FB_ATTACHMENT_INFO &fb_info = framebuffer->attachments[i];
-                if (pRPNode->attachments[i].store_op == VK_ATTACHMENT_STORE_OP_STORE) {
+                VkFormat format = pRPNode->pCreateInfo->pAttachments[pRPNode->attachments[i].attachment].format;
+                if (FormatSpecificLoadAndStoreOpSettings(format, pRPNode->attachments[i].store_op,
+                                                         pRPNode->attachments[i].stencil_store_op, VK_ATTACHMENT_STORE_OP_STORE)) {
                     std::function<bool()> function = [=]() {
                         set_memory_valid(dev_data, fb_info.mem, true, fb_info.image);
                         return false;
                     };
                     pCB->validate_functions.push_back(function);
-                } else if (pRPNode->attachments[i].store_op == VK_ATTACHMENT_STORE_OP_DONT_CARE) {
+                } else if (FormatSpecificLoadAndStoreOpSettings(format, pRPNode->attachments[i].store_op,
+                                                                pRPNode->attachments[i].stencil_store_op,
+                                                                VK_ATTACHMENT_STORE_OP_DONT_CARE)) {
                     std::function<bool()> function = [=]() {
                         set_memory_valid(dev_data, fb_info.mem, false, fb_info.image);
                         return false;
@@ -9497,6 +9655,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
             const MEMORY_RANGE range =
                 insert_memory_ranges(image_handle, mem, memoryOffset, memRequirements, mem_info->imageRanges);
             skipCall |= validate_memory_range(dev_data, mem_info->bufferRanges, range, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
+            skipCall |= ValidateMemoryTypes(dev_data, mem_info, memRequirements.memoryTypeBits, "vkBindImageMemory");
         }
 
         print_mem_list(dev_data);
@@ -9556,24 +9715,16 @@ QueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo *p
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip_call = false;
     std::unique_lock<std::mutex> lock(global_lock);
+    auto pFence = getFenceNode(dev_data, fence);
+    auto pQueue = getQueueNode(dev_data, queue);
+
     // First verify that fence is not in use
+    skip_call |= ValidateFenceForSubmit(dev_data, pFence);
+
     if (fence != VK_NULL_HANDLE) {
-        auto fence_data = dev_data->fenceMap.find(fence);
-        if ((bindInfoCount != 0) && fence_data->second.in_use.load()) {
-            skip_call |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                        reinterpret_cast<uint64_t &>(fence), __LINE__, DRAWSTATE_INVALID_FENCE, "DS",
-                        "Fence 0x%" PRIx64 " is already in use by another submission.", reinterpret_cast<uint64_t &>(fence));
-        }
-        if (!fence_data->second.needsSignaled) {
-            skip_call |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,
-                        reinterpret_cast<uint64_t &>(fence), __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
-                        "Fence 0x%" PRIxLEAST64 " submitted in SIGNALED state.  Fences must be reset before being submitted",
-                        reinterpret_cast<uint64_t &>(fence));
-        }
-        trackCommandBuffers(dev_data, queue, 0, nullptr, fence);
+        SubmitFence(pQueue, pFence);
     }
+
     for (uint32_t bindIdx = 0; bindIdx < bindInfoCount; ++bindIdx) {
         const VkBindSparseInfo &bindInfo = pBindInfo[bindIdx];
         // Track objects tied to memory
@@ -9662,6 +9813,7 @@ CreateEvent(VkDevice device, const VkEventCreateInfo *pCreateInfo, const VkAlloc
         std::lock_guard<std::mutex> lock(global_lock);
         dev_data->eventMap[*pEvent].needsSignaled = false;
         dev_data->eventMap[*pEvent].in_use.store(0);
+        dev_data->eventMap[*pEvent].write_in_use = 0;
         dev_data->eventMap[*pEvent].stageMask = VkPipelineStageFlags(0);
     }
     return result;
@@ -9767,54 +9919,61 @@ GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCoun
 
 VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip_call = false;
 
-    if (pPresentInfo) {
-        std::lock_guard<std::mutex> lock(global_lock);
-        for (uint32_t i = 0; i < pPresentInfo->waitSemaphoreCount; ++i) {
-            const VkSemaphore &semaphore = pPresentInfo->pWaitSemaphores[i];
-            if (dev_data->semaphoreMap.find(semaphore) != dev_data->semaphoreMap.end()) {
-                if (dev_data->semaphoreMap[semaphore].signaled) {
-                    dev_data->semaphoreMap[semaphore].signaled = false;
-                } else {
-                    skip_call |=
-                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
-                                "Queue 0x%" PRIx64 " is waiting on semaphore 0x%" PRIx64 " that has no way to be signaled.",
-                                reinterpret_cast<uint64_t &>(queue), reinterpret_cast<const uint64_t &>(semaphore));
-                }
-            }
+    std::lock_guard<std::mutex> lock(global_lock);
+    for (uint32_t i = 0; i < pPresentInfo->waitSemaphoreCount; ++i) {
+        auto pSemaphore = getSemaphoreNode(dev_data, pPresentInfo->pWaitSemaphores[i]);
+        if (pSemaphore && !pSemaphore->signaled) {
+            skip_call |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                            VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                            "Queue 0x%" PRIx64 " is waiting on semaphore 0x%" PRIx64 " that has no way to be signaled.",
+                            reinterpret_cast<uint64_t &>(queue), reinterpret_cast<const uint64_t &>(pPresentInfo->pWaitSemaphores[i]));
         }
-        VkDeviceMemory mem;
-        for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
-            auto swapchain_data = getSwapchainNode(dev_data, pPresentInfo->pSwapchains[i]);
-            if (swapchain_data && pPresentInfo->pImageIndices[i] < swapchain_data->images.size()) {
-                VkImage image = swapchain_data->images[pPresentInfo->pImageIndices[i]];
+    }
+    VkDeviceMemory mem;
+    for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
+        auto swapchain_data = getSwapchainNode(dev_data, pPresentInfo->pSwapchains[i]);
+        if (swapchain_data && pPresentInfo->pImageIndices[i] < swapchain_data->images.size()) {
+            VkImage image = swapchain_data->images[pPresentInfo->pImageIndices[i]];
 #if MTMERGESOURCE
-                skip_call |=
+            skip_call |=
                     get_mem_binding_from_object(dev_data, (uint64_t)(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
-                skip_call |= validate_memory_is_valid(dev_data, mem, "vkQueuePresentKHR()", image);
+            skip_call |= validate_memory_is_valid(dev_data, mem, "vkQueuePresentKHR()", image);
 #endif
-                vector<VkImageLayout> layouts;
-                if (FindLayouts(dev_data, image, layouts)) {
-                    for (auto layout : layouts) {
-                        if (layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-                            skip_call |=
+            vector<VkImageLayout> layouts;
+            if (FindLayouts(dev_data, image, layouts)) {
+                for (auto layout : layouts) {
+                    if (layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+                        skip_call |=
                                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
                                         reinterpret_cast<uint64_t &>(queue), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                         "Images passed to present must be in layout "
                                         "PRESENT_SOURCE_KHR but is in %s",
                                         string_VkImageLayout(layout));
-                        }
                     }
                 }
             }
         }
     }
 
-    if (!skip_call)
-        result = dev_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
+    if (skip_call) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+
+    VkResult result = dev_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
+
+    if (result != VK_ERROR_VALIDATION_FAILED_EXT) {
+        // Semaphore waits occur before error generation, if the call reached
+        // the ICD. (Confirm?)
+        for (uint32_t i = 0; i < pPresentInfo->waitSemaphoreCount; ++i) {
+            auto pSemaphore = getSemaphoreNode(dev_data, pPresentInfo->pWaitSemaphores[i]);
+            if (pSemaphore && pSemaphore->signaled) {
+                pSemaphore->signaled = false;
+            }
+        }
+    }
 
     return result;
 }
@@ -9822,29 +9981,40 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
 VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout,
                                                    VkSemaphore semaphore, VkFence fence, uint32_t *pImageIndex) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skipCall = false;
 
     std::unique_lock<std::mutex> lock(global_lock);
-    if (semaphore != VK_NULL_HANDLE &&
-        dev_data->semaphoreMap.find(semaphore) != dev_data->semaphoreMap.end()) {
-        if (dev_data->semaphoreMap[semaphore].signaled) {
-            skipCall = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
-                               reinterpret_cast<const uint64_t &>(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
-                               "vkAcquireNextImageKHR: Semaphore must not be currently signaled or in a wait state");
-        }
-        dev_data->semaphoreMap[semaphore].signaled = true;
+    auto pSemaphore = getSemaphoreNode(dev_data, semaphore);
+    if (pSemaphore && pSemaphore->signaled) {
+        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
+                           reinterpret_cast<const uint64_t &>(semaphore), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                           "vkAcquireNextImageKHR: Semaphore must not be currently signaled or in a wait state");
     }
-    auto fence_data = dev_data->fenceMap.find(fence);
-    if (fence_data != dev_data->fenceMap.end()) {
-        fence_data->second.swapchain = swapchain;
+
+    auto pFence = getFenceNode(dev_data, fence);
+    if (pFence) {
+        skipCall |= ValidateFenceForSubmit(dev_data, pFence);
     }
     lock.unlock();
 
-    if (!skipCall) {
-        result =
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+
+    VkResult result =
             dev_data->device_dispatch_table->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
+
+    lock.lock();
+    if (result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR) {
+        if (pFence) {
+            pFence->state = FENCE_INFLIGHT;
+        }
+
+        // A successful call to AcquireNextImageKHR counts as a signal operation on semaphore
+        if (pSemaphore) {
+            pSemaphore->signaled = true;
+        }
     }
+    lock.unlock();
 
     return result;
 }

@@ -352,8 +352,8 @@ loader_platform_open_library(const char *libPath) {
     return LoadLibrary(libPath);
 }
 static char *loader_platform_open_library_error(const char *libPath) {
-    static char errorMsg[120];
-    snprintf(errorMsg, 119, "Failed to open dynamic library \"%s\"", libPath);
+    static char errorMsg[164];
+    snprintf(errorMsg, 163, "Failed to open dynamic library \"%s\"", libPath);
     return errorMsg;
 }
 static void loader_platform_close_library(loader_platform_dl_handle library) {

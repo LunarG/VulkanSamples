@@ -165,7 +165,9 @@ struct MEMORY_RANGE {
 // Data struct for tracking memory object
 struct DEVICE_MEM_INFO {
     void *object; // Dispatchable object used to create this memory (device of swapchain)
-    bool valid;   // Stores if the memory has valid data or not
+    bool valid; // Stores if the color/depth/buffer memory has valid data or not
+    bool stencil_valid; // TODO: Stores if the stencil memory has valid data or not. The validity of this memory may ultimately need
+                        // to be tracked separately from the depth/stencil/buffer memory
     VkDeviceMemory mem;
     VkMemoryAllocateInfo allocInfo;
     std::unordered_set<MT_OBJ_HANDLE_TYPE> objBindings;        // objects bound to this memory
@@ -176,8 +178,8 @@ struct DEVICE_MEM_INFO {
     MemRange memRange;
     void *pData, *pDriverData;
     DEVICE_MEM_INFO(void *disp_object, const VkDeviceMemory in_mem, const VkMemoryAllocateInfo *p_alloc_info)
-        : object(disp_object), valid(false), mem(in_mem), allocInfo(*p_alloc_info), image(VK_NULL_HANDLE), memRange{}, pData(0),
-          pDriverData(0){};
+        : object(disp_object), valid(false), stencil_valid(false), mem(in_mem), allocInfo(*p_alloc_info),
+          image(VK_NULL_HANDLE), memRange{}, pData(0), pDriverData(0){};
 };
 
 class SWAPCHAIN_NODE {
@@ -219,6 +221,8 @@ struct MT_PASS_ATTACHMENT_INFO {
     uint32_t attachment;
     VkAttachmentLoadOp load_op;
     VkAttachmentStoreOp store_op;
+    VkAttachmentLoadOp stencil_load_op;
+    VkAttachmentStoreOp stencil_store_op;
 };
 
 // Store the DAG.
@@ -423,7 +427,6 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     VkCommandBufferAllocateInfo createInfo;
     VkCommandBufferBeginInfo beginInfo;
     VkCommandBufferInheritanceInfo inheritanceInfo;
-    // VkFence fence;                      // fence tracking this cmd buffer
     VkDevice device;                    // device this CB belongs to
     uint64_t numCmds;                   // number of cmds in this CB
     uint64_t drawCount[NUM_DRAW_TYPES]; // Count of each type of draw in this CB
@@ -440,9 +443,6 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     std::vector<VkViewport> viewports;
     std::vector<VkRect2D> scissors;
     VkRenderPassBeginInfo activeRenderPassBeginInfo;
-    uint64_t fenceId;
-    VkFence lastSubmittedFence;
-    VkQueue lastSubmittedQueue;
     RENDER_PASS_NODE *activeRenderPass;
     VkSubpassContents activeSubpassContents;
     uint32_t activeSubpass;
@@ -457,7 +457,6 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     std::unordered_set<VkFramebuffer> destroyedFramebuffers;
     std::unordered_set<VkEvent> waitedEvents;
     std::vector<VkEvent> writeEventsBeforeWait;
-    std::vector<VkSemaphore> semaphores;
     std::vector<VkEvent> events;
     std::unordered_map<QueryObject, std::unordered_set<VkEvent>> waitedEventsBeforeQueryReset;
     std::unordered_map<QueryObject, bool> queryToStateMap; // 0 is unavailable, 1 is available
@@ -483,6 +482,15 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
 
     ~GLOBAL_CB_NODE();
 };
+
+struct CB_SUBMISSION {
+    CB_SUBMISSION(VkCommandBuffer cb, std::vector<VkSemaphore> const & semaphores)
+        : cb(cb), semaphores(semaphores) {}
+
+    VkCommandBuffer cb;
+    std::vector<VkSemaphore> semaphores;
+};
+
 // Fwd declarations of layer_data and helpers to look-up state from layer_data maps
 namespace core_validation {
 struct layer_data;

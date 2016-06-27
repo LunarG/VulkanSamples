@@ -208,20 +208,19 @@ class PHYS_DEV_PROPERTIES_NODE {
     std::vector<VkQueueFamilyProperties> queue_family_properties;
 };
 
-class FENCE_NODE : public BASE_NODE {
-  public:
-    using BASE_NODE::in_use;
+enum FENCE_STATE { FENCE_UNSIGNALED, FENCE_INFLIGHT, FENCE_RETIRED };
 
-    VkSwapchainKHR swapchain; // Swapchain that this fence is submitted against or NULL
-    bool firstTimeFlag;       // Fence was created in signaled state, avoid warnings for first use
+class FENCE_NODE {
+  public:
+    VkFence fence;
     VkFenceCreateInfo createInfo;
     std::unordered_set<VkQueue> queues;
-    std::vector<VkCommandBuffer> cmdBuffers;
-    bool needsSignaled;
+    std::vector<CB_SUBMISSION> submissions;
     std::vector<VkFence> priorFences;
+    FENCE_STATE state;
 
     // Default constructor
-    FENCE_NODE() : swapchain(VK_NULL_HANDLE), firstTimeFlag(false), needsSignaled(false){};
+    FENCE_NODE() : state(FENCE_UNSIGNALED) {}
 };
 
 class SEMAPHORE_NODE : public BASE_NODE {
@@ -241,14 +240,10 @@ class EVENT_NODE : public BASE_NODE {
 
 class QUEUE_NODE {
   public:
+    VkQueue queue;
     VkDevice device;
     std::vector<VkFence> lastFences;
-#if MTMERGE
-    // MTMTODO : merge cmd_buffer data structs here
-    std::list<VkCommandBuffer> pQueueCommandBuffers;
-    std::list<VkDeviceMemory> pMemRefList;
-#endif
-    std::vector<VkCommandBuffer> untrackedCmdBuffers;
+    std::vector<CB_SUBMISSION> untrackedSubmissions;
     std::unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
     std::unordered_map<QueryObject, bool> queryToStateMap; // 0 is unavailable, 1 is available
 };

@@ -153,58 +153,6 @@ VkResult init_device_extension_properties(struct sample_info &info,
 }
 
 /*
- * TODO: function description here
- */
-VkResult init_device_layer_properties(struct sample_info &info) {
-    uint32_t device_layer_count;
-    VkLayerProperties *vk_props = NULL;
-    VkResult res;
-
-    /*
-     * It's possible, though very rare, that the number of
-     * instance layers could change. For example, installing something
-     * could include new layers that the loader would pick up
-     * between the initial query for the count and the
-     * request for VkLayerProperties. The loader indicates that
-     * by returning a VK_INCOMPLETE status and will update the
-     * the count parameter.
-     * The count parameter will be updated with the number of
-     * entries loaded into the data pointer - in case the number
-     * of layers went down or is smaller than the size given.
-     */
-    do {
-        res = vkEnumerateDeviceLayerProperties(info.gpus[0],
-                                               &device_layer_count, NULL);
-        if (res)
-            return res;
-
-        if (device_layer_count == 0) {
-            return VK_SUCCESS;
-        }
-
-        vk_props = (VkLayerProperties *)realloc(
-            vk_props, device_layer_count * sizeof(VkLayerProperties));
-
-        res = vkEnumerateDeviceLayerProperties(info.gpus[0],
-                                               &device_layer_count, vk_props);
-    } while (res == VK_INCOMPLETE);
-
-    /*
-     * Now gather the extension list for each device layer.
-     */
-    for (uint32_t i = 0; i < device_layer_count; i++) {
-        layer_properties layer_props;
-        layer_props.properties = vk_props[i];
-        res = init_device_extension_properties(info, layer_props);
-        if (res)
-            return res;
-        info.device_layer_properties.push_back(layer_props);
-    }
-    free(vk_props);
-
-    return res;
-}
-/*
  * Return 1 (true) if all layer names specified in check_names
  * can be found in given layer properties.
  */
@@ -292,9 +240,6 @@ VkResult init_device(struct sample_info &info) {
     device_info.pNext = NULL;
     device_info.queueCreateInfoCount = 1;
     device_info.pQueueCreateInfos = &queue_info;
-    device_info.enabledLayerCount = info.device_layer_names.size();
-    device_info.ppEnabledLayerNames =
-        device_info.enabledLayerCount ? info.device_layer_names.data() : NULL;
     device_info.enabledExtensionCount = info.device_extension_names.size();
     device_info.ppEnabledExtensionNames =
         device_info.enabledExtensionCount ? info.device_extension_names.data()
@@ -821,19 +766,19 @@ void init_presentable_image(struct sample_info &info) {
     /* DEPENDS on init_swap_chain() */
 
     VkResult U_ASSERT_ONLY res;
-    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
-    presentCompleteSemaphoreCreateInfo.sType =
+    VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
+    imageAcquiredSemaphoreCreateInfo.sType =
         VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    presentCompleteSemaphoreCreateInfo.pNext = NULL;
-    presentCompleteSemaphoreCreateInfo.flags = 0;
+    imageAcquiredSemaphoreCreateInfo.pNext = NULL;
+    imageAcquiredSemaphoreCreateInfo.flags = 0;
 
-    res = vkCreateSemaphore(info.device, &presentCompleteSemaphoreCreateInfo,
-                            NULL, &info.presentCompleteSemaphore);
+    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo,
+                            NULL, &info.imageAcquiredSemaphore);
     assert(!res);
 
     // Get the index of the next available swapchain image:
     res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
-                                info.presentCompleteSemaphore, VK_NULL_HANDLE,
+                                info.imageAcquiredSemaphore, VK_NULL_HANDLE,
                                 &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
@@ -855,7 +800,7 @@ void execute_queue_cmdbuf(struct sample_info &info,
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 1;
-    submit_info[0].pWaitSemaphores = &info.presentCompleteSemaphore;
+    submit_info[0].pWaitSemaphores = &info.imageAcquiredSemaphore;
     submit_info[0].pWaitDstStageMask = NULL;
     submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
@@ -2103,7 +2048,7 @@ void init_submit_info(struct sample_info &info, VkSubmitInfo &submit_info,
     submit_info.pNext = NULL;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &info.presentCompleteSemaphore;
+    submit_info.pWaitSemaphores = &info.imageAcquiredSemaphore;
     submit_info.pWaitDstStageMask = &pipe_stage_flags;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &info.cmd;

@@ -166,15 +166,16 @@ EnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount, Vk
             my_data->instanceState->vkEnumeratePhysicalDevicesState = QUERY_COUNT;
         } else {
             if (UNCALLED == my_data->instanceState->vkEnumeratePhysicalDevicesState) {
-                // Flag error here, shouldn't be calling this without having queried count
+                // Flag warning here. You can call this without having queried the count, but it may not be
+                // robust on platforms with multiple physical devices.
                 skipCall |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, 0,
-                            __LINE__, DEVLIMITS_MUST_QUERY_COUNT, "DL",
-                            "Invalid call sequence to vkEnumeratePhysicalDevices() w/ non-NULL pPhysicalDevices. You should first "
+                    log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, 0,
+                            __LINE__, DEVLIMITS_MISSING_QUERY_COUNT, "DL",
+                            "Call sequence has vkEnumeratePhysicalDevices() w/ non-NULL pPhysicalDevices. You should first "
                             "call vkEnumeratePhysicalDevices() w/ NULL pPhysicalDevices to query pPhysicalDeviceCount.");
             } // TODO : Could also flag a warning if re-calling this function in QUERY_DETAILS state
             else if (my_data->instanceState->physicalDevicesCount != *pPhysicalDeviceCount) {
-                // TODO: Having actual count match count from app is not a requirement, so this can be a warning
+                // Having actual count match count from app is not a requirement, so this can be a warning
                 skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
                                     VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_COUNT_MISMATCH, "DL",
                                     "Call to vkEnumeratePhysicalDevices() w/ pPhysicalDeviceCount value %u, but actual count "
@@ -247,9 +248,9 @@ GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t
             // Verify that for each physical device, this function is called first with NULL pQueueFamilyProperties ptr in order to
             // get count
             if (UNCALLED == phy_dev_data->physicalDeviceState->vkGetPhysicalDeviceQueueFamilyPropertiesState) {
-                skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                    VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_MUST_QUERY_COUNT, "DL",
-                                    "Invalid call sequence to vkGetPhysicalDeviceQueueFamilyProperties() w/ non-NULL "
+                skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_MISSING_QUERY_COUNT, "DL",
+                                    "Call sequence has vkGetPhysicalDeviceQueueFamilyProperties() w/ non-NULL "
                                     "pQueueFamilyProperties. You should first call vkGetPhysicalDeviceQueueFamilyProperties() w/ "
                                     "NULL pQueueFamilyProperties to query pCount.");
             }
@@ -586,61 +587,6 @@ UpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWri
     }
 }
 
-VKAPI_ATTR void VKAPI_CALL
-CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer,
-                VkDeviceSize dstOffset, VkDeviceSize dataSize, const uint32_t *pData) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-
-    // dstOffset is the byte offset into the buffer to start updating and must be a multiple of 4.
-    if (dstOffset & 3) {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
-                    DEVLIMITS_INVALID_BUFFER_UPDATE_ALIGNMENT, "DL",
-                    "vkCmdUpdateBuffer parameter, VkDeviceSize dstOffset, is not a multiple of 4")) {
-            return;
-        }
-    }
-
-    // dataSize is the number of bytes to update, which must be a multiple of 4.
-    if (dataSize & 3) {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
-                    DEVLIMITS_INVALID_BUFFER_UPDATE_ALIGNMENT, "DL",
-                    "vkCmdUpdateBuffer parameter, VkDeviceSize dataSize, is not a multiple of 4")) {
-            return;
-        }
-    }
-
-    dev_data->device_dispatch_table->CmdUpdateBuffer(commandBuffer, dstBuffer, dstOffset, dataSize, pData);
-}
-
-VKAPI_ATTR void VKAPI_CALL
-CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize size, uint32_t data) {
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-
-    // dstOffset is the byte offset into the buffer to start filling and must be a multiple of 4.
-    if (dstOffset & 3) {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
-                    DEVLIMITS_INVALID_BUFFER_UPDATE_ALIGNMENT, "DL",
-                    "vkCmdFillBuffer parameter, VkDeviceSize dstOffset, is not a multiple of 4")) {
-            return;
-        }
-    }
-
-    // size is the number of bytes to fill, which must be a multiple of 4.
-    if (size & 3) {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
-                    DEVLIMITS_INVALID_BUFFER_UPDATE_ALIGNMENT, "DL",
-                    "vkCmdFillBuffer parameter, VkDeviceSize size, is not a multiple of 4")) {
-            return;
-        }
-    }
-
-    dev_data->device_dispatch_table->CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
-}
-
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
                              const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pMsgCallback) {
@@ -798,9 +744,7 @@ intercept_core_device_command(const char *name) {
         { "vkAllocateCommandBuffers", reinterpret_cast<PFN_vkVoidFunction>(AllocateCommandBuffers) },
         { "vkFreeCommandBuffers", reinterpret_cast<PFN_vkVoidFunction>(FreeCommandBuffers) },
         { "vkBeginCommandBuffer", reinterpret_cast<PFN_vkVoidFunction>(BeginCommandBuffer) },
-        { "vkCmdUpdateBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdUpdateBuffer) },
         { "vkUpdateDescriptorSets", reinterpret_cast<PFN_vkVoidFunction>(UpdateDescriptorSets) },
-        { "vkCmdFillBuffer", reinterpret_cast<PFN_vkVoidFunction>(CmdFillBuffer) },
         { "vkCmdSetScissor", reinterpret_cast<PFN_vkVoidFunction>(CmdSetScissor) },
         { "vkCmdSetViewport", reinterpret_cast<PFN_vkVoidFunction>(CmdSetViewport) },
     };

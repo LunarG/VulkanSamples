@@ -28,7 +28,7 @@ include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/../../include/vulkan
 	)
 
-add_library(vkjson STATIC vkjson.cc vkjson_device.cc ../../loader/cJSON.c)
+add_library(vkjson STATIC vkjson.cc vkjson_instance.cc ../../loader/cJSON.c)
 
 if(UNIX)
     add_executable(vkjson_unittest vkjson_unittest.cc)

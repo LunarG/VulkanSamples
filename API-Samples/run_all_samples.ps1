@@ -8,79 +8,94 @@ if ($Debug) {
     $dPath = "Release"
 }
 
+trap
+{
+    Write-Error $_
+    exit 1
+}
+
+function Exec
+{
+    param ($Command)
+    & $dPath\$Command
+    if ($LastExitCode -ne 0) {
+        throw "Error running sample"
+    }
+}
+
 echo "Instance"
-& $dPath\instance
+Exec {instance}
 echo "Instance Layer Properties"
-& $dPath\instance_layer_properties
+Exec {instance_layer_properties}
 echo "Instance Layer Properties"
-& $dPath\instance_layer_properties
+Exec {instance_layer_properties}
 echo "Instance Extension Properties"
-& $dPath\instance_extension_properties
+Exec {instance_extension_properties}
 echo "Instance Layer ExtensionProperties"
-& $dPath\instance_layer_extension_properties
+Exec {instance_layer_extension_properties}
 echo "Enumerate"
-& $dPath\enumerate
+Exec {enumerate}
 echo "Device"
-& $dPath\device
+Exec {device}
 echo "Enable Validation and Debug Message Callback"
-& $dPath\enable_validation_with_callback
+Exec {enable_validation_with_callback}
 echo "Create Debug Message Callback"
-& $dPath\dbgcreatemsgcallback
+Exec {dbgcreatemsgcallback}
 echo "Init Swapchain"
-& $dPath\initswapchain
+Exec {initswapchain}
 echo "Init Command Buffer"
-& $dPath\initcommandbuffer
+Exec {initcommandbuffer}
 echo "Depth Buffer"
-& $dPath\depthbuffer
+Exec {depthbuffer}
 echo "Init Texture"
-& $dPath\inittexture
+Exec {inittexture}
 echo "Uniform Buffer"
-& $dPath\uniformbuffer
+Exec {uniformbuffer}
 echo "Init RenderPass"
-& $dPath\initrenderpass
+Exec {initrenderpass}
 echo "Init Framebuffer"
-& $dPath\initframebuffers
+Exec {initframebuffers}
 echo "Descriptor and Pipeline Layouts"
-& $dPath\descriptor_pipeline_layouts
+Exec {descriptor_pipeline_layouts}
 echo "Vertex Buffer"
-& $dPath\vertexbuffer
+Exec {vertexbuffer}
 echo "Alloc Descriptor Sets"
-& $dPath\allocdescriptorsets
+Exec {allocdescriptorsets}
 echo "Initialize Shaders"
-& $dPath\initshaders
+Exec {initshaders}
 echo "Initialize Pipeline"
-& $dPath\initpipeline
+Exec {initpipeline}
 echo "Draw Cube"
-& $dPath\drawcube
+Exec {drawcube}
 echo "Copy/Blit Image"
-& $dPath\copyblitimage
+Exec {copyblitimage}
 echo "Draw Textured Cube"
-& $dPath\drawtexturedcube
+Exec {drawtexturedcube}
 echo "Draw Cubes with Dynamic Uniform Buffer"
-& $dPath\dynamicuniform
+Exec {dynamicuniform}
 echo "Texel Buffer"
-& $dPath\texelbuffer
+Exec {texelbuffer}
 echo "Immutable Sampler"
-& $dPath\immutable_sampler
+Exec {immutable_sampler}
 echo "Multiple Descriptor Sets"
-& $dPath\multiple_sets
+Exec {multiple_sets}
 echo "Multithreaded Command Buffers"
-& $dPath\multithreadcmdbuf
+Exec {multithreadcmdbuf}
 echo "Push Constants"
-& $dPath\push_constants
+Exec {push_constants}
 echo "Separate image sampler"
-& $dPath\separate_image_sampler
+Exec {separate_image_sampler}
 echo "Draw Sub-passes"
-& $dPath\drawsubpasses
+Exec {drawsubpasses}
 echo "Occlusion Query"
-& $dPath\occlusion_query
+Exec {occlusion_query}
 echo "Pipeline Cache"
-& $dPath\pipeline_cache
+Exec {pipeline_cache}
 echo "Pipeline Derivative"
-& $dPath\pipeline_derivative
+Exec {pipeline_derivative}
 echo "Secondary Command Buffers"
-& $dPath\secondarycmd
+Exec {secondarycmd}
 echo "SPIR-V Assembly"
-& $dPath\spirv_assembly
+Exec {spirv_assembly}
 echo "SPIR-V Specialization"
-& $dPath\spirv_specialization
+Exec {spirv_specialization}
