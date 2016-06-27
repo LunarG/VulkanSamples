@@ -48,8 +48,8 @@
 #	include <MoltenVK/vk_mvk_ios_surface.h>
 #   include <unistd.h>
 #elif defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
-#	define VK_USE_PLATFORM_OSX_MVK
-#	include <MoltenVK/vk_mvk_osx_surface.h>
+#	define VK_USE_PLATFORM_MACOS_MVK
+#	include <MoltenVK/vk_mvk_macos_surface.h>
 #   include <unistd.h>
 #else
 #include <unistd.h>
@@ -146,7 +146,7 @@ struct sample_info {
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND window;                 // hWnd - window handle
-#elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_OSX_MVK))
+#elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 	void* window;
 #elif defined(__ANDROID__)
     PFN_vkCreateAndroidSurfaceKHR fpCreateAndroidSurfaceKHR;

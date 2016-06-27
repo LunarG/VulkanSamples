@@ -236,8 +236,8 @@ void init_instance_extension_names(struct sample_info &info) {
         VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
 	info.instance_extension_names.push_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_OSX_MVK)
-	info.instance_extension_names.push_back(VK_MVK_OSX_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
+	info.instance_extension_names.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
 #else
     info.instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #endif
@@ -425,7 +425,7 @@ void destroy_debug_report_callback(struct sample_info &info) {
 }
 
 void init_connection(struct sample_info &info) {
-#if !(defined(_WIN32) || defined(__ANDROID__) || defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_OSX_MVK))
+#if !(defined(_WIN32) || defined(__ANDROID__) || defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
@@ -524,9 +524,9 @@ void destroy_window(struct sample_info &info) {
     DestroyWindow(info.window);
 }
 
-#elif defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_OSX_MVK)
+#elif defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK)
 
-// iOS & OSX: init_window() implemented externally to allow access to Objective-C components
+// iOS & macOS: init_window() implemented externally to allow access to Objective-C components
 
 void destroy_window(struct sample_info &info) {
 	info.window = NULL;
@@ -737,13 +737,13 @@ void init_swapchain_extension(struct sample_info &info) {
 	createInfo.flags = 0;
 	createInfo.pView = info.window;
 	res = vkCreateIOSSurfaceMVK(info.inst, &createInfo, NULL, &info.surface);
-#elif defined(VK_USE_PLATFORM_OSX_MVK)
-	VkOSXSurfaceCreateInfoMVK createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_OSX_SURFACE_CREATE_INFO_MVK;
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
+	VkMacOSSurfaceCreateInfoMVK createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
 	createInfo.pNext = NULL;
 	createInfo.flags = 0;
 	createInfo.pView = info.window;
-	res = vkCreateOSXSurfaceMVK(info.inst, &createInfo, NULL, &info.surface);
+	res = vkCreateMacOSSurfaceMVK(info.inst, &createInfo, NULL, &info.surface);
 #elif defined(__ANDROID__)
     GET_INSTANCE_PROC_ADDR(info.inst, CreateAndroidSurfaceKHR);
 

@@ -92,10 +92,10 @@ int sample_main(int argc, char *argv[]) {
 #	define VK_USE_PLATFORM_IOS_MVK
 #	include <MoltenVK/vk_mvk_ios_surface.h>
     info.instance_extension_names.push_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_OSX_MVK)
-#	define VK_USE_PLATFORM_OSX_MVK
-#	include <MoltenVK/vk_mvk_osx_surface.h>
-    info.instance_extension_names.push_back(VK_MVK_OSX_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
+#	define VK_USE_PLATFORM_MACOS_MVK
+#	include <MoltenVK/vk_mvk_macos_surface.h>
+    info.instance_extension_names.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
 #elif defined(__ANDROID__)
     info.instance_extension_names.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #else

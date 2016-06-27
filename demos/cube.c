@@ -291,7 +291,7 @@ struct demo {
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND window;                 // hWnd - window handle
-#elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_OSX_MVK))
+#elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 	void* window;
 #elif defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
     Display* display;
@@ -1025,7 +1025,7 @@ static void demo_prepare_depth(struct demo *demo) {
 bool loadTexture(const char *filename, uint8_t *rgba_data,
                  VkSubresourceLayout *layout, int32_t *width, int32_t *height) {
 
-#if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_OSX_MVK))
+#if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 	filename =[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent: @(filename)].UTF8String;
 #endif
 	
@@ -1527,7 +1527,7 @@ char *demo_read_spv(const char *filename, size_t *psize) {
     size_t U_ASSERT_ONLY retval;
     void *shader_code;
 
-#if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_OSX_MVK))
+#if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 	filename =[[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent: @(filename)].UTF8String;
 #endif
 	
@@ -2445,10 +2445,10 @@ static void demo_init_vk(struct demo *demo) {
 				demo->extension_names[demo->enabled_extension_count++] = VK_MVK_IOS_SURFACE_EXTENSION_NAME;
 			}
 #endif
-#if defined(VK_USE_PLATFORM_OSX_MVK)
-			if (!strcmp(VK_MVK_OSX_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
+#if defined(VK_USE_PLATFORM_MACOS_MVK)
+			if (!strcmp(VK_MVK_MACOS_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
 				platformSurfaceExtFound = 1;
-				demo->extension_names[demo->enabled_extension_count++] = VK_MVK_OSX_SURFACE_EXTENSION_NAME;
+				demo->extension_names[demo->enabled_extension_count++] = VK_MVK_MACOS_SURFACE_EXTENSION_NAME;
 			}
 #endif
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
@@ -2514,9 +2514,9 @@ static void demo_init_vk(struct demo *demo) {
 				 "look at the Getting Started guide for additional "
 				 "information.\n",
 				 "vkCreateInstance Failure");
-#elif defined(VK_USE_PLATFORM_OSX_MVK)
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
 		ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
-				 VK_MVK_OSX_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
+				 VK_MVK_MACOS_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
 				 "Vulkan installable client driver (ICD) installed?\nPlease "
 				 "look at the Getting Started guide for additional "
 				 "information.\n",
@@ -2831,13 +2831,13 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 	surface.flags = 0;
 	surface.pView = demo->window;
 	err = vkCreateIOSSurfaceMVK(demo->inst, &surface, NULL, &demo->surface);
-#elif defined(VK_USE_PLATFORM_OSX_MVK)
-	VkOSXSurfaceCreateInfoMVK surface;
-	surface.sType = VK_STRUCTURE_TYPE_OSX_SURFACE_CREATE_INFO_MVK;
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
+	VkMacOSSurfaceCreateInfoMVK surface;
+	surface.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
 	surface.pNext = NULL;
 	surface.flags = 0;
 	surface.pView = demo->window;
-	err = vkCreateOSXSurfaceMVK(demo->inst, &surface, NULL, &demo->surface);
+	err = vkCreateMacOSSurfaceMVK(demo->inst, &surface, NULL, &demo->surface);
 
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     VkAndroidSurfaceCreateInfoKHR createInfo;
@@ -3136,7 +3136,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     return (int)msg.wParam;
 }
 
-#elif defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_OSX_MVK)
+#elif defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK)
 static void demo_main(struct demo *demo, void* view) {
 	const char* argv[] = { "CubeSample" };
 	int argc = sizeof(argv) / sizeof(char*);

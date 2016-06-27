@@ -40,7 +40,7 @@ samples utility functions
 #include "shaderc/shaderc.hpp"
 // Static variable that keeps ANativeWindow and asset manager instances.
 static android_app* Android_application = nullptr;
-#elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_OSX_MVK))
+#elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 #	include <MoltenGLSLToSPIRVConverter/GLSLToSPIRVConverter.h>
 #else
 #	include "SPIRV/GlslangToSpv.h"
@@ -55,8 +55,8 @@ static android_app* Android_application = nullptr;
 
 using namespace std;
 
-#if !(defined(__ANDROID__) || defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_OSX_MVK))
-// Android, iOS, and OSX: main() implemented externally to allow access to Objective-C components
+#if !(defined(__ANDROID__) || defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+// Android, iOS, and macOS: main() implemented externally to allow access to Objective-C components
 int main(int argc, char **argv) { return sample_main(argc, argv); }
 #endif
 
@@ -84,8 +84,8 @@ string get_file_name(const string &s) {
     return ("");
 }
 
-#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_OSX_MVK))
-// iOS & OSX: get_base_data_dir() implemented externally to allow access to Objective-C components
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+// iOS & macOS: get_base_data_dir() implemented externally to allow access to Objective-C components
 std::string get_base_data_dir() {
 #ifdef __ANDROID__
     return "";
@@ -277,7 +277,7 @@ bool read_ppm(char const *const filename, int &width, int &height,
     return true;
 }
 
-#if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_OSX_MVK))
+#if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 
 void init_glslang() {}
 
@@ -317,7 +317,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
  	return wasConverted;
  }
 
-#else   // not IOS OR OSX
+#else   // not IOS OR macOS
 
 #ifndef __ANDROID__
 void init_resources(TBuiltInResource &Resources) {
@@ -555,7 +555,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
     return true;
 }
 
-#endif  // IOS or OSX
+#endif  // IOS or macOS
 
 void wait_seconds(int seconds) {
 #ifdef WIN32
