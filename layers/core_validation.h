@@ -290,8 +290,8 @@ enum CALL_STATE {
 struct INSTANCE_STATE {
     // Track the call state and array size for physical devices
     CALL_STATE vkEnumeratePhysicalDevicesState;
-    uint32_t physicalDevicesCount;
-    INSTANCE_STATE() : vkEnumeratePhysicalDevicesState(UNCALLED), physicalDevicesCount(0) {};
+    uint32_t physical_devices_count;
+    INSTANCE_STATE() : vkEnumeratePhysicalDevicesState(UNCALLED), physical_devices_count(0) {};
 };
 
 struct PHYSICAL_DEVICE_STATE {
@@ -299,13 +299,11 @@ struct PHYSICAL_DEVICE_STATE {
     CALL_STATE vkGetPhysicalDeviceQueueFamilyPropertiesState;
     uint32_t queueFamilyPropertiesCount;
     CALL_STATE vkGetPhysicalDeviceLayerPropertiesState;
-    uint32_t deviceLayerCount;
     CALL_STATE vkGetPhysicalDeviceExtensionPropertiesState;
-    uint32_t deviceExtensionCount;
     CALL_STATE vkGetPhysicalDeviceFeaturesState;
     PHYSICAL_DEVICE_STATE()
-        : vkGetPhysicalDeviceQueueFamilyPropertiesState(UNCALLED), queueFamilyPropertiesCount(0),
-        vkGetPhysicalDeviceLayerPropertiesState(UNCALLED), deviceLayerCount(0),
-        vkGetPhysicalDeviceExtensionPropertiesState(UNCALLED), deviceExtensionCount(0),
+        : vkGetPhysicalDeviceQueueFamilyPropertiesState(UNCALLED),
+        vkGetPhysicalDeviceLayerPropertiesState(UNCALLED),
+        vkGetPhysicalDeviceExtensionPropertiesState(UNCALLED),
         vkGetPhysicalDeviceFeaturesState(UNCALLED) {};
 };
