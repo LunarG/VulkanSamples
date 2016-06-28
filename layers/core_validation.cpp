@@ -2844,7 +2844,6 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
         if (pCB->activeRenderPass) {
             const VkRenderPassCreateInfo *render_pass_info = pCB->activeRenderPass->pCreateInfo;
             const VkSubpassDescription *subpass_desc = &render_pass_info->pSubpasses[pCB->activeSubpass];
-            VkSampleCountFlagBits subpass_num_samples = VkSampleCountFlagBits(0);
             uint32_t i;
 
             const safe_VkPipelineColorBlendStateCreateInfo *color_blend_state = pPipeline->graphicsPipelineCI.pColorBlendState;
@@ -2860,6 +2859,8 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
                                 reinterpret_cast<const uint64_t &>(pPipeline->pipeline));
             }
 
+            VkSampleCountFlagBits subpass_num_samples = VkSampleCountFlagBits(0);
+
             for (i = 0; i < subpass_desc->colorAttachmentCount; i++) {
                 VkSampleCountFlagBits samples;
 
@@ -2874,6 +2875,7 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
                     break;
                 }
             }
+
             if ((subpass_desc->pDepthStencilAttachment != NULL) &&
                 (subpass_desc->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED)) {
                 const VkSampleCountFlagBits samples =
@@ -2884,8 +2886,7 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
                     subpass_num_samples = static_cast<VkSampleCountFlagBits>(-1);
             }
 
-            if (((subpass_desc->colorAttachmentCount > 0) || (subpass_desc->pDepthStencilAttachment != NULL)) &&
-                (pso_num_samples != subpass_num_samples)) {
+            if (subpass_num_samples && pso_num_samples != subpass_num_samples) {
                 skip_call |=
                         log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                                 reinterpret_cast<const uint64_t &>(pPipeline->pipeline), __LINE__, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
