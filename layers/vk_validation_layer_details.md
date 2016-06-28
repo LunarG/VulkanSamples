@@ -10,7 +10,6 @@ This is a meta-layer managed by the loader. Specifying this layer name will caus
 
  - VK_LAYER_GOOGLE_threading
  - VK_LAYER_LUNARG_parameter_validation
- - VK_LAYER_LUNARG_device_limits
  - VK_LAYER_LUNARG_object_tracker
  - VK_LAYER_LUNARG_image
  - VK_LAYER_LUNARG_core_validation
@@ -141,7 +140,7 @@ It flags errors when inconsistencies are found across interfaces between shader 
 | NA | Enum used for informational messages | NONE | | TODO | None |
 
 ### VK_LAYER_LUNARG_core_validation Shader Checker Pending Work
- 
+
 See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ### VK_LAYER_LUNARG_core_validation Memory Tracker Details Table
@@ -169,6 +168,20 @@ The Mem Tracker portion of the VK_LAYER_LUNARG_core_validation layer tracks memo
 
 See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
+### VK_LAYER_LUNARG_core_validation Memory Device Limits Details Table
+Each device specifies a set of Device Limits with which the appropriate parameters should comply.  The core_validation layer contains device-limits related checks for which some amount of saved state information is necessary to complete the check.
+
+| Check | Overview | ENUM DEVLIMITS_* | Relevant API | Testname | Notes/TODO |
+| ----- | -------- | ---------------- | ---------------- | -------- | ---------- |
+| Valid instance | If an invalid instance is used, this error will be flagged | INVALID_INSTANCE | vkEnumeratePhysicalDevices | TODO | VK_LAYER_LUNARG_object_tracker should also catch this so if we made sure VK_LAYER_LUNARG_object_tracker was always on top, we could avoid this check |
+| Valid physical device | Enum used for informational messages | INVALID_PHYSICAL_DEVICE | vkEnumeratePhysicalDevices | TODO | VK_LAYER_LUNARG_object_tracker should also catch this so if we made sure VK_LAYER_LUNARG_object_tracker was always on top, we could avoid this check |
+| Query count checked | Signifies that a query call such as vkEnumeratePhysicalDevices or vkGetPhysicalDeviceQueueFamilyProperties has been called without querying the count | MISSING_QUERY_COUNT | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | TODO | None |
+| Querying array counts | For API calls where an array count should be queried with an initial call and a NULL array pointer, verify that such a call was made before making a call with non-null array pointer. | MUST_QUERY_COUNT | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | TODO | Create focused test |
+| Array count value | For API calls where an array of details is queried, verify that the size of the requested array matches the size of the array supported by the device. | COUNT_MISMATCH | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | TODO | Create focused test |
+| Queue Creation | When creating/requesting queues, make sure that QueueFamilyPropertiesIndex and index/count within that queue family are valid. | INVALID_QUEUE_CREATE_REQUEST | vkGetDeviceQueue vkCreateDevice | TODO | Create focused test |
+| NA | Enum used for informational messages | NONE | | TODO | None |
+
+
 ## VK_LAYER_LUNARG_parameter_validation
 
 ### VK_LAYER_LUNARG_parameter_validation Overview
@@ -185,6 +198,8 @@ The VK_LAYER_LUNARG_parameter_validation layer validates parameter values and fl
 | Required Parameter | Verifies that a required parameter was not specified as 0 or NULL | REQUIRED_PARAMETER | | RequiredParameter | NA |
 | Reserved Parameter | Verifies that a parameter reserved for future use was specified as 0 or NULL | RESERVED_PARAMETER | | ReservedParameter | NA |
 | Unrecognized Value | Verifies that a Vulkan enumeration, VkFlags, or VkBool32 parameter contains a value that is recognized as valid for that type | UNRECOGNIZED_VALUE | | UnrecognizedValue | NA |
+| Device Limit Violation | Verifies that a parameter is within the limits advertised by the gpu | DEVICE_LIMIT | vkUpdateDescriptorSets vkCreateRenderPass | TODO | NA |
+| Device Feature Violation | Verifies that a requested feature is supported by the gpu | DEVICE_FEATURE | vkBeginCommandBuffer | TODO | NA |
 | Failed Call Return Code | Provides a description of a failure code returned by a Vulkan API call | FAILURE_RETURN_CODE | | FailedReturnValue | NA |
 | NA | Enum used for informational messages | NONE | | TODO | None |
 
