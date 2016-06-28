@@ -5177,9 +5177,8 @@ static void remove_memory_ranges(uint64_t handle, VkDeviceMemory mem, vector<MEM
 VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
                                          const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip_call = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    if (!validateIdleBuffer(dev_data, buffer) && !skip_call) {
+    if (!validateIdleBuffer(dev_data, buffer)) {
         lock.unlock();
         dev_data->device_dispatch_table->DestroyBuffer(device, buffer, pAllocator);
         lock.lock();
@@ -5187,6 +5186,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
     // Clean up memory binding and range information for buffer
     auto buff_node = getBufferNode(dev_data, buffer);
     if (buff_node) {
+        // Any bound cmd buffers are now invalid
+        invalidateCommandBuffers(buff_node->cb_bindings,
+                                 {reinterpret_cast<uint64_t &>(buff_node->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT});
         auto mem_info = getMemObjInfo(dev_data, buff_node->mem);
         if (mem_info) {
             remove_memory_ranges(reinterpret_cast<uint64_t &>(buffer), buff_node->mem, mem_info->bufferRanges);
