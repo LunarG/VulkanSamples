@@ -8908,14 +8908,39 @@ static bool ValidateRenderpassAttachmentUsage(layer_data *dev_data, const VkRend
                 skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Preserve");
             }
         }
+
+        auto subpass_performs_resolve = subpass.pResolveAttachments && std::any_of(
+            subpass.pResolveAttachments, subpass.pResolveAttachments + subpass.colorAttachmentCount,
+            [](VkAttachmentReference ref) { return ref.attachment != VK_ATTACHMENT_UNUSED; });
+
         for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
             uint32_t attachment;
             if (subpass.pResolveAttachments) {
                 attachment = subpass.pResolveAttachments[j].attachment;
                 skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Resolve");
+
+                if (!skip_call && attachment != VK_ATTACHMENT_UNUSED &&
+                    pCreateInfo->pAttachments[attachment].samples != VK_SAMPLE_COUNT_1_BIT) {
+                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                                         __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                         "CreateRenderPass:  Subpass %u requests multisample resolve into attachment %u, "
+                                         "which must have VK_SAMPLE_COUNT_1_BIT but has %s",
+                                         i, attachment, string_VkSampleCountFlagBits(pCreateInfo->pAttachments[attachment].samples));
+                }
             }
             attachment = subpass.pColorAttachments[j].attachment;
             skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Color");
+
+            if (!skip_call &&
+                subpass_performs_resolve &&
+                attachment != VK_ATTACHMENT_UNUSED &&
+                pCreateInfo->pAttachments[attachment].samples == VK_SAMPLE_COUNT_1_BIT) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                                     __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                     "CreateRenderPass:  Subpass %u requests multisample resolve, but renders to "
+                                     "attachment %u which has VK_SAMPLE_COUNT_1_BIT",
+                                     i, attachment);
+            }
         }
         if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
             uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
