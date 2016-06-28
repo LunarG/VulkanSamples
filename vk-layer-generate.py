@@ -1196,7 +1196,8 @@ class ObjectTrackerSubcommand(Subcommand):
             "FreeMemory",
             "DestroySwapchainKHR",
             "GetSwapchainImagesKHR",
-            "GetDisplayPlaneSupportedDisplaysKHR"
+            "GetPhysicalDeviceDisplayPropertiesKHR",
+            "GetDisplayModePropertiesKHR"
         ]
         decl = proto.c_func(attr="VKAPI")
         param0_name = proto.params[0].name
@@ -1273,6 +1274,8 @@ class ObjectTrackerSubcommand(Subcommand):
         if True in [create_txt in proto.name for create_txt in ['Create', 'Allocate']]:
             create_func = True
             last_param_index = -1 # For create funcs don't validate last object
+        if proto.name == 'GetDisplayPlaneSupportedDisplaysKHR':
+            last_param_index = -1 # don't validate the DisplayKHR objects which are non-created output parameters
         (struct_uses, local_decls) = get_object_uses(vulkan.object_type_list, proto.params[:last_param_index])
         funcs = []
         mutex_unlock = False
@@ -1283,7 +1286,6 @@ class ObjectTrackerSubcommand(Subcommand):
                      '    return explicit_%s;\n'
                      '}' % (qual, decl, proto.c_call()))
             return "".join(funcs)
-        # Temporarily prevent  DestroySurface call from being generated until WSI layer support is fleshed out
         elif 'DestroyInstance' in proto.name or 'DestroyDevice' in proto.name:
             return ""
         else:
