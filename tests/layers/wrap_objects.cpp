@@ -184,7 +184,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice physicalDevice, c
 
     create_device_register_extensions(pCreateInfo, *pDevice);
 
-#if 0 // TODO add once device is wrapped 
+#if 0 // TODO add once device is wrapped
     // store the loader callback for initializing created dispatchable objects
     chain_info = get_chain_info(pCreateInfo, VK_LOADER_DATA_CALLBACK);
     if (chain_info) {
@@ -1098,7 +1098,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWaylandPresentationSupportKHR(
 {
     wrapped_phys_dev_obj *phys_dev;
     auto vk_phys_dev = unwrap_phys_dev(physicalDevice, &phys_dev);
-    VkBool32 result = inst->layer_disp.GetPhysicalDeviceWaylandPresentationSupportKHR(vk_phys_dev, queueFamilyIndex, display);
+    VkBool32 result = phys_dev->inst->layer_disp.GetPhysicalDeviceWaylandPresentationSupportKHR(vk_phys_dev, queueFamilyIndex, display);
     return result;
 }
 #endif  // VK_USE_PLATFORM_WAYLAND_KHR
@@ -1119,7 +1119,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceMirPresentationSupportKHR(VkPh
 {
     wrapped_phys_dev_obj *phys_dev;
     auto vk_phys_dev = unwrap_phys_dev(physicalDevice, &phys_dev);
-    VkBool32 result = inst->layer_disp.GetPhysicalDeviceMirPresentationSupportKHR(vk_phys_dev, queueFamilyIndex, connection);
+    VkBool32 result = phys_dev->inst->layer_disp.GetPhysicalDeviceMirPresentationSupportKHR(vk_phys_dev, queueFamilyIndex, connection);
     return result;
 }
 #endif  // VK_USE_PLATFORM_MIR_KHR
@@ -1494,7 +1494,7 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
     PFN_vkVoidFunction addr;
-   
+
     if (!strcmp(funcName, "vkCreateInstance"))
         return (PFN_vkVoidFunction) vkCreateInstance;
     if (!strcmp(funcName, "vkCreateDevice"))
