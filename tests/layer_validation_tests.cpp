@@ -11080,7 +11080,7 @@ TEST_F(VkLayerTest, CreatePipeline64BitAttributesPositive) {
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    if (!m_device->phy().features().tessellationShader) {
+    if (!m_device->phy().features().shaderFloat64) {
         printf("Device does not support 64bit vertex attributes; skipped.\n");
         return;
     }
