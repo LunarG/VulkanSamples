@@ -248,8 +248,8 @@ enum DEV_LIMITS_ERROR {
     DEVLIMITS_NONE,                          // Used for INFO & other non-error messages
     DEVLIMITS_INVALID_INSTANCE,              // Invalid instance used
     DEVLIMITS_INVALID_PHYSICAL_DEVICE,       // Invalid physical device used
-    DEVLIMITS_INVALID_INHERITED_QUERY,       // Invalid use of inherited query
-    DEVLIMITS_INVALID_ATTACHMENT_COUNT,      // Invalid value for the number of attachments
+// LUGMAL    DEVLIMITS_INVALID_INHERITED_QUERY,       // Invalid use of inherited query              -> PV DEVICE_FEATURE
+// LUGMAL    DEVLIMITS_INVALID_ATTACHMENT_COUNT,      // Invalid value for the number of attachments -> PV DEVICE_LIMIT
     DEVLIMITS_MISSING_QUERY_COUNT,           // Did not make initial call to an API to query the count
     DEVLIMITS_MUST_QUERY_COUNT,              // Failed to make initial call to an API to query the count
     DEVLIMITS_INVALID_CALL_SEQUENCE,         // Flag generic case of an invalid call sequence by the app

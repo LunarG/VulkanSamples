@@ -68,9 +68,12 @@ struct layer_data {
     // Map for queue family index to queue count
     std::unordered_map<uint32_t, uint32_t> queueFamilyIndexMap;
     VkPhysicalDeviceLimits device_limits;
+    VkPhysicalDeviceFeatures physical_device_features;
+    VkPhysicalDevice physical_device;
 
     layer_data()
-        : report_data(nullptr), num_tmp_callbacks(0), tmp_dbg_create_infos(nullptr), tmp_callbacks(nullptr), device_limits{} {};
+        : report_data(nullptr), num_tmp_callbacks(0), tmp_dbg_create_infos(nullptr), tmp_callbacks(nullptr), device_limits{},
+          physical_device_features{}, physical_device{} {};
 };
 
 static std::unordered_map<void *, layer_data *> layer_data_map;
@@ -1413,8 +1416,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
     }
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL
-EnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount, VkPhysicalDevice *pPhysicalDevices) {
+VKAPI_ATTR VkResult VKAPI_CALL EnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount,
+                                                        VkPhysicalDevice *pPhysicalDevices) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
@@ -1427,8 +1430,15 @@ EnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount, Vk
                      ->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
 
         validate_result(my_data->report_data, "vkEnumeratePhysicalDevices", result);
+        if ((result == VK_SUCCESS) && (NULL != pPhysicalDevices)) {
+            for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
+                layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(pPhysicalDevices[i]), layer_data_map);
+                // Save the supported features for each physical device
+                VkLayerInstanceDispatchTable *disp_table = get_dispatch_table(pc_instance_table_map, pPhysicalDevices[i]);
+                disp_table->GetPhysicalDeviceFeatures(pPhysicalDevices[i], &(phy_dev_data->physical_device_features));
+            }
+        }
     }
-
     return result;
 }
 
@@ -1656,6 +1666,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice,
             VkPhysicalDeviceProperties device_properties = {};
             instance_dispatch_table->GetPhysicalDeviceProperties(physicalDevice, &device_properties);
             memcpy(&my_device_data->device_limits, &device_properties.limits, sizeof(VkPhysicalDeviceLimits));
+            my_device_data->physical_device = physicalDevice;
         }
     }
 
@@ -3546,6 +3557,21 @@ DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocatio
     }
 }
 
+bool PreCreateRenderPass(layer_data *dev_data, const VkRenderPassCreateInfo *pCreateInfo) {
+    bool skip_call = false;
+    uint32_t max_color_attachments = dev_data->device_limits.maxColorAttachments;
+
+    for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
+        if (pCreateInfo->pSubpasses[i].colorAttachmentCount > max_color_attachments) {
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                 __LINE__, DEVICE_LIMIT, "DL",
+                                 "Cannot create a render pass with %d color attachments. Max is %d.",
+                                 pCreateInfo->pSubpasses[i].colorAttachmentCount, max_color_attachments);
+        }
+    }
+    return skip_call;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderPassCreateInfo *pCreateInfo,
                                                 const VkAllocationCallbacks *pAllocator,
                                                 VkRenderPass *pRenderPass) {
@@ -3555,6 +3581,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
     assert(my_data != NULL);
 
     skipCall |= parameter_validation_vkCreateRenderPass(my_data->report_data, pCreateInfo, pAllocator, pRenderPass);
+    skipCall |= PreCreateRenderPass(my_data, pCreateInfo);
 
     if (!skipCall) {
         result = get_dispatch_table(pc_device_table_map, device)->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
@@ -3684,8 +3711,34 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
     }
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL
-BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo *pBeginInfo) {
+bool PreBeginCommandBuffer(layer_data *dev_data, VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo *pBeginInfo) {
+    bool skip_call = false;
+    layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(dev_data->physical_device), layer_data_map);
+    const VkCommandBufferInheritanceInfo *pInfo = pBeginInfo->pInheritanceInfo;
+
+    if (pInfo != NULL) {
+        if ((phy_dev_data->physical_device_features.inheritedQueries == VK_FALSE) && (pInfo->occlusionQueryEnable != VK_FALSE)) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DEVICE_FEATURE, "PARAMCHECK",
+                        "Cannot set inherited occlusionQueryEnable in vkBeginCommandBuffer() when device does not support "
+                        "inheritedQueries.");
+        }
+
+        if ((phy_dev_data->physical_device_features.inheritedQueries != VK_FALSE) && (pInfo->occlusionQueryEnable != VK_FALSE) &&
+            (!validate_VkQueryControlFlagBits(VkQueryControlFlagBits(pInfo->queryFlags)))) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DEVICE_FEATURE, "PARAMCHECK",
+                        "Cannot enable in occlusion queries in vkBeginCommandBuffer() and set queryFlags to %d which is not a "
+                        "valid combination of VkQueryControlFlagBits.",
+                        pInfo->queryFlags);
+        }
+    }
+    return skip_call;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo *pBeginInfo) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     bool skip_call = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -3716,6 +3769,8 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                                     "VkQueryPipelineStatisticFlagBits", AllVkQueryPipelineStatisticFlagBits,
                                     pBeginInfo->pInheritanceInfo->pipelineStatistics, false);
     }
+
+    skip_call |= PreBeginCommandBuffer(device_data, commandBuffer, pBeginInfo);
 
     if (!skip_call) {
         result = get_dispatch_table(pc_device_table_map, commandBuffer)->BeginCommandBuffer(commandBuffer, pBeginInfo);
@@ -4186,19 +4241,20 @@ VKAPI_ATTR void VKAPI_CALL CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer
     skip_call |= parameter_validation_vkCmdFillBuffer(my_data->report_data, dstBuffer, dstOffset, size, data);
 
     if (dstOffset & 3) {
-        skip_call |= log_msg(
-            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, INVALID_USAGE, "DL",
-            "vkCmdFillBuffer parameter, VkDeviceSize dstOffset (0x%" PRIxLEAST64 "), is not a multiple of 4", dstOffset);
+        skip_call |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, INVALID_USAGE,
+                    "PARAMCHECK", "vkCmdFillBuffer parameter, VkDeviceSize dstOffset (0x%" PRIxLEAST64 "), is not a multiple of 4",
+                    dstOffset);
     }
 
     if (size != VK_WHOLE_SIZE) {
         if (size <= 0) {
             skip_call |= log_msg(
                 my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, INVALID_USAGE,
-                "DL", "vkCmdFillBuffer parameter, VkDeviceSize size (0x%" PRIxLEAST64 "), must be greater than zero", size);
+                "PARAMCHECK", "vkCmdFillBuffer parameter, VkDeviceSize size (0x%" PRIxLEAST64 "), must be greater than zero", size);
         } else if (size & 3) {
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
-                                 INVALID_USAGE, "DL",
+                                 INVALID_USAGE, "PARAMCHECK",
                                  "vkCmdFillBuffer parameter, VkDeviceSize size (0x%" PRIxLEAST64 "), is not a multiple of 4", size);
         }
     }
