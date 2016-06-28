@@ -3996,11 +3996,49 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo
     }
 }
 
+// Verify that queue family has been properly requested
+bool ValidateRequestedQueueFamilyProperties(layer_data *dev_data, const VkDeviceCreateInfo *create_info) {
+    bool skip_call = false;
+    // First check is app has actually requested queueFamilyProperties
+    if (!dev_data->physical_device_state) {
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                             0, __LINE__, DEVLIMITS_MUST_QUERY_COUNT, "DL",
+                             "Invalid call to vkCreateDevice() w/o first calling vkEnumeratePhysicalDevices().");
+    } else if (QUERY_DETAILS != dev_data->physical_device_state->vkGetPhysicalDeviceQueueFamilyPropertiesState) {
+        // TODO: This is not called out as an invalid use in the spec so make more informative recommendation.
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                             VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST,
+                             "DL", "Call to vkCreateDevice() w/o first calling vkGetPhysicalDeviceQueueFamilyProperties().");
+    } else {
+        // Check that the requested queue properties are valid
+        for (uint32_t i = 0; i < create_info->queueCreateInfoCount; i++) {
+            uint32_t requestedIndex = create_info->pQueueCreateInfos[i].queueFamilyIndex;
+            if (dev_data->queue_family_properties.size() <=
+                requestedIndex) { // requested index is out of bounds for this physical device
+                skip_call |= log_msg(
+                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0,
+                    __LINE__, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
+                    "Invalid queue create request in vkCreateDevice(). Invalid queueFamilyIndex %u requested.", requestedIndex);
+            } else if (create_info->pQueueCreateInfos[i].queueCount >
+                       dev_data->queue_family_properties[requestedIndex]->queueCount) {
+                skip_call |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                            0, __LINE__, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
+                            "Invalid queue create request in vkCreateDevice(). QueueFamilyIndex %u only has %u queues, but "
+                            "requested queueCount is %u.",
+                            requestedIndex, dev_data->queue_family_properties[requestedIndex]->queueCount,
+                            create_info->pQueueCreateInfos[i].queueCount);
+            }
+        }
+    }
+    return skip_call;
+}
+
 // Verify that features have been queried and that they are available
-static bool ValidateRequestedFeatures(layer_data *phy_dev_data, const VkPhysicalDeviceFeatures *requested_features) {
+static bool ValidateRequestedFeatures(layer_data *dev_data, const VkPhysicalDeviceFeatures *requested_features) {
     bool skip_call = false;
 
-    VkBool32 *actual = (VkBool32 *)&(phy_dev_data->physical_device_features);
+    VkBool32 *actual = (VkBool32 *)&(dev_data->physical_device_features);
     VkBool32 *requested = (VkBool32 *)requested_features;
     // TODO : This is a nice, compact way to loop through struct, but a bad way to report issues
     //  Need to provide the struct member name with the issue. To do that seems like we'll
@@ -4010,7 +4048,7 @@ static bool ValidateRequestedFeatures(layer_data *phy_dev_data, const VkPhysical
     for (uint32_t i = 0; i < total_bools; i++) {
         if (requested[i] > actual[i]) {
             // TODO: Add index to struct member name helper to be able to include a feature name
-            skip_call |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                 VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_INVALID_FEATURE_REQUESTED,
                 "DL", "While calling vkCreateDevice(), requesting feature #%u in VkPhysicalDeviceFeatures struct, "
                 "which is not available on this device.",
@@ -4018,10 +4056,10 @@ static bool ValidateRequestedFeatures(layer_data *phy_dev_data, const VkPhysical
             errors++;
         }
     }
-    if (errors && (UNCALLED == phy_dev_data->physical_device_state->vkGetPhysicalDeviceFeaturesState)) {
+    if (errors && (UNCALLED == dev_data->physical_device_state->vkGetPhysicalDeviceFeaturesState)) {
         // If user didn't request features, notify them that they should
         // TODO: Verify this against the spec. I believe this is an invalid use of the API and should return an error
-        skip_call |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                              VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVLIMITS_INVALID_FEATURE_REQUESTED,
                              "DL", "You requested features that are unavailable on this device. You should first query feature "
                                    "availability by calling vkGetPhysicalDeviceFeatures().");
@@ -4038,7 +4076,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     if (pCreateInfo->pEnabledFeatures) {
         skip_call |= ValidateRequestedFeatures(my_instance_data, pCreateInfo->pEnabledFeatures);
     }
-
+    skip_call |= ValidateRequestedQueueFamilyProperties(my_instance_data, pCreateInfo);
 
     VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
