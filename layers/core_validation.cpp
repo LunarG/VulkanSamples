@@ -5691,7 +5691,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
         IMAGE_LAYOUT_NODE image_node;
         image_node.layout = pCreateInfo->initialLayout;
         image_node.format = pCreateInfo->format;
-        dev_data->imageMap.insert(std::make_pair(*pImage, unique_ptr<IMAGE_NODE>(new IMAGE_NODE(pCreateInfo))));
+        dev_data->imageMap.insert(std::make_pair(*pImage, unique_ptr<IMAGE_NODE>(new IMAGE_NODE(*pImage, pCreateInfo))));
         ImageSubresourcePair subpair = {*pImage, false, VkImageSubresource()};
         dev_data->imageSubresourceMap[*pImage].push_back(subpair);
         dev_data->imageLayoutMap[subpair] = image_node;
@@ -10253,7 +10253,7 @@ GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pCoun
             image_ci.extent.width = swapchain_node->createInfo.imageExtent.width;
             image_ci.extent.height = swapchain_node->createInfo.imageExtent.height;
             image_ci.sharingMode = swapchain_node->createInfo.imageSharingMode;
-            dev_data->imageMap[pSwapchainImages[i]] = unique_ptr<IMAGE_NODE>(new IMAGE_NODE(&image_ci));
+            dev_data->imageMap[pSwapchainImages[i]] = unique_ptr<IMAGE_NODE>(new IMAGE_NODE(pSwapchainImages[i], &image_ci));
             auto &image_node = dev_data->imageMap[pSwapchainImages[i]];
             image_node->valid = false;
             image_node->mem = MEMTRACKER_SWAP_CHAIN_IMAGE_KEY;

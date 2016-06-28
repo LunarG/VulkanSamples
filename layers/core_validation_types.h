@@ -143,18 +143,19 @@ struct SAMPLER_NODE {
 class IMAGE_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
+    VkImage image;
     VkImageCreateInfo createInfo;
     VkDeviceMemory mem;
     bool valid; // If this is a swapchain image backing memory track valid here as it doesn't have DEVICE_MEM_INFO
     VkDeviceSize memOffset;
     VkDeviceSize memSize;
-    IMAGE_NODE() : createInfo{}, mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0) { in_use.store(0); };
-    IMAGE_NODE(const VkImageCreateInfo *pCreateInfo)
-        : createInfo(*pCreateInfo), mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0) {
+    IMAGE_NODE() : image(VK_NULL_HANDLE), createInfo{}, mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0) { in_use.store(0); };
+    IMAGE_NODE(VkImage img, const VkImageCreateInfo *pCreateInfo)
+        : image(img), createInfo(*pCreateInfo), mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0) {
         in_use.store(0);
     };
     IMAGE_NODE(const IMAGE_NODE &rh_obj)
-        : createInfo(rh_obj.createInfo), mem(rh_obj.mem), valid(rh_obj.valid), memOffset(rh_obj.memOffset),
+        : image(rh_obj.image), createInfo(rh_obj.createInfo), mem(rh_obj.mem), valid(rh_obj.valid), memOffset(rh_obj.memOffset),
           memSize(rh_obj.memSize) {
         in_use.store(rh_obj.in_use.load());
     };
