@@ -1554,7 +1554,8 @@ class UniqueObjectsSubcommand(Subcommand):
                                              'DestroyDevice',
                                              'CreateComputePipelines',
                                              'CreateGraphicsPipelines',
-                                             'GetDisplayPlaneSupportedDisplaysKHR'
+                                             'GetDisplayPlaneSupportedDisplaysKHR',
+                                             'GetDisplayModePropertiesKHR'
                                              ]
         # TODO : This is hacky, need to make this a more general-purpose solution for all layers
         ifdef_dict = {'CreateXcbSurfaceKHR': 'VK_USE_PLATFORM_XCB_KHR',

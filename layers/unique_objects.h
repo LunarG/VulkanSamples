@@ -435,4 +435,39 @@ VkResult explicit_GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDevice physicalD
     }
     return result;
 }
+
+
+VkResult explicit_GetDisplayModePropertiesKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR display, uint32_t* pPropertyCount, VkDisplayModePropertiesKHR* pProperties)
+{
+    layer_data *my_map_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    safe_VkDisplayModePropertiesKHR* local_pProperties = NULL;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        display = (VkDisplayKHR)my_map_data->unique_id_mapping[reinterpret_cast<uint64_t &>(display)];
+        if (pProperties) {
+            local_pProperties = new safe_VkDisplayModePropertiesKHR[*pPropertyCount];
+            for (uint32_t idx0=0; idx0<*pPropertyCount; ++idx0) {
+                local_pProperties[idx0].initialize(&pProperties[idx0]);
+            }
+        }
+    }
+
+    VkResult result = get_dispatch_table(unique_objects_instance_table_map, physicalDevice)->GetDisplayModePropertiesKHR(physicalDevice, display, pPropertyCount, ( VkDisplayModePropertiesKHR*)local_pProperties);
+    if (result == VK_SUCCESS && pProperties)
+    {
+        for (uint32_t idx0=0; idx0<*pPropertyCount; ++idx0) {
+            std::lock_guard<std::mutex> lock(global_lock);
+
+            uint64_t unique_id = global_unique_id++;
+            my_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(local_pProperties[idx0].displayMode);
+            pProperties[idx0].displayMode = reinterpret_cast<VkDisplayModeKHR&>(unique_id);
+            pProperties[idx0].parameters.visibleRegion.width = local_pProperties[idx0].parameters.visibleRegion.width;
+            pProperties[idx0].parameters.visibleRegion.height = local_pProperties[idx0].parameters.visibleRegion.height;
+            pProperties[idx0].parameters.refreshRate = local_pProperties[idx0].parameters.refreshRate;
+        }
+    }
+    if (local_pProperties)
+        delete[] local_pProperties;
+    return result;
+}
 } // namespace unique_objects
