@@ -31,7 +31,7 @@
 
 static VkResult vkDevExtError(VkDevice dev) {
     struct loader_device *found_dev;
-    struct loader_icd *icd = loader_get_icd_and_device(dev, &found_dev);
+    struct loader_icd *icd = loader_get_icd_and_device(dev, &found_dev, NULL);
 
     if (icd)
         loader_log(icd->this_instance, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
@@ -539,6 +539,20 @@ loader_lookup_device_dispatch_table(const VkLayerDispatchTable *table,
         return (void *)table->CmdEndRenderPass;
     if (!strcmp(name, "CmdExecuteCommands"))
         return (void *)table->CmdExecuteCommands;
+
+    if (!strcmp(name, "CreateSwapchainKHR")) {
+        // For CreateSwapChainKHR we need to use the entry and terminator
+        // functions to properly unwrap the SurfaceKHR object.
+        return (void *)vkCreateSwapchainKHR;
+    }
+    if (!strcmp(name, "DestroySwapchainKHR"))
+        return (void *)table->DestroySwapchainKHR;
+    if (!strcmp(name, "GetSwapchainImagesKHR"))
+        return (void *)table->GetSwapchainImagesKHR;
+    if (!strcmp(name, "AcquireNextImageKHR"))
+        return (void *)table->AcquireNextImageKHR;
+    if (!strcmp(name, "QueuePresentKHR"))
+        return (void *)table->QueuePresentKHR;
 
     return NULL;
 }

@@ -209,22 +209,27 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceExternalImageFormatPropertiesNV
         GetPhysicalDeviceExternalImageFormatPropertiesNV;
 #ifdef VK_USE_PLATFORM_WIN32_KHR
+    PFN_vkCreateWin32SurfaceKHR CreateWin32SurfaceKHR;
     PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR
         GetPhysicalDeviceWin32PresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_MIR_KHR
+    PFN_vkCreateMirSurfaceKHR CreateMirSurfaceKHR;
     PFN_vkGetPhysicalDeviceMirPresentationSupportKHR
         GetPhysicalDeviceMirPresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    PFN_vkCreateWaylandSurfaceKHR CreateWaylandSurfaceKHR;
     PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR
         GetPhysicalDeviceWaylandPresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
+    PFN_vkCreateXcbSurfaceKHR CreateXcbSurfaceKHR;
     PFN_vkGetPhysicalDeviceXcbPresentationSupportKHR
         GetPhysicalDeviceXcbPresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
+    PFN_vkCreateXlibSurfaceKHR CreateXlibSurfaceKHR;
     PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR
         GetPhysicalDeviceXlibPresentationSupportKHR;
 #endif
@@ -239,6 +244,7 @@ struct loader_icd {
     PFN_vkGetDisplayPlaneCapabilitiesKHR GetDisplayPlaneCapabilitiesKHR;
     PFN_vkCreateDisplayPlaneSurfaceKHR CreateDisplayPlaneSurfaceKHR;
     PFN_vkDestroySurfaceKHR DestroySurfaceKHR;
+    PFN_vkCreateSwapchainKHR CreateSwapchainKHR;
     struct loader_icd *next;
 };
 
@@ -333,6 +339,7 @@ struct loader_physical_device_tramp {
 struct loader_physical_device {
     VkLayerInstanceDispatchTable *disp; // must be first entry in structure
     struct loader_icd *this_icd;
+    uint8_t icd_index;
     VkPhysicalDevice phys_dev; // object from ICD
 };
 
@@ -500,7 +507,8 @@ VkResult loader_get_icd_loader_instance_extensions(
     const struct loader_instance *inst, struct loader_icd_libs *icd_libs,
     struct loader_extension_list *inst_exts);
 struct loader_icd *loader_get_icd_and_device(const VkDevice device,
-                                             struct loader_device **found_dev);
+                                             struct loader_device **found_dev,
+                                             uint32_t *icd_index);
 void loader_init_dispatch_dev_ext(struct loader_instance *inst,
                                   struct loader_device *dev);
 void *loader_dev_ext_gpa(struct loader_instance *inst, const char *funcName);

@@ -751,7 +751,7 @@ vkDestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
 
     loader_platform_thread_lock_mutex(&loader_lock);
 
-    struct loader_icd *icd = loader_get_icd_and_device(device, &dev);
+    struct loader_icd *icd = loader_get_icd_and_device(device, &dev, NULL);
     const struct loader_instance *inst = icd->this_instance;
     disp = loader_get_dispatch(device);
 

@@ -28,7 +28,7 @@
 /*
  * Loader-ICD version negotiation API
  */
-#define CURRENT_LOADER_ICD_INTERFACE_VERSION 2
+#define CURRENT_LOADER_ICD_INTERFACE_VERSION 3
 #define MIN_SUPPORTED_LOADER_ICD_INTERFACE_VERSION 0
 typedef VkResult (VKAPI_PTR *PFN_vkNegotiateLoaderICDInterfaceVersion)(uint32_t *pVersion);
 /*
@@ -121,4 +121,31 @@ typedef struct {
     VkDisplayPlaneAlphaFlagBitsKHR alphaMode;
     VkExtent2D imageExtent;
 } VkIcdSurfaceDisplay;
+
+typedef struct {
+    union {
+#ifdef VK_USE_PLATFORM_MIR_KHR
+        VkIcdSurfaceMir mir_surf;
+#endif // VK_USE_PLATFORM_MIR_KHR
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+        VkIcdSurfaceWayland wayland_surf;
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+        VkIcdSurfaceWin32 win_surf;
+#endif // VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_XCB_KHR
+        VkIcdSurfaceXcb xcb_surf;
+#endif // VK_USE_PLATFORM_XCB_KHR
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+        VkIcdSurfaceXlib xlib_surf;
+#endif // VK_USE_PLATFORM_XLIB_KHR
+        VkIcdSurfaceDisplay display_surf;
+    };
+    uint32_t base_size; // Size of VkIcdSurfaceBase
+    uint32_t platform_size; // Size of corresponding VkIcdSurfaceXXX
+    uint32_t non_platform_offset; // Start offset to base_size
+    uint32_t entire_size; // Size of entire VkIcdSurface
+    VkSurfaceKHR *real_icd_surfaces;
+} VkIcdSurface;
+
 #endif // VKICD_H
