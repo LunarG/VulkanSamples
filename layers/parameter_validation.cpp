@@ -1709,7 +1709,6 @@ bool PreGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queu
                 queueIndex);
         return false;
     }
-
     return true;
 }
 
@@ -3513,6 +3512,38 @@ UpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWri
                         skip_call |= validate_required_handle(report_data, "vkUpdateDescriptorSets",
                                                               "pDescriptorWrites[i].pTexelBufferView[i]",
                                                               pDescriptorWrites[i].pTexelBufferView[descriptor_index]);
+                    }
+                }
+            }
+
+            if ((pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ||
+                (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)) {
+                VkDeviceSize uniformAlignment = device_data->device_limits.minUniformBufferOffsetAlignment;
+                for (uint32_t j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
+                    if (pDescriptorWrites[i].pBufferInfo != NULL) {
+                        if (vk_safe_modulo(pDescriptorWrites[i].pBufferInfo[j].offset, uniformAlignment) != 0) {
+                            skip_call |=
+                                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVICE_LIMIT, "PARAMCHECK",
+                                        "vkUpdateDescriptorSets(): pDescriptorWrites[%d].pBufferInfo[%d].offset (0x%" PRIxLEAST64
+                                        ") must be a multiple of device limit minUniformBufferOffsetAlignment 0x%" PRIxLEAST64,
+                                        i, j, pDescriptorWrites[i].pBufferInfo[j].offset, uniformAlignment);
+                        }
+                    }
+                }
+            } else if ((pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
+                       (pDescriptorWrites[i].descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
+                VkDeviceSize storageAlignment = device_data->device_limits.minStorageBufferOffsetAlignment;
+                for (uint32_t j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
+                    if (pDescriptorWrites[i].pBufferInfo != NULL) {
+                        if (vk_safe_modulo(pDescriptorWrites[i].pBufferInfo[j].offset, storageAlignment) != 0) {
+                            skip_call |=
+                                log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVICE_LIMIT, "PARAMCHECK",
+                                        "vkUpdateDescriptorSets(): pDescriptorWrites[%d].pBufferInfo[%d].offset (0x%" PRIxLEAST64
+                                        ") must be a multiple of device limit minStorageBufferOffsetAlignment 0x%" PRIxLEAST64,
+                                        i, j, pDescriptorWrites[i].pBufferInfo[j].offset, storageAlignment);
+                        }
                     }
                 }
             }

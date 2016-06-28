@@ -255,8 +255,8 @@ enum DEV_LIMITS_ERROR {
     DEVLIMITS_INVALID_CALL_SEQUENCE,         // Flag generic case of an invalid call sequence by the app
     DEVLIMITS_INVALID_FEATURE_REQUESTED,     // App requested a feature not supported by physical device
     DEVLIMITS_COUNT_MISMATCH,                // App requesting a count value different than actual value
-    DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST,  // Invalid queue requested based on queue family properties
-    DEVLIMITS_INVALID_UNIFORM_BUFFER_OFFSET, // Uniform buffer offset violates device limit granularity
-    DEVLIMITS_INVALID_STORAGE_BUFFER_OFFSET, // Storage buffer offset violates device limit granularity
+// LUGMAL     DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST,  // Invalid queue requested based on queue family properties -> deleted
+// LUGMAL    DEVLIMITS_INVALID_UNIFORM_BUFFER_OFFSET, // Uniform buffer offset violates device limit granularity -> device_limit
+// LUGMAL    DEVLIMITS_INVALID_STORAGE_BUFFER_OFFSET, // Storage buffer offset violates device limit granularity -> device_limit
 };
 #endif // CORE_VALIDATION_ERROR_ENUMS_H_
