@@ -5209,23 +5209,24 @@ DestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCa
 
 VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip_call = false;
-    if (!skip_call) {
-        dev_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
-    }
+    // TODO : Flag error if image is use by in-flight command buffer
+    dev_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
 
     std::lock_guard<std::mutex> lock(global_lock);
-    const auto &imageEntry = dev_data->imageMap.find(image);
-    if (imageEntry != dev_data->imageMap.end()) {
+    auto img_node = getImageNode(dev_data, image);
+    if (img_node) {
+        // Any bound cmd buffers are now invalid
+        invalidateCommandBuffers(img_node->cb_bindings,
+                                 {reinterpret_cast<uint64_t &>(img_node->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT});
         // Clean up memory mapping, bindings and range references for image
-        auto mem_info = getMemObjInfo(dev_data, imageEntry->second.get()->mem);
+        auto mem_info = getMemObjInfo(dev_data, img_node->mem);
         if (mem_info) {
-            remove_memory_ranges(reinterpret_cast<uint64_t &>(image), imageEntry->second.get()->mem, mem_info->imageRanges);
+            remove_memory_ranges(reinterpret_cast<uint64_t &>(image), img_node->mem, mem_info->imageRanges);
             clear_object_binding(dev_data, reinterpret_cast<uint64_t &>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
             mem_info->image = VK_NULL_HANDLE;
         }
         // Remove image from imageMap
-        dev_data->imageMap.erase(imageEntry);
+        dev_data->imageMap.erase(img_node->image);
     }
     const auto& subEntry = dev_data->imageSubresourceMap.find(image);
     if (subEntry != dev_data->imageSubresourceMap.end()) {
