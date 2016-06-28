@@ -5717,6 +5717,83 @@ TEST_F(VkLayerTest, WriteDescriptorSetIntegrityCheck) {
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
+TEST_F(VkLayerTest, InvalidCmdBufferImageDestroyed) {
+    TEST_DESCRIPTION("Attempt to draw with a command buffer that is invalid "
+                     "due to an image dependency being destroyed.");
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkImage image;
+    const VkFormat tex_format = VK_FORMAT_B8G8R8A8_UNORM;
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = tex_format;
+    image_create_info.extent.width = 32;
+    image_create_info.extent.height = 32;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage =
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    image_create_info.flags = 0;
+    VkResult err =
+        vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
+    ASSERT_VK_SUCCESS(err);
+
+    VkMemoryRequirements mem_reqs;
+    VkDeviceMemory image_mem;
+    bool pass;
+    VkMemoryAllocateInfo memAlloc = {};
+    memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memAlloc.pNext = NULL;
+    memAlloc.allocationSize = 0;
+    memAlloc.memoryTypeIndex = 0;
+    vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
+    memAlloc.allocationSize = mem_reqs.size;
+    pass =
+        m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &image_mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), image, image_mem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    vk_testing::Buffer buffer;
+    VkMemoryPropertyFlags reqs = 0;
+    buffer.init_as_src(*m_device, 128 * 128 * 4, reqs);
+    VkBufferImageCopy region = {};
+    region.bufferRowLength = 128;
+    region.bufferImageHeight = 128;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    region.imageSubresource.layerCount = 1;
+    region.imageExtent.height = 4;
+    region.imageExtent.width = 4;
+    region.imageExtent.depth = 1;
+    m_commandBuffer->BeginCommandBuffer();
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(),
+                           image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                           &region);
+    m_commandBuffer->EndCommandBuffer();
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT, " that is invalid because bound image ");
+    // Destroy image dependency prior to submit to cause ERROR
+    vkDestroyImage(m_device->device(), image, NULL);
+
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+
+    m_errorMonitor->VerifyFound();
+    vkFreeMemory(m_device->device(), image_mem, NULL);
+}
+
 TEST_F(VkLayerTest, InvalidPipeline) {
     // Attempt to bind an invalid Pipeline to a valid Command Buffer
     // ObjectTracker should catch this.
