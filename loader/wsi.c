@@ -214,7 +214,7 @@ terminator_DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
                              const VkAllocationCallbacks *pAllocator) {
     struct loader_instance *ptr_instance = loader_get_instance(instance);
 
-    loader_instance_heap_free(ptr_instance, (void *)surface);
+    loader_heap_free(ptr_instance, (void *)surface);
 }
 
 /*
@@ -431,9 +431,11 @@ terminator_GetPhysicalDeviceSurfacePresentModesKHR(
  * This is the trampoline entrypoint
  * for CreateSwapchainKHR
  */
-LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
-    VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchain) {
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkCreateSwapchainKHR(VkDevice device,
+                     const VkSwapchainCreateInfoKHR *pCreateInfo,
+                     const VkAllocationCallbacks *pAllocator,
+                     VkSwapchainKHR *pSwapchain) {
     const VkLayerDispatchTable *disp;
     disp = loader_get_dispatch(device);
     VkResult res =
@@ -505,9 +507,11 @@ vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo) {
  * This is the trampoline entrypoint
  * for CreateWin32SurfaceKHR
  */
-LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
-    VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkCreateWin32SurfaceKHR(VkInstance instance,
+                        const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
+                        const VkAllocationCallbacks *pAllocator,
+                        VkSurfaceKHR *pSurface) {
     const VkLayerInstanceDispatchTable *disp;
     disp = loader_get_instance_dispatch(instance);
     VkResult res;
@@ -521,9 +525,11 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
  * This is the instance chain terminator function
  * for CreateWin32SurfaceKHR
  */
-VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWin32SurfaceKHR(
-    VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_CreateWin32SurfaceKHR(VkInstance instance,
+                                 const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
+                                 const VkAllocationCallbacks *pAllocator,
+                                 VkSurfaceKHR *pSurface) {
     // First, check to ensure the appropriate extension was enabled:
     struct loader_instance *ptr_instance = loader_get_instance(instance);
     if (!ptr_instance->wsi_win32_surface_enabled) {
@@ -536,9 +542,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWin32SurfaceKHR(
     // Next, if so, proceed with the implementation of this function:
     VkIcdSurfaceWin32 *pIcdSurface = NULL;
 
-    pIcdSurface =
-        loader_instance_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceWin32),
-                                   VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    pIcdSurface = loader_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceWin32),
+                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (pIcdSurface == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -610,9 +615,11 @@ terminator_GetPhysicalDeviceWin32PresentationSupportKHR(
  * This is the trampoline entrypoint
  * for CreateMirSurfaceKHR
  */
-LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
-    VkInstance instance, const VkMirSurfaceCreateInfoKHR *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkCreateMirSurfaceKHR(VkInstance instance,
+                      const VkMirSurfaceCreateInfoKHR *pCreateInfo,
+                      const VkAllocationCallbacks *pAllocator,
+                      VkSurfaceKHR *pSurface) {
     const VkLayerInstanceDispatchTable *disp;
     disp = loader_get_instance_dispatch(instance);
     VkResult res;
@@ -626,9 +633,11 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
  * This is the instance chain terminator function
  * for CreateMirSurfaceKHR
  */
-VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateMirSurfaceKHR(
-    VkInstance instance, const VkMirSurfaceCreateInfoKHR *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_CreateMirSurfaceKHR(VkInstance instance,
+                               const VkMirSurfaceCreateInfoKHR *pCreateInfo,
+                               const VkAllocationCallbacks *pAllocator,
+                               VkSurfaceKHR *pSurface) {
     // First, check to ensure the appropriate extension was enabled:
     struct loader_instance *ptr_instance = loader_get_instance(instance);
     if (!ptr_instance->wsi_mir_surface_enabled) {
@@ -641,9 +650,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateMirSurfaceKHR(
     // Next, if so, proceed with the implementation of this function:
     VkIcdSurfaceMir *pIcdSurface = NULL;
 
-    pIcdSurface =
-        loader_instance_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceMir),
-                                   VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    pIcdSurface = loader_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceMir),
+                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (pIcdSurface == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -735,7 +743,8 @@ vkCreateWaylandSurfaceKHR(VkInstance instance,
  * This is the instance chain terminator function
  * for CreateWaylandSurfaceKHR
  */
-VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWaylandSurfaceKHR(
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_CreateWaylandSurfaceKHR(
     VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
     // First, check to ensure the appropriate extension was enabled:
@@ -750,9 +759,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWaylandSurfaceKHR(
     // Next, if so, proceed with the implementation of this function:
     VkIcdSurfaceWayland *pIcdSurface = NULL;
 
-    pIcdSurface =
-        loader_instance_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceWayland),
-                                   VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    pIcdSurface = loader_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceWayland),
+                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (pIcdSurface == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -826,9 +834,11 @@ terminator_GetPhysicalDeviceWaylandPresentationSupportKHR(
  * This is the trampoline entrypoint
  * for CreateXcbSurfaceKHR
  */
-LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
-    VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkCreateXcbSurfaceKHR(VkInstance instance,
+                      const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
+                      const VkAllocationCallbacks *pAllocator,
+                      VkSurfaceKHR *pSurface) {
     const VkLayerInstanceDispatchTable *disp;
     disp = loader_get_instance_dispatch(instance);
     VkResult res;
@@ -842,9 +852,11 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
  * This is the instance chain terminator function
  * for CreateXcbSurfaceKHR
  */
-VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXcbSurfaceKHR(
-    VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_CreateXcbSurfaceKHR(VkInstance instance,
+                               const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
+                               const VkAllocationCallbacks *pAllocator,
+                               VkSurfaceKHR *pSurface) {
     // First, check to ensure the appropriate extension was enabled:
     struct loader_instance *ptr_instance = loader_get_instance(instance);
     if (!ptr_instance->wsi_xcb_surface_enabled) {
@@ -857,9 +869,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXcbSurfaceKHR(
     // Next, if so, proceed with the implementation of this function:
     VkIcdSurfaceXcb *pIcdSurface = NULL;
 
-    pIcdSurface =
-        loader_instance_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceXcb),
-                                   VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    pIcdSurface = loader_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceXcb),
+                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (pIcdSurface == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -934,9 +945,11 @@ terminator_GetPhysicalDeviceXcbPresentationSupportKHR(
  * This is the trampoline entrypoint
  * for CreateXlibSurfaceKHR
  */
-LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
-    VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkCreateXlibSurfaceKHR(VkInstance instance,
+                       const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
+                       const VkAllocationCallbacks *pAllocator,
+                       VkSurfaceKHR *pSurface) {
     const VkLayerInstanceDispatchTable *disp;
     disp = loader_get_instance_dispatch(instance);
     VkResult res;
@@ -950,9 +963,11 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
  * This is the instance chain terminator function
  * for CreateXlibSurfaceKHR
  */
-VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXlibSurfaceKHR(
-    VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_CreateXlibSurfaceKHR(VkInstance instance,
+                                const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
+                                const VkAllocationCallbacks *pAllocator,
+                                VkSurfaceKHR *pSurface) {
     // First, check to ensure the appropriate extension was enabled:
     struct loader_instance *ptr_instance = loader_get_instance(instance);
     if (!ptr_instance->wsi_xlib_surface_enabled) {
@@ -965,9 +980,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXlibSurfaceKHR(
     // Next, if so, proceed with the implementation of this function:
     VkIcdSurfaceXlib *pIcdSurface = NULL;
 
-    pIcdSurface =
-        loader_instance_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceXlib),
-                                   VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    pIcdSurface = loader_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceXlib),
+                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (pIcdSurface == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -1041,9 +1055,10 @@ terminator_GetPhysicalDeviceXlibPresentationSupportKHR(
  * This is the trampoline entrypoint
  * for CreateAndroidSurfaceKHR
  */
-LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
-    VkInstance instance, ANativeWindow *window,
-    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkCreateAndroidSurfaceKHR(VkInstance instance, ANativeWindow *window,
+                          const VkAllocationCallbacks *pAllocator,
+                          VkSurfaceKHR *pSurface) {
     const VkLayerInstanceDispatchTable *disp;
     disp = loader_get_instance_dispatch(instance);
     VkResult res;
@@ -1056,9 +1071,10 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
  * This is the instance chain terminator function
  * for CreateAndroidSurfaceKHR
  */
-VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateAndroidSurfaceKHR(
-    VkInstance instance, Window window, const VkAllocationCallbacks *pAllocator,
-    VkSurfaceKHR *pSurface) {
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_CreateAndroidSurfaceKHR(VkInstance instance, Window window,
+                                   const VkAllocationCallbacks *pAllocator,
+                                   VkSurfaceKHR *pSurface) {
     // First, check to ensure the appropriate extension was enabled:
     struct loader_instance *ptr_instance = loader_get_instance(instance);
     if (!ptr_instance->wsi_display_enabled) {
@@ -1071,9 +1087,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateAndroidSurfaceKHR(
     // Next, if so, proceed with the implementation of this function:
     VkIcdSurfaceAndroid *pIcdSurface = NULL;
 
-    pIcdSurface =
-        loader_instance_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceAndroid),
-                                   VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    pIcdSurface = loader_heap_alloc(ptr_instance, sizeof(VkIcdSurfaceAndroid),
+                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (pIcdSurface == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -1250,10 +1265,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetDisplayModePropertiesKHR(
                                             pPropertyCount, pProperties);
 }
 
-LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDisplayModeKHR(
-    VkPhysicalDevice physicalDevice, VkDisplayKHR display,
-    const VkDisplayModeCreateInfoKHR *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator, VkDisplayModeKHR *pMode) {
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkCreateDisplayModeKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR display,
+                       const VkDisplayModeCreateInfoKHR *pCreateInfo,
+                       const VkAllocationCallbacks *pAllocator,
+                       VkDisplayModeKHR *pMode) {
     VkPhysicalDevice unwrapped_phys_dev =
         loader_unwrap_physical_device(physicalDevice);
     const VkLayerInstanceDispatchTable *disp;
@@ -1263,10 +1279,12 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDisplayModeKHR(
     return res;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayModeKHR(
-    VkPhysicalDevice physicalDevice, VkDisplayKHR display,
-    const VkDisplayModeCreateInfoKHR *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator, VkDisplayModeKHR *pMode) {
+VKAPI_ATTR VkResult VKAPI_CALL
+terminator_CreateDisplayModeKHR(VkPhysicalDevice physicalDevice,
+                                VkDisplayKHR display,
+                                const VkDisplayModeCreateInfoKHR *pCreateInfo,
+                                const VkAllocationCallbacks *pAllocator,
+                                VkDisplayModeKHR *pMode) {
     // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
@@ -1327,9 +1345,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetDisplayPlaneCapabilitiesKHR(
                                                planeIndex, pCapabilities);
 }
 
-LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDisplayPlaneSurfaceKHR(
-    VkInstance instance, const VkDisplaySurfaceCreateInfoKHR *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkCreateDisplayPlaneSurfaceKHR(VkInstance instance,
+                               const VkDisplaySurfaceCreateInfoKHR *pCreateInfo,
+                               const VkAllocationCallbacks *pAllocator,
+                               VkSurfaceKHR *pSurface) {
     const VkLayerInstanceDispatchTable *disp;
     disp = loader_get_instance_dispatch(instance);
     VkResult res;
@@ -1352,8 +1372,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayPlaneSurfaceKHR(
         return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
-    pIcdSurface = loader_instance_heap_alloc(
-        inst, sizeof(VkIcdSurfaceDisplay), VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    pIcdSurface = loader_heap_alloc(inst, sizeof(VkIcdSurfaceDisplay),
+                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (pIcdSurface == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
