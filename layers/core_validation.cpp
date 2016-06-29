@@ -8888,6 +8888,10 @@ static bool ValidateAttachmentIndex(layer_data *dev_data, uint32_t attachment, u
     return skip_call;
 }
 
+static bool IsPowerOfTwo(unsigned x) {
+    return x && !(x & (x-1));
+}
+
 static bool ValidateRenderpassAttachmentUsage(layer_data *dev_data, const VkRenderPassCreateInfo *pCreateInfo) {
     bool skip_call = false;
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
@@ -8913,6 +8917,8 @@ static bool ValidateRenderpassAttachmentUsage(layer_data *dev_data, const VkRend
             subpass.pResolveAttachments, subpass.pResolveAttachments + subpass.colorAttachmentCount,
             [](VkAttachmentReference ref) { return ref.attachment != VK_ATTACHMENT_UNUSED; });
 
+        unsigned sample_count = 0;
+
         for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
             uint32_t attachment;
             if (subpass.pResolveAttachments) {
@@ -8931,6 +8937,10 @@ static bool ValidateRenderpassAttachmentUsage(layer_data *dev_data, const VkRend
             attachment = subpass.pColorAttachments[j].attachment;
             skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Color");
 
+            if (!skip_call && attachment != VK_ATTACHMENT_UNUSED) {
+                sample_count |= (unsigned)pCreateInfo->pAttachments[attachment].samples;
+            }
+
             if (!skip_call &&
                 subpass_performs_resolve &&
                 attachment != VK_ATTACHMENT_UNUSED &&
@@ -8945,10 +8955,22 @@ static bool ValidateRenderpassAttachmentUsage(layer_data *dev_data, const VkRend
         if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
             uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
             skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Depth stencil");
+
+            if (!skip_call && attachment != VK_ATTACHMENT_UNUSED) {
+                sample_count |= (unsigned)pCreateInfo->pAttachments[attachment].samples;
+            }
         }
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
             uint32_t attachment = subpass.pInputAttachments[j].attachment;
             skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Input");
+        }
+
+        if (sample_count && !IsPowerOfTwo(sample_count)) {
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                                 __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                 "CreateRenderPass:  Subpass %u attempts to render to "
+                                 "attachments with inconsistent sample counts",
+                                 i);
         }
     }
     return skip_call;
