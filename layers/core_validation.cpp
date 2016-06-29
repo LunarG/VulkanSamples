@@ -38,6 +38,7 @@
 #include <map>
 #include <mutex>
 #include <set>
+//#include <memory>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -154,7 +155,7 @@ struct layer_data {
 
     layer_data()
         : instance_state(nullptr), report_data(nullptr), device_dispatch_table(nullptr), instance_dispatch_table(nullptr),
-          device_extensions(), device(VK_NULL_HANDLE), phys_dev_properties{}, phys_dev_mem_props{},
+          device_extensions(), device(VK_NULL_HANDLE), phys_dev_properties{}, phys_dev_mem_props{}, physical_device_features{},
           physical_device_state(nullptr){};
 };
 
@@ -3944,8 +3945,8 @@ CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallba
     instance_data->report_data =
         debug_report_create_instance(instance_data->instance_dispatch_table, *pInstance, pCreateInfo->enabledExtensionCount,
                                      pCreateInfo->ppEnabledExtensionNames);
-
     init_core_validation(instance_data, pAllocator);
+
     instance_data->instance_state = unique_ptr<INSTANCE_STATE>(new INSTANCE_STATE());
     ValidateLayerOrdering(*pCreateInfo);
 
@@ -4038,8 +4039,8 @@ bool ValidateRequestedQueueFamilyProperties(layer_data *dev_data, const VkDevice
 static bool ValidateRequestedFeatures(layer_data *dev_data, const VkPhysicalDeviceFeatures *requested_features) {
     bool skip_call = false;
 
-    VkBool32 *actual = (VkBool32 *)&(dev_data->physical_device_features);
-    VkBool32 *requested = (VkBool32 *)requested_features;
+    VkBool32 *actual = reinterpret_cast<VkBool32 *>(&(dev_data->physical_device_features));
+    const VkBool32 *requested = reinterpret_cast<const VkBool32 *>(requested_features);
     // TODO : This is a nice, compact way to loop through struct, but a bad way to report issues
     //  Need to provide the struct member name with the issue. To do that seems like we'll
     //  have to loop through each struct member which should be done w/ codegen to keep in synch.

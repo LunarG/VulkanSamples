@@ -1236,11 +1236,11 @@ static bool validate_string(debug_report_data *report_data, const char *apiName,
     } else if (result & VK_STRING_ERROR_LENGTH) {
         skipCall =
             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, INVALID_USAGE,
-                    "PARAMCHECK", "%s: string %s exceeds max length %d", apiName, stringName, MaxParamCheckerStringLength);
+                    LayerName, "%s: string %s exceeds max length %d", apiName, stringName, MaxParamCheckerStringLength);
     } else if (result & VK_STRING_ERROR_BAD_DATA) {
         skipCall =
             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, INVALID_USAGE,
-                    "PARAMCHECK", "%s: string %s contains invalid characters or is badly formed", apiName, stringName);
+                    LayerName, "%s: string %s contains invalid characters or is badly formed", apiName, stringName);
     }
     return skipCall;
 }
@@ -1252,14 +1252,14 @@ static bool validate_queue_family_index(layer_data *device_data, const char *fun
     bool skip_call = false;
 
     if (index == VK_QUEUE_FAMILY_IGNORED) {
-        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                             "PARAMCHECK", "%s: %s cannot be VK_QUEUE_FAMILY_IGNORED.", function_name, parameter_name);
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, LayerName,
+                             "%s: %s cannot be VK_QUEUE_FAMILY_IGNORED.", function_name, parameter_name);
     } else {
         const auto &queue_data = device_data->queueFamilyIndexMap.find(index);
         if (queue_data == device_data->queueFamilyIndexMap.end()) {
             skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                 "PARAMCHECK", "%s: %s (%d) must be one of the indices specified when the device was created, via "
-                                               "the VkDeviceQueueCreateInfo structure.",
+                                 LayerName, "%s: %s (%d) must be one of the indices specified when the device was created, via "
+                                            "the VkDeviceQueueCreateInfo structure.",
                                  function_name, parameter_name, index);
             return false;
         }
@@ -1277,15 +1277,14 @@ static bool validate_queue_family_indices(layer_data *device_data, const char *f
     if (indices != nullptr) {
         for (uint32_t i = 0; i < count; i++) {
             if (indices[i] == VK_QUEUE_FAMILY_IGNORED) {
-                skip_call |=
-                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, "PARAMCHECK",
-                            "%s: %s[%d] cannot be VK_QUEUE_FAMILY_IGNORED.", function_name, parameter_name, i);
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                     LayerName, "%s: %s[%d] cannot be VK_QUEUE_FAMILY_IGNORED.", function_name, parameter_name, i);
             } else {
                 const auto &queue_data = device_data->queueFamilyIndexMap.find(indices[i]);
                 if (queue_data == device_data->queueFamilyIndexMap.end()) {
                     skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                                         "PARAMCHECK", "%s: %s[%d] (%d) must be one of the indices specified when the device was "
-                                                       "created, via the VkDeviceQueueCreateInfo structure.",
+                                         LayerName, "%s: %s[%d] (%d) must be one of the indices specified when the device was "
+                                                    "created, via the VkDeviceQueueCreateInfo structure.",
                                          function_name, parameter_name, i, indices[i]);
                     return false;
                 }
@@ -1543,7 +1542,7 @@ void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDeviceCre
         for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; ++i) {
             if (set.count(pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex)) {
                 log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                        INVALID_USAGE, "PARAMCHECK",
+                        INVALID_USAGE, LayerName,
                         "VkDeviceCreateInfo parameter, uint32_t pQueueCreateInfos[%d]->queueFamilyIndex, is not unique within this "
                         "structure.",
                         i);
@@ -1556,7 +1555,7 @@ void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDeviceCre
                     if ((pCreateInfo->pQueueCreateInfos[i].pQueuePriorities[j] < 0.f) ||
                         (pCreateInfo->pQueueCreateInfos[i].pQueuePriorities[j] > 1.f)) {
                         log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
-                                __LINE__, INVALID_USAGE, "PARAMCHECK",
+                                __LINE__, INVALID_USAGE, LayerName,
                                 "VkDeviceCreateInfo parameter, uint32_t pQueueCreateInfos[%d]->pQueuePriorities[%d], must be "
                                 "between 0 and 1. Actual value is %f",
                                 i, j, pCreateInfo->pQueueCreateInfos[i].pQueuePriorities[j]);
@@ -1567,7 +1566,7 @@ void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDeviceCre
             if (pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex >= properties.size()) {
                 log_msg(
                     mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    INVALID_USAGE, "PARAMCHECK",
+                    INVALID_USAGE, LayerName,
                     "VkDeviceCreateInfo parameter, uint32_t pQueueCreateInfos[%d]->queueFamilyIndex cannot be more than the number "
                     "of queue families.",
                     i);
@@ -1575,7 +1574,7 @@ void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDeviceCre
                        properties[pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex].queueCount) {
                 log_msg(
                     mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    INVALID_USAGE, "PARAMCHECK",
+                    INVALID_USAGE, LayerName,
                     "VkDeviceCreateInfo parameter, uint32_t pQueueCreateInfos[%d]->queueCount cannot be more than the number of "
                     "queues for the given family index.",
                     i);
@@ -1703,7 +1702,7 @@ bool PreGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queu
     const auto &queue_data = my_device_data->queueFamilyIndexMap.find(queueFamilyIndex);
     if (queue_data->second <= queueIndex) {
         log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, INVALID_USAGE,
-                "PARAMCHECK",
+            LayerName,
                 "VkGetDeviceQueue parameter, uint32_t queueIndex %d, must be less than the number of queues given when the device "
                 "was created.",
                 queueIndex);
@@ -1947,7 +1946,7 @@ bool PostGetImageSparseMemoryRequirements(VkDevice device, VkImage image, uint32
              (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT |
               VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    UNRECOGNIZED_VALUE, "PARAMCHECK",
+                    UNRECOGNIZED_VALUE, LayerName,
                     "vkGetImageSparseMemoryRequirements parameter, VkImageAspect "
                     "pSparseMemoryRequirements->formatProperties.aspectMask, is an unrecognized enumerator");
             return false;
@@ -1982,7 +1981,7 @@ bool PostGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice physicalD
         if ((pProperties->aspectMask & (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT |
                                         VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__, 1,
-                    "PARAMCHECK",
+                    LayerName,
                     "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageAspect pProperties->aspectMask, is an "
                     "unrecognized enumerator");
             return false;
@@ -2437,7 +2436,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
         if ((pCreateInfo->imageType == VK_IMAGE_TYPE_1D) && (pCreateInfo->extent.height != 1) && (pCreateInfo->extent.depth != 1)) {
             skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
                                  LayerName, "vkCreateImage: if pCreateInfo->imageType is VK_IMAGE_TYPE_1D, both "
-                                                          "pCreateInfo->extent.height and pCreateInfo->extent.depth must be 1");
+                                            "pCreateInfo->extent.height and pCreateInfo->extent.depth must be 1");
         }
 
         if (pCreateInfo->imageType == VK_IMAGE_TYPE_2D) {
@@ -2445,17 +2444,15 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateImage(VkDevice device, const VkImageCreateI
             // extent.height must be equal
             if ((pCreateInfo->flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) &&
                 (pCreateInfo->extent.width != pCreateInfo->extent.height)) {
-                skip_call |=
-                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                            LayerName, "vkCreateImage: if pCreateInfo->imageType is VK_IMAGE_TYPE_2D and "
-                                                     "pCreateInfo->flags contains VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, "
-                                                     "pCreateInfo->extent.width and pCreateInfo->extent.height must be equal");
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
+                                     LayerName, "vkCreateImage: if pCreateInfo->imageType is VK_IMAGE_TYPE_2D and "
+                                                "pCreateInfo->flags contains VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, "
+                                                "pCreateInfo->extent.width and pCreateInfo->extent.height must be equal");
             }
 
             if (pCreateInfo->extent.depth != 1) {
                 skip_call |=
-                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1,
-                            LayerName,
+                    log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, 1, LayerName,
                             "vkCreateImage: if pCreateInfo->imageType is VK_IMAGE_TYPE_2D, pCreateInfo->extent.depth must be 1");
             }
         }
@@ -2506,7 +2503,7 @@ bool PreGetImageSubresourceLayout(VkDevice device, const VkImageSubresource *pSu
         if ((pSubresource->aspectMask & (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT |
                                          VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    UNRECOGNIZED_VALUE, "PARAMCHECK",
+                    UNRECOGNIZED_VALUE, LayerName,
                     "vkGetImageSubresourceLayout parameter, VkImageAspect pSubresource->aspectMask, is an unrecognized enumerator");
             return false;
         }
@@ -2716,7 +2713,7 @@ bool PreCreateGraphicsPipelines(VkDevice device, const VkGraphicsPipelineCreateI
             if (pCreateInfos->basePipelineIndex != -1) {
                 if (pCreateInfos->basePipelineHandle != VK_NULL_HANDLE) {
                     log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            INVALID_USAGE, "PARAMCHECK",
+                            INVALID_USAGE, LayerName,
                             "vkCreateGraphicsPipelines parameter, pCreateInfos->basePipelineHandle, must be VK_NULL_HANDLE if "
                             "pCreateInfos->flags "
                             "contains the VK_PIPELINE_CREATE_DERIVATIVE_BIT flag and pCreateInfos->basePipelineIndex is not -1");
@@ -2728,7 +2725,7 @@ bool PreCreateGraphicsPipelines(VkDevice device, const VkGraphicsPipelineCreateI
                 if (pCreateInfos->basePipelineIndex != -1) {
                     log_msg(
                         mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                        INVALID_USAGE, "PARAMCHECK",
+                        INVALID_USAGE, LayerName,
                         "vkCreateGraphicsPipelines parameter, pCreateInfos->basePipelineIndex, must be -1 if pCreateInfos->flags "
                         "contains the VK_PIPELINE_CREATE_DERIVATIVE_BIT flag and pCreateInfos->basePipelineHandle is not "
                         "VK_NULL_HANDLE");
@@ -2740,7 +2737,7 @@ bool PreCreateGraphicsPipelines(VkDevice device, const VkGraphicsPipelineCreateI
         if (pCreateInfos->pRasterizationState != nullptr) {
             if (pCreateInfos->pRasterizationState->cullMode & ~VK_CULL_MODE_FRONT_AND_BACK) {
                 log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                        UNRECOGNIZED_VALUE, "PARAMCHECK",
+                        UNRECOGNIZED_VALUE, LayerName,
                         "vkCreateGraphicsPipelines parameter, VkCullMode pCreateInfos->pRasterizationState->cullMode, is an "
                         "unrecognized enumerator");
                 return false;
@@ -3524,7 +3521,7 @@ UpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWri
                         if (vk_safe_modulo(pDescriptorWrites[i].pBufferInfo[j].offset, uniformAlignment) != 0) {
                             skip_call |=
                                 log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                        VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVICE_LIMIT, "PARAMCHECK",
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVICE_LIMIT, LayerName,
                                         "vkUpdateDescriptorSets(): pDescriptorWrites[%d].pBufferInfo[%d].offset (0x%" PRIxLEAST64
                                         ") must be a multiple of device limit minUniformBufferOffsetAlignment 0x%" PRIxLEAST64,
                                         i, j, pDescriptorWrites[i].pBufferInfo[j].offset, uniformAlignment);
@@ -3539,7 +3536,7 @@ UpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWri
                         if (vk_safe_modulo(pDescriptorWrites[i].pBufferInfo[j].offset, storageAlignment) != 0) {
                             skip_call |=
                                 log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                        VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVICE_LIMIT, "PARAMCHECK",
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, __LINE__, DEVICE_LIMIT, LayerName,
                                         "vkUpdateDescriptorSets(): pDescriptorWrites[%d].pBufferInfo[%d].offset (0x%" PRIxLEAST64
                                         ") must be a multiple of device limit minStorageBufferOffsetAlignment 0x%" PRIxLEAST64,
                                         i, j, pDescriptorWrites[i].pBufferInfo[j].offset, storageAlignment);
@@ -3751,7 +3748,7 @@ bool PreBeginCommandBuffer(layer_data *dev_data, VkCommandBuffer commandBuffer, 
         if ((phy_dev_data->physical_device_features.inheritedQueries == VK_FALSE) && (pInfo->occlusionQueryEnable != VK_FALSE)) {
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DEVICE_FEATURE, "PARAMCHECK",
+                        reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DEVICE_FEATURE, LayerName,
                         "Cannot set inherited occlusionQueryEnable in vkBeginCommandBuffer() when device does not support "
                         "inheritedQueries.");
         }
@@ -3760,7 +3757,7 @@ bool PreBeginCommandBuffer(layer_data *dev_data, VkCommandBuffer commandBuffer, 
             (!validate_VkQueryControlFlagBits(VkQueryControlFlagBits(pInfo->queryFlags)))) {
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                        reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DEVICE_FEATURE, "PARAMCHECK",
+                        reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DEVICE_FEATURE, LayerName,
                         "Cannot enable in occlusion queries in vkBeginCommandBuffer() and set queryFlags to %d which is not a "
                         "valid combination of VkQueryControlFlagBits.",
                         pInfo->queryFlags);
@@ -3998,7 +3995,7 @@ bool PreCmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t in
         // TODO: Verify against Valid Usage section. I don't see a non-zero vertexCount listed, may need to add that and make
         // this an error or leave as is.
         log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                REQUIRED_PARAMETER, "PARAMCHECK", "vkCmdDraw parameter, uint32_t vertexCount, is 0");
+                REQUIRED_PARAMETER, LayerName, "vkCmdDraw parameter, uint32_t vertexCount, is 0");
         return false;
     }
 
@@ -4006,7 +4003,7 @@ bool PreCmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t in
         // TODO: Verify against Valid Usage section. I don't see a non-zero instanceCount listed, may need to add that and make
         // this an error or leave as is.
         log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                REQUIRED_PARAMETER, "PARAMCHECK", "vkCmdDraw parameter, uint32_t instanceCount, is 0");
+                REQUIRED_PARAMETER, LayerName, "vkCmdDraw parameter, uint32_t instanceCount, is 0");
         return false;
     }
 
@@ -4091,14 +4088,14 @@ bool PreCmdCopyImage(VkCommandBuffer commandBuffer, const VkImageCopy *pRegions)
         if ((pRegions->srcSubresource.aspectMask & (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT |
                                                     VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    UNRECOGNIZED_VALUE, "PARAMCHECK",
+                    UNRECOGNIZED_VALUE, LayerName,
                     "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspectMask, is an unrecognized enumerator");
             return false;
         }
         if ((pRegions->dstSubresource.aspectMask & (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT |
                                                     VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    UNRECOGNIZED_VALUE, "PARAMCHECK",
+                    UNRECOGNIZED_VALUE, LayerName,
                     "vkCmdCopyImage parameter, VkImageAspect pRegions->dstSubresource.aspectMask, is an unrecognized enumerator");
             return false;
         }
@@ -4130,14 +4127,14 @@ bool PreCmdBlitImage(VkCommandBuffer commandBuffer, const VkImageBlit *pRegions)
         if ((pRegions->srcSubresource.aspectMask & (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT |
                                                     VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    UNRECOGNIZED_VALUE, "PARAMCHECK",
+                    UNRECOGNIZED_VALUE, LayerName,
                     "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspectMask, is an unrecognized enumerator");
             return false;
         }
         if ((pRegions->dstSubresource.aspectMask & (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT |
                                                     VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    UNRECOGNIZED_VALUE, "PARAMCHECK",
+                    UNRECOGNIZED_VALUE, LayerName,
                     "vkCmdCopyImage parameter, VkImageAspect pRegions->dstSubresource.aspectMask, is an unrecognized enumerator");
             return false;
         }
@@ -4169,7 +4166,7 @@ bool PreCmdCopyBufferToImage(VkCommandBuffer commandBuffer, const VkBufferImageC
         if ((pRegions->imageSubresource.aspectMask & (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT |
                                                       VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    UNRECOGNIZED_VALUE, "PARAMCHECK",
+                    UNRECOGNIZED_VALUE, LayerName,
                     "vkCmdCopyBufferToImage parameter, VkImageAspect pRegions->imageSubresource.aspectMask, is an unrecognized "
                     "enumerator");
             return false;
@@ -4202,7 +4199,7 @@ bool PreCmdCopyImageToBuffer(VkCommandBuffer commandBuffer, const VkBufferImageC
         if ((pRegions->imageSubresource.aspectMask & (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT |
                                                       VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                    UNRECOGNIZED_VALUE, "PARAMCHECK",
+                    UNRECOGNIZED_VALUE, LayerName,
                     "vkCmdCopyImageToBuffer parameter, VkImageAspect pRegions->imageSubresource.aspectMask, is an unrecognized "
                     "enumerator");
             return false;
@@ -4239,22 +4236,20 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
     skip_call |= parameter_validation_vkCmdUpdateBuffer(my_data->report_data, dstBuffer, dstOffset, dataSize, pData);
 
     if (dstOffset & 3) {
-        skip_call |=
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, INVALID_USAGE,
-                    "PARAMCHECK", "CmdUpdateBuffer parameter, VkDeviceSize dstOffset (0x%" PRIxLEAST64 "), is not a multiple of 4",
-                    dstOffset);
+        skip_call |= log_msg(
+            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, INVALID_USAGE,
+            LayerName, "CmdUpdateBuffer parameter, VkDeviceSize dstOffset (0x%" PRIxLEAST64 "), is not a multiple of 4", dstOffset);
     }
 
     if ((dataSize <= 0) || (dataSize > 65536)) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
-                             INVALID_USAGE, "PARAMCHECK", "CmdUpdateBuffer parameter, VkDeviceSize dataSize (0x%" PRIxLEAST64
-                                                          "), must be greater than zero and less than or equal to 65536",
+                             INVALID_USAGE, LayerName, "CmdUpdateBuffer parameter, VkDeviceSize dataSize (0x%" PRIxLEAST64
+                                                       "), must be greater than zero and less than or equal to 65536",
                              dataSize);
     } else if (dataSize & 3) {
-        skip_call |=
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, INVALID_USAGE,
-                    "PARAMCHECK", "CmdUpdateBuffer parameter, VkDeviceSize dataSize (0x%" PRIxLEAST64 "), is not a multiple of 4",
-                    dataSize);
+        skip_call |= log_msg(
+            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, INVALID_USAGE,
+            LayerName, "CmdUpdateBuffer parameter, VkDeviceSize dataSize (0x%" PRIxLEAST64 "), is not a multiple of 4", dataSize);
     }
 
     if (!skip_call) {
@@ -4272,20 +4267,19 @@ VKAPI_ATTR void VKAPI_CALL CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer
     skip_call |= parameter_validation_vkCmdFillBuffer(my_data->report_data, dstBuffer, dstOffset, size, data);
 
     if (dstOffset & 3) {
-        skip_call |=
-            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, INVALID_USAGE,
-                    "PARAMCHECK", "vkCmdFillBuffer parameter, VkDeviceSize dstOffset (0x%" PRIxLEAST64 "), is not a multiple of 4",
-                    dstOffset);
+        skip_call |= log_msg(
+            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, INVALID_USAGE,
+            LayerName, "vkCmdFillBuffer parameter, VkDeviceSize dstOffset (0x%" PRIxLEAST64 "), is not a multiple of 4", dstOffset);
     }
 
     if (size != VK_WHOLE_SIZE) {
         if (size <= 0) {
             skip_call |= log_msg(
                 my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__, INVALID_USAGE,
-                "PARAMCHECK", "vkCmdFillBuffer parameter, VkDeviceSize size (0x%" PRIxLEAST64 "), must be greater than zero", size);
+                LayerName, "vkCmdFillBuffer parameter, VkDeviceSize size (0x%" PRIxLEAST64 "), must be greater than zero", size);
         } else if (size & 3) {
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
-                                 INVALID_USAGE, "PARAMCHECK",
+                                 INVALID_USAGE, LayerName,
                                  "vkCmdFillBuffer parameter, VkDeviceSize size (0x%" PRIxLEAST64 "), is not a multiple of 4", size);
         }
     }
@@ -4348,7 +4342,7 @@ bool PreCmdResolveImage(VkCommandBuffer commandBuffer, const VkImageResolve *pRe
                                                     VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(
                 mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                UNRECOGNIZED_VALUE, "PARAMCHECK",
+                UNRECOGNIZED_VALUE, LayerName,
                 "vkCmdResolveImage parameter, VkImageAspect pRegions->srcSubresource.aspectMask, is an unrecognized enumerator");
             return false;
         }
@@ -4356,7 +4350,7 @@ bool PreCmdResolveImage(VkCommandBuffer commandBuffer, const VkImageResolve *pRe
                                                     VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0) {
             log_msg(
                 mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                UNRECOGNIZED_VALUE, "PARAMCHECK",
+                UNRECOGNIZED_VALUE, LayerName,
                 "vkCmdResolveImage parameter, VkImageAspect pRegions->dstSubresource.aspectMask, is an unrecognized enumerator");
             return false;
         }
