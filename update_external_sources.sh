@@ -61,7 +61,6 @@ function build_glslang () {
    mkdir -p build
    cd build
    cmake -D CMAKE_BUILD_TYPE=Release ..
-   cmake -D CMAKE_BUILD_TYPE=Release ..
    make
    make install
 }
