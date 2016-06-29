@@ -286,7 +286,6 @@ class VkLayerTest : public VkRenderFramework {
         instance_layer_names.push_back("VK_LAYER_LUNARG_parameter_validation");
         instance_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
         instance_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
-        instance_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
         instance_layer_names.push_back("VK_LAYER_LUNARG_image");
         instance_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
         instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
@@ -295,7 +294,6 @@ class VkLayerTest : public VkRenderFramework {
         device_layer_names.push_back("VK_LAYER_LUNARG_parameter_validation");
         device_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
         device_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
-        device_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
         device_layer_names.push_back("VK_LAYER_LUNARG_image");
         device_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
         device_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
@@ -2551,7 +2549,6 @@ TEST_F(VkLayerTest, LeakAnObject) {
     device_layer_names.push_back("VK_LAYER_LUNARG_parameter_validation");
     device_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
     device_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
-    device_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
     device_layer_names.push_back("VK_LAYER_LUNARG_image");
     device_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
 
