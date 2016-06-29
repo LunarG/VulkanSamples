@@ -114,7 +114,6 @@ void setLayerOption(const char *_option, const char *_val) { g_configFileObj.set
 // Constructor for ConfigFile. Initialize layers to log error messages to stdout by default. If a vk_layer_settings file is present,
 // its settings will override the defaults.
 ConfigFile::ConfigFile() : m_fileIsParsed(false) {
-    m_valueMap["lunarg_device_limits.report_flags"] = "error";
     m_valueMap["lunarg_core_validation.report_flags"] = "error";
     m_valueMap["lunarg_image.report_flags"] = "error";
     m_valueMap["lunarg_object_tracker.report_flags"] = "error";
@@ -124,7 +123,6 @@ ConfigFile::ConfigFile() : m_fileIsParsed(false) {
 
 #ifdef WIN32
     // For Windows, enable message logging AND OutputDebugString
-    m_valueMap["lunarg_device_limits.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
     m_valueMap["lunarg_core_validation.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
     m_valueMap["lunarg_image.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
     m_valueMap["lunarg_object_tracker.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
@@ -132,7 +130,6 @@ ConfigFile::ConfigFile() : m_fileIsParsed(false) {
     m_valueMap["lunarg_swapchain.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
     m_valueMap["google_threading.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG,VK_DBG_LAYER_ACTION_DEBUG_OUTPUT";
 #else  // WIN32
-    m_valueMap["lunarg_device_limits.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
     m_valueMap["lunarg_core_validation.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
     m_valueMap["lunarg_image.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
     m_valueMap["lunarg_object_tracker.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
@@ -141,7 +138,6 @@ ConfigFile::ConfigFile() : m_fileIsParsed(false) {
     m_valueMap["google_threading.debug_action"] = "VK_DBG_LAYER_ACTION_DEFAULT,VK_DBG_LAYER_ACTION_LOG_MSG";
 #endif // WIN32
 
-    m_valueMap["lunarg_device_limits.log_filename"] = "stdout";
     m_valueMap["lunarg_core_validation.log_filename"] = "stdout";
     m_valueMap["lunarg_image.log_filename"] = "stdout";
     m_valueMap["lunarg_object_tracker.log_filename"] = "stdout";

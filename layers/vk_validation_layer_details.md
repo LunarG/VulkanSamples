@@ -179,6 +179,7 @@ Each device specifies a set of Device Limits with which the appropriate paramete
 | Query count checked | Signifies that a query call such as vkEnumeratePhysicalDevices or vkGetPhysicalDeviceQueueFamilyProperties has been called without querying the count | MISSING_QUERY_COUNT | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | TODO | None |
 | Querying array counts | For API calls where an array count should be queried with an initial call and a NULL array pointer, verify that such a call was made before making a call with non-null array pointer. | MUST_QUERY_COUNT | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | TODO | Create focused test |
 | Array count value | For API calls where an array of details is queried, verify that the size of the requested array matches the size of the array supported by the device. | COUNT_MISMATCH | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | TODO | Create focused test |
+| Feature Request | Attempting to vkCreateDevice with a feature that is not supported by the underlying physical device | INVALID_FEATURE_REQUESTED | vkCreateDevice | TODO | Add validation test |
 | Queue Creation | When creating/requesting queues, make sure that QueueFamilyPropertiesIndex and index/count within that queue family are valid. | INVALID_QUEUE_CREATE_REQUEST | vkGetDeviceQueue vkCreateDevice | TODO | Create focused test |
 | NA | Enum used for informational messages | NONE | | TODO | None |
 
@@ -298,39 +299,6 @@ It cannot insure that there is no latent race condition.
 | NA | Enum used for informational messages | NONE | | TODO | None |
 
 ### VK_LAYER_GOOGLE_threading Pending Work
-
-See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
-
-## VK_LAYER_LUNARG_device_limits
-
-### VK_LAYER_LUNARG_device_limits Overview
-
-This layer is a work in progress. VK_LAYER_LUNARG_device_limits layer is intended to capture two broad categories of errors:
- 1. Incorrect use of APIs to query device capabilities
- 2. Attempt to use API functionality beyond the capability of the underlying device
-
-For the first category, the layer tracks which calls are made and flags errors if calls are excluded that should not be, or if call sequencing is incorrect. An example is an app that assumes attempts to Query and use queues without ever having called vkGetPhysicalDeviceQueueFamilyProperties(). Also, if an app is calling vkGetPhysicalDeviceQueueFamilyProperties() to retrieve properties with some assumed count for array size instead of first calling vkGetPhysicalDeviceQueueFamilyProperties() w/ a NULL pQueueFamilyProperties parameter in order to query the actual count.
-For the second category of errors, VK_LAYER_LUNARG_device_limits stores its own internal record of underlying device capabilities and flags errors if requests are made beyond those limits. Most (all?) of the limits are queried via vkGetPhysicalDevice* calls.
-
-### VK_LAYER_LUNARG_device_limits Details Table
-
-| Check | Overview | ENUM DEVLIMITS_* | Relevant API | Testname | Notes/TODO |
-| ----- | -------- | ---------------- | ---------------- | -------- | ---------- |
-| Valid instance | If an invalid instance is used, this error will be flagged | INVALID_INSTANCE | vkEnumeratePhysicalDevices | TODO | VK_LAYER_LUNARG_object_tracker should also catch this so if we made sure VK_LAYER_LUNARG_object_tracker was always on top, we could avoid this check |
-| Valid physical device | Enum used for informational messages | INVALID_PHYSICAL_DEVICE | vkEnumeratePhysicalDevices | TODO | VK_LAYER_LUNARG_object_tracker should also catch this so if we made sure VK_LAYER_LUNARG_object_tracker was always on top, we could avoid this check |
-| Valid inherited query | If an invalid inherited query is used, this error will be flagged | INVALID_INHERITED_QUERY | vkBeginCommandBuffer | TODO | None |
-| Valid attachment count | If the number of attachments exceeds the device max, this error will be flagged | INVALID_ATTACHMENT_COUNT | vkCreateRenderPass | TODO | None |
-| Query count checked | Signifies that a query call such as vkEnumeratePhysicalDevices or vkGetPhysicalDeviceQueueFamilyProperties has been called without querying the count | MISSING_QUERY_COUNT | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | TODO | None |
-| Querying array counts | For API calls where an array count should be queried with an initial call and a NULL array pointer, verify that such a call was made before making a call with non-null array pointer. | MUST_QUERY_COUNT | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | TODO | Create focused test |
-| Array count value | For API calls where an array of details is queried, verify that the size of the requested array matches the size of the array supported by the device. | COUNT_MISMATCH | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | TODO | Create focused test |
-| Queue Creation | When creating/requesting queues, make sure that QueueFamilyPropertiesIndex and index/count within that queue family are valid. | INVALID_QUEUE_CREATE_REQUEST | vkGetDeviceQueue vkCreateDevice | TODO | Create focused test |
-| API Call Sequencing | This is a general error indicating that an app did not use vkGetPhysicalDevice* and other such query calls, but rather made an assumption about device capabilities. | INVALID_CALL_SEQUENCE | vkCreateDevice | TODO | Add validation test |
-| Feature Request | Attempting to vkCreateDevice with a feature that is not supported by the underlying physical device. | INVALID_FEATURE_REQUESTED | vkCreateDevice | TODO | Add validation test |
-| Storage Buffer Alignment  | Storage Buffer offsets must agree with offset alignment device limit | INVALID_STORAGE_BUFFER_OFFSET | vkBindBufferMemory vkUpdateDescriptorSets | TODO | Create test |
-| Uniform Buffer Alignment  | Uniform Buffer offsets must agree with offset alignment device limit | INVALID_UNIFORM_BUFFER_OFFSET | vkBindBufferMemory vkUpdateDescriptorSets | TODO | Create test |
-| NA | Enum used for informational messages | NONE | | TODO | None |
-
-### VK_LAYER_LUNARG_device_limits Pending Work
 
 See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
