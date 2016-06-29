@@ -2859,31 +2859,18 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
                                 reinterpret_cast<const uint64_t &>(pPipeline->pipeline));
             }
 
-            VkSampleCountFlagBits subpass_num_samples = VkSampleCountFlagBits(0);
+            unsigned subpass_num_samples = 0;
 
             for (i = 0; i < subpass_desc->colorAttachmentCount; i++) {
-                VkSampleCountFlagBits samples;
-
-                if (subpass_desc->pColorAttachments[i].attachment == VK_ATTACHMENT_UNUSED)
-                    continue;
-
-                samples = render_pass_info->pAttachments[subpass_desc->pColorAttachments[i].attachment].samples;
-                if (subpass_num_samples == static_cast<VkSampleCountFlagBits>(0)) {
-                    subpass_num_samples = samples;
-                } else if (subpass_num_samples != samples) {
-                    subpass_num_samples = static_cast<VkSampleCountFlagBits>(-1);
-                    break;
-                }
+                auto attachment = subpass_desc->pColorAttachments[i].attachment;
+                if (attachment != VK_ATTACHMENT_UNUSED)
+                    subpass_num_samples |= (unsigned)render_pass_info->pAttachments[attachment].samples;
             }
 
-            if ((subpass_desc->pDepthStencilAttachment != NULL) &&
-                (subpass_desc->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED)) {
-                const VkSampleCountFlagBits samples =
-                        render_pass_info->pAttachments[subpass_desc->pDepthStencilAttachment->attachment].samples;
-                if (subpass_num_samples == static_cast<VkSampleCountFlagBits>(0))
-                    subpass_num_samples = samples;
-                else if (subpass_num_samples != samples)
-                    subpass_num_samples = static_cast<VkSampleCountFlagBits>(-1);
+            if (subpass_desc->pDepthStencilAttachment &&
+                subpass_desc->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+                auto attachment = subpass_desc->pDepthStencilAttachment->attachment;
+                subpass_num_samples |= (unsigned)render_pass_info->pAttachments[attachment].samples;
             }
 
             if (subpass_num_samples && pso_num_samples != subpass_num_samples) {
