@@ -421,20 +421,6 @@ static bool validateImageUsageFlags(layer_data *dev_data, IMAGE_NODE const *imag
 }
 
 // Helper function to validate usage flags for buffers
-// Pulls buffer info and then sends actual vs. desired usage off to helper above where
-//  an error will be flagged if usage is not correct
-static bool validate_buffer_usage_flags(layer_data *dev_data, VkBuffer buffer, VkFlags desired, VkBool32 strict,
-                                            char const *func_name, char const *usage_string) {
-    bool skip_call = false;
-    auto buffer_node = getBufferNode(dev_data, buffer);
-    if (buffer_node) {
-        skip_call = validate_usage_flags(dev_data, buffer_node->createInfo.usage, desired, strict, (uint64_t)buffer,
-                                         VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "buffer", func_name, usage_string);
-    }
-    return skip_call;
-}
-
-// Helper function to validate usage flags for buffers
 // For given buffer_node send actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
 static bool validateBufferUsageFlags(layer_data *dev_data, BUFFER_NODE const *buffer_node, VkFlags desired, VkBool32 strict,
@@ -5663,11 +5649,11 @@ static bool PreCallValidateCreateBufferView(layer_data *dev_data, const VkBuffer
                                  reinterpret_cast<const uint64_t &>(pCreateInfo->buffer));
         }
     }
-    // In order to create a valid buffer view, the buffer must have been created with at least one of the
-    // following flags:  UNIFORM_TEXEL_BUFFER_BIT or STORAGE_TEXEL_BUFFER_BIT
-    skip_call = validate_buffer_usage_flags(dev_data, pCreateInfo->buffer,
-                                            VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT,
-                                            false, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
+        // In order to create a valid buffer view, the buffer must have been created with at least one of the
+        // following flags:  UNIFORM_TEXEL_BUFFER_BIT or STORAGE_TEXEL_BUFFER_BIT
+        validateBufferUsageFlags(dev_data, buf_node,
+                                 VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, false,
+                                 "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
     return skip_call;
 }
 
