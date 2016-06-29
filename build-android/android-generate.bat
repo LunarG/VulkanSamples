@@ -41,14 +41,14 @@ copy /Y ..\layers\descriptor_sets.cpp   generated\common\
 REM create build-script root directory
 mkdir generated\gradle-build
 cd generated\gradle-build
-mkdir  core_validation device_limits image object_tracker parameter_validation swapchain threading unique_objects
+mkdir  core_validation image object_tracker parameter_validation swapchain threading unique_objects
 cd ..\..
 mkdir generated\layer-src
 cd generated\layer-src
-mkdir  core_validation device_limits image object_tracker parameter_validation swapchain threading unique_objects
+mkdir  core_validation image object_tracker parameter_validation swapchain threading unique_objects
 cd ..\..
 xcopy /s gradle-templates\*   generated\gradle-build\
-for %%G in (core_validation device_limits image parameter_validation swapchain threading) Do (
+for %%G in (core_validation image parameter_validation swapchain threading) Do (
     copy ..\layers\%%G.cpp   generated\layer-src\%%G
     echo apply from: "../common.gradle"  > generated\gradle-build\%%G\build.gradle
 )
