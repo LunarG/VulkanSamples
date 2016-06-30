@@ -3220,6 +3220,62 @@ TEST_F(VkLayerTest, RenderPassSubpassZeroTransitionsApplied) {
     vkDestroyImageView(m_device->device(), view, nullptr);
 }
 
+TEST_F(VkLayerTest, RenderPassTransitionsAttachmentUnused) {
+    TEST_DESCRIPTION("Ensure that layout transitions work correctly without "
+                     "errors, when an attachment reference is "
+                     "VK_ATTACHMENT_UNUSED");
+
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // A renderpass with no attachments
+    VkAttachmentReference att_ref = {
+        VK_ATTACHMENT_UNUSED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    };
+
+    VkSubpassDescription subpass = {
+        0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr,
+        1, &att_ref, nullptr, nullptr, 0, nullptr
+    };
+
+    VkRenderPassCreateInfo rpci = {
+        VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr,
+        0, 0, nullptr, 1, &subpass, 0, nullptr
+    };
+
+    VkRenderPass rp;
+    VkResult err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    // A compatible framebuffer.
+    VkFramebufferCreateInfo fci = {
+        VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr,
+        0, rp, 0, nullptr,
+        32, 32, 1
+    };
+    VkFramebuffer fb;
+    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
+    ASSERT_VK_SUCCESS(err);
+
+    // Record a command buffer which just begins and ends the renderpass. The
+    // bug manifests in BeginRenderPass.
+    VkRenderPassBeginInfo rpbi = {
+        VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr,
+        rp, fb, { 0, 0, 32, 32 },
+        0, nullptr
+    };
+    BeginCommandBuffer();
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &rpbi,
+                         VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdEndRenderPass(m_commandBuffer->handle());
+    m_errorMonitor->VerifyNotFound();
+    EndCommandBuffer();
+
+    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+}
+
 // This is a positive test. No errors are expected.
 TEST_F(VkLayerTest, StencilLoadOp) {
     TEST_DESCRIPTION("Create a stencil-only attachment with a LOAD_OP set to "
