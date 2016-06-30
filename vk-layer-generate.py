@@ -1391,6 +1391,13 @@ class ObjectTrackerSubcommand(Subcommand):
                 'vkGetDisplayPlaneCapabilitiesKHR',
                 'vkCreateDisplayPlaneSurfaceKHR',
                 ]
+        additional_android_instance_extensions = [
+                'vkDestroySurfaceKHR',
+                'vkGetPhysicalDeviceSurfaceSupportKHR',
+                'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
+                'vkGetPhysicalDeviceSurfaceFormatsKHR',
+                'vkGetPhysicalDeviceSurfacePresentModesKHR',
+                ]
         if self.wsi == 'Win32':
             instance_extensions=[('msg_callback_get_proc_addr', []),
                                   ('wsi_enabled',
@@ -1399,7 +1406,7 @@ class ObjectTrackerSubcommand(Subcommand):
         elif self.wsi == 'Android':
             instance_extensions=[('msg_callback_get_proc_addr', []),
                                   ('wsi_enabled',
-                                  ['vkCreateAndroidSurfaceKHR'] + additional_instance_extensions)]
+                                  ['vkCreateAndroidSurfaceKHR'] + additional_android_instance_extensions)]
         elif self.wsi == 'Xcb' or self.wsi == 'Xlib' or self.wsi == 'Wayland' or self.wsi == 'Mir':
             instance_extensions=[('msg_callback_get_proc_addr', []),
                                   ('wsi_enabled',
@@ -1723,7 +1730,6 @@ class UniqueObjectsSubcommand(Subcommand):
                                  ('win32_enabled', ['vkCreateWin32SurfaceKHR'])]
         elif self.wsi == 'Android':
             instance_extensions=[('wsi_enabled', surface_wsi_instance_exts),
-                                 ('display_enabled', display_wsi_instance_exts),
                                  ('android_enabled', ['vkCreateAndroidSurfaceKHR'])]
         elif self.wsi == 'Xcb' or self.wsi == 'Xlib' or self.wsi == 'Wayland' or self.wsi == 'Mir':
             instance_extensions=[('wsi_enabled', surface_wsi_instance_exts),

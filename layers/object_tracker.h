@@ -153,6 +153,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreate
         (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR)gpa(instance, "vkGetPhysicalDeviceSurfaceFormatsKHR");
     pDisp->GetPhysicalDeviceSurfacePresentModesKHR =
         (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)gpa(instance, "vkGetPhysicalDeviceSurfacePresentModesKHR");
+#ifndef __ANDROID__
     pDisp->GetPhysicalDeviceDisplayPropertiesKHR = 
         (PFN_vkGetPhysicalDeviceDisplayPropertiesKHR)gpa(instance, "vkGetPhysicalDeviceDisplayPropertiesKHR");
     pDisp->GetPhysicalDeviceDisplayPlanePropertiesKHR = 
@@ -167,6 +168,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreate
         (PFN_vkGetDisplayPlaneCapabilitiesKHR)gpa(instance, "vkGetDisplayPlaneCapabilitiesKHR");
     pDisp->CreateDisplayPlaneSurfaceKHR = 
         (PFN_vkCreateDisplayPlaneSurfaceKHR)gpa(instance, "vkCreateDisplayPlaneSurfaceKHR");
+#endif
 
 #if VK_USE_PLATFORM_WIN32_KHR
     pDisp->CreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR)gpa(instance, "vkCreateWin32SurfaceKHR");
@@ -1032,6 +1034,7 @@ VkResult explicit_GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchai
     return result;
 }
 
+#ifndef __ANDROID__
 VkResult explicit_GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalDevice physicalDevice, uint32_t* pPropertyCount, VkDisplayPropertiesKHR* pProperties)
 {
     bool skipCall = false;
@@ -1078,6 +1081,7 @@ VkResult explicit_GetDisplayModePropertiesKHR(VkPhysicalDevice physicalDevice, V
     }
     return result;
 }
+#endif
 
 // TODO: Add special case to codegen to cover validating all the pipelines instead of just the first
 VkResult explicit_CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount,

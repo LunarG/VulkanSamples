@@ -89,6 +89,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreate
         (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)gpa(instance, "vkGetPhysicalDeviceSurfacePresentModesKHR");
 
     // KHR_display
+#ifndef __ANDROID__
     pDisp->GetPhysicalDeviceDisplayPropertiesKHR = (PFN_vkGetPhysicalDeviceDisplayPropertiesKHR)gpa(instance, "vkGetPhysicalDeviceDisplayPropertiesKHR");
     pDisp->GetPhysicalDeviceDisplayPlanePropertiesKHR = (PFN_vkGetPhysicalDeviceDisplayPlanePropertiesKHR)gpa(instance, "vkGetPhysicalDeviceDisplayPlanePropertiesKHR");
     pDisp->GetDisplayPlaneSupportedDisplaysKHR = (PFN_vkGetDisplayPlaneSupportedDisplaysKHR)gpa(instance, "vkGetDisplayPlaneSupportedDisplaysKHR");
@@ -96,6 +97,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreate
     pDisp->CreateDisplayModeKHR = (PFN_vkCreateDisplayModeKHR)gpa(instance, "vkCreateDisplayModeKHR");
     pDisp->GetDisplayPlaneCapabilitiesKHR = (PFN_vkGetDisplayPlaneCapabilitiesKHR)gpa(instance, "vkGetDisplayPlaneCapabilitiesKHR");
     pDisp->CreateDisplayPlaneSurfaceKHR = (PFN_vkCreateDisplayPlaneSurfaceKHR)gpa(instance, "vkCreateDisplayPlaneSurfaceKHR");
+#endif
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     pDisp->CreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR)gpa(instance, "vkCreateWin32SurfaceKHR");
@@ -418,6 +420,7 @@ VkResult explicit_GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchai
     return result;
 }
 
+ #ifndef __ANDROID__
 VkResult explicit_GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalDevice physicalDevice, uint32_t* pPropertyCount, VkDisplayPropertiesKHR* pProperties)
 {
     layer_data *my_map_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
@@ -465,9 +468,9 @@ VkResult explicit_GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDevice physicalD
         if ((*pDisplayCount > 0) && pDisplays) {
             std::lock_guard<std::mutex> lock(global_lock);
             for (uint32_t i = 0; i < *pDisplayCount; i++) {
-                auto it = my_map_data->unique_id_mapping.find(reinterpret_cast<uint64_t> (pDisplays[i]));
+		    auto it = my_map_data->unique_id_mapping.find(reinterpret_cast<const uint64_t &> (pDisplays[i]));
                 assert (it !=  my_map_data->unique_id_mapping.end());
-                pDisplays[i] = reinterpret_cast<VkDisplayKHR> (it->second);
+                pDisplays[i] = reinterpret_cast<VkDisplayKHR&> (it->second);
             }
         }
     }
@@ -508,4 +511,5 @@ VkResult explicit_GetDisplayModePropertiesKHR(VkPhysicalDevice physicalDevice, V
         delete[] local_pProperties;
     return result;
 }
+#endif
 } // namespace unique_objects
