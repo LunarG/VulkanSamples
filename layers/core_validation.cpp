@@ -8738,6 +8738,10 @@ static bool ValidateLayouts(const layer_data *my_data, VkDevice device, const Vk
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
+            auto attach_index = subpass.pInputAttachments[j].attachment;
+            if (attach_index == VK_ATTACHMENT_UNUSED)
+                continue;
+
             if (subpass.pInputAttachments[j].layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL &&
                 subpass.pInputAttachments[j].layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
                 if (subpass.pInputAttachments[j].layout == VK_IMAGE_LAYOUT_GENERAL) {
@@ -8752,11 +8756,14 @@ static bool ValidateLayouts(const layer_data *my_data, VkDevice device, const Vk
                                     string_VkImageLayout(subpass.pInputAttachments[j].layout));
                 }
             }
-            auto attach_index = subpass.pInputAttachments[j].attachment;
             skip |= ValidateLayoutVsAttachmentDescription(my_data->report_data, subpass.pInputAttachments[j].layout, attach_index,
                                                           pCreateInfo->pAttachments[attach_index]);
         }
         for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
+            auto attach_index = subpass.pColorAttachments[j].attachment;
+            if (attach_index == VK_ATTACHMENT_UNUSED)
+                continue;
+
             if (subpass.pColorAttachments[j].layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
                 if (subpass.pColorAttachments[j].layout == VK_IMAGE_LAYOUT_GENERAL) {
                     // TODO: Verify Valid Use in spec. I believe this is allowed (valid) but may not be optimal performance
@@ -8770,7 +8777,6 @@ static bool ValidateLayouts(const layer_data *my_data, VkDevice device, const Vk
                                     string_VkImageLayout(subpass.pColorAttachments[j].layout));
                 }
             }
-            auto attach_index = subpass.pColorAttachments[j].attachment;
             skip |= ValidateLayoutVsAttachmentDescription(my_data->report_data, subpass.pColorAttachments[j].layout, attach_index,
                                                           pCreateInfo->pAttachments[attach_index]);
         }
