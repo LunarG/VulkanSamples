@@ -44,6 +44,9 @@
 #define LOADER_EXPORT
 #endif
 
+// A debug option to disable allocators at compile time to investigate future issues.
+#define DEBUG_DISABLE_APP_ALLOCATORS 0
+
 #define MAX_STRING_SIZE 1024
 #define VK_MAJOR(version) (version >> 22)
 #define VK_MINOR(version) ((version >> 12) & 0x3ff)
@@ -169,6 +172,8 @@ struct loader_device {
     VkExtensionProperties *app_extension_props;
 
     struct loader_layer_list activated_layer_list;
+
+    VkAllocationCallbacks alloc_callbacks;
 
     struct loader_device *next;
 };
@@ -393,14 +398,14 @@ struct loader_msg_callback_map_entry {
 };
 
 /* helper function definitions */
-void *loader_heap_alloc(const struct loader_instance *instance, size_t size,
-                        VkSystemAllocationScope allocationScope);
-
-void loader_heap_free(const struct loader_instance *instance, void *pMemory);
-
-void *loader_tls_heap_alloc(size_t size);
-
-void loader_tls_heap_free(void *pMemory);
+void *loader_instance_heap_alloc(const struct loader_instance *instance, size_t size, VkSystemAllocationScope allocationScope);
+void loader_instance_heap_free(const struct loader_instance *instance, void *pMemory);
+void *loader_instance_heap_realloc(const struct loader_instance *instance, void *pMemory, size_t orig_size, size_t size, VkSystemAllocationScope alloc_scope);
+void *loader_instance_tls_heap_alloc(size_t size);
+void loader_instance_tls_heap_free(void *pMemory);
+void *loader_device_heap_alloc(const struct loader_device *device, size_t size, VkSystemAllocationScope allocationScope);
+void loader_device_heap_free(const struct loader_device *device, void *pMemory);
+void *loader_device_heap_realloc(const struct loader_device *device, void *pMemory, size_t orig_size, size_t size, VkSystemAllocationScope alloc_scope);
 
 void loader_log(const struct loader_instance *inst, VkFlags msg_type,
                 int32_t msg_code, const char *format, ...);
@@ -420,9 +425,9 @@ VkResult loader_validate_instance_extensions(
     const VkInstanceCreateInfo *pCreateInfo);
 
 void loader_initialize(void);
-void loader_copy_layer_properties(const struct loader_instance *inst,
-                                         struct loader_layer_properties *dst,
-                                         struct loader_layer_properties *src);
+VkResult loader_copy_layer_properties(const struct loader_instance *inst,
+                                      struct loader_layer_properties *dst,
+                                      struct loader_layer_properties *src);
 bool has_vk_extension_property_array(const VkExtensionProperties *vk_ext_prop,
                                      const uint32_t count,
                                      const VkExtensionProperties *ext_array);
@@ -450,12 +455,13 @@ bool loader_init_generic_list(const struct loader_instance *inst,
 void loader_destroy_generic_list(const struct loader_instance *inst,
                                  struct loader_generic_list *list);
 void loader_destroy_layer_list(const struct loader_instance *inst,
+                               struct loader_device *device,
                                struct loader_layer_list *layer_list);
 void loader_delete_layer_properties(const struct loader_instance *inst,
                                     struct loader_layer_list *layer_list);
 bool loader_find_layer_name_array(const char *name, uint32_t layer_count,
                         const char layer_list[][VK_MAX_EXTENSION_NAME_SIZE]);
-void loader_expand_layer_names(
+VkResult loader_expand_layer_names(
     struct loader_instance *inst, const char *key_name,
     uint32_t expand_count,
     const char expand_names[][VK_MAX_EXTENSION_NAME_SIZE],
@@ -467,17 +473,17 @@ void loader_delete_shadow_dev_layer_names(const struct loader_instance *inst,
 void loader_delete_shadow_inst_layer_names(const struct loader_instance *inst,
                                            const VkInstanceCreateInfo *orig,
                                            VkInstanceCreateInfo *ours);
-void loader_add_to_layer_list(const struct loader_instance *inst,
-                              struct loader_layer_list *list,
-                              uint32_t prop_list_count,
-                              const struct loader_layer_properties *props);
+VkResult loader_add_to_layer_list(const struct loader_instance *inst,
+                                  struct loader_layer_list *list,
+                                  uint32_t prop_list_count,
+                                  const struct loader_layer_properties *props);
 void loader_find_layer_name_add_list(
     const struct loader_instance *inst, const char *name,
     const enum layer_type type, const struct loader_layer_list *search_list,
     struct loader_layer_list *found_list);
 void loader_scanned_icd_clear(const struct loader_instance *inst,
                               struct loader_icd_libs *icd_libs);
-void loader_icd_scan(const struct loader_instance *inst,
+VkResult loader_icd_scan(const struct loader_instance *inst,
                      struct loader_icd_libs *icds);
 void loader_layer_scan(const struct loader_instance *inst,
                        struct loader_layer_list *instance_layers);
@@ -494,15 +500,22 @@ void *loader_dev_ext_gpa(struct loader_instance *inst, const char *funcName);
 void *loader_get_dev_ext_trampoline(uint32_t index);
 struct loader_instance *loader_get_instance(const VkInstance instance);
 void loader_deactivate_layers(const struct loader_instance *instance,
+                              struct loader_device *device,
                               struct loader_layer_list *list);
 struct loader_device *
-loader_create_logical_device(const struct loader_instance *inst);
+loader_create_logical_device(const struct loader_instance *inst, const VkAllocationCallbacks *pAllocator);
 void loader_add_logical_device(const struct loader_instance *inst,
                                struct loader_icd *icd,
                                struct loader_device *found_dev);
 void loader_remove_logical_device(const struct loader_instance *inst,
                                   struct loader_icd *icd,
-                                  struct loader_device *found_dev);
+                                  struct loader_device *found_dev,
+                                  const VkAllocationCallbacks *pAllocator);
+// NOTE: Outside of loader, this entry-point is only proivided for error cleanup.
+void loader_destroy_logical_device(const struct loader_instance *inst,
+                                   struct loader_device *dev,
+                                   const VkAllocationCallbacks *pAllocator);
+
 VkResult
 loader_enable_instance_layers(struct loader_instance *inst,
                               const VkInstanceCreateInfo *pCreateInfo,
