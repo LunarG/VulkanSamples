@@ -2203,20 +2203,10 @@ static bool attachment_references_compatible(const uint32_t index, const VkAttac
     // Format and sample counts didn't match
     return false;
 }
-
+// TODO : Scrub verify_renderpass_compatibility() and validateRenderPassCompatibility() and unify them and/or share code
 // For given primary RenderPass object and secondry RenderPassCreateInfo, verify that they're compatible
-static bool verify_renderpass_compatibility(const layer_data *my_data, const VkRenderPass primaryRP,
+static bool verify_renderpass_compatibility(const layer_data *my_data, const VkRenderPassCreateInfo *primaryRPCI,
                                             const VkRenderPassCreateInfo *secondaryRPCI, string &errorMsg) {
-    auto primary_render_pass = getRenderPass(my_data, primaryRP);
-
-    if (!primary_render_pass) {
-        stringstream errorStr;
-        errorStr << "invalid VkRenderPass (" << primaryRP << ")";
-        errorMsg = errorStr.str();
-        return false;
-    }
-
-    const VkRenderPassCreateInfo *primaryRPCI = primary_render_pass->pCreateInfo;
     if (primaryRPCI->subpassCount != secondaryRPCI->subpassCount) {
         stringstream errorStr;
         errorStr << "RenderPass for primary cmdBuffer has " << primaryRPCI->subpassCount
@@ -2274,25 +2264,6 @@ static bool verify_renderpass_compatibility(const layer_data *my_data, const VkR
         }
     }
     return true;
-}
-
-// For given primary and secondary RenderPass objects, verify that they're compatible
-static bool verify_renderpass_compatibility(const layer_data *dev_data, const VkRenderPass primaryRP,
-                                            const VkRenderPass secondaryRP, string &errorMsg) {
-    // Handle trivial match case first
-    if (primaryRP == secondaryRP)
-        return true;
-
-    auto secondary_render_pass = getRenderPass(dev_data, secondaryRP);
-
-    if (!secondary_render_pass) {
-        stringstream errorStr;
-        errorStr << "invalid VkRenderPass (" << secondaryRP << ")";
-        errorMsg = errorStr.str();
-        return false;
-    }
-    const VkRenderPassCreateInfo *secondaryRPCI = secondary_render_pass->pCreateInfo;
-    return verify_renderpass_compatibility(dev_data, primaryRP, secondaryRPCI, errorMsg);
 }
 
 // For given cvdescriptorset::DescriptorSet, verify that its Set is compatible w/ the setLayout corresponding to
@@ -2901,7 +2872,8 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
     // Verify that PSO creation renderPass is compatible with active renderPass
     if (pCB->activeRenderPass) {
         std::string err_string;
-        if (!verify_renderpass_compatibility(my_data, pCB->activeRenderPass->renderPass, pPipeline->render_pass_ci.ptr(),
+        if ((pCB->activeRenderPass->renderPass != pPipeline->graphicsPipelineCI.renderPass) &&
+            !verify_renderpass_compatibility(my_data, pCB->activeRenderPass->pCreateInfo, pPipeline->render_pass_ci.ptr(),
                                              err_string)) {
             // renderPass that PSO was created with must be compatible with active renderPass that PSO is being used with
             skip_call |=
@@ -6328,18 +6300,21 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                         string errorString = "";
                         auto framebuffer = getFramebuffer(dev_data, pInfo->framebuffer);
                         if (framebuffer) {
-                            VkRenderPass fbRP = framebuffer->createInfo.renderPass;
-                            if (!verify_renderpass_compatibility(dev_data, fbRP, pInfo->renderPass, errorString)) {
+                            if ((framebuffer->createInfo.renderPass != pInfo->renderPass) &&
+                                !verify_renderpass_compatibility(dev_data, framebuffer->renderPassCreateInfo.ptr(),
+                                                                 getRenderPass(dev_data, pInfo->renderPass)->pCreateInfo,
+                                                                 errorString)) {
                                 // renderPass that framebuffer was created with must be compatible with local renderPass
-                                skipCall |=
-                                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                            VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                                            reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE,
-                                            "DS", "vkBeginCommandBuffer(): Secondary Command "
-                                                  "Buffer (0x%p) renderPass (0x%" PRIxLEAST64 ") is incompatible w/ framebuffer "
-                                                  "(0x%" PRIxLEAST64 ") w/ render pass (0x%" PRIxLEAST64 ") due to: %s",
-                                            reinterpret_cast<void *>(commandBuffer), (uint64_t)(pInfo->renderPass),
-                                            (uint64_t)(pInfo->framebuffer), (uint64_t)(fbRP), errorString.c_str());
+                                skipCall |= log_msg(
+                                    dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                    VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer),
+                                    __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
+                                    "vkBeginCommandBuffer(): Secondary Command "
+                                    "Buffer (0x%p) renderPass (0x%" PRIxLEAST64 ") is incompatible w/ framebuffer "
+                                    "(0x%" PRIxLEAST64 ") w/ render pass (0x%" PRIxLEAST64 ") due to: %s",
+                                    reinterpret_cast<void *>(commandBuffer), reinterpret_cast<const uint64_t &>(pInfo->renderPass),
+                                    reinterpret_cast<const uint64_t &>(pInfo->framebuffer),
+                                    reinterpret_cast<uint64_t &>(framebuffer->createInfo.renderPass), errorString.c_str());
                             }
                             // Connect this framebuffer to this cmdBuffer
                             framebuffer->cb_bindings.insert(pCB);
@@ -9467,66 +9442,61 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
         dev_data->device_dispatch_table->CmdEndRenderPass(commandBuffer);
 }
 
-static bool logInvalidAttachmentMessage(layer_data *dev_data, VkCommandBuffer secondaryBuffer, RENDER_PASS_NODE const *secondaryPass,
-                                        RENDER_PASS_NODE const *primaryPass, uint32_t primaryAttach, uint32_t secondaryAttach,
-                                        const char *msg) {
+static bool logInvalidAttachmentMessage(layer_data *dev_data, VkCommandBuffer secondaryBuffer, uint32_t primaryAttach,
+                                        uint32_t secondaryAttach, const char *msg) {
     return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                    DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
-                   "vkCmdExecuteCommands() called w/ invalid Cmd Buffer 0x%p which has a render pass 0x%" PRIx64
-                   " that is not compatible with the current render pass 0x%" PRIx64 "."
-                   "Attachment %" PRIu32 " is not compatible with %" PRIu32 ". %s",
-                   (void *)secondaryBuffer, (uint64_t)(secondaryPass->renderPass), (uint64_t)(primaryPass->renderPass), primaryAttach, secondaryAttach,
-                   msg);
+                   "vkCmdExecuteCommands() called w/ invalid Secondary Cmd Buffer 0x%" PRIx64 " which has a render pass "
+                   "that is not compatible with the Primary Cmd Buffer current render pass. "
+                   "Attachment %u is not compatible with %u: %s",
+                   reinterpret_cast<uint64_t &>(secondaryBuffer), primaryAttach, secondaryAttach, msg);
 }
 
-static bool validateAttachmentCompatibility(layer_data *dev_data, VkCommandBuffer primaryBuffer, RENDER_PASS_NODE const *primaryPass,
-                                            uint32_t primaryAttach, VkCommandBuffer secondaryBuffer, RENDER_PASS_NODE const *secondaryPass,
+static bool validateAttachmentCompatibility(layer_data *dev_data, VkCommandBuffer primaryBuffer,
+                                            VkRenderPassCreateInfo const *primaryPassCI, uint32_t primaryAttach,
+                                            VkCommandBuffer secondaryBuffer, VkRenderPassCreateInfo const *secondaryPassCI,
                                             uint32_t secondaryAttach, bool is_multi) {
     bool skip_call = false;
-    if (primaryPass->pCreateInfo->attachmentCount <= primaryAttach) {
+    if (primaryPassCI->attachmentCount <= primaryAttach) {
         primaryAttach = VK_ATTACHMENT_UNUSED;
     }
-    if (secondaryPass->pCreateInfo->attachmentCount <= secondaryAttach) {
+    if (secondaryPassCI->attachmentCount <= secondaryAttach) {
         secondaryAttach = VK_ATTACHMENT_UNUSED;
     }
     if (primaryAttach == VK_ATTACHMENT_UNUSED && secondaryAttach == VK_ATTACHMENT_UNUSED) {
         return skip_call;
     }
     if (primaryAttach == VK_ATTACHMENT_UNUSED) {
-        skip_call |= logInvalidAttachmentMessage(dev_data, secondaryBuffer, secondaryPass, primaryPass, primaryAttach,
-                                                 secondaryAttach, "The first is unused while the second is not.");
+        skip_call |= logInvalidAttachmentMessage(dev_data, secondaryBuffer, primaryAttach, secondaryAttach,
+                                                 "The first is unused while the second is not.");
         return skip_call;
     }
     if (secondaryAttach == VK_ATTACHMENT_UNUSED) {
-        skip_call |= logInvalidAttachmentMessage(dev_data, secondaryBuffer, secondaryPass, primaryPass, primaryAttach,
-                                                 secondaryAttach, "The second is unused while the first is not.");
+        skip_call |= logInvalidAttachmentMessage(dev_data, secondaryBuffer, primaryAttach, secondaryAttach,
+                                                 "The second is unused while the first is not.");
         return skip_call;
     }
-    if (primaryPass->pCreateInfo->pAttachments[primaryAttach].format !=
-        secondaryPass->pCreateInfo->pAttachments[secondaryAttach].format) {
-        skip_call |= logInvalidAttachmentMessage(dev_data, secondaryBuffer, secondaryPass, primaryPass, primaryAttach,
-                                                 secondaryAttach, "They have different formats.");
+    if (primaryPassCI->pAttachments[primaryAttach].format != secondaryPassCI->pAttachments[secondaryAttach].format) {
+        skip_call |=
+            logInvalidAttachmentMessage(dev_data, secondaryBuffer, primaryAttach, secondaryAttach, "They have different formats.");
     }
-    if (primaryPass->pCreateInfo->pAttachments[primaryAttach].samples !=
-        secondaryPass->pCreateInfo->pAttachments[secondaryAttach].samples) {
-        skip_call |= logInvalidAttachmentMessage(dev_data, secondaryBuffer, secondaryPass, primaryPass, primaryAttach,
-                                                 secondaryAttach, "They have different samples.");
+    if (primaryPassCI->pAttachments[primaryAttach].samples != secondaryPassCI->pAttachments[secondaryAttach].samples) {
+        skip_call |=
+            logInvalidAttachmentMessage(dev_data, secondaryBuffer, primaryAttach, secondaryAttach, "They have different samples.");
     }
-    if (is_multi &&
-        primaryPass->pCreateInfo->pAttachments[primaryAttach].flags !=
-            secondaryPass->pCreateInfo->pAttachments[secondaryAttach].flags) {
-        skip_call |= logInvalidAttachmentMessage(dev_data, secondaryBuffer, secondaryPass, primaryPass, primaryAttach,
-                                                 secondaryAttach, "They have different flags.");
+    if (is_multi && primaryPassCI->pAttachments[primaryAttach].flags != secondaryPassCI->pAttachments[secondaryAttach].flags) {
+        skip_call |=
+            logInvalidAttachmentMessage(dev_data, secondaryBuffer, primaryAttach, secondaryAttach, "They have different flags.");
     }
     return skip_call;
 }
 
-static bool validateSubpassCompatibility(layer_data *dev_data, VkCommandBuffer primaryBuffer, RENDER_PASS_NODE const *primaryPass,
-                                         VkCommandBuffer secondaryBuffer, RENDER_PASS_NODE const *secondaryPass, const int subpass,
-                                         bool is_multi) {
+static bool validateSubpassCompatibility(layer_data *dev_data, VkCommandBuffer primaryBuffer,
+                                         VkRenderPassCreateInfo const *primaryPassCI, VkCommandBuffer secondaryBuffer,
+                                         VkRenderPassCreateInfo const *secondaryPassCI, const int subpass, bool is_multi) {
     bool skip_call = false;
-    const VkSubpassDescription &primary_desc = primaryPass->pCreateInfo->pSubpasses[subpass];
-    const VkSubpassDescription &secondary_desc = secondaryPass->pCreateInfo->pSubpasses[subpass];
+    const VkSubpassDescription &primary_desc = primaryPassCI->pSubpasses[subpass];
+    const VkSubpassDescription &secondary_desc = secondaryPassCI->pSubpasses[subpass];
     uint32_t maxInputAttachmentCount = std::max(primary_desc.inputAttachmentCount, secondary_desc.inputAttachmentCount);
     for (uint32_t i = 0; i < maxInputAttachmentCount; ++i) {
         uint32_t primary_input_attach = VK_ATTACHMENT_UNUSED, secondary_input_attach = VK_ATTACHMENT_UNUSED;
@@ -9536,8 +9506,8 @@ static bool validateSubpassCompatibility(layer_data *dev_data, VkCommandBuffer p
         if (i < secondary_desc.inputAttachmentCount) {
             secondary_input_attach = secondary_desc.pInputAttachments[i].attachment;
         }
-        skip_call |= validateAttachmentCompatibility(dev_data, primaryBuffer, primaryPass, primary_input_attach, secondaryBuffer,
-                                                     secondaryPass, secondary_input_attach, is_multi);
+        skip_call |= validateAttachmentCompatibility(dev_data, primaryBuffer, primaryPassCI, primary_input_attach, secondaryBuffer,
+                                                     secondaryPassCI, secondary_input_attach, is_multi);
     }
     uint32_t maxColorAttachmentCount = std::max(primary_desc.colorAttachmentCount, secondary_desc.colorAttachmentCount);
     for (uint32_t i = 0; i < maxColorAttachmentCount; ++i) {
@@ -9548,8 +9518,8 @@ static bool validateSubpassCompatibility(layer_data *dev_data, VkCommandBuffer p
         if (i < secondary_desc.colorAttachmentCount) {
             secondary_color_attach = secondary_desc.pColorAttachments[i].attachment;
         }
-        skip_call |= validateAttachmentCompatibility(dev_data, primaryBuffer, primaryPass, primary_color_attach, secondaryBuffer,
-                                                     secondaryPass, secondary_color_attach, is_multi);
+        skip_call |= validateAttachmentCompatibility(dev_data, primaryBuffer, primaryPassCI, primary_color_attach, secondaryBuffer,
+                                                     secondaryPassCI, secondary_color_attach, is_multi);
         uint32_t primary_resolve_attach = VK_ATTACHMENT_UNUSED, secondary_resolve_attach = VK_ATTACHMENT_UNUSED;
         if (i < primary_desc.colorAttachmentCount && primary_desc.pResolveAttachments) {
             primary_resolve_attach = primary_desc.pResolveAttachments[i].attachment;
@@ -9557,8 +9527,8 @@ static bool validateSubpassCompatibility(layer_data *dev_data, VkCommandBuffer p
         if (i < secondary_desc.colorAttachmentCount && secondary_desc.pResolveAttachments) {
             secondary_resolve_attach = secondary_desc.pResolveAttachments[i].attachment;
         }
-        skip_call |= validateAttachmentCompatibility(dev_data, primaryBuffer, primaryPass, primary_resolve_attach, secondaryBuffer,
-                                                     secondaryPass, secondary_resolve_attach, is_multi);
+        skip_call |= validateAttachmentCompatibility(dev_data, primaryBuffer, primaryPassCI, primary_resolve_attach,
+                                                     secondaryBuffer, secondaryPassCI, secondary_resolve_attach, is_multi);
     }
     uint32_t primary_depthstencil_attach = VK_ATTACHMENT_UNUSED, secondary_depthstencil_attach = VK_ATTACHMENT_UNUSED;
     if (primary_desc.pDepthStencilAttachment) {
@@ -9567,48 +9537,32 @@ static bool validateSubpassCompatibility(layer_data *dev_data, VkCommandBuffer p
     if (secondary_desc.pDepthStencilAttachment) {
         secondary_depthstencil_attach = secondary_desc.pDepthStencilAttachment[0].attachment;
     }
-    skip_call |= validateAttachmentCompatibility(dev_data, primaryBuffer, primaryPass, primary_depthstencil_attach, secondaryBuffer,
-                                                 secondaryPass, secondary_depthstencil_attach, is_multi);
+    skip_call |= validateAttachmentCompatibility(dev_data, primaryBuffer, primaryPassCI, primary_depthstencil_attach,
+                                                 secondaryBuffer, secondaryPassCI, secondary_depthstencil_attach, is_multi);
     return skip_call;
 }
 
-static bool validateRenderPassCompatibility(layer_data *dev_data, VkCommandBuffer primaryBuffer, VkRenderPass primaryPass,
-                                            VkCommandBuffer secondaryBuffer, VkRenderPass secondaryPass) {
+// Verify that given renderPass CreateInfo for primary and secondary command buffers are compatible.
+//  This function deals directly with the CreateInfo, there are overloaded versions below that can take the renderPass handle and
+//  will then feed into this function
+static bool validateRenderPassCompatibility(layer_data *dev_data, VkCommandBuffer primaryBuffer,
+                                            VkRenderPassCreateInfo const *primaryPassCI, VkCommandBuffer secondaryBuffer,
+                                            VkRenderPassCreateInfo const *secondaryPassCI) {
     bool skip_call = false;
-    // Early exit if renderPass objects are identical (and therefore compatible)
-    if (primaryPass == secondaryPass)
-        return skip_call;
-    auto primary_render_pass = getRenderPass(dev_data, primaryPass);
-    auto secondary_render_pass = getRenderPass(dev_data, secondaryPass);
-    if (!primary_render_pass) {
-        skip_call |=
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                    DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
-                    "vkCmdExecuteCommands() called w/ invalid current Cmd Buffer 0x%p which has invalid render pass 0x%" PRIx64 ".",
-                    (void *)primaryBuffer, (uint64_t)(primaryPass));
-        return skip_call;
-    }
-    if (!secondary_render_pass) {
-        skip_call |=
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                    DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
-                    "vkCmdExecuteCommands() called w/ invalid secondary Cmd Buffer 0x%p which has invalid render pass 0x%" PRIx64 ".",
-                    (void *)secondaryBuffer, (uint64_t)(secondaryPass));
-        return skip_call;
-    }
-    if (primary_render_pass->pCreateInfo->subpassCount != secondary_render_pass->pCreateInfo->subpassCount) {
+
+    if (primaryPassCI->subpassCount != secondaryPassCI->subpassCount) {
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                              DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
-                             "vkCmdExecuteCommands() called w/ invalid Cmd Buffer 0x%p which has a render pass 0x%" PRIx64
-                             " that is not compatible with the current render pass 0x%" PRIx64 "."
-                             "They have a different number of subpasses.",
-                             (void *)secondaryBuffer, (uint64_t)(secondaryPass), (uint64_t)(primaryPass));
-        return skip_call;
-    }
-    auto subpassCount = primary_render_pass->pCreateInfo->subpassCount;
-    for (uint32_t i = 0; i < subpassCount; ++i) {
-        skip_call |= validateSubpassCompatibility(dev_data, primaryBuffer, primary_render_pass, secondaryBuffer,
-                                                  secondary_render_pass, i, subpassCount > 1);
+                             "vkCmdExecuteCommands() called w/ invalid secondary Cmd Buffer 0x%" PRIx64
+                             " that has a subpassCount of %u that is incompatible with the primary Cmd Buffer 0x%" PRIx64
+                             " that has a subpassCount of %u.",
+                             reinterpret_cast<uint64_t &>(secondaryBuffer), secondaryPassCI->subpassCount,
+                             reinterpret_cast<uint64_t &>(primaryBuffer), primaryPassCI->subpassCount);
+    } else {
+        for (uint32_t i = 0; i < primaryPassCI->subpassCount; ++i) {
+            skip_call |= validateSubpassCompatibility(dev_data, primaryBuffer, primaryPassCI, secondaryBuffer, secondaryPassCI, i,
+                                                      primaryPassCI->subpassCount > 1);
+        }
     }
     return skip_call;
 }
@@ -9638,8 +9592,11 @@ static bool validateFramebuffer(layer_data *dev_data, VkCommandBuffer primaryBuf
                         (void *)secondaryBuffer, (uint64_t)(secondary_fb));
             return skip_call;
         }
-        skip_call |= validateRenderPassCompatibility(dev_data, secondaryBuffer, fb->createInfo.renderPass,
-                                                     secondaryBuffer, pSubCB->beginInfo.pInheritanceInfo->renderPass);
+        auto cb_renderpass = getRenderPass(dev_data, pSubCB->beginInfo.pInheritanceInfo->renderPass);
+        if (cb_renderpass->renderPass != fb->createInfo.renderPass) {
+            skip_call |= validateRenderPassCompatibility(dev_data, secondaryBuffer, fb->renderPassCreateInfo.ptr(), secondaryBuffer,
+                                                         cb_renderpass->pCreateInfo);
+        }
     }
     return skip_call;
 }
@@ -9705,6 +9662,7 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
                                     "array. All cmd buffers in pCommandBuffers array must be secondary.",
                                     (void *)pCommandBuffers[i], i);
             } else if (pCB->activeRenderPass) { // Secondary CB w/i RenderPass must have *CONTINUE_BIT set
+                auto secondary_rp_node = getRenderPass(dev_data, pSubCB->beginInfo.pInheritanceInfo->renderPass);
                 if (!(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
                     skipCall |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
@@ -9714,13 +9672,16 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
                         (void *)pCommandBuffers[i], (uint64_t)pCB->activeRenderPass->renderPass);
                 } else {
                     // Make sure render pass is compatible with parent command buffer pass if has continue
-                    skipCall |= validateRenderPassCompatibility(dev_data, commandBuffer, pCB->activeRenderPass->renderPass, pCommandBuffers[i],
-                                                                pSubCB->beginInfo.pInheritanceInfo->renderPass);
+                    if (pCB->activeRenderPass->renderPass != secondary_rp_node->renderPass) {
+                        skipCall |= validateRenderPassCompatibility(dev_data, commandBuffer, pCB->activeRenderPass->pCreateInfo,
+                                                                    pCommandBuffers[i], secondary_rp_node->pCreateInfo);
+                    }
                     skipCall |= validateFramebuffer(dev_data, commandBuffer, pCB, pCommandBuffers[i], pSubCB);
                 }
                 string errorString = "";
-                if (!verify_renderpass_compatibility(dev_data, pCB->activeRenderPass->renderPass,
-                                                     pSubCB->beginInfo.pInheritanceInfo->renderPass, errorString)) {
+                if ((pCB->activeRenderPass->renderPass != secondary_rp_node->renderPass) &&
+                    !verify_renderpass_compatibility(dev_data, pCB->activeRenderPass->pCreateInfo, secondary_rp_node->pCreateInfo,
+                                                     errorString)) {
                     skipCall |= log_msg(
                         dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)pCommandBuffers[i], __LINE__, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
