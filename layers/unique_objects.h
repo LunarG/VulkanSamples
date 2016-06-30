@@ -54,7 +54,7 @@ struct layer_data {
     layer_data() : wsi_enabled(false), gpu(VK_NULL_HANDLE){};
 };
 
-struct instExts {
+struct instance_extension_enables {
     bool wsi_enabled;
     bool xlib_enabled;
     bool xcb_enabled;
@@ -62,9 +62,10 @@ struct instExts {
     bool mir_enabled;
     bool android_enabled;
     bool win32_enabled;
+    bool display_enabled;
 };
 
-static std::unordered_map<void *, struct instExts> instanceExtMap;
+static std::unordered_map<void *, struct instance_extension_enables> instanceExtMap;
 static std::unordered_map<void *, layer_data *> layer_data_map;
 static device_table_map unique_objects_device_table_map;
 static instance_table_map unique_objects_instance_table_map;
@@ -76,6 +77,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreate
     VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(unique_objects_instance_table_map, instance);
     PFN_vkGetInstanceProcAddr gpa = pDisp->GetInstanceProcAddr;
 
+    //KHR_surface
     pDisp->DestroySurfaceKHR = (PFN_vkDestroySurfaceKHR)gpa(instance, "vkDestroySurfaceKHR");
     pDisp->GetPhysicalDeviceSurfaceSupportKHR =
         (PFN_vkGetPhysicalDeviceSurfaceSupportKHR)gpa(instance, "vkGetPhysicalDeviceSurfaceSupportKHR");
@@ -85,6 +87,18 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreate
         (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR)gpa(instance, "vkGetPhysicalDeviceSurfaceFormatsKHR");
     pDisp->GetPhysicalDeviceSurfacePresentModesKHR =
         (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)gpa(instance, "vkGetPhysicalDeviceSurfacePresentModesKHR");
+
+    // KHR_display
+#ifndef __ANDROID__
+    pDisp->GetPhysicalDeviceDisplayPropertiesKHR = (PFN_vkGetPhysicalDeviceDisplayPropertiesKHR)gpa(instance, "vkGetPhysicalDeviceDisplayPropertiesKHR");
+    pDisp->GetPhysicalDeviceDisplayPlanePropertiesKHR = (PFN_vkGetPhysicalDeviceDisplayPlanePropertiesKHR)gpa(instance, "vkGetPhysicalDeviceDisplayPlanePropertiesKHR");
+    pDisp->GetDisplayPlaneSupportedDisplaysKHR = (PFN_vkGetDisplayPlaneSupportedDisplaysKHR)gpa(instance, "vkGetDisplayPlaneSupportedDisplaysKHR");
+    pDisp->GetDisplayModePropertiesKHR = (PFN_vkGetDisplayModePropertiesKHR)gpa(instance, "vkGetDisplayModePropertiesKHR");
+    pDisp->CreateDisplayModeKHR = (PFN_vkCreateDisplayModeKHR)gpa(instance, "vkCreateDisplayModeKHR");
+    pDisp->GetDisplayPlaneCapabilitiesKHR = (PFN_vkGetDisplayPlaneCapabilitiesKHR)gpa(instance, "vkGetDisplayPlaneCapabilitiesKHR");
+    pDisp->CreateDisplayPlaneSurfaceKHR = (PFN_vkCreateDisplayPlaneSurfaceKHR)gpa(instance, "vkCreateDisplayPlaneSurfaceKHR");
+#endif
+
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     pDisp->CreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR)gpa(instance, "vkCreateWin32SurfaceKHR");
     pDisp->GetPhysicalDeviceWin32PresentationSupportKHR =
@@ -115,9 +129,12 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreate
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
     instanceExtMap[pDisp] = {};
+
     for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0)
             instanceExtMap[pDisp].wsi_enabled = true;
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0)
+            instanceExtMap[pDisp].display_enabled = true;
 #ifdef VK_USE_PLATFORM_XLIB_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0)
             instanceExtMap[pDisp].xlib_enabled = true;
@@ -177,6 +194,8 @@ void explicit_DestroyInstance(VkInstance instance, const VkAllocationCallbacks *
     dispatch_key key = get_dispatch_key(instance);
     get_dispatch_table(unique_objects_instance_table_map, instance)->DestroyInstance(instance, pAllocator);
     layer_data_map.erase(key);
+    VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(unique_objects_instance_table_map, instance);
+    instanceExtMap.erase(pDisp);
 }
 
 // Handle CreateDevice
@@ -401,4 +420,96 @@ VkResult explicit_GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchai
     return result;
 }
 
+ #ifndef __ANDROID__
+VkResult explicit_GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalDevice physicalDevice, uint32_t* pPropertyCount, VkDisplayPropertiesKHR* pProperties)
+{
+    layer_data *my_map_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    safe_VkDisplayPropertiesKHR* local_pProperties = NULL;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        if (pProperties) {
+            local_pProperties = new safe_VkDisplayPropertiesKHR[*pPropertyCount];
+            for (uint32_t idx0=0; idx0<*pPropertyCount; ++idx0) {
+                local_pProperties[idx0].initialize(&pProperties[idx0]);
+                if (pProperties[idx0].display) {
+                    local_pProperties[idx0].display = (VkDisplayKHR)my_map_data->unique_id_mapping[reinterpret_cast<const uint64_t &>(pProperties[idx0].display)];
+                }
+            }
+        }
+    }
+
+    VkResult result = get_dispatch_table(unique_objects_instance_table_map, physicalDevice)->GetPhysicalDeviceDisplayPropertiesKHR(physicalDevice, pPropertyCount, ( VkDisplayPropertiesKHR*)local_pProperties);
+    if (result == VK_SUCCESS && pProperties)
+    {
+        for (uint32_t idx0=0; idx0<*pPropertyCount; ++idx0) {
+            std::lock_guard<std::mutex> lock(global_lock);
+
+            uint64_t unique_id = global_unique_id++;
+            my_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(local_pProperties[idx0].display);
+            pProperties[idx0].display = reinterpret_cast<VkDisplayKHR&>(unique_id);
+            pProperties[idx0].displayName = local_pProperties[idx0].displayName;
+            pProperties[idx0].physicalDimensions = local_pProperties[idx0].physicalDimensions;
+            pProperties[idx0].physicalResolution = local_pProperties[idx0].physicalResolution;
+            pProperties[idx0].supportedTransforms = local_pProperties[idx0].supportedTransforms;
+            pProperties[idx0].planeReorderPossible = local_pProperties[idx0].planeReorderPossible;
+            pProperties[idx0].persistentContent = local_pProperties[idx0].persistentContent;
+        }
+    }
+    if (local_pProperties)
+        delete[] local_pProperties;
+    return result;
+}
+
+VkResult explicit_GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDevice physicalDevice, uint32_t planeIndex, uint32_t* pDisplayCount, VkDisplayKHR* pDisplays)
+{
+    layer_data *my_map_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    VkResult result = get_dispatch_table(unique_objects_instance_table_map, physicalDevice)->GetDisplayPlaneSupportedDisplaysKHR(physicalDevice, planeIndex, pDisplayCount, pDisplays);
+    if (VK_SUCCESS == result) {
+        if ((*pDisplayCount > 0) && pDisplays) {
+            std::lock_guard<std::mutex> lock(global_lock);
+            for (uint32_t i = 0; i < *pDisplayCount; i++) {
+		    auto it = my_map_data->unique_id_mapping.find(reinterpret_cast<const uint64_t &> (pDisplays[i]));
+                assert (it !=  my_map_data->unique_id_mapping.end());
+                pDisplays[i] = reinterpret_cast<VkDisplayKHR&> (it->second);
+            }
+        }
+    }
+    return result;
+}
+
+
+VkResult explicit_GetDisplayModePropertiesKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR display, uint32_t* pPropertyCount, VkDisplayModePropertiesKHR* pProperties)
+{
+    layer_data *my_map_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    safe_VkDisplayModePropertiesKHR* local_pProperties = NULL;
+    {
+        std::lock_guard<std::mutex> lock(global_lock);
+        display = (VkDisplayKHR)my_map_data->unique_id_mapping[reinterpret_cast<uint64_t &>(display)];
+        if (pProperties) {
+            local_pProperties = new safe_VkDisplayModePropertiesKHR[*pPropertyCount];
+            for (uint32_t idx0=0; idx0<*pPropertyCount; ++idx0) {
+                local_pProperties[idx0].initialize(&pProperties[idx0]);
+            }
+        }
+    }
+
+    VkResult result = get_dispatch_table(unique_objects_instance_table_map, physicalDevice)->GetDisplayModePropertiesKHR(physicalDevice, display, pPropertyCount, ( VkDisplayModePropertiesKHR*)local_pProperties);
+    if (result == VK_SUCCESS && pProperties)
+    {
+        for (uint32_t idx0=0; idx0<*pPropertyCount; ++idx0) {
+            std::lock_guard<std::mutex> lock(global_lock);
+
+            uint64_t unique_id = global_unique_id++;
+            my_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(local_pProperties[idx0].displayMode);
+            pProperties[idx0].displayMode = reinterpret_cast<VkDisplayModeKHR&>(unique_id);
+            pProperties[idx0].parameters.visibleRegion.width = local_pProperties[idx0].parameters.visibleRegion.width;
+            pProperties[idx0].parameters.visibleRegion.height = local_pProperties[idx0].parameters.visibleRegion.height;
+            pProperties[idx0].parameters.refreshRate = local_pProperties[idx0].parameters.refreshRate;
+        }
+    }
+    if (local_pProperties)
+        delete[] local_pProperties;
+    return result;
+}
+#endif
 } // namespace unique_objects

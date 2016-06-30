@@ -66,12 +66,16 @@ util_CreateDebugReportCallback(struct loader_instance *inst,
                                const VkAllocationCallbacks *pAllocator,
                                VkDebugReportCallbackEXT callback) {
     VkLayerDbgFunctionNode *pNewDbgFuncNode;
+#if (DEBUG_DISABLE_APP_ALLOCATORS == 1)
+    {
+#else
     if (pAllocator != NULL) {
         pNewDbgFuncNode = (VkLayerDbgFunctionNode *)pAllocator->pfnAllocation(
             pAllocator->pUserData, sizeof(VkLayerDbgFunctionNode),
-            sizeof(int *), VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+            sizeof(int *), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     } else {
-        pNewDbgFuncNode = (VkLayerDbgFunctionNode *)loader_heap_alloc(
+#endif
+        pNewDbgFuncNode = (VkLayerDbgFunctionNode *)loader_instance_heap_alloc(
             inst, sizeof(VkLayerDbgFunctionNode),
             VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     }
@@ -137,10 +141,14 @@ void util_DestroyDebugReportCallback(struct loader_instance *inst,
             pPrev->pNext = pTrav->pNext;
             if (inst->DbgFunctionHead == pTrav)
                 inst->DbgFunctionHead = pTrav->pNext;
+#if (DEBUG_DISABLE_APP_ALLOCATORS == 1)
+            {
+#else
             if (pAllocator != NULL) {
                 pAllocator->pfnFree(pAllocator->pUserData, pTrav);
             } else {
-                loader_heap_free(inst, pTrav);
+#endif
+                loader_instance_heap_free(inst, pTrav);
             }
             break;
         }
@@ -159,6 +167,8 @@ VkResult util_CopyDebugReportCreateInfos(
     uint32_t *num_callbacks, VkDebugReportCallbackCreateInfoEXT **infos,
     VkDebugReportCallbackEXT **callbacks) {
     uint32_t n = *num_callbacks = 0;
+    VkDebugReportCallbackCreateInfoEXT *pInfos = NULL;
+    VkDebugReportCallbackEXT *pCallbacks = NULL;
 
     // NOTE: The loader is not using pAllocator, and so this function doesn't
     // either.
@@ -176,17 +186,38 @@ VkResult util_CopyDebugReportCreateInfos(
         return VK_SUCCESS;
     }
 
-    // 2nd, allocate memory for each VkDebugReportCallbackCreateInfoEXT:
-    VkDebugReportCallbackCreateInfoEXT *pInfos = *infos =
-        ((VkDebugReportCallbackCreateInfoEXT *)malloc(
+// 2nd, allocate memory for each VkDebugReportCallbackCreateInfoEXT:
+#if (DEBUG_DISABLE_APP_ALLOCATORS == 1)
+    {
+#else
+    if (pAllocator != NULL) {
+        pInfos = *infos =
+            ((VkDebugReportCallbackCreateInfoEXT *)pAllocator->pfnAllocation(
+                pAllocator->pUserData,
+                n * sizeof(VkDebugReportCallbackCreateInfoEXT), sizeof(void *),
+                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT));
+    } else {
+#endif
+        pInfos = *infos = ((VkDebugReportCallbackCreateInfoEXT *)malloc(
             n * sizeof(VkDebugReportCallbackCreateInfoEXT)));
+    }
     if (!pInfos) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
-    // 3rd, allocate memory for a unique handle for each callback:
-    VkDebugReportCallbackEXT *pCallbacks = *callbacks =
-        ((VkDebugReportCallbackEXT *)malloc(n *
-                                            sizeof(VkDebugReportCallbackEXT)));
+// 3rd, allocate memory for a unique handle for each callback:
+#if (DEBUG_DISABLE_APP_ALLOCATORS == 1)
+    {
+#else
+    if (pAllocator != NULL) {
+        pCallbacks = *callbacks =
+            ((VkDebugReportCallbackEXT *)pAllocator->pfnAllocation(
+                pAllocator->pUserData, n * sizeof(VkDebugReportCallbackEXT),
+                sizeof(void *), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT));
+    } else {
+#endif
+        pCallbacks = *callbacks = ((VkDebugReportCallbackEXT *)malloc(
+            n * sizeof(VkDebugReportCallbackEXT)));
+    }
     if (!pCallbacks) {
         free(pInfos);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -281,7 +312,21 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDebugReportCallback(
     VkResult res = VK_SUCCESS;
     uint32_t storage_idx;
 
-    icd_info = calloc(sizeof(VkDebugReportCallbackEXT), inst->total_icd_count);
+#if (DEBUG_DISABLE_APP_ALLOCATORS == 1)
+    {
+#else
+    if (pAllocator != NULL) {
+        icd_info = ((VkDebugReportCallbackEXT *)pAllocator->pfnAllocation(
+            pAllocator->pUserData,
+            inst->total_icd_count * sizeof(VkDebugReportCallbackEXT),
+            sizeof(void *), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT));
+        memset(icd_info, 0,
+               inst->total_icd_count * sizeof(VkDebugReportCallbackEXT));
+    } else {
+#endif
+        icd_info =
+            calloc(sizeof(VkDebugReportCallbackEXT), inst->total_icd_count);
+    }
     if (!icd_info) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -328,10 +373,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDebugReportCallback(
  * This is the instance chain terminator function
  * for DestroyDebugReportCallback
  */
-VKAPI_ATTR void VKAPI_CALL
-terminator_DestroyDebugReportCallback(VkInstance instance,
-                                      VkDebugReportCallbackEXT callback,
-                                      const VkAllocationCallbacks *pAllocator) {
+VKAPI_ATTR void VKAPI_CALL terminator_DestroyDebugReportCallback(
+    VkInstance instance, VkDebugReportCallbackEXT callback,
+    const VkAllocationCallbacks *pAllocator) {
     uint32_t storage_idx;
     VkDebugReportCallbackEXT *icd_info;
     const struct loader_icd *icd;
@@ -356,11 +400,10 @@ terminator_DestroyDebugReportCallback(VkInstance instance,
  * This is the instance chain terminator function
  * for DebugReportMessage
  */
-VKAPI_ATTR void VKAPI_CALL
-terminator_DebugReportMessage(VkInstance instance, VkDebugReportFlagsEXT flags,
-                              VkDebugReportObjectTypeEXT objType,
-                              uint64_t object, size_t location, int32_t msgCode,
-                              const char *pLayerPrefix, const char *pMsg) {
+VKAPI_ATTR void VKAPI_CALL terminator_DebugReportMessage(
+    VkInstance instance, VkDebugReportFlagsEXT flags,
+    VkDebugReportObjectTypeEXT objType, uint64_t object, size_t location,
+    int32_t msgCode, const char *pLayerPrefix, const char *pMsg) {
     const struct loader_icd *icd;
 
     struct loader_instance *inst = (struct loader_instance *)instance;

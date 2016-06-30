@@ -131,6 +131,7 @@ uint32_t cvdescriptorset::DescriptorSetLayout::GetGlobalStartIndexFromBinding(co
         return btgsi_itr->second;
     }
     // In error case max uint32_t so index is out of bounds to break ASAP
+    assert(0);
     return 0xFFFFFFFF;
 }
 // For the given binding, return end index
@@ -141,6 +142,7 @@ uint32_t cvdescriptorset::DescriptorSetLayout::GetGlobalEndIndexFromBinding(cons
         return btgei_itr->second;
     }
     // In error case max uint32_t so index is out of bounds to break ASAP
+    assert(0);
     return 0xFFFFFFFF;
 }
 // For given binding, return ptr to ImmutableSampler array
@@ -319,7 +321,7 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
 cvdescriptorset::DescriptorSet::~DescriptorSet() {
     InvalidateBoundCmdBuffers();
     // Remove link to any cmd buffers
-    for (auto cb : bound_cmd_buffers_) {
+    for (auto cb : cb_bindings) {
         for (uint32_t i=0; i<VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
             cb->lastBound[i].uniqueBoundSets.erase(this);
         }
@@ -337,6 +339,13 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::unordered_set<
                                                        const std::vector<uint32_t> &dynamic_offsets, std::string *error) const {
     auto dyn_offset_index = 0;
     for (auto binding : bindings) {
+        if (!p_layout_->HasBinding(binding)) {
+            std::stringstream error_str;
+            error_str << "Attempting to validate DrawState for binding #" << binding
+                      << " which is an invalid binding for this descriptor set.";
+            *error = error_str.str();
+            return false;
+        }
         auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
         if (descriptors_[start_idx]->IsImmutableSampler()) {
             // Nothing to do for strictly immutable sampler
@@ -413,6 +422,10 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::unordered_
                                                            std::unordered_set<VkImageView> *image_set) const {
     auto num_updates = 0;
     for (auto binding : bindings) {
+        // If a binding doesn't exist, skip it
+        if (!p_layout_->HasBinding(binding)) {
+            continue;
+        }
         auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
         if (descriptors_[start_idx]->IsStorage()) {
             if (Image == descriptors_[start_idx]->descriptor_class) {
@@ -447,9 +460,8 @@ uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::unordered_
 }
 // Set is being deleted or updates so invalidate all bound cmd buffers
 void cvdescriptorset::DescriptorSet::InvalidateBoundCmdBuffers() {
-    for (auto cb_node : bound_cmd_buffers_) {
-        cb_node->state = CB_INVALID;
-    }
+    core_validation::invalidateCommandBuffers(cb_bindings,
+                                              {reinterpret_cast<uint64_t &>(set_), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT});
 }
 // Perform write update in given update struct
 void cvdescriptorset::DescriptorSet::PerformWriteUpdate(const VkWriteDescriptorSet *update) {

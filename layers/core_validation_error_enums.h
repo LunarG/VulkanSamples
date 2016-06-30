@@ -131,6 +131,7 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_FRAMEBUFFER_INCOMPATIBLE,         // Incompatible framebuffer between
                                                 // secondary cmdBuffer and active
                                                 // renderPass
+    DRAWSTATE_INVALID_FRAMEBUFFER_CREATE_INFO,  // Invalid VkFramebufferCreateInfo state
     DRAWSTATE_INVALID_RENDERPASS,               // Use of a NULL or otherwise invalid
                                                 // RenderPass object
     DRAWSTATE_INVALID_RENDERPASS_CMD,           // Invalid cmd submitted while a
@@ -221,6 +222,7 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_PUSH_CONSTANTS_ERROR,          // Push constants exceed maxPushConstantSize
 };
 
+// Shader Checker ERROR codes
 enum SHADER_CHECKER_ERROR {
     SHADER_CHECKER_NONE,
     SHADER_CHECKER_INTERFACE_TYPE_MISMATCH,    // Type mismatch between shader stages or shader and pipeline
@@ -241,4 +243,15 @@ enum SHADER_CHECKER_ERROR {
     SHADER_CHECKER_BAD_CAPABILITY,                          // Shader uses capability not supported by Vulkan (OpenCL features)
 };
 
+// Device Limits ERROR codes
+enum DEV_LIMITS_ERROR {
+    DEVLIMITS_NONE,                          // Used for INFO & other non-error messages
+    DEVLIMITS_INVALID_INSTANCE,              // Invalid instance used
+    DEVLIMITS_INVALID_PHYSICAL_DEVICE,       // Invalid physical device used
+    DEVLIMITS_MISSING_QUERY_COUNT,           // Did not make initial call to an API to query the count
+    DEVLIMITS_MUST_QUERY_COUNT,              // Failed to make initial call to an API to query the count
+    DEVLIMITS_INVALID_FEATURE_REQUESTED,     // App requested a feature not supported by physical device
+    DEVLIMITS_COUNT_MISMATCH,                // App requesting a count value different than actual value
+    DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST,  // Invalid queue requested based on queue family properties
+};
 #endif // CORE_VALIDATION_ERROR_ENUMS_H_

@@ -49,6 +49,10 @@ enum ErrorCode {
     UNRECOGNIZED_VALUE,   // A Vulkan enumeration, VkFlags, or VkBool32 parameter
                           // contains a value that is not recognized as valid for
                           // that type.
+    DEVICE_LIMIT,         // A specified parameter exceeds the limits returned
+                          // by the physical device
+    DEVICE_FEATURE,       // Use of a requested feature is not supported by
+                          // the device
     FAILURE_RETURN_CODE,  // A Vulkan return code indicating a failure condition
                           // was encountered.
 };

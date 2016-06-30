@@ -115,6 +115,7 @@ class DescriptorSetLayout {
     VkSampler const *GetImmutableSamplerPtrFromBinding(const uint32_t) const;
     VkSampler const *GetImmutableSamplerPtrFromIndex(const uint32_t) const;
     // For a particular binding, get the global index
+    //  These calls should be guarded by a call to "HasBinding(binding)" to verify that the given binding exists
     uint32_t GetGlobalStartIndexFromBinding(const uint32_t) const;
     uint32_t GetGlobalEndIndexFromBinding(const uint32_t) const;
     // For a particular binding starting at offset and having update_count descriptors
@@ -285,6 +286,7 @@ void PerformAllocateDescriptorSets(const VkDescriptorSetAllocateInfo *, const Vk
 class DescriptorSet : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
+    using BASE_NODE::cb_bindings;
     DescriptorSet(const VkDescriptorSet, const DescriptorSetLayout *, const core_validation::layer_data *);
     ~DescriptorSet();
     // A number of common Get* functions that return data based on layout from which this set was created
@@ -330,11 +332,11 @@ class DescriptorSet : public BASE_NODE {
     const DescriptorSetLayout *GetLayout() const { return p_layout_; };
     VkDescriptorSet GetSet() const { return set_; };
     // Return unordered_set of all command buffers that this set is bound to
-    std::unordered_set<GLOBAL_CB_NODE *> GetBoundCmdBuffers() const { return bound_cmd_buffers_; }
+    std::unordered_set<GLOBAL_CB_NODE *> GetBoundCmdBuffers() const { return cb_bindings; }
     // Bind given cmd_buffer to this descriptor set
-    void BindCommandBuffer(GLOBAL_CB_NODE *cb_node) { bound_cmd_buffers_.insert(cb_node); }
-    // If given cmd_buffer is in the bound_cmd_buffers_ set, remove it
-    void RemoveBoundCommandBuffer(GLOBAL_CB_NODE *cb_node) { bound_cmd_buffers_.erase(cb_node); }
+    void BindCommandBuffer(GLOBAL_CB_NODE *cb_node) { cb_bindings.insert(cb_node); }
+    // If given cmd_buffer is in the cb_bindings set, remove it
+    void RemoveBoundCommandBuffer(GLOBAL_CB_NODE *cb_node) { cb_bindings.erase(cb_node); }
     VkSampler const *GetImmutableSamplerPtrFromBinding(const uint32_t index) const {
         return p_layout_->GetImmutableSamplerPtrFromBinding(index);
     };
@@ -358,7 +360,6 @@ class DescriptorSet : public BASE_NODE {
     bool some_update_; // has any part of the set ever been updated?
     VkDescriptorSet set_;
     const DescriptorSetLayout *p_layout_;
-    std::unordered_set<GLOBAL_CB_NODE *> bound_cmd_buffers_;
     std::vector<std::unique_ptr<Descriptor>> descriptors_;
     // Ptr to device data used for various data look-ups
     const core_validation::layer_data *device_data_;

@@ -253,11 +253,17 @@ class QUERY_POOL_NODE : public BASE_NODE {
     VkQueryPoolCreateInfo createInfo;
 };
 
-class FRAMEBUFFER_NODE {
+class FRAMEBUFFER_NODE : BASE_NODE {
   public:
-    VkFramebufferCreateInfo createInfo;
+    using BASE_NODE::in_use;
+    using BASE_NODE::cb_bindings;
+    VkFramebuffer framebuffer;
+    safe_VkFramebufferCreateInfo createInfo;
+    safe_VkRenderPassCreateInfo renderPassCreateInfo;
     std::unordered_set<VkCommandBuffer> referencingCmdBuffers;
     std::vector<MT_FB_ATTACHMENT_INFO> attachments;
+    FRAMEBUFFER_NODE(VkFramebuffer fb, const VkFramebufferCreateInfo *pCreateInfo, const VkRenderPassCreateInfo *pRPCI)
+        : framebuffer(fb), createInfo(pCreateInfo), renderPassCreateInfo(pRPCI){};
 };
 
 typedef struct stencil_data {
@@ -265,3 +271,39 @@ typedef struct stencil_data {
     uint32_t writeMask;
     uint32_t reference;
 } CBStencilData;
+
+// Track command pools and their command buffers
+struct COMMAND_POOL_NODE {
+    VkCommandPoolCreateFlags createFlags;
+    uint32_t queueFamilyIndex;
+    // TODO: why is this std::list?
+    std::list<VkCommandBuffer> commandBuffers; // container of cmd buffers allocated from this pool
+};
+
+// Stuff from Device Limits Layer
+enum CALL_STATE {
+    UNCALLED,      // Function has not been called
+    QUERY_COUNT,   // Function called once to query a count
+    QUERY_DETAILS, // Function called w/ a count to query details
+};
+
+struct INSTANCE_STATE {
+    // Track the call state and array size for physical devices
+    CALL_STATE vkEnumeratePhysicalDevicesState;
+    uint32_t physical_devices_count;
+    INSTANCE_STATE() : vkEnumeratePhysicalDevicesState(UNCALLED), physical_devices_count(0) {};
+};
+
+struct PHYSICAL_DEVICE_STATE {
+    // Track the call state and array sizes for various query functions
+    CALL_STATE vkGetPhysicalDeviceQueueFamilyPropertiesState;
+    uint32_t queueFamilyPropertiesCount;
+    CALL_STATE vkGetPhysicalDeviceLayerPropertiesState;
+    CALL_STATE vkGetPhysicalDeviceExtensionPropertiesState;
+    CALL_STATE vkGetPhysicalDeviceFeaturesState;
+    PHYSICAL_DEVICE_STATE()
+        : vkGetPhysicalDeviceQueueFamilyPropertiesState(UNCALLED),
+        vkGetPhysicalDeviceLayerPropertiesState(UNCALLED),
+        vkGetPhysicalDeviceExtensionPropertiesState(UNCALLED),
+        vkGetPhysicalDeviceFeaturesState(UNCALLED) {};
+};
