@@ -8653,6 +8653,8 @@ static bool ValidateDependencies(const layer_data *my_data, FRAMEBUFFER_NODE con
         attachmentIndices.clear();
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
             uint32_t attachment = subpass.pInputAttachments[j].attachment;
+            if (attachment == VK_ATTACHMENT_UNUSED)
+                continue;
             input_attachment_to_subpass[attachment].push_back(i);
             for (auto overlapping_attachment : overlapping_attachments[attachment]) {
                 input_attachment_to_subpass[overlapping_attachment].push_back(i);
@@ -8660,6 +8662,8 @@ static bool ValidateDependencies(const layer_data *my_data, FRAMEBUFFER_NODE con
         }
         for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
             uint32_t attachment = subpass.pColorAttachments[j].attachment;
+            if (attachment == VK_ATTACHMENT_UNUSED)
+                continue;
             output_attachment_to_subpass[attachment].push_back(i);
             for (auto overlapping_attachment : overlapping_attachments[attachment]) {
                 output_attachment_to_subpass[overlapping_attachment].push_back(i);
@@ -8687,12 +8691,16 @@ static bool ValidateDependencies(const layer_data *my_data, FRAMEBUFFER_NODE con
         const VkSubpassDescription &subpass = pCreateInfo->pSubpasses[i];
         // If the attachment is an input then all subpasses that output must have a dependency relationship
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
-            const uint32_t &attachment = subpass.pInputAttachments[j].attachment;
+            uint32_t attachment = subpass.pInputAttachments[j].attachment;
+            if (attachment == VK_ATTACHMENT_UNUSED)
+                continue;
             CheckDependencyExists(my_data, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
         }
         // If the attachment is an output then all subpasses that use the attachment must have a dependency relationship
         for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
-            const uint32_t &attachment = subpass.pColorAttachments[j].attachment;
+            uint32_t attachment = subpass.pColorAttachments[j].attachment;
+            if (attachment == VK_ATTACHMENT_UNUSED)
+                continue;
             CheckDependencyExists(my_data, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
             CheckDependencyExists(my_data, i, input_attachment_to_subpass[attachment], subpass_to_node, skip_call);
         }
