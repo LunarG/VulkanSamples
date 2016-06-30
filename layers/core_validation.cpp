@@ -9094,13 +9094,16 @@ static bool VerifyFramebufferAndRenderPassLayouts(layer_data *dev_data, GLOBAL_C
                     SetLayout(pCB, image, sub, newNode);
                     continue;
                 }
-                if (newNode.layout != node.layout) {
+                if (newNode.layout != VK_IMAGE_LAYOUT_UNDEFINED &&
+                    newNode.layout != node.layout) {
                     skip_call |=
                         log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                DRAWSTATE_INVALID_RENDERPASS, "DS", "You cannot start a render pass using attachment %i "
-                                                                    "where the "
-                                                                    "initial layout is %s and the layout of the attachment at the "
-                                                                    "start of the render pass is %s. The layouts must match.",
+                                DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                "You cannot start a render pass using attachment %u "
+                                "where the render pass initial layout is %s and the previous "
+                                "known layout of the attachment is %s. The layouts must match, or "
+                                "the render pass initial layout for the attachment must be "
+                                "VK_IMAGE_LAYOUT_UNDEFINED",
                                 i, string_VkImageLayout(newNode.layout), string_VkImageLayout(node.layout));
                 }
             }
