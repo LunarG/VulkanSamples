@@ -9126,6 +9126,16 @@ static bool VerifyFramebufferAndRenderPassLayouts(layer_data *dev_data, GLOBAL_C
     return skip_call;
 }
 
+static void TransitionAttachmentRefLayout(layer_data *dev_data, GLOBAL_CB_NODE *pCB,
+                                          FRAMEBUFFER_NODE *pFramebuffer,
+                                          VkAttachmentReference ref)
+{
+    if (ref.attachment != VK_ATTACHMENT_UNUSED) {
+        auto image_view = pFramebuffer->createInfo.pAttachments[ref.attachment];
+        SetLayout(dev_data, pCB, image_view, ref.layout);
+    }
+}
+
 static void TransitionSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB, const VkRenderPassBeginInfo *pRenderPassBegin,
                                      const int subpass_index) {
     auto renderPass = getRenderPass(dev_data, pRenderPassBegin->renderPass);
@@ -9139,16 +9149,13 @@ static void TransitionSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB, 
     const safe_VkFramebufferCreateInfo &framebufferInfo = framebuffer->createInfo;
     const VkSubpassDescription &subpass = renderPass->pCreateInfo->pSubpasses[subpass_index];
     for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
-        const VkImageView &image_view = framebufferInfo.pAttachments[subpass.pInputAttachments[j].attachment];
-        SetLayout(dev_data, pCB, image_view, subpass.pInputAttachments[j].layout);
+        TransitionAttachmentRefLayout(dev_data, pCB, framebuffer, subpass.pInputAttachments[j]);
     }
     for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
-        const VkImageView &image_view = framebufferInfo.pAttachments[subpass.pColorAttachments[j].attachment];
-        SetLayout(dev_data, pCB, image_view, subpass.pColorAttachments[j].layout);
+        TransitionAttachmentRefLayout(dev_data, pCB, framebuffer, subpass.pColorAttachments[j]);
     }
-    if ((subpass.pDepthStencilAttachment != NULL) && (subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED)) {
-        const VkImageView &image_view = framebufferInfo.pAttachments[subpass.pDepthStencilAttachment->attachment];
-        SetLayout(dev_data, pCB, image_view, subpass.pDepthStencilAttachment->layout);
+    if (subpass.pDepthStencilAttachment) {
+        TransitionAttachmentRefLayout(dev_data, pCB, framebuffer, *subpass.pDepthStencilAttachment);
     }
 }
 
@@ -9173,7 +9180,7 @@ static void TransitionFinalSubpassLayouts(layer_data *dev_data, GLOBAL_CB_NODE *
         return;
 
     for (uint32_t i = 0; i < pRenderPassInfo->attachmentCount; ++i) {
-        const VkImageView &image_view = framebuffer->createInfo.pAttachments[i];
+        auto image_view = framebuffer->createInfo.pAttachments[i];
         SetLayout(dev_data, pCB, image_view, pRenderPassInfo->pAttachments[i].finalLayout);
     }
 }
