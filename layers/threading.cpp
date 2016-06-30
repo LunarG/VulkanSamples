@@ -318,7 +318,7 @@ AllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pAllo
     // Record mapping from command buffer to command pool
     if (VK_SUCCESS == result) {
         for (uint32_t index = 0; index < pAllocateInfo->commandBufferCount; index++) {
-            std::lock_guard<std::mutex> lock(global_lock);
+            std::lock_guard<std::mutex> lock(command_pool_lock);
             command_pool_map[pCommandBuffers[index]] = pAllocateInfo->commandPool;
         }
     }
@@ -343,7 +343,7 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
     finishWriteObject(my_data, commandPool);
     for (uint32_t index = 0; index < commandBufferCount; index++) {
         finishWriteObject(my_data, pCommandBuffers[index], lockCommandPool);
-        std::lock_guard<std::mutex> lock(global_lock);
+        std::lock_guard<std::mutex> lock(command_pool_lock);
         command_pool_map.erase(pCommandBuffers[index]);
     }
 }
