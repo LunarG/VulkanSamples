@@ -2,8 +2,6 @@
 
 pushd $(dirname "$0") > /dev/null
 
-echo "Testing wrap-objects layer..."
-
 # Check for insertion of wrap-objects layer.
 output=$(VK_LAYER_PATH=$VK_LAYER_PATH:`pwd`/layers \
    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/layers \
@@ -125,12 +123,10 @@ ec=$?
 
 if [ $ec -eq 1 ]
 then
-   echo "TEST FAILED - wrap-objects altered the results of the layer validation tests" >&2
+   echo "Wrap-objects layer validation tests FAILED - wrap-objects altered the results of the layer validation tests" >&2
    exit 1
 fi
-echo "wrap-objects completed layer validation tests"
-
-echo "TEST PASSED"
+echo "Wrap-objects layer validation tests PASSED"
 
 popd > /dev/null
 

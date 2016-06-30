@@ -355,6 +355,19 @@ TEST(CreateInstance, LayerNotPresent)
     ASSERT_EQ(result, VK_ERROR_LAYER_NOT_PRESENT);
 }
 
+// Used by run_loader_tests.sh to test for layer insertion.
+TEST(CreateInstance, LayerPresent)
+{
+    char const*const names[] = {"VK_LAYER_LUNARG_parameter_validation"}; // Temporary required due to MSVC bug.
+    auto const info = VK::InstanceCreateInfo().
+        enabledLayerCount(1).
+        ppEnabledLayerNames(names);
+
+    VkInstance instance = VK_NULL_HANDLE;
+    VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+}
+
 TEST(CreateDevice, ExtensionNotPresent)
 {
     VkInstance instance = VK_NULL_HANDLE;
