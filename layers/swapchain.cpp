@@ -954,6 +954,7 @@ GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalDevice physicalDevice, uint32_t 
     if (!pPropertyCount) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pPropertyCount");
     }
+    // TODO add check for the count being consistent
     lock.unlock();
 
     if (!skipCall) {
@@ -985,6 +986,7 @@ GetPhysicalDeviceDisplayPlanePropertiesKHR(VkPhysicalDevice physicalDevice, uint
     if (!pPropertyCount) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pPropertyCount");
     }
+    // TODO add check for the count being consistent
     lock.unlock();
 
     if (!skipCall) {
@@ -996,6 +998,7 @@ GetPhysicalDeviceDisplayPlanePropertiesKHR(VkPhysicalDevice physicalDevice, uint
             pPhysicalDevice->displayPlanePropertyCount = *pPropertyCount;
             pPhysicalDevice->gotDisplayPlanePropertyCount = true;
         }
+	// TODO store the properties for later checks
         lock.unlock();
 
         return result;
@@ -1025,6 +1028,7 @@ GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDevice physicalDevice, uint32_t pl
     if (!pDisplayCount) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pDisplayCount");
     }
+    // TODO add check for the count being consistent
 
     if (!pPhysicalDevice->gotDisplayPlanePropertyCount)
     {
@@ -1050,6 +1054,7 @@ GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDevice physicalDevice, uint32_t pl
 
         return result;
     }
+    // TODO validate the returned display objects
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -1075,12 +1080,14 @@ GetDisplayModePropertiesKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR displa
     if (!pPropertyCount) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pPropertyCount");
     }
+    // TODO add check for the count being consistent
     lock.unlock();
 
     if (!skipCall) {
         result = my_data->instance_dispatch_table->GetDisplayModePropertiesKHR(physicalDevice, display, pPropertyCount, pProperties);
         return result;
     }
+    // TODO store the displayMode for later checking
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
@@ -1108,6 +1115,7 @@ CreateDisplayModeKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR display, cons
     }
     lock.unlock();
 
+    // TODO more validation checks needed
     if (!skipCall) {
         result = my_data->instance_dispatch_table->CreateDisplayModeKHR(physicalDevice, display, pCreateInfo, pAllocator, pMode);
         return result;
@@ -1194,6 +1202,7 @@ CreateDisplayPlaneSurfaceKHR(VkInstance instance, const VkDisplaySurfaceCreateIn
         }
     }
 
+    // TODO more validation checks
     if (!skipCall) {
         // Call down the call chain:
         lock.unlock();
