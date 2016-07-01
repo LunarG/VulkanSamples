@@ -5816,40 +5816,20 @@ TEST_F(VkLayerTest, InvalidCmdBufferImageDestroyed) {
         vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
     ASSERT_VK_SUCCESS(err);
 
-    VkMemoryRequirements mem_reqs;
-    VkDeviceMemory image_mem;
-    bool pass;
-    VkMemoryAllocateInfo memAlloc = {};
-    memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    memAlloc.pNext = NULL;
-    memAlloc.allocationSize = 0;
-    memAlloc.memoryTypeIndex = 0;
-    vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
-    memAlloc.allocationSize = mem_reqs.size;
-    pass =
-        m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &memAlloc, 0);
-    ASSERT_TRUE(pass);
-    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &image_mem);
-    ASSERT_VK_SUCCESS(err);
-    err = vkBindImageMemory(m_device->device(), image, image_mem, 0);
-    ASSERT_VK_SUCCESS(err);
-
-    vk_testing::Buffer buffer;
-    VkMemoryPropertyFlags reqs = 0;
-    buffer.init_as_src(*m_device, 128 * 128 * 4, reqs);
-    VkBufferImageCopy region = {};
-    region.bufferRowLength = 128;
-    region.bufferImageHeight = 128;
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-    region.imageSubresource.layerCount = 1;
-    region.imageExtent.height = 4;
-    region.imageExtent.width = 4;
-    region.imageExtent.depth = 1;
     m_commandBuffer->BeginCommandBuffer();
-    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(),
-                           image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
-                           &region);
+    VkClearColorValue ccv;
+    ccv.float32[0] = 1.0f;
+    ccv.float32[1] = 1.0f;
+    ccv.float32[2] = 1.0f;
+    ccv.float32[3] = 1.0f;
+    VkImageSubresourceRange isr = {};
+    isr.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    isr.baseArrayLayer = 1;
+    isr.baseMipLevel = 1;
+    isr.layerCount = 1;
+    isr.levelCount = 1;
+    vkCmdClearColorImage(m_commandBuffer->GetBufferHandle(), image,
+                         VK_IMAGE_LAYOUT_GENERAL, &ccv, 1, &isr);
     m_commandBuffer->EndCommandBuffer();
 
     m_errorMonitor->SetDesiredFailureMsg(
@@ -5864,7 +5844,6 @@ TEST_F(VkLayerTest, InvalidCmdBufferImageDestroyed) {
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
 
     m_errorMonitor->VerifyFound();
-    vkFreeMemory(m_device->device(), image_mem, NULL);
 }
 
 TEST_F(VkLayerTest, InvalidPipeline) {
