@@ -333,8 +333,6 @@ No!  Most extension functionality only affects a device and not an instance or a
 device.  Thus, the overwhelming majority of extensions will be device extensions rather than
 instance extensions.
 
-<br/>
-
 
 ## Vulkan Installable Client Driver interface with the loader ##
 

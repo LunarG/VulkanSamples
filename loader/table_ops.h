@@ -276,6 +276,18 @@ static inline void loader_init_device_extension_dispatch_table(
     table->GetMemoryWin32HandleNV =
         (PFN_vkGetMemoryWin32HandleNV)gpa(dev, "vkGetMemoryWin32HandleNV");
 #endif // VK_USE_PLATFORM_WIN32_KHR
+    table->CreateSharedSwapchainsKHR =
+        (PFN_vkCreateSharedSwapchainsKHR)gpa(dev, "vkCreateSharedSwapchainsKHR");
+    table->DebugMarkerSetObjectTagEXT =
+        (PFN_vkDebugMarkerSetObjectTagEXT)gpa(dev, "vkDebugMarkerSetObjectTagEXT");
+    table->DebugMarkerSetObjectNameEXT =
+        (PFN_vkDebugMarkerSetObjectNameEXT)gpa(dev, "vkDebugMarkerSetObjectNameEXT");
+    table->CmdDebugMarkerBeginEXT =
+        (PFN_vkCmdDebugMarkerBeginEXT)gpa(dev, "vkCmdDebugMarkerBeginEXT");
+    table->CmdDebugMarkerEndEXT =
+        (PFN_vkCmdDebugMarkerEndEXT)gpa(dev, "vkCmdDebugMarkerEndEXT");
+    table->CmdDebugMarkerInsertEXT =
+        (PFN_vkCmdDebugMarkerInsertEXT)gpa(dev, "vkCmdDebugMarkerInsertEXT");
 }
 
 static inline void *

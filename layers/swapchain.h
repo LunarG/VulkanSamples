@@ -221,6 +221,9 @@ struct SwpDevice {
     // Set to true if VK_KHR_SWAPCHAIN_EXTENSION_NAME was enabled:
     bool swapchainExtensionEnabled;
 
+    // Set to true if VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME was enabled:
+    bool displaySwapchainExtensionEnabled;
+
     // When vkCreateSwapchainKHR is called, the VkSwapchainKHR's are
     // remembered:
     unordered_map<VkSwapchainKHR, SwpSwapchain *> swapchains;

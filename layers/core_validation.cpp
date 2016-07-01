@@ -86,6 +86,7 @@ static const VkDeviceMemory MEMTRACKER_SWAP_CHAIN_IMAGE_KEY = (VkDeviceMemory)(-
 
 struct devExts {
     bool wsi_enabled;
+    bool wsi_display_swapchain_enabled;
     unordered_map<VkSwapchainKHR, unique_ptr<SWAPCHAIN_NODE>> swapchainMap;
     unordered_map<VkImage, VkSwapchainKHR> imageToSwapchainMap;
 };
@@ -4220,10 +4221,13 @@ static void checkDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo,
     // by more than one thread?
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     dev_data->device_extensions.wsi_enabled = false;
+    dev_data->device_extensions.wsi_display_swapchain_enabled = false;
 
     for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
             dev_data->device_extensions.wsi_enabled = true;
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) == 0)
+            dev_data->device_extensions.wsi_display_swapchain_enabled = true;
     }
 }
 
@@ -10995,6 +10999,16 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     return result;
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32_t swapchainCount,
+                                                         const VkSwapchainCreateInfoKHR *pCreateInfos,
+                                                         const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchains) {
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    VkResult result =
+        dev_data->device_dispatch_table->CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
+    return result;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout,
                                                    VkSemaphore semaphore, VkFence fence, uint32_t *pImageIndex) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -11433,9 +11447,10 @@ intercept_khr_swapchain_command(const char *name, VkDevice dev) {
         { "vkAcquireNextImageKHR", reinterpret_cast<PFN_vkVoidFunction>(AcquireNextImageKHR) },
         { "vkQueuePresentKHR", reinterpret_cast<PFN_vkVoidFunction>(QueuePresentKHR) },
     };
+    layer_data *dev_data = nullptr;
 
     if (dev) {
-        layer_data *dev_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
+        dev_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
         if (!dev_data->device_extensions.wsi_enabled)
             return nullptr;
     }
@@ -11444,6 +11459,14 @@ intercept_khr_swapchain_command(const char *name, VkDevice dev) {
         if (!strcmp(khr_swapchain_commands[i].name, name))
             return khr_swapchain_commands[i].proc;
     }
+
+    if (dev_data) {
+        if (!dev_data->device_extensions.wsi_display_swapchain_enabled)
+            return nullptr;
+    }
+
+    if (!strcmp("vkCreateSharedSwapchainsKHR", name))
+        return reinterpret_cast<PFN_vkVoidFunction>(CreateSharedSwapchainsKHR);
 
     return nullptr;
 }

@@ -1262,6 +1262,18 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayPlaneSurfaceKHR(
     return VK_SUCCESS;
 }
 
+// This is the trampoline entrypoint
+// for CreateSharedSwapchainsKHR
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSharedSwapchainsKHR(
+    VkDevice device, uint32_t swapchainCount,
+    const VkSwapchainCreateInfoKHR *pCreateInfos,
+    const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchains) {
+    const VkLayerDispatchTable *disp;
+    disp = loader_get_dispatch(device);
+    return disp->CreateSharedSwapchainsKHR(
+        device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
+}
+
 bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
                                 const char *name, void **addr) {
     *addr = NULL;
@@ -1458,5 +1470,12 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
                     : NULL;
         return true;
     }
+
+    // Functions for KHR_display_swapchain extension:
+    if (!strcmp("vkCreateSharedSwapchainsKHR", name)) {
+        *addr = (void *)vkCreateSharedSwapchainsKHR;
+        return true;
+    }
+
     return false;
 }

@@ -1195,6 +1195,20 @@ ext_khr_device_swapchain = Extension(
     ],
 )
 
+ext_khr_display_swapchain = Extension(
+    name="VK_KHR_display_swapchain",
+    headers=["vulkan/vulkan.h"],
+    objects=["VkDisplayPresentInfoKHR"],
+    protos=[
+        Proto("VkResult", "CreateSharedSwapchainsKHR",
+            [Param("VkDevice", "device"),
+             Param("uint32_t", "swapchainCount"),
+             Param("const VkSwapchainCreateInfoKHR*", "pCreateInfos"),
+             Param("const VkAllocationCallbacks*", "pAllocator"),
+             Param("VkSwapchainKHR*", "pSwapchains")]),
+    ],
+)
+
 ext_khr_xcb_surface = Extension(
     name="VK_KHR_xcb_surface",
     headers=["vulkan/vulkan.h"],
@@ -1294,7 +1308,7 @@ ext_khr_win32_surface = Extension(
              Param("uint32_t", "queueFamilyIndex")]),
     ],
 )
-lunarg_debug_report = Extension(
+ext_debug_report = Extension(
     name="VK_EXT_debug_report",
     headers=["vulkan/vulkan.h"],
     objects=[
@@ -1323,33 +1337,104 @@ lunarg_debug_report = Extension(
              Param("const char *", "pMsg")]),
     ],
 )
+ext_debug_marker = Extension(
+    name="VK_EXT_debug_marker",
+    headers=["vulkan/vulkan.h"],
+    objects=[
+        "VkDebugMarkerObjectNameInfoEXT",
+        "VkDebugMarkerObjectTagInfoEXT",
+        "VkDebugMarkerMarkerInfoEXT"
+    ],
+    protos=[
+        Proto("VkResult", "DebugMarkerSetObjectTagEXT",
+            [Param("VkDevice", "device"),
+             Param("VkDebugMarkerObjectTagInfoEXT*", "pTagInfo")]),
+
+        Proto("VkResult", "DebugMarkerSetObjectNameEXT",
+            [Param("VkDevice", "device"),
+             Param("VkDebugMarkerObjectNameInfoEXT*", "pNameInfo")]),
+
+        Proto("void", "CmdDebugMarkerBeginEXT",
+            [Param("VkCommandBuffer", "commandBuffer"),
+             Param("VkDebugMarkerMarkerInfoEXT*", "pMarkerInfo")]),
+
+        Proto("void", "CmdDebugMarkerEndEXT",
+            [Param("VkCommandBuffer*", "commandBuffer")]),
+
+        Proto("void", "CmdDebugMarkerInsertEXT",
+            [Param("VkCommandBuffer", "commandBuffer"),
+             Param("VkDebugMarkerMarkerInfoEXT*", "pMarkerInfo")]),
+    ],
+)
 
 import sys
 
 if sys.argv[1] == 'AllPlatforms':
-    extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, ext_khr_display, ext_khr_android_surface, ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities, ext_nv_external_memory_win32]
-    extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, ext_khr_display, ext_khr_android_surface, ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities, ext_nv_external_memory_win32, lunarg_debug_report]
+    extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, ext_khr_xcb_surface,
+                         ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, ext_khr_display,
+                         ext_khr_android_surface, ext_amd_extension_draw_indirect_count,
+                         ext_nv_external_memory_capabilities, ext_nv_external_memory_win32,
+                         ext_khr_display_swapchain]
+    extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface,
+                             ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface,
+                             ext_khr_display, ext_khr_android_surface, ext_amd_extension_draw_indirect_count,
+                             ext_nv_external_memory_capabilities, ext_nv_external_memory_win32,
+                             ext_khr_display_swapchain, ext_debug_report, ext_debug_marker]
 else :
     if len(sys.argv) > 3:
         if sys.platform.startswith('win32') and sys.argv[1] != 'Android':
-            extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, ext_khr_display, ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities, ext_nv_external_memory_win32]
-            extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, ext_khr_display, ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities, ext_nv_external_memory_win32, lunarg_debug_report]
+            extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface,
+                                 ext_khr_display, ext_amd_extension_draw_indirect_count,
+                                 ext_nv_external_memory_capabilities, ext_nv_external_memory_win32,
+                                 ext_khr_display_swapchain]
+            extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface,
+                                      ext_khr_display, ext_amd_extension_draw_indirect_count,
+                                      ext_nv_external_memory_capabilities, ext_nv_external_memory_win32,
+                                      ext_khr_display_swapchain, ext_debug_report, ext_debug_marker]
         elif sys.platform.startswith('linux') and sys.argv[1] != 'Android':
-            extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, ext_khr_display, ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities]
-            extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, ext_khr_display, ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities, lunarg_debug_report]
+            extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface,
+                                 ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, ext_khr_display,
+                                 ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities,
+                                 ext_khr_display_swapchain]
+            extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface,
+                                      ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface,
+                                      ext_khr_display, ext_amd_extension_draw_indirect_count,
+                                      ext_nv_external_memory_capabilities, ext_khr_display_swapchain,
+                                      ext_debug_report, ext_debug_marker]
         else: # android
-            extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface, ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities]
-            extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface, ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities, lunarg_debug_report]
+            extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface,
+                                 ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities,
+                                 ext_khr_display_swapchain]
+            extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface,
+                                      ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities,
+                                      ext_khr_display_swapchain, ext_debug_report, ext_debug_marker]
     else :
         if sys.argv[1] == 'Win32':
-            extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, ext_khr_display, ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities, ext_nv_external_memory_win32]
-            extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, ext_khr_display, ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities, ext_nv_external_memory_win32, lunarg_debug_report]
+            extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface,
+                                 ext_khr_display, ext_amd_extension_draw_indirect_count,
+                                 ext_nv_external_memory_capabilities, ext_nv_external_memory_win32,
+                                 ext_khr_display_swapchain]
+            extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface,
+                                      ext_khr_display, ext_amd_extension_draw_indirect_count,
+                                      ext_nv_external_memory_capabilities, ext_nv_external_memory_win32,
+                                      ext_khr_display_swapchain, ext_debug_report, ext_debug_marker]
         elif sys.argv[1] == 'Android':
-            extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface, ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities]
-            extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface, ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities, lunarg_debug_report]
+            extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface,
+                                 ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities,
+                                 ext_khr_display_swapchain]
+            extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_android_surface,
+                                      ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities,
+                                      ext_khr_display_swapchain, ext_debug_report, ext_debug_marker]
         elif sys.argv[1] == 'Xcb' or sys.argv[1] == 'Xlib' or sys.argv[1] == 'Wayland' or sys.argv[1] == 'Mir' or sys.argv[1] == 'Display':
-            extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, ext_khr_display, ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities]
-            extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface, ext_khr_display, lunarg_debug_report, ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities]
+            extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface,
+                                 ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface,
+                                 ext_khr_display, ext_amd_extension_draw_indirect_count,
+                                 ext_nv_external_memory_capabilities, ext_khr_display_swapchain]
+            extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface,
+                                      ext_khr_xlib_surface, ext_khr_wayland_surface, ext_khr_mir_surface,
+                                      ext_khr_display, ext_amd_extension_draw_indirect_count,
+                                      ext_nv_external_memory_capabilities, ext_khr_display_swapchain,
+                                      ext_debug_report, ext_debug_marker]
         else:
             print('Error: Undefined DisplayServer')
             extensions = []
