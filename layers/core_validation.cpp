@@ -7874,8 +7874,7 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
 
         auto buffer_node = getBufferNode(dev_data, mem_barrier->buffer);
         if (buffer_node) {
-            VkDeviceSize buffer_size =
-                (buffer_node->createInfo.sType == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO) ? buffer_node->createInfo.size : 0;
+            auto buffer_size = buffer_node->memSize;
             if (mem_barrier->offset >= buffer_size) {
                 skip_call |= log_msg(
                     dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
