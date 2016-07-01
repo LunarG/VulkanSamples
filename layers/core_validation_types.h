@@ -118,13 +118,17 @@ class BUFFER_NODE : public BASE_NODE {
     using BASE_NODE::in_use;
     VkBuffer buffer;
     VkDeviceMemory mem;
+    VkDeviceSize memOffset;
+    VkDeviceSize memSize; // Note: may differ from createInfo::size
     VkBufferCreateInfo createInfo;
-    BUFFER_NODE() : buffer(VK_NULL_HANDLE), mem(VK_NULL_HANDLE), createInfo{} { in_use.store(0); };
+    BUFFER_NODE() : buffer(VK_NULL_HANDLE), mem(VK_NULL_HANDLE), memOffset(0), memSize(0), createInfo{} { in_use.store(0); };
     BUFFER_NODE(VkBuffer buff, const VkBufferCreateInfo *pCreateInfo)
-        : buffer(buff), mem(VK_NULL_HANDLE), createInfo(*pCreateInfo) {
+        : buffer(buff), mem(VK_NULL_HANDLE), memOffset(0), memSize(0), createInfo(*pCreateInfo) {
         in_use.store(0);
     };
-    BUFFER_NODE(const BUFFER_NODE &rh_obj) : buffer(rh_obj.buffer), mem(rh_obj.mem), createInfo(rh_obj.createInfo) {
+    BUFFER_NODE(const BUFFER_NODE &rh_obj)
+        : buffer(rh_obj.buffer), mem(rh_obj.mem), memOffset(rh_obj.memOffset),
+          memSize(rh_obj.memSize), createInfo(rh_obj.createInfo) {
         in_use.store(0);
     };
 };
