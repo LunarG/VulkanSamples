@@ -1782,8 +1782,11 @@ static bool validate_fs_outputs_against_render_pass(debug_report_data *report_da
     std::map<uint32_t, VkFormat> color_attachments;
     auto subpass = rpci->pSubpasses[subpass_index];
     for (auto i = 0u; i < subpass.colorAttachmentCount; ++i) {
-        if (rpci->pAttachments[subpass.pColorAttachments[i].attachment].format != VK_FORMAT_UNDEFINED) {
-            color_attachments[i] = rpci->pAttachments[subpass.pColorAttachments[i].attachment].format;
+        uint32_t attachment = subpass.pColorAttachments[i].attachment;
+        if (attachment == VK_ATTACHMENT_UNUSED)
+            continue;
+        if (rpci->pAttachments[attachment].format != VK_FORMAT_UNDEFINED) {
+            color_attachments[i] = rpci->pAttachments[attachment].format;
         }
     }
 
