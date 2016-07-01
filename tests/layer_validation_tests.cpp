@@ -3497,12 +3497,16 @@ TEST_F(VkLayerTest, UnusedPreserveAttachment) {
 }
 
 TEST_F(VkLayerTest, CreateRenderPassResolveRequiresColorMsaa) {
+    TEST_DESCRIPTION("Ensure that CreateRenderPass produces a validation error "
+                     "when the source of a subpass multisample resolve "
+                     "does not have multiple samples.");
+
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Subpass 0 requests multisample resolve, but renders to "
-        "attachment 0 which has VK_SAMPLE_COUNT_1_BIT");
+        "Subpass 0 requests multisample resolve from attachment 0 which has "
+        "VK_SAMPLE_COUNT_1_BIT");
 
     VkAttachmentDescription attachments[] = {
         {
@@ -3555,6 +3559,11 @@ TEST_F(VkLayerTest, CreateRenderPassResolveRequiresColorMsaa) {
 }
 
 TEST_F(VkLayerTest, CreateRenderPassResolveRequiresSingleSampleDest) {
+    TEST_DESCRIPTION("Ensure CreateRenderPass produces a validation error "
+                     "when a subpass multisample resolve operation is "
+                     "requested, and the destination of that resolve has "
+                     "multiple samples.");
+
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     m_errorMonitor->SetDesiredFailureMsg(
@@ -3613,6 +3622,10 @@ TEST_F(VkLayerTest, CreateRenderPassResolveRequiresSingleSampleDest) {
 }
 
 TEST_F(VkLayerTest, CreateRenderPassSubpassSampleCountConsistency) {
+    TEST_DESCRIPTION("Ensure CreateRenderPass produces a validation error "
+                     "when the color and depth attachments used by a subpass "
+                     "have inconsistent sample counts");
+
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     m_errorMonitor->SetDesiredFailureMsg(

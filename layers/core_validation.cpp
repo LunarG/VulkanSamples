@@ -8926,19 +8926,18 @@ static bool ValidateRenderpassAttachmentUsage(layer_data *dev_data, const VkRend
 
             if (!skip_call && attachment != VK_ATTACHMENT_UNUSED) {
                 sample_count |= (unsigned)pCreateInfo->pAttachments[attachment].samples;
-            }
 
-            if (!skip_call &&
-                subpass_performs_resolve &&
-                attachment != VK_ATTACHMENT_UNUSED &&
-                pCreateInfo->pAttachments[attachment].samples == VK_SAMPLE_COUNT_1_BIT) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
-                                     __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                     "CreateRenderPass:  Subpass %u requests multisample resolve, but renders to "
-                                     "attachment %u which has VK_SAMPLE_COUNT_1_BIT",
-                                     i, attachment);
+                if (subpass_performs_resolve &&
+                    pCreateInfo->pAttachments[attachment].samples == VK_SAMPLE_COUNT_1_BIT) {
+                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                                         __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                         "CreateRenderPass:  Subpass %u requests multisample resolve from attachment %u "
+                                         "which has VK_SAMPLE_COUNT_1_BIT",
+                                         i, attachment);
+                }
             }
         }
+
         if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
             uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
             skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Depth stencil");
@@ -8947,6 +8946,7 @@ static bool ValidateRenderpassAttachmentUsage(layer_data *dev_data, const VkRend
                 sample_count |= (unsigned)pCreateInfo->pAttachments[attachment].samples;
             }
         }
+
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
             uint32_t attachment = subpass.pInputAttachments[j].attachment;
             skip_call |= ValidateAttachmentIndex(dev_data, attachment, pCreateInfo->attachmentCount, "Input");
