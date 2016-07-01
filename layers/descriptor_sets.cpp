@@ -998,15 +998,8 @@ bool cvdescriptorset::DescriptorSet::ValidateWriteUpdate(const debug_report_data
 }
 // For the given buffer, verify that its creation parameters are appropriate for the given type
 //  If there's an error, update the error string with details and return false, else return true
-bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkBuffer buffer, VkDescriptorType type, std::string *error) const {
-    // First make sure that buffer is valid
-    auto buffer_node = getBufferNode(device_data_, buffer);
-    if (!buffer_node) {
-        std::stringstream error_str;
-        error_str << "Invalid VkBuffer: " << buffer;
-        *error = error_str.str();
-        return false;
-    }
+bool cvdescriptorset::DescriptorSet::ValidateBufferUsage(BUFFER_NODE const *buffer_node, VkDescriptorType type,
+                                                         std::string *error) const {
     // Verify that usage bits set correctly for given type
     auto usage = buffer_node->createInfo.usage;
     std::string error_usage_bit;
@@ -1038,13 +1031,63 @@ bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkBuffer buffer, VkDes
     }
     if (!error_usage_bit.empty()) {
         std::stringstream error_str;
-        error_str << "Buffer (" << buffer << ") with usage mask 0x" << usage << " being used for a descriptor update of type "
-                  << string_VkDescriptorType(type) << " does not have " << error_usage_bit << " set.";
+        error_str << "Buffer (" << buffer_node->buffer << ") with usage mask 0x" << usage
+                  << " being used for a descriptor update of type " << string_VkDescriptorType(type) << " does not have "
+                  << error_usage_bit << " set.";
         *error = error_str.str();
         return false;
     }
     return true;
 }
+// For buffer descriptor updates, verify the buffer usage and VkDescriptorBufferInfo struct which includes:
+//  1. buffer is valid
+//  2. buffer was created with correct usage flags
+//  3. offset is less than buffer size
+//  4. range is either VK_WHOLE_SIZE or falls in (0, (buffer size - offset)]
+// If there's an error, update the error string with details and return false, else return true
+bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkDescriptorBufferInfo const *buffer_info, VkDescriptorType type,
+                                                          std::string *error) const {
+    // First make sure that buffer is valid
+    auto buffer_node = getBufferNode(device_data_, buffer_info->buffer);
+    if (!buffer_node) {
+        std::stringstream error_str;
+        error_str << "Invalid VkBuffer: " << buffer_info->buffer;
+        *error = error_str.str();
+        return false;
+    }
+    // Verify usage bits
+    if (!ValidateBufferUsage(buffer_node, type, error)) {
+        // error will have been updated by ValidateBufferUsage()
+        return false;
+    }
+    // offset must be less than buffer size
+    if (buffer_info->offset > buffer_node->createInfo.size) {
+        std::stringstream error_str;
+        error_str << "VkDescriptorBufferInfo offset of " << buffer_info->offset << " is greater than buffer " << buffer_node->buffer
+                  << " size of " << buffer_node->createInfo.size;
+        *error = error_str.str();
+        return false;
+    }
+    if (buffer_info->range != VK_WHOLE_SIZE) {
+        // Range must be VK_WHOLE_SIZE or > 0
+        if (!buffer_info->range) {
+            std::stringstream error_str;
+            error_str << "VkDescriptorBufferInfo range is not VK_WHOLE_SIZE and is zero, which is not allowed.";
+            *error = error_str.str();
+            return false;
+        }
+        // Range must be VK_WHOLE_SIZE or <= (buffer size - offset)
+        if (buffer_info->range > (buffer_node->createInfo.size - buffer_info->offset)) {
+            std::stringstream error_str;
+            error_str << "VkDescriptorBufferInfo range is " << buffer_info->range << " which is greater than buffer size ("
+                      << buffer_node->createInfo.size << ") minus requested offset of " << buffer_info->offset;
+            *error = error_str.str();
+            return false;
+        }
+    }
+    return true;
+}
+
 // Verify that the contents of the update are ok, but don't perform actual update
 bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDescriptorSet *update, const uint32_t index,
                                                                std::string *error) const {
@@ -1106,7 +1149,7 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
                 return false;
             }
             auto buffer = bv_info->buffer;
-            if (!ValidateBufferUpdate(buffer, update->descriptorType, error)) {
+            if (!ValidateBufferUsage(getBufferNode(device_data_, buffer), update->descriptorType, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to texel buffer descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
@@ -1120,8 +1163,7 @@ bool cvdescriptorset::DescriptorSet::VerifyWriteUpdateContents(const VkWriteDesc
     case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
     case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
-            auto buffer = update->pBufferInfo[di].buffer;
-            if (!ValidateBufferUpdate(buffer, update->descriptorType, error)) {
+            if (!ValidateBufferUpdate(update->pBufferInfo + di, update->descriptorType, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted write update to buffer descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
@@ -1208,7 +1250,7 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
                 return false;
             }
             auto buffer = bv_info->buffer;
-            if (!ValidateBufferUpdate(buffer, type, error)) {
+            if (!ValidateBufferUsage(getBufferNode(device_data_, buffer), type, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted copy update to texel buffer descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
@@ -1220,7 +1262,7 @@ bool cvdescriptorset::DescriptorSet::VerifyCopyUpdateContents(const VkCopyDescri
     case GeneralBuffer: {
         for (uint32_t di = 0; di < update->descriptorCount; ++di) {
             auto buffer = static_cast<BufferDescriptor *>(src_set->descriptors_[index + di].get())->GetBuffer();
-            if (!ValidateBufferUpdate(buffer, type, error)) {
+            if (!ValidateBufferUsage(getBufferNode(device_data_, buffer), type, error)) {
                 std::stringstream error_str;
                 error_str << "Attempted copy update to buffer descriptor failed due to: " << error->c_str();
                 *error = error_str.str();
