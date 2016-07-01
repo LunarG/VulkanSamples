@@ -5229,9 +5229,11 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
         set_mem_binding(dev_data, mem, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory");
     auto buffer_node = getBufferNode(dev_data, buffer);
     if (buffer_node) {
-        buffer_node->mem = mem;
         VkMemoryRequirements memRequirements;
         dev_data->device_dispatch_table->GetBufferMemoryRequirements(device, buffer, &memRequirements);
+        buffer_node->mem = mem;
+        buffer_node->memOffset = memoryOffset;
+        buffer_node->memSize = memRequirements.size;
 
         // Track and validate bound memory range information
         auto mem_info = getMemObjInfo(dev_data, mem);
