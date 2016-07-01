@@ -3085,7 +3085,7 @@ TEST_F(VkLayerTest, RenderPassInitialLayoutUndefined) {
     // command buffer already has a layout recorded for the attachment.
     VkRenderPassBeginInfo rpbi = {
         VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr,
-        rp, fb, { 0, 0, 32, 32 },
+        rp, fb, { { 0, 0 } , { 32, 32 } },
         0, nullptr
     };
     BeginCommandBuffer();
@@ -3188,7 +3188,7 @@ TEST_F(VkLayerTest, RenderPassSubpassZeroTransitionsApplied) {
     // if it doesn't occur.
     VkRenderPassBeginInfo rpbi = {
         VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr,
-        rp, fb, { 0, 0, 32, 32 },
+        rp, fb, { { 0, 0 }, { 32, 32 } },
         0, nullptr
     };
     BeginCommandBuffer();
@@ -3262,7 +3262,7 @@ TEST_F(VkLayerTest, RenderPassTransitionsAttachmentUnused) {
     // bug manifests in BeginRenderPass.
     VkRenderPassBeginInfo rpbi = {
         VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr,
-        rp, fb, { 0, 0, 32, 32 },
+        rp, fb, { { 0, 0 }, { 32, 32 } },
         0, nullptr
     };
     BeginCommandBuffer();
