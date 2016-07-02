@@ -874,7 +874,7 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(const debug_report_data *repo
             std::string error_str;
             if (!set_node->ValidateWriteUpdate(report_data, &p_wds[i], &error_str)) {
                 skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                                     reinterpret_cast<uint64_t &>(dest_set), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
+                                     reinterpret_cast<uint64_t &>(dest_set), __LINE__, DRAWSTATE_INVALID_WRITE_UPDATE, "DS",
                                      "vkUpdateDescriptorsSets() failed write update validation for Descriptor Set 0x%" PRIx64
                                      " with error: %s",
                                      reinterpret_cast<uint64_t &>(dest_set), error_str.c_str());
@@ -904,7 +904,7 @@ bool cvdescriptorset::ValidateUpdateDescriptorSets(const debug_report_data *repo
             if (!dst_node->ValidateCopyUpdate(report_data, &p_cds[i], src_node, &error_str)) {
                 skip_call |=
                     log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                            reinterpret_cast<uint64_t &>(dst_set), __LINE__, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
+                            reinterpret_cast<uint64_t &>(dst_set), __LINE__, DRAWSTATE_INVALID_COPY_UPDATE, "DS",
                             "vkUpdateDescriptorsSets() failed copy update from Descriptor Set 0x%" PRIx64
                             " to Descriptor Set 0x%" PRIx64 " with error: %s",
                             reinterpret_cast<uint64_t &>(src_set), reinterpret_cast<uint64_t &>(dst_set), error_str.c_str());

@@ -89,8 +89,10 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_CANT_FREE_FROM_NON_FREE_POOL,           // Invalid to call
                                                       // vkFreeDescriptorSets on Sets
                                                       // allocated from a NON_FREE Pool
-    DRAWSTATE_INVALID_UPDATE_INDEX,                   // Index of requested update is invalid for
-                                                      // specified descriptors set
+    DRAWSTATE_INVALID_WRITE_UPDATE,                   // Attempting a write update to a descriptor
+                                                      // set with invalid update state
+    DRAWSTATE_INVALID_COPY_UPDATE,                    // Attempting copy update to a descriptor set
+                                                      // with invalid state
     DRAWSTATE_INVALID_UPDATE_STRUCT,                  // Struct in DS Update tree is of invalid
                                                       // type
     DRAWSTATE_NUM_SAMPLES_MISMATCH,                   // Number of samples in bound PSO does not
