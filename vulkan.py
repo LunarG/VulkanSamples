@@ -1346,6 +1346,16 @@ for ext in extensions:
 
 proto_names = [proto.name for proto in protos]
 
+headers_all = []
+objects_all = []
+protos_all = []
+for ext in extensions_all:
+    headers_all.extend(ext.headers)
+    objects_all.extend(ext.objects)
+    protos_all.extend(ext.protos)
+
+proto_all_names = [proto.name for proto in protos_all]
+
 def parse_vk_h(filename):
     # read object and protoype typedefs
     object_lines = []

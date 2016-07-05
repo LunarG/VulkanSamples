@@ -69,8 +69,6 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCreateInfo* pCre
     }
     layer_init_instance_dispatch_table(*pInstance, &inst->layer_disp, fpGetInstanceProcAddr);
 
-    create_instance_register_extensions(pCreateInfo, *pInstance, inst);
-
     return result;
 }
 
@@ -181,8 +179,6 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice physicalDevice, c
         return result;
     }
     initDeviceTable(*pDevice, fpGetDeviceProcAddr);
-
-    create_device_register_extensions(pCreateInfo, *pDevice);
 
 #if 0 // TODO add once device is wrapped
     // store the loader callback for initializing created dispatchable objects

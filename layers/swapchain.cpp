@@ -42,21 +42,11 @@ static const VkLayerProperties swapchain_layer = {
     "VK_LAYER_LUNARG_swapchain", VK_LAYER_API_VERSION, 1, "LunarG Validation Layer",
 };
 
-static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo *pCreateInfo,
-                                           VkDevice device) {
+static void checkDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo *pCreateInfo,
+                                          VkDevice device) {
     uint32_t i;
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-
-    VkLayerDispatchTable *pDisp = my_device_data->device_dispatch_table;
-    PFN_vkGetDeviceProcAddr gpa = pDisp->GetDeviceProcAddr;
-
-    pDisp->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR)gpa(device, "vkCreateSwapchainKHR");
-    pDisp->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR)gpa(device, "vkDestroySwapchainKHR");
-    pDisp->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)gpa(device, "vkGetSwapchainImagesKHR");
-    pDisp->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR)gpa(device, "vkAcquireNextImageKHR");
-    pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR)gpa(device, "vkQueuePresentKHR");
-    pDisp->GetDeviceQueue = (PFN_vkGetDeviceQueue)gpa(device, "vkGetDeviceQueue");
 
     SwpPhysicalDevice *pPhysicalDevice = NULL;
     {
@@ -87,62 +77,9 @@ static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, cons
     }
 }
 
-static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance) {
+static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance) {
     uint32_t i;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    VkLayerInstanceDispatchTable *pDisp = my_data->instance_dispatch_table;
-    PFN_vkGetInstanceProcAddr gpa = pDisp->GetInstanceProcAddr;
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-    pDisp->CreateAndroidSurfaceKHR = (PFN_vkCreateAndroidSurfaceKHR)gpa(instance, "vkCreateAndroidSurfaceKHR");
-#endif // VK_USE_PLATFORM_ANDROID_KHR
-#ifdef VK_USE_PLATFORM_MIR_KHR
-    pDisp->CreateMirSurfaceKHR = (PFN_vkCreateMirSurfaceKHR)gpa(instance, "vkCreateMirSurfaceKHR");
-    pDisp->GetPhysicalDeviceMirPresentationSupportKHR =
-        (PFN_vkGetPhysicalDeviceMirPresentationSupportKHR)gpa(instance, "vkGetPhysicalDeviceMirPresentationSupportKHR");
-#endif // VK_USE_PLATFORM_MIR_KHR
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    pDisp->CreateWaylandSurfaceKHR = (PFN_vkCreateWaylandSurfaceKHR)gpa(instance, "vkCreateWaylandSurfaceKHR");
-    pDisp->GetPhysicalDeviceWaylandPresentationSupportKHR =
-        (PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR)gpa(instance, "vkGetPhysicalDeviceWaylandPresentationSupportKHR");
-#endif // VK_USE_PLATFORM_WAYLAND_KHR
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    pDisp->CreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR)gpa(instance, "vkCreateWin32SurfaceKHR");
-    pDisp->GetPhysicalDeviceWin32PresentationSupportKHR =
-        (PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR)gpa(instance, "vkGetPhysicalDeviceWin32PresentationSupportKHR");
-#endif // VK_USE_PLATFORM_WIN32_KHR
-#ifdef VK_USE_PLATFORM_XCB_KHR
-    pDisp->CreateXcbSurfaceKHR = (PFN_vkCreateXcbSurfaceKHR)gpa(instance, "vkCreateXcbSurfaceKHR");
-    pDisp->GetPhysicalDeviceXcbPresentationSupportKHR =
-        (PFN_vkGetPhysicalDeviceXcbPresentationSupportKHR)gpa(instance, "vkGetPhysicalDeviceXcbPresentationSupportKHR");
-#endif // VK_USE_PLATFORM_XCB_KHR
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-    pDisp->CreateXlibSurfaceKHR = (PFN_vkCreateXlibSurfaceKHR)gpa(instance, "vkCreateXlibSurfaceKHR");
-    pDisp->GetPhysicalDeviceXlibPresentationSupportKHR =
-        (PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR)gpa(instance, "vkGetPhysicalDeviceXlibPresentationSupportKHR");
-#endif // VK_USE_PLATFORM_XLIB_KHR
-    pDisp->DestroySurfaceKHR = (PFN_vkDestroySurfaceKHR)gpa(instance, "vkDestroySurfaceKHR");
-    pDisp->GetPhysicalDeviceSurfaceSupportKHR =
-        (PFN_vkGetPhysicalDeviceSurfaceSupportKHR)gpa(instance, "vkGetPhysicalDeviceSurfaceSupportKHR");
-    pDisp->GetPhysicalDeviceSurfaceCapabilitiesKHR =
-        (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR)gpa(instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
-    pDisp->GetPhysicalDeviceSurfaceFormatsKHR =
-        (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR)gpa(instance, "vkGetPhysicalDeviceSurfaceFormatsKHR");
-    pDisp->GetPhysicalDeviceSurfacePresentModesKHR =
-        (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)gpa(instance, "vkGetPhysicalDeviceSurfacePresentModesKHR");
-    pDisp->CreateDisplayPlaneSurfaceKHR =
-        (PFN_vkCreateDisplayPlaneSurfaceKHR)gpa(instance, "vkCreateDisplayPlaneSurfaceKHR");
-    pDisp->GetPhysicalDeviceDisplayPropertiesKHR =
-        (PFN_vkGetPhysicalDeviceDisplayPropertiesKHR)gpa(instance, "vkGetPhysicalDeviceDisplayPropertiesKHR");
-    pDisp->GetPhysicalDeviceDisplayPlanePropertiesKHR =
-        (PFN_vkGetPhysicalDeviceDisplayPlanePropertiesKHR)gpa(instance, "vkGetPhysicalDeviceDisplayPlanePropertiesKHR");
-    pDisp->GetDisplayPlaneSupportedDisplaysKHR =
-        (PFN_vkGetDisplayPlaneSupportedDisplaysKHR)gpa(instance, "vkGetDisplayPlaneSupportedDisplaysKHR");
-    pDisp->GetDisplayModePropertiesKHR =
-        (PFN_vkGetDisplayModePropertiesKHR)gpa(instance, "vkGetDisplayModePropertiesKHR");
-    pDisp->CreateDisplayModeKHR =
-        (PFN_vkCreateDisplayModeKHR)gpa(instance, "vkCreateDisplayModeKHR");
-    pDisp->GetDisplayPlaneCapabilitiesKHR =
-        (PFN_vkGetDisplayPlaneCapabilitiesKHR)gpa(instance, "vkGetDisplayPlaneCapabilitiesKHR");
 
     // Remember this instance, and whether the VK_KHR_surface extension
     // was enabled for it:
@@ -278,7 +215,7 @@ CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallba
                                                         pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames);
 
     // Call the following function after my_data is initialized:
-    createInstanceRegisterExtensions(pCreateInfo, *pInstance);
+    checkInstanceRegisterExtensions(pCreateInfo, *pInstance);
     init_swapchain(my_data, pAllocator);
 
     return result;
@@ -1356,7 +1293,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice,
     layer_init_device_dispatch_table(*pDevice, my_device_data->device_dispatch_table, fpGetDeviceProcAddr);
 
     my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
-    createDeviceRegisterExtensions(physicalDevice, pCreateInfo, *pDevice);
+    checkDeviceRegisterExtensions(physicalDevice, pCreateInfo, *pDevice);
 
     return result;
 }
