@@ -3132,8 +3132,8 @@ TEST_F(VkLayerTest, RenderPassSubpassZeroTransitionsApplied) {
     };
 
     VkSubpassDependency dep = {
-        0, 0, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        0, 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
         VK_DEPENDENCY_BY_REGION_BIT
@@ -3206,8 +3206,8 @@ TEST_F(VkLayerTest, RenderPassSubpassZeroTransitionsApplied) {
         { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
     };
     vkCmdPipelineBarrier(m_commandBuffer->handle(),
-                         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                          VK_DEPENDENCY_BY_REGION_BIT,
                          0, nullptr, 0, nullptr, 1, &imb);
 
