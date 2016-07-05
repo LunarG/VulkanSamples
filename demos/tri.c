@@ -152,6 +152,7 @@ struct demo {
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND window;                 // hWnd - window handle
+    POINT minsize;               // minimum window size
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
     xcb_connection_t *connection;
     xcb_screen_t *screen;
@@ -1618,6 +1619,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
             demo_run(&demo);
             break;
         }
+    case WM_GETMINMAXINFO:     // set window's minimum size
+        ((MINMAXINFO*)lParam)->ptMinTrackSize = demo.minsize;
+        return 0;
     case WM_SIZE:
         // Resize the application to the new window size, except when
         // it was minimized. Vulkan doesn't support images or swapchains
@@ -1625,6 +1629,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         if (wParam != SIZE_MINIMIZED) {
             demo.width = lParam & 0xffff;
             demo.height = lParam & 0xffff0000 >> 16;
+            
+            if (demo.height < 64) demo.height = 64;
+
             demo_resize(&demo);
         }
         break;
@@ -1678,6 +1685,9 @@ static void demo_create_window(struct demo *demo) {
         fflush(stdout);
         exit(1);
     }
+    // Window client area size must be at least 1 pixel high, to prevent crash.
+    demo->minsize.x = GetSystemMetrics(SM_CXMINTRACK);
+    demo->minsize.y = GetSystemMetrics(SM_CYMINTRACK) + 1;
 }
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 static void demo_handle_event(struct demo *demo,
