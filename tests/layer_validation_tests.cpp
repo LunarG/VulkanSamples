@@ -8903,6 +8903,7 @@ TEST_F(VkLayerTest, DSBufferInfoErrors) {
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
     m_errorMonitor->VerifyFound();
+    vkFreeMemory(m_device->device(), mem, NULL);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyBuffer(m_device->device(), buffer, NULL);
     vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
