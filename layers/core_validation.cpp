@@ -396,20 +396,6 @@ static bool validate_usage_flags(layer_data *my_data, VkFlags actual, VkFlags de
     return skip_call;
 }
 
-// Helper function to validate usage flags for images
-// Pulls image info and then sends actual vs. desired usage off to helper above where
-//  an error will be flagged if usage is not correct
-static bool validate_image_usage_flags(layer_data *dev_data, VkImage image, VkFlags desired, VkBool32 strict,
-                                           char const *func_name, char const *usage_string) {
-    bool skip_call = false;
-    auto const image_node = getImageNode(dev_data, image);
-    if (image_node) {
-        skip_call = validate_usage_flags(dev_data, image_node->createInfo.usage, desired, strict, (uint64_t)image,
-                                         VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "image", func_name, usage_string);
-    }
-    return skip_call;
-}
-
 // Helper function to validate usage flags for buffers
 // For given buffer_node send actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
@@ -5733,11 +5719,11 @@ static void ResolveRemainingLevelsLayers(layer_data *dev_data, uint32_t *levels,
 
 static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageViewCreateInfo *pCreateInfo) {
     bool skip_call = false;
-    skip_call |= validate_image_usage_flags(dev_data, pCreateInfo->image,
-                                            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
-                                                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                                            false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
     IMAGE_NODE *image_node = getImageNode(dev_data, pCreateInfo->image);
+    skip_call |= validateImageUsageFlags(dev_data, image_node,
+                                         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
+                                             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                                         false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
     // If this isn't a sparse image, it needs to have memory backing it at CreateImageView time
     if (0 == (static_cast<uint32_t>(image_node->createInfo.flags) & VK_IMAGE_CREATE_SPARSE_BINDING_BIT)) {
         if (MEMTRACKER_SWAP_CHAIN_IMAGE_KEY != image_node->mem) {
