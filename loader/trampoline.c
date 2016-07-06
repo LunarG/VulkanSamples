@@ -253,11 +253,13 @@ vkEnumerateInstanceLayerProperties(uint32_t *pPropertyCount,
     }
 
     *pPropertyCount = copy_size;
-    loader_destroy_layer_list(NULL, NULL, &instance_layer_list);
 
     if (copy_size < instance_layer_list.count) {
+        loader_destroy_layer_list(NULL, NULL, &instance_layer_list);
         return VK_INCOMPLETE;
     }
+
+    loader_destroy_layer_list(NULL, NULL, &instance_layer_list);
 
     return VK_SUCCESS;
 }
