@@ -268,31 +268,9 @@ int sample_main(int argc, char *argv[]) {
         assert(res == VK_SUCCESS);
     }
 
-    // Going to need a command buffer to send the memory barriers in
-    // set_image_layout but we couldn't have created one before we knew
-    // what our graphics_queue_family_index is, but now that we have it,
-    // create the command buffer
-
-    init_command_pool(info);
-    init_command_buffer(info);
-    execute_begin_command_buffer(info);
-    vkGetDeviceQueue(info.device, info.graphics_queue_family_index, 0,
-                     &info.queue);
-
-    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
-        set_image_layout(info, info.buffers[i].image, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_UNDEFINED,
-                         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-    }
-    execute_end_command_buffer(info);
-    execute_queue_command_buffer(info);
     /* VULKAN_KEY_END */
 
     /* Clean Up */
-    VkCommandBuffer cmd_bufs[1] = {info.cmd};
-    vkFreeCommandBuffers(info.device, info.cmd_pool, 1, cmd_bufs);
-    vkDestroyCommandPool(info.device, info.cmd_pool, NULL);
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         vkDestroyImageView(info.device, info.buffers[i].view, NULL);
     }

@@ -54,10 +54,6 @@ int sample_main(int argc, char *argv[]) {
     init_window(info);
     init_swapchain_extension(info);
     init_device(info);
-    init_command_pool(info);
-    init_command_buffer(info);
-    execute_begin_command_buffer(info);
-    init_device_queue(info);
 
     /* VULKAN_KEY_START */
     VkImageCreateInfo image_info = {};
@@ -141,17 +137,10 @@ int sample_main(int argc, char *argv[]) {
     res = vkBindImageMemory(info.device, info.depth.image, info.depth.mem, 0);
     assert(res == VK_SUCCESS);
 
-    /* Set the image layout to depth stencil optimal */
-    set_image_layout(info, info.depth.image, VK_IMAGE_ASPECT_DEPTH_BIT,
-                     VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
     /* Create image view */
     view_info.image = info.depth.image;
     res = vkCreateImageView(info.device, &view_info, NULL, &info.depth.view);
     assert(res == VK_SUCCESS);
-    execute_end_command_buffer(info);
-    execute_queue_command_buffer(info);
 
     /* VULKAN_KEY_END */
 
@@ -160,8 +149,6 @@ int sample_main(int argc, char *argv[]) {
     vkDestroyImageView(info.device, info.depth.view, NULL);
     vkDestroyImage(info.device, info.depth.image, NULL);
     vkFreeMemory(info.device, info.depth.mem, NULL);
-    destroy_command_buffer(info);
-    destroy_command_pool(info);
     destroy_device(info);
     destroy_window(info);
     destroy_instance(info);
