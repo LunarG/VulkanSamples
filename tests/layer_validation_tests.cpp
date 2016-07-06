@@ -11489,6 +11489,65 @@ TEST_F(VkLayerTest, CreatePipelineAttribArrayType)
     m_errorMonitor->VerifyNotFound();
 }
 
+TEST_F(VkLayerTest, CreatePipelineAttribComponents)
+{
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkVertexInputBindingDescription input_binding;
+    memset(&input_binding, 0, sizeof(input_binding));
+
+    VkVertexInputAttributeDescription input_attribs[3];
+    memset(input_attribs, 0, sizeof(input_attribs));
+
+    for (int i = 0; i < 3; i++) {
+        input_attribs[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        input_attribs[i].location = i;
+    }
+
+    char const *vsSource =
+        "#version 450\n"
+        "\n"
+        "layout(location=0) in vec4 x;\n"
+        "layout(location=1) in vec3 y1;\n"
+        "layout(location=1, component=3) in float y2;\n"
+        "layout(location=2) in vec4 z;\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "   gl_Position = x + vec4(y1, y2) + z;\n"
+        "}\n";
+    char const *fsSource =
+        "#version 450\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    pipe.AddVertexInputBindings(&input_binding, 1);
+    pipe.AddVertexInputAttribs(input_attribs, 3);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    m_errorMonitor->VerifyNotFound();
+}
+
 TEST_F(VkLayerTest, CreatePipelineSimplePositive)
 {
     m_errorMonitor->ExpectSuccess();
