@@ -1750,6 +1750,7 @@ static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipe
 
     auto it_a = attribs.begin();
     auto it_b = inputs.begin();
+    bool used = false;
 
     while ((attribs.size() > 0 && it_a != attribs.end()) || (inputs.size() > 0 && it_b != inputs.end())) {
         bool a_at_end = attribs.size() == 0 || it_a == attribs.end();
@@ -1757,11 +1758,12 @@ static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipe
         auto a_first = a_at_end ? 0 : it_a->first;
         auto b_first = b_at_end ? 0 : it_b->first.first;
         if (!a_at_end && (b_at_end || a_first < b_first)) {
-            if (log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+            if (!used && log_msg(report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
                         __LINE__, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                         "Vertex attribute at location %d not consumed by VS", a_first)) {
                 pass = false;
             }
+            used = false;
             it_a++;
         } else if (!b_at_end && (a_at_end || b_first < a_first)) {
             if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, /*dev*/ 0,
@@ -1786,7 +1788,7 @@ static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipe
             }
 
             /* OK! */
-            it_a++;
+            used = true;
             it_b++;
         }
     }
