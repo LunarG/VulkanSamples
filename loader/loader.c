@@ -2400,13 +2400,13 @@ loader_add_layer_properties(const struct loader_instance *inst,
     // Get the major/minor/and patch as integers for easier comparison
     vers_tok = strtok(file_vers, ".\"\n\r");
     if (NULL != vers_tok) {
-        file_major_vers = atoi(vers_tok);
+        file_major_vers = (uint16_t)atoi(vers_tok);
         vers_tok = strtok(NULL, ".\"\n\r");
         if (NULL != vers_tok) {
-            file_minor_vers = atoi(vers_tok);
+            file_minor_vers = (uint16_t)atoi(vers_tok);
             vers_tok = strtok(NULL, ".\"\n\r");
             if (NULL != vers_tok) {
-                file_patch_vers = atoi(vers_tok);
+                file_patch_vers = (uint16_t)atoi(vers_tok);
             }
         }
     }
@@ -2831,13 +2831,13 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
         // Get the major/minor/and patch as integers for easier comparison
         vers_tok = strtok(file_vers, ".\"\n\r");
         if (NULL != vers_tok) {
-            file_major_vers = atoi(vers_tok);
+            file_major_vers = (uint16_t)atoi(vers_tok);
             vers_tok = strtok(NULL, ".\"\n\r");
             if (NULL != vers_tok) {
-                file_minor_vers = atoi(vers_tok);
+                file_minor_vers = (uint16_t)atoi(vers_tok);
                 vers_tok = strtok(NULL, ".\"\n\r");
                 if (NULL != vers_tok) {
-                    file_patch_vers = atoi(vers_tok);
+                    file_patch_vers = (uint16_t)atoi(vers_tok);
                 }
             }
         }
@@ -2952,7 +2952,6 @@ void loader_layer_scan(const struct loader_instance *inst,
     struct loader_manifest_files
         manifest_files[2]; // [0] = explicit, [1] = implicit
     cJSON *json;
-    uint32_t i;
     uint32_t implicit;
     bool lockedMutex = false;
 
@@ -2986,7 +2985,7 @@ void loader_layer_scan(const struct loader_instance *inst,
     loader_platform_thread_lock_mutex(&loader_json_lock);
     lockedMutex = true;
     for (implicit = 0; implicit < 2; implicit++) {
-        for (i = 0; i < manifest_files[implicit].count; i++) {
+        for (uint32_t i = 0; i < manifest_files[implicit].count; i++) {
             file_str = manifest_files[implicit].filename_list[i];
             if (file_str == NULL)
                 continue;
