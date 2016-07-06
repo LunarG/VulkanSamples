@@ -5815,6 +5815,23 @@ TEST_F(VkLayerTest, InvalidCmdBufferImageDestroyed) {
     VkResult err =
         vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
     ASSERT_VK_SUCCESS(err);
+    // Have to bind memory to image before recording cmd in cmd buffer using it
+    VkMemoryRequirements mem_reqs;
+    VkDeviceMemory image_mem;
+    bool pass;
+    VkMemoryAllocateInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.memoryTypeIndex = 0;
+    vkGetImageMemoryRequirements(m_device->device(), image, &mem_reqs);
+    mem_alloc.allocationSize = mem_reqs.size;
+    pass =
+        m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    ASSERT_TRUE(pass);
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &image_mem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), image, image_mem, 0);
+    ASSERT_VK_SUCCESS(err);
 
     m_commandBuffer->BeginCommandBuffer();
     VkClearColorValue ccv;
@@ -5824,8 +5841,8 @@ TEST_F(VkLayerTest, InvalidCmdBufferImageDestroyed) {
     ccv.float32[3] = 1.0f;
     VkImageSubresourceRange isr = {};
     isr.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    isr.baseArrayLayer = 1;
-    isr.baseMipLevel = 1;
+    isr.baseArrayLayer = 0;
+    isr.baseMipLevel = 0;
     isr.layerCount = 1;
     isr.levelCount = 1;
     vkCmdClearColorImage(m_commandBuffer->GetBufferHandle(), image,
@@ -5844,6 +5861,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferImageDestroyed) {
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
 
     m_errorMonitor->VerifyFound();
+    vkFreeMemory(m_device->device(), image_mem, nullptr);
 }
 
 TEST_F(VkLayerTest, InvalidPipeline) {
