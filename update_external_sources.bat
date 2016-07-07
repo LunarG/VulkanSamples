@@ -215,6 +215,13 @@ goto:eof
    cd %GLSLANG_DIR%
    git fetch --all
    git checkout %GLSLANG_REVISION%
+   REM Special case for this particular revision:
+   REM Pull in a patch that fixes a compilation issue with g++ 5.3
+   REM See https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/issues/681
+   if "%GLSLANG_REVISION%" == "4678ca9dacfec7a084dbc69bbe568bdad6889f1b" (
+      git checkout %GLSLANG_REVISION% -B temp1610
+      git cherry-pick 880bf36cacee1cfce7d5d94991eb18c9e2d59d39
+   )
 goto:eof
 
 :create_spirv-tools
