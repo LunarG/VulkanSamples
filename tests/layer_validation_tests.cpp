@@ -6543,6 +6543,36 @@ TEST_F(VkLayerTest, InvalidCmdBufferImageDestroyed) {
     vkFreeMemory(m_device->device(), image_mem, nullptr);
 }
 
+TEST_F(VkLayerTest, InvalidCmdBufferEventDestroyed) {
+    TEST_DESCRIPTION("Attempt to draw with a command buffer that is invalid "
+                     "due to an event dependency being destroyed.");
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkEvent event;
+    VkEventCreateInfo evci = {};
+    evci.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+    VkResult result = vkCreateEvent(m_device->device(), &evci, NULL, &event);
+    ASSERT_VK_SUCCESS(result);
+
+    m_commandBuffer->BeginCommandBuffer();
+    vkCmdSetEvent(m_commandBuffer->GetBufferHandle(), event,
+                  VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+    m_commandBuffer->EndCommandBuffer();
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT, " that is invalid because bound event ");
+    // Destroy event dependency prior to submit to cause ERROR
+    vkDestroyEvent(m_device->device(), event, NULL);
+
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+
+    m_errorMonitor->VerifyFound();
+}
+
 TEST_F(VkLayerTest, InvalidPipeline) {
     // Attempt to bind an invalid Pipeline to a valid Command Buffer
     // ObjectTracker should catch this.
