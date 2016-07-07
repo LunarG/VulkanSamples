@@ -426,10 +426,25 @@ template <> struct hash<ImageSubresourcePair> {
 };
 }
 
+// Store layouts and pushconstants for PipelineLayout
+struct PIPELINE_LAYOUT_NODE {
+    VkPipelineLayout layout;
+    std::vector<cvdescriptorset::DescriptorSetLayout const *> set_layouts;
+    std::vector<VkPushConstantRange> push_constant_ranges;
+
+    PIPELINE_LAYOUT_NODE() : layout(VK_NULL_HANDLE), set_layouts{}, push_constant_ranges{} {}
+
+    void reset() {
+        layout = VK_NULL_HANDLE;
+        set_layouts.clear();
+        push_constant_ranges.clear();
+    }
+};
+
 // Track last states that are bound per pipeline bind point (Gfx & Compute)
 struct LAST_BOUND_STATE {
     VkPipeline pipeline;
-    VkPipelineLayout pipelineLayout;
+    PIPELINE_LAYOUT_NODE pipeline_layout;
     // Track each set that has been bound
     // TODO : can unique be global per CB? (do we care about Gfx vs. Compute?)
     std::unordered_set<cvdescriptorset::DescriptorSet *> uniqueBoundSets;
@@ -440,7 +455,7 @@ struct LAST_BOUND_STATE {
 
     void reset() {
         pipeline = VK_NULL_HANDLE;
-        pipelineLayout = VK_NULL_HANDLE;
+        pipeline_layout.reset();
         uniqueBoundSets.clear();
         boundDescriptorSets.clear();
         dynamicOffsets.clear();
