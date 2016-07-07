@@ -535,22 +535,11 @@ static void demo_set_image_layout(struct demo *demo, VkImage image,
 
         err = vkAllocateCommandBuffers(demo->device, &cmd, &demo->cmd);
         assert(!err);
-
-        VkCommandBufferInheritanceInfo cmd_buf_hinfo = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-            .pNext = NULL,
-            .renderPass = VK_NULL_HANDLE,
-            .subpass = 0,
-            .framebuffer = VK_NULL_HANDLE,
-            .occlusionQueryEnable = VK_FALSE,
-            .queryFlags = 0,
-            .pipelineStatistics = 0,
-        };
         VkCommandBufferBeginInfo cmd_buf_info = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
             .pNext = NULL,
             .flags = 0,
-            .pInheritanceInfo = &cmd_buf_hinfo,
+            .pInheritanceInfo = NULL,
         };
         err = vkBeginCommandBuffer(demo->cmd, &cmd_buf_info);
         assert(!err);
@@ -597,21 +586,11 @@ static void demo_set_image_layout(struct demo *demo, VkImage image,
 }
 
 static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf) {
-    VkCommandBufferInheritanceInfo cmd_buf_hinfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-        .pNext = NULL,
-        .renderPass = VK_NULL_HANDLE,
-        .subpass = 0,
-        .framebuffer = VK_NULL_HANDLE,
-        .occlusionQueryEnable = VK_FALSE,
-        .queryFlags = 0,
-        .pipelineStatistics = 0,
-    };
     const VkCommandBufferBeginInfo cmd_buf_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .pNext = NULL,
         .flags = 0,
-        .pInheritanceInfo = &cmd_buf_hinfo,
+        .pInheritanceInfo = NULL,
     };
     const VkClearValue clear_values[2] = {
             [0] = {.color.float32 = {0.2f, 0.2f, 0.2f, 0.2f}},
