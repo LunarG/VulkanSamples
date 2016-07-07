@@ -2058,7 +2058,7 @@ static VkDescriptorSetLayoutBinding const * get_descriptor_binding(PIPELINE_LAYO
     if (!pipelineLayout)
         return nullptr;
 
-    if (slot.first >= pipelineLayout->descriptorSetLayouts.size())
+    if (slot.first >= pipelineLayout->setLayouts.size())
         return nullptr;
 
     return pipelineLayout->setLayouts[slot.first]->GetDescriptorSetLayoutBindingPtrFromBinding(slot.second);
@@ -2301,11 +2301,11 @@ static bool verify_set_layout_compatibility(layer_data *my_data, const cvdescrip
         errorMsg = errorStr.str();
         return false;
     }
-    if (layoutIndex >= pipeline_layout->descriptorSetLayouts.size()) {
+    auto num_sets = pipeline_layout->setLayouts.size();
+    if (layoutIndex >= num_sets) {
         stringstream errorStr;
-        errorStr << "VkPipelineLayout (" << layout << ") only contains " << pipeline_layout->descriptorSetLayouts.size()
-                 << " setLayouts corresponding to sets 0-" << pipeline_layout->descriptorSetLayouts.size() - 1
-                 << ", but you're attempting to bind set to index " << layoutIndex;
+        errorStr << "VkPipelineLayout (" << layout << ") only contains " << num_sets << " setLayouts corresponding to sets 0-"
+                 << num_sets - 1 << ", but you're attempting to bind set to index " << layoutIndex;
         errorMsg = errorStr.str();
         return false;
     }
@@ -6063,10 +6063,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         PIPELINE_LAYOUT_NODE &plNode = dev_data->pipelineLayoutMap[*pPipelineLayout];
-        plNode.descriptorSetLayouts.resize(pCreateInfo->setLayoutCount);
         plNode.setLayouts.resize(pCreateInfo->setLayoutCount);
         for (i = 0; i < pCreateInfo->setLayoutCount; ++i) {
-            plNode.descriptorSetLayouts[i] = pCreateInfo->pSetLayouts[i];
             plNode.setLayouts[i] = getDescriptorSetLayout(dev_data, pCreateInfo->pSetLayouts[i]);
         }
         plNode.pushConstantRanges.resize(pCreateInfo->pushConstantRangeCount);
