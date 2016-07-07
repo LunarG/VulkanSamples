@@ -252,7 +252,8 @@ class VkLayerTest : public VkRenderFramework {
         m_commandBuffer->DrawIndexed(indexCount, instanceCount, firstIndex,
                                      vertexOffset, firstInstance);
     }
-    void QueueCommandBuffer() { m_commandBuffer->QueueCommandBuffer(); }
+    void QueueCommandBuffer(bool checkSuccess = true) {
+        m_commandBuffer->QueueCommandBuffer(checkSuccess); }
     void QueueCommandBuffer(const VkFence &fence) {
         m_commandBuffer->QueueCommandBuffer(fence);
     }
@@ -557,6 +558,268 @@ protected:
     }
 };
 
+class VkBufferTest {
+public:
+    enum eTestEnFlags {
+        eDoubleDelete,
+        eInvalidDeviceOffset,
+        eInvalidMemoryOffset,
+        eBindNullBuffer,
+        eFreeInvalidHandle,
+    };
+
+    enum eTestConditions {
+        eOffsetAlignment = 1
+    };
+
+    static bool GetTestConditionValid(VkDeviceObj *aVulkanDevice,
+                                      eTestEnFlags aTestFlag,
+                                      VkBufferUsageFlags aBufferUsage = 0) {
+        if (eInvalidDeviceOffset != aTestFlag &&
+                eInvalidMemoryOffset != aTestFlag) {
+            return true;
+        }
+        VkDeviceSize offset_limit = 0;
+        if (eInvalidMemoryOffset == aTestFlag) {
+            VkBuffer vulkanBuffer;
+            VkBufferCreateInfo buffer_create_info = {};
+            buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            buffer_create_info.size = 32;
+            buffer_create_info.usage = aBufferUsage;
+
+            vkCreateBuffer(aVulkanDevice->device(), &buffer_create_info, nullptr,
+                           &vulkanBuffer);
+            VkMemoryRequirements memory_reqs = {0};
+
+            vkGetBufferMemoryRequirements(aVulkanDevice->device(),
+                                          vulkanBuffer, &memory_reqs);
+            vkDestroyBuffer(aVulkanDevice->device(), vulkanBuffer, nullptr);
+            offset_limit = memory_reqs.alignment;
+        }
+        else if ((VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
+             VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT) & aBufferUsage) {
+            offset_limit =
+                    aVulkanDevice->props.limits.minTexelBufferOffsetAlignment;
+        } else if (VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT & aBufferUsage) {
+            offset_limit =
+                    aVulkanDevice->props.limits.minUniformBufferOffsetAlignment;
+        } else if (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT & aBufferUsage) {
+            offset_limit =
+                    aVulkanDevice->props.limits.minStorageBufferOffsetAlignment;
+        }
+        if (eOffsetAlignment < offset_limit) {
+            return true;
+        }
+        return false;
+    }
+
+    // A constructor which performs validation tests within construction.
+    VkBufferTest(VkDeviceObj *aVulkanDevice,
+                 VkBufferUsageFlags aBufferUsage,
+                 eTestEnFlags aTestFlag)
+        : AllocateCurrent(false), BoundCurrent(false),
+        CreateCurrent(false), VulkanDevice(aVulkanDevice->device()) {
+
+        if (eBindNullBuffer == aTestFlag) {
+            VulkanMemory = 0;
+            vkBindBufferMemory(VulkanDevice, VulkanBuffer, VulkanMemory, 0);
+        } else {
+            VkBufferCreateInfo buffer_create_info = {};
+            buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            buffer_create_info.size = 32;
+            buffer_create_info.usage = aBufferUsage;
+
+            vkCreateBuffer(VulkanDevice, &buffer_create_info, nullptr,
+                           &VulkanBuffer);
+
+            CreateCurrent = true;
+
+            VkMemoryRequirements memory_requirements;
+            vkGetBufferMemoryRequirements(VulkanDevice, VulkanBuffer,
+                                          &memory_requirements);
+
+            VkMemoryAllocateInfo memory_allocate_info = {};
+            memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            memory_allocate_info.allocationSize = memory_requirements.size;
+            bool pass = aVulkanDevice->phy().
+                    set_memory_type(memory_requirements.memoryTypeBits,
+                                    &memory_allocate_info,
+                                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            if (!pass) {
+                vkDestroyBuffer(VulkanDevice, VulkanBuffer, nullptr);
+                return;
+            }
+
+            vkAllocateMemory(VulkanDevice, &memory_allocate_info, NULL,
+                             &VulkanMemory);
+            AllocateCurrent = true;
+            // NB: 1 is intentionally an invalid offset value
+            const bool offset_en = eInvalidDeviceOffset == aTestFlag ||
+                    eInvalidMemoryOffset == aTestFlag;
+            vkBindBufferMemory(VulkanDevice, VulkanBuffer, VulkanMemory,
+                               offset_en ? eOffsetAlignment : 0);
+            BoundCurrent = true;
+
+            InvalidDeleteEn = (eFreeInvalidHandle == aTestFlag);
+        }
+    }
+
+    ~VkBufferTest() {
+        if (CreateCurrent) {
+            vkDestroyBuffer(VulkanDevice, VulkanBuffer, nullptr);
+        }
+        if (AllocateCurrent) {
+            if (InvalidDeleteEn) {
+                union {
+                    VkDeviceMemory device_memory;
+                    unsigned long long index_access;
+                } bad_index;
+
+                bad_index.device_memory = VulkanMemory;
+                bad_index.index_access++;
+
+                vkFreeMemory(VulkanDevice,
+                             bad_index.device_memory,
+                             nullptr);
+            }
+            vkFreeMemory(VulkanDevice, VulkanMemory, nullptr);
+        }
+    }
+
+    bool GetBufferCurrent() {
+        return AllocateCurrent && BoundCurrent && CreateCurrent;
+    }
+
+    const VkBuffer &GetBuffer() {
+        return VulkanBuffer;
+    }
+
+    void TestDoubleDestroy() {
+        // Destroy the buffer but leave the flag set, which will cause
+        // the buffer to be destroyed again in the destructor.
+        vkDestroyBuffer(VulkanDevice, VulkanBuffer, nullptr);
+    }
+
+protected:
+    bool AllocateCurrent;
+    bool BoundCurrent;
+    bool CreateCurrent;
+    bool InvalidDeleteEn;
+
+    VkBuffer VulkanBuffer;
+    VkDevice VulkanDevice;
+    VkDeviceMemory VulkanMemory;
+
+};
+
+class VkVerticesObj {
+public:
+    VkVerticesObj(VkDeviceObj *aVulkanDevice, unsigned aAttributeCount,
+                  unsigned aBindingCount, unsigned aByteStride,
+                  VkDeviceSize aVertexCount, const float *aVerticies)
+        : BoundCurrent(false),
+          AttributeCount(aAttributeCount),
+          BindingCount(aBindingCount),
+          BindId(BindIdGenerator),
+          PipelineVertexInputStateCreateInfo(),
+          VulkanMemoryBuffer(aVulkanDevice, 1,
+                             static_cast<int>(aByteStride * aVertexCount),
+                             reinterpret_cast<const void *>(aVerticies),
+                             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
+        BindIdGenerator++; // NB: This can wrap w/misuse
+
+        VertexInputAttributeDescription =
+                new VkVertexInputAttributeDescription[AttributeCount];
+        VertexInputBindingDescription =
+                new VkVertexInputBindingDescription[BindingCount];
+
+        PipelineVertexInputStateCreateInfo.pVertexAttributeDescriptions =
+                VertexInputAttributeDescription;
+        PipelineVertexInputStateCreateInfo.vertexAttributeDescriptionCount =
+                AttributeCount;
+        PipelineVertexInputStateCreateInfo.pVertexBindingDescriptions =
+                VertexInputBindingDescription;
+        PipelineVertexInputStateCreateInfo.vertexBindingDescriptionCount =
+                BindingCount;
+        PipelineVertexInputStateCreateInfo.sType =
+                VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+        unsigned i = 0;
+        do {
+            VertexInputAttributeDescription[i].binding = BindId;
+            VertexInputAttributeDescription[i].location = i;
+            VertexInputAttributeDescription[i].format =
+                    VK_FORMAT_R32G32B32_SFLOAT;
+            VertexInputAttributeDescription[i].offset =
+                    sizeof(float) * aByteStride;
+            i++;
+        } while (AttributeCount < i);
+
+        i = 0;
+        do {
+            VertexInputBindingDescription[i].binding = BindId;
+            VertexInputBindingDescription[i].stride = aByteStride;
+            VertexInputBindingDescription[i].inputRate =
+                    VK_VERTEX_INPUT_RATE_VERTEX;
+            i++;
+        } while (BindingCount < i);
+    }
+
+    ~VkVerticesObj() {
+        if (VertexInputAttributeDescription) {
+            delete[] VertexInputAttributeDescription;
+        }
+        if (VertexInputBindingDescription) {
+            delete[] VertexInputBindingDescription;
+        }
+    }
+
+    bool AddVertexInputToPipe(VkPipelineObj &aPipelineObj) {
+        aPipelineObj.AddVertexInputAttribs(VertexInputAttributeDescription,
+                                           AttributeCount);
+        aPipelineObj.AddVertexInputBindings(VertexInputBindingDescription,
+                                            BindingCount);
+        return true;
+    }
+
+    void BindVertexBuffers(VkCommandBuffer aCommandBuffer,
+                           unsigned aOffsetCount = 0,
+                           VkDeviceSize *aOffsetList = nullptr) {
+        VkDeviceSize *offsetList;
+        unsigned offsetCount;
+
+        if (aOffsetCount) {
+            offsetList = aOffsetList;
+            offsetCount = aOffsetCount;
+        } else {
+            offsetList = new VkDeviceSize[1]();
+            offsetCount = 1;
+        }
+
+        vkCmdBindVertexBuffers(aCommandBuffer, BindId, offsetCount,
+                               &VulkanMemoryBuffer.handle(), offsetList);
+        BoundCurrent = true;
+
+        if (!aOffsetCount) {
+            delete [] offsetList;
+        }
+    }
+
+protected:
+    static uint32_t BindIdGenerator;
+
+    bool BoundCurrent;
+    unsigned AttributeCount;
+    unsigned BindingCount;
+    uint32_t BindId;
+
+    VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo;
+    VkVertexInputAttributeDescription *VertexInputAttributeDescription;
+    VkVertexInputBindingDescription *VertexInputBindingDescription;
+    VkConstantBufferObj VulkanMemoryBuffer;
+};
+
+uint32_t VkVerticesObj::BindIdGenerator;
 // ********************************************************************************************************************
 // ********************************************************************************************************************
 // ********************************************************************************************************************
@@ -10862,6 +11125,180 @@ TEST_F(VkLayerTest, VtxBufferBadIndex) {
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
+
+TEST_F(VkLayerTest, VertexBufferInvalid) {
+    TEST_DESCRIPTION("Submit a command buffer using deleted vertex buffer, "
+                     "delete a buffer twice, use an invalid offset for each "
+                     "buffer type, and attempt to bind a null buffer");
+
+    const char *deleted_buffer_in_command_buffer = "Cannot submit cmd buffer "
+                                                   "using deleted buffer ";
+    const char *double_destroy_message = "Cannot free buffer 0x";
+    const char *invalid_offset_message = "vkBindBufferMemory(): "
+                                         "memoryOffset is 0x";
+    const char *invalid_storage_buffer_offset_message = "vkBindBufferMemory(): "
+                                                        "storage memoryOffset "
+                                                        "is 0x";
+    const char *invalid_texel_buffer_offset_message = "vkBindBufferMemory(): "
+                                                      "texel memoryOffset "
+                                                      "is 0x";
+    const char *invalid_uniform_buffer_offset_message = "vkBindBufferMemory(): "
+                                                        "uniform memoryOffset "
+                                                        "is 0x";
+    const char *bind_null_buffer_message = "In vkBindBufferMemory, attempting"
+                                           " to Bind Obj(0x";
+    const char *free_invalid_buffer_message = "Request to delete memory "
+                                              "object 0x";
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
+    pipe_ms_state_ci.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    pipe_ms_state_ci.pNext = NULL;
+    pipe_ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    pipe_ms_state_ci.sampleShadingEnable = 0;
+    pipe_ms_state_ci.minSampleShading = 1.0;
+    pipe_ms_state_ci.pSampleMask = nullptr;
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    VkPipelineLayout pipeline_layout;
+
+    VkResult err = vkCreatePipelineLayout(m_device->device(),
+                                          &pipeline_layout_ci, nullptr,
+                                          &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkShaderObj vs(m_device, bindStateVertShaderText,
+                   VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText,
+                   VK_SHADER_STAGE_FRAGMENT_BIT,
+                   this);
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
+    pipe.SetMSAA(&pipe_ms_state_ci);
+    pipe.SetViewport(m_viewports);
+    pipe.SetScissor(m_scissors);
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
+
+    BeginCommandBuffer();
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(),
+                      VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+
+    {
+        // Create and bind a vertex buffer in a reduced scope, which will cause
+        // it to be deleted upon leaving this scope
+        const float vbo_data[3] = {1.f, 0.f, 1.f};
+        VkVerticesObj draw_verticies(m_device, 1, 1, sizeof(vbo_data),
+                                     3, vbo_data);
+        draw_verticies.BindVertexBuffers(m_commandBuffer->handle());
+        draw_verticies.AddVertexInputToPipe(pipe);
+    }
+
+    Draw(1, 0, 0, 0);
+
+    EndCommandBuffer();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         deleted_buffer_in_command_buffer);
+    QueueCommandBuffer(false);
+    m_errorMonitor->VerifyFound();
+
+    {
+        // Create and bind a vertex buffer in a reduced scope, and delete it
+        // twice, the second through the destructor
+        VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                 VkBufferTest::eDoubleDelete);
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             double_destroy_message);
+        buffer_test.TestDoubleDestroy();
+    }
+    m_errorMonitor->VerifyFound();
+
+    if (VkBufferTest::
+            GetTestConditionValid(m_device,
+                                  VkBufferTest::eInvalidMemoryOffset)) {
+        // Create and bind a memory buffer with an invalid offset.
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             invalid_offset_message);
+        VkBufferTest buffer_test(m_device,
+                                  VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT,
+                                  VkBufferTest::eInvalidMemoryOffset);
+        (void) buffer_test;
+        m_errorMonitor->VerifyFound();
+    }
+
+    if (VkBufferTest::
+            GetTestConditionValid(m_device,
+                                  VkBufferTest::eInvalidDeviceOffset,
+                                  VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT)) {
+        // Create and bind a memory buffer with an invalid offset again,
+        // but look for a texel buffer message.
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             invalid_texel_buffer_offset_message);
+        VkBufferTest buffer_test(m_device,
+                                  VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT,
+                                  VkBufferTest::eInvalidDeviceOffset);
+        (void) buffer_test;
+        m_errorMonitor->VerifyFound();
+    }
+
+    if (VkBufferTest::
+            GetTestConditionValid(m_device,
+                                  VkBufferTest::eInvalidDeviceOffset,
+                                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)) {
+        // Create and bind a memory buffer with an invalid offset again, but
+        // look for a uniform buffer message.
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             invalid_uniform_buffer_offset_message);
+        VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                  VkBufferTest::eInvalidDeviceOffset);
+        (void) buffer_test;
+        m_errorMonitor->VerifyFound();
+    }
+
+    if (VkBufferTest::
+            GetTestConditionValid(m_device,
+                                  VkBufferTest::eInvalidDeviceOffset,
+                                  VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)) {
+        // Create and bind a memory buffer with an invalid offset again, but
+        // look for a storage buffer message.
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             invalid_storage_buffer_offset_message);
+        VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                  VkBufferTest::eInvalidDeviceOffset);
+        (void) buffer_test;
+        m_errorMonitor->VerifyFound();
+    }
+
+    {
+        // Attempt to bind a null buffer.
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             bind_null_buffer_message);
+        VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                  VkBufferTest::eBindNullBuffer);
+        (void) buffer_test;
+        m_errorMonitor->VerifyFound();
+    }
+
+    {
+        // Attempt to use an invalid handle to delete a buffer.
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             free_invalid_buffer_message);
+        VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                 VkBufferTest::eFreeInvalidHandle);
+        (void) buffer_test;
+    }
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+}
+
 // INVALID_IMAGE_LAYOUT tests (one other case is hit by MapMemWithoutHostVisibleBit and not here)
 TEST_F(VkLayerTest, InvalidImageLayout) {
     TEST_DESCRIPTION("Hit all possible validation checks associated with the "
