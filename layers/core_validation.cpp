@@ -2614,8 +2614,7 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
     auto pipelineLayout = pipeline->pipeline_layout;
 
     /* validate push constant usage */
-    pass &= validate_push_constant_usage(report_data, &pipelineLayout->pushConstantRanges,
-                                        module, accessible_ids, pStage->stage);
+    pass &= validate_push_constant_usage(report_data, &pipelineLayout.pushConstantRanges, module, accessible_ids, pStage->stage);
 
     /* validate descriptor use */
     for (auto use : descriptor_uses) {
@@ -2623,7 +2622,7 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
         pipeline->active_slots[use.first.first].insert(use.first.second);
 
         /* verify given pipelineLayout has requested setLayout with requested binding */
-        const auto & binding = get_descriptor_binding(pipelineLayout, use.first);
+        const auto &binding = get_descriptor_binding(&pipelineLayout, use.first);
         unsigned required_descriptor_count;
 
         if (!binding) {
@@ -5859,7 +5858,7 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
         pPipeNode[i] = new PIPELINE_NODE;
         pPipeNode[i]->initGraphicsPipeline(&pCreateInfos[i]);
         pPipeNode[i]->render_pass_ci.initialize(getRenderPass(dev_data, pCreateInfos[i].renderPass)->pCreateInfo);
-        pPipeNode[i]->pipeline_layout = getPipelineLayout(dev_data, pCreateInfos[i].layout);
+        pPipeNode[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
 
         skip_call |= verifyPipelineCreateState(dev_data, device, pPipeNode, i);
     }
@@ -5903,7 +5902,7 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
         // Create and initialize internal tracking data structure
         pPipeNode[i] = new PIPELINE_NODE;
         pPipeNode[i]->initComputePipeline(&pCreateInfos[i]);
-        pPipeNode[i]->pipeline_layout = getPipelineLayout(dev_data, pCreateInfos[i].layout);
+        pPipeNode[i]->pipeline_layout = *getPipelineLayout(dev_data, pCreateInfos[i].layout);
         // memcpy(&pPipeNode[i]->computePipelineCI, (const void *)&pCreateInfos[i], sizeof(VkComputePipelineCreateInfo));
 
         // TODO: Add Compute Pipeline Verification
