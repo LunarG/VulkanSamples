@@ -5345,7 +5345,9 @@ DestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout, const Vk
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     dev_data->device_dispatch_table->DestroyPipelineLayout(device, pipelineLayout, pAllocator);
 
+    std::unique_lock<std::mutex> lock(global_lock);
     dev_data->pipelineLayoutMap.erase(pipelineLayout);
+    lock.unlock();
 }
 
 VKAPI_ATTR void VKAPI_CALL
