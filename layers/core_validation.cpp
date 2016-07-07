@@ -327,6 +327,14 @@ FENCE_NODE *getFenceNode(layer_data *dev_data, VkFence fence) {
     return &it->second;
 }
 
+EVENT_NODE *getEventNode(layer_data *dev_data, VkEvent event) {
+    auto it = dev_data->eventMap.find(event);
+    if (it == dev_data->eventMap.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}
+
 QUEUE_NODE *getQueueNode(layer_data *dev_data, VkQueue queue) {
     auto it = dev_data->queueMap.find(queue);
     if (it == dev_data->queueMap.end()) {
@@ -638,6 +646,8 @@ static const char *object_type_to_string(VkDebugReportObjectTypeEXT type) {
         return "descriptor set";
     case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT:
         return "buffer";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT:
+        return "event";
     default:
         return "unknown";
     }
@@ -4278,19 +4288,20 @@ static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *p
         }
     }
     for (auto event : pCB->events) {
-        auto eventNode = my_data->eventMap.find(event);
-        if (eventNode == my_data->eventMap.end()) {
+        auto event_node = getEventNode(my_data, event);
+        if (!event_node) {
             skip_call |=
                 log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                         reinterpret_cast<uint64_t &>(event), __LINE__, DRAWSTATE_INVALID_EVENT, "DS",
                         "Cannot submit cmd buffer using deleted event 0x%" PRIx64 ".", reinterpret_cast<uint64_t &>(event));
         } else {
-            eventNode->second.in_use.fetch_add(1);
+            event_node->in_use.fetch_add(1);
         }
     }
     for (auto event : pCB->writeEventsBeforeWait) {
-        auto eventNode = my_data->eventMap.find(event);
-        eventNode->second.write_in_use++;
+        auto event_node = getEventNode(my_data, event);
+        if (event_node)
+            event_node->write_in_use++;
     }
     return skip_call;
 }
@@ -4996,20 +5007,25 @@ VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const Vk
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool skip_call = false;
     std::unique_lock<std::mutex> lock(global_lock);
-    auto event_data = dev_data->eventMap.find(event);
-    if (event_data != dev_data->eventMap.end()) {
-        if (event_data->second.in_use.load()) {
+    auto event_node = getEventNode(dev_data, event);
+    if (event_node) {
+        if (event_node->in_use.load()) {
             skip_call |= log_msg(
                 dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                 reinterpret_cast<uint64_t &>(event), __LINE__, DRAWSTATE_INVALID_EVENT, "DS",
                 "Cannot delete event 0x%" PRIx64 " which is in use by a command buffer.", reinterpret_cast<uint64_t &>(event));
         }
-        dev_data->eventMap.erase(event_data);
     }
     lock.unlock();
     if (!skip_call)
         dev_data->device_dispatch_table->DestroyEvent(device, event, pAllocator);
-    // TODO : Clean up any internal data structures using this obj.
+
+    if (event_node) {
+        // Any bound cmd buffers are now invalid
+        invalidateCommandBuffers(event_node->cb_bindings,
+                                 {reinterpret_cast<uint64_t &>(event), VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT});
+        dev_data->eventMap.erase(event);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -7644,6 +7660,10 @@ CmdSetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags s
     if (pCB) {
         skip_call |= addCmd(dev_data, pCB, CMD_SETEVENT, "vkCmdSetEvent()");
         skip_call |= insideRenderPass(dev_data, pCB, "vkCmdSetEvent");
+        auto event_node = getEventNode(dev_data, event);
+        if (event_node) {
+            event_node->cb_bindings.insert(pCB);
+        }
         pCB->events.push_back(event);
         if (!pCB->waitedEvents.count(event)) {
             pCB->writeEventsBeforeWait.push_back(event);
@@ -7666,6 +7686,10 @@ CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags
     if (pCB) {
         skip_call |= addCmd(dev_data, pCB, CMD_RESETEVENT, "vkCmdResetEvent()");
         skip_call |= insideRenderPass(dev_data, pCB, "vkCmdResetEvent");
+        auto event_node = getEventNode(dev_data, event);
+        if (event_node) {
+            event_node->cb_bindings.insert(pCB);
+        }
         pCB->events.push_back(event);
         if (!pCB->waitedEvents.count(event)) {
             pCB->writeEventsBeforeWait.push_back(event);
@@ -8022,14 +8046,14 @@ bool validateEventStageMask(VkQueue queue, GLOBAL_CB_NODE *pCB, uint32_t eventCo
         if (event_data != queue_data->second.eventToStageMap.end()) {
             stageMask |= event_data->second;
         } else {
-            auto global_event_data = dev_data->eventMap.find(event);
-            if (global_event_data == dev_data->eventMap.end()) {
+            auto global_event_data = getEventNode(dev_data, event);
+            if (!global_event_data) {
                 skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT,
                                      reinterpret_cast<const uint64_t &>(event), __LINE__, DRAWSTATE_INVALID_EVENT, "DS",
                                      "Event 0x%" PRIx64 " cannot be waited on if it has never been set.",
                                      reinterpret_cast<const uint64_t &>(event));
             } else {
-                stageMask |= global_event_data->second.stageMask;
+                stageMask |= global_event_data->stageMask;
             }
         }
     }
@@ -8059,6 +8083,10 @@ CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent 
     if (pCB) {
         auto firstEventIndex = pCB->events.size();
         for (uint32_t i = 0; i < eventCount; ++i) {
+            auto event_node = getEventNode(dev_data, pEvents[i]);
+            if (event_node) {
+                event_node->cb_bindings.insert(pCB);
+            }
             pCB->waitedEvents.insert(pEvents[i]);
             pCB->events.push_back(pEvents[i]);
         }
@@ -10034,11 +10062,11 @@ VKAPI_ATTR VkResult VKAPI_CALL SetEvent(VkDevice device, VkEvent event) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
-    auto event_node = dev_data->eventMap.find(event);
-    if (event_node != dev_data->eventMap.end()) {
-        event_node->second.needsSignaled = false;
-        event_node->second.stageMask = VK_PIPELINE_STAGE_HOST_BIT;
-        if (event_node->second.write_in_use) {
+    auto event_node = getEventNode(dev_data, event);
+    if (event_node) {
+        event_node->needsSignaled = false;
+        event_node->stageMask = VK_PIPELINE_STAGE_HOST_BIT;
+        if (event_node->write_in_use) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT,
                                  reinterpret_cast<const uint64_t &>(event), __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
                                  "Cannot call vkSetEvent() on event 0x%" PRIxLEAST64 " that is already in use by a command buffer.",
