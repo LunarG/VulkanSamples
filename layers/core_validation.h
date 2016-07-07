@@ -149,13 +149,13 @@ class PIPELINE_NODE {
     bool blendConstantsEnabled; // Blend constants enabled for any attachments
     // Store RPCI b/c renderPass may be destroyed after Pipeline creation
     safe_VkRenderPassCreateInfo render_pass_ci;
-    PIPELINE_LAYOUT_NODE const *pipelineLayout;
+    PIPELINE_LAYOUT_NODE const *pipeline_layout;
 
     // Default constructor
     PIPELINE_NODE()
         : pipeline{}, graphicsPipelineCI{}, computePipelineCI{}, active_shaders(0), duplicate_shaders(0), active_slots(),
           vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false), render_pass_ci(),
-          pipelineLayout(nullptr) {}
+          pipeline_layout(nullptr) {}
 
     void initGraphicsPipeline(const VkGraphicsPipelineCreateInfo *pCreateInfo) {
         graphicsPipelineCI.initialize(pCreateInfo);

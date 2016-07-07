@@ -2611,7 +2611,7 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
     std::map<descriptor_slot_t, interface_var> descriptor_uses;
     collect_interface_by_descriptor_slot(report_data, module, accessible_ids, descriptor_uses);
 
-    auto pipelineLayout = pipeline->pipelineLayout;
+    auto pipelineLayout = pipeline->pipeline_layout;
 
     /* validate push constant usage */
     pass &= validate_push_constant_usage(report_data, &pipelineLayout->pushConstantRanges,
@@ -5859,7 +5859,7 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
         pPipeNode[i] = new PIPELINE_NODE;
         pPipeNode[i]->initGraphicsPipeline(&pCreateInfos[i]);
         pPipeNode[i]->render_pass_ci.initialize(getRenderPass(dev_data, pCreateInfos[i].renderPass)->pCreateInfo);
-        pPipeNode[i]->pipelineLayout = getPipelineLayout(dev_data, pCreateInfos[i].layout);
+        pPipeNode[i]->pipeline_layout = getPipelineLayout(dev_data, pCreateInfos[i].layout);
 
         skip_call |= verifyPipelineCreateState(dev_data, device, pPipeNode, i);
     }
@@ -5903,7 +5903,7 @@ CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t 
         // Create and initialize internal tracking data structure
         pPipeNode[i] = new PIPELINE_NODE;
         pPipeNode[i]->initComputePipeline(&pCreateInfos[i]);
-        pPipeNode[i]->pipelineLayout = getPipelineLayout(dev_data, pCreateInfos[i].layout);
+        pPipeNode[i]->pipeline_layout = getPipelineLayout(dev_data, pCreateInfos[i].layout);
         // memcpy(&pPipeNode[i]->computePipelineCI, (const void *)&pCreateInfos[i], sizeof(VkComputePipelineCreateInfo));
 
         // TODO: Add Compute Pipeline Verification
