@@ -1026,6 +1026,8 @@ TEST_F(VkLayerTest, IgnoreUnrelatedDescriptor) {
                      "validation behavior will result in the test running to "
                      "completion without validation errors.");
 
+    const uintptr_t invalid_ptr = 0xcdcdcdcd;
+
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     // Image Case
@@ -1153,9 +1155,9 @@ TEST_F(VkLayerTest, IgnoreUnrelatedDescriptor) {
         // layer
         // does not correctly ignore pBufferInfo.
         descriptor_write.pBufferInfo =
-            reinterpret_cast<const VkDescriptorBufferInfo *>(0xcdcdcdcd);
+            reinterpret_cast<const VkDescriptorBufferInfo *>(invalid_ptr);
         descriptor_write.pTexelBufferView =
-            reinterpret_cast<const VkBufferView *>(0xcdcdcdcd);
+            reinterpret_cast<const VkBufferView *>(invalid_ptr);
 
         vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0,
                                NULL);
@@ -1273,9 +1275,9 @@ TEST_F(VkLayerTest, IgnoreUnrelatedDescriptor) {
         // layer
         // does not correctly ignore pImageInfo.
         descriptor_write.pImageInfo =
-            reinterpret_cast<const VkDescriptorImageInfo *>(0xcdcdcdcd);
+            reinterpret_cast<const VkDescriptorImageInfo *>(invalid_ptr);
         descriptor_write.pTexelBufferView =
-            reinterpret_cast<const VkBufferView *>(0xcdcdcdcd);
+            reinterpret_cast<const VkBufferView *>(invalid_ptr);
 
         vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0,
                                NULL);
@@ -1397,9 +1399,9 @@ TEST_F(VkLayerTest, IgnoreUnrelatedDescriptor) {
         // layer
         // does not correctly ignore pImageInfo and pBufferInfo.
         descriptor_write.pImageInfo =
-            reinterpret_cast<const VkDescriptorImageInfo *>(0xcdcdcdcd);
+            reinterpret_cast<const VkDescriptorImageInfo *>(invalid_ptr);
         descriptor_write.pBufferInfo =
-            reinterpret_cast<const VkDescriptorBufferInfo *>(0xcdcdcdcd);
+            reinterpret_cast<const VkDescriptorBufferInfo *>(invalid_ptr);
 
         vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0,
                                NULL);
