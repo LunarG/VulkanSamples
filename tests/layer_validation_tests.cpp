@@ -6942,7 +6942,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     // verify_set_layout_compatibility fail cases:
     // 1. invalid VkPipelineLayout (layout) passed into vkCmdBindDescriptorSets
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " due to: invalid VkPipelineLayout ");
+                                         "Invalid VkPipelineLayout Object ");
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(),
                             VK_PIPELINE_BIND_POINT_GRAPHICS,
                             (VkPipelineLayout)((size_t)0xbaadb1be), 0, 1,
@@ -7014,6 +7014,11 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
                             pipe_layout_fs_only, 0, 1, &ds0_fs_only, 0, NULL);
     m_errorMonitor->VerifyFound();
 
+    // Now that we're done actively using the pipelineLayout that gfx pipeline
+    //  was created with, we should be able to delete it. Do that now to verify
+    //  that validation obeys pipelineLayout lifetime
+    vkDestroyPipelineLayout(m_device->device(), pipe_layout_fs_only, NULL);
+
     // Cause draw-time errors due to PSO incompatibilities
     // 1. Error due to not binding required set (we actually use same code as
     // above to disturb set0)
@@ -7042,7 +7047,6 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility) {
     m_errorMonitor->VerifyFound();
 
     // Remaining clean-up
-    vkDestroyPipelineLayout(m_device->device(), pipe_layout_fs_only, NULL);
     for (uint32_t i = 0; i < NUM_LAYOUTS; ++i) {
         vkDestroyDescriptorSetLayout(m_device->device(), ds_layout[i], NULL);
     }
