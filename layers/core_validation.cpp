@@ -5048,10 +5048,10 @@ VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const Vk
     auto event_node = getEventNode(dev_data, event);
     if (event_node) {
         if (event_node->in_use.load()) {
-            skip_call |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                        reinterpret_cast<uint64_t &>(event), __LINE__, DRAWSTATE_INVALID_EVENT, "DS",
-                        "Cannot delete event 0x%" PRIx64 " which is in use by a command buffer.", reinterpret_cast<uint64_t &>(event));
+            skip_call |= log_msg(
+                dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                reinterpret_cast<uint64_t &>(event), __LINE__, DRAWSTATE_INVALID_EVENT, "DS",
+                "Cannot delete event 0x%" PRIx64 " which is in use by a command buffer.", reinterpret_cast<uint64_t &>(event));
         }
         // Any bound cmd buffers are now invalid
         invalidateCommandBuffers(event_node->cb_bindings,
@@ -7713,8 +7713,12 @@ CmdSetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags s
     if (pCB) {
         skip_call |= addCmd(dev_data, pCB, CMD_SETEVENT, "vkCmdSetEvent()");
         skip_call |= insideRenderPass(dev_data, pCB, "vkCmdSetEvent");
-        addCommandBufferBinding(&getEventNode(dev_data, event)->cb_bindings,
-                                {reinterpret_cast<uint64_t &>(event), VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT}, pCB);
+        auto event_node = getEventNode(dev_data, event);
+        if (event_node) {
+            addCommandBufferBinding(&event_node->cb_bindings,
+                                    {reinterpret_cast<uint64_t &>(event), VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT}, pCB);
+            event_node->cb_bindings.insert(pCB);
+        }
         pCB->events.push_back(event);
         if (!pCB->waitedEvents.count(event)) {
             pCB->writeEventsBeforeWait.push_back(event);
@@ -7737,8 +7741,12 @@ CmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags
     if (pCB) {
         skip_call |= addCmd(dev_data, pCB, CMD_RESETEVENT, "vkCmdResetEvent()");
         skip_call |= insideRenderPass(dev_data, pCB, "vkCmdResetEvent");
-        addCommandBufferBinding(&getEventNode(dev_data, event)->cb_bindings,
-                                {reinterpret_cast<uint64_t &>(event), VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT}, pCB);
+        auto event_node = getEventNode(dev_data, event);
+        if (event_node) {
+            addCommandBufferBinding(&event_node->cb_bindings,
+                                    {reinterpret_cast<uint64_t &>(event), VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT}, pCB);
+            event_node->cb_bindings.insert(pCB);
+        }
         pCB->events.push_back(event);
         if (!pCB->waitedEvents.count(event)) {
             pCB->writeEventsBeforeWait.push_back(event);
@@ -8132,8 +8140,13 @@ CmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent 
     if (pCB) {
         auto firstEventIndex = pCB->events.size();
         for (uint32_t i = 0; i < eventCount; ++i) {
-            addCommandBufferBinding(&getEventNode(dev_data, pEvents[i])->cb_bindings,
-                                    {reinterpret_cast<const uint64_t &>(pEvents[i]), VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT}, pCB);
+            auto event_node = getEventNode(dev_data, pEvents[i]);
+            if (event_node) {
+                addCommandBufferBinding(&event_node->cb_bindings,
+                                        {reinterpret_cast<const uint64_t &>(pEvents[i]), VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT},
+                                        pCB);
+                event_node->cb_bindings.insert(pCB);
+            }
             pCB->waitedEvents.insert(pEvents[i]);
             pCB->events.push_back(pEvents[i]);
         }
