@@ -1981,7 +1981,7 @@ static void mark_accessible_ids(shader_module const *src, spirv_inst_iter entryp
 }
 
 static bool validate_push_constant_block_against_pipeline(debug_report_data *report_data,
-                                                          std::vector<VkPushConstantRange> const *pushConstantRanges,
+                                                          std::vector<VkPushConstantRange> const *push_constant_ranges,
                                                           shader_module const *src, spirv_inst_iter type,
                                                           VkShaderStageFlagBits stage) {
     bool pass = true;
@@ -2001,7 +2001,7 @@ static bool validate_push_constant_block_against_pipeline(debug_report_data *rep
                 auto size = 4; /* bytes; TODO: calculate this based on the type */
 
                 bool found_range = false;
-                for (auto const &range : *pushConstantRanges) {
+                for (auto const &range : *push_constant_ranges) {
                     if (range.offset <= offset && range.offset + range.size >= offset + size) {
                         found_range = true;
 
@@ -2036,15 +2036,15 @@ static bool validate_push_constant_block_against_pipeline(debug_report_data *rep
 }
 
 static bool validate_push_constant_usage(debug_report_data *report_data,
-                                         std::vector<VkPushConstantRange> const *pushConstantRanges, shader_module const *src,
+                                         std::vector<VkPushConstantRange> const *push_constant_ranges, shader_module const *src,
                                          std::unordered_set<uint32_t> accessible_ids, VkShaderStageFlagBits stage) {
     bool pass = true;
 
     for (auto id : accessible_ids) {
         auto def_insn = src->get_def(id);
         if (def_insn.opcode() == spv::OpVariable && def_insn.word(3) == spv::StorageClassPushConstant) {
-            pass &= validate_push_constant_block_against_pipeline(report_data, pushConstantRanges, src,
-                                                                 src->get_def(def_insn.word(1)), stage);
+            pass &= validate_push_constant_block_against_pipeline(report_data, push_constant_ranges, src,
+                                                                  src->get_def(def_insn.word(1)), stage);
         }
     }
 
@@ -2058,10 +2058,10 @@ static VkDescriptorSetLayoutBinding const * get_descriptor_binding(PIPELINE_LAYO
     if (!pipelineLayout)
         return nullptr;
 
-    if (slot.first >= pipelineLayout->setLayouts.size())
+    if (slot.first >= pipelineLayout->set_layouts.size())
         return nullptr;
 
-    return pipelineLayout->setLayouts[slot.first]->GetDescriptorSetLayoutBindingPtrFromBinding(slot.second);
+    return pipelineLayout->set_layouts[slot.first]->GetDescriptorSetLayoutBindingPtrFromBinding(slot.second);
 }
 
 // Block of code at start here for managing/tracking Pipeline state that this layer cares about
@@ -2301,7 +2301,7 @@ static bool verify_set_layout_compatibility(layer_data *my_data, const cvdescrip
         errorMsg = errorStr.str();
         return false;
     }
-    auto num_sets = pipeline_layout->setLayouts.size();
+    auto num_sets = pipeline_layout->set_layouts.size();
     if (layoutIndex >= num_sets) {
         stringstream errorStr;
         errorStr << "VkPipelineLayout (" << layout << ") only contains " << num_sets << " setLayouts corresponding to sets 0-"
@@ -2309,7 +2309,7 @@ static bool verify_set_layout_compatibility(layer_data *my_data, const cvdescrip
         errorMsg = errorStr.str();
         return false;
     }
-    auto layout_node = pipeline_layout->setLayouts[layoutIndex];
+    auto layout_node = pipeline_layout->set_layouts[layoutIndex];
     return pSet->IsCompatible(layout_node, &errorMsg);
 }
 
@@ -2614,7 +2614,7 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
     auto pipelineLayout = pipeline->pipeline_layout;
 
     /* validate push constant usage */
-    pass &= validate_push_constant_usage(report_data, &pipelineLayout.pushConstantRanges, module, accessible_ids, pStage->stage);
+    pass &= validate_push_constant_usage(report_data, &pipelineLayout.push_constant_ranges, module, accessible_ids, pStage->stage);
 
     /* validate descriptor use */
     for (auto use : descriptor_uses) {
@@ -6063,13 +6063,13 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
     if (VK_SUCCESS == result) {
         std::lock_guard<std::mutex> lock(global_lock);
         PIPELINE_LAYOUT_NODE &plNode = dev_data->pipelineLayoutMap[*pPipelineLayout];
-        plNode.setLayouts.resize(pCreateInfo->setLayoutCount);
+        plNode.set_layouts.resize(pCreateInfo->setLayoutCount);
         for (i = 0; i < pCreateInfo->setLayoutCount; ++i) {
-            plNode.setLayouts[i] = getDescriptorSetLayout(dev_data, pCreateInfo->pSetLayouts[i]);
+            plNode.set_layouts[i] = getDescriptorSetLayout(dev_data, pCreateInfo->pSetLayouts[i]);
         }
-        plNode.pushConstantRanges.resize(pCreateInfo->pushConstantRangeCount);
+        plNode.push_constant_ranges.resize(pCreateInfo->pushConstantRangeCount);
         for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
-            plNode.pushConstantRanges[i] = pCreateInfo->pPushConstantRanges[i];
+            plNode.push_constant_ranges[i] = pCreateInfo->pPushConstantRanges[i];
         }
     }
     return result;
@@ -8275,7 +8275,7 @@ VKAPI_ATTR void VKAPI_CALL CmdPushConstants(VkCommandBuffer commandBuffer, VkPip
         // Coalesce adjacent/overlapping pipeline ranges before checking to see if incoming range is
         // contained in the pipeline ranges.
         // Build a {start, end} span list for ranges with matching stage flags.
-        const auto &ranges = pipeline_layout->pushConstantRanges;
+        const auto &ranges = pipeline_layout->push_constant_ranges;
         struct span {
             uint32_t start;
             uint32_t end;

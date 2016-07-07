@@ -127,8 +127,8 @@ struct IMAGE_LAYOUT_NODE {
 
 // Store layouts and pushconstants for PipelineLayout
 struct PIPELINE_LAYOUT_NODE {
-    std::vector<cvdescriptorset::DescriptorSetLayout const *> setLayouts;
-    std::vector<VkPushConstantRange> pushConstantRanges;
+    std::vector<cvdescriptorset::DescriptorSetLayout const *> set_layouts;
+    std::vector<VkPushConstantRange> push_constant_ranges;
 };
 
 class PIPELINE_NODE {
