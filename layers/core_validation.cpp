@@ -5342,9 +5342,10 @@ DestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocationCallback
 
 VKAPI_ATTR void VKAPI_CALL
 DestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout, const VkAllocationCallbacks *pAllocator) {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)
-        ->device_dispatch_table->DestroyPipelineLayout(device, pipelineLayout, pAllocator);
-    // TODO : Clean up any internal data structures using this obj.
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    dev_data->device_dispatch_table->DestroyPipelineLayout(device, pipelineLayout, pAllocator);
+
+    dev_data->pipelineLayoutMap.erase(pipelineLayout);
 }
 
 VKAPI_ATTR void VKAPI_CALL
