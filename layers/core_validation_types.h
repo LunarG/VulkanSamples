@@ -77,6 +77,14 @@ struct VK_OBJECT {
     VkDebugReportObjectTypeEXT type;
 };
 
+inline bool operator==(VK_OBJECT a, VK_OBJECT b) NOEXCEPT { return a.handle == b.handle && a.type == b.type; }
+
+namespace std {
+template <> struct hash<VK_OBJECT> {
+    size_t operator()(VK_OBJECT obj) const NOEXCEPT { return hash<uint64_t>()(obj.handle) ^ hash<uint32_t>()(obj.type); }
+};
+}
+
 struct DESCRIPTOR_POOL_NODE {
     VkDescriptorPool pool;
     uint32_t maxSets;       // Max descriptor sets allowed in this pool
@@ -162,6 +170,7 @@ class IMAGE_NODE : public BASE_NODE {
 };
 
 // Simple struct to hold handle and type of object so they can be uniquely identified and looked up in appropriate map
+// TODO : Unify this with VK_OBJECT above
 struct MT_OBJ_HANDLE_TYPE {
     uint64_t handle;
     VkDebugReportObjectTypeEXT type;
@@ -488,9 +497,11 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     uint32_t activeSubpass;
     VkFramebuffer activeFramebuffer;
     std::unordered_set<VkFramebuffer> framebuffers;
-    // Unified data struct to track dependencies that have been broken
-    //  These are either destroyed objects, or updated descriptor sets
+    // Unified data structs to track objects bound to this command buffer as well as object
+    //  dependencies that have been broken : either destroyed objects, or updated descriptor sets
+    std::unordered_set<VK_OBJECT> object_bindings;
     std::vector<VK_OBJECT> broken_bindings;
+
     std::unordered_set<VkEvent> waitedEvents;
     std::vector<VkEvent> writeEventsBeforeWait;
     std::vector<VkEvent> events;
