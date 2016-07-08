@@ -658,6 +658,8 @@ static const char *object_type_to_string(VkDebugReportObjectTypeEXT type) {
         return "event";
     case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT:
         return "query pool";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT:
+        return "pipeline";
     default:
         return "unknown";
     }
@@ -3761,6 +3763,12 @@ static void removeCommandBufferBinding(layer_data *dev_data, VK_OBJECT const *ob
             qp_node->cb_bindings.erase(cb_node);
         break;
     }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT: {
+        auto pipe_node = getPipeline(dev_data, reinterpret_cast<VkPipeline>(object->handle));
+        if (pipe_node)
+            pipe_node->cb_bindings.erase(cb_node);
+        break;
+    }
     default:
         assert(0); // unhandled object type
     }
@@ -5403,8 +5411,16 @@ DestroyShaderModule(VkDevice device, VkShaderModule shaderModule, const VkAlloca
 
 VKAPI_ATTR void VKAPI_CALL
 DestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocationCallbacks *pAllocator) {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyPipeline(device, pipeline, pAllocator);
-    // TODO : Clean up any internal data structures using this obj.
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    dev_data->device_dispatch_table->DestroyPipeline(device, pipeline, pAllocator);
+
+    auto pipe_node = getPipeline(dev_data, pipeline);
+    if (pipe_node) {
+        // Any bound cmd buffers are now invalid
+        invalidateCommandBuffers(pipe_node->cb_bindings,
+                                 {reinterpret_cast<uint64_t &>(pipeline), VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT});
+        dev_data->pipelineMap.erase(pipeline);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -6577,6 +6593,8 @@ CmdBindPipeline(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindP
                                  (uint64_t)pipeline, __LINE__, DRAWSTATE_INVALID_PIPELINE, "DS",
                                  "Attempt to bind Pipeline 0x%" PRIxLEAST64 " that doesn't exist!", (uint64_t)(pipeline));
         }
+        addCommandBufferBinding(&getPipeline(dev_data, pipeline)->cb_bindings,
+                                {reinterpret_cast<uint64_t &>(pipeline), VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT}, pCB);
     }
     lock.unlock();
     if (!skip_call)
