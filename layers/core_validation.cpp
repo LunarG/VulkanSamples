@@ -3723,13 +3723,13 @@ static bool addCmd(layer_data *my_data, GLOBAL_CB_NODE *pCB, const CMD_TYPE cmd,
 static void removeCommandBufferBinding(layer_data *dev_data, VK_OBJECT const *object, GLOBAL_CB_NODE *cb_node) {
     switch (object->type) {
     case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
-        auto img_node = getImageNode(dev_data, reinterpret_cast<VkImage>(object->handle));
+        auto img_node = getImageNode(dev_data, reinterpret_cast<const VkImage &>(object->handle));
         if (img_node)
             img_node->cb_bindings.erase(cb_node);
         break;
     }
     case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
-        auto buf_node = getBufferNode(dev_data, reinterpret_cast<VkBuffer>(object->handle));
+        auto buf_node = getBufferNode(dev_data, reinterpret_cast<const VkBuffer &>(object->handle));
         if (buf_node)
             buf_node->cb_bindings.erase(cb_node);
         break;
