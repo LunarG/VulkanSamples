@@ -5066,7 +5066,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const Vk
 VKAPI_ATTR void VKAPI_CALL
 DestroyQueryPool(VkDevice device, VkQueryPool queryPool, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    // TODO : Handle in-flight queryPool
+    // TODO : Add detection for an in-flight queryPool
     std::unique_lock<std::mutex> lock(global_lock);
     auto qp_node = getQueryPoolNode(dev_data, queryPool);
     if (qp_node) {
