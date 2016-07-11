@@ -4760,11 +4760,13 @@ FreeMemory(VkDevice device, VkDeviceMemory mem, const VkAllocationCallbacks *pAl
     // undefined behavior.
 
     std::unique_lock<std::mutex> lock(global_lock);
-    freeMemObjInfo(my_data, device, mem, false);
+    bool skip_call = freeMemObjInfo(my_data, device, mem, false);
     print_mem_list(my_data);
     printCBList(my_data);
     lock.unlock();
-    my_data->device_dispatch_table->FreeMemory(device, mem, pAllocator);
+    if (!skip_call) {
+        my_data->device_dispatch_table->FreeMemory(device, mem, pAllocator);
+    }
 }
 
 static bool validateMemRange(layer_data *my_data, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size) {
