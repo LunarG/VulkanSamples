@@ -710,14 +710,30 @@ TEST_F(VkLayerTest, InvalidStructPNext) {
 
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "value of pAllocateInfo->pNext must be NULL");
+        "value of pCreateInfo->pNext must be NULL");
     // Set VkMemoryAllocateInfo::pNext to a non-NULL value, when pNext must be
-    // NULL
+    // NULL.
+    // Need to pick a function that has no allowed pNext structure types.
+    // Expected to trigger an error with
+    // parameter_validation::validate_struct_pnext
+    VkEvent event = VK_NULL_HANDLE;
+    VkEventCreateInfo event_alloc_info;
+    // Zero-initialization will provide the correct sType
+    VkApplicationInfo app_info = {};
+    event_alloc_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+    event_alloc_info.pNext = &app_info;
+    vkCreateEvent(device(), &event_alloc_info, NULL, &event);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        " chain includes a structure with unexpected VkStructureType ");
+    // Set VkMemoryAllocateInfo::pNext to a non-NULL value, but use
+    // a function that has allowed pNext structure types and specify
+    // a structure type that is not allowed.
     // Expected to trigger an error with
     // parameter_validation::validate_struct_pnext
     VkDeviceMemory memory = VK_NULL_HANDLE;
-    // Zero-initialization will provide the correct sType
-    VkApplicationInfo app_info = {};
     VkMemoryAllocateInfo memory_alloc_info = {};
     memory_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     memory_alloc_info.pNext = &app_info;
