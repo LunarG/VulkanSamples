@@ -8784,7 +8784,7 @@ TEST_F(VkLayerTest, UpdateBufferWithinRenderPass) {
 
     VkDeviceSize dstOffset = 0;
     VkDeviceSize dataSize = 1024;
-    const uint32_t *pData = NULL;
+    const void *pData = NULL;
 
     vkCmdUpdateBuffer(m_commandBuffer->GetBufferHandle(), dstBuffer.handle(),
                       dstOffset, dataSize, pData);

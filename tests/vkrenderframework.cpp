@@ -1505,7 +1505,7 @@ void VkCommandBufferObj::FillBuffer(VkBuffer buffer, VkDeviceSize offset,
 
 void VkCommandBufferObj::UpdateBuffer(VkBuffer buffer, VkDeviceSize dstOffset,
                                       VkDeviceSize dataSize,
-                                      const uint32_t *pData) {
+                                      const void *pData) {
     vkCmdUpdateBuffer(handle(), buffer, dstOffset, dataSize, pData);
 }
 

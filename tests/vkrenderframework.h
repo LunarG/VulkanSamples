@@ -200,7 +200,7 @@ class VkCommandBufferObj : public vk_testing::CommandBuffer {
     void SetStencilWriteMask(VkStencilFaceFlags faceMask, uint32_t writeMask);
     void SetStencilReference(VkStencilFaceFlags faceMask, uint32_t reference);
     void UpdateBuffer(VkBuffer buffer, VkDeviceSize dstOffset,
-                      VkDeviceSize dataSize, const uint32_t *pData);
+                      VkDeviceSize dataSize, const void *pData);
     void CopyImage(VkImage srcImage, VkImageLayout srcImageLayout,
                    VkImage dstImage, VkImageLayout dstImageLayout,
                    uint32_t regionCount, const VkImageCopy *pRegions);
