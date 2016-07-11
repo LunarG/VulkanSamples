@@ -717,7 +717,7 @@ TEST_F(VkLayerTest, InvalidStructPNext) {
     // Expected to trigger an error with
     // parameter_validation::validate_struct_pnext
     VkEvent event = VK_NULL_HANDLE;
-    VkEventCreateInfo event_alloc_info;
+    VkEventCreateInfo event_alloc_info = {};
     // Zero-initialization will provide the correct sType
     VkApplicationInfo app_info = {};
     event_alloc_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
