@@ -22,7 +22,7 @@ Layers can also be activated via the VK_INSTANCE_LAYERS environment variable.
 
 All validation layers work with the DEBUG_REPORT extension to provide validation feedback.
 When a validation layer is enabled, it will look for a vk_layer_settings.txt file to define
-its loggin behavior, which can include sending output to a file, stdout, or debug output (Windows).
+its logging behavior, which can include sending output to a file, stdout, or debug output (Windows).
 Applications can also register debug callback functions via the DEBUG_REPORT extension to receive
 callbacks when validation events occur. Application callbacks are independent of settings in a
 vk_layer_settings.txt file which will be carried out separately. If no vk_layer_settings.txt
