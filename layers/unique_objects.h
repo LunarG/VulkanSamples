@@ -192,10 +192,10 @@ VkResult explicit_CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const 
 
 void explicit_DestroyInstance(VkInstance instance, const VkAllocationCallbacks *pAllocator) {
     dispatch_key key = get_dispatch_key(instance);
-    get_dispatch_table(unique_objects_instance_table_map, instance)->DestroyInstance(instance, pAllocator);
-    layer_data_map.erase(key);
     VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(unique_objects_instance_table_map, instance);
     instanceExtMap.erase(pDisp);
+    pDisp->DestroyInstance(instance, pAllocator);
+    layer_data_map.erase(key);
 }
 
 // Handle CreateDevice
