@@ -2028,7 +2028,7 @@ vkCmdCopyImageToBuffer(VkCommandBuffer commandBuffer, VkImage srcImage,
 LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkCmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer,
                   VkDeviceSize dstOffset, VkDeviceSize dataSize,
-                  const uint32_t *pData) {
+                  const void *pData) {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(commandBuffer);

@@ -25,6 +25,14 @@ function update_glslang () {
    cd $BASEDIR/glslang
    git fetch --all
    git checkout $GLSLANG_REVISION
+   # Special case for this particular revision:
+   # Pull in a patch that fixes a compilation issue with g++ 5.3
+   # See https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/issues/681
+   if [ $GLSLANG_REVISION == "4678ca9dacfec7a084dbc69bbe568bdad6889f1b" ] ;
+   then
+      git checkout $GLSLANG_REVISION -B temp1610
+      git cherry-pick 880bf36cacee1cfce7d5d94991eb18c9e2d59d39
+   fi
 }
 
 function create_spirv-tools () {

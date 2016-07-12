@@ -125,13 +125,6 @@ struct IMAGE_LAYOUT_NODE {
     VkFormat format;
 };
 
-// Store layouts and pushconstants for PipelineLayout
-struct PIPELINE_LAYOUT_NODE {
-    std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
-    std::vector<cvdescriptorset::DescriptorSetLayout const *> setLayouts;
-    std::vector<VkPushConstantRange> pushConstantRanges;
-};
-
 class PIPELINE_NODE {
   public:
     VkPipeline pipeline;
@@ -147,13 +140,15 @@ class PIPELINE_NODE {
     std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions;
     std::vector<VkPipelineColorBlendAttachmentState> attachments;
     bool blendConstantsEnabled; // Blend constants enabled for any attachments
-    RENDER_PASS_NODE *renderPass;
-    PIPELINE_LAYOUT_NODE const *pipelineLayout;
+    // Store RPCI b/c renderPass may be destroyed after Pipeline creation
+    safe_VkRenderPassCreateInfo render_pass_ci;
+    PIPELINE_LAYOUT_NODE pipeline_layout;
 
     // Default constructor
     PIPELINE_NODE()
-        : pipeline{}, graphicsPipelineCI{}, computePipelineCI{}, active_shaders(0), duplicate_shaders(0), active_slots(), vertexBindingDescriptions(),
-          vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false), renderPass(nullptr), pipelineLayout(nullptr) {}
+        : pipeline{}, graphicsPipelineCI{}, computePipelineCI{}, active_shaders(0), duplicate_shaders(0), active_slots(),
+          vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false), render_pass_ci(),
+          pipeline_layout() {}
 
     void initGraphicsPipeline(const VkGraphicsPipelineCreateInfo *pCreateInfo) {
         graphicsPipelineCI.initialize(pCreateInfo);

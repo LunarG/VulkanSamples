@@ -224,7 +224,7 @@ VkFormat VkTestFramework::GetFormat(VkInstance instance,
     }
     printf("Error - device does not support VK_FORMAT_B8G8R8A8_UNORM nor "
            "VK_FORMAT_R8G8B8A8_UNORM - exiting\n");
-    exit(0);
+    exit(1);
 }
 
 void VkTestFramework::Finish() {}

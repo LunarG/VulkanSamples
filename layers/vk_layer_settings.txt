@@ -55,10 +55,6 @@
 # Example of actual settings for each layer:
 # ==========================================
 #
-# VK_LAYER_LUNARG_device_limits Settings
-lunarg_device_limits.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
-lunarg_device_limits.report_flags = error,warn,perf
-lunarg_device_limits.log_filename = stdout
 
 # VK_LAYER_LUNARG_core_validation Settings
 lunarg_core_validation.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG

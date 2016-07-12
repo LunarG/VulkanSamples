@@ -152,6 +152,7 @@ struct demo {
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND window;                 // hWnd - window handle
+    POINT minsize;               // minimum window size
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
     xcb_connection_t *connection;
     xcb_screen_t *screen;
@@ -376,21 +377,11 @@ static void demo_set_image_layout(struct demo *demo, VkImage image,
         err = vkAllocateCommandBuffers(demo->device, &cmd, &demo->setup_cmd);
         assert(!err);
 
-        VkCommandBufferInheritanceInfo cmd_buf_hinfo = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-            .pNext = NULL,
-            .renderPass = VK_NULL_HANDLE,
-            .subpass = 0,
-            .framebuffer = VK_NULL_HANDLE,
-            .occlusionQueryEnable = VK_FALSE,
-            .queryFlags = 0,
-            .pipelineStatistics = 0,
-        };
         VkCommandBufferBeginInfo cmd_buf_info = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
             .pNext = NULL,
             .flags = 0,
-            .pInheritanceInfo = &cmd_buf_hinfo,
+            .pInheritanceInfo = NULL,
         };
         err = vkBeginCommandBuffer(demo->setup_cmd, &cmd_buf_info);
         assert(!err);
@@ -437,21 +428,11 @@ static void demo_set_image_layout(struct demo *demo, VkImage image,
 }
 
 static void demo_draw_build_cmd(struct demo *demo) {
-    const VkCommandBufferInheritanceInfo cmd_buf_hinfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-        .pNext = NULL,
-        .renderPass = VK_NULL_HANDLE,
-        .subpass = 0,
-        .framebuffer = VK_NULL_HANDLE,
-        .occlusionQueryEnable = VK_FALSE,
-        .queryFlags = 0,
-        .pipelineStatistics = 0,
-    };
     const VkCommandBufferBeginInfo cmd_buf_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .pNext = NULL,
         .flags = 0,
-        .pInheritanceInfo = &cmd_buf_hinfo,
+        .pInheritanceInfo = NULL,
     };
     const VkClearValue clear_values[2] = {
             [0] = {.color.float32 = {0.2f, 0.2f, 0.2f, 0.2f}},
@@ -1618,6 +1599,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
             demo_run(&demo);
             break;
         }
+    case WM_GETMINMAXINFO:     // set window's minimum size
+        ((MINMAXINFO*)lParam)->ptMinTrackSize = demo.minsize;
+        return 0;
     case WM_SIZE:
         // Resize the application to the new window size, except when
         // it was minimized. Vulkan doesn't support images or swapchains
@@ -1625,6 +1609,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         if (wParam != SIZE_MINIMIZED) {
             demo.width = lParam & 0xffff;
             demo.height = lParam & 0xffff0000 >> 16;
+            
+            if (demo.height < 64) demo.height = 64;
+
             demo_resize(&demo);
         }
         break;
@@ -1678,6 +1665,9 @@ static void demo_create_window(struct demo *demo) {
         fflush(stdout);
         exit(1);
     }
+    // Window client area size must be at least 1 pixel high, to prevent crash.
+    demo->minsize.x = GetSystemMetrics(SM_CXMINTRACK);
+    demo->minsize.y = GetSystemMetrics(SM_CYMINTRACK) + 1;
 }
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 static void demo_handle_event(struct demo *demo,
@@ -1889,10 +1879,10 @@ static void demo_init_vk(struct demo *demo) {
     };
 
     char *instance_validation_layers_alt2[] = {
-        "VK_LAYER_GOOGLE_threading",     "VK_LAYER_LUNARG_parameter_validation",
-        "VK_LAYER_LUNARG_device_limits", "VK_LAYER_LUNARG_object_tracker",
-        "VK_LAYER_LUNARG_image",         "VK_LAYER_LUNARG_core_validation",
-        "VK_LAYER_LUNARG_swapchain",     "VK_LAYER_GOOGLE_unique_objects"
+        "VK_LAYER_GOOGLE_threading",       "VK_LAYER_LUNARG_parameter_validation",
+        "VK_LAYER_LUNARG_object_tracker",  "VK_LAYER_LUNARG_image",
+        "VK_LAYER_LUNARG_core_validation", "VK_LAYER_LUNARG_swapchain",
+        "VK_LAYER_GOOGLE_unique_objects"
     };
 
     /* Look for validation layers */

@@ -883,7 +883,7 @@ core = Extension(
              Param("VkBuffer", "dstBuffer"),
              Param("VkDeviceSize", "dstOffset"),
              Param("VkDeviceSize", "dataSize"),
-             Param("const uint32_t*", "pData")]),
+             Param("const void*", "pData")]),
 
         Proto("void", "CmdFillBuffer",
             [Param("VkCommandBuffer", "commandBuffer"),
