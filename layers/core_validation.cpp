@@ -5026,8 +5026,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyFence(VkDevice device, VkFence fence, const Vk
 VKAPI_ATTR void VKAPI_CALL
 DestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_dispatch_table->DestroySemaphore(device, semaphore, pAllocator);
-    std::lock_guard<std::mutex> lock(global_lock);
+
+    std::unique_lock<std::mutex> lock(global_lock);
     auto item = dev_data->semaphoreMap.find(semaphore);
     if (item != dev_data->semaphoreMap.end()) {
         if (item->second.in_use.load()) {
@@ -5037,7 +5037,8 @@ DestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocationCallb
         }
         dev_data->semaphoreMap.erase(semaphore);
     }
-    // TODO : Clean up any internal data structures using this obj.
+    lock.unlock();
+    dev_data->device_dispatch_table->DestroySemaphore(device, semaphore, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const VkAllocationCallbacks *pAllocator) {
@@ -5045,29 +5046,27 @@ VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const Vk
     bool skip_call = false;
     std::unique_lock<std::mutex> lock(global_lock);
     auto event_node = getEventNode(dev_data, event);
-    if (event_node && event_node->in_use.load()) {
-        skip_call |=
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                    reinterpret_cast<uint64_t &>(event), __LINE__, DRAWSTATE_INVALID_EVENT, "DS",
-                    "Cannot delete event 0x%" PRIx64 " which is in use by a command buffer.", reinterpret_cast<uint64_t &>(event));
-    }
-    lock.unlock();
-    if (!skip_call)
-        dev_data->device_dispatch_table->DestroyEvent(device, event, pAllocator);
-
     if (event_node) {
+        if (event_node->in_use.load()) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                        reinterpret_cast<uint64_t &>(event), __LINE__, DRAWSTATE_INVALID_EVENT, "DS",
+                        "Cannot delete event 0x%" PRIx64 " which is in use by a command buffer.", reinterpret_cast<uint64_t &>(event));
+        }
         // Any bound cmd buffers are now invalid
         invalidateCommandBuffers(event_node->cb_bindings,
                                  {reinterpret_cast<uint64_t &>(event), VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT});
         dev_data->eventMap.erase(event);
     }
+    lock.unlock();
+    if (!skip_call)
+        dev_data->device_dispatch_table->DestroyEvent(device, event, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL
 DestroyQueryPool(VkDevice device, VkQueryPool queryPool, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_dispatch_table->DestroyQueryPool(device, queryPool, pAllocator);
-
+    // TODO : Handle in-flight queryPool
     std::unique_lock<std::mutex> lock(global_lock);
     auto qp_node = getQueryPoolNode(dev_data, queryPool);
     if (qp_node) {
@@ -5076,6 +5075,8 @@ DestroyQueryPool(VkDevice device, VkQueryPool queryPool, const VkAllocationCallb
                                  {reinterpret_cast<uint64_t &>(queryPool), VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT});
         dev_data->queryPoolMap.erase(queryPool);
     }
+    lock.unlock();
+    dev_data->device_dispatch_table->DestroyQueryPool(device, queryPool, pAllocator);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL GetQueryPoolResults(VkDevice device, VkQueryPool queryPool, uint32_t firstQuery,
@@ -5222,42 +5223,41 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     if (!validateIdleBuffer(dev_data, buffer)) {
+        // Clean up memory binding and range information for buffer
+        auto buff_node = getBufferNode(dev_data, buffer);
+        if (buff_node) {
+            // Any bound cmd buffers are now invalid
+            invalidateCommandBuffers(buff_node->cb_bindings,
+                                     {reinterpret_cast<uint64_t &>(buff_node->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT});
+            auto mem_info = getMemObjInfo(dev_data, buff_node->mem);
+            if (mem_info) {
+                remove_memory_ranges(reinterpret_cast<uint64_t &>(buffer), buff_node->mem, mem_info->bufferRanges);
+            }
+            clear_object_binding(dev_data, reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
+            dev_data->bufferMap.erase(buff_node->buffer);
+        }
         lock.unlock();
         dev_data->device_dispatch_table->DestroyBuffer(device, buffer, pAllocator);
-        lock.lock();
-    }
-    // Clean up memory binding and range information for buffer
-    auto buff_node = getBufferNode(dev_data, buffer);
-    if (buff_node) {
-        // Any bound cmd buffers are now invalid
-        invalidateCommandBuffers(buff_node->cb_bindings,
-                                 {reinterpret_cast<uint64_t &>(buff_node->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT});
-        auto mem_info = getMemObjInfo(dev_data, buff_node->mem);
-        if (mem_info) {
-            remove_memory_ranges(reinterpret_cast<uint64_t &>(buffer), buff_node->mem, mem_info->bufferRanges);
-        }
-        clear_object_binding(dev_data, reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
-        dev_data->bufferMap.erase(buff_node->buffer);
     }
 }
 
 VKAPI_ATTR void VKAPI_CALL
 DestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_dispatch_table->DestroyBufferView(device, bufferView, pAllocator);
-    std::lock_guard<std::mutex> lock(global_lock);
+
+    std::unique_lock<std::mutex> lock(global_lock);
     auto item = dev_data->bufferViewMap.find(bufferView);
     if (item != dev_data->bufferViewMap.end()) {
         dev_data->bufferViewMap.erase(item);
     }
+    lock.unlock();
+    dev_data->device_dispatch_table->DestroyBufferView(device, bufferView, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    // TODO : Flag error if image is use by in-flight command buffer
-    dev_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
 
-    std::lock_guard<std::mutex> lock(global_lock);
+    std::unique_lock<std::mutex> lock(global_lock);
     auto img_node = getImageNode(dev_data, image);
     if (img_node) {
         // Any bound cmd buffers are now invalid
@@ -5280,6 +5280,8 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
         }
         dev_data->imageSubresourceMap.erase(subEntry);
     }
+    lock.unlock();
+    dev_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
 }
 
 static bool ValidateMemoryTypes(const layer_data *dev_data, const DEVICE_MEM_INFO *mem_info, const uint32_t memory_type_bits,
@@ -5393,9 +5395,9 @@ GetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements 
 
 VKAPI_ATTR void VKAPI_CALL
 DestroyImageView(VkDevice device, VkImageView imageView, const VkAllocationCallbacks *pAllocator) {
+    // TODO : Clean up any internal data structures using this obj.
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)
         ->device_dispatch_table->DestroyImageView(device, imageView, pAllocator);
-    // TODO : Clean up any internal data structures using this obj.
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -5412,8 +5414,8 @@ DestroyShaderModule(VkDevice device, VkShaderModule shaderModule, const VkAlloca
 VKAPI_ATTR void VKAPI_CALL
 DestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_dispatch_table->DestroyPipeline(device, pipeline, pAllocator);
-
+    // TODO : Add detection for in-flight pipeline
+    std::unique_lock<std::mutex> lock(global_lock);
     auto pipe_node = getPipeline(dev_data, pipeline);
     if (pipe_node) {
         // Any bound cmd buffers are now invalid
@@ -5421,36 +5423,38 @@ DestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocationCallback
                                  {reinterpret_cast<uint64_t &>(pipeline), VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT});
         dev_data->pipelineMap.erase(pipeline);
     }
+    lock.unlock();
+    dev_data->device_dispatch_table->DestroyPipeline(device, pipeline, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL
 DestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_dispatch_table->DestroyPipelineLayout(device, pipelineLayout, pAllocator);
-
     std::unique_lock<std::mutex> lock(global_lock);
     dev_data->pipelineLayoutMap.erase(pipelineLayout);
     lock.unlock();
+
+    dev_data->device_dispatch_table->DestroyPipelineLayout(device, pipelineLayout, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL
 DestroySampler(VkDevice device, VkSampler sampler, const VkAllocationCallbacks *pAllocator) {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroySampler(device, sampler, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroySampler(device, sampler, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL
 DestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout, const VkAllocationCallbacks *pAllocator) {
+    // TODO : Clean up any internal data structures using this obj.
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)
         ->device_dispatch_table->DestroyDescriptorSetLayout(device, descriptorSetLayout, pAllocator);
-    // TODO : Clean up any internal data structures using this obj.
 }
 
 VKAPI_ATTR void VKAPI_CALL
 DestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, const VkAllocationCallbacks *pAllocator) {
+    // TODO : Clean up any internal data structures using this obj.
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)
         ->device_dispatch_table->DestroyDescriptorPool(device, descriptorPool, pAllocator);
-    // TODO : Clean up any internal data structures using this obj.
 }
 // Verify cmdBuffer in given cb_node is not in global in-flight set, and return skip_call result
 //  If this is a secondary command buffer, then make sure its primary is also in-flight
@@ -5502,14 +5506,10 @@ FreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandB
             skip_call |= checkCommandBufferInFlight(dev_data, cb_node, "free");
         }
     }
-    lock.unlock();
 
     if (skip_call)
         return;
 
-    dev_data->device_dispatch_table->FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
-
-    lock.lock();
     auto pPool = getCommandPoolNode(dev_data, commandPool);
     for (uint32_t i = 0; i < commandBufferCount; i++) {
         auto cb_node = getCBNode(dev_data, pCommandBuffers[i]);
@@ -5527,6 +5527,8 @@ FreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandB
     }
     printCBList(dev_data);
     lock.unlock();
+
+    dev_data->device_dispatch_table->FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateCommandPool(VkDevice device, const VkCommandPoolCreateInfo *pCreateInfo,
@@ -5566,14 +5568,8 @@ DestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocatio
     auto pPool = getCommandPoolNode(dev_data, commandPool);
     skip_call |= checkCommandBuffersInFlight(dev_data, pPool, "destroy command pool with");
 
-    lock.unlock();
-
     if (skip_call)
         return;
-
-    dev_data->device_dispatch_table->DestroyCommandPool(device, commandPool, pAllocator);
-
-    lock.lock();
     // Must remove cmdpool from cmdpoolmap, after removing all cmdbuffers in its list from the commandBufferMap
     clearCommandBuffersInFlight(dev_data, pPool);
     for (auto cb : pPool->commandBuffers) {
@@ -5584,6 +5580,8 @@ DestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocatio
     }
     dev_data->commandPoolMap.erase(commandPool);
     lock.unlock();
+
+    dev_data->device_dispatch_table->DestroyCommandPool(device, commandPool, pAllocator);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
@@ -5675,10 +5673,11 @@ DestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocatio
 VKAPI_ATTR void VKAPI_CALL
 DestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_dispatch_table->DestroyRenderPass(device, renderPass, pAllocator);
-    std::lock_guard<std::mutex> lock(global_lock);
+    std::unique_lock<std::mutex> lock(global_lock);
     dev_data->renderPassMap.erase(renderPass);
     // TODO: leaking all the guts of the renderpass node here!
+    lock.unlock();
+    dev_data->device_dispatch_table->DestroyRenderPass(device, renderPass, pAllocator);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL CreateBuffer(VkDevice device, const VkBufferCreateInfo *pCreateInfo,
@@ -6278,6 +6277,7 @@ FreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t co
     std::unique_lock<std::mutex> lock(global_lock);
     bool skip_call = PreCallValidateFreeDescriptorSets(dev_data, descriptorPool, count, pDescriptorSets);
     lock.unlock();
+
     if (skip_call)
         return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
