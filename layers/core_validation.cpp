@@ -3752,19 +3752,19 @@ static void removeCommandBufferBinding(layer_data *dev_data, VK_OBJECT const *ob
         break;
     }
     case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT: {
-        auto evt_node = getEventNode(dev_data, reinterpret_cast<VkEvent>(object->handle));
+        auto evt_node = getEventNode(dev_data, reinterpret_cast<const VkEvent &>(object->handle));
         if (evt_node)
             evt_node->cb_bindings.erase(cb_node);
         break;
     }
     case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT: {
-        auto qp_node = getQueryPoolNode(dev_data, reinterpret_cast<VkQueryPool>(object->handle));
+        auto qp_node = getQueryPoolNode(dev_data, reinterpret_cast<const VkQueryPool &>(object->handle));
         if (qp_node)
             qp_node->cb_bindings.erase(cb_node);
         break;
     }
     case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT: {
-        auto pipe_node = getPipeline(dev_data, reinterpret_cast<VkPipeline>(object->handle));
+        auto pipe_node = getPipeline(dev_data, reinterpret_cast<const VkPipeline &>(object->handle));
         if (pipe_node)
             pipe_node->cb_bindings.erase(cb_node);
         break;
