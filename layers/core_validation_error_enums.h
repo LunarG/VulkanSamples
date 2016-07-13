@@ -56,7 +56,6 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_INVALID_LAYOUT,                // Invalid DS layout
     DRAWSTATE_INVALID_IMAGE_LAYOUT,          // Invalid Image layout
     DRAWSTATE_INVALID_PIPELINE,              // Invalid Pipeline handle referenced
-    DRAWSTATE_INVALID_PIPELINE_LAYOUT,       // Invalid PipelineLayout
     DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, // Attempt to create a pipeline
                                              // with invalid state
     DRAWSTATE_INVALID_COMMAND_BUFFER,        // Invalid CommandBuffer referenced
