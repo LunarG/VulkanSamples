@@ -34,7 +34,7 @@ if %do_cmake%==0 (
     if %do_32%==0 (
         if %do_64%==0 (
             echo No valid parameters specified.
-            exit /B 1
+            exit 1
         )
     )
 )
@@ -76,7 +76,7 @@ if %do_64%==1 (
        echo.
        echo 64-bit Debug build failed!
        popd
-       exit /B 1
+       exit 1
     )   
    
     echo Building 64-bit Release 
@@ -85,7 +85,7 @@ if %do_64%==1 (
        echo.
        echo 64-bit Release build failed!
        popd
-       exit /B 1
+       exit 1
     )   
     popd
 )
@@ -106,7 +106,7 @@ if %do_32%==1 (
        echo.
        echo 32-bit Debug build failed!
        popd
-       exit /B 1
+       exit 1
     )   
        
     echo Building 32-bit Release 
@@ -115,8 +115,8 @@ if %do_32%==1 (
        echo.
        echo 32-bit Release build failed!
        popd
-       exit /B 1
+       exit 1
     )   
     popd
 )
-exit /B 0
+exit 0
