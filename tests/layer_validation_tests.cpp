@@ -11673,7 +11673,7 @@ struct thread_data_struct {
 extern "C" void *AddToCommandBuffer(void *arg) {
     struct thread_data_struct *data = (struct thread_data_struct *)arg;
 
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 80000; i++) {
         vkCmdSetEvent(data->commandBuffer, data->event,
                       VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
         if (data->bailout) {
@@ -11717,6 +11717,20 @@ TEST_F(VkLayerTest, ThreadCommandBufferCollision) {
     data.event = event;
     data.bailout = false;
     m_errorMonitor->SetBailout(&data.bailout);
+
+    // First do some correct operations using multiple threads.
+    // Add many entries to command buffer from another thread.
+    test_platform_thread_create(&thread, AddToCommandBuffer, (void *)&data);
+    // Make non-conflicting calls from this thread at the same time.
+    for (int i = 0; i < 80000; i++) {
+        const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
+        VkFormatProperties format_properties;
+        vkGetPhysicalDeviceFormatProperties(gpu(), tex_format,
+                                            &format_properties);
+    }
+    test_platform_thread_join(thread, NULL);
+
+    // Then do some incorrect operations using multiple threads.
     // Add many entries to command buffer from another thread.
     test_platform_thread_create(&thread, AddToCommandBuffer, (void *)&data);
     // Add many entries to command buffer from this thread at the same time.
