@@ -374,17 +374,19 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
         for (uint32_t index = 0; index < commandBufferCount; index++) {
             startWriteObject(my_data, pCommandBuffers[index], lockCommandPool);
         }
+        // The driver may immediately reuse command buffers in another thread.
+        // These updates need to be done before calling down to the driver.
+        for (uint32_t index = 0; index < commandBufferCount; index++) {
+            finishWriteObject(my_data, pCommandBuffers[index], lockCommandPool);
+            std::lock_guard<std::mutex> lock(command_pool_lock);
+            command_pool_map.erase(pCommandBuffers[index]);
+        }
     }
 
     pTable->FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
     if (threadChecks) {
         finishReadObject(my_data, device);
         finishWriteObject(my_data, commandPool);
-        for (uint32_t index = 0; index < commandBufferCount; index++) {
-            finishWriteObject(my_data, pCommandBuffers[index], lockCommandPool);
-            std::lock_guard<std::mutex> lock(command_pool_lock);
-            command_pool_map.erase(pCommandBuffers[index]);
-        }
     } else {
         finishMultiThread();
     }
