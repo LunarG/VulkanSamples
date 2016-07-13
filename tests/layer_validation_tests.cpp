@@ -17,6 +17,7 @@
  * Author: Mike Stroyan <mike@LunarG.com>
  * Author: Tobin Ehlis <tobine@google.com>
  * Author: Tony Barbour <tony@LunarG.com>
+ * Author: Cody Northrop <cnorthrop@google.com>
  */
 
 #ifdef ANDROID
@@ -24,6 +25,12 @@
 #else
 #include <vulkan/vulkan.h>
 #endif
+
+#if defined(ANDROID) && defined(VALIDATION_APK)
+#include <android/log.h>
+#include <android_native_app_glue.h>
+#endif
+
 #include "test_common.h"
 #include "vkrenderframework.h"
 #include "vk_layer_config.h"
@@ -15611,6 +15618,155 @@ TEST_F(VkLayerTest, ClearImageErrors) {
     m_errorMonitor->VerifyFound();
 }
 #endif // IMAGE_TESTS
+
+#if defined(ANDROID) && defined(VALIDATION_APK)
+static bool initialized = false;
+static bool active = false;
+
+// Convert Intents to argv
+// Ported from Hologram sample, only difference is flexible key
+std::vector<std::string> get_args(android_app &app, const char* intent_extra_data_key)
+{
+    std::vector<std::string> args;
+    JavaVM &vm = *app.activity->vm;
+    JNIEnv *p_env;
+    if (vm.AttachCurrentThread(&p_env, nullptr) != JNI_OK)
+        return args;
+
+    JNIEnv &env = *p_env;
+    jobject activity = app.activity->clazz;
+    jmethodID get_intent_method = env.GetMethodID(env.GetObjectClass(activity),
+            "getIntent", "()Landroid/content/Intent;");
+    jobject intent = env.CallObjectMethod(activity, get_intent_method);
+    jmethodID get_string_extra_method = env.GetMethodID(env.GetObjectClass(intent),
+            "getStringExtra", "(Ljava/lang/String;)Ljava/lang/String;");
+    jvalue get_string_extra_args;
+    get_string_extra_args.l = env.NewStringUTF(intent_extra_data_key);
+    jstring extra_str = static_cast<jstring>(env.CallObjectMethodA(intent,
+            get_string_extra_method, &get_string_extra_args));
+
+    std::string args_str;
+    if (extra_str) {
+        const char *extra_utf = env.GetStringUTFChars(extra_str, nullptr);
+        args_str = extra_utf;
+        env.ReleaseStringUTFChars(extra_str, extra_utf);
+        env.DeleteLocalRef(extra_str);
+    }
+
+    env.DeleteLocalRef(get_string_extra_args.l);
+    env.DeleteLocalRef(intent);
+    vm.DetachCurrentThread();
+
+    // split args_str
+    std::stringstream ss(args_str);
+    std::string arg;
+    while (std::getline(ss, arg, ' ')) {
+        if (!arg.empty())
+            args.push_back(arg);
+    }
+
+    return args;
+}
+
+
+static int32_t processInput(struct android_app* app, AInputEvent* event) {
+    return 0;
+}
+
+static void processCommand(struct android_app* app, int32_t cmd) {
+    switch(cmd) {
+        case APP_CMD_INIT_WINDOW: {
+            if (app->window) {
+                initialized = true;
+            }
+            break;
+        }
+        case APP_CMD_GAINED_FOCUS: {
+            active = true;
+            break;
+        }
+        case APP_CMD_LOST_FOCUS: {
+            active = false;
+            break;
+        }
+    }
+}
+
+void android_main(struct android_app *app)
+{
+    app_dummy();
+
+    const char* appTag = "VulkanLayerValidationTests";
+
+    int vulkanSupport = InitVulkan();
+    if (vulkanSupport == 0) {
+        __android_log_print(ANDROID_LOG_INFO, appTag, "==== FAILED ==== No Vulkan support found");
+        return;
+    }
+
+    app->onAppCmd = processCommand;
+    app->onInputEvent = processInput;
+
+    while(1) {
+        int events;
+        struct android_poll_source* source;
+        while (ALooper_pollAll(active ? 0 : -1, NULL, &events, (void**)&source) >= 0) {
+            if (source) {
+                source->process(app, source);
+            }
+
+            if (app->destroyRequested != 0) {
+                VkTestFramework::Finish();
+                return;
+            }
+        }
+
+        if (initialized && active) {
+          // Use the following key to send arguments to gtest, i.e.
+          // --es args "--gtest_filter=-VkLayerTest.foo"
+          const char key[] = "args";
+          std::vector<std::string> args = get_args(*app, key);
+
+          std::string filter = "";
+          if (args.size() > 0) {
+              __android_log_print(ANDROID_LOG_INFO, appTag, "Intent args = %s", args[0].c_str());
+              filter += args[0];
+          } else {
+              __android_log_print(ANDROID_LOG_INFO, appTag, "No Intent args detected");
+          }
+
+          int argc = 2;
+          char *argv[] = { (char*)"foo", (char*)filter.c_str() };
+           __android_log_print(ANDROID_LOG_DEBUG, appTag, "filter = %s", argv[1]);
+
+           // Route output to files until we can override the gtest output
+           freopen("/sdcard/Android/data/com.example.VulkanLayerValidationTests/files/out.txt", "w", stdout);
+           freopen("/sdcard/Android/data/com.example.VulkanLayerValidationTests/files/err.txt", "w", stderr);
+
+           ::testing::InitGoogleTest(&argc, argv);
+           VkTestFramework::InitArgs(&argc, argv);
+           ::testing::AddGlobalTestEnvironment(new TestEnvironment);
+
+           int result = RUN_ALL_TESTS();
+
+           if (result != 0) {
+               __android_log_print(ANDROID_LOG_INFO, appTag, "==== Tests FAILED ====");
+           } else {
+               __android_log_print(ANDROID_LOG_INFO, appTag, "==== Tests PASSED ====");
+           }
+
+           VkTestFramework::Finish();
+
+           fclose(stdout);
+           fclose(stderr);
+
+           ANativeActivity_finish(app->activity);
+
+           return;
+        }
+    }
+}
+#endif
 
 int main(int argc, char **argv) {
     int result;
