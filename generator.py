@@ -2573,9 +2573,9 @@ class ThreadOutputGenerator(OutputGenerator):
                                 limit = element[0:element.find('s[]')] + 'Count'
                                 dotp = limit.rfind('.p')
                                 limit = limit[0:dotp+1] + limit[dotp+2:dotp+3].lower() + limit[dotp+3:]
-                                paramdecl += '        for(uint32_t index2=0;index2<'+limit+';index2++)'
+                                paramdecl += '        for(uint32_t index2=0;index2<'+limit+';index2++)\n'
                                 element = element.replace('[]','[index2]')
-                            paramdecl += '        ' + functionprefix + 'WriteObject(my_data, ' + element + ');\n'
+                            paramdecl += '            ' + functionprefix + 'WriteObject(my_data, ' + element + ');\n'
                         paramdecl += '    }\n'
                     else:
                         # externsync can list members to synchronize
@@ -2601,7 +2601,7 @@ class ThreadOutputGenerator(OutputGenerator):
             for param in explicitexternsyncparams:
                 externsyncattrib = param.attrib.get('externsync')
                 paramname = param.find('name')
-                paramdecl += '// Host access to '
+                paramdecl += '    // Host access to '
                 if externsyncattrib == 'true':
                     if self.paramIsArray(param):
                         paramdecl += 'each member of ' + paramname.text
@@ -2810,12 +2810,19 @@ class ThreadOutputGenerator(OutputGenerator):
         else:
             assignresult = ''
 
-        self.appendSection('command', str(startthreadsafety))
+        self.appendSection('command', '    bool threadChecks = startMultiThread();')
+        self.appendSection('command', '    if (threadChecks) {')
+        self.appendSection('command', "    "+"\n    ".join(str(startthreadsafety).rstrip().split("\n")))
+        self.appendSection('command', '    }')
         params = cmdinfo.elem.findall('param/name')
         paramstext = ','.join([str(param.text) for param in params])
         API = cmdinfo.elem.attrib.get('name').replace('vk','pTable->',1)
         self.appendSection('command', '    ' + assignresult + API + '(' + paramstext + ');')
-        self.appendSection('command', str(finishthreadsafety))
+        self.appendSection('command', '    if (threadChecks) {')
+        self.appendSection('command', "    "+"\n    ".join(str(finishthreadsafety).rstrip().split("\n")))
+        self.appendSection('command', '    } else {')
+        self.appendSection('command', '        finishMultiThread();')
+        self.appendSection('command', '    }')
         # Return result variable, if any.
         if (resulttype != None):
             self.appendSection('command', '    return result;')

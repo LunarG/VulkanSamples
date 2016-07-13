@@ -48,6 +48,26 @@ struct object_use_data {
 
 struct layer_data;
 
+namespace threading {
+volatile bool vulkan_in_use = false;
+volatile bool vulkan_multi_threaded = false;
+// starting check if an application is using vulkan from multiple threads.
+inline bool startMultiThread() {
+    if (vulkan_multi_threaded) {
+        return true;
+    }
+    if (vulkan_in_use) {
+        vulkan_multi_threaded = true;
+        return true;
+    }
+    vulkan_in_use = true;
+    return false;
+}
+
+// finishing check if an application is using vulkan from multiple threads.
+inline void finishMultiThread() { vulkan_in_use = false; }
+} // namespace threading
+
 template <typename T> class counter {
   public:
     const char *typeName;
