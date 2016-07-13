@@ -3093,18 +3093,16 @@ static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device
             if (pPipeline->attachments.size() > 1) {
                 VkPipelineColorBlendAttachmentState *pAttachments = &pPipeline->attachments[0];
                 for (size_t i = 1; i < pPipeline->attachments.size(); i++) {
-                    if ((pAttachments[0].blendEnable != pAttachments[i].blendEnable) ||
-                        (pAttachments[0].srcColorBlendFactor != pAttachments[i].srcColorBlendFactor) ||
-                        (pAttachments[0].dstColorBlendFactor != pAttachments[i].dstColorBlendFactor) ||
-                        (pAttachments[0].colorBlendOp != pAttachments[i].colorBlendOp) ||
-                        (pAttachments[0].srcAlphaBlendFactor != pAttachments[i].srcAlphaBlendFactor) ||
-                        (pAttachments[0].dstAlphaBlendFactor != pAttachments[i].dstAlphaBlendFactor) ||
-                        (pAttachments[0].alphaBlendOp != pAttachments[i].alphaBlendOp) ||
-                        (pAttachments[0].colorWriteMask != pAttachments[i].colorWriteMask)) {
+                    // Quoting the spec: "If [the independent blend] feature is not enabled, the VkPipelineColorBlendAttachmentState
+                    // settings for all color attachments must be identical." VkPipelineColorBlendAttachmentState contains
+                    // only attachment state, so memcmp is best suited for the comparison
+                    if (memcmp(static_cast<const void *>(pAttachments), static_cast<const void *>(&pAttachments[i]),
+                               sizeof(pAttachments[0]))) {
                         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
                                              __LINE__, DRAWSTATE_INDEPENDENT_BLEND, "DS",
                                              "Invalid Pipeline CreateInfo: If independent blend feature not "
                                              "enabled, all elements of pAttachments must be identical");
+                        break;
                     }
                 }
             }
