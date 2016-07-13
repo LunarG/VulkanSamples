@@ -3367,15 +3367,14 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
         skip_call |= ValidateCommandBuffer(device, commandPool, pCommandBuffers[i]);
     }
 
+    for (uint32_t i = 0; i < commandBufferCount; i++) {
+        DestroyDispatchableObject(device, pCommandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT);
+    }
+
     lock.unlock();
     if (!skip_call) {
         get_dispatch_table(ot_device_table_map, device)
             ->FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
-    }
-
-    lock.lock();
-    for (uint32_t i = 0; i < commandBufferCount; i++) {
-        DestroyDispatchableObject(device, pCommandBuffers[i], VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT);
     }
 }
 VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocationCallbacks *pAllocator) {
@@ -3411,15 +3410,14 @@ VKAPI_ATTR VkResult VKAPI_CALL FreeDescriptorSets(VkDevice device, VkDescriptorP
         skip_call |= ValidateDescriptorSet(device, descriptorPool, pDescriptorSets[i]);
     }
 
+    for (uint32_t i = 0; i < descriptorSetCount; i++) {
+        DestroyNonDispatchableObject(device, pDescriptorSets[i], VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT);
+    }
+
     lock.unlock();
     if (!skip_call) {
         result = get_dispatch_table(ot_device_table_map, device)
                      ->FreeDescriptorSets(device, descriptorPool, descriptorSetCount, pDescriptorSets);
-    }
-
-    lock.lock();
-    for (uint32_t i = 0; i < descriptorSetCount; i++) {
-        DestroyNonDispatchableObject(device, pDescriptorSets[i], VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT);
     }
     return result;
 }
