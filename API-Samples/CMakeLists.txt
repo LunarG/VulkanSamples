@@ -108,7 +108,6 @@ function(sampleWithSingleFile)
                     project \":parameter_validation\"
                     project \":object_tracker\"
                     project \":core_validation\"
-                    project \":device_limits\"
                     project \":image\"
                     project \":swapchain\"
                     project \":unique_objects\"")
