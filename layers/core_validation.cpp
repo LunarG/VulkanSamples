@@ -692,6 +692,34 @@ static bool clear_object_binding(layer_data *dev_data, uint64_t handle, VkDebugR
     return skip_call;
 }
 
+// Check to see if memory was ever bound to this image
+static bool ValidateMemoryIsBoundToImage(layer_data *dev_data, IMAGE_NODE *image_node, const char *api_name) {
+    bool result = false;
+    if (0 == (static_cast<uint32_t>(image_node->createInfo.flags) & VK_IMAGE_CREATE_SPARSE_BINDING_BIT)) {
+        if (0 == image_node->mem) {
+            result = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                reinterpret_cast<uint64_t &>(image_node->image), __LINE__, MEMTRACK_OBJECT_NOT_BOUND, "MEM",
+                "%s: VkImage object 0x%" PRIxLEAST64 " used without first calling vkBindImageMemory.", api_name,
+                reinterpret_cast<uint64_t &>(image_node->image));
+        }
+    }
+    return result;
+}
+
+// Check to see if memory was bound to this buffer
+static bool ValidateMemoryIsBoundToBuffer(layer_data *dev_data, BUFFER_NODE *buffer_node, const char *api_name) {
+    bool result = false;
+    if (0 == (static_cast<uint32_t>(buffer_node->createInfo.flags) & VK_IMAGE_CREATE_SPARSE_BINDING_BIT)) {
+        if (0 == buffer_node->mem) {
+            result = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                reinterpret_cast<uint64_t &>(buffer_node->buffer), __LINE__, MEMTRACK_OBJECT_NOT_BOUND, "MEM",
+                "%s: VkBuffer object 0x%" PRIxLEAST64 " used without first calling vkBindBufferMemory.", api_name,
+                reinterpret_cast<uint64_t &>(buffer_node->buffer));
+        }
+    }
+    return result;
+}
+
 // For NULL mem case, output warning
 // Make sure given object is in global object map
 //  IF a previous binding existed, output validation error
@@ -5698,30 +5726,14 @@ static bool PreCallValidateCreateBufferView(layer_data *dev_data, const VkBuffer
     bool skip_call = false;
     BUFFER_NODE *buf_node = getBufferNode(dev_data, pCreateInfo->buffer);
     // If this isn't a sparse buffer, it needs to have memory backing it at CreateBufferView time
-    if (0 == (static_cast<uint32_t>(buf_node->createInfo.flags) & VK_BUFFER_CREATE_SPARSE_BINDING_BIT)) {
-        if (buf_node->mem) {
-            DEVICE_MEM_INFO *pMemObjInfo = getMemObjInfo(dev_data, buf_node->mem);
-            if (!pMemObjInfo) {
-                skip_call |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                            reinterpret_cast<uint64_t &>(buf_node->mem), __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
-                            "vkCreateBufferView called with invalid memory 0x%" PRIx64 " bound to buffer 0x%" PRIx64 ".  Memory "
-                            "must be bound prior to creating a view to a non-sparse buffer.",
-                            reinterpret_cast<uint64_t &>(buf_node->mem), reinterpret_cast<const uint64_t &>(pCreateInfo->buffer));
-            }
-        } else {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                 VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
-                                 "vkCreateBufferView called with invalid memory bound to buffer 0x%" PRIx64 ".  Memory "
-                                 "must be bound prior to creating a view to a non-sparse buffer.",
-                                 reinterpret_cast<const uint64_t &>(pCreateInfo->buffer));
-        }
-    }
+    if (buf_node) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buf_node, "vkCreateBufferView()");
         // In order to create a valid buffer view, the buffer must have been created with at least one of the
         // following flags:  UNIFORM_TEXEL_BUFFER_BIT or STORAGE_TEXEL_BUFFER_BIT
-        validateBufferUsageFlags(dev_data, buf_node,
-                                 VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, false,
-                                 "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
+        skip_call |= validateBufferUsageFlags(dev_data, buf_node,
+                                              VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT,
+                                              false, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
+    }
     return skip_call;
 }
 
@@ -5802,31 +5814,13 @@ static void ResolveRemainingLevelsLayers(layer_data *dev_data, uint32_t *levels,
 static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageViewCreateInfo *pCreateInfo) {
     bool skip_call = false;
     IMAGE_NODE *image_node = getImageNode(dev_data, pCreateInfo->image);
-    skip_call |= validateImageUsageFlags(dev_data, image_node,
-                                         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
-                                             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                                         false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
-    // If this isn't a sparse image, it needs to have memory backing it at CreateImageView time
-    if (0 == (static_cast<uint32_t>(image_node->createInfo.flags) & VK_IMAGE_CREATE_SPARSE_BINDING_BIT)) {
-        if (MEMTRACKER_SWAP_CHAIN_IMAGE_KEY != image_node->mem) {
-            if (image_node->mem) {
-                DEVICE_MEM_INFO *pMemObjInfo = getMemObjInfo(dev_data, image_node->mem);
-                if (!pMemObjInfo) {
-                    skip_call |= log_msg(
-                        dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                        reinterpret_cast<uint64_t &>(image_node->mem), __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
-                        "vkCreateImageView called with invalid memory 0x%" PRIx64 " bound to image 0x%" PRIx64 ".  Memory "
-                        "must be bound prior to creating a view to a non-sparse image.",
-                        reinterpret_cast<uint64_t &>(image_node->mem), reinterpret_cast<const uint64_t &>(pCreateInfo->image));
-                }
-            } else {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                     VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, 0, __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
-                                     "vkCreateImageView called with invalid memory bound to image 0x%" PRIx64 ".  Memory "
-                                     "must be bound prior to creating a view to a non-sparse image.",
-                                     reinterpret_cast<const uint64_t &>(pCreateInfo->image));
-            }
-        }
+    if (image_node) {
+        skip_call |= validateImageUsageFlags(dev_data, image_node,
+                                             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
+                                                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                                             false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
+        // If this isn't a sparse image, it needs to have memory backing it at CreateImageView time
+        skip_call |= ValidateMemoryIsBoundToImage(dev_data, image_node, "vkCreateImageView()");
     }
     return skip_call;
 }
@@ -6925,9 +6919,11 @@ CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize 
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     // TODO : Somewhere need to verify that IBs have correct usage state flagged
     std::unique_lock<std::mutex> lock(global_lock);
+
     auto buff_node = getBufferNode(dev_data, buffer);
     auto cb_node = getCBNode(dev_data, commandBuffer);
     if (cb_node && buff_node) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buff_node, "vkCmdBindIndexBuffer()");
         std::function<bool()> function = [=]() {
             return validate_memory_is_valid(dev_data, buff_node->mem, "vkCmdBindIndexBuffer()");
         };
@@ -6979,12 +6975,13 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     // TODO : Somewhere need to verify that VBs have correct usage state flagged
     std::unique_lock<std::mutex> lock(global_lock);
+
     auto cb_node = getCBNode(dev_data, commandBuffer);
     if (cb_node) {
         for (uint32_t i = 0; i < bindingCount; ++i) {
             auto buff_node = getBufferNode(dev_data, pBuffers[i]);
             assert(buff_node);
-
+            skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buff_node, "vkCmdBindVertexBuffers()");
             std::function<bool()> function = [=]() {
                 return validate_memory_is_valid(dev_data, buff_node->mem, "vkCmdBindVertexBuffers()");
             };
@@ -7092,7 +7089,8 @@ CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize off
     auto cb_node = getCBNode(dev_data, commandBuffer);
     auto buff_node = getBufferNode(dev_data, buffer);
     if (cb_node && buff_node) {
-        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, buff_node, "vkCmdDrawIndirect");
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buff_node, "vkCmdDrawIndirect()");
+        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, buff_node, "vkCmdDrawIndirect()");
         skip_call |= addCmd(dev_data, cb_node, CMD_DRAWINDIRECT, "vkCmdDrawIndirect()");
         cb_node->drawCount[DRAW_INDIRECT]++;
         skip_call |= validate_and_update_draw_state(dev_data, cb_node, false, VK_PIPELINE_BIND_POINT_GRAPHICS);
@@ -7105,7 +7103,7 @@ CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize off
         if (!skip_call) {
             updateResourceTrackingOnDraw(cb_node);
         }
-        skip_call |= outsideRenderPass(dev_data, cb_node, "vkCmdDrawIndirect");
+        skip_call |= outsideRenderPass(dev_data, cb_node, "vkCmdDrawIndirect()");
     } else {
         assert(0);
     }
@@ -7123,7 +7121,8 @@ CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceS
     auto cb_node = getCBNode(dev_data, commandBuffer);
     auto buff_node = getBufferNode(dev_data, buffer);
     if (cb_node && buff_node) {
-        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, buff_node, "vkCmdDrawIndexedIndirect");
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buff_node, "vkCmdDrawIndexedIndirect()");
+        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, buff_node, "vkCmdDrawIndexedIndirect()");
         skip_call |= addCmd(dev_data, cb_node, CMD_DRAWINDEXEDINDIRECT, "vkCmdDrawIndexedIndirect()");
         cb_node->drawCount[DRAW_INDEXED_INDIRECT]++;
         skip_call |= validate_and_update_draw_state(dev_data, cb_node, true, VK_PIPELINE_BIND_POINT_GRAPHICS);
@@ -7137,7 +7136,7 @@ CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceS
         if (!skip_call) {
             updateResourceTrackingOnDraw(cb_node);
         }
-        skip_call |= outsideRenderPass(dev_data, cb_node, "vkCmdDrawIndexedIndirect");
+        skip_call |= outsideRenderPass(dev_data, cb_node, "vkCmdDrawIndexedIndirect()");
     } else {
         assert(0);
     }
@@ -7170,12 +7169,13 @@ CmdDispatchIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize
 
     auto cb_node = getCBNode(dev_data, commandBuffer);
     auto buff_node = getBufferNode(dev_data, buffer);
-    if (cb_node) {
-        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, buff_node, "vkCmdDispatchIndirect");
+    if (cb_node && buff_node) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buff_node, "vkCmdDispatchIndirect()");
+        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, buff_node, "vkCmdDispatchIndirect()");
         skip_call |= validate_and_update_draw_state(dev_data, cb_node, false, VK_PIPELINE_BIND_POINT_COMPUTE);
         skip_call |= markStoreImagesAndBuffersAsWritten(dev_data, cb_node);
         skip_call |= addCmd(dev_data, cb_node, CMD_DISPATCHINDIRECT, "vkCmdDispatchIndirect()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdDispatchIndirect");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdDispatchIndirect()");
     }
     lock.unlock();
     if (!skip_call)
@@ -7192,9 +7192,11 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
     auto src_buff_node = getBufferNode(dev_data, srcBuffer);
     auto dst_buff_node = getBufferNode(dev_data, dstBuffer);
     if (cb_node && src_buff_node && dst_buff_node) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, src_buff_node, "vkCmdCopyBuffer()");
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_node, "vkCmdCopyBuffer()");
         // Update bindings between buffers and cmd buffer
-        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, src_buff_node, "vkCmdCopyBuffer");
-        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node, "vkCmdCopyBuffer");
+        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, src_buff_node, "vkCmdCopyBuffer()");
+        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node, "vkCmdCopyBuffer()");
         // Validate that SRC & DST buffers have correct usage flags set
         skip_call |= validateBufferUsageFlags(dev_data, src_buff_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, "vkCmdCopyBuffer()",
                                               "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
@@ -7212,7 +7214,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_COPYBUFFER, "vkCmdCopyBuffer()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyBuffer");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyBuffer()");
     } else {
         // Param_checker will flag errors on invalid objects, just assert here as debugging aid
         assert(0);
@@ -7313,9 +7315,11 @@ CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
     auto src_img_node = getImageNode(dev_data, srcImage);
     auto dst_img_node = getImageNode(dev_data, dstImage);
     if (cb_node && src_img_node && dst_img_node) {
+        skip_call |= ValidateMemoryIsBoundToImage(dev_data, src_img_node, "vkCmdCopyImage()");
+        skip_call |= ValidateMemoryIsBoundToImage(dev_data, dst_img_node, "vkCmdCopyImage()");
         // Update bindings between images and cmd buffer
-        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, src_img_node, "vkCmdCopyImage");
-        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, dst_img_node, "vkCmdCopyImage");
+        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, src_img_node, "vkCmdCopyImage()");
+        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, dst_img_node, "vkCmdCopyImage()");
         // Validate that SRC & DST images have correct usage flags set
         skip_call |= validateImageUsageFlags(dev_data, src_img_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, "vkCmdCopyImage()",
                                              "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
@@ -7332,7 +7336,7 @@ CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_COPYIMAGE, "vkCmdCopyImage()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImage");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImage()");
         for (uint32_t i = 0; i < regionCount; ++i) {
             skip_call |= VerifySourceImageLayout(dev_data, cb_node, srcImage, pRegions[i].srcSubresource, srcImageLayout);
             skip_call |= VerifyDestImageLayout(dev_data, cb_node, dstImage, pRegions[i].dstSubresource, dstImageLayout);
@@ -7357,9 +7361,11 @@ CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
     auto src_img_node = getImageNode(dev_data, srcImage);
     auto dst_img_node = getImageNode(dev_data, dstImage);
     if (cb_node && src_img_node && dst_img_node) {
+        skip_call |= ValidateMemoryIsBoundToImage(dev_data, src_img_node, "vkCmdBlitImage()");
+        skip_call |= ValidateMemoryIsBoundToImage(dev_data, dst_img_node, "vkCmdBlitImage()");
         // Update bindings between images and cmd buffer
-        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, src_img_node, "vkCmdBlitImage");
-        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, dst_img_node, "vkCmdBlitImage");
+        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, src_img_node, "vkCmdBlitImage()");
+        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, dst_img_node, "vkCmdBlitImage()");
         // Validate that SRC & DST images have correct usage flags set
         skip_call |= validateImageUsageFlags(dev_data, src_img_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, "vkCmdBlitImage()",
                                              "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
@@ -7376,7 +7382,7 @@ CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_BLITIMAGE, "vkCmdBlitImage()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdBlitImage");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdBlitImage()");
     } else {
         assert(0);
     }
@@ -7397,8 +7403,10 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
     auto src_buff_node = getBufferNode(dev_data, srcBuffer);
     auto dst_img_node = getImageNode(dev_data, dstImage);
     if (cb_node && src_buff_node && dst_img_node) {
-        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, src_buff_node, "vkCmdCopyBufferToImage");
-        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, dst_img_node, "vkCmdCopyBufferToImage");
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, src_buff_node, "vkCmdCopyBufferToImage()");
+        skip_call |= ValidateMemoryIsBoundToImage(dev_data, dst_img_node, "vkCmdCopyBufferToImage()");
+        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, src_buff_node, "vkCmdCopyBufferToImage()");
+        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, dst_img_node, "vkCmdCopyBufferToImage()");
         skip_call |= validateBufferUsageFlags(dev_data, src_buff_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true,
                                               "vkCmdCopyBufferToImage()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
         skip_call |= validateImageUsageFlags(dev_data, dst_img_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
@@ -7412,7 +7420,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_COPYBUFFERTOIMAGE, "vkCmdCopyBufferToImage()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyBufferToImage");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyBufferToImage()");
         for (uint32_t i = 0; i < regionCount; ++i) {
             skip_call |= VerifyDestImageLayout(dev_data, cb_node, dstImage, pRegions[i].imageSubresource, dstImageLayout);
         }
@@ -7436,9 +7444,11 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
     auto src_img_node = getImageNode(dev_data, srcImage);
     auto dst_buff_node = getBufferNode(dev_data, dstBuffer);
     if (cb_node && src_img_node && dst_buff_node) {
+        skip_call |= ValidateMemoryIsBoundToImage(dev_data, src_img_node, "vkCmdCopyImageToBuffer()");
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_node, "vkCmdCopyImageToBuffer()");
         // Update bindings between buffer/image and cmd buffer
-        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, src_img_node, "vkCmdCopyImageToBuffer");
-        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node, "vkCmdCopyImageToBuffer");
+        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, src_img_node, "vkCmdCopyImageToBuffer()");
+        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node, "vkCmdCopyImageToBuffer()");
         // Validate that SRC image & DST buffer have correct usage flags set
         skip_call |= validateImageUsageFlags(dev_data, src_img_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true,
                                              "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
@@ -7455,7 +7465,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_COPYIMAGETOBUFFER, "vkCmdCopyImageToBuffer()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImageToBuffer");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImageToBuffer()");
         for (uint32_t i = 0; i < regionCount; ++i) {
             skip_call |= VerifySourceImageLayout(dev_data, cb_node, srcImage, pRegions[i].imageSubresource, srcImageLayout);
         }
@@ -7477,8 +7487,9 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
     auto cb_node = getCBNode(dev_data, commandBuffer);
     auto dst_buff_node = getBufferNode(dev_data, dstBuffer);
     if (cb_node && dst_buff_node) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_node, "vkCmdUpdateBuffer()");
         // Update bindings between buffer and cmd buffer
-        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node, "vkCmdUpdateBuffer");
+        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node, "vkCmdUpdateBuffer()");
         // Validate that DST buffer has correct usage flags set
         skip_call |= validateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
                                               "vkCmdUpdateBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
@@ -7489,7 +7500,7 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_UPDATEBUFFER, "vkCmdUpdateBuffer()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyUpdateBuffer");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyUpdateBuffer()");
     } else {
         assert(0);
     }
@@ -7507,8 +7518,9 @@ CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize ds
     auto cb_node = getCBNode(dev_data, commandBuffer);
     auto dst_buff_node = getBufferNode(dev_data, dstBuffer);
     if (cb_node && dst_buff_node) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_node, "vkCmdFillBuffer()");
         // Update bindings between buffer and cmd buffer
-        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node, "vkCmdFillBuffer");
+        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node, "vkCmdFillBuffer()");
         // Validate that DST buffer has correct usage flags set
         skip_call |= validateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, "vkCmdFillBuffer()",
                                               "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
@@ -7519,7 +7531,7 @@ CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize ds
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_FILLBUFFER, "vkCmdFillBuffer()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyFillBuffer");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyFillBuffer()");
     } else {
         assert(0);
     }
@@ -7551,7 +7563,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
                                  " It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.",
                                  (uint64_t)(commandBuffer));
         }
-        skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdClearAttachments");
+        skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdClearAttachments()");
     }
 
     // Validate that attachment is in reference list of active subpass
@@ -7609,7 +7621,8 @@ VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkI
     auto cb_node = getCBNode(dev_data, commandBuffer);
     auto img_node = getImageNode(dev_data, image);
     if (cb_node && img_node) {
-        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, img_node, "vkCmdClearColorImage");
+        skip_call |= ValidateMemoryIsBoundToImage(dev_data, img_node, "vkCmdClearColorImage()");
+        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, img_node, "vkCmdClearColorImage()");
         std::function<bool()> function = [=]() {
             set_memory_valid(dev_data, img_node->mem, true, image);
             return false;
@@ -7617,7 +7630,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkI
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_CLEARCOLORIMAGE, "vkCmdClearColorImage()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdClearColorImage");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdClearColorImage()");
     } else {
         assert(0);
     }
@@ -7638,7 +7651,8 @@ CmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageL
     auto cb_node = getCBNode(dev_data, commandBuffer);
     auto img_node = getImageNode(dev_data, image);
     if (cb_node && img_node) {
-        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, img_node, "vkCmdClearDepthStencilImage");
+        skip_call |= ValidateMemoryIsBoundToImage(dev_data, img_node, "vkCmdClearDepthStencilImage()");
+        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, img_node, "vkCmdClearDepthStencilImage()");
         std::function<bool()> function = [=]() {
             set_memory_valid(dev_data, img_node->mem, true, image);
             return false;
@@ -7646,7 +7660,7 @@ CmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageL
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_CLEARDEPTHSTENCILIMAGE, "vkCmdClearDepthStencilImage()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdClearDepthStencilImage");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdClearDepthStencilImage()");
     } else {
         assert(0);
     }
@@ -7667,9 +7681,11 @@ CmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout s
     auto src_img_node = getImageNode(dev_data, srcImage);
     auto dst_img_node = getImageNode(dev_data, dstImage);
     if (cb_node && src_img_node && dst_img_node) {
+        skip_call |= ValidateMemoryIsBoundToImage(dev_data, src_img_node, "vkCmdResolveImage()");
+        skip_call |= ValidateMemoryIsBoundToImage(dev_data, dst_img_node, "vkCmdResolveImage()");
         // Update bindings between images and cmd buffer
-        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, src_img_node, "vkCmdCopyImage");
-        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, dst_img_node, "vkCmdCopyImage");
+        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, src_img_node, "vkCmdCopyImage()");
+        skip_call |= addCommandBufferBindingImage(dev_data, cb_node, dst_img_node, "vkCmdCopyImage()");
         std::function<bool()> function = [=]() {
             return validate_memory_is_valid(dev_data, src_img_node->mem, "vkCmdResolveImage()", srcImage);
         };
@@ -7681,7 +7697,7 @@ CmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout s
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_RESOLVEIMAGE, "vkCmdResolveImage()");
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdResolveImage");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdResolveImage()");
     } else {
         assert(0);
     }
@@ -8328,8 +8344,9 @@ CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, ui
     auto cb_node = getCBNode(dev_data, commandBuffer);
     auto dst_buff_node = getBufferNode(dev_data, dstBuffer);
     if (cb_node && dst_buff_node) {
+        skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_node, "vkCmdCopyQueryPoolResults()");
         // Update bindings between buffer and cmd buffer
-        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node, "vkCmdCopyQueryPoolResults");
+        skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node, "vkCmdCopyQueryPoolResults()");
         // Validate that DST buffer has correct usage flags set
         skip_call |= validateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
                                               "vkCmdCopyQueryPoolResults()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
@@ -8346,7 +8363,7 @@ CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, ui
         } else {
             skip_call |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdCopyQueryPoolResults()");
         }
-        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyQueryPoolResults");
+        skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyQueryPoolResults()");
         addCommandBufferBinding(&getQueryPoolNode(dev_data, queryPool)->cb_bindings,
                                 {reinterpret_cast<uint64_t &>(queryPool), VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT}, cb_node);
     } else {

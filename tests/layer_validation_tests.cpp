@@ -6915,7 +6915,7 @@ TEST_F(VkLayerTest, CreateBufferViewNoMemoryBoundToBuffer) {
     VkResult err;
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "vkCreateBufferView called with invalid memory ");
+        "used without first calling vkBindBufferMemory");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -9329,7 +9329,7 @@ TEST_F(VkLayerTest, ClearColorAttachmentsOutsideRenderPass) {
     VkResult err;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "vkCmdClearAttachments: This call "
+                                         "vkCmdClearAttachments(): This call "
                                          "must be issued inside an active "
                                          "render pass");
 
@@ -13447,7 +13447,7 @@ TEST_F(VkLayerTest, CreateImageViewNoMemoryBoundToImage) {
 
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "vkCreateImageView called with invalid memory ");
+        "used without first calling vkBindImageMemory");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
