@@ -1557,6 +1557,7 @@ class UniqueObjectsSubcommand(Subcommand):
                                              'DestroyInstance',
                                              'CreateDevice',
                                              'DestroyDevice',
+                                             'AllocateMemory',
                                              'CreateComputePipelines',
                                              'CreateGraphicsPipelines',
                                              'GetPhysicalDeviceDisplayPropertiesKHR',
