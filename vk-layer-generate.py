@@ -1608,6 +1608,7 @@ class UniqueObjectsSubcommand(Subcommand):
                 for del_obj in sorted(struct_uses):
                     pre_call_txt += '%suint64_t local_%s = reinterpret_cast<uint64_t &>(%s);\n' % (indent, del_obj, del_obj)
                     pre_call_txt += '%s%s = (%s)my_map_data->unique_id_mapping[local_%s];\n' % (indent, del_obj, struct_uses[del_obj], del_obj)
+                pre_call_txt += '%smy_map_data->unique_id_mapping.erase(local_%s);\n' % (indent, proto.params[-2].name)
                 pre_call_txt += '%slock.unlock();\n' % (indent)
                 (pre_decl, pre_code, post_code) = ('', '', '')
             else:
@@ -1660,20 +1661,6 @@ class UniqueObjectsSubcommand(Subcommand):
                     post_call_txt += '%s*%s = reinterpret_cast<%s&>(unique_id);\n' % (indent, obj_name, obj_type)
                 indent = indent[4:]
                 post_call_txt += '%s}\n' % (indent)
-        elif destroy_func:
-            del_obj = proto.params[-2].name
-            if 'count' in del_obj.lower():
-                post_call_txt += '%s\n' % (self.lineinfo.get())
-                post_call_txt += '%sfor (uint32_t i=0; i<%s; ++i) {\n' % (indent, del_obj)
-                del_obj = proto.params[-1].name
-                indent += '    '
-                post_call_txt += '%sdelete (VkUniqueObject*)%s[i];\n' % (indent, del_obj)
-                indent = indent[4:]
-                post_call_txt += '%s}\n' % (indent)
-            else:
-                post_call_txt += '%s\n' % (self.lineinfo.get())
-                post_call_txt += '%slock.lock();\n' % (indent)
-                post_call_txt += '%smy_map_data->unique_id_mapping.erase(local_%s);\n' % (indent, proto.params[-2].name)
 
         call_sig = proto.c_call()
         # Replace default params with any custom local params
