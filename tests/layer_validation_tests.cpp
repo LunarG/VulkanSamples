@@ -11723,10 +11723,8 @@ TEST_F(VkLayerTest, ThreadCommandBufferCollision) {
     test_platform_thread_create(&thread, AddToCommandBuffer, (void *)&data);
     // Make non-conflicting calls from this thread at the same time.
     for (int i = 0; i < 80000; i++) {
-        const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
-        VkFormatProperties format_properties;
-        vkGetPhysicalDeviceFormatProperties(gpu(), tex_format,
-                                            &format_properties);
+        uint32_t count;
+        vkEnumeratePhysicalDevices(instance(), &count, NULL);
     }
     test_platform_thread_join(thread, NULL);
 
