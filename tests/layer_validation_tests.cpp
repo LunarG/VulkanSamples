@@ -1114,6 +1114,87 @@ TEST_F(VkLayerTest, InvalidStructPNext) {
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 
+    // Positive test to check parameter_validation and unique_objects support
+    // for NV_dedicated_allocation
+    uint32_t extension_count = 0;
+    bool supports_nv_dedicated_allocation = false;
+    err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count,
+                                               nullptr);
+    ASSERT_VK_SUCCESS(err);
+
+    if (extension_count > 0) {
+        std::vector<VkExtensionProperties> available_extensions(
+            extension_count);
+
+        err = vkEnumerateDeviceExtensionProperties(
+            gpu(), nullptr, &extension_count, &available_extensions[0]);
+        ASSERT_VK_SUCCESS(err);
+
+        for (const auto &extension_props : available_extensions) {
+            if (strcmp(extension_props.extensionName,
+                       VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME) == 0) {
+                supports_nv_dedicated_allocation = true;
+            }
+        }
+    }
+
+    if (supports_nv_dedicated_allocation) {
+        m_errorMonitor->ExpectSuccess();
+
+        VkDedicatedAllocationBufferCreateInfoNV dedicated_buffer_create_info =
+            {};
+        dedicated_buffer_create_info.sType =
+            VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV;
+        dedicated_buffer_create_info.pNext = nullptr;
+        dedicated_buffer_create_info.dedicatedAllocation = VK_TRUE;
+
+        uint32_t queue_family_index = 0;
+        VkBufferCreateInfo buffer_create_info = {};
+        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_create_info.pNext = &dedicated_buffer_create_info;
+        buffer_create_info.size = 1024;
+        buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        buffer_create_info.queueFamilyIndexCount = 1;
+        buffer_create_info.pQueueFamilyIndices = &queue_family_index;
+
+        VkBuffer buffer;
+        VkResult err = vkCreateBuffer(m_device->device(), &buffer_create_info,
+                                      NULL, &buffer);
+        ASSERT_VK_SUCCESS(err);
+
+        VkMemoryRequirements memory_reqs;
+        vkGetBufferMemoryRequirements(m_device->device(), buffer, &memory_reqs);
+
+        VkDedicatedAllocationMemoryAllocateInfoNV dedicated_memory_info = {};
+        dedicated_memory_info.sType =
+            VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV;
+        dedicated_memory_info.pNext = nullptr;
+        dedicated_memory_info.buffer = buffer;
+        dedicated_memory_info.image = VK_NULL_HANDLE;
+
+        VkMemoryAllocateInfo memory_info = {};
+        memory_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memory_info.pNext = &dedicated_memory_info;
+        memory_info.allocationSize = memory_reqs.size;
+
+        bool pass;
+        pass = m_device->phy().set_memory_type(memory_reqs.memoryTypeBits,
+                                               &memory_info, 0);
+        ASSERT_TRUE(pass);
+
+        VkDeviceMemory buffer_memory;
+        err = vkAllocateMemory(m_device->device(), &memory_info, NULL,
+                               &buffer_memory);
+        ASSERT_VK_SUCCESS(err);
+
+        err = vkBindBufferMemory(m_device->device(), buffer, buffer_memory, 0);
+        ASSERT_VK_SUCCESS(err);
+
+        vkDestroyBuffer(m_device->device(), buffer, NULL);
+        vkFreeMemory(m_device->device(), buffer_memory, NULL);
+
+        m_errorMonitor->VerifyNotFound();
+    }
 }
 
 TEST_F(VkLayerTest, UnrecognizedValue) {
