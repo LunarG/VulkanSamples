@@ -5603,6 +5603,9 @@ DestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocatio
     for (auto cb : pPool->commandBuffers) {
         clear_cmd_buf_and_mem_references(dev_data, cb);
         auto cb_node = getCBNode(dev_data, cb);
+        for (auto obj : cb_node->object_bindings) {
+            removeCommandBufferBinding(dev_data, &obj, cb_node);
+        }
         dev_data->commandBufferMap.erase(cb); // Remove this command buffer
         delete cb_node;                       // delete CB info structure
     }
