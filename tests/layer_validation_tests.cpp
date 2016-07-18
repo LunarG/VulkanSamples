@@ -1524,7 +1524,6 @@ TEST_F(VkLayerTest, IgnoreUnrelatedDescriptor) {
 
         m_errorMonitor->VerifyNotFound();
 
-        vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptor_set);
         vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
         vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
         vkDestroyImageView(m_device->device(), view, NULL);
