@@ -304,6 +304,8 @@ class LayerDoc:
         # Count number of errors found and return it
         errors_found = 0
         warnings_found = 0
+        # A few checks that are allowed to not have tests
+        no_test_checks = ['DRAWSTATE_INTERNAL_ERROR', 'DRAWSTATE_OUT_OF_MEMORY', 'MEMTRACK_INTERNAL_ERROR', 'OBJTRACK_INTERNAL_ERROR']
         # First we'll go through the doc datastructures and flag any issues
         for chk in self.enum_list:
             doc_layer_found = False
@@ -348,7 +350,8 @@ class LayerDoc:
                                 break
                     elif test not in tests_set and not chk.endswith('_NONE'):
                         if test == 'TODO':
-                            warnings_found += 1
+                            if chk not in no_test_checks:
+                                warnings_found += 1
                         else:
                             print(self.txt_color.red() + 'Validation check %s has missing or invalid test : %s' % (chk, test))
                             errors_found += 1
