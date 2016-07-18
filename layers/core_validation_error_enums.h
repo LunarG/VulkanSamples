@@ -40,6 +40,7 @@ enum MEM_TRACK_ERROR {
     MEMTRACK_INVALID_USAGE_FLAG,           // Usage flags specified at image/buffer create conflict w/ use of object
     MEMTRACK_INVALID_MAP,                  // Size flag specified at alloc is too small for mapping range
     MEMTRACK_INVALID_MEM_TYPE,             // Memory Type mismatch
+    MEMTRACK_OBJECT_NOT_BOUND,             // Image or Buffer used without having memory bound to it
 };
 
 // Draw State ERROR codes

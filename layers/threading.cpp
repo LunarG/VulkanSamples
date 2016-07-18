@@ -94,9 +94,16 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
         }
     }
 
-    startWriteObject(my_data, instance);
+    bool threadChecks = startMultiThread();
+    if (threadChecks) {
+        startWriteObject(my_data, instance);
+    }
     pTable->DestroyInstance(instance, pAllocator);
-    finishWriteObject(my_data, instance);
+    if (threadChecks) {
+        finishWriteObject(my_data, instance);
+    } else {
+        finishMultiThread();
+    }
 
     // Disable and cleanup the temporary callback(s):
     if (callback_setup) {
@@ -153,9 +160,16 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
 VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
     dispatch_key key = get_dispatch_key(device);
     layer_data *dev_data = get_my_data_ptr(key, layer_data_map);
-    startWriteObject(dev_data, device);
+    bool threadChecks = startMultiThread();
+    if (threadChecks) {
+        startWriteObject(dev_data, device);
+    }
     dev_data->device_dispatch_table->DestroyDevice(device, pAllocator);
-    finishWriteObject(dev_data, device);
+    if (threadChecks) {
+        finishWriteObject(dev_data, device);
+    } else {
+        finishMultiThread();
+    }
     layer_data_map.erase(key);
 }
 
@@ -281,25 +295,39 @@ VKAPI_ATTR VkResult VKAPI_CALL
 CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
                              const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pMsgCallback) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    startReadObject(my_data, instance);
+    bool threadChecks = startMultiThread();
+    if (threadChecks) {
+        startReadObject(my_data, instance);
+    }
     VkResult result =
         my_data->instance_dispatch_table->CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);
     if (VK_SUCCESS == result) {
         result = layer_create_msg_callback(my_data->report_data, false, pCreateInfo, pAllocator, pMsgCallback);
     }
-    finishReadObject(my_data, instance);
+    if (threadChecks) {
+        finishReadObject(my_data, instance);
+    } else {
+        finishMultiThread();
+    }
     return result;
 }
 
 VKAPI_ATTR void VKAPI_CALL
 DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks *pAllocator) {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    startReadObject(my_data, instance);
-    startWriteObject(my_data, callback);
+    bool threadChecks = startMultiThread();
+    if (threadChecks) {
+        startReadObject(my_data, instance);
+        startWriteObject(my_data, callback);
+    }
     my_data->instance_dispatch_table->DestroyDebugReportCallbackEXT(instance, callback, pAllocator);
     layer_destroy_msg_callback(my_data->report_data, callback, pAllocator);
-    finishReadObject(my_data, instance);
-    finishWriteObject(my_data, callback);
+    if (threadChecks) {
+        finishReadObject(my_data, instance);
+        finishWriteObject(my_data, callback);
+    } else {
+        finishMultiThread();
+    }
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
@@ -308,17 +336,24 @@ AllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pAllo
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
     VkResult result;
-    startReadObject(my_data, device);
-    startWriteObject(my_data, pAllocateInfo->commandPool);
+    bool threadChecks = startMultiThread();
+    if (threadChecks) {
+        startReadObject(my_data, device);
+        startWriteObject(my_data, pAllocateInfo->commandPool);
+    }
 
     result = pTable->AllocateCommandBuffers(device, pAllocateInfo, pCommandBuffers);
-    finishReadObject(my_data, device);
-    finishWriteObject(my_data, pAllocateInfo->commandPool);
+    if (threadChecks) {
+        finishReadObject(my_data, device);
+        finishWriteObject(my_data, pAllocateInfo->commandPool);
+    } else {
+        finishMultiThread();
+    }
 
     // Record mapping from command buffer to command pool
     if (VK_SUCCESS == result) {
         for (uint32_t index = 0; index < pAllocateInfo->commandBufferCount; index++) {
-            std::lock_guard<std::mutex> lock(global_lock);
+            std::lock_guard<std::mutex> lock(command_pool_lock);
             command_pool_map[pCommandBuffers[index]] = pAllocateInfo->commandPool;
         }
     }
@@ -332,19 +367,28 @@ VKAPI_ATTR void VKAPI_CALL FreeCommandBuffers(VkDevice device, VkCommandPool com
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     VkLayerDispatchTable *pTable = my_data->device_dispatch_table;
     const bool lockCommandPool = false; // pool is already directly locked
-    startReadObject(my_data, device);
-    startWriteObject(my_data, commandPool);
-    for (uint32_t index = 0; index < commandBufferCount; index++) {
-        startWriteObject(my_data, pCommandBuffers[index], lockCommandPool);
+    bool threadChecks = startMultiThread();
+    if (threadChecks) {
+        startReadObject(my_data, device);
+        startWriteObject(my_data, commandPool);
+        for (uint32_t index = 0; index < commandBufferCount; index++) {
+            startWriteObject(my_data, pCommandBuffers[index], lockCommandPool);
+        }
+        // The driver may immediately reuse command buffers in another thread.
+        // These updates need to be done before calling down to the driver.
+        for (uint32_t index = 0; index < commandBufferCount; index++) {
+            finishWriteObject(my_data, pCommandBuffers[index], lockCommandPool);
+            std::lock_guard<std::mutex> lock(command_pool_lock);
+            command_pool_map.erase(pCommandBuffers[index]);
+        }
     }
 
     pTable->FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
-    finishReadObject(my_data, device);
-    finishWriteObject(my_data, commandPool);
-    for (uint32_t index = 0; index < commandBufferCount; index++) {
-        finishWriteObject(my_data, pCommandBuffers[index], lockCommandPool);
-        std::lock_guard<std::mutex> lock(global_lock);
-        command_pool_map.erase(pCommandBuffers[index]);
+    if (threadChecks) {
+        finishReadObject(my_data, device);
+        finishWriteObject(my_data, commandPool);
+    } else {
+        finishMultiThread();
     }
 }
 

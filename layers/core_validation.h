@@ -125,7 +125,7 @@ struct IMAGE_LAYOUT_NODE {
     VkFormat format;
 };
 
-class PIPELINE_NODE {
+class PIPELINE_NODE : public BASE_NODE {
   public:
     VkPipeline pipeline;
     safe_VkGraphicsPipelineCreateInfo graphicsPipelineCI;

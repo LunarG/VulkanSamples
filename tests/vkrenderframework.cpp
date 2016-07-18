@@ -919,11 +919,18 @@ VkSamplerObj::VkSamplerObj(VkDeviceObj *device) {
  * Basic ConstantBuffer constructor. Then use create methods to fill in the
  * details.
  */
-VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device) {
+VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device,
+                                         VkBufferUsageFlags usage) {
     m_device = device;
     m_commandBuffer = 0;
 
     memset(&m_descriptorBufferInfo, 0, sizeof(m_descriptorBufferInfo));
+
+    // Special case for usages outside of original limits of framework
+    if ((VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT) !=
+            usage) {
+        init_no_mem(*m_device, create_info(0, usage));
+    }
 }
 
 VkConstantBufferObj::~VkConstantBufferObj() {
@@ -936,7 +943,8 @@ VkConstantBufferObj::~VkConstantBufferObj() {
 }
 
 VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
-                                         int constantSize, const void *data) {
+                                         int constantSize, const void *data,
+                                         VkBufferUsageFlags usage) {
     m_device = device;
     m_commandBuffer = 0;
 
@@ -945,12 +953,19 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
     m_stride = constantSize;
 
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    const size_t allocationSize = constantCount * constantSize;
-    init_as_src_and_dst(*m_device, allocationSize, reqs);
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    const VkDeviceSize allocationSize =
+            static_cast<VkDeviceSize>(constantCount * constantSize);
+
+    if ((VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT) ==
+            usage) {
+        init_as_src_and_dst(*m_device, allocationSize, reqs);
+    } else {
+        init(*m_device, create_info(allocationSize, usage), reqs);
+    }
 
     void *pData = memory().map();
-    memcpy(pData, data, allocationSize);
+    memcpy(pData, data, static_cast<size_t>(allocationSize));
     memory().unmap();
 
     /*
@@ -1237,13 +1252,13 @@ void VkPipelineObj::AddShader(VkShaderObj *shader) {
 }
 
 void VkPipelineObj::AddVertexInputAttribs(
-    VkVertexInputAttributeDescription *vi_attrib, int count) {
+    VkVertexInputAttributeDescription *vi_attrib, uint32_t count) {
     m_vi_state.pVertexAttributeDescriptions = vi_attrib;
     m_vi_state.vertexAttributeDescriptionCount = count;
 }
 
-void VkPipelineObj::AddVertexInputBindings(
-    VkVertexInputBindingDescription *vi_binding, int count) {
+void VkPipelineObj::AddVertexInputBindings(VkVertexInputBindingDescription *vi_binding,
+                                           uint32_t count) {
     m_vi_state.pVertexBindingDescriptions = vi_binding;
     m_vi_state.vertexBindingDescriptionCount = count;
 }
@@ -1640,12 +1655,12 @@ void VkCommandBufferObj::Draw(uint32_t vertexCount, uint32_t instanceCount,
     vkCmdDraw(handle(), vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
-void VkCommandBufferObj::QueueCommandBuffer() {
+void VkCommandBufferObj::QueueCommandBuffer(bool checkSuccess) {
     VkFence nullFence = {VK_NULL_HANDLE};
-    QueueCommandBuffer(nullFence);
+    QueueCommandBuffer(nullFence, checkSuccess);
 }
 
-void VkCommandBufferObj::QueueCommandBuffer(VkFence fence) {
+void VkCommandBufferObj::QueueCommandBuffer(VkFence fence, bool checkSuccess) {
     VkResult err = VK_SUCCESS;
 
     // submit the command buffer to the universal queue
@@ -1661,10 +1676,14 @@ void VkCommandBufferObj::QueueCommandBuffer(VkFence fence) {
     submit_info.pSignalSemaphores = NULL;
 
     err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, fence);
-    ASSERT_VK_SUCCESS(err);
+    if (checkSuccess) {
+        ASSERT_VK_SUCCESS(err);
+    }
 
     err = vkQueueWaitIdle(m_device->m_queue);
-    ASSERT_VK_SUCCESS(err);
+    if (checkSuccess) {
+        ASSERT_VK_SUCCESS(err);
+    }
 
     // Wait for work to finish before cleaning up.
     vkDeviceWaitIdle(m_device->device());

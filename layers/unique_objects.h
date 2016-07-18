@@ -21,10 +21,11 @@
 #include "vk_loader_platform.h"
 #include "vulkan/vulkan.h"
 
+#include <cinttypes>
+#include <memory>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <cinttypes>
 
 #include <unordered_map>
 #include <vector>
@@ -70,6 +71,27 @@ static std::unordered_map<void *, layer_data *> layer_data_map;
 static device_table_map unique_objects_device_table_map;
 static instance_table_map unique_objects_instance_table_map;
 static std::mutex global_lock; // Protect map accesses and unique_id increments
+
+struct GenericHeader {
+    VkStructureType sType;
+    void *pNext;
+};
+
+template <typename T> bool ContainsExtStruct(const T *target, VkStructureType ext_type) {
+    assert(target != nullptr);
+
+    const GenericHeader *ext_struct = reinterpret_cast<const GenericHeader *>(target->pNext);
+
+    while (ext_struct != nullptr) {
+        if (ext_struct->sType == ext_type) {
+            return true;
+        }
+
+        ext_struct = reinterpret_cast<const GenericHeader *>(ext_struct->pNext);
+    }
+
+    return false;
+}
 
 // Handle CreateInstance
 static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance) {
@@ -251,6 +273,68 @@ void explicit_DestroyDevice(VkDevice device, const VkAllocationCallbacks *pAlloc
     dispatch_key key = get_dispatch_key(device);
     get_dispatch_table(unique_objects_device_table_map, device)->DestroyDevice(device, pAllocator);
     layer_data_map.erase(key);
+}
+
+VkResult explicit_AllocateMemory(VkDevice device, const VkMemoryAllocateInfo *pAllocateInfo,
+                                 const VkAllocationCallbacks *pAllocator, VkDeviceMemory *pMemory) {
+    const VkMemoryAllocateInfo *input_allocate_info = pAllocateInfo;
+    std::unique_ptr<safe_VkMemoryAllocateInfo> safe_allocate_info;
+    std::unique_ptr<safe_VkDedicatedAllocationMemoryAllocateInfoNV> safe_dedicated_allocate_info;
+    layer_data *my_map_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    if ((pAllocateInfo != nullptr) &&
+        ContainsExtStruct(pAllocateInfo, VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV)) {
+        // Assuming there is only one extension struct of this type in the list for now
+        safe_dedicated_allocate_info =
+            std::unique_ptr<safe_VkDedicatedAllocationMemoryAllocateInfoNV>(new safe_VkDedicatedAllocationMemoryAllocateInfoNV);
+        safe_allocate_info = std::unique_ptr<safe_VkMemoryAllocateInfo>(new safe_VkMemoryAllocateInfo);
+
+        safe_allocate_info->initialize(pAllocateInfo);
+        input_allocate_info = reinterpret_cast<const VkMemoryAllocateInfo *>(safe_allocate_info.get());
+
+        const GenericHeader *orig_pnext = reinterpret_cast<const GenericHeader *>(pAllocateInfo->pNext);
+        GenericHeader *input_pnext = reinterpret_cast<GenericHeader *>(safe_allocate_info.get());
+        while (orig_pnext != nullptr) {
+            if (orig_pnext->sType == VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV) {
+                safe_dedicated_allocate_info->initialize(
+                    reinterpret_cast<const VkDedicatedAllocationMemoryAllocateInfoNV *>(orig_pnext));
+
+                std::unique_lock<std::mutex> lock(global_lock);
+
+                if (safe_dedicated_allocate_info->buffer != VK_NULL_HANDLE) {
+                    uint64_t local_buffer = reinterpret_cast<uint64_t &>(safe_dedicated_allocate_info->buffer);
+                    safe_dedicated_allocate_info->buffer =
+                        reinterpret_cast<VkBuffer &>(my_map_data->unique_id_mapping[local_buffer]);
+                }
+
+                if (safe_dedicated_allocate_info->image != VK_NULL_HANDLE) {
+                    uint64_t local_image = reinterpret_cast<uint64_t &>(safe_dedicated_allocate_info->image);
+                    safe_dedicated_allocate_info->image = reinterpret_cast<VkImage &>(my_map_data->unique_id_mapping[local_image]);
+                }
+
+                lock.unlock();
+
+                input_pnext->pNext = reinterpret_cast<GenericHeader *>(safe_dedicated_allocate_info.get());
+                input_pnext = reinterpret_cast<GenericHeader *>(input_pnext->pNext);
+            } else {
+                // TODO: generic handling of pNext copies
+            }
+
+            orig_pnext = reinterpret_cast<const GenericHeader *>(orig_pnext->pNext);
+        }
+    }
+
+    VkResult result = get_dispatch_table(unique_objects_device_table_map, device)
+                          ->AllocateMemory(device, input_allocate_info, pAllocator, pMemory);
+
+    if (VK_SUCCESS == result) {
+        std::lock_guard<std::mutex> lock(global_lock);
+        uint64_t unique_id = global_unique_id++;
+        my_map_data->unique_id_mapping[unique_id] = reinterpret_cast<uint64_t &>(*pMemory);
+        *pMemory = reinterpret_cast<VkDeviceMemory &>(unique_id);
+    }
+
+    return result;
 }
 
 VkResult explicit_CreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount,
