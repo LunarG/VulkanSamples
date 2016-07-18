@@ -263,9 +263,7 @@ class LayerDoc:
                         detail_sections = line.split('|')
                         #print("Details elements from line %s: %s" % (line, detail_sections))
                         check_name = '%s%s' % (enum_prefix, detail_sections[3].strip())
-                        if '_NA' in check_name:
-                            # TODO : Should clean up these NA checks in the doc, skipping them for now
-                            continue
+
                         self.enum_list.append(check_name)
                         self.layer_doc_dict[layer_name][check_name] = {}
                         self.layer_doc_dict[layer_name][check_name]['summary_txt'] = detail_sections[1].strip()
