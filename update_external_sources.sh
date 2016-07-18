@@ -25,13 +25,14 @@ function update_glslang () {
    cd $BASEDIR/glslang
    git fetch --all
    git checkout $GLSLANG_REVISION
-   # Special case for this particular revision:
-   # Pull in a patch that fixes a compilation issue with g++ 5.3
+   # Revert glslang a5c33d6ffb34ccede5b233bc724c907166b6e479
    # See https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/issues/681
-   if [ $GLSLANG_REVISION == "4678ca9dacfec7a084dbc69bbe568bdad6889f1b" ] ;
+   git diff-index --quiet HEAD | true
+   rc=${PIPESTATUS[0]}
+   if (( $rc == 0 ))
    then
-      git checkout $GLSLANG_REVISION -B temp1610
-      git cherry-pick 880bf36cacee1cfce7d5d94991eb18c9e2d59d39
+      echo "applying patch to revert glslang a5c33d"
+      git apply $BUILDDIR/glslang_revert_a5c33d.patch.txt
    fi
 }
 

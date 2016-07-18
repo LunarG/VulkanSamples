@@ -217,15 +217,15 @@ if (WIN32)
     add_library(Loader      STATIC IMPORTED)
     add_library(SPIRV-Tools STATIC IMPORTED)
 
-    find_library(GLSLANG_DLIB NAMES glslang
+    find_library(GLSLANG_DLIB NAMES glslangd
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(OGLCompiler_DLIB NAMES OGLCompiler
+    find_library(OGLCompiler_DLIB NAMES OGLCompilerd
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(OSDependent_DLIB NAMES OSDependent
+    find_library(OSDependent_DLIB NAMES OSDependentd
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(HLSL_DLIB NAMES HLSL
+    find_library(HLSL_DLIB NAMES HLSLd
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(SPIRV_DLIB NAMES SPIRV
+    find_library(SPIRV_DLIB NAMES SPIRVd
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
     find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Tools
                  HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH} )
