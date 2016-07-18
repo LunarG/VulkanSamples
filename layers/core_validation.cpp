@@ -8392,74 +8392,68 @@ VKAPI_ATTR void VKAPI_CALL CmdPushConstants(VkCommandBuffer commandBuffer, VkPip
 
     // Check if push constant update is within any of the ranges with the same stage flags specified in pipeline layout.
     auto pipeline_layout = getPipelineLayout(dev_data, layout);
-    if (!pipeline_layout) {
-        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                             DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCmdPushConstants() Pipeline Layout 0x%" PRIx64 " not found.",
-                             (uint64_t)layout);
+    // Coalesce adjacent/overlapping pipeline ranges before checking to see if incoming range is
+    // contained in the pipeline ranges.
+    // Build a {start, end} span list for ranges with matching stage flags.
+    const auto &ranges = pipeline_layout->push_constant_ranges;
+    struct span {
+        uint32_t start;
+        uint32_t end;
+    };
+    std::vector<span> spans;
+    spans.reserve(ranges.size());
+    for (const auto &iter : ranges) {
+        if (iter.stageFlags == stageFlags) {
+            spans.push_back({iter.offset, iter.offset + iter.size});
+        }
+    }
+    if (spans.size() == 0) {
+        // There were no ranges that matched the stageFlags.
+        skip_call |=
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                    DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCmdPushConstants() stageFlags = 0x%" PRIx32 " do not match "
+                                                          "the stageFlags in any of the ranges in pipeline layout 0x%" PRIx64 ".",
+                    (uint32_t)stageFlags, (uint64_t)layout);
     } else {
-        // Coalesce adjacent/overlapping pipeline ranges before checking to see if incoming range is
-        // contained in the pipeline ranges.
-        // Build a {start, end} span list for ranges with matching stage flags.
-        const auto &ranges = pipeline_layout->push_constant_ranges;
-        struct span {
-            uint32_t start;
-            uint32_t end;
-        };
-        std::vector<span> spans;
-        spans.reserve(ranges.size());
-        for (const auto &iter : ranges) {
-            if (iter.stageFlags == stageFlags) {
-                spans.push_back({iter.offset, iter.offset + iter.size});
+        // Sort span list by start value.
+        struct comparer {
+            bool operator()(struct span i, struct span j) { return i.start < j.start; }
+        } my_comparer;
+        std::sort(spans.begin(), spans.end(), my_comparer);
+
+        // Examine two spans at a time.
+        std::vector<span>::iterator current = spans.begin();
+        std::vector<span>::iterator next = current + 1;
+        while (next != spans.end()) {
+            if (current->end < next->start) {
+                // There is a gap; cannot coalesce. Move to the next two spans.
+                ++current;
+                ++next;
+            } else {
+                // Coalesce the two spans.  The start of the next span
+                // is within the current span, so pick the larger of
+                // the end values to extend the current span.
+                // Then delete the next span and set next to the span after it.
+                current->end = max(current->end, next->end);
+                next = spans.erase(next);
             }
         }
-        if (spans.size() == 0) {
-            // There were no ranges that matched the stageFlags.
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS",
-                                 "vkCmdPushConstants() stageFlags = 0x%" PRIx32 " do not match "
-                                 "the stageFlags in any of the ranges in pipeline layout 0x%" PRIx64 ".",
-                                 (uint32_t)stageFlags, (uint64_t)layout);
-        } else {
-            // Sort span list by start value.
-            struct comparer {
-                bool operator()(struct span i, struct span j) { return i.start < j.start; }
-            } my_comparer;
-            std::sort(spans.begin(), spans.end(), my_comparer);
 
-            // Examine two spans at a time.
-            std::vector<span>::iterator current = spans.begin();
-            std::vector<span>::iterator next = current + 1;
-            while (next != spans.end()) {
-                if (current->end < next->start) {
-                    // There is a gap; cannot coalesce. Move to the next two spans.
-                    ++current;
-                    ++next;
-                } else {
-                    // Coalesce the two spans.  The start of the next span
-                    // is within the current span, so pick the larger of
-                    // the end values to extend the current span.
-                    // Then delete the next span and set next to the span after it.
-                    current->end = max(current->end, next->end);
-                    next = spans.erase(next);
-                }
+        // Now we can check if the incoming range is within any of the spans.
+        bool contained_in_a_range = false;
+        for (uint32_t i = 0; i < spans.size(); ++i) {
+            if ((offset >= spans[i].start) && ((uint64_t)offset + (uint64_t)size <= (uint64_t)spans[i].end)) {
+                contained_in_a_range = true;
+                break;
             }
-
-            // Now we can check if the incoming range is within any of the spans.
-            bool contained_in_a_range = false;
-            for (uint32_t i = 0; i < spans.size(); ++i) {
-                if ((offset >= spans[i].start) && ((uint64_t)offset + (uint64_t)size <= (uint64_t)spans[i].end)) {
-                    contained_in_a_range = true;
-                    break;
-                }
-            }
-            if (!contained_in_a_range) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                     __LINE__, DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS",
-                                     "vkCmdPushConstants() Push constant range [%d, %d) "
-                                     "with stageFlags = 0x%" PRIx32 " "
-                                     "not within flag-matching ranges in pipeline layout 0x%" PRIx64 ".",
-                                     offset, offset + size, (uint32_t)stageFlags, (uint64_t)layout);
-            }
+        }
+        if (!contained_in_a_range) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCmdPushConstants() Push constant range [%d, %d) "
+                                                              "with stageFlags = 0x%" PRIx32 " "
+                                                              "not within flag-matching ranges in pipeline layout 0x%" PRIx64 ".",
+                        offset, offset + size, (uint32_t)stageFlags, (uint64_t)layout);
         }
     }
     lock.unlock();
