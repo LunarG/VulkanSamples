@@ -5052,7 +5052,7 @@ DestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocationCallb
     if (item != dev_data->semaphoreMap.end()) {
         if (item->second.in_use.load()) {
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
-                    reinterpret_cast<uint64_t &>(semaphore), __LINE__, DRAWSTATE_INVALID_SEMAPHORE, "DS",
+                    reinterpret_cast<uint64_t &>(semaphore), __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
                     "Cannot delete semaphore 0x%" PRIx64 " which is in use.", reinterpret_cast<uint64_t &>(semaphore));
         }
         dev_data->semaphoreMap.erase(semaphore);
