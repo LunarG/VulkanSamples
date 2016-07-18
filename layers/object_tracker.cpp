@@ -152,10 +152,10 @@ static bool ValidateCommandBuffer(VkDevice device, VkCommandPool command_pool, V
                                  reinterpret_cast<uint64_t &>(command_pool));
         }
     } else {
-        skip_call |=
-            log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, object_handle, __LINE__,
-                    OBJTRACK_NONE, LayerName,
-                    "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?", object_handle);
+        skip_call |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, object_handle,
+                             __LINE__, OBJTRACK_NONE, LayerName, "Unable to remove command buffer obj 0x%" PRIxLEAST64
+                                                                 ". Was it created? Has it already been destroyed?",
+                             object_handle);
     }
     return skip_call;
 }
@@ -197,10 +197,10 @@ static bool ValidateDescriptorSet(VkDevice device, VkDescriptorPool descriptor_p
                                  reinterpret_cast<uint64_t &>(descriptor_pool));
         }
     } else {
-        skip_call |=
-            log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, object_handle, __LINE__,
-                    OBJTRACK_NONE, LayerName,
-                    "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?", object_handle);
+        skip_call |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, object_handle,
+                             __LINE__, OBJTRACK_NONE, LayerName, "Unable to remove descriptor set obj 0x%" PRIxLEAST64
+                                                                 ". Was it created? Has it already been destroyed?",
+                             object_handle);
     }
     return skip_call;
 }
@@ -302,7 +302,8 @@ static void DestroyDispatchableObject(T1 dispatchable_object, T2 object, VkDebug
     } else {
         log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, object_handle, __LINE__,
                 OBJTRACK_UNKNOWN_OBJECT, LayerName,
-                "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?", object_handle);
+                "Unable to remove %s obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",
+                object_name[object_type], object_handle);
     }
 }
 
@@ -332,7 +333,8 @@ static void DestroyNonDispatchableObject(T1 dispatchable_object, T2 object, VkDe
     } else {
         log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, object_handle, __LINE__,
                 OBJTRACK_UNKNOWN_OBJECT, LayerName,
-                "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?", object_handle);
+                "Unable to remove %s obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",
+                object_name[object_type], object_handle);
     }
 }
 
@@ -347,7 +349,7 @@ static bool ValidateDispatchableObject(T1 dispatchable_object, T2 object, VkDebu
     if (instance_data->object_map[object_type].find(reinterpret_cast<uint64_t>(object)) ==
         instance_data->object_map[object_type].end()) {
         return log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, reinterpret_cast<uint64_t>(object),
-                       __LINE__, OBJTRACK_INVALID_OBJECT, LayerName, "Invalid %s Object 0x%" PRIx64, object_name[object_type],
+                       __LINE__, OBJTRACK_INVALID_OBJECT, LayerName, "Invalid %s Object 0x%" PRIxLEAST64, object_name[object_type],
                        reinterpret_cast<uint64_t>(object));
     }
     return false;
@@ -367,7 +369,7 @@ static bool ValidateNonDispatchableObject(T1 dispatchable_object, T2 object, VkD
             (device_data->swapchainImageMap.find(reinterpret_cast<uint64_t &>(object)) == device_data->swapchainImageMap.end())) {
             return log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type,
                            reinterpret_cast<uint64_t &>(object), __LINE__, OBJTRACK_INVALID_OBJECT, LayerName,
-                           "Invalid %s Object 0x%" PRIx64, object_name[object_type], reinterpret_cast<uint64_t &>(object));
+                           "Invalid %s Object 0x%" PRIxLEAST64, object_name[object_type], reinterpret_cast<uint64_t &>(object));
         }
     }
     return false;
