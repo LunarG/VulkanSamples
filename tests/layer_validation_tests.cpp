@@ -12366,6 +12366,116 @@ TEST_F(VkLayerTest, ValidRenderPassAttachmentLayoutWithLoadOp) {
 
     vkDestroyRenderPass(m_device->device(), rp, NULL);
 }
+
+TEST_F(VkLayerTest, FramebufferIncompatible) {
+    TEST_DESCRIPTION("Bind a secondary command buffer with with a framebuffer "
+                     "that does not match the framebuffer for the active "
+                     "renderpass.");
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    // A renderpass with one color attachment.
+    VkAttachmentDescription attachment = {
+        0,
+        VK_FORMAT_B8G8R8A8_UNORM,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_STORE_OP_STORE,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+
+    VkAttachmentReference att_ref = {0,
+                                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+
+    VkSubpassDescription subpass = {0,       VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    0,       nullptr,
+                                    1,       &att_ref,
+                                    nullptr, nullptr,
+                                    0,       nullptr};
+
+    VkRenderPassCreateInfo rpci = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+                                   nullptr,
+                                   0,
+                                   1,
+                                   &attachment,
+                                   1,
+                                   &subpass,
+                                   0,
+                                   nullptr};
+
+    VkRenderPass rp;
+    VkResult err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    // A compatible framebuffer.
+    VkImageObj image(m_device);
+    image.init(32, 32, VK_FORMAT_B8G8R8A8_UNORM,
+               VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+
+    VkImageViewCreateInfo ivci = {
+        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        nullptr,
+        0,
+        image.handle(),
+        VK_IMAGE_VIEW_TYPE_2D,
+        VK_FORMAT_B8G8R8A8_UNORM,
+        {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+         VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
+        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
+    };
+    VkImageView view;
+    err = vkCreateImageView(m_device->device(), &ivci, nullptr, &view);
+    ASSERT_VK_SUCCESS(err);
+
+    VkFramebufferCreateInfo fci = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+                                   nullptr,
+                                   0,
+                                   rp,
+                                   1,
+                                   &view,
+                                   32,
+                                   32,
+                                   1};
+    VkFramebuffer fb;
+    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
+    ASSERT_VK_SUCCESS(err);
+
+    VkCommandBufferAllocateInfo cbai = {};
+    cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cbai.commandPool = m_commandPool;
+    cbai.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+    cbai.commandBufferCount = 1;
+
+    VkCommandBuffer sec_cb;
+    err = vkAllocateCommandBuffers(m_device->device(), &cbai, &sec_cb);
+    ASSERT_VK_SUCCESS(err);
+    VkCommandBufferBeginInfo cbbi = {};
+    VkCommandBufferInheritanceInfo cbii = {};
+    cbii.renderPass = renderPass();
+    cbii.framebuffer = fb;
+    cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cbbi.pNext = NULL;
+    cbbi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT |
+                 VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+    cbbi.pInheritanceInfo = &cbii;
+    vkBeginCommandBuffer(sec_cb, &cbbi);
+    vkEndCommandBuffer(sec_cb);
+
+    BeginCommandBuffer();
+
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        " that is not the same as the primaryCB's current active framebuffer ");
+    vkCmdExecuteCommands(m_commandBuffer->GetBufferHandle(), 1, &sec_cb);
+    m_errorMonitor->VerifyFound();
+    // Cleanup
+    vkDestroyImageView(m_device->device(), view, NULL);
+    vkDestroyRenderPass(m_device->device(), rp, NULL);
+    vkDestroyFramebuffer(m_device->device(), fb, NULL);
+}
 #endif // DRAW_STATE_TESTS
 
 #if THREADING_TESTS
