@@ -10244,8 +10244,8 @@ TEST_F(VkLayerTest, InvalidQueueFamilyIndex) {
 }
 
 TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB) {
-    // Attempt vkCmdExecuteCommands w/ a primary cmd buffer (should only be
-    // secondary)
+    TEST_DESCRIPTION("Attempt vkCmdExecuteCommands w/ a primary cmd buffer"
+                     " (should only be secondary)");
 
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -10255,7 +10255,7 @@ TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     BeginCommandBuffer();
-    // ASSERT_VK_SUCCESS(err);
+
     VkCommandBuffer primCB = m_commandBuffer->GetBufferHandle();
     vkCmdExecuteCommands(m_commandBuffer->GetBufferHandle(), 1, &primCB);
 
