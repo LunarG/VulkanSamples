@@ -2802,7 +2802,7 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
             } else {
                 skip_call |=
                     validate_struct_pnext(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pTessellationState->pNext",
-                                          NULL, pCreateInfos[i].pTessellationState->pNext, 0, NULL);
+                                          NULL, pCreateInfos[i].pTessellationState->pNext, 0, NULL, GeneratedHeaderVersion);
 
                 skip_call |=
                     validate_reserved_flags(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pTessellationState->flags",
@@ -2832,7 +2832,7 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
             } else {
                 skip_call |=
                     validate_struct_pnext(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pViewportState->pNext", NULL,
-                                          pCreateInfos[i].pViewportState->pNext, 0, NULL);
+                                          pCreateInfos[i].pViewportState->pNext, 0, NULL, GeneratedHeaderVersion);
 
                 skip_call |=
                     validate_reserved_flags(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pViewportState->flags",
@@ -2919,7 +2919,7 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
             } else {
                 skip_call |=
                     validate_struct_pnext(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pMultisampleState->pNext",
-                                          NULL, pCreateInfos[i].pMultisampleState->pNext, 0, NULL);
+                                          NULL, pCreateInfos[i].pMultisampleState->pNext, 0, NULL, GeneratedHeaderVersion);
 
                 skip_call |=
                     validate_reserved_flags(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pMultisampleState->flags",
@@ -2955,7 +2955,7 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
             if (pCreateInfos[i].pDepthStencilState != nullptr) {
                 skip_call |=
                     validate_struct_pnext(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pDepthStencilState->pNext",
-                                          NULL, pCreateInfos[i].pDepthStencilState->pNext, 0, NULL);
+                                          NULL, pCreateInfos[i].pDepthStencilState->pNext, 0, NULL, GeneratedHeaderVersion);
 
                 skip_call |=
                     validate_reserved_flags(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pDepthStencilState->flags",
@@ -3027,7 +3027,7 @@ CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t
             if (pCreateInfos[i].pColorBlendState != nullptr) {
                 skip_call |=
                     validate_struct_pnext(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pColorBlendState->pNext", NULL,
-                                          pCreateInfos[i].pColorBlendState->pNext, 0, NULL);
+                                          pCreateInfos[i].pColorBlendState->pNext, 0, NULL, GeneratedHeaderVersion);
 
                 skip_call |=
                     validate_reserved_flags(report_data, "vkCreateGraphicsPipelines", "pCreateInfos[i].pColorBlendState->flags",
@@ -3788,7 +3788,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BeginCommandBuffer(VkCommandBuffer commandBuffer,
 
     if (pBeginInfo->pInheritanceInfo != NULL) {
         skip_call |= validate_struct_pnext(report_data, "vkBeginCommandBuffer", "pBeginInfo->pInheritanceInfo->pNext", NULL,
-                                           pBeginInfo->pInheritanceInfo->pNext, 0, NULL);
+                                           pBeginInfo->pInheritanceInfo->pNext, 0, NULL, GeneratedHeaderVersion);
 
         skip_call |= validate_bool32(report_data, "vkBeginCommandBuffer", "pBeginInfo->pInheritanceInfo->occlusionQueryEnable",
                                      pBeginInfo->pInheritanceInfo->occlusionQueryEnable);

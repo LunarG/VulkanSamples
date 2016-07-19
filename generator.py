@@ -3431,7 +3431,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             extStructCount = 'ARRAY_SIZE(allowedStructs)'
             extStructVar = 'allowedStructs'
             extStructNames = '"' + ', '.join(structs) + '"'
-        checkExpr.append('skipCall |= validate_struct_pnext(report_data, "{}", "{}", {}, {}{}, {}, {});\n'.format(
+        checkExpr.append('skipCall |= validate_struct_pnext(report_data, "{}", "{}", {}, {}{}, {}, {}, GeneratedHeaderVersion);\n'.format(
             funcPrintName, valuePrintName, extStructNames, prefix, value.name, extStructCount, extStructVar))
         return checkExpr
     #

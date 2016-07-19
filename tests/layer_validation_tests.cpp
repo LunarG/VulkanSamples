@@ -972,7 +972,7 @@ TEST_F(VkLayerTest, InvalidStructPNext) {
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        VK_DEBUG_REPORT_WARNING_BIT_EXT,
         "value of pCreateInfo->pNext must be NULL");
     // Set VkMemoryAllocateInfo::pNext to a non-NULL value, when pNext must be
     // NULL.
@@ -989,7 +989,7 @@ TEST_F(VkLayerTest, InvalidStructPNext) {
     m_errorMonitor->VerifyFound();
 
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        VK_DEBUG_REPORT_WARNING_BIT_EXT,
         " chain includes a structure with unexpected VkStructureType ");
     // Set VkMemoryAllocateInfo::pNext to a non-NULL value, but use
     // a function that has allowed pNext structure types and specify
@@ -1004,7 +1004,7 @@ TEST_F(VkLayerTest, InvalidStructPNext) {
     m_errorMonitor->VerifyFound();
 
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        VK_DEBUG_REPORT_WARNING_BIT_EXT,
         " chain includes a structure with unexpected VkStructureType ");
     // Set VkGraphicsPipelineCreateInfo::VkPipelineRasterizationStateCreateInfo::pNext to an invalid structure, when pNext is allowed to be a non-NULL value
     // Expected to trigger an error with
