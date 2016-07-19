@@ -1534,7 +1534,7 @@ static void collect_interface_by_location(shader_module const *src, spirv_inst_i
 
 static void collect_interface_by_descriptor_slot(debug_report_data *report_data, shader_module const *src,
                                                  std::unordered_set<uint32_t> const &accessible_ids,
-                                                 std::map<descriptor_slot_t, interface_var> &out) {
+                                                 std::vector<std::pair<descriptor_slot_t, interface_var>> &out) {
 
     std::unordered_map<unsigned, unsigned> var_sets;
     std::unordered_map<unsigned, unsigned> var_bindings;
@@ -1563,23 +1563,13 @@ static void collect_interface_by_descriptor_slot(debug_report_data *report_data,
             unsigned set = value_or_default(var_sets, insn.word(2), 0);
             unsigned binding = value_or_default(var_bindings, insn.word(2), 0);
 
-            auto existing_it = out.find(std::make_pair(set, binding));
-            if (existing_it != out.end()) {
-                /* conflict within spv image */
-                log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
-                        __LINE__, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
-                        "var %d (type %d) in %s interface in descriptor slot (%u,%u) conflicts with existing definition",
-                        insn.word(2), insn.word(1), storage_class_name(insn.word(3)), existing_it->first.first,
-                        existing_it->first.second);
-            }
-
             interface_var v;
             v.id = insn.word(2);
             v.type_id = insn.word(1);
             v.offset = 0;
             v.is_patch = false;
             v.is_block_member = false;
-            out[std::make_pair(set, binding)] = v;
+            out.emplace_back(std::make_pair(set, binding), v);
         }
     }
 }
@@ -2645,7 +2635,7 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
     mark_accessible_ids(module, entrypoint, accessible_ids);
 
     /* validate descriptor set layout against what the entrypoint actually uses */
-    std::map<descriptor_slot_t, interface_var> descriptor_uses;
+    std::vector<std::pair<descriptor_slot_t, interface_var>> descriptor_uses;
     collect_interface_by_descriptor_slot(report_data, module, accessible_ids, descriptor_uses);
 
     auto pipelineLayout = pipeline->pipeline_layout;
