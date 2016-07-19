@@ -248,6 +248,66 @@ Get\*ProcAddr will often be the only way to access extension API features.
 
 ![Get*ProcAddr efficiency](get_proc_addr.png)
 
+##### WSI Extensions
+
+Khronos approved WSI extensions are available and provide Windows System Integration
+support for various execution environments. It is important to understand that some WSI
+extensions are valid for all targets, but others are particular to a given execution
+environment (and loader). This desktop loader (currently targeting Windows and Linux)
+only enables those WSI extensions that are appropriate to the current environment.
+For the most part, the selection is done in the loader using  compile-time preprocessor
+flags. All versions of the desktop loader currently expose at least the following WSI
+extension support:
+- VK_KHR_surface
+- VK_KHR_swapchain
+- VK_KHR_display
+
+In addition, each of the following OS targets for the loader support target-specific extensions:
+- **Windows** : VK_KHR_win32_surface
+- **Linux (default)** : VK_KHR_xcb_surface and VK_KHR_xlib_surface
+- **Linux (Wayland build)** : VK_KHR_wayland_surface
+- **Linux (Mir build)** : VK_KHR_mir_surface
+
+**NOTE:** Wayland and Mir targets are not fully supported at this time and should be considered
+alpha quality.
+
+It is important to understand that while the loader may support the various entry-points
+for these extensions, there is a hand-shake required to actually use them:
+* At least one physical device must support the extension(s)
+* The application must select such a physical device
+* The application must request the extension(s) be enabled while creating the instance or logical device (This depends on whether or not the given extension works with an instance or a device).
+* The instance and/or logical device creation must succeed.
+
+Only then can you expect to properly use a WSI extension in your Vulkan program.
+
+##### New Extensions
+
+With the ability to expand Vulkan so easily, extensions will be created that the loader knows
+nothing about.  If the extension is a device extension, the loader will pass the unknown
+entry-point down the device call chain ending with the appropriate ICD entry-points.
+However, if the extension is an instance extension, the loader will fail to load it.
+
+*But why doesn't the loader support unknown instance extensions?*
+<br/>
+Let's look again at the Instance call chain:
+![Instance call chain](instance_call_chain.png)
+
+Notice that for a normal instance function call, the loader has to handle passing along the
+function call to the available ICDs.  If the loader has no idea of the parameters or return
+value of the instance call, it can't properly pass information along to the ICDs.
+There may be ways to do this, which will be explored in the future.  However, for now, this
+loader does not support any unknown instance extensions.
+
+Because the device call-chain does not pass through the loader terminator, this is not
+a problem for device extensions.  Instead, device extensions terminate directly in the
+ICD they are associated with.
+
+*Is this a big problem?*
+<br/>
+No!  Most extension functionality only affects a device and not an instance or a physical
+device.  Thus, the overwhelming majority of extensions will be device extensions rather than
+instance extensions.
+
 
 Vulkan Installable Client Driver interface with the loader
 ----------------------------------------------------------
