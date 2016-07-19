@@ -30,7 +30,8 @@
         assert(fp##entrypoint != NULL);                                        \
     }
 
-//Return true if format contains depth and stencil information
+// TODO : These functions are duplicated is vk_layer_utils.cpp, share code
+// Return true if format contains depth and stencil information
 bool vk_format_is_depth_and_stencil(VkFormat format) {
     bool is_ds = false;
 
@@ -44,6 +45,35 @@ bool vk_format_is_depth_and_stencil(VkFormat format) {
         break;
     }
     return is_ds;
+}
+
+// Return true if format is a stencil-only format
+bool vk_format_is_stencil_only(VkFormat format) {
+    return (format == VK_FORMAT_S8_UINT);
+}
+
+// Return true if format is a depth-only format
+bool vk_format_is_depth_only(VkFormat format) {
+    bool is_depth = false;
+
+    switch (format) {
+    case VK_FORMAT_D16_UNORM:
+    case VK_FORMAT_X8_D24_UNORM_PACK32:
+    case VK_FORMAT_D32_SFLOAT:
+        is_depth = true;
+        break;
+    default:
+        break;
+    }
+
+    return is_depth;
+}
+
+// Return true if format is a depth or stencil format
+bool vk_format_is_depth_or_stencil(VkFormat format) {
+    return (vk_format_is_depth_and_stencil(format) ||
+            vk_format_is_depth_only(format) ||
+            vk_format_is_stencil_only(format));
 }
 
 VkRenderFramework::VkRenderFramework()
@@ -769,7 +799,20 @@ void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage,
     else
         newLayout = m_descriptorImageInfo.imageLayout;
 
-    SetLayout(VK_IMAGE_ASPECT_COLOR_BIT, newLayout);
+    VkImageAspectFlags image_aspect = 0;
+    if (vk_format_is_depth_or_stencil(fmt)) {
+        if (vk_format_is_depth_and_stencil(fmt)) {
+            image_aspect =
+                VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
+        } else if (vk_format_is_depth_only(fmt)) {
+            image_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+        } else { // stencil-only case
+            image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+    } else { // color
+        image_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+    SetLayout(image_aspect, newLayout);
 }
 
 VkResult VkImageObj::CopyImage(VkImageObj &src_image) {
