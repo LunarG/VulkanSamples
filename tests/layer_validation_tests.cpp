@@ -11874,6 +11874,50 @@ TEST_F(VkLayerTest, InvalidImageLayout) {
     vkDestroyImage(m_device->device(), src_image, NULL);
     vkDestroyImage(m_device->device(), dst_image, NULL);
 }
+
+TEST_F(VkLayerTest, ValidRenderPassAttachmentLayoutWithLoadOp) {
+    TEST_DESCRIPTION("Positive test where we create a renderpass with an "
+                     "attachment that uses LOAD_OP_CLEAR, the first subpass "
+                     "has a valid layout, and a second subpass then uses a "
+                     "valid *READ_ONLY* layout.");
+    m_errorMonitor->ExpectSuccess();
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkAttachmentReference attach[2] = {};
+    attach[0].attachment = 0;
+    attach[0].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attach[1].attachment = 0;
+    attach[1].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    VkSubpassDescription subpasses[2] = {};
+    // First subpass clears DS attach on load
+    subpasses[0].pDepthStencilAttachment = &attach[0];
+    // 2nd subpass reads in DS as input attachment
+    subpasses[1].inputAttachmentCount = 1;
+    subpasses[1].pInputAttachments = &attach[1];
+    VkAttachmentDescription attach_desc = {};
+    attach_desc.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attach_desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attach_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attach_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attach_desc.initialLayout =
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    VkRenderPassCreateInfo rpci = {};
+    rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    rpci.attachmentCount = 1;
+    rpci.pAttachments = &attach_desc;
+    rpci.subpassCount = 2;
+    rpci.pSubpasses = subpasses;
+
+    // Now create RenderPass and verify no errors
+    VkRenderPass rp;
+    vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+    m_errorMonitor->VerifyNotFound();
+
+    vkDestroyRenderPass(m_device->device(), rp, NULL);
+}
 #endif // DRAW_STATE_TESTS
 
 #if THREADING_TESTS
