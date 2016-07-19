@@ -2870,6 +2870,8 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             'vkDebugReportMessageEXT']
         # Validation conditions for some special case struct members that are conditionally validated
         self.structMemberValidationConditions = { 'VkPipelineColorBlendStateCreateInfo' : { 'logicOp' : '{}logicOpEnable == VK_TRUE' } }
+        # Header version
+        self.headerVersion = None
         # Internal state - accumulators for different inner block text
         self.sections = dict([(section, []) for section in self.ALL_SECTIONS])
         self.structNames = []                             # List of Vulkan struct typenames
@@ -2951,6 +2953,7 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         # Accumulate includes, defines, types, enums, function pointer typedefs,
         # end function prototypes separately for this feature. They're only
         # printed in endFeature().
+        self.headerVersion = None
         self.sections = dict([(section, []) for section in self.ALL_SECTIONS])
         self.structNames = []
         self.stypes = []
@@ -2976,6 +2979,10 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             self.processStructMemberData()
             # Generate the command parameter checking code from the captured data
             self.processCmdData()
+            # Write the declaration for the HeaderVersion
+            if self.headerVersion:
+                write('const uint32_t GeneratedHeaderVersion = {};'.format(self.headerVersion), file=self.outFile)
+                self.newline()
             # Write the declarations for the VkFlags values combining all flag bits
             for flag in sorted(self.flags):
                 flagBits = flag.replace('Flags', 'FlagBits')
@@ -3019,6 +3026,10 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             self.handleTypes.add(name)
         elif (category == 'bitmask'):
             self.flags.add(name)
+        elif (category == 'define'):
+            if name == 'VK_HEADER_VERSION':
+                nameElem = typeElem.find('name')
+                self.headerVersion = noneStr(nameElem.tail).strip()
     #
     # Struct parameter check generation.
     # This is a special case of the <type> tag where the contents are
