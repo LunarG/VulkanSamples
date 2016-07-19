@@ -8004,14 +8004,39 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                 }
             }
             if (imageFound) {
-                if (vk_format_is_depth_and_stencil(format) &&
-                    (!(mem_barrier->subresourceRange.aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) ||
-                     !(mem_barrier->subresourceRange.aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT))) {
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                            DRAWSTATE_INVALID_BARRIER, "DS", "%s: Image is a depth and stencil format and thus must "
-                                                             "have both VK_IMAGE_ASPECT_DEPTH_BIT and "
-                                                             "VK_IMAGE_ASPECT_STENCIL_BIT set.",
-                            funcName);
+                auto aspect_mask = mem_barrier->subresourceRange.aspectMask;
+                if (vk_format_is_depth_or_stencil(format)) {
+                    if (vk_format_is_depth_and_stencil(format)) {
+                        if (!(aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) && !(aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT)) {
+                            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                    __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
+                                    "%s: Image is a depth and stencil format and thus must "
+                                    "have either one or both of VK_IMAGE_ASPECT_DEPTH_BIT and "
+                                    "VK_IMAGE_ASPECT_STENCIL_BIT set.",
+                                    funcName);
+                        }
+                    } else if (vk_format_is_depth_only(format)) {
+                        if (!(aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT)) {
+                            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                    __LINE__, DRAWSTATE_INVALID_BARRIER, "DS", "%s: Image is a depth-only format and thus must "
+                                                                               "have VK_IMAGE_ASPECT_DEPTH_BIT set.",
+                                    funcName);
+                        }
+                    } else { // stencil-only case
+                        if (!(aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT)) {
+                            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                    __LINE__, DRAWSTATE_INVALID_BARRIER, "DS", "%s: Image is a stencil-only format and thus must "
+                                                                               "have VK_IMAGE_ASPECT_STENCIL_BIT set.",
+                                    funcName);
+                        }
+                    }
+                } else { // image is a color format
+                    if (!(aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT)) {
+                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                DRAWSTATE_INVALID_BARRIER, "DS", "%s: Image is a color format and thus must "
+                                                                 "have VK_IMAGE_ASPECT_COLOR_BIT set.",
+                                funcName);
+                    }
                 }
                 int layerCount = (mem_barrier->subresourceRange.layerCount == VK_REMAINING_ARRAY_LAYERS)
                                      ? 1
