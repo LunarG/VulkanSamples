@@ -219,8 +219,8 @@ int sample_main(int argc, char *argv[]) {
      * Destroying the device before destroying the command pool above
      * will trigger a validation error.
      */
-    std::cout << "calling vkDestroyDevice before destroying command pool\n";
-    std::cout << "this should result in an error\n";
+    std::cout << "*** INTENTIONALLY calling vkDestroyDevice before destroying command pool ***\n";
+    std::cout << "*** The following error message is EXPECTED ***\n";
     vkDestroyDevice(info.device, NULL);
 
     /* Clean up callback */
