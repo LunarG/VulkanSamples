@@ -9851,10 +9851,12 @@ static bool validateFramebuffer(layer_data *dev_data, VkCommandBuffer primaryBuf
     if (secondary_fb != VK_NULL_HANDLE) {
         if (primary_fb != secondary_fb) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                 DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
-                                 "vkCmdExecuteCommands() called w/ invalid Cmd Buffer 0x%p which has a framebuffer 0x%" PRIx64
-                                 " that is not compatible with the current framebuffer 0x%" PRIx64 ".",
-                                 (void *)secondaryBuffer, (uint64_t)(secondary_fb), (uint64_t)(primary_fb));
+                                 DRAWSTATE_FRAMEBUFFER_INCOMPATIBLE, "DS",
+                                 "vkCmdExecuteCommands() called w/ invalid secondary Cmd Buffer 0x%" PRIx64
+                                 " which has a framebuffer 0x%" PRIx64
+                                 " that is not the same as the primaryCB's current active framebuffer 0x%" PRIx64 ".",
+                                 reinterpret_cast<uint64_t &>(secondaryBuffer), reinterpret_cast<uint64_t &>(secondary_fb),
+                                 reinterpret_cast<uint64_t &>(primary_fb));
         }
         auto fb = getFramebuffer(dev_data, secondary_fb);
         if (!fb) {
@@ -9949,9 +9951,11 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
                         skip_call |= validateRenderPassCompatibility(dev_data, commandBuffer, pCB->activeRenderPass->pCreateInfo,
                                                                     pCommandBuffers[i], secondary_rp_node->pCreateInfo);
                     }
+                    //  If framebuffer for secondary CB is not NULL, then it must match active FB from primaryCB
                     skip_call |= validateFramebuffer(dev_data, commandBuffer, pCB, pCommandBuffers[i], pSubCB);
                 }
                 string errorString = "";
+                // secondaryCB must have been created w/ RP compatible w/ primaryCB active renderpass
                 if ((pCB->activeRenderPass->renderPass != secondary_rp_node->renderPass) &&
                     !verify_renderpass_compatibility(dev_data, pCB->activeRenderPass->pCreateInfo, secondary_rp_node->pCreateInfo,
                                                      errorString)) {
@@ -9962,19 +9966,6 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
                         ") is incompatible w/ primary command buffer (0x%p) w/ render pass (0x%" PRIxLEAST64 ") due to: %s",
                         (void *)pCommandBuffers[i], (uint64_t)pSubCB->beginInfo.pInheritanceInfo->renderPass, (void *)commandBuffer,
                         (uint64_t)pCB->activeRenderPass->renderPass, errorString.c_str());
-                }
-                //  If framebuffer for secondary CB is not NULL, then it must match FB from vkCmdBeginRenderPass()
-                //   that this CB will be executed in AND framebuffer must have been created w/ RP compatible w/ renderpass
-                if (pSubCB->beginInfo.pInheritanceInfo->framebuffer) {
-                    if (pSubCB->beginInfo.pInheritanceInfo->framebuffer != pCB->activeRenderPassBeginInfo.framebuffer) {
-                        skip_call |= log_msg(
-                            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            (uint64_t)pCommandBuffers[i], __LINE__, DRAWSTATE_FRAMEBUFFER_INCOMPATIBLE, "DS",
-                            "vkCmdExecuteCommands(): Secondary Command Buffer (0x%p) references framebuffer (0x%" PRIxLEAST64
-                            ") that does not match framebuffer (0x%" PRIxLEAST64 ") in active renderpass (0x%" PRIxLEAST64 ").",
-                            (void *)pCommandBuffers[i], (uint64_t)pSubCB->beginInfo.pInheritanceInfo->framebuffer,
-                            (uint64_t)pCB->activeRenderPassBeginInfo.framebuffer, (uint64_t)pCB->activeRenderPass->renderPass);
-                    }
                 }
             }
             // TODO(mlentine): Move more logic into this method
