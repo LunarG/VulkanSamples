@@ -13778,6 +13778,75 @@ TEST_F(VkLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsImage) {
     vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
 }
 
+TEST_F(VkLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsBoth) {
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkDescriptorSetLayoutBinding bindings[] = {
+        {
+            0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr
+        },
+        {
+            1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr
+        },
+    };
+    VkDescriptorSetLayoutCreateInfo dslci = {
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr,
+        0, 2, bindings
+    };
+    VkDescriptorSetLayout dsl;
+    VkResult err = vkCreateDescriptorSetLayout(m_device->device(), &dslci,
+                                               nullptr, &dsl);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo plci = {
+        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr,
+        0, 1, &dsl, 0, nullptr
+    };
+    VkPipelineLayout pl;
+    err = vkCreatePipelineLayout(m_device->device(), &plci,
+                                 nullptr, &pl);
+    ASSERT_VK_SUCCESS(err);
+
+    char const *csSource =
+        "#version 450\n"
+        "\n"
+        "layout(local_size_x=1) in;\n"
+        "layout(set=0, binding=0) uniform texture2D t;\n"
+        "layout(set=0, binding=0) uniform sampler s;  // both binding 0!\n"
+        "layout(set=0, binding=1) buffer block { vec4 x; };\n"
+        "void main() {\n"
+        "   x = texture(sampler2D(t, s), vec2(0));\n"
+        "}\n";
+    VkShaderObj cs(m_device, csSource, VK_SHADER_STAGE_COMPUTE_BIT, this);
+
+    VkComputePipelineCreateInfo cpci = {
+        VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, nullptr,
+        0, {
+            VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            nullptr, 0, VK_SHADER_STAGE_COMPUTE_BIT,
+            cs.handle(), "main", nullptr
+        },
+        pl, VK_NULL_HANDLE, -1
+    };
+
+    VkPipeline pipe;
+    err = vkCreateComputePipelines(
+            m_device->device(), VK_NULL_HANDLE, 1, &cpci, nullptr, &pipe);
+
+    m_errorMonitor->VerifyNotFound();
+
+    if (err == VK_SUCCESS) {
+        vkDestroyPipeline(m_device->device(), pipe, nullptr);
+    }
+
+    vkDestroyPipelineLayout(m_device->device(), pl, nullptr);
+    vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
+}
+
 #endif // SHADER_CHECKER_TESTS
 
 #if DEVICE_LIMITS_TESTS
