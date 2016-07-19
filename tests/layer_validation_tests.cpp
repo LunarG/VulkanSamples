@@ -12005,6 +12005,9 @@ TEST_F(VkLayerTest, ThreadCommandBufferCollision) {
 
 #if SHADER_CHECKER_TESTS
 TEST_F(VkLayerTest, InvalidSPIRVCodeSize) {
+    TEST_DESCRIPTION("Test that an error is produced for a spirv module "
+                     "with an impossible code size");
+
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Invalid SPIR-V header");
 
@@ -12030,6 +12033,9 @@ TEST_F(VkLayerTest, InvalidSPIRVCodeSize) {
 }
 
 TEST_F(VkLayerTest, InvalidSPIRVMagic) {
+    TEST_DESCRIPTION("Test that an error is produced for a spirv module "
+                     "with a bad magic number");
+
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Invalid SPIR-V magic number");
 
@@ -12084,6 +12090,8 @@ TEST_F(VkLayerTest, InvalidSPIRVVersion) {
 #endif
 
 TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed) {
+    TEST_DESCRIPTION("Test that a warning is produced for a vertex output that "
+                     "is not consumed by the fragment stage");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                          "not consumed by fragment shader");
 
@@ -12127,6 +12135,9 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided) {
+    TEST_DESCRIPTION("Test that an error is produced for a fragment shader input "
+                     "which is not present in the outputs of the previous stage");
+
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "not written by vertex shader");
 
@@ -12169,6 +12180,9 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvidedInBlock) {
+    TEST_DESCRIPTION("Test that an error is produced for a fragment shader input "
+                     "within an interace block, which is not present in the outputs "
+                     "of the previous stage.");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "not written by vertex shader");
 
@@ -12211,6 +12225,8 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvidedInBlock) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize) {
+    TEST_DESCRIPTION("Test that an error is produced for mismatched array sizes "
+                     "across the VS->FS interface");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Type mismatch on location 0.0: 'ptr to "
                                          "output arr[2] of float32' vs 'ptr to "
@@ -12257,6 +12273,8 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchArraySize) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch) {
+    TEST_DESCRIPTION("Test that an error is produced for mismatched types across "
+                     "the VS->FS interface");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Type mismatch on location 0");
 
@@ -12301,6 +12319,9 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchInBlock) {
+    TEST_DESCRIPTION("Test that an error is produced for mismatched types across "
+                     "the VS->FS interface, when the variable is contained within "
+                     "an interface block");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Type mismatch on location 0");
 
@@ -12345,6 +12366,9 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatchInBlock) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByLocation) {
+    TEST_DESCRIPTION("Test that an error is produced for location mismatches across "
+                     "the VS->FS interface; This should manifest as a not-written/not-consumed "
+                     "pair, but flushes out broken walking of the interfaces");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "location 0.0 which is not written by vertex shader");
 
@@ -12389,6 +12413,9 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByLocation) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByComponent) {
+    TEST_DESCRIPTION("Test that an error is produced for component mismatches across the "
+                     "VS->FS interface. It's not enough to have the same set of locations in "
+                     "use; matching is defined in terms of spirv variables.");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "location 0.1 which is not written by vertex shader");
 
@@ -12433,6 +12460,8 @@ TEST_F(VkLayerTest, CreatePipelineVsFsMismatchByComponent) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed) {
+    TEST_DESCRIPTION("Test that a warning is produced for a vertex attribute which is "
+                     "not consumed by the vertex shader");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                          "location 0 not consumed by VS");
 
@@ -12484,6 +12513,8 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineAttribLocationMismatch) {
+    TEST_DESCRIPTION("Test that a warning is produced for a location mismatch on "
+                     "vertex attributes. This flushes out bad behavior in the interface walker");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
                                          "location 0 not consumed by VS");
 
@@ -12536,6 +12567,8 @@ TEST_F(VkLayerTest, CreatePipelineAttribLocationMismatch) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineAttribNotProvided) {
+    TEST_DESCRIPTION("Test that an error is produced for a VS input which is not "
+                     "provided by a vertex attribute");
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "VS consumes input at location 0 but not provided");
@@ -12579,6 +12612,9 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch) {
+    TEST_DESCRIPTION("Test that an error is produced for a mismatch between the "
+                     "fundamental type (float/int/uint) of an attribute and the "
+                     "VS input that consumes it");
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "location 0 does not match VS input type");
@@ -12632,6 +12668,8 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineDuplicateStage) {
+    TEST_DESCRIPTION("Test that an error is produced for a pipeline containing multiple "
+                     "shaders for the same stage");
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Multiple shaders provided for stage VK_SHADER_STAGE_VERTEX_BIT");
@@ -12675,6 +12713,8 @@ TEST_F(VkLayerTest, CreatePipelineDuplicateStage) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineAttribMatrixType) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts matrices passed "
+                     "as vertex attributes");
     m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -12788,6 +12828,9 @@ TEST_F(VkLayerTest, CreatePipelineAttribArrayType)
 
 TEST_F(VkLayerTest, CreatePipelineAttribComponents)
 {
+    TEST_DESCRIPTION("Test that pipeline validation accepts consuming a vertex attribute "
+                     "through multiple VS inputs, each consuming a different subset of the "
+                     "components.");
     m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -12887,6 +12930,9 @@ TEST_F(VkLayerTest, CreatePipelineSimplePositive)
 
 TEST_F(VkLayerTest, CreatePipelineRelaxedTypeMatch)
 {
+    TEST_DESCRIPTION("Test that pipeline validation accepts the relaxed type matching rules "
+                     "set out in 14.1.3: fundamental type must match, and producer side must "
+                     "have at least as many components");
     m_errorMonitor->ExpectSuccess();
 
     // VK 1.0.8 Specification, 14.1.3 "Additionally,..." block
@@ -12940,6 +12986,8 @@ TEST_F(VkLayerTest, CreatePipelineRelaxedTypeMatch)
 
 TEST_F(VkLayerTest, CreatePipelineTessPerVertex)
 {
+    TEST_DESCRIPTION("Test that pipeline validation accepts per-vertex variables "
+                     "passed between the TCS and TES stages");
     m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -13016,6 +13064,10 @@ TEST_F(VkLayerTest, CreatePipelineTessPerVertex)
 
 TEST_F(VkLayerTest, CreatePipelineGeometryInputBlockPositive)
 {
+    TEST_DESCRIPTION("Test that pipeline validation accepts a user-defined "
+                     "interface block passed into the geometry shader. This "
+                     "is interesting because the 'extra' array level is not "
+                     "present on the member type, but on the block instance.");
     m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -13070,6 +13122,9 @@ TEST_F(VkLayerTest, CreatePipelineGeometryInputBlockPositive)
 
 TEST_F(VkLayerTest, CreatePipelineTessPatchDecorationMismatch)
 {
+    TEST_DESCRIPTION("Test that an error is produced for a variable output from "
+                     "the TCS without the patch decoration, but consumed in the TES "
+                     "with the decoration.");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "is per-vertex in tessellation control shader stage "
                                          "but per-patch in tessellation evaluation shader stage");
@@ -13147,6 +13202,8 @@ TEST_F(VkLayerTest, CreatePipelineTessPatchDecorationMismatch)
 }
 
 TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict) {
+    TEST_DESCRIPTION("Test that an error is produced for a vertex attribute setup where multiple "
+                     "bindings provide the same location");
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Duplicate vertex input binding descriptions for binding 0");
@@ -13201,6 +13258,9 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict) {
 }
 
 TEST_F(VkLayerTest, CreatePipeline64BitAttributesPositive) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts basic use of 64bit vertex "
+                     "attributes. This is interesting because they consume multiple "
+                     "locations.");
     m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -13268,6 +13328,8 @@ TEST_F(VkLayerTest, CreatePipeline64BitAttributesPositive) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
+    TEST_DESCRIPTION("Test that an error is produced for a FS which does not "
+                     "provide an output for one of the pipeline's color attachments");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Attachment 0 not written by FS");
 
@@ -13309,6 +13371,8 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed) {
+    TEST_DESCRIPTION("Test that a warning is produced for a FS which provides a spurious "
+                     "output with no matching attachment");
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_WARNING_BIT_EXT,
         "FS writes to output location 1 with no matching attachment");
@@ -13356,6 +13420,8 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch) {
+    TEST_DESCRIPTION("Test that an error is produced for a mismatch between the fundamental "
+                     "type of an FS output variable, and the format of the corresponding attachment");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "does not match FS output type");
 
@@ -13399,6 +13465,8 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch) {
 }
 
 TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided) {
+    TEST_DESCRIPTION("Test that an error is produced for a shader consuming a uniform "
+                     "block which has no corresponding binding in the pipeline layout");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "not declared in pipeline layout");
 
@@ -13442,6 +13510,8 @@ TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided) {
 }
 
 TEST_F(VkLayerTest, CreatePipelinePushConstantsNotInLayout) {
+    TEST_DESCRIPTION("Test that an error is produced for a shader consuming push constants "
+                     "which are not provided in the pipeline layout");
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "not declared in layout");
 
@@ -13486,6 +13556,8 @@ TEST_F(VkLayerTest, CreatePipelinePushConstantsNotInLayout) {
 }
 
 TEST_F(VkLayerTest, CreateComputePipelineMissingDescriptor) {
+    TEST_DESCRIPTION("Test that an error is produced for a compute pipeline consuming a "
+                     "descriptor which is not provided in the pipeline layout");
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Shader uses descriptor slot 0.0");
@@ -13529,6 +13601,10 @@ TEST_F(VkLayerTest, CreateComputePipelineMissingDescriptor) {
 }
 
 TEST_F(VkLayerTest, CreateComputePipelineMissingDescriptorUnusedPositive) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts a compute pipeline which declares a "
+                     "descriptor-backed resource which is not provided, but the shader does not "
+                     "statically use it. This is interesting because it requires compute pipelines "
+                     "to have a proper descriptor use walk, which they didn't for some time.");
     m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -13570,6 +13646,8 @@ TEST_F(VkLayerTest, CreateComputePipelineMissingDescriptorUnusedPositive) {
 }
 
 TEST_F(VkLayerTest, CreateComputePipelineDescriptorTypeMismatch) {
+    TEST_DESCRIPTION("Test that an error is produced for a pipeline consuming a "
+                     "descriptor-backed resource of a mismatched type");
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "but descriptor of type VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER");
@@ -13633,6 +13711,8 @@ TEST_F(VkLayerTest, CreateComputePipelineDescriptorTypeMismatch) {
 }
 
 TEST_F(VkLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsSampler) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts a shader consuming only the "
+                     "sampler portion of a combined image + sampler");
     m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -13706,6 +13786,8 @@ TEST_F(VkLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsSampler) 
 }
 
 TEST_F(VkLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsImage) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts a shader consuming only the "
+                     "image portion of a combined image + sampler");
     m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -13779,6 +13861,9 @@ TEST_F(VkLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsImage) {
 }
 
 TEST_F(VkLayerTest, CreateComputePipelineCombinedImageSamplerConsumedAsBoth) {
+    TEST_DESCRIPTION("Test that pipeline validation accepts a shader consuming "
+                     "both the sampler and the image of a combined image+sampler "
+                     "but via separate variables");
     m_errorMonitor->ExpectSuccess();
 
     ASSERT_NO_FATAL_FAILURE(InitState());
