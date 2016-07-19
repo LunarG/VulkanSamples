@@ -71,6 +71,7 @@ typedef enum _BsoFailSelect {
     BsoFailStencilWriteMask = 0x00000080,
     BsoFailStencilReference = 0x00000100,
     BsoFailCmdClearAttachments = 0x00000200,
+    BsoFailIndexBuffer = 0x00000400,
 } BsoFailSelect;
 
 struct vktriangle_vs_uniform {
@@ -490,7 +491,12 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText,
     GenericDrawPreparation(pipelineobj, descriptorSet, failMask);
 
     // render triangle
-    Draw(3, 1, 0, 0);
+    if (failMask & BsoFailIndexBuffer) {
+        // Use DrawIndexed w/o an index buffer bound
+        DrawIndexed(3, 1, 0, 0, 0);
+    } else {
+        Draw(3, 1, 0, 0);
+    }
 
     if (failMask & BsoFailCmdClearAttachments) {
         VkClearAttachment color_attachment = {};
@@ -6339,6 +6345,16 @@ TEST_F(VkLayerTest, DynamicStencilRefNotBound) {
         "Dynamic stencil reference state not set for this command buffer");
     VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText,
                    BsoFailStencilReference);
+    m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkLayerTest, IndexBufferNotBound) {
+    TEST_DESCRIPTION("Run an indexed draw call without an index buffer bound.");
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Index buffer object not bound to this command buffer when Indexed ");
+    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText,
+                   BsoFailIndexBuffer);
     m_errorMonitor->VerifyFound();
 }
 
