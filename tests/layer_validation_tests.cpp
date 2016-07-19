@@ -7133,7 +7133,7 @@ TEST_F(VkLayerTest, InvalidCmdBufferPipelineDestroyed) {
     vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp_state_ci.viewportCount = 1;
     VkViewport vp = {};           // Just need dummy vp to point to
-    vp_state_ci.pViewports = &vp; // Null vp w/ count of 1 should cause error
+    vp_state_ci.pViewports = &vp;
     vp_state_ci.scissorCount = 1;
     VkRect2D scissors = {}; // Dummy scissors to point to
     vp_state_ci.pScissors = &scissors;
@@ -12491,6 +12491,115 @@ TEST_F(VkLayerTest, FramebufferIncompatible) {
     vkDestroyImageView(m_device->device(), view, NULL);
     vkDestroyRenderPass(m_device->device(), rp, NULL);
     vkDestroyFramebuffer(m_device->device(), fb, NULL);
+}
+
+TEST_F(VkLayerTest, ColorBlendLogicOpTests) {
+    TEST_DESCRIPTION("If logicOp is available on the device, set it to an "
+                     "invalid value. If logicOp is not available, attempt to "
+                     "use it and verify that we see the correct error.");
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    auto features = m_device->phy().features();
+    // Set the expected error depending on whether or not logicOp available
+    if (VK_FALSE == features.logicOp) {
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "If logic operations feature not "
+                                             "enabled, logicOpEnable must be "
+                                             "VK_FALSE");
+    } else {
+        m_errorMonitor->SetDesiredFailureMsg(
+            VK_DEBUG_REPORT_ERROR_BIT_EXT,
+            ", logicOp must be a valid VkLogicOp value");
+    }
+    // Create a pipeline using logicOp
+    VkResult err;
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
+                                 &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineViewportStateCreateInfo vp_state_ci = {};
+    vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    vp_state_ci.viewportCount = 1;
+    VkViewport vp = {};           // Just need dummy vp to point to
+    vp_state_ci.pViewports = &vp;
+    vp_state_ci.scissorCount = 1;
+    VkRect2D scissors = {}; // Dummy scissors to point to
+    vp_state_ci.pScissors = &scissors;
+    // No dynamic state
+    VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
+    dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+
+    VkPipelineShaderStageCreateInfo shaderStages[2];
+    memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
+
+    VkShaderObj vs(m_device, bindStateVertShaderText,
+                   VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText,
+                   VK_SHADER_STAGE_FRAGMENT_BIT,
+                   this);
+    shaderStages[0] = vs.GetStageCreateInfo();
+    shaderStages[1] = fs.GetStageCreateInfo();
+
+    VkPipelineVertexInputStateCreateInfo vi_ci = {};
+    vi_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    VkPipelineInputAssemblyStateCreateInfo ia_ci = {};
+    ia_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
+    VkPipelineRasterizationStateCreateInfo rs_ci = {};
+    rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+
+    VkPipelineColorBlendAttachmentState att = {};
+    att.blendEnable = VK_FALSE;
+    att.colorWriteMask = 0xf;
+
+    VkPipelineColorBlendStateCreateInfo cb_ci = {};
+    cb_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    // Enable logicOp & set logicOp to value 1 beyond allowed entries
+    cb_ci.logicOpEnable = VK_TRUE;
+    cb_ci.logicOp = VK_LOGIC_OP_RANGE_SIZE; // This should cause an error
+    cb_ci.attachmentCount = 1;
+    cb_ci.pAttachments = &att;
+
+    VkGraphicsPipelineCreateInfo gp_ci = {};
+    gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    gp_ci.stageCount = 2;
+    gp_ci.pStages = shaderStages;
+    gp_ci.pVertexInputState = &vi_ci;
+    gp_ci.pInputAssemblyState = &ia_ci;
+    gp_ci.pViewportState = &vp_state_ci;
+    gp_ci.pRasterizationState = &rs_ci;
+    gp_ci.pColorBlendState = &cb_ci;
+    gp_ci.pDynamicState = &dyn_state_ci;
+    gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+    gp_ci.layout = pipeline_layout;
+    gp_ci.renderPass = renderPass();
+
+    VkPipelineCacheCreateInfo pc_ci = {};
+    pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+
+    VkPipeline pipeline;
+    VkPipelineCache pipelineCache;
+    err =
+        vkCreatePipelineCache(m_device->device(), &pc_ci, NULL, &pipelineCache);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1,
+                                    &gp_ci, NULL, &pipeline);
+    m_errorMonitor->VerifyFound();
+    if (VK_SUCCESS == err) {
+        vkDestroyPipeline(m_device->device(), pipeline, NULL);
+    }
+    m_errorMonitor->VerifyFound();
+    vkDestroyPipelineCache(m_device->device(), pipelineCache, NULL);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
 }
 #endif // DRAW_STATE_TESTS
 
