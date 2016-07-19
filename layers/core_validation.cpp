@@ -2411,7 +2411,8 @@ static bool descriptor_type_match(shader_module const *module, uint32_t type_id,
     }
 
     case spv::OpTypeSampler:
-        return descriptor_type == VK_DESCRIPTOR_TYPE_SAMPLER;
+        return descriptor_type == VK_DESCRIPTOR_TYPE_SAMPLER ||
+            descriptor_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 
     case spv::OpTypeSampledImage:
         if (descriptor_type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) {
@@ -2444,7 +2445,8 @@ static bool descriptor_type_match(shader_module const *module, uint32_t type_id,
                 return descriptor_type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
             }
         } else if (sampled == 1) {
-            return descriptor_type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+            return descriptor_type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
+                descriptor_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         } else {
             return descriptor_type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         }
