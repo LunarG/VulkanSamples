@@ -6,7 +6,7 @@
 
 ### VK_LAYER_LUNARG_standard_validation Overview
 
-This is a meta-layer managed by the loader. Specifying this layer name will cause the loader to load the all of the standard validation layers in the following optimal order:
+This is a meta-layer managed by the loader. On desktop systems, specifying this layer name will cause the loader to load the all of the standard validation layers in the following optimal order:
 
  - VK_LAYER_GOOGLE_threading
  - VK_LAYER_LUNARG_parameter_validation
@@ -15,6 +15,8 @@ This is a meta-layer managed by the loader. Specifying this layer name will caus
  - VK_LAYER_LUNARG_core_validation
  - VK_LAYER_LUNARG_swapchain
  - VK_LAYER_GOOGLE_unique_objects
+
+For platforms not using the standard loader (i.e., mobile platforms) the layers should be declared explicitly in the order shown above.
 
 Other layers can be specified and the loader will remove duplicates. See the following individual layer descriptions for layer details.
 
