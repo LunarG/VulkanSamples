@@ -1,23 +1,27 @@
 # Vulkan Loader Specification and Architecture Overview
 
+<br/>
 
-Goals of this document
+## Goals of this document ##
 ----------------------
 
 Specify necessary functions and expected behavior of interface between the
 loader library and ICDs and layers for Windows, Linux and Android based
 systems. Also describe the application visible behaviors of the loader.
 
-Audience
+<br/>
+
+## Audience ##
 --------
 
-Application, Vulkan driver and Vulkan layer developers.
+This document is primarily targeted at Vulkan application, driver and layer developers.
+However, it can also be used by any developer interested in understanding more about
+how the Vulkan loader and layers interact.
 
-Any developers interested in understanding more about loader and layer behavior
-and architecture.
+<br/>
 
 
-Loader goals
+## Loader goals ##
 ------------
 
 -   Support multiple ICDs (Installable Client Drivers) to co-exist on a system
@@ -29,39 +33,47 @@ developer or the system and have no impact when not enabled.
 -   Negligible performance cost for an application calling through the loader
 to an ICD entry point.
 
-Architectural overview of layers and loader
+<br/>
+
+## Architectural overview of layers and loader ##
 -------------------------------------------
 
-Vulkan is a layered architecture. Layers can hook (intercept) Vulkan commands to
-achieve various functionality that a Vulkan driver (aka ICD) or loader doesn't
-support. Functionality such as Vulkan API tracing and debugging, API usage
-validation, and other tools such as framebuffer overlays are all natural
-candidates for Vulkan layers. Layers are implemented as libraries that are
-inserted between the application and the driver.
+Vulkan is a layered architecture placing the Application on one end, the
+ICDs on the other, and the loader and some number of layers in between.
 
-Not only is Vulkan a layered architecture but it also supports multiple GPUs
-and their drivers. Vulkan commands called by an application may wind up calling
-into a diverse set of modules: loader, layers, and ICDs. The loader is critical
-to managing the proper dispatching of Vulkan commands to the appropriate set of
-layers and ICDs. The Vulkan object model allows the loader to insert layers
-into a call chain so the layers can process Vulkan commands prior to the
-ICD being called.
+Layers are implemented as libraries that can be enabled in different ways
+(including by application request) and loaded during CreateInstance.  Each
+layer can chooses to hook (intercept) any Vulkan commands which in turn
+can be ignored, augmented, or simply passed along.  A layer may also
+expose functionality not available in the loader or any ICD.  Some examples
+of this include: the ability to perform Vulkan API tracing and debugging,
+validate API usage, or overlay additional content on the applications surfaces.
+
+The loader is responsible for working with the various layers as well as
+supporting multiple GPUs and their drivers.  Any Vulkan command may
+wind up calling into a diverse set of modules: loader, layers, and ICDs.
+The loader is critical to managing the proper dispatching of Vulkan
+commands to the appropriate set of layers and ICDs. The Vulkan object
+model allows the loader to insert layers into a call chain so that the layers
+can process Vulkan commands prior to the ICD being called.
 
 Vulkan uses an object model to control the scope of a particular action /
 operation.  The object to be acted on is always the first parameter of a Vulkan
 call and is a dispatchable object (see Vulkan specification section 2.3 Object
 Model).  Under the covers, the dispatchable object handle is a pointer to a
-structure that contains a pointer to a dispatch table maintained by the loader.
-This dispatch table contains pointers to the Vulkan functions appropriate to
-that object. There are two types of dispatch tables the loader maintains,
-Instance and Device. I.e. a VkInstance object's dispatch table will point to Vulkan
-functions such as vkEnumeratePhysicalDevices, vkDestroyInstance,
-vkCreateInstance, etc. Instance functions take a VkInstance or VkPhysicalDevice as
-their first argument.
+structure, which in turn, contains a pointer to a dispatch table maintained by
+the loader.  This dispatch table contains pointers to the Vulkan functions appropriate to
+that object.
 
-Device objects have a separate dispatch table containing the appropriate
-function pointers. The device dispatch table is used for all functions that
-take a VkDevice, VkQueue or VkCommandBuffer as their first argument.
+There are two types of dispatch tables the loader maintains:
+-  **Instance Dispatch Table**
+  - Contains any function that takes a VkInstance or VkPhysicalDevice as their first parameter
+    - vkEnumeratePhysicalDevices
+    - vkDestroyInstance
+    - vkCreateInstance
+    - ...
+-  **Device Dispatch Table**
+  - Contains any function that takes a VkDevice, VkQueue or VkCommandBuffer as their first parameter
 
 These instance and device dispatch tables are constructed when the application
 calls vkCreateInstance and vkCreateDevice. At that time the application and/or
@@ -90,7 +102,9 @@ the chain. The below diagram also illustrates how layers (either device or
 instance) can skip intercepting any given Vulkan entry point.
 ![Chain skipping layers](chain_skipping_layers.png)
 
-Application interface to loader
+<br/>
+
+## Application interface to loader ##
 -------------------------------
 
 In this section we'll discuss how an application interacts with the loader.
@@ -308,8 +322,10 @@ No!  Most extension functionality only affects a device and not an instance or a
 device.  Thus, the overwhelming majority of extensions will be device extensions rather than
 instance extensions.
 
+<br/>
 
-Vulkan Installable Client Driver interface with the loader
+
+## Vulkan Installable Client Driver interface with the loader ##
 ----------------------------------------------------------
 
 ### ICD discovery
@@ -544,8 +560,9 @@ changed. The loader will load the driver/ICD via hw_get_module with the ID
 of "vulkan". Due to security policies in Android none of this can be modified
 under normal use.
 
+<br/>
 
-ICD interface requirements
+## ICD interface requirements ##
 ----------------------------------------
 
 Generally, for all Vulkan commands issued by an application, the loader can be
@@ -752,7 +769,9 @@ loader queries layer and extension information directly from the
 respective libraries and does not use the json manifest files used
 by the Windows and Linux loaders.
 
-Vulkan layer interface with the loader
+<br/>
+
+## Vulkan layer interface with the loader ##
 --------------------------------------
 
 ### Layer discovery
@@ -1022,7 +1041,9 @@ application would.
 An application enabled for debug has more options. It can enumerate and enable
 layers located in /data/local/vulkan/debug.
 
-Layer interface requirements
+<br/>
+
+## Layer interface requirements ##
 ------------------------------------------------------
 
 #### Architectural interface overview
