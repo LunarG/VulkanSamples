@@ -538,7 +538,7 @@ struct CB_SUBMISSION {
     std::vector<VkSemaphore> semaphores;
 };
 
-// Fwd declarations of layer_data and helpers to look-up state from layer_data maps
+// Fwd declarations of layer_data and helpers to look-up/validate state from layer_data maps
 namespace core_validation {
 struct layer_data;
 cvdescriptorset::DescriptorSet *getSetNode(const layer_data *, VkDescriptorSet);
@@ -553,6 +553,7 @@ VkImageViewCreateInfo *getImageViewData(const layer_data *, VkImageView);
 VkSwapchainKHR getSwapchainFromImage(const layer_data *, VkImage);
 SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, VkSwapchainKHR);
 void invalidateCommandBuffers(std::unordered_set<GLOBAL_CB_NODE *>, VK_OBJECT);
+bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_NODE *, const char *);
 }
 
 #endif // CORE_VALIDATION_TYPES_H_

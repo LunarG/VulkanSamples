@@ -693,28 +693,28 @@ static bool clear_object_binding(layer_data *dev_data, uint64_t handle, VkDebugR
 }
 
 // Check to see if memory was ever bound to this image
-static bool ValidateMemoryIsBoundToImage(layer_data *dev_data, IMAGE_NODE *image_node, const char *api_name) {
+bool ValidateMemoryIsBoundToImage(const layer_data *dev_data, const IMAGE_NODE *image_node, const char *api_name) {
     bool result = false;
     if (0 == (static_cast<uint32_t>(image_node->createInfo.flags) & VK_IMAGE_CREATE_SPARSE_BINDING_BIT)) {
         if (0 == image_node->mem) {
             result = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                reinterpret_cast<uint64_t &>(image_node->image), __LINE__, MEMTRACK_OBJECT_NOT_BOUND, "MEM",
-                "%s: VkImage object 0x%" PRIxLEAST64 " used without first calling vkBindImageMemory.", api_name,
-                reinterpret_cast<uint64_t &>(image_node->image));
+                             reinterpret_cast<const uint64_t &>(image_node->image), __LINE__, MEMTRACK_OBJECT_NOT_BOUND, "MEM",
+                             "%s: VkImage object 0x%" PRIxLEAST64 " used without first calling vkBindImageMemory.", api_name,
+                             reinterpret_cast<const uint64_t &>(image_node->image));
         }
     }
     return result;
 }
 
 // Check to see if memory was bound to this buffer
-static bool ValidateMemoryIsBoundToBuffer(layer_data *dev_data, BUFFER_NODE *buffer_node, const char *api_name) {
+bool ValidateMemoryIsBoundToBuffer(const layer_data *dev_data, const BUFFER_NODE *buffer_node, const char *api_name) {
     bool result = false;
     if (0 == (static_cast<uint32_t>(buffer_node->createInfo.flags) & VK_IMAGE_CREATE_SPARSE_BINDING_BIT)) {
         if (0 == buffer_node->mem) {
             result = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                reinterpret_cast<uint64_t &>(buffer_node->buffer), __LINE__, MEMTRACK_OBJECT_NOT_BOUND, "MEM",
-                "%s: VkBuffer object 0x%" PRIxLEAST64 " used without first calling vkBindBufferMemory.", api_name,
-                reinterpret_cast<uint64_t &>(buffer_node->buffer));
+                             reinterpret_cast<const uint64_t &>(buffer_node->buffer), __LINE__, MEMTRACK_OBJECT_NOT_BOUND, "MEM",
+                             "%s: VkBuffer object 0x%" PRIxLEAST64 " used without first calling vkBindBufferMemory.", api_name,
+                             reinterpret_cast<const uint64_t &>(buffer_node->buffer));
         }
     }
     return result;
