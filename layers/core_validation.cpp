@@ -9486,7 +9486,7 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                 if (FormatSpecificLoadAndStoreOpSettings(format, renderPass->attachments[i].load_op,
                                                          renderPass->attachments[i].stencil_load_op,
                                                          VK_ATTACHMENT_LOAD_OP_CLEAR)) {
-                    clear_op_size = i + 1;
+                    clear_op_size = static_cast<uint32_t>(i) + 1;
                     std::function<bool()> function = [=]() {
                         set_memory_valid(dev_data, fb_info.mem, true, fb_info.image);
                         return false;
