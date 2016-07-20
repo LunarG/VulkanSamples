@@ -600,6 +600,7 @@ bool cvdescriptorset::ValidateImageUpdate(VkImageView image_view, VkImageLayout 
         *error = error_str.str();
         return false;
     }
+    // Note that when an imageview is created, we validated that memory is bound so no need to re-check here
     // Validate that imageLayout is compatible with aspect_mask and image format
     //  and validate that image usage bits are correct for given usage
     VkImageAspectFlags aspect_mask = iv_data->subresourceRange.aspectMask;
@@ -1055,6 +1056,8 @@ bool cvdescriptorset::DescriptorSet::ValidateBufferUpdate(VkDescriptorBufferInfo
         *error = error_str.str();
         return false;
     }
+    if (ValidateMemoryIsBoundToBuffer(device_data_, buffer_node, "vkUpdateDescriptorSets()"))
+        return false;
     // Verify usage bits
     if (!ValidateBufferUsage(buffer_node, type, error)) {
         // error will have been updated by ValidateBufferUsage()
