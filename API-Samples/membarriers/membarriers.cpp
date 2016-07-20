@@ -37,21 +37,22 @@ Use memory barriers to update texture
 #include <cube_data.h>
 
 // Using OpenGL based glm, so Y is upside down between OpenGL and Vulkan
-static const VertexUV vb_Data[] =
-{
-    { XYZ1(  1,  0.5,  1 ), UV( 0.f, 1.f ) },
-    { XYZ1(  2,  0.5,  1 ), UV( 1.f, 1.f ) },
-    { XYZ1(  1, -0.5,  1 ), UV( 0.f, 0.f ) },
-    { XYZ1(  1, -0.5,  1 ), UV( 0.f, 0.f ) },
-    { XYZ1(  2,  0.5,  1 ), UV( 1.f, 1.f ) },
-    { XYZ1(  2, -0.5,  1 ), UV( 1.f, 0.f ) },
 
-    { XYZ1(  -2,  0.5,  1 ), UV( 0.f, 1.f ) },
-    { XYZ1(  -1,  0.5,  1 ), UV( 1.f, 1.f ) },
-    { XYZ1(  -2, -0.5,  1 ), UV( 0.f, 0.f ) },
-    { XYZ1(  -2, -0.5,  1 ), UV( 0.f, 0.f ) },
-    { XYZ1(  -1,  0.5,  1 ), UV( 1.f, 1.f ) },
-    { XYZ1(  -1, -0.5,  1 ), UV( 1.f, 0.f ) },
+static const VertexUV vb_Data[] =
+{   //Textured quad:
+    { XYZ1( -2, -0.5, -1 ), UV( 0.f, 0.f ) },  //lft-top        / Z
+    { XYZ1( -1, -0.5, -1 ), UV( 1.f, 0.f ) },  //rgt-top       /
+    { XYZ1( -2,  0.5, -1 ), UV( 0.f, 1.f ) },  //lft-btm      +------> X
+    { XYZ1( -2,  0.5, -1 ), UV( 0.f, 1.f ) },  //lft-btm      |
+    { XYZ1( -1, -0.5, -1 ), UV( 1.f, 0.f ) },  //rgt-top      |
+    { XYZ1( -1,  0.5, -1 ), UV( 1.f, 1.f ) },  //rgt-btm      v Y
+    //Green quad:
+    { XYZ1(  1, -0.5, -1 ), UV( 0.f, 0.f ) },  //lft-top
+    { XYZ1(  2, -0.5, -1 ), UV( 1.f, 0.f ) },  //rgt-top
+    { XYZ1(  1,  0.5, -1 ), UV( 0.f, 1.f ) },  //lft-btm
+    { XYZ1(  1,  0.5, -1 ), UV( 0.f, 1.f ) },  //lft-btm
+    { XYZ1(  2, -0.5, -1 ), UV( 1.f, 0.f ) },  //rgt-top
+    { XYZ1(  2,  0.5, -1 ), UV( 1.f, 1.f ) },  //rgt-btm
 };
 
 #define DEPTH_PRESENT false

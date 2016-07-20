@@ -105,9 +105,9 @@ int sample_main(int argc, char *argv[]) {
     /* Set up uniform buffer with 2 transform matrices in it */
     info.Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
     info.View = glm::lookAt(
-        glm::vec3(0, 3, 10), // Camera is at (0,3,10), in World Space
-        glm::vec3(0, 0, 0),  // and looks at the origin
-        glm::vec3(0, -1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
+        glm::vec3(0, 3,-10), // Camera is at (0,3,-10), in World Space
+        glm::vec3(0, 0,  0), // and looks at the origin
+        glm::vec3(0,-1,  0)  // Head is up (set to 0,-1,0 to look upside-down)
         );
     info.Model = glm::mat4(1.0f);
     // Vulkan clip space has inverted Y and half Z.
@@ -118,7 +118,7 @@ int sample_main(int argc, char *argv[]) {
 
     info.MVP = info.Clip * info.Projection * info.View * info.Model;
     /* VULKAN_KEY_START */
-    info.Model = glm::translate(info.Model, glm::vec3(1.5, 1.5, 1.5));
+    info.Model = glm::translate(info.Model, glm::vec3(-1.5, 1.5,-1.5));
     glm::mat4 MVP2 = info.Clip * info.Projection * info.View * info.Model;
     VkDeviceSize buf_size = sizeof(info.MVP);
 
