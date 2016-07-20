@@ -1011,123 +1011,12 @@ TEST_F(VkLayerTest, InvalidStructPNext) {
     vkAllocateMemory(device(), &memory_alloc_info, NULL, &memory);
     m_errorMonitor->VerifyFound();
 
-    m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_WARNING_BIT_EXT,
-        " chain includes a structure with unexpected VkStructureType ");
-    // Set VkGraphicsPipelineCreateInfo::VkPipelineRasterizationStateCreateInfo::pNext to an invalid structure, when pNext is allowed to be a non-NULL value
-    // Expected to trigger an error with
-    // parameter_validation::validate_struct_pnext
-    VkDescriptorPoolSize ds_type_count = {};
-    ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    ds_type_count.descriptorCount = 1;
-
-    VkDescriptorPoolCreateInfo ds_pool_ci = {};
-    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    ds_pool_ci.pNext = NULL;
-    ds_pool_ci.maxSets = 1;
-    ds_pool_ci.poolSizeCount = 1;
-    ds_pool_ci.pPoolSizes = &ds_type_count;
-
-    VkDescriptorPool ds_pool;
-    VkResult err =
-        vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorSetLayoutBinding dsl_binding = {};
-    dsl_binding.binding = 0;
-    dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    dsl_binding.descriptorCount = 1;
-    dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
-    dsl_binding.pImmutableSamplers = NULL;
-
-    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
-    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    ds_layout_ci.pNext = NULL;
-    ds_layout_ci.bindingCount = 1;
-    ds_layout_ci.pBindings = &dsl_binding;
-
-    VkDescriptorSetLayout ds_layout;
-    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL,
-        &ds_layout);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocateInfo ds_alloc_info = {};
-    ds_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    ds_alloc_info.descriptorSetCount = 1;
-    ds_alloc_info.descriptorPool = ds_pool;
-    ds_alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocateDescriptorSets(m_device->device(), &ds_alloc_info,
-        &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
-
-    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
-    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_ci.setLayoutCount = 1;
-    pipeline_layout_ci.pSetLayouts = &ds_layout;
-
-    VkPipelineLayout pipeline_layout;
-    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
-        &pipeline_layout);
-    ASSERT_VK_SUCCESS(err);
-
-    VkViewport vp = {}; // Just need dummy vp to point to
-    VkRect2D sc = {};   // dummy scissor to point to
-
-    VkPipelineViewportStateCreateInfo vp_state_ci = {};
-    vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    vp_state_ci.scissorCount = 1;
-    vp_state_ci.pScissors = &sc;
-    vp_state_ci.viewportCount = 1;
-    vp_state_ci.pViewports = &vp;
-
-    VkPipelineRasterizationStateCreateInfo rs_state_ci = {};
-    rs_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rs_state_ci.polygonMode = VK_POLYGON_MODE_FILL;
-    rs_state_ci.cullMode = VK_CULL_MODE_BACK_BIT;
-    rs_state_ci.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rs_state_ci.depthClampEnable = VK_FALSE;
-    rs_state_ci.rasterizerDiscardEnable = VK_FALSE;
-    rs_state_ci.depthBiasEnable = VK_FALSE;
-
-    VkGraphicsPipelineCreateInfo gp_ci = {};
-    gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    gp_ci.pViewportState = &vp_state_ci;
-    gp_ci.pRasterizationState = &rs_state_ci;
-    gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-    gp_ci.layout = pipeline_layout;
-    gp_ci.renderPass = renderPass();
-
-    VkPipelineCacheCreateInfo pc_ci = {};
-    pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-    pc_ci.initialDataSize = 0;
-    pc_ci.pInitialData = 0;
-
-    VkPipeline pipeline;
-    VkPipelineCache pipelineCache;
-
-    err =
-        vkCreatePipelineCache(m_device->device(), &pc_ci, NULL, &pipelineCache);
-    ASSERT_VK_SUCCESS(err);
-
-    // Set VkPipelineRasterizationStateCreateInfo::pNext to an invalid value
-    VkApplicationInfo invalid_pnext_struct = {};
-    rs_state_ci.pNext = &invalid_pnext_struct;
-
-    vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1,
-        &gp_ci, NULL, &pipeline);
-    m_errorMonitor->VerifyFound();
-    vkDestroyPipelineCache(m_device->device(), pipelineCache, NULL);
-    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
-    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
-    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
-
     // Positive test to check parameter_validation and unique_objects support
     // for NV_dedicated_allocation
     uint32_t extension_count = 0;
     bool supports_nv_dedicated_allocation = false;
-    err = vkEnumerateDeviceExtensionProperties(gpu(), nullptr, &extension_count,
-                                               nullptr);
+    VkResult err = vkEnumerateDeviceExtensionProperties(
+        gpu(), nullptr, &extension_count, nullptr);
     ASSERT_VK_SUCCESS(err);
 
     if (extension_count > 0) {
