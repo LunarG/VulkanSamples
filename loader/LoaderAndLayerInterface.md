@@ -3,7 +3,6 @@
 <br/>
 
 ## Goals of this document ##
-----------------------
 
 Specify necessary functions and expected behavior of interface between the
 loader library and ICDs and layers for Windows, Linux and Android based
@@ -12,7 +11,6 @@ systems. Also describe the application visible behaviors of the loader.
 <br/>
 
 ## Audience ##
---------
 
 This document is primarily targeted at Vulkan application, driver and layer developers.
 However, it can also be used by any developer interested in understanding more about
@@ -22,7 +20,6 @@ how the Vulkan loader and layers interact.
 
 
 ## Loader goals ##
-------------
 
 -   Support multiple ICDs (Installable Client Drivers) to co-exist on a system
 without interfering with each other.
@@ -36,7 +33,6 @@ to an ICD entry point.
 <br/>
 
 ## Architectural overview of layers and loader ##
--------------------------------------------
 
 Vulkan is a layered architecture placing the Application on one end, the
 ICDs on the other, and the loader and some number of layers in between.
@@ -105,7 +101,6 @@ instance) can skip intercepting any given Vulkan entry point.
 <br/>
 
 ## Application interface to loader ##
--------------------------------
 
 In this section we'll discuss how an application interacts with the loader.
 
@@ -326,7 +321,6 @@ instance extensions.
 
 
 ## Vulkan Installable Client Driver interface with the loader ##
-----------------------------------------------------------
 
 ### ICD discovery
 
@@ -563,7 +557,6 @@ under normal use.
 <br/>
 
 ## ICD interface requirements ##
-----------------------------------------
 
 Generally, for all Vulkan commands issued by an application, the loader can be
 viewed as a pass through. That is, the loader generally doesn't modify the
@@ -772,7 +765,6 @@ by the Windows and Linux loaders.
 <br/>
 
 ## Vulkan layer interface with the loader ##
---------------------------------------
 
 ### Layer discovery
 
@@ -1044,7 +1036,6 @@ layers located in /data/local/vulkan/debug.
 <br/>
 
 ## Layer interface requirements ##
-------------------------------------------------------
 
 #### Architectural interface overview
 
