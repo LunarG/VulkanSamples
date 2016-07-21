@@ -8023,7 +8023,7 @@ static bool ValidateBarriers(const char *funcName, VkCommandBuffer cmdBuffer, ui
                                     funcName);
                         }
                     } else { // stencil-only case
-                        if (!(aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT)) {
+                        if (!(aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT)) {
                             log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
                                     __LINE__, DRAWSTATE_INVALID_BARRIER, "DS", "%s: Image is a stencil-only format and thus must "
                                                                                "have VK_IMAGE_ASPECT_STENCIL_BIT set.",
