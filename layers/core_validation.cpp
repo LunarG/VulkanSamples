@@ -709,7 +709,7 @@ bool ValidateMemoryIsBoundToImage(const layer_data *dev_data, const IMAGE_NODE *
 // Check to see if memory was bound to this buffer
 bool ValidateMemoryIsBoundToBuffer(const layer_data *dev_data, const BUFFER_NODE *buffer_node, const char *api_name) {
     bool result = false;
-    if (0 == (static_cast<uint32_t>(buffer_node->createInfo.flags) & VK_IMAGE_CREATE_SPARSE_BINDING_BIT)) {
+    if (0 == (static_cast<uint32_t>(buffer_node->createInfo.flags) & VK_BUFFER_CREATE_SPARSE_BINDING_BIT)) {
         if (0 == buffer_node->mem) {
             result = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                              reinterpret_cast<const uint64_t &>(buffer_node->buffer), __LINE__, MEMTRACK_OBJECT_NOT_BOUND, "MEM",
