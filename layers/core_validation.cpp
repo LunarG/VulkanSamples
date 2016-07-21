@@ -9937,6 +9937,9 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
             pSubCB->primaryCommandBuffer = pCB->commandBuffer;
             pCB->secondaryCommandBuffers.insert(pSubCB->commandBuffer);
             dev_data->globalInFlightCmdBuffers.insert(pSubCB->commandBuffer);
+            for (auto &function : pSubCB->queryUpdates) {
+                pCB->queryUpdates.push_back(function);
+            }
         }
         skip_call |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdExecuteComands");
         skip_call |= addCmd(dev_data, pCB, CMD_EXECUTECOMMANDS, "vkCmdExecuteComands()");
