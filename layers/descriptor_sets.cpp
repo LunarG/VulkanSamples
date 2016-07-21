@@ -320,12 +320,6 @@ cvdescriptorset::DescriptorSet::DescriptorSet(const VkDescriptorSet set, const D
 
 cvdescriptorset::DescriptorSet::~DescriptorSet() {
     InvalidateBoundCmdBuffers();
-    // Remove link to any cmd buffers
-    for (auto cb : cb_bindings) {
-        for (uint32_t i=0; i<VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
-            cb->lastBound[i].uniqueBoundSets.erase(this);
-        }
-    }
 }
 
 
@@ -628,6 +622,16 @@ void cvdescriptorset::DescriptorSet::PerformCopyUpdate(const VkCopyDescriptorSet
         some_update_ = true;
 
     InvalidateBoundCmdBuffers();
+}
+
+void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node) {
+    // bind cb to this descriptor set
+    cb_bindings.insert(cb_node);
+    // Add bindings for descriptor set and individual objects in the set
+    cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(set_), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT});
+    // TODO : Can bind individual objects from within each descriptor : buffers/images and their views, samplers & memory
+    //  The trick is we should only bind the objects actually "in use" by the cmd buffer, meaning that we need to
+    //  check active descriptor slots based on last bound state for this CB
 }
 
 cvdescriptorset::SamplerDescriptor::SamplerDescriptor() : sampler_(VK_NULL_HANDLE), immutable_(false) {

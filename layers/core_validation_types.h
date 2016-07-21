@@ -483,8 +483,6 @@ struct LAST_BOUND_STATE {
     VkPipeline pipeline;
     PIPELINE_LAYOUT_NODE pipeline_layout;
     // Track each set that has been bound
-    // TODO : can unique be global per CB? (do we care about Gfx vs. Compute?)
-    std::unordered_set<cvdescriptorset::DescriptorSet *> uniqueBoundSets;
     // Ordered bound set tracking where index is set# that given set is bound to
     std::vector<cvdescriptorset::DescriptorSet *> boundDescriptorSets;
     // one dynamic offset per dynamic descriptor bound to this CB
@@ -493,7 +491,6 @@ struct LAST_BOUND_STATE {
     void reset() {
         pipeline = VK_NULL_HANDLE;
         pipeline_layout.reset();
-        uniqueBoundSets.clear();
         boundDescriptorSets.clear();
         dynamicOffsets.clear();
     }
@@ -554,8 +551,6 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     std::unordered_set<VkDeviceMemory> memObjs;
     std::vector<std::function<bool(VkQueue)>> eventUpdates;
     std::vector<std::function<bool(VkQueue)>> queryUpdates;
-
-    ~GLOBAL_CB_NODE();
 };
 
 struct SEMAPHORE_WAIT {

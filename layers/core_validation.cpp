@@ -75,16 +75,6 @@
 
 using namespace std;
 
-// TODO : CB really needs it's own class and files so this is just temp code until that happens
-GLOBAL_CB_NODE::~GLOBAL_CB_NODE() {
-    for (uint32_t i=0; i<VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
-        // Make sure that no sets hold onto deleted CB binding
-        for (auto set : lastBound[i].uniqueBoundSets) {
-            set->RemoveBoundCommandBuffer(this);
-        }
-    }
-}
-
 namespace core_validation {
 
 using std::unordered_map;
@@ -3941,6 +3931,12 @@ static void removeCommandBufferBinding(layer_data *dev_data, VK_OBJECT const *ob
             pipe_node->cb_bindings.erase(cb_node);
         break;
     }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT: {
+        auto set_node = getSetNode(dev_data, reinterpret_cast<const VkDescriptorSet &>(object->handle));
+        if (set_node)
+            set_node->RemoveBoundCommandBuffer(cb_node);
+        break;
+    }
     default:
         assert(0); // unhandled object type
     }
@@ -3965,10 +3961,6 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->scissorMask = 0;
 
         for (uint32_t i = 0; i < VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
-            // Before clearing lastBoundState, remove any CB bindings from all uniqueBoundSets
-            for (auto set : pCB->lastBound[i].uniqueBoundSets) {
-                set->RemoveBoundCommandBuffer(pCB);
-            }
             pCB->lastBound[i].reset();
         }
 
@@ -4005,6 +3997,7 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         for (auto obj : pCB->object_bindings) {
             removeCommandBufferBinding(dev_data, &obj, pCB);
         }
+        pCB->object_bindings.clear();
         // Remove this cmdBuffer's reference from each FrameBuffer's CB ref list
         for (auto framebuffer : pCB->framebuffers) {
             auto fb_node = getFramebuffer(dev_data, framebuffer);
@@ -4461,6 +4454,32 @@ static bool ValidateCmdBufImageLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB
     return skip_call;
 }
 
+// Loop through bound objects and increment their in_use counts
+//  For any unknown objects, flag an error
+static bool ValidateAndIncrementBoundObjects(layer_data const *dev_data, GLOBAL_CB_NODE const *cb_node) {
+    bool skip_call = false;
+    for (auto obj : cb_node->object_bindings) {
+        switch (obj.type) {
+        case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT: {
+            auto set_node = getSetNode(dev_data, reinterpret_cast<VkDescriptorSet &>(obj.handle));
+            if (!set_node) {
+                skip_call |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                            obj.handle, __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
+                            "Cannot submit cmd buffer using deleted descriptor set 0x%" PRIx64 ".", obj.handle);
+            } else {
+                set_node->in_use.fetch_add(1);
+            }
+            break;
+        }
+        default:
+            // TODO : Merge handling of other objects types into this code
+            break;
+        }
+    }
+    return skip_call;
+}
+
 // Track which resources are in-flight by atomically incrementing their "in_use" count
 static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *pCB) {
     bool skip_call = false;
@@ -4468,6 +4487,11 @@ static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *p
     pCB->in_use.fetch_add(1);
     my_data->globalInFlightCmdBuffers.insert(pCB->commandBuffer);
 
+    // First Increment for all "generic" objects bound to cmd buffer, followed by special-case objects below
+    skip_call |= ValidateAndIncrementBoundObjects(my_data, pCB);
+    // TODO : We should be able to remove the NULL look-up checks from the code below as long as
+    //  all the corresponding cases are verified to cause CB_INVALID state and the CB_INVALID state
+    //  should then be flagged prior to calling this function
     for (auto drawDataElement : pCB->drawData) {
         for (auto buffer : drawDataElement.buffers) {
             auto buffer_node = getBufferNode(my_data, buffer);
@@ -4477,18 +4501,6 @@ static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *p
                                      "Cannot submit cmd buffer using deleted buffer 0x%" PRIx64 ".", (uint64_t)(buffer));
             } else {
                 buffer_node->in_use.fetch_add(1);
-            }
-        }
-    }
-    for (uint32_t i = 0; i < VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
-        for (auto set : pCB->lastBound[i].uniqueBoundSets) {
-            if (!my_data->setMap.count(set->GetSet())) {
-                skip_call |=
-                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                            (uint64_t)(set), __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
-                            "Cannot submit cmd buffer using deleted descriptor set 0x%" PRIx64 ".", (uint64_t)(set));
-            } else {
-                set->in_use.fetch_add(1);
             }
         }
     }
@@ -4544,6 +4556,21 @@ static inline void removeInFlightCmdBuffer(layer_data *dev_data, VkCommandBuffer
     }
 }
 
+// Decrement in-use count for objects bound to command buffer
+static void DecrementBoundResources(layer_data const *dev_data, GLOBAL_CB_NODE const *cb_node) {
+    for (auto obj : cb_node->object_bindings) {
+        switch (obj.type) {
+        case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT: {
+            auto set_node = getSetNode(dev_data, reinterpret_cast<VkDescriptorSet &>(obj.handle));
+            set_node->in_use.fetch_sub(1);
+            break;
+        }
+        default:
+            // TODO : Merge handling of other objects types into this code
+            break;
+        }
+    }
+}
 
 static bool RetireWorkOnQueue(layer_data *dev_data, QUEUE_NODE *pQueue, uint64_t seq)
 {
@@ -4568,17 +4595,14 @@ static bool RetireWorkOnQueue(layer_data *dev_data, QUEUE_NODE *pQueue, uint64_t
 
         for (auto cb : submission.cbs) {
             auto pCB = getCBNode(dev_data, cb);
+            // First perform decrement on general case bound objects
+            DecrementBoundResources(dev_data, pCB);
             for (auto drawDataElement : pCB->drawData) {
                 for (auto buffer : drawDataElement.buffers) {
                     auto buffer_node = getBufferNode(dev_data, buffer);
                     if (buffer_node) {
                         buffer_node->in_use.fetch_sub(1);
                     }
-                }
-            }
-            for (uint32_t i = 0; i < VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
-                for (auto set : pCB->lastBound[i].uniqueBoundSets) {
-                    set->in_use.fetch_sub(1);
                 }
             }
             for (auto event : pCB->events) {
@@ -6974,7 +6998,6 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
             for (uint32_t i = 0; i < setCount; i++) {
                 cvdescriptorset::DescriptorSet *pSet = getSetNode(dev_data, pDescriptorSets[i]);
                 if (pSet) {
-                    pCB->lastBound[pipelineBindPoint].uniqueBoundSets.insert(pSet);
                     pSet->BindCommandBuffer(pCB);
                     pCB->lastBound[pipelineBindPoint].pipeline_layout = *pipeline_layout;
                     pCB->lastBound[pipelineBindPoint].boundDescriptorSets[i + firstSet] = pSet;
