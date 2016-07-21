@@ -69,13 +69,6 @@ bool vk_format_is_depth_only(VkFormat format) {
     return is_depth;
 }
 
-// Return true if format is a depth or stencil format
-bool vk_format_is_depth_or_stencil(VkFormat format) {
-    return (vk_format_is_depth_and_stencil(format) ||
-            vk_format_is_depth_only(format) ||
-            vk_format_is_stencil_only(format));
-}
-
 VkRenderFramework::VkRenderFramework()
     : inst(VK_NULL_HANDLE), m_device(NULL), m_commandPool(VK_NULL_HANDLE),
       m_commandBuffer(NULL), m_renderPass(VK_NULL_HANDLE),
@@ -800,15 +793,12 @@ void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage,
         newLayout = m_descriptorImageInfo.imageLayout;
 
     VkImageAspectFlags image_aspect = 0;
-    if (vk_format_is_depth_or_stencil(fmt)) {
-        if (vk_format_is_depth_and_stencil(fmt)) {
-            image_aspect =
-                VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
-        } else if (vk_format_is_depth_only(fmt)) {
-            image_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-        } else { // stencil-only case
-            image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
-        }
+    if (vk_format_is_depth_and_stencil(fmt)) {
+        image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
+    } else if (vk_format_is_depth_only(fmt)) {
+        image_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+    } else if (vk_format_is_stencil_only(fmt)) {
+        image_aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
     } else { // color
         image_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
     }
