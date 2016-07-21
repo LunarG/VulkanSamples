@@ -9812,10 +9812,11 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     VkDepthStencilObj ds_image(m_device);
     ds_image.Init(m_device, 128, 128, VK_FORMAT_D24_UNORM_S8_UINT);
     ASSERT_TRUE(ds_image.initialized());
-    img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    img_barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    img_barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    img_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
     img_barrier.image = ds_image.handle();
-    // Leave aspectMask at COLOR on purpose
+    // Use of COLOR aspect on DS image is error
+    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
                          VK_PIPELINE_STAGE_HOST_BIT,
                          VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0,
@@ -9835,11 +9836,12 @@ TEST_F(VkLayerTest, InvalidBarriers) {
         VkDepthStencilObj d_image(m_device);
         d_image.Init(m_device, 128, 128, VK_FORMAT_D16_UNORM);
         ASSERT_TRUE(d_image.initialized());
-        img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        img_barrier.newLayout =
+        img_barrier.oldLayout =
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        img_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
         img_barrier.image = d_image.handle();
-        // Leave aspectMask at COLOR on purpose
+        // Use of COLOR aspect on depth image is error
+        img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
                              VK_PIPELINE_STAGE_HOST_BIT,
                              VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
@@ -9858,11 +9860,12 @@ TEST_F(VkLayerTest, InvalidBarriers) {
         VkDepthStencilObj s_image(m_device);
         s_image.Init(m_device, 128, 128, VK_FORMAT_S8_UINT);
         ASSERT_TRUE(s_image.initialized());
-        img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        img_barrier.newLayout =
+        img_barrier.oldLayout =
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        img_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
         img_barrier.image = s_image.handle();
-        // Leave aspectMask at COLOR on purpose
+        // Use of COLOR aspect on depth image is error
+        img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
                              VK_PIPELINE_STAGE_HOST_BIT,
                              VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
