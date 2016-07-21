@@ -220,7 +220,7 @@ int sample_main(int argc, char **argv)
     textureBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     textureBarrier.pNext = NULL;
     textureBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    textureBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    textureBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     textureBarrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     textureBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
     textureBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -248,7 +248,7 @@ int sample_main(int argc, char **argv)
     // because we're going to use it as a texture again
     textureBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     textureBarrier.pNext = NULL;
-    textureBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    textureBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     textureBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     textureBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
     textureBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
