@@ -4481,22 +4481,22 @@ static bool ValidateAndIncrementBoundObjects(layer_data const *dev_data, GLOBAL_
 }
 
 // Track which resources are in-flight by atomically incrementing their "in_use" count
-static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *pCB) {
+static bool validateAndIncrementResources(layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
     bool skip_call = false;
 
-    pCB->in_use.fetch_add(1);
-    my_data->globalInFlightCmdBuffers.insert(pCB->commandBuffer);
+    cb_node->in_use.fetch_add(1);
+    dev_data->globalInFlightCmdBuffers.insert(cb_node->commandBuffer);
 
     // First Increment for all "generic" objects bound to cmd buffer, followed by special-case objects below
-    skip_call |= ValidateAndIncrementBoundObjects(my_data, pCB);
+    skip_call |= ValidateAndIncrementBoundObjects(dev_data, cb_node);
     // TODO : We should be able to remove the NULL look-up checks from the code below as long as
     //  all the corresponding cases are verified to cause CB_INVALID state and the CB_INVALID state
     //  should then be flagged prior to calling this function
-    for (auto drawDataElement : pCB->drawData) {
+    for (auto drawDataElement : cb_node->drawData) {
         for (auto buffer : drawDataElement.buffers) {
-            auto buffer_node = getBufferNode(my_data, buffer);
+            auto buffer_node = getBufferNode(dev_data, buffer);
             if (!buffer_node) {
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                      (uint64_t)(buffer), __LINE__, DRAWSTATE_INVALID_BUFFER, "DS",
                                      "Cannot submit cmd buffer using deleted buffer 0x%" PRIx64 ".", (uint64_t)(buffer));
             } else {
@@ -4504,19 +4504,19 @@ static bool validateAndIncrementResources(layer_data *my_data, GLOBAL_CB_NODE *p
             }
         }
     }
-    for (auto event : pCB->events) {
-        auto event_node = getEventNode(my_data, event);
+    for (auto event : cb_node->events) {
+        auto event_node = getEventNode(dev_data, event);
         if (!event_node) {
             skip_call |=
-                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                         reinterpret_cast<uint64_t &>(event), __LINE__, DRAWSTATE_INVALID_EVENT, "DS",
                         "Cannot submit cmd buffer using deleted event 0x%" PRIx64 ".", reinterpret_cast<uint64_t &>(event));
         } else {
             event_node->in_use.fetch_add(1);
         }
     }
-    for (auto event : pCB->writeEventsBeforeWait) {
-        auto event_node = getEventNode(my_data, event);
+    for (auto event : cb_node->writeEventsBeforeWait) {
+        auto event_node = getEventNode(dev_data, event);
         if (event_node)
             event_node->write_in_use++;
     }
@@ -4594,10 +4594,10 @@ static bool RetireWorkOnQueue(layer_data *dev_data, QUEUE_NODE *pQueue, uint64_t
         }
 
         for (auto cb : submission.cbs) {
-            auto pCB = getCBNode(dev_data, cb);
+            auto cb_node = getCBNode(dev_data, cb);
             // First perform decrement on general case bound objects
-            DecrementBoundResources(dev_data, pCB);
-            for (auto drawDataElement : pCB->drawData) {
+            DecrementBoundResources(dev_data, cb_node);
+            for (auto drawDataElement : cb_node->drawData) {
                 for (auto buffer : drawDataElement.buffers) {
                     auto buffer_node = getBufferNode(dev_data, buffer);
                     if (buffer_node) {
@@ -4605,22 +4605,22 @@ static bool RetireWorkOnQueue(layer_data *dev_data, QUEUE_NODE *pQueue, uint64_t
                     }
                 }
             }
-            for (auto event : pCB->events) {
+            for (auto event : cb_node->events) {
                 auto eventNode = dev_data->eventMap.find(event);
                 if (eventNode != dev_data->eventMap.end()) {
                     eventNode->second.in_use.fetch_sub(1);
                 }
             }
-            for (auto event : pCB->writeEventsBeforeWait) {
+            for (auto event : cb_node->writeEventsBeforeWait) {
                 auto eventNode = dev_data->eventMap.find(event);
                 if (eventNode != dev_data->eventMap.end()) {
                     eventNode->second.write_in_use--;
                 }
             }
-            for (auto queryStatePair : pCB->queryToStateMap) {
+            for (auto queryStatePair : cb_node->queryToStateMap) {
                 dev_data->queryToStateMap[queryStatePair.first] = queryStatePair.second;
             }
-            for (auto eventStagePair : pCB->eventToStageMap) {
+            for (auto eventStagePair : cb_node->eventToStageMap) {
                 dev_data->eventMap[eventStagePair.first].stageMask = eventStagePair.second;
             }
 
