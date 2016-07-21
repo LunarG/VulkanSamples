@@ -9802,12 +9802,12 @@ TEST_F(VkLayerTest, InvalidBarriers) {
                          VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 1,
                          &buf_barrier, 0, nullptr);
     m_errorMonitor->VerifyFound();
-    buf_barrier.size = VK_WHOLE_SIZE;
 
+    // Now exercise barrier aspect bit errors, first DS
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Image is a depth and stencil format and thus must "
-        "have both VK_IMAGE_ASPECT_DEPTH_BIT and "
+        "have either one or both of VK_IMAGE_ASPECT_DEPTH_BIT and "
         "VK_IMAGE_ASPECT_STENCIL_BIT set.");
     VkDepthStencilObj ds_image(m_device);
     ds_image.Init(m_device, 128, 128, VK_FORMAT_D24_UNORM_S8_UINT);
@@ -9816,6 +9816,73 @@ TEST_F(VkLayerTest, InvalidBarriers) {
     img_barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     img_barrier.image = ds_image.handle();
     // Leave aspectMask at COLOR on purpose
+    vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
+                         VK_PIPELINE_STAGE_HOST_BIT,
+                         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0,
+                         nullptr, 1, &img_barrier);
+    m_errorMonitor->VerifyFound();
+    // Now test depth-only
+    VkFormatProperties format_props;
+
+    vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(),
+                                        VK_FORMAT_D16_UNORM, &format_props);
+    if (format_props.optimalTilingFeatures &
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        m_errorMonitor->SetDesiredFailureMsg(
+            VK_DEBUG_REPORT_ERROR_BIT_EXT,
+            "Image is a depth-only format and thus must "
+            "have VK_IMAGE_ASPECT_DEPTH_BIT set.");
+        VkDepthStencilObj d_image(m_device);
+        d_image.Init(m_device, 128, 128, VK_FORMAT_D16_UNORM);
+        ASSERT_TRUE(d_image.initialized());
+        img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        img_barrier.newLayout =
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        img_barrier.image = d_image.handle();
+        // Leave aspectMask at COLOR on purpose
+        vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
+                             VK_PIPELINE_STAGE_HOST_BIT,
+                             VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                             0, nullptr, 1, &img_barrier);
+        m_errorMonitor->VerifyFound();
+    }
+    vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(),
+                                        VK_FORMAT_S8_UINT, &format_props);
+    if (format_props.optimalTilingFeatures &
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        // Now test stencil-only
+        m_errorMonitor->SetDesiredFailureMsg(
+            VK_DEBUG_REPORT_ERROR_BIT_EXT,
+            "Image is a stencil-only format and thus must "
+            "have VK_IMAGE_ASPECT_STENCIL_BIT set.");
+        VkDepthStencilObj s_image(m_device);
+        s_image.Init(m_device, 128, 128, VK_FORMAT_S8_UINT);
+        ASSERT_TRUE(s_image.initialized());
+        img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        img_barrier.newLayout =
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        img_barrier.image = s_image.handle();
+        // Leave aspectMask at COLOR on purpose
+        vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
+                             VK_PIPELINE_STAGE_HOST_BIT,
+                             VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr,
+                             0, nullptr, 1, &img_barrier);
+        m_errorMonitor->VerifyFound();
+    }
+    // Finally test color
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT, "Image is a color format and thus must "
+                                       "have VK_IMAGE_ASPECT_COLOR_BIT set.");
+    VkImageObj c_image(m_device);
+    c_image.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM,
+                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL,
+                 0);
+    ASSERT_TRUE(c_image.initialized());
+    img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    img_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    img_barrier.image = c_image.handle();
+    // Set aspect to depth (non-color)
+    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
     vkCmdPipelineBarrier(m_commandBuffer->GetBufferHandle(),
                          VK_PIPELINE_STAGE_HOST_BIT,
                          VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0,
