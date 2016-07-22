@@ -158,24 +158,32 @@ also be linked to by applications (e.g. libvulkan.so.1).
 ####Layer Usage
 
 Applications desiring Vulkan functionality beyond what the core API offers may
-use various layers or extensions. A layer cannot add new or modify existing
-Vulkan commands, but may offer extensions that do. A common use of layers is
-for API validation. A developer can use validation layers during application
-development, but during production the layers can be disabled by the
-application. Thus, eliminating the overhead of validating the application's
-usage of the API. Layers discovered by the loader are reported to the
-application via vkEnumerateInstanceLayerProperties.
-Layers are enabled at vkCreateInstance and are active for all Vulkan commands
-using the given VkIstance and any of it's child objects.  For example, the
-ppEnabledLayerNames array in the VkInstanceCreateInfo structure is used by
-the application to list the layer names to be enabled at vkCreateInstance. At
-vkCreateInstance and vkCreateDevice, the loader will construct call chains that
-include the application specified (enabled) layers.  vkCreateDevice will use the
-layers specified at vkCreateInstance. vkEnumerateDeviceLayerProperties and
-device layers are deprecated.  Order is important in the
+use various layers or extensions. A layer cannot introduce new Vulkan API
+entry-points not exposed in Vulkan.h, but may offer extensions that do. A
+common use of layers is for API validation which can be enabled by loading the
+layer during application development, but not loading the layer for application
+release. This eliminates the overhead of validating the application's
+usage of the API, something that wasn't available on some previous graphics
+APIs.
+
+Layers discovered by the loader are reported to the application via
+vkEnumerateInstanceLayerProperties.  Layers are enabled at vkCreateInstance
+and are active for all Vulkan commands using the given VkInstance and any
+of it's child objects.  For example, the ppEnabledLayerNames array in the
+VkInstanceCreateInfo structure is used by the application to list the layer
+names to be enabled at vkCreateInstance. At vkCreateInstance and
+vkCreateDevice, the loader will construct call chains that include the application
+specified (enabled) layers.  Order is important in the
 ppEnabledLayerNames array; array element 0 is the topmost (closest to the
 application) layer inserted in the chain and the last array element is closest
 to the driver.
+
+**NOTE**: vkCreateDevice originally was able to select layers in a
+similar manner to vkCreateInstance.  This lead to the concept of "instance
+layers" and "device layers".  It was decided by Khronos to deprecate the
+"device layer" functionality and only consider "instance layers".
+Therefore, vkCreateDevice will use the layers specified at vkCreateInstance.
+Additionally, vkEnumerateDeviceLayerProperties has been deprecated.  
 
 Developers may want to enable layers that are not enabled by the given
 application they are using. On Linux and Windows, the environment variable
@@ -212,6 +220,14 @@ enabled (subject to environment variable overrides described later). Discovery
 of properly installed implicit and explicit layers is described later.
 Explicitly enabling a layer that is implicitly enabled has no additional
 effect: the layer will still be enabled implicitly by the loader.
+
+Implicit layers have an additional requirement over explicit layers in that they
+require being able to be disabled by an environmental variable.  This is due
+to the fact that they are not visible to the application and could cause issues.
+A good principle to keep in mind would be to define both an enable and disable
+environment variable so the users can deterministicly enable the functionality.
+On Desktop platforms (Windows and Linux), these enable/disable settings are
+defined in the layer's JSON file.
 
 Extensions are optional functionality provided by a layer, the loader or an
 ICD. Extensions can modify the behavior of the Vulkan API and need to be
@@ -342,6 +358,11 @@ values in the following Windows registry key:
 
 HKEY\_LOCAL\_MACHINE\\SOFTWARE\\Khronos\\Vulkan\\Drivers
 
+On 64-bit Windows, when a 32-bit application is triggered, the loader
+will scan for 32-bit drivers in a separate area of the registry:
+
+HKEY\_LOCAL\_MACHINE\\SOFTWARE\\WOW6432Node\\Khronos\\Vulkan\\Drivers
+
 For each value in this key which has DWORD data set to 0, the loader opens the
 JSON format text information file (a.k.a. "manifest file") specified by the
 name of the value. Each name must be a full pathname to the text manifest file.
@@ -371,7 +392,7 @@ character), but do contain at least one directory separator.
 The "file\_format\_version" specifies a major.minor.patch version number in
 case the format of the text information file changes in the future. If the same
 ICD shared library supports multiple, incompatible versions of text manifest
-file format versions, it must have multiple text info files (all of which may
+file format versions, it must have separate JSON files for each (all of which may
 point to the same shared library).
 
 The "api\_version" specifies the major.minor.patch version number of the Vulkan
@@ -591,7 +612,7 @@ with a legacy ICD supporting either interface version 0 or 1.
 Similarly, if an ICD sees a call to vk\_icdGetInstanceProcAddr before a call to
 vk_icdGetLoaderICDInterfaceVersion then it knows that it's dealing with a legacy loader
 supporting version 0 or 1.
-Note if the loader calls vk\_icdGetInstanceProcAddr first it supports version 1,
+**Note** if the loader calls vk\_icdGetInstanceProcAddr first it supports at least version 1,
 otherwise the loader only supports version 0.
 
 The pSupportedVersion parameter is both an input and output parameter.
