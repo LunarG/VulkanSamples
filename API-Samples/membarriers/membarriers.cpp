@@ -223,7 +223,7 @@ int sample_main(int argc, char **argv)
     textureBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
     textureBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     textureBarrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    textureBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    textureBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     textureBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     textureBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     textureBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -232,7 +232,7 @@ int sample_main(int argc, char **argv)
     textureBarrier.subresourceRange.baseArrayLayer = 0;
     textureBarrier.subresourceRange.layerCount = 1;
     textureBarrier.image = info.textures[0].image;
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                          VK_PIPELINE_STAGE_TRANSFER_BIT,
                          0, 0, NULL, 0, NULL, 1, &textureBarrier);
 
@@ -242,7 +242,7 @@ int sample_main(int argc, char **argv)
     clear_color[0].float32[3] = 1.0f;
     /* Clear texture to green */
     vkCmdClearColorImage(info.cmd,
-           info.textures[0].image, VK_IMAGE_LAYOUT_GENERAL,
+           info.textures[0].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
            clear_color, 1, &srRange );
 
     // Send a barrier to change the texture image's layout back to SHADER_READ_ONLY
@@ -251,7 +251,7 @@ int sample_main(int argc, char **argv)
     textureBarrier.pNext = NULL;
     textureBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     textureBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    textureBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+    textureBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     textureBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     textureBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     textureBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -261,8 +261,8 @@ int sample_main(int argc, char **argv)
     textureBarrier.subresourceRange.baseArrayLayer = 0;
     textureBarrier.subresourceRange.layerCount = 1;
     textureBarrier.image = info.textures[0].image;
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT,
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                          0, 0, NULL, 0, NULL, 1, &textureBarrier);
 
     // Draw the second quad to the right using the (now) green texture
