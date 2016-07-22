@@ -5643,8 +5643,15 @@ DestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocatio
     for (auto cb : pPool->commandBuffers) {
         clear_cmd_buf_and_mem_references(dev_data, cb);
         auto cb_node = getCBNode(dev_data, cb);
+        // Remove references to this cb_node prior to delete
+        // TODO : Need better solution here, resetCB?
         for (auto obj : cb_node->object_bindings) {
             removeCommandBufferBinding(dev_data, &obj, cb_node);
+        }
+        for (auto framebuffer : cb_node->framebuffers) {
+            auto fb_node = getFramebuffer(dev_data, framebuffer);
+            if (fb_node)
+                fb_node->cb_bindings.erase(cb_node);
         }
         dev_data->commandBufferMap.erase(cb); // Remove this command buffer
         delete cb_node;                       // delete CB info structure
