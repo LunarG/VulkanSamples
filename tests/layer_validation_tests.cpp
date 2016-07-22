@@ -906,7 +906,7 @@ TEST_F(VkLayerTest, RequiredParameter) {
 
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "value of pSubmits[i].pWaitDstStageMask[0] must not be 0");
+        "value of pSubmits[0].pWaitDstStageMask[0] must not be 0");
     // Specify 0 for a required VkFlags array entry
     // Expected to trigger an error with
     // parameter_validation::validate_flags_array
@@ -10924,7 +10924,7 @@ TEST_F(VkLayerTest, BufferMemoryBarrierNoBuffer) {
     // Try to add a buffer memory barrier with no buffer.
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "required parameter pBufferMemoryBarriers[i].buffer specified as VK_NULL_HANDLE");
+        "required parameter pBufferMemoryBarriers[0].buffer specified as VK_NULL_HANDLE");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     BeginCommandBuffer();
