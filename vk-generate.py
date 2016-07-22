@@ -133,21 +133,20 @@ class DispatchTableOpsSubcommand(Subcommand):
 
             KHR_printed = False
             EXT_printed = False
+            Win32_printed = False
             XLIB_printed = False
             XCB_printed = False
             MIR_printed = False
             WAY_printed = False
+            Android_printed = False
             for proto in self.protos:
                 if proto.name == "CreateInstance" or proto.name == "EnumerateInstanceExtensionProperties" or \
                   proto.name == "EnumerateInstanceLayerProperties" or proto.params[0].ty == "VkInstance" or \
                   proto.params[0].ty == "VkPhysicalDevice" or proto.name == "GetDeviceProcAddr":
                     continue
-                if 'KHR' in proto.name and not KHR_printed:
-                    stmts.append("    // KHR device extension function pointers")
-                    KHR_printed = True
-                if 'EXT' in proto.name and not EXT_printed:
-                    stmts.append("    // EXT device extension function pointers")
-                    EXT_printed = True
+                if Win32_printed and 'Win32' not in proto.name:
+                    stmts.append("#endif // VK_USE_PLATFORM_WIN32_KHR")
+                    Win32_printed = False
                 if XLIB_printed and 'Xlib' not in proto.name:
                     stmts.append("#endif // VK_USE_PLATFORM_XLIB_KHR")
                     XLIB_printed = False
@@ -160,6 +159,13 @@ class DispatchTableOpsSubcommand(Subcommand):
                 if WAY_printed and 'Wayland' not in proto.name:
                     stmts.append("#endif // VK_USE_PLATFORM_WAYLAND_KHR")
                     WAY_printed = False
+                if Android_printed and 'Android' not in proto.name:
+                    stmts.append("#endif // VK_USE_PLATFORM_ANDROID_KHR")
+                    Android_printed = False
+                if 'KHR' in proto.name and 'Win32' in proto.name:
+                    if not Win32_printed:
+                        stmts.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
+                        Win32_printed = True
                 if 'KHR' in proto.name and 'Xlib' in proto.name:
                     if not XLIB_printed:
                         stmts.append("#ifdef VK_USE_PLATFORM_XLIB_KHR")
@@ -176,6 +182,16 @@ class DispatchTableOpsSubcommand(Subcommand):
                     if not WAY_printed:
                         stmts.append("#ifdef VK_USE_PLATFORM_WAYLAND_KHR")
                         WAY_printed = True
+                if 'KHR' in proto.name and 'Android' in proto.name:
+                    if not Android_printed:
+                        stmts.append("#ifdef VK_USE_PLATFORM_ANDROID_KHR")
+                        Android_printed = True
+                if 'KHR' in proto.name and not KHR_printed:
+                    stmts.append("    // KHR device extension function pointers")
+                    KHR_printed = True
+                if 'EXT' in proto.name and not EXT_printed:
+                    stmts.append("    // EXT device extension function pointers")
+                    EXT_printed = True
                 stmts.append("    table->%s = (PFN_vk%s) gpa(device, \"vk%s\");" %
                         (proto.name, proto.name, proto.name))
             func.append("static inline void %s_init_device_dispatch_table(VkDevice device,"
@@ -191,20 +207,19 @@ class DispatchTableOpsSubcommand(Subcommand):
 
             KHR_printed = False
             EXT_printed = False
+            Win32_printed = False
             XLIB_printed = False
             XCB_printed = False
             MIR_printed = False
             WAY_printed = False
+            Android_printed = False
             for proto in self.protos:
                 if proto.params[0].ty != "VkInstance" and proto.params[0].ty != "VkPhysicalDevice" or \
                   proto.name == "CreateDevice" or proto.name == "GetInstanceProcAddr":
                     continue
-                if 'KHR' in proto.name and not KHR_printed:
-                    stmts.append("    // KHR instance extension function pointers")
-                    KHR_printed = True
-                if 'EXT' in proto.name and not EXT_printed:
-                    stmts.append("    // EXT instance extension function pointers")
-                    EXT_printed = True
+                if Win32_printed and 'Win32' not in proto.name:
+                    stmts.append("#endif // VK_USE_PLATFORM_WIN32_KHR")
+                    Win32_printed = False
                 if XLIB_printed and 'Xlib' not in proto.name:
                     stmts.append("#endif // VK_USE_PLATFORM_XLIB_KHR")
                     XLIB_printed = False
@@ -217,6 +232,13 @@ class DispatchTableOpsSubcommand(Subcommand):
                 if WAY_printed and 'Wayland' not in proto.name:
                     stmts.append("#endif // VK_USE_PLATFORM_WAYLAND_KHR")
                     WAY_printed = False
+                if Android_printed and 'Android' not in proto.name:
+                    stmts.append("#endif // VK_USE_PLATFORM_ANDROID_KHR")
+                    Android_printed = False
+                if 'KHR' in proto.name and 'Win32' in proto.name:
+                    if not Win32_printed:
+                        stmts.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
+                        Win32_printed = True
                 if 'KHR' in proto.name and 'Xlib' in proto.name:
                     if not XLIB_printed:
                         stmts.append("#ifdef VK_USE_PLATFORM_XLIB_KHR")
@@ -233,6 +255,16 @@ class DispatchTableOpsSubcommand(Subcommand):
                     if not WAY_printed:
                         stmts.append("#ifdef VK_USE_PLATFORM_WAYLAND_KHR")
                         WAY_printed = True
+                if 'KHR' in proto.name and 'Android' in proto.name:
+                    if not Android_printed:
+                        stmts.append("#ifdef VK_USE_PLATFORM_ANDROID_KHR")
+                        Android_printed = True
+                if 'KHR' in proto.name and not KHR_printed:
+                    stmts.append("    // KHR instance extension function pointers")
+                    KHR_printed = True
+                if 'EXT' in proto.name and not EXT_printed:
+                    stmts.append("    // EXT instance extension function pointers")
+                    EXT_printed = True
                 stmts.append("    table->%s = (PFN_vk%s) gpa(instance, \"vk%s\");" %
                       (proto.name, proto.name, proto.name))
             func.append("static inline void %s_init_instance_dispatch_table(" % self.prefix)
@@ -334,7 +366,8 @@ def main():
             "Xlib",
             "Wayland",
             "Mir",
-            "Display"
+            "Display",
+            "AllPlatforms"
     }
     subcommands = {
             "dispatch-table-ops": DispatchTableOpsSubcommand,
