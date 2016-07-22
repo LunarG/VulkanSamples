@@ -3032,31 +3032,31 @@ static inline PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, Vk
         return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWin32PresentationSupportKHR);
 #endif // VK_USE_PLATFORM_WIN32_KHR
 #ifdef VK_USE_PLATFORM_XCB_KHR
-    if ((instanceExtMap[pTable].xcb_enabled == true) && !strcmp("CreateXcbSurfaceKHR", name))
+    if ((instanceExtMap[pTable].xcb_enabled == true) && !strcmp("vkCreateXcbSurfaceKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(CreateXcbSurfaceKHR);
-    if ((instanceExtMap[pTable].xcb_enabled == true) && !strcmp("GetPhysicalDeviceXcbPresentationSupportKHR", name))
+    if ((instanceExtMap[pTable].xcb_enabled == true) && !strcmp("vkGetPhysicalDeviceXcbPresentationSupportKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXcbPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_XCB_KHR
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-    if ((instanceExtMap[pTable].xlib_enabled == true) && !strcmp("CreateXlibSurfaceKHR", name))
+    if ((instanceExtMap[pTable].xlib_enabled == true) && !strcmp("vkCreateXlibSurfaceKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR);
-    if ((instanceExtMap[pTable].xlib_enabled == true) && !strcmp("GetPhysicalDeviceXlibPresentationSupportKHR", name))
+    if ((instanceExtMap[pTable].xlib_enabled == true) && !strcmp("vkGetPhysicalDeviceXlibPresentationSupportKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXlibPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_XLIB_KHR
 #ifdef VK_USE_PLATFORM_MIR_KHR
-    if ((instanceExtMap[pTable].mir_enabled == true) && !strcmp("CreateMirSurfaceKHR", name))
+    if ((instanceExtMap[pTable].mir_enabled == true) && !strcmp("vkCreateMirSurfaceKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(CreateMirSurfaceKHR);
-    if ((instanceExtMap[pTable].mir_enabled == true) && !strcmp("GetPhysicalDeviceMirPresentationSupportKHR", name))
+    if ((instanceExtMap[pTable].mir_enabled == true) && !strcmp("vkGetPhysicalDeviceMirPresentationSupportKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceMirPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_MIR_KHR
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    if ((instanceExtMap[pTable].wayland_enabled == true) && !strcmp("CreateWaylandSurfaceKHR", name))
+    if ((instanceExtMap[pTable].wayland_enabled == true) && !strcmp("vkCreateWaylandSurfaceKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR);
-    if ((instanceExtMap[pTable].wayland_enabled == true) && !strcmp("GetPhysicalDeviceWaylandPresentationSupportKHR", name))
+    if ((instanceExtMap[pTable].wayland_enabled == true) && !strcmp("vkGetPhysicalDeviceWaylandPresentationSupportKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWaylandPresentationSupportKHR);
 #endif // VK_USE_PLATFORM_WAYLAND_KHR
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
-    if ((instanceExtMap[pTable].android_enabled == true) && !strcmp("CreateAndroidSurfaceKHR", name))
+    if ((instanceExtMap[pTable].android_enabled == true) && !strcmp("vkCreateAndroidSurfaceKHR", name))
         return reinterpret_cast<PFN_vkVoidFunction>(CreateAndroidSurfaceKHR);
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
