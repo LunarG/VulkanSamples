@@ -77,6 +77,8 @@ echo "Texel Buffer"
 Exec {texelbuffer}
 echo "Immutable Sampler"
 Exec {immutable_sampler}
+echo "Memory Barriers"
+Exec {membarriers}
 echo "Multiple Descriptor Sets"
 Exec {multiple_sets}
 echo "Multithreaded Command Buffers"

@@ -10,7 +10,6 @@ This is a meta-layer managed by the loader. Specifying this layer name will caus
 
  - VK_LAYER_GOOGLE_threading
  - VK_LAYER_LUNARG_parameter_validation
- - VK_LAYER_LUNARG_device_limits
  - VK_LAYER_LUNARG_object_tracker
  - VK_LAYER_LUNARG_image
  - VK_LAYER_LUNARG_core_validation
@@ -55,7 +54,8 @@ The Draw State portion of the core validation layer tracks state leading into Dr
 | DS Update Size | DS update out of bounds for given layout section. | DESCRIPTOR_UPDATE_OUT_OF_BOUNDS | vkUpdateDescriptorSets | DSUpdateOutOfBounds CopyDescriptorUpdateErrors | NA |
 | Descriptor Pool empty | Attempt to allocate descriptor type from descriptor pool when no more of that type are available to be allocated. | DESCRIPTOR_POOL_EMPTY | vkAllocateDescriptorSets | AllocDescriptorFromEmptyPool | NA |
 | Free from NON_FREE Pool | It's invalid to call vkFreeDescriptorSets() on Sets that were allocated from a Pool created with NON_FREE usage. | CANT_FREE_FROM_NON_FREE_POOL | vkFreeDescriptorSets | TODO | NA |
-| DS Update Index | DS update binding too large for layout binding count. | INVALID_UPDATE_INDEX | vkUpdateDescriptorSets | InvalidDSUpdateIndex CopyDescriptorUpdateErrors DSUsageBitsErrors DSAspectBitsErrors | NA |
+| DS Write Update | DS write update with invalid state which includes things like bad update objects, bad update sizes, and bad descriptor binding values. | INVALID_WRITE_UPDATE | vkUpdateDescriptorSets | InvalidDSUpdateIndex CopyDescriptorUpdateErrors DSUsageBitsErrors DSAspectBitsErrors DSBufferInfoErrors | NA |
+| DS Copy Update | DS copy update with invalid state such as bad object state, mis-matched descriptor types or a bad binding index. | INVALID_COPY_UPDATE | vkUpdateDescriptorSets | InvalidDSUpdateIndex CopyDescriptorUpdateErrors DSUsageBitsErrors DSAspectBitsErrors | NA |
 | DS Update Type | Verifies that structs in DS Update tree are properly created, currently valid, and of the right type | INVALID_UPDATE_STRUCT | vkUpdateDescriptorSets | InvalidDSUpdateStruct | NA |
 | MSAA Sample Count | Verifies that Pipeline, RenderPass, and Subpass sample counts are consistent | NUM_SAMPLES_MISMATCH | vkCmdBindPipeline vkCmdBeginRenderPass vkCmdNextSubpass | NumSamplesMismatch | NA |
 | Dynamic Viewport State Binding | Verify that viewport dynamic state bound to Cmd Buffer at Draw time | VIEWPORT_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DynamicViewportNotBound | NA |
@@ -68,8 +68,9 @@ The Draw State portion of the core validation layer tracks state leading into Dr
 | RenderPass misuse | Tests for the following: that vkCmdDispatch, vkCmdDispatchIndirect, vkCmdCopyBuffer, vkCmdCopyImage, vkCmdBlitImage, vkCmdCopyBufferToImage, vkCmdCopyImageToBuffer, vkCmdUpdateBuffer, vkCmdFillBuffer, vkCmdClearColorImage, vkCmdClearDepthStencilImage, vkCmdResolveImage, vkCmdSetEvent, vkCmdResetEvent, vkCmdResetQueryPool, vkCmdCopyQueryPoolResults, vkCmdBeginRenderPass, vkEndCommandBuffer are not called during an active Renderpass, and that binding compute descriptor sets or pipelines does not take place during an active Renderpass  | INVALID_RENDERPASS_CMD | vkCmdBindPipeline vkCmdBindDescriptorSets vkCmdDispatch vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdResolveImage vkCmdSetEvent vkCmdResetEvent vkCmdResetQueryPool vkCmdCopyQueryPoolResults vkCmdBeginRenderPass vkEndCommandBuffer | RenderPassWithinRenderPass UpdateBufferWithinRenderPass ClearColorImageWithinRenderPass ClearDepthStencilImageWithinRenderPass FillBufferWithinRenderPass EndCommandBufferWithinRenderPass | NA |
 | Correct use of RenderPass | Validates that the following rendering commands are issued inside an active RenderPass: vkCmdDraw, vkCmdDrawIndexed, vkCmdDrawIndirect, vkCmdDrawIndexedIndirect, vkCmdClearAttachments, vkCmdNextSubpass, vkCmdEndRenderPass | NO_ACTIVE_RENDERPASS | vkCmdBindPipeline vkCmdBindDescriptorSets  vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdClearAttachments vkCmdNextSubpass vkCmdEndRenderPass | ClearColorAttachmentsOutsideRenderPass | NA |
 | Valid RenderPass | Flag error if attempt made to Begin/End/Continue a NULL or otherwise invalid RenderPass object | INVALID_RENDERPASS | vkCmdBeginRenderPass vkCmdEndRenderPass vkBeginCommandBuffer | NullRenderPass | NA |
-| RenderPass Compatibility | Verify that active renderpass is compatible with renderpass specified in secondary command buffer, and that renderpass specified for a framebuffer is compatible with renderpass specified in secondary command buffer. Also that parameters for BeginRenderpass are compatible with actual renderpass. | RENDERPASS_INCOMPATIBLE | vkCmdExecuteCommands vkBeginCommandBuffer vkCmdBeginRenderPass vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | RenderPassClearOpMismatch RenderPassIncompatible | Need to write some more tests to cover all of these cases. |
+| RenderPass Compatibility | Verify that active renderpass is compatible with renderpass specified in secondary command buffer, and that renderpass specified for a framebuffer is compatible with renderpass specified in secondary command buffer. Also that parameters for BeginRenderpass are compatible with actual renderpass. | RENDERPASS_INCOMPATIBLE | vkCmdExecuteCommands vkBeginCommandBuffer vkCmdBeginRenderPass vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | RenderPassClearOpMismatch RenderPassIncompatible FramebufferCreateErrors | Need to write some more tests to cover all of these cases. |
 | Framebuffer Compatibility | If a framebuffer is passed to secondary command buffer in vkBeginCommandBuffer, then it must match active renderpass (if any) at time of vkCmdExecuteCommands | FRAMEBUFFER_INCOMPATIBLE | vkCmdExecuteCommands | TODO | None |
+| Framebuffer Creation | If a CreateFramebuffer is called with invalide CreateInfo such as attachments with bad mip levelCount or dimensions | INVALID_FRAMEBUFFER_CREATE_INFO | vkCreateFramebuffer | FramebufferCreateErrors | None |
 | DescriptorSet Updated | Warn user if DescriptorSet bound that was never updated and is not empty. Trigger error at draw time if a set being used was never updated. | DESCRIPTOR_SET_NOT_UPDATED | vkCmdBindDescriptorSets vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | DescriptorSetCompatibility | NA |
 | DescriptorSet Bound | Error if DescriptorSet not bound that is used by currently bound VkPipeline at draw time | DESCRIPTOR_SET_NOT_BOUND | vkCmdBindDescriptorSets | DescriptorSetNotUpdated | NA |
 | Dynamic Offset Count | Error if dynamicOffsetCount at CmdBindDescriptorSets time is not equal to the actual number of dynamic descriptors in all sets being bound. | INVALID_DYNAMIC_OFFSET_COUNT | vkCmdBindDescriptorSets | InvalidDynamicOffsetCases | None |
@@ -86,24 +87,24 @@ The Draw State portion of the core validation layer tracks state leading into Dr
 | Attachment References in Subpass | Attachment reference must be present in active subpass | MISSING_ATTACHMENT_REFERENCE | vkCmdClearAttachments | MissingClearAttachment | Currently only making sure bufferInfo has buffer whose handle is known, can add further validation for bufferInfo parameters |
 | Verify Image Layouts | Validate correct image layouts for presents, image transitions, command buffers and renderpasses | INVALID_IMAGE_LAYOUT | vkCreateRenderPass vkMapMemory vkQueuePresentKHR vkQueueSubmit vkCmdCopyImage vkCmdCopyImageToBuffer vkCmdWaitEvents VkCmdPipelineBarrier | InvalidImageLayout MapMemWithoutHostVisibleBit | None |
 | Verify Memory Access Flags/Memory Barriers | Validate correct access flags for memory barriers | INVALID_BARRIER | vkCmdWaitEvents vkCmdPipelineBarrier | InvalidBarriers | None |
-| Verify Memory Buffer Not Deleted | Validate Command Buffer not submitted with deleted memory buffer | INVALID_BUFFER | vkQueueSubmit | TODO | None |
-| Verify Memory Buffer Destroy | Validate memory buffers are not destroyed more than once | DOUBLE_DESTROY | vkDestroyBuffer | TODO | None |
+| Verify Memory Buffer Not Deleted | Validate Command Buffer not submitted with deleted memory buffer | INVALID_BUFFER | vkQueueSubmit | VertexBufferInvalid | None |
+| Verify Memory Buffer Destroy | Validate memory buffers are not destroyed more than once | DOUBLE_DESTROY | vkDestroyBuffer | VertexBufferInvalid | None |
 | Verify Object Not In Use | Validate that object being freed or modified is not in use | OBJECT_INUSE | vkDestroyBuffer vkFreeDescriptorSets vkUpdateDescriptorSets | TODO | None |
 | Verify Get Queries| Validate that that queries are properly setup, initialized and synchronized | INVALID_QUERY | vkGetFenceStatus vkQueueWaitIdle vkWaitForFences vkDeviceWaitIdle vkCmdBeginQuery vkCmdEndQuery | TODO | None |
 | Verify Fences Not In Use | Validate that that fences are not used in multiple submit calls at the same time | INVALID_FENCE | vkQueueSubmit | TODO | None |
 | Verify Semaphores Not In Use | Validate that the semaphores are not used in multiple submit calls at the same time | INVALID_SEMAPHORE | vkQueueSubmit | TODO | None |
 | Verify Events Not In Use | Validate that that events are not used at the time they are destroyed | INVALID_EVENT | vkDestroyEvent | TODO | None |
 | Live Semaphore  | When waiting on a semaphore, need to make sure that the semaphore is live and therefore can be signalled, otherwise queue is stalled and cannot make forward progress. | QUEUE_FORWARD_PROGRESS | vkQueueSubmit vkQueueBindSparse vkQueuePresentKHR vkAcquireNextImageKHR | TODO | Create test |
-| Buffer Alignment  | Buffer memory offset in BindBufferMemory must agree with VkMemoryRequirements::alignment returned from a call to vkGetBufferMemoryRequirements with buffer | INVALID_BUFFER_MEMORY_OFFSET | vkBindBufferMemory | TODO | Create test |
-| Texel Buffer Alignment  | Storage/Uniform Texel Buffer memory offset in BindBufferMemory must agree with offset alignment device limit | INVALID_TEXEL_BUFFER_OFFSET | vkBindBufferMemory | TODO | Create test |
-| Storage Buffer Alignment  | Storage Buffer offsets in BindBufferMemory, BindDescriptorSets must agree with offset alignment device limit | INVALID_STORAGE_BUFFER_OFFSET | vkBindBufferMemory vkCmdBindDescriptorSets | TODO | Create test |
-| Uniform Buffer Alignment  | Uniform Buffer offsets in BindBufferMemory, BindDescriptorSets must agree with offset alignment device limit | INVALID_UNIFORM_BUFFER_OFFSET | vkBindBufferMemory vkCmdBindDescriptorSets | TODO | Create test |
+| Buffer Alignment  | Buffer memory offset in BindBufferMemory must agree with VkMemoryRequirements::alignment returned from a call to vkGetBufferMemoryRequirements with buffer | INVALID_BUFFER_MEMORY_OFFSET | vkBindBufferMemory | VertexBufferInvalid | None |
+| Texel Buffer Alignment  | Storage/Uniform Texel Buffer memory offset in BindBufferMemory must agree with offset alignment device limit | INVALID_TEXEL_BUFFER_OFFSET | vkBindBufferMemory | VertexBufferInvalid | None |
+| Storage Buffer Alignment  | Storage Buffer offsets in BindBufferMemory, BindDescriptorSets must agree with offset alignment device limit | INVALID_STORAGE_BUFFER_OFFSET | vkBindBufferMemory vkCmdBindDescriptorSets | VertexBufferInvalid | None |
+| Uniform Buffer Alignment  | Uniform Buffer offsets in BindBufferMemory, BindDescriptorSets must agree with offset alignment device limit | INVALID_UNIFORM_BUFFER_OFFSET | vkBindBufferMemory vkCmdBindDescriptorSets | VertexBufferInvalid | None |
 | Independent Blending  | If independent blending is not enabled, all elements of pAttachments must be identical | INDEPENDENT_BLEND | vkCreateGraphicsPipelines | TODO | Create test |
 | Enabled Logic Operations  | If logic operations is not enabled, logicOpEnable must be VK_FALSE | DISABLED_LOGIC_OP | vkCreateGraphicsPipelines | TODO | Create test |
 | Valid Logic Operations  | If logicOpEnable is VK_TRUE, logicOp must be a valid VkLogicOp value | INVALID_LOGIC_OP | vkCreateGraphicsPipelines | TODO | Create test |
 | QueueFamilyIndex is Valid | Validates that QueueFamilyIndices are less an the number of QueueFamilies | INVALID_QUEUE_INDEX | vkCmdWaitEvents vkCmdPipelineBarrier vkCreateBuffer vkCreateImage | TODO | Create test |
 | Push Constants | Validate that the size of push constant ranges and updates does not exceed maxPushConstantSize | PUSH_CONSTANTS_ERROR | vkCreatePipelineLayout vkCmdPushConstants | TODO | Create test |
-| Attachment Image Usage | Validate that Image attachment location does not conflict with the image's USAGE flags | INVALID_IMAGE_USAGE | vkCreateFramebuffer | AttachmentUsageMismatch | NA |
+| Attachment Image Usage | Validate that Image attachment location does not conflict with the image's USAGE flags | INVALID_IMAGE_USAGE | vkCreateFramebuffer | FramebufferCreateErrors | NA |
 | Attachment Image Index | Validate that Image attachment references are appropriate and not out-of-bounds | INVALID_ATTACHMENT_INDEX | vkCreateRenderPass vkCreateFramebuffer | UnusedPreserveAttachment | NA |
 | NA | Enum used for informational messages | NONE | | TODO | None |
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | TODO | None |
@@ -140,7 +141,7 @@ It flags errors when inconsistencies are found across interfaces between shader 
 | NA | Enum used for informational messages | NONE | | TODO | None |
 
 ### VK_LAYER_LUNARG_core_validation Shader Checker Pending Work
- 
+
 See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
 ### VK_LAYER_LUNARG_core_validation Memory Tracker Details Table
@@ -149,7 +150,7 @@ The Mem Tracker portion of the VK_LAYER_LUNARG_core_validation layer tracks memo
 | Check | Overview | ENUM MEMTRACK_* | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
 | Valid Command Buffer | Verifies that the command buffer was properly created and is currently valid | INVALID_CB | vkCmdBindPipeline vkCmdSetViewport vkCmdSetLineWidth vkCmdSetDepthBias vkCmdSetBlendConstants vkCmdSetDepthBounds vkCmdSetStencilCompareMask vkCmdSetStencilWriteMask vkCmdSetStencilReference vkBeginCommandBuffer vkResetCommandBuffer vkDestroyDevice vkFreeMemory | TODO | NA |
-| Valid Memory Object | Verifies that the memory object was properly created and is currently valid | INVALID_MEM_OBJ | vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdResolveImage vkFreeMemory vkBindBufferMemory vkBindImageMemory vkQueueBindSparse | TODO | NA |
+| Valid Memory Object | Verifies that the memory object was properly created and is currently valid | INVALID_MEM_OBJ | vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdResolveImage vkFreeMemory vkBindBufferMemory vkBindImageMemory vkQueueBindSparse | VertexBufferInvalid | NA |
 | Memory Aliasing | Flag error if image and/or buffer memory binding ranges overlap | INVALID_ALIASING | vkBindBufferMemory vkBindImageMemory | InvalidMemoryAliasing | Implement test |
 | Free Referenced Memory | Checks to see if memory being freed still has current references | FREED_MEM_REF | vmFreeMemory | TODO | NA |
 | Valid Object | Verifies that the specified Vulkan object was created properly and is currently valid | INVALID_OBJECT | vkCmdBindPipeline vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdResolveImage | TODO | NA |
@@ -161,12 +162,28 @@ The Mem Tracker portion of the VK_LAYER_LUNARG_core_validation layer tracks memo
 | Image/Buffer Usage bits | Verify correct USAGE bits set based on how Images and Buffers are used | INVALID_USAGE_FLAG | vkCreateImage, vkCreateBuffer, vkCreateBufferView, vkCmdCopyBuffer, vkCmdCopyQueryPoolResults, vkCmdCopyImage, vkCmdBlitImage, vkCmdCopyBufferToImage, vkCmdCopyImageToBuffer, vkCmdUpdateBuffer, vkCmdFillBuffer  | InvalidUsageBits | NA |
 | Memory Map Range Checks | Validates that Memory Mapping Requests are valid for the Memory Object (in-range, not currently mapped on Map, currently mapped on UnMap, size is non-zero) | INVALID_MAP | vkMapMemory | InvalidMemoryMapping | NA |
 | Memory Type Index Checks | Validates that specified memory type indices are valid | INVALID_MEM_TYPE | vkBindImageMemory vkBindBufferMemory | TODO | Need to fix up and re-enable BindImageInvalidMemoryType test as noted in comment in test |
+| Memory Bound To Object Checks | Validates that memory was bound to image or buffer before use | OBJECT_NOT_BOUND | vkCreateImageView vkCreateBufferView vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdResolveImage vkCmdUpdateBuffer vkCmdFillBuffer vkCmdBindIndexBuffer vkCmdBindVertexBuffers vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyQueryPoolResults| CreateBufferViewNoMemoryBoundToBuffer CreateImageViewNoMemoryBoundToImage ImageMemoryNotBound BufferMemoryNotBound | None |
 | NA | Enum used for informational messages | NONE | | TODO | None |
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | TODO | None |
 
 ### VK_LAYER_LUNARG_core_validation Memory Tracker Pending Work and Enhancements
 
 See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
+
+### VK_LAYER_LUNARG_core_validation Memory Device Limits Details Table
+Each device specifies a set of Device Limits with which the appropriate parameters should comply.  The core_validation layer contains device-limits related checks for which some amount of saved state information is necessary to complete the check.
+
+| Check | Overview | ENUM DEVLIMITS_* | Relevant API | Testname | Notes/TODO |
+| ----- | -------- | ---------------- | ---------------- | -------- | ---------- |
+| Valid instance | If an invalid instance is used, this error will be flagged | INVALID_INSTANCE | vkEnumeratePhysicalDevices | TODO | VK_LAYER_LUNARG_object_tracker should also catch this so if we made sure VK_LAYER_LUNARG_object_tracker was always on top, we could avoid this check |
+| Valid physical device | Enum used for informational messages | INVALID_PHYSICAL_DEVICE | vkEnumeratePhysicalDevices | TODO | VK_LAYER_LUNARG_object_tracker should also catch this so if we made sure VK_LAYER_LUNARG_object_tracker was always on top, we could avoid this check |
+| Query count checked | Signifies that a query call such as vkEnumeratePhysicalDevices or vkGetPhysicalDeviceQueueFamilyProperties has been called without querying the count | MISSING_QUERY_COUNT | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | TODO | None |
+| Querying array counts | For API calls where an array count should be queried with an initial call and a NULL array pointer, verify that such a call was made before making a call with non-null array pointer. | MUST_QUERY_COUNT | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | TODO | Create focused test |
+| Array count value | For API calls where an array of details is queried, verify that the size of the requested array matches the size of the array supported by the device. | COUNT_MISMATCH | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | TODO | Create focused test |
+| Feature Request | Attempting to vkCreateDevice with a feature that is not supported by the underlying physical device | INVALID_FEATURE_REQUESTED | vkCreateDevice | TODO | Add validation test |
+| Queue Creation | When creating/requesting queues, make sure that QueueFamilyPropertiesIndex and index/count within that queue family are valid. | INVALID_QUEUE_CREATE_REQUEST | vkGetDeviceQueue vkCreateDevice | TODO | Create focused test |
+| NA | Enum used for informational messages | NONE | | TODO | None |
+
 
 ## VK_LAYER_LUNARG_parameter_validation
 
@@ -184,6 +201,8 @@ The VK_LAYER_LUNARG_parameter_validation layer validates parameter values and fl
 | Required Parameter | Verifies that a required parameter was not specified as 0 or NULL | REQUIRED_PARAMETER | | RequiredParameter | NA |
 | Reserved Parameter | Verifies that a parameter reserved for future use was specified as 0 or NULL | RESERVED_PARAMETER | | ReservedParameter | NA |
 | Unrecognized Value | Verifies that a Vulkan enumeration, VkFlags, or VkBool32 parameter contains a value that is recognized as valid for that type | UNRECOGNIZED_VALUE | | UnrecognizedValue | NA |
+| Device Limit Violation | Verifies that a parameter is within the limits advertised by the gpu | DEVICE_LIMIT | vkUpdateDescriptorSets vkCreateRenderPass | TODO | NA |
+| Device Feature Violation | Verifies that a requested feature is supported by the gpu | DEVICE_FEATURE | vkBeginCommandBuffer | TODO | NA |
 | Failed Call Return Code | Provides a description of a failure code returned by a Vulkan API call | FAILURE_RETURN_CODE | | FailedReturnValue | NA |
 | NA | Enum used for informational messages | NONE | | TODO | None |
 
@@ -284,39 +303,6 @@ It cannot insure that there is no latent race condition.
 
 See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
 
-## VK_LAYER_LUNARG_device_limits
-
-### VK_LAYER_LUNARG_device_limits Overview
-
-This layer is a work in progress. VK_LAYER_LUNARG_device_limits layer is intended to capture two broad categories of errors:
- 1. Incorrect use of APIs to query device capabilities
- 2. Attempt to use API functionality beyond the capability of the underlying device
-
-For the first category, the layer tracks which calls are made and flags errors if calls are excluded that should not be, or if call sequencing is incorrect. An example is an app that assumes attempts to Query and use queues without ever having called vkGetPhysicalDeviceQueueFamilyProperties(). Also, if an app is calling vkGetPhysicalDeviceQueueFamilyProperties() to retrieve properties with some assumed count for array size instead of first calling vkGetPhysicalDeviceQueueFamilyProperties() w/ a NULL pQueueFamilyProperties parameter in order to query the actual count.
-For the second category of errors, VK_LAYER_LUNARG_device_limits stores its own internal record of underlying device capabilities and flags errors if requests are made beyond those limits. Most (all?) of the limits are queried via vkGetPhysicalDevice* calls.
-
-### VK_LAYER_LUNARG_device_limits Details Table
-
-| Check | Overview | ENUM DEVLIMITS_* | Relevant API | Testname | Notes/TODO |
-| ----- | -------- | ---------------- | ---------------- | -------- | ---------- |
-| Valid instance | If an invalid instance is used, this error will be flagged | INVALID_INSTANCE | vkEnumeratePhysicalDevices | TODO | VK_LAYER_LUNARG_object_tracker should also catch this so if we made sure VK_LAYER_LUNARG_object_tracker was always on top, we could avoid this check |
-| Valid physical device | Enum used for informational messages | INVALID_PHYSICAL_DEVICE | vkEnumeratePhysicalDevices | TODO | VK_LAYER_LUNARG_object_tracker should also catch this so if we made sure VK_LAYER_LUNARG_object_tracker was always on top, we could avoid this check |
-| Valid inherited query | If an invalid inherited query is used, this error will be flagged | INVALID_INHERITED_QUERY | vkBeginCommandBuffer | TODO | None |
-| Valid attachment count | If the number of attachments exceeds the device max, this error will be flagged | INVALID_ATTACHMENT_COUNT | vkCreateRenderPass | TODO | None |
-| Query count checked | Signifies that a query call such as vkEnumeratePhysicalDevices or vkGetPhysicalDeviceQueueFamilyProperties has been called without querying the count | MISSING_QUERY_COUNT | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | TODO | None |
-| Querying array counts | For API calls where an array count should be queried with an initial call and a NULL array pointer, verify that such a call was made before making a call with non-null array pointer. | MUST_QUERY_COUNT | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | TODO | Create focused test |
-| Array count value | For API calls where an array of details is queried, verify that the size of the requested array matches the size of the array supported by the device. | COUNT_MISMATCH | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | TODO | Create focused test |
-| Queue Creation | When creating/requesting queues, make sure that QueueFamilyPropertiesIndex and index/count within that queue family are valid. | INVALID_QUEUE_CREATE_REQUEST | vkGetDeviceQueue vkCreateDevice | TODO | Create focused test |
-| API Call Sequencing | This is a general error indicating that an app did not use vkGetPhysicalDevice* and other such query calls, but rather made an assumption about device capabilities. | INVALID_CALL_SEQUENCE | vkCreateDevice | TODO | Add validation test |
-| Feature Request | Attempting to vkCreateDevice with a feature that is not supported by the underlying physical device. | INVALID_FEATURE_REQUESTED | vkCreateDevice | TODO | Add validation test |
-| Storage Buffer Alignment  | Storage Buffer offsets must agree with offset alignment device limit | INVALID_STORAGE_BUFFER_OFFSET | vkBindBufferMemory vkUpdateDescriptorSets | TODO | Create test |
-| Uniform Buffer Alignment  | Uniform Buffer offsets must agree with offset alignment device limit | INVALID_UNIFORM_BUFFER_OFFSET | vkBindBufferMemory vkUpdateDescriptorSets | TODO | Create test |
-| NA | Enum used for informational messages | NONE | | TODO | None |
-
-### VK_LAYER_LUNARG_device_limits Pending Work
-
-See the Khronos github repository for Vulkan-LoaderAndValidationLayers for additional pending issues, or to submit new validation requests
-
 ## VK_LAYER_LUNARG_swapchain
 
 ### Swapchain Overview
@@ -362,6 +348,10 @@ This layer is a work in progress. VK_LAYER_LUNARG_swapchain layer is intended to
 | Valid queueFamilyIndex value | Validates that a queueFamilyIndex value is less-than pQueueFamilyPropertyCount returned by vkGetPhysicalDeviceQueueFamilyProperties | QUEUE_FAMILY_INDEX_TOO_LARGE | vkGetPhysicalDeviceSurfaceSupportKHR | TODO | None |
 | Supported combination of queue and surface | Validates that the surface associated with a swapchain was seen to support the queueFamilyIndex of a given queue | SURFACE_NOT_SUPPORTED_WITH_QUEUE | vkQueuePresentKHR | TODO | None |
 | Proper synchronization of acquired images | vkAcquireNextImageKHR should be called with a valid semaphore and/or fence | NO_SYNC_FOR_ACQUIRE | vkAcquireNextImageKHR | TODO | None |
+| Potential use before query | Validates that Display Plane Properties are queried before getting supported Display Planes | GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY | vkGetPhysicalDeviceSurfaceSupportKHR | TODO | actually: vkGetDisplayPlaneSupportedDisplaysKHR |
+| Index too large | Validates index is in range of phys device display plane props | PLANE_INDEX_TOO_LARGE | vkGetPhysicalDeviceSurfaceSupportKHR | TODO | actually: vkGetDisplayPlaneSupportedDisplaysKHR |
+| Index too large | Validates index is in range of phys device display plane props | PLANE_INDEX_TOO_LARGE | vkGetPhysicalDeviceSurfaceSupportKHR | TODO | actually: vkGetDisplayPlaneCapabilitiesKHR |
+
 
 Note: The following platform-specific functions are not mentioned above, because they are protected by ifdefs, which cause test failures:
 

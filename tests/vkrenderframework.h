@@ -200,7 +200,7 @@ class VkCommandBufferObj : public vk_testing::CommandBuffer {
     void SetStencilWriteMask(VkStencilFaceFlags faceMask, uint32_t writeMask);
     void SetStencilReference(VkStencilFaceFlags faceMask, uint32_t reference);
     void UpdateBuffer(VkBuffer buffer, VkDeviceSize dstOffset,
-                      VkDeviceSize dataSize, const uint32_t *pData);
+                      VkDeviceSize dataSize, const void *pData);
     void CopyImage(VkImage srcImage, VkImageLayout srcImageLayout,
                    VkImage dstImage, VkImageLayout dstImageLayout,
                    uint32_t regionCount, const VkImageCopy *pRegions);
@@ -215,9 +215,15 @@ class VkCommandBufferObj : public vk_testing::CommandBuffer {
 
 class VkConstantBufferObj : public vk_testing::Buffer {
   public:
-    VkConstantBufferObj(VkDeviceObj *device);
+    VkConstantBufferObj(VkDeviceObj *device,
+                        VkBufferUsageFlags usage =
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     VkConstantBufferObj(VkDeviceObj *device, int constantCount,
-                        int constantSize, const void *data);
+                        int constantSize, const void *data,
+                        VkBufferUsageFlags usage =
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     ~VkConstantBufferObj();
     void BufferMemoryBarrier(
         VkFlags srcAccessMask = VK_ACCESS_HOST_WRITE_BIT |
@@ -411,9 +417,9 @@ class VkPipelineObj : public vk_testing::Pipeline {
     VkPipelineObj(VkDeviceObj *device);
     void AddShader(VkShaderObj *shaderObj);
     void AddVertexInputAttribs(VkVertexInputAttributeDescription *vi_attrib,
-                               unsigned count);
+                               uint32_t count);
     void AddVertexInputBindings(VkVertexInputBindingDescription *vi_binding,
-                                unsigned count);
+                                uint32_t count);
     void AddColorAttachment(uint32_t binding,
                             const VkPipelineColorBlendAttachmentState *att);
     void MakeDynamic(VkDynamicState state);
@@ -453,164 +459,4 @@ class VkPipelineObj : public vk_testing::Pipeline {
     vector<VkPipelineColorBlendAttachmentState> m_colorAttachments;
     int m_vertexBufferCount;
 };
-class cMemoryBuffer {
-public:
-    cMemoryBuffer(VkDeviceObj *aVulkanDevice, VkBufferUsageFlags aBufferUsage, VkDeviceSize &aBufferByteCount, const float *aClientData) :
-       AllocateCurrent(false),
-       BoundCurrent(false),
-       CreateCurrent(false),
-       VulkanDevice(aVulkanDevice->device()) {
-
-        VkBufferCreateInfo buffer_create_info = {};
-        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_create_info.size = aBufferByteCount;
-        buffer_create_info.usage = aBufferUsage;
-
-        VkResult returnValue = vkCreateBuffer(VulkanDevice, &buffer_create_info, nullptr, &VulkanBuffer);
-        assert(!returnValue);
-        CreateCurrent = true;
-
-        VkMemoryRequirements memory_requirements;
-        vkGetBufferMemoryRequirements(VulkanDevice, VulkanBuffer, &memory_requirements);
-
-        VkMemoryAllocateInfo memory_allocate_info = {};
-        memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        memory_allocate_info.allocationSize = memory_requirements.size;
-        bool pass = aVulkanDevice->phy().set_memory_type(memory_requirements.memoryTypeBits, &memory_allocate_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        if (!pass) {
-            vkDestroyBuffer(VulkanDevice, VulkanBuffer, nullptr);
-            return;
-        }
-
-        returnValue = vkAllocateMemory(VulkanDevice, &memory_allocate_info, NULL, &VulkanMemory);
-        assert(!returnValue);
-        AllocateCurrent = true;
-
-        void *mappedMemory;
-        returnValue = vkMapMemory(VulkanDevice, VulkanMemory, 0, memory_allocate_info.allocationSize, 0, &mappedMemory);
-        assert(!returnValue);
-
-        memcpy(mappedMemory, aClientData, static_cast<size_t>(aBufferByteCount));
-
-        vkUnmapMemory(VulkanDevice, VulkanMemory);
-
-        returnValue = vkBindBufferMemory(VulkanDevice, VulkanBuffer, VulkanMemory, 0);
-        assert(!returnValue);
-        BoundCurrent = true;
-    }
-
-    ~cMemoryBuffer() {
-        if (CreateCurrent) {
-            vkDestroyBuffer(VulkanDevice, VulkanBuffer, nullptr);
-        }
-        if (AllocateCurrent) {
-            vkFreeMemory(VulkanDevice, VulkanMemory, nullptr);
-        }
-    }
-
-    const VkBuffer &GetBuffer() {
-        return VulkanBuffer;
-    }
-
-protected:
-    bool AllocateCurrent;
-    bool BoundCurrent;
-    bool CreateCurrent;
-
-    VkBuffer VulkanBuffer;
-    VkDevice VulkanDevice;
-    VkDeviceMemory VulkanMemory;
-
-};
-
-class cVertices {
-public:
-    cVertices(VkDeviceObj *aVulkanDevice, unsigned aAttributeCount, unsigned aBindingCount, unsigned aByteStride, VkDeviceSize aVertexCount, const float *aVerticies) :
-       BoundCurrent(false),
-       AttributeCount(aAttributeCount),
-       BindingCount(aBindingCount),
-       BindId(BindIdGenerator),
-       PipelineVertexInputStateCreateInfo(),
-       VulkanDevice(aVulkanDevice->device()),
-       VulkanMemoryBuffer(aVulkanDevice, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, aVertexCount, aVerticies) {
-        BindIdGenerator++; // NB: This can wrap w/misuse
-        VertexInputAttributeDescription = new VkVertexInputAttributeDescription[AttributeCount];
-        VertexInputBindingDescription = new VkVertexInputBindingDescription[BindingCount];
-
-        PipelineVertexInputStateCreateInfo.pVertexAttributeDescriptions = VertexInputAttributeDescription;
-        PipelineVertexInputStateCreateInfo.vertexAttributeDescriptionCount = AttributeCount;
-        PipelineVertexInputStateCreateInfo.pVertexBindingDescriptions = VertexInputBindingDescription;
-        PipelineVertexInputStateCreateInfo.vertexBindingDescriptionCount = BindingCount;
-        PipelineVertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-        unsigned i = 0;
-        do {
-            VertexInputAttributeDescription[i].binding = BindId;
-            VertexInputAttributeDescription[i].location = i;
-            VertexInputAttributeDescription[i].format = VK_FORMAT_R32G32B32_SFLOAT;
-            VertexInputAttributeDescription[i].offset = sizeof(float) * aByteStride;
-            i++;
-        } while (AttributeCount < i);
-
-        i = 0;
-        do {
-            VertexInputBindingDescription[i].binding = BindId;
-            VertexInputBindingDescription[i].stride = aByteStride;
-            VertexInputBindingDescription[i].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-            i++;
-        } while (BindingCount < i);
-    }
-
-    ~cVertices() {
-        if (VertexInputAttributeDescription) {
-            delete[] VertexInputAttributeDescription;
-        }
-        if (VertexInputBindingDescription) {
-            delete[] VertexInputBindingDescription;
-        }
-    }
-
-    void BindVertexBuffers(VkCommandBuffer aCommandBuffer, unsigned aOffsetCount = 0, VkDeviceSize *aOffsetList = nullptr) {
-        VkDeviceSize *offsetList;
-        unsigned offsetCount;
-
-        if (aOffsetCount) {
-            offsetList = aOffsetList;
-            offsetCount = aOffsetCount;
-        }
-        else {
-            offsetList = new VkDeviceSize[1]();
-            offsetCount = 1;
-        }
-
-        vkCmdBindVertexBuffers(aCommandBuffer, BindId, offsetCount, &VulkanMemoryBuffer.GetBuffer(), offsetList);
-        BoundCurrent = true;
-
-        if (!aOffsetCount) {
-            delete [] offsetList;
-        }
-    }
-
-    void AddVertexInputToPipe(VkPipelineObj &aPipelineObj) {
-        aPipelineObj.AddVertexInputAttribs(VertexInputAttributeDescription, AttributeCount);
-        aPipelineObj.AddVertexInputBindings(VertexInputBindingDescription, BindingCount);
-    }
-
-protected:
-    static unsigned BindIdGenerator;
-
-    bool BoundCurrent;
-    unsigned AttributeCount;
-    unsigned BindingCount;
-    uint32_t BindId;
-    VkDeviceMemory DeviceMemory;
-
-    VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo;
-    VkVertexInputAttributeDescription *VertexInputAttributeDescription;
-    VkVertexInputBindingDescription *VertexInputBindingDescription;
-    VkDevice VulkanDevice;
-    cMemoryBuffer VulkanMemoryBuffer;
-};
-
-
 #endif // VKRENDERFRAMEWORK_H

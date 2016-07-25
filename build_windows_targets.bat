@@ -34,7 +34,7 @@ if %do_cmake%==0 (
     if %do_32%==0 (
         if %do_64%==0 (
             echo No valid parameters specified.
-            exit /B 1
+            exit 1
         )
     )
 )

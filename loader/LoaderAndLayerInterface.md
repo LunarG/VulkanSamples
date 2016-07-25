@@ -1165,7 +1165,7 @@ Allowable values for type (both before and after deprecation) are "INSTANCE", "G
 Thus, layers must have a type of "GLOBAL" or "INSTANCE" for the loader to include the layer in the enumerated instance layer list.
 
 "library\_path" is the filename, full path, or relative path to the library file.
-See [Manifest File Example](# ManifestFileExample) section for more details.
+See [Manifest File Example](#ManifestFileExample) section for more details.
 
 Note 2: One "implementation\_version" node is required per layer. This node gives the layer version, a single number
 increasing with backward uncompatible changes.

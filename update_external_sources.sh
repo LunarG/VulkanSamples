@@ -25,6 +25,15 @@ function update_glslang () {
    cd $BASEDIR/glslang
    git fetch --all
    git checkout $GLSLANG_REVISION
+   # Revert glslang a5c33d6ffb34ccede5b233bc724c907166b6e479
+   # See https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/issues/681
+   git diff-index --quiet HEAD | true
+   rc=${PIPESTATUS[0]}
+   if (( $rc == 0 ))
+   then
+      echo "applying patch to revert glslang a5c33d"
+      git apply $BUILDDIR/glslang_revert_a5c33d.patch.txt
+   fi
 }
 
 function create_spirv-tools () {
@@ -60,7 +69,6 @@ function build_glslang () {
    cd $BASEDIR/glslang
    mkdir -p build
    cd build
-   cmake -D CMAKE_BUILD_TYPE=Release ..
    cmake -D CMAKE_BUILD_TYPE=Release ..
    make
    make install

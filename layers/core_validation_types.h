@@ -58,10 +58,32 @@ class DescriptorSetLayout;
 class DescriptorSet;
 };
 
+struct GLOBAL_CB_NODE;
+
 class BASE_NODE {
   public:
+    // Track when object is being used by an in-flight command buffer
     std::atomic_int in_use;
+    // Track command buffers that this object is bound to
+    //  binding initialized when cmd referencing object is bound to command buffer
+    //  binding removed when command buffer is reset or destroyed
+    // When an object is destroyed, any bound cbs are set to INVALID
+    std::unordered_set<GLOBAL_CB_NODE *> cb_bindings;
 };
+
+// Generic wrapper for vulkan objects
+struct VK_OBJECT {
+    uint64_t handle;
+    VkDebugReportObjectTypeEXT type;
+};
+
+inline bool operator==(VK_OBJECT a, VK_OBJECT b) NOEXCEPT { return a.handle == b.handle && a.type == b.type; }
+
+namespace std {
+template <> struct hash<VK_OBJECT> {
+    size_t operator()(VK_OBJECT obj) const NOEXCEPT { return hash<uint64_t>()(obj.handle) ^ hash<uint32_t>()(obj.type); }
+};
+}
 
 struct DESCRIPTOR_POOL_NODE {
     VkDescriptorPool pool;
@@ -102,11 +124,21 @@ struct DESCRIPTOR_POOL_NODE {
 class BUFFER_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
+    VkBuffer buffer;
     VkDeviceMemory mem;
+    VkDeviceSize memOffset;
+    VkDeviceSize memSize; // Note: may differ from createInfo::size
     VkBufferCreateInfo createInfo;
-    BUFFER_NODE() : mem(VK_NULL_HANDLE), createInfo{} { in_use.store(0); };
-    BUFFER_NODE(const VkBufferCreateInfo *pCreateInfo) : mem(VK_NULL_HANDLE), createInfo(*pCreateInfo) { in_use.store(0); };
-    BUFFER_NODE(const BUFFER_NODE &rh_obj) : mem(rh_obj.mem), createInfo(rh_obj.createInfo) { in_use.store(rh_obj.in_use.load()); };
+    BUFFER_NODE() : buffer(VK_NULL_HANDLE), mem(VK_NULL_HANDLE), memOffset(0), memSize(0), createInfo{} { in_use.store(0); };
+    BUFFER_NODE(VkBuffer buff, const VkBufferCreateInfo *pCreateInfo)
+        : buffer(buff), mem(VK_NULL_HANDLE), memOffset(0), memSize(0), createInfo(*pCreateInfo) {
+        in_use.store(0);
+    };
+    BUFFER_NODE(const BUFFER_NODE &rh_obj)
+        : buffer(rh_obj.buffer), mem(rh_obj.mem), memOffset(rh_obj.memOffset),
+          memSize(rh_obj.memSize), createInfo(rh_obj.createInfo) {
+        in_use.store(0);
+    };
 };
 
 struct SAMPLER_NODE {
@@ -119,24 +151,26 @@ struct SAMPLER_NODE {
 class IMAGE_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
+    VkImage image;
     VkImageCreateInfo createInfo;
     VkDeviceMemory mem;
     bool valid; // If this is a swapchain image backing memory track valid here as it doesn't have DEVICE_MEM_INFO
     VkDeviceSize memOffset;
     VkDeviceSize memSize;
-    IMAGE_NODE() : createInfo{}, mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0) { in_use.store(0); };
-    IMAGE_NODE(const VkImageCreateInfo *pCreateInfo)
-        : createInfo(*pCreateInfo), mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0) {
+    IMAGE_NODE() : image(VK_NULL_HANDLE), createInfo{}, mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0) { in_use.store(0); };
+    IMAGE_NODE(VkImage img, const VkImageCreateInfo *pCreateInfo)
+        : image(img), createInfo(*pCreateInfo), mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0) {
         in_use.store(0);
     };
     IMAGE_NODE(const IMAGE_NODE &rh_obj)
-        : createInfo(rh_obj.createInfo), mem(rh_obj.mem), valid(rh_obj.valid), memOffset(rh_obj.memOffset),
+        : image(rh_obj.image), createInfo(rh_obj.createInfo), mem(rh_obj.mem), valid(rh_obj.valid), memOffset(rh_obj.memOffset),
           memSize(rh_obj.memSize) {
         in_use.store(rh_obj.in_use.load());
     };
 };
 
 // Simple struct to hold handle and type of object so they can be uniquely identified and looked up in appropriate map
+// TODO : Unify this with VK_OBJECT above
 struct MT_OBJ_HANDLE_TYPE {
     uint64_t handle;
     VkDebugReportObjectTypeEXT type;
@@ -401,10 +435,25 @@ template <> struct hash<ImageSubresourcePair> {
 };
 }
 
+// Store layouts and pushconstants for PipelineLayout
+struct PIPELINE_LAYOUT_NODE {
+    VkPipelineLayout layout;
+    std::vector<cvdescriptorset::DescriptorSetLayout const *> set_layouts;
+    std::vector<VkPushConstantRange> push_constant_ranges;
+
+    PIPELINE_LAYOUT_NODE() : layout(VK_NULL_HANDLE), set_layouts{}, push_constant_ranges{} {}
+
+    void reset() {
+        layout = VK_NULL_HANDLE;
+        set_layouts.clear();
+        push_constant_ranges.clear();
+    }
+};
+
 // Track last states that are bound per pipeline bind point (Gfx & Compute)
 struct LAST_BOUND_STATE {
     VkPipeline pipeline;
-    VkPipelineLayout pipelineLayout;
+    PIPELINE_LAYOUT_NODE pipeline_layout;
     // Track each set that has been bound
     // TODO : can unique be global per CB? (do we care about Gfx vs. Compute?)
     std::unordered_set<cvdescriptorset::DescriptorSet *> uniqueBoundSets;
@@ -415,7 +464,7 @@ struct LAST_BOUND_STATE {
 
     void reset() {
         pipeline = VK_NULL_HANDLE;
-        pipelineLayout = VK_NULL_HANDLE;
+        pipeline_layout.reset();
         uniqueBoundSets.clear();
         boundDescriptorSets.clear();
         dynamicOffsets.clear();
@@ -448,13 +497,11 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     uint32_t activeSubpass;
     VkFramebuffer activeFramebuffer;
     std::unordered_set<VkFramebuffer> framebuffers;
-    // Track descriptor sets that are destroyed or updated while bound to CB
-    // TODO : These data structures relate to tracking resources that invalidate
-    //  a cmd buffer that references them. Need to unify how we handle these
-    //  cases so we don't have different tracking data for each type.
-    std::unordered_set<cvdescriptorset::DescriptorSet *> destroyedSets;
-    std::unordered_set<cvdescriptorset::DescriptorSet *> updatedSets;
-    std::unordered_set<VkFramebuffer> destroyedFramebuffers;
+    // Unified data structs to track objects bound to this command buffer as well as object
+    //  dependencies that have been broken : either destroyed objects, or updated descriptor sets
+    std::unordered_set<VK_OBJECT> object_bindings;
+    std::vector<VK_OBJECT> broken_bindings;
+
     std::unordered_set<VkEvent> waitedEvents;
     std::vector<VkEvent> writeEventsBeforeWait;
     std::vector<VkEvent> events;
@@ -484,10 +531,10 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
 };
 
 struct CB_SUBMISSION {
-    CB_SUBMISSION(VkCommandBuffer cb, std::vector<VkSemaphore> const & semaphores)
-        : cb(cb), semaphores(semaphores) {}
+    CB_SUBMISSION(std::vector<VkCommandBuffer> const &cbs, std::vector<VkSemaphore> const &semaphores)
+        : cbs(cbs), semaphores(semaphores) {}
 
-    VkCommandBuffer cb;
+    std::vector<VkCommandBuffer> cbs;
     std::vector<VkSemaphore> semaphores;
 };
 
@@ -505,6 +552,7 @@ SAMPLER_NODE *getSamplerNode(const layer_data *, VkSampler);
 VkImageViewCreateInfo *getImageViewData(const layer_data *, VkImageView);
 VkSwapchainKHR getSwapchainFromImage(const layer_data *, VkImage);
 SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, VkSwapchainKHR);
+void invalidateCommandBuffers(std::unordered_set<GLOBAL_CB_NODE *>, VK_OBJECT);
 }
 
 #endif // CORE_VALIDATION_TYPES_H_

@@ -239,22 +239,18 @@ int sample_main(int argc, char *argv[]) {
     assert(res == VK_SUCCESS);
 
     info.buffers.resize(info.swapchainImageCount);
-
-    // Going to need a command buffer to send the memory barriers in
-    // set_image_layout but we couldn't have created one before we knew
-    // what our graphics_queue_family_index is, but now that we have it,
-    // create the command buffer
-
-    init_command_pool(info);
-    init_command_buffer(info);
-    execute_begin_command_buffer(info);
-    vkGetDeviceQueue(info.device, info.graphics_queue_family_index, 0,
-                     &info.queue);
+    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
+        info.buffers[i].image = swapchainImages[i];
+    }
+    free(swapchainImages);
 
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         VkImageViewCreateInfo color_image_view = {};
         color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         color_image_view.pNext = NULL;
+        color_image_view.flags = 0;
+        color_image_view.image = info.buffers[i].image;
+        color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
         color_image_view.format = info.format;
         color_image_view.components.r = VK_COMPONENT_SWIZZLE_R;
         color_image_view.components.g = VK_COMPONENT_SWIZZLE_G;
@@ -266,30 +262,15 @@ int sample_main(int argc, char *argv[]) {
         color_image_view.subresourceRange.levelCount = 1;
         color_image_view.subresourceRange.baseArrayLayer = 0;
         color_image_view.subresourceRange.layerCount = 1;
-        color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        color_image_view.flags = 0;
-
-        info.buffers[i].image = swapchainImages[i];
-
-        set_image_layout(info, info.buffers[i].image, VK_IMAGE_ASPECT_COLOR_BIT,
-                         VK_IMAGE_LAYOUT_UNDEFINED,
-                         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-        color_image_view.image = info.buffers[i].image;
 
         res = vkCreateImageView(info.device, &color_image_view, NULL,
                                 &info.buffers[i].view);
         assert(res == VK_SUCCESS);
     }
-    free(swapchainImages);
-    execute_end_command_buffer(info);
-    execute_queue_command_buffer(info);
+
     /* VULKAN_KEY_END */
 
     /* Clean Up */
-    VkCommandBuffer cmd_bufs[1] = {info.cmd};
-    vkFreeCommandBuffers(info.device, info.cmd_pool, 1, cmd_bufs);
-    vkDestroyCommandPool(info.device, info.cmd_pool, NULL);
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         vkDestroyImageView(info.device, info.buffers[i].view, NULL);
     }

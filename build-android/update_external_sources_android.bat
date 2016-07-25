@@ -215,7 +215,7 @@ goto:eof
    echo Creating local shaderc repository %SHADERC_DIR%
    mkdir %SHADERC_DIR%
    cd %SHADERC_DIR%
-   git clone git@github.com:google/shaderc.git .
+   git clone https://github.com/google/shaderc.git .
    git checkout %SHADERC_REVISION%
    if not exist %SHADERC_DIR%\libshaderc (
       echo shaderc source download failed!

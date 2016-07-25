@@ -51,6 +51,38 @@ int sample_main(int argc, char *argv[]) {
     init_depth_buffer(info);
 
     /* VULKAN_KEY_START */
+
+    // A semaphore (or fence) is required in order to acquire a
+    // swapchain image to prepare it for use in a renderpass.
+    // The semaphore is normally used to hold back the rendering
+    // operation until the image is actually available.
+    // But since this sample does not render, the semaphore
+    // ends up being unused.
+    VkSemaphore imageAcquiredSemaphore;
+    VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
+    imageAcquiredSemaphoreCreateInfo.sType =
+        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    imageAcquiredSemaphoreCreateInfo.pNext = NULL;
+    imageAcquiredSemaphoreCreateInfo.flags = 0;
+
+    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo,
+                            NULL, &imageAcquiredSemaphore);
+    assert(res == VK_SUCCESS);
+
+    // Acquire the swapchain image in order to set its layout
+    res = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX,
+                                imageAcquiredSemaphore, VK_NULL_HANDLE,
+                                &info.current_buffer);
+    assert(res >= 0);
+
+    // Set the layout for the color buffer, transitioning it from
+    // undefined to an optimal color attachment to make it usable in
+    // a renderpass.
+    // The depth buffer layout has already been set by init_depth_buffer().
+    set_image_layout(info, info.buffers[info.current_buffer].image,
+                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
     /* Need attachments for render target and depth buffer */
     VkAttachmentDescription attachments[2];
     attachments[0].format = info.format;
@@ -112,6 +144,7 @@ int sample_main(int argc, char *argv[]) {
     /* VULKAN_KEY_END */
 
     vkDestroyRenderPass(info.device, info.render_pass, NULL);
+    vkDestroySemaphore(info.device, imageAcquiredSemaphore, NULL);
     destroy_depth_buffer(info);
     destroy_swap_chain(info);
     destroy_command_buffer(info);

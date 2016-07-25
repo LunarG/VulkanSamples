@@ -19,7 +19,7 @@
 ## Sample progression
   - In general, the samples are not interrelated, but there is a progression
       among some of the samples that lead to drawing a cube.  Start with the
-      instance sample, then enumerate-adv, device, initswapchain, initcommandbuffer, initdepthbuffer,
+      instance sample, then enumerate-adv, device, initcommandbuffer, initswapchain, initdepthbuffer,
       inituniformbuffer, descriptor_pipeline_layouts, initrenderpass, initshaders,
       initframebuffers, vertexbuffer, allocdescriptorsets, initpipeline, and they
       culminate in the drawcube sample.  Each sample uses utility routines from

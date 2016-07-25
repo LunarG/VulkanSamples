@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) {
       !options.device_name.empty()) {
     Dump(instance, options);
   } else {
-    for (uint32_t i = 0, n = instance.devices.size(); i < n; i++) {
+    for (uint32_t i = 0, n = static_cast<uint32_t>(instance.devices.size()); i < n; i++) {
       options.device_index = i;
       Dump(instance, options);
     }

@@ -28,7 +28,6 @@ set(LAYER_JSON_FILES
     VkLayer_parameter_validation
     VkLayer_swapchain
     VkLayer_threading
-    VkLayer_device_limits
     )
 
 if (WIN32)
@@ -153,7 +152,6 @@ else()
 endif()
 
 add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp vk_safe_struct.cpp descriptor_sets.cpp)
-add_vk_layer(device_limits device_limits.cpp vk_layer_table.cpp)
 add_vk_layer(image image.cpp vk_layer_table.cpp)
 add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
 # generated

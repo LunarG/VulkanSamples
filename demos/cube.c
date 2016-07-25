@@ -1,25 +1,27 @@
-    /*
- * Copyright (c) 2015-2016 The Khronos Group Inc.
- * Copyright (c) 2015-2016 Valve Corporation
- * Copyright (c) 2015-2016 LunarG, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * Author: Chia-I Wu <olv@lunarg.com>
- * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
- * Author: Ian Elliott <ian@LunarG.com>
- * Author: Jon Ashburn <jon@lunarg.com>
- */
+/*
+* Copyright (c) 2015-2016 The Khronos Group Inc.
+* Copyright (c) 2015-2016 Valve Corporation
+* Copyright (c) 2015-2016 LunarG, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*
+* Author: Chia-I Wu <olv@lunarg.com>
+* Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+* Author: Ian Elliott <ian@LunarG.com>
+* Author: Jon Ashburn <jon@lunarg.com>
+* Author: Gwan-gyeong Mun <elongbug@gmail.com>
+* Author: Bill Hollings <bill.hollings@brenwill.com>
+*/
 
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -55,6 +57,12 @@
 #define U_ASSERT_ONLY __attribute__((unused))
 #else
 #define U_ASSERT_ONLY
+#endif
+
+#if defined(__GNUC__)
+#define UNUSED __attribute__((unused))
+#else
+#define UNUSED
 #endif
 
 #ifdef _WIN32
@@ -291,6 +299,7 @@ struct demo {
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND window;                 // hWnd - window handle
+    POINT minsize;               // minimum window size
 #elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 	void* window;
 #elif defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
@@ -301,6 +310,13 @@ struct demo {
     xcb_screen_t *screen;
     xcb_window_t xcb_window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    struct wl_display *display;
+    struct wl_registry *registry;
+    struct wl_compositor *compositor;
+    struct wl_surface *window;
+    struct wl_shell *shell;
+    struct wl_shell_surface *shell_surface;
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     ANativeWindow* window;
 #endif
@@ -520,22 +536,11 @@ static void demo_set_image_layout(struct demo *demo, VkImage image,
 
         err = vkAllocateCommandBuffers(demo->device, &cmd, &demo->cmd);
         assert(!err);
-
-        VkCommandBufferInheritanceInfo cmd_buf_hinfo = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-            .pNext = NULL,
-            .renderPass = VK_NULL_HANDLE,
-            .subpass = 0,
-            .framebuffer = VK_NULL_HANDLE,
-            .occlusionQueryEnable = VK_FALSE,
-            .queryFlags = 0,
-            .pipelineStatistics = 0,
-        };
         VkCommandBufferBeginInfo cmd_buf_info = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
             .pNext = NULL,
             .flags = 0,
-            .pInheritanceInfo = &cmd_buf_hinfo,
+            .pInheritanceInfo = NULL,
         };
         err = vkBeginCommandBuffer(demo->cmd, &cmd_buf_info);
         assert(!err);
@@ -582,21 +587,11 @@ static void demo_set_image_layout(struct demo *demo, VkImage image,
 }
 
 static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf) {
-    VkCommandBufferInheritanceInfo cmd_buf_hinfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-        .pNext = NULL,
-        .renderPass = VK_NULL_HANDLE,
-        .subpass = 0,
-        .framebuffer = VK_NULL_HANDLE,
-        .occlusionQueryEnable = VK_FALSE,
-        .queryFlags = 0,
-        .pipelineStatistics = 0,
-    };
     const VkCommandBufferBeginInfo cmd_buf_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .pNext = NULL,
         .flags = 0,
-        .pInheritanceInfo = &cmd_buf_hinfo,
+        .pInheritanceInfo = NULL,
     };
     const VkClearValue clear_values[2] = {
             [0] = {.color.float32 = {0.2f, 0.2f, 0.2f, 0.2f}},
@@ -1941,6 +1936,13 @@ static void demo_cleanup(struct demo *demo) {
     xcb_destroy_window(demo->connection, demo->xcb_window);
     xcb_disconnect(demo->connection);
     free(demo->atom_wm_delete_window);
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    wl_shell_surface_destroy(demo->shell_surface);
+    wl_surface_destroy(demo->window);
+    wl_shell_destroy(demo->shell);
+    wl_compositor_destroy(demo->compositor);
+    wl_registry_destroy(demo->registry);
+    wl_display_disconnect(demo->display);
 #endif
 }
 
@@ -2027,6 +2029,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     case WM_PAINT:
         demo_run(&demo);
         break;
+    case WM_GETMINMAXINFO:     // set window's minimum size
+        ((MINMAXINFO*)lParam)->ptMinTrackSize = demo.minsize;
+        return 0;
     case WM_SIZE:
         // Resize the application to the new window size, except when
         // it was minimized. Vulkan doesn't support images or swapchains
@@ -2087,6 +2092,9 @@ static void demo_create_window(struct demo *demo) {
         fflush(stdout);
         exit(1);
     }
+    // Window client area size must be at least 1 pixel high, to prevent crash.
+    demo->minsize.x = GetSystemMetrics(SM_CXMINTRACK);
+    demo->minsize.y = GetSystemMetrics(SM_CYMINTRACK)+1;
 }
 #elif defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
 static void demo_create_xlib_window(struct demo *demo) {
@@ -2302,6 +2310,59 @@ static void demo_create_xcb_window(struct demo *demo) {
     xcb_configure_window(demo->connection, demo->xcb_window,
                          XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
 }
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+static void demo_run(struct demo *demo) {
+    while (!demo->quit) {
+        // Wait for work to finish before updating MVP.
+        vkDeviceWaitIdle(demo->device);
+        demo_update_data_buffer(demo);
+
+        demo_draw(demo);
+
+        // Wait for work to finish before updating MVP.
+        vkDeviceWaitIdle(demo->device);
+        demo->curFrame++;
+        if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
+            demo->quit = true;
+    }
+}
+
+static void handle_ping(void *data UNUSED,
+                        struct wl_shell_surface *shell_surface,
+                        uint32_t serial) {
+    wl_shell_surface_pong(shell_surface, serial);
+}
+
+static void handle_configure(void *data UNUSED,
+                             struct wl_shell_surface *shell_surface UNUSED,
+                             uint32_t edges UNUSED, int32_t width UNUSED,
+                             int32_t height UNUSED) {}
+
+static void handle_popup_done(void *data UNUSED,
+                              struct wl_shell_surface *shell_surface UNUSED) {}
+
+static const struct wl_shell_surface_listener shell_surface_listener = {
+    handle_ping, handle_configure, handle_popup_done};
+
+static void demo_create_window(struct demo *demo) {
+    demo->window = wl_compositor_create_surface(demo->compositor);
+    if (!demo->window) {
+        printf("Can not create wayland_surface from compositor!\n");
+        fflush(stdout);
+        exit(1);
+    }
+
+    demo->shell_surface = wl_shell_get_shell_surface(demo->shell, demo->window);
+    if (!demo->shell_surface) {
+        printf("Can not get shell_surface from wayland_surface!\n");
+        fflush(stdout);
+        exit(1);
+    }
+    wl_shell_surface_add_listener(demo->shell_surface, &shell_surface_listener,
+                                  demo);
+    wl_shell_surface_set_toplevel(demo->shell_surface);
+    wl_shell_surface_set_title(demo->shell_surface, APP_SHORT_NAME);
+}
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
 static void demo_run(struct demo *demo) {
     if (!demo->prepared)
@@ -2357,10 +2418,10 @@ static void demo_init_vk(struct demo *demo) {
     };
 
     char *instance_validation_layers_alt2[] = {
-        "VK_LAYER_GOOGLE_threading",     "VK_LAYER_LUNARG_parameter_validation",
-        "VK_LAYER_LUNARG_device_limits", "VK_LAYER_LUNARG_object_tracker",
-        "VK_LAYER_LUNARG_image",         "VK_LAYER_LUNARG_core_validation",
-        "VK_LAYER_LUNARG_swapchain",     "VK_LAYER_GOOGLE_unique_objects"
+        "VK_LAYER_GOOGLE_threading",       "VK_LAYER_LUNARG_parameter_validation",
+        "VK_LAYER_LUNARG_object_tracker",  "VK_LAYER_LUNARG_image",
+        "VK_LAYER_LUNARG_core_validation", "VK_LAYER_LUNARG_swapchain",
+        "VK_LAYER_GOOGLE_unique_objects"
     };
 
     /* Look for validation layers */
@@ -2475,6 +2536,14 @@ static void demo_init_vk(struct demo *demo) {
                     VK_KHR_XCB_SURFACE_EXTENSION_NAME;
             }
 #endif
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+            if (!strcmp(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
+                        instance_extensions[i].extensionName)) {
+                platformSurfaceExtFound = 1;
+                demo->extension_names[demo->enabled_extension_count++] =
+                    VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
+            }
+#endif
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
             if (!strcmp(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
@@ -2531,6 +2600,14 @@ static void demo_init_vk(struct demo *demo) {
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_XCB_SURFACE_EXTENSION_NAME
+                 " extension.\n\nDo you have a compatible "
+                 "Vulkan installable client driver (ICD) installed?\nPlease "
+                 "look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateInstance Failure");
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
+                 "the " VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
                  " extension.\n\nDo you have a compatible "
                  "Vulkan installable client driver (ICD) installed?\nPlease "
                  "look at the Getting Started guide for additional "
@@ -2809,6 +2886,16 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 	surface.pView = demo->window;
 	err = vkCreateMacOSSurfaceMVK(demo->inst, &surface, NULL, &demo->surface);
 
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR) && !defined(VK_USE_PLATFORM_XCB_KHR)
+    VkWaylandSurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.flags = 0;
+    createInfo.display = demo->display;
+    createInfo.surface = demo->window;
+
+    err = vkCreateWaylandSurfaceKHR(demo->inst, &createInfo, NULL,
+                                    &demo->surface);
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     VkAndroidSurfaceCreateInfoKHR createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
@@ -2940,6 +3027,29 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     vkGetPhysicalDeviceMemoryProperties(demo->gpu, &demo->memory_properties);
 }
 
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR) && !defined(VK_USE_PLATFORM_XCB_KHR)
+static void registry_handle_global(void *data, struct wl_registry *registry,
+                                   uint32_t name, const char *interface,
+                                   uint32_t version UNUSED) {
+    struct demo *demo = data;
+    if (strcmp(interface, "wl_compositor") == 0) {
+        demo->compositor =
+            wl_registry_bind(registry, name, &wl_compositor_interface, 3);
+        /* Todo: When xdg_shell protocol has stablized, we should move wl_shell
+         * tp xdg_shell */
+    } else if (strcmp(interface, "wl_shell") == 0) {
+        demo->shell = wl_registry_bind(registry, name, &wl_shell_interface, 1);
+    }
+}
+
+static void registry_handle_global_remove(void *data UNUSED,
+                                          struct wl_registry *registry UNUSED,
+                                          uint32_t name UNUSED) {}
+
+static const struct wl_registry_listener registry_listener = {
+    registry_handle_global, registry_handle_global_remove};
+#endif
+
 static void demo_init_connection(struct demo *demo) {
 #if defined(VK_USE_PLATFORM_XCB_KHR)
     const xcb_setup_t *setup;
@@ -2960,6 +3070,19 @@ static void demo_init_connection(struct demo *demo) {
         xcb_screen_next(&iter);
 
     demo->screen = iter.data;
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    demo->display = wl_display_connect(NULL);
+
+    if (demo->display == NULL) {
+        printf("Cannot find a compatible Vulkan installable client driver "
+               "(ICD).\nExiting ...\n");
+        fflush(stdout);
+        exit(1);
+    }
+
+    demo->registry = wl_display_get_registry(demo->display);
+    wl_registry_add_listener(demo->registry, &registry_listener, demo);
+    wl_display_dispatch(demo->display);
 #endif
 }
 
@@ -3212,19 +3335,27 @@ int main(int argc, char **argv) {
     struct demo demo;
 
     demo_init(&demo, argc, argv);
+#if defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
     if (demo.use_xlib)
         demo_create_xlib_window(&demo);
     else
         demo_create_xcb_window(&demo);
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    demo_create_window(&demo);
+#endif
 
     demo_init_vk_swapchain(&demo);
 
     demo_prepare(&demo);
 
+#if defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
     if (demo.use_xlib)
         demo_run_xlib(&demo);
     else
         demo_run_xcb(&demo);
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    demo_run(&demo);
+#endif
 
     demo_cleanup(&demo);
 

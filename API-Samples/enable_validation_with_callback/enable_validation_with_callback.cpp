@@ -79,7 +79,6 @@ int sample_main(int argc, char *argv[]) {
             "VK_LAYER_LUNARG_parameter_validation");
         info.instance_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
         info.instance_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
-        info.instance_layer_names.push_back("VK_LAYER_LUNARG_device_limits");
         info.instance_layer_names.push_back("VK_LAYER_LUNARG_image");
         info.instance_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
         info.instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
@@ -220,8 +219,8 @@ int sample_main(int argc, char *argv[]) {
      * Destroying the device before destroying the command pool above
      * will trigger a validation error.
      */
-    std::cout << "calling vkDestroyDevice before destroying command pool\n";
-    std::cout << "this should result in an error\n";
+    std::cout << "*** INTENTIONALLY calling vkDestroyDevice before destroying command pool ***\n";
+    std::cout << "*** The following error message is EXPECTED ***\n";
     vkDestroyDevice(info.device, NULL);
 
     /* Clean up callback */

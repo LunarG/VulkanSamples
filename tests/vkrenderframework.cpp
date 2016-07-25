@@ -919,11 +919,18 @@ VkSamplerObj::VkSamplerObj(VkDeviceObj *device) {
  * Basic ConstantBuffer constructor. Then use create methods to fill in the
  * details.
  */
-VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device) {
+VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device,
+                                         VkBufferUsageFlags usage) {
     m_device = device;
     m_commandBuffer = 0;
 
     memset(&m_descriptorBufferInfo, 0, sizeof(m_descriptorBufferInfo));
+
+    // Special case for usages outside of original limits of framework
+    if ((VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT) !=
+            usage) {
+        init_no_mem(*m_device, create_info(0, usage));
+    }
 }
 
 VkConstantBufferObj::~VkConstantBufferObj() {
@@ -936,7 +943,8 @@ VkConstantBufferObj::~VkConstantBufferObj() {
 }
 
 VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
-                                         int constantSize, const void *data) {
+                                         int constantSize, const void *data,
+                                         VkBufferUsageFlags usage) {
     m_device = device;
     m_commandBuffer = 0;
 
@@ -945,12 +953,19 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
     m_stride = constantSize;
 
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    const size_t allocationSize = constantCount * constantSize;
-    init_as_src_and_dst(*m_device, allocationSize, reqs);
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    const VkDeviceSize allocationSize =
+            static_cast<VkDeviceSize>(constantCount * constantSize);
+
+    if ((VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT) ==
+            usage) {
+        init_as_src_and_dst(*m_device, allocationSize, reqs);
+    } else {
+        init(*m_device, create_info(allocationSize, usage), reqs);
+    }
 
     void *pData = memory().map();
-    memcpy(pData, data, allocationSize);
+    memcpy(pData, data, static_cast<size_t>(allocationSize));
     memory().unmap();
 
     /*
@@ -1237,12 +1252,13 @@ void VkPipelineObj::AddShader(VkShaderObj *shader) {
 }
 
 void VkPipelineObj::AddVertexInputAttribs(
-    VkVertexInputAttributeDescription *vi_attrib, unsigned count) {
+    VkVertexInputAttributeDescription *vi_attrib, uint32_t count) {
     m_vi_state.pVertexAttributeDescriptions = vi_attrib;
     m_vi_state.vertexAttributeDescriptionCount = count;
 }
 
-void VkPipelineObj::AddVertexInputBindings(VkVertexInputBindingDescription *vi_binding, unsigned count) {
+void VkPipelineObj::AddVertexInputBindings(VkVertexInputBindingDescription *vi_binding,
+                                           uint32_t count) {
     m_vi_state.pVertexBindingDescriptions = vi_binding;
     m_vi_state.vertexBindingDescriptionCount = count;
 }
@@ -1504,7 +1520,7 @@ void VkCommandBufferObj::FillBuffer(VkBuffer buffer, VkDeviceSize offset,
 
 void VkCommandBufferObj::UpdateBuffer(VkBuffer buffer, VkDeviceSize dstOffset,
                                       VkDeviceSize dataSize,
-                                      const uint32_t *pData) {
+                                      const void *pData) {
     vkCmdUpdateBuffer(handle(), buffer, dstOffset, dataSize, pData);
 }
 
@@ -1742,5 +1758,3 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
 
     m_attachmentBindInfo = m_imageView.handle();
 }
-
-unsigned cVertices::BindIdGenerator;

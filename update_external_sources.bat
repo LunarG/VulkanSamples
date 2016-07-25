@@ -215,6 +215,9 @@ goto:eof
    cd %GLSLANG_DIR%
    git fetch --all
    git checkout %GLSLANG_REVISION%
+   REM Revert glslang a5c33d6ffb34ccede5b233bc724c907166b6e479
+   REM See https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/issues/681
+   git apply --whitespace=fix %BUILD_DIR%\glslang_revert_a5c33d.patch.txt
 goto:eof
 
 :create_spirv-tools
@@ -282,7 +285,7 @@ goto:eof
    msbuild INSTALL.vcxproj /p:Platform=x86 /p:Configuration=Debug /verbosity:quiet
    
    REM Check for existence of one lib, even though we should check for all results
-   if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslang.lib (
+   if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslangd.lib (
       echo.
       echo glslang 32-bit Debug build failed!
       set errorCode=1
@@ -312,7 +315,7 @@ goto:eof
    msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug /verbosity:quiet
    
    REM Check for existence of one lib, even though we should check for all results
-   if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslang.lib (
+   if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslangd.lib (
       echo.
       echo glslang 64-bit Debug build failed!
       set errorCode=1

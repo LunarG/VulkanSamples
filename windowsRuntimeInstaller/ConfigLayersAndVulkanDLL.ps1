@@ -359,6 +359,7 @@ function UpdateVulkanSysFolder([string]$dir, [int]$writeSdkName)
 
 # We only care about SYSWOW64 if we're targeting a 64-bit OS
 if ($ossize -eq 64) {
+
     # Update the SYSWOW64 Vulkan DLLS/EXEs
     WriteToLog "Calling UpdateVulkanSysFolder $winfolder\SYSWOW64 0"
     UpdateVulkanSysFolder $winfolder\SYSWOW64 0
@@ -368,12 +369,26 @@ if ($ossize -eq 64) {
     }
 }
 
-# Update the SYSTEM32 Vulkan DLLS/EXEs
-WriteToLog "Calling UpdateVulkanSysFolder $winfolder\SYSTEM32 1"
-UpdateVulkanSysFolder $winfolder\SYSTEM32 1
-if (!$?) {
-    WriteToLog "Error: Calling UpdateVulkanSysFolder for all OS"
-    setScriptReturnValue(80)
+# If this is a 64 bit OS and a 32 bit powershell
+if (($ossize -eq 64 ) -and ([IntPtr]::size -eq 4)) {
+
+    # Update the SYSTEM32 Vulkan DLLS/EXEs
+    WriteToLog "Calling UpdateVulkanSysFolder $winfolder\SYSTEM32 1"
+    UpdateVulkanSysFolder $winfolder\SYSNATIVE 1
+    if (!$?) {
+        WriteToLog "Error: Calling UpdateVulkanSysFolder for all OS"
+        setScriptReturnValue(80)
+    }
+
+} else {
+
+    # Update the SYSTEM32 Vulkan DLLS/EXEs
+    WriteToLog "Calling UpdateVulkanSysFolder $winfolder\SYSTEM32 1"
+    UpdateVulkanSysFolder $winfolder\SYSTEM32 1
+    if (!$?) {
+        WriteToLog "Error: Calling UpdateVulkanSysFolder for all OS"
+        setScriptReturnValue(81)
+    }
 }
 
 # Create an array of vulkan sdk install dirs
