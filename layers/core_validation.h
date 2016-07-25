@@ -134,7 +134,7 @@ class PIPELINE_NODE : public BASE_NODE {
     uint32_t active_shaders;
     uint32_t duplicate_shaders;
     // Capture which slots (set#->bindings) are actually used by the shaders of this pipeline
-    std::unordered_map<uint32_t, std::unordered_set<uint32_t>> active_slots;
+    std::unordered_map<uint32_t, std::unordered_map<uint32_t, descriptor_req>> active_slots;
     // Vtx input info (if any)
     std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
     std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions;

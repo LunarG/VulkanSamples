@@ -2603,6 +2603,12 @@ static bool validate_shader_capabilities(debug_report_data *report_data, shader_
     return pass;
 }
 
+
+static uint32_t descriptor_type_to_reqs(shader_module const *module, uint32_t type_id) {
+    return 0;
+}
+
+
 static bool validate_pipeline_shader_stage(debug_report_data *report_data,
                                            VkPipelineShaderStageCreateInfo const *pStage,
                                            PIPELINE_NODE *pipeline,
@@ -2646,7 +2652,8 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
     /* validate descriptor use */
     for (auto use : descriptor_uses) {
         // While validating shaders capture which slots are used by the pipeline
-        pipeline->active_slots[use.first.first].insert(use.first.second);
+        auto & reqs = pipeline->active_slots[use.first.first][use.first.second];
+        reqs = descriptor_req(reqs | descriptor_type_to_reqs(module, use.second.type_id));
 
         /* verify given pipelineLayout has requested setLayout with requested binding */
         const auto &binding = get_descriptor_binding(&pipelineLayout, use.first);
@@ -2782,7 +2789,7 @@ cvdescriptorset::DescriptorSet *getSetNode(const layer_data *my_data, VkDescript
 //  3. Grow updateBuffers for pCB to include buffers from STORAGE*_BUFFER descriptor buffers
 static bool validate_and_update_drawtime_descriptor_state(
     layer_data *dev_data, GLOBAL_CB_NODE *pCB,
-    const vector<std::tuple<cvdescriptorset::DescriptorSet *, unordered_set<uint32_t>,
+    const vector<std::tuple<cvdescriptorset::DescriptorSet *, unordered_map<uint32_t, descriptor_req>,
                             std::vector<uint32_t> const *>> &activeSetBindingsPairs) {
     bool result = false;
     for (auto set_bindings_pair : activeSetBindingsPairs) {
@@ -2965,7 +2972,7 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
         auto pipeline_layout = pPipe->pipeline_layout;
 
         // Need a vector (vs. std::set) of active Sets for dynamicOffset validation in case same set bound w/ different offsets
-        vector<std::tuple<cvdescriptorset::DescriptorSet *, unordered_set<uint32_t>, std::vector<uint32_t> const *>> activeSetBindingsPairs;
+        vector<std::tuple<cvdescriptorset::DescriptorSet *, unordered_map<uint32_t, descriptor_req>, std::vector<uint32_t> const *>> activeSetBindingsPairs;
         for (auto & setBindingPair : pPipe->active_slots) {
             uint32_t setIndex = setBindingPair.first;
             // If valid set is not bound throw an error
@@ -2995,7 +3002,7 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
                 //  If it has immutable samplers, we'll flag error later as needed depending on binding
                 if (!pSet->IsUpdated()) {
                     for (auto binding : setBindingPair.second) {
-                        if (!pSet->GetImmutableSamplerPtrFromBinding(binding)) {
+                        if (!pSet->GetImmutableSamplerPtrFromBinding(binding.first)) {
                             result |= log_msg(
                                 my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                 (uint64_t)pSet->GetSet(), __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",

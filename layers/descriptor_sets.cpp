@@ -335,10 +335,11 @@ bool cvdescriptorset::DescriptorSet::IsCompatible(const DescriptorSetLayout *lay
 //  This includes validating that all descriptors in the given bindings are updated,
 //  that any update buffers are valid, and that any dynamic offsets are within the bounds of their buffers.
 // Return true if state is acceptable, or false and write an error message into error string
-bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::unordered_set<uint32_t> &bindings,
+bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::unordered_map<uint32_t, descriptor_req> &bindings,
                                                        const std::vector<uint32_t> &dynamic_offsets, std::string *error) const {
     auto dyn_offset_index = 0;
-    for (auto binding : bindings) {
+    for (auto binding_pair : bindings) {
+        auto binding = binding_pair.first;
         if (!p_layout_->HasBinding(binding)) {
             std::stringstream error_str;
             error_str << "Attempting to validate DrawState for binding #" << binding
@@ -417,11 +418,12 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::unordered_set<
     return true;
 }
 // For given bindings, place any update buffers or images into the passed-in unordered_sets
-uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::unordered_set<uint32_t> &bindings,
+uint32_t cvdescriptorset::DescriptorSet::GetStorageUpdates(const std::unordered_map<uint32_t, descriptor_req> &bindings,
                                                            std::unordered_set<VkBuffer> *buffer_set,
                                                            std::unordered_set<VkImageView> *image_set) const {
     auto num_updates = 0;
-    for (auto binding : bindings) {
+    for (auto binding_pair : bindings) {
+        auto binding = binding_pair.first;
         // If a binding doesn't exist, skip it
         if (!p_layout_->HasBinding(binding)) {
             continue;
