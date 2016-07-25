@@ -2605,7 +2605,40 @@ static bool validate_shader_capabilities(debug_report_data *report_data, shader_
 
 
 static uint32_t descriptor_type_to_reqs(shader_module const *module, uint32_t type_id) {
-    return 0;
+    auto type = module->get_def(type_id);
+
+    while (true) {
+        switch (type.opcode()) {
+        case spv::OpTypeArray:
+        case spv::OpTypeSampledImage:
+            type = module->get_def(type.word(2));
+            break;
+        case spv::OpTypePointer:
+            type = module->get_def(type.word(3));
+            break;
+        case spv::OpTypeImage: {
+            auto dim = type.word(3);
+            auto arrayed = type.word(5);
+            auto msaa = type.word(6);
+
+            switch (dim) {
+            case spv::Dim1D:
+                return DESCRIPTOR_REQ_VIEW_TYPE_1D << arrayed;
+            case spv::Dim2D:
+                return (msaa ? DESCRIPTOR_REQ_MULTI_SAMPLE : DESCRIPTOR_REQ_SINGLE_SAMPLE) |
+                    (DESCRIPTOR_REQ_VIEW_TYPE_2D << arrayed);
+            case spv::Dim3D:
+                return DESCRIPTOR_REQ_VIEW_TYPE_3D;
+            case spv::DimCube:
+                return DESCRIPTOR_REQ_VIEW_TYPE_CUBE << arrayed;
+            default:  // subpass, buffer, etc.
+                return 0;
+            }
+        }
+        default:
+            return 0;
+        }
+    }
 }
 
 
