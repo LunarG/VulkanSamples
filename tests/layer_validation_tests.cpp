@@ -1668,6 +1668,95 @@ TEST_F(VkLayerTest, IgnoreUnrelatedDescriptor) {
         vkFreeMemory(m_device->device(), buffer_memory, NULL);
     }
 }
+
+TEST_F(VkLayerTest, PSOPolygonModeInvalid) {
+    VkResult err;
+
+    TEST_DESCRIPTION("Attempt to use a non-solid polygon fill mode in a "
+        "pipeline when this feature is not enabled.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    std::vector<const char *> device_extension_names;
+    auto features = m_device->phy().features();
+    // Artificially disable support for non-solid fill modes
+    features.fillModeNonSolid = false;
+    // The sacrificial device object
+    VkDeviceObj test_device(0, gpu(), device_extension_names, &features);
+
+    VkRenderpassObj render_pass(&test_device);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.setLayoutCount = 0;
+    pipeline_layout_ci.pSetLayouts = NULL;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(test_device.device(), &pipeline_layout_ci, NULL,
+        &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineRasterizationStateCreateInfo rs_ci = {};
+    rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rs_ci.pNext = nullptr;
+    rs_ci.lineWidth = 1.0f;
+    rs_ci.rasterizerDiscardEnable = true;
+
+    VkShaderObj vs(&test_device, bindStateVertShaderText,
+        VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(&test_device, bindStateFragShaderText,
+        VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    // Set polygonMode to unsupporte value POINT, should fail
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "polygonMode cannot be VK_POLYGON_MODE_POINT or VK_POLYGON_MODE_LINE");
+    {
+        VkPipelineObj pipe(&test_device);
+        pipe.AddShader(&vs);
+        pipe.AddShader(&fs);
+        pipe.AddColorAttachment();
+        // Introduce failure by setting unsupported polygon mode
+        rs_ci.polygonMode = VK_POLYGON_MODE_POINT;
+        pipe.SetRasterization(&rs_ci);
+        pipe.CreateVKPipeline(pipeline_layout, render_pass.handle());
+    }
+    m_errorMonitor->VerifyFound();
+
+    // Try again with polygonMode=LINE, should fail
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "polygonMode cannot be VK_POLYGON_MODE_POINT or VK_POLYGON_MODE_LINE");
+    {
+        VkPipelineObj pipe(&test_device);
+        pipe.AddShader(&vs);
+        pipe.AddShader(&fs);
+        pipe.AddColorAttachment();
+        // Introduce failure by setting unsupported polygon mode
+        rs_ci.polygonMode = VK_POLYGON_MODE_LINE;
+        pipe.SetRasterization(&rs_ci);
+        pipe.CreateVKPipeline(pipeline_layout, render_pass.handle());
+    }
+    m_errorMonitor->VerifyFound();
+
+    // Try again with polygonMode=FILL. No error is expected
+    m_errorMonitor->ExpectSuccess();
+    {
+        VkPipelineObj pipe(&test_device);
+        pipe.AddShader(&vs);
+        pipe.AddShader(&fs);
+        pipe.AddColorAttachment();
+        // Set polygonMode to a good value
+        rs_ci.polygonMode = VK_POLYGON_MODE_FILL;
+        pipe.SetRasterization(&rs_ci);
+        pipe.CreateVKPipeline(pipeline_layout, render_pass.handle());
+    }
+    m_errorMonitor->VerifyNotFound();
+
+    vkDestroyPipelineLayout(test_device.device(), pipeline_layout, NULL);
+}
+
 #endif // PARAMETER_VALIDATION_TESTS
 
 #if MEM_TRACKER_TESTS
