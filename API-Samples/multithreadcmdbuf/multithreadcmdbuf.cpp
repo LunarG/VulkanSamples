@@ -215,7 +215,7 @@ int sample_main(int argc, char *argv[]) {
     submit_info[0].pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, clearFence);
+    res = vkQueueSubmit(info.graphics_queue, 1, submit_info, clearFence);
     assert(!res);
 
     do {
@@ -291,7 +291,7 @@ int sample_main(int argc, char *argv[]) {
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, drawFence);
+    res = vkQueueSubmit(info.graphics_queue, 1, submit_info, drawFence);
     assert(!res);
 
     /* Make sure command buffer is finished before presenting */

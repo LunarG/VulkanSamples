@@ -300,10 +300,10 @@ int sample_main(int argc, char *argv[]) {
     submit_info[0].pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, drawFence);
+    res = vkQueueSubmit(info.graphics_queue, 1, submit_info, drawFence);
     assert(res == VK_SUCCESS);
 
-    res = vkQueueWaitIdle(info.queue);
+    res = vkQueueWaitIdle(info.graphics_queue);
     assert(res == VK_SUCCESS);
 
     uint64_t samples_passed[4];
@@ -354,7 +354,7 @@ int sample_main(int argc, char *argv[]) {
     } while (res == VK_TIMEOUT);
 
     assert(res == VK_SUCCESS);
-    res = vkQueuePresentKHR(info.queue, &present);
+    res = vkQueuePresentKHR(info.present_queue, &present);
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);

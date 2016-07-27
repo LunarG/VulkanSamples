@@ -94,27 +94,33 @@ int sample_main(int argc, char *argv[]) {
     }
 
     // Search for a graphics queue and a present queue in the array of queue
-    // families, try to find one that supports both
-    uint32_t graphicsQueueNodeIndex = UINT32_MAX;
+    // families
+    info.graphics_queue_family_index = info.present_queue_family_index =
+        UINT32_MAX;
     for (uint32_t i = 0; i < info.queue_count; i++) {
-        if ((info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
-            if (supportsPresent[i] == VK_TRUE) {
-                graphicsQueueNodeIndex = i;
-                break;
-            }
+        if ((info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 &&
+            info.graphics_queue_family_index == UINT32_MAX) {
+            info.graphics_queue_family_index = i;
+        }
+        if (supportsPresent[i] == VK_TRUE &&
+            info.present_queue_family_index == UINT32_MAX) {
+            info.present_queue_family_index = i;
+        }
+        if (info.graphics_queue_family_index != UINT32_MAX &&
+            info.present_queue_family_index != UINT32_MAX) {
+            break;
         }
     }
     free(supportsPresent);
 
-    // Generate error if could not find a queue that supports both a graphics
+    // Generate error if could not find queues that support graphics
     // and present
-    if (graphicsQueueNodeIndex == UINT32_MAX) {
-        std::cout << "Could not find a queue that supports both graphics and "
+    if (info.graphics_queue_family_index == UINT32_MAX ||
+        info.present_queue_family_index == UINT32_MAX) {
+        std::cout << "Could not find a queues for graphics and "
                      "present\n";
         exit(-1);
     }
-
-    info.graphics_queue_family_index = graphicsQueueNodeIndex;
 
     init_device(info);
 
@@ -203,28 +209,40 @@ int sample_main(int argc, char *argv[]) {
         preTransform = surfCapabilities.currentTransform;
     }
 
-    VkSwapchainCreateInfoKHR swap_chain = {};
-    swap_chain.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    swap_chain.pNext = NULL;
-    swap_chain.surface = info.surface;
-    swap_chain.minImageCount = desiredNumberOfSwapChainImages;
-    swap_chain.imageFormat = info.format;
-    swap_chain.imageExtent.width = swapChainExtent.width;
-    swap_chain.imageExtent.height = swapChainExtent.height;
-    swap_chain.preTransform = preTransform;
-    swap_chain.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swap_chain.imageArrayLayers = 1;
-    swap_chain.presentMode = swapchainPresentMode;
-    swap_chain.oldSwapchain = VK_NULL_HANDLE;
-    swap_chain.clipped = true;
-    swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-    swap_chain.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    swap_chain.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    swap_chain.queueFamilyIndexCount = 0;
-    swap_chain.pQueueFamilyIndices = NULL;
+    VkSwapchainCreateInfoKHR swapchain_ci = {};
+    swapchain_ci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchain_ci.pNext = NULL;
+    swapchain_ci.surface = info.surface;
+    swapchain_ci.minImageCount = desiredNumberOfSwapChainImages;
+    swapchain_ci.imageFormat = info.format;
+    swapchain_ci.imageExtent.width = swapChainExtent.width;
+    swapchain_ci.imageExtent.height = swapChainExtent.height;
+    swapchain_ci.preTransform = preTransform;
+    swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchain_ci.imageArrayLayers = 1;
+    swapchain_ci.presentMode = swapchainPresentMode;
+    swapchain_ci.oldSwapchain = VK_NULL_HANDLE;
+    swapchain_ci.clipped = true;
+    swapchain_ci.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+    swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swapchain_ci.queueFamilyIndexCount = 0;
+    swapchain_ci.pQueueFamilyIndices = NULL;
+    uint32_t queueFamilyIndices[2] = {
+        (uint32_t)info.graphics_queue_family_index,
+        (uint32_t)info.present_queue_family_index};
+    if (info.graphics_queue_family_index != info.present_queue_family_index) {
+        // If the graphics and present queues are from different queue families,
+        // we either have to explicitly transfer ownership of images between
+        // the queues, or we have to create the swapchain with imageSharingMode
+        // as VK_SHARING_MODE_CONCURRENT
+        swapchain_ci.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        swapchain_ci.queueFamilyIndexCount = 2;
+        swapchain_ci.pQueueFamilyIndices = queueFamilyIndices;
+    }
 
-    res =
-        vkCreateSwapchainKHR(info.device, &swap_chain, NULL, &info.swap_chain);
+    res = vkCreateSwapchainKHR(info.device, &swapchain_ci, NULL,
+                               &info.swap_chain);
     assert(res == VK_SUCCESS);
 
     res = vkGetSwapchainImagesKHR(info.device, info.swap_chain,

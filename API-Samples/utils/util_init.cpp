@@ -694,27 +694,33 @@ void init_swapchain_extension(struct sample_info &info) {
     }
 
     // Search for a graphics queue and a present queue in the array of queue
-    // families, try to find one that supports both
-    uint32_t graphicsQueueNodeIndex = UINT32_MAX;
+    // families
+    info.graphics_queue_family_index = info.present_queue_family_index =
+        UINT32_MAX;
     for (uint32_t i = 0; i < info.queue_count; i++) {
-        if ((info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
-            if (supportsPresent[i] == VK_TRUE) {
-                graphicsQueueNodeIndex = i;
-                break;
-            }
+        if ((info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 &&
+            info.graphics_queue_family_index == UINT32_MAX) {
+            info.graphics_queue_family_index = i;
+        }
+        if (supportsPresent[i] == VK_TRUE &&
+            info.present_queue_family_index == UINT32_MAX) {
+            info.present_queue_family_index = i;
+        }
+        if (info.graphics_queue_family_index != UINT32_MAX &&
+            info.present_queue_family_index != UINT32_MAX) {
+            break;
         }
     }
     free(supportsPresent);
 
-    // Generate error if could not find a queue that supports both a graphics
+    // Generate error if could not find queues that support graphics
     // and present
-    if (graphicsQueueNodeIndex == UINT32_MAX) {
-        std::cout
-            << "Could not find a queue that supports both graphics and present";
+    if (info.graphics_queue_family_index == UINT32_MAX ||
+        info.present_queue_family_index == UINT32_MAX) {
+        std::cout << "Could not find a queues for both graphics and present";
         exit(-1);
     }
 
-    info.graphics_queue_family_index = graphicsQueueNodeIndex;
 
     // Get the list of VkFormats that are supported:
     uint32_t formatCount;
@@ -785,7 +791,7 @@ void execute_queue_cmdbuf(struct sample_info &info,
     submit_info[0].pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, fence);
+    res = vkQueueSubmit(info.graphics_queue, 1, submit_info, fence);
     assert(!res);
 }
 
@@ -828,7 +834,7 @@ void execute_present_image(struct sample_info &info) {
     present.waitSemaphoreCount = 0;
     present.pResults = NULL;
 
-    res = vkQueuePresentKHR(info.queue, &present);
+    res = vkQueuePresentKHR(info.present_queue, &present);
     // TODO: Deal with the VK_SUBOPTIMAL_WSI and VK_ERROR_OUT_OF_DATE_WSI
     // return codes
     assert(!res);
@@ -906,32 +912,44 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
         preTransform = surfCapabilities.currentTransform;
     }
 
-    VkSwapchainCreateInfoKHR swap_chain = {};
-    swap_chain.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    swap_chain.pNext = NULL;
-    swap_chain.surface = info.surface;
-    swap_chain.minImageCount = desiredNumberOfSwapChainImages;
-    swap_chain.imageFormat = info.format;
-    swap_chain.imageExtent.width = swapChainExtent.width;
-    swap_chain.imageExtent.height = swapChainExtent.height;
-    swap_chain.preTransform = preTransform;
-    swap_chain.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swap_chain.imageArrayLayers = 1;
-    swap_chain.presentMode = swapchainPresentMode;
-    swap_chain.oldSwapchain = VK_NULL_HANDLE;
+    VkSwapchainCreateInfoKHR swapchain_ci = {};
+    swapchain_ci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchain_ci.pNext = NULL;
+    swapchain_ci.surface = info.surface;
+    swapchain_ci.minImageCount = desiredNumberOfSwapChainImages;
+    swapchain_ci.imageFormat = info.format;
+    swapchain_ci.imageExtent.width = swapChainExtent.width;
+    swapchain_ci.imageExtent.height = swapChainExtent.height;
+    swapchain_ci.preTransform = preTransform;
+    swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchain_ci.imageArrayLayers = 1;
+    swapchain_ci.presentMode = swapchainPresentMode;
+    swapchain_ci.oldSwapchain = VK_NULL_HANDLE;
 #ifndef __ANDROID__
-    swap_chain.clipped = true;
+    swapchain_ci.clipped = true;
 #else
     swap_chain.clipped = false;
 #endif
-    swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-    swap_chain.imageUsage = usageFlags;
-    swap_chain.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    swap_chain.queueFamilyIndexCount = 0;
-    swap_chain.pQueueFamilyIndices = NULL;
+    swapchain_ci.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+    swapchain_ci.imageUsage = usageFlags;
+    swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swapchain_ci.queueFamilyIndexCount = 0;
+    swapchain_ci.pQueueFamilyIndices = NULL;
+    uint32_t queueFamilyIndices[2] = {
+        (uint32_t)info.graphics_queue_family_index,
+        (uint32_t)info.present_queue_family_index};
+    if (info.graphics_queue_family_index != info.present_queue_family_index) {
+        // If the graphics and present queues are from different queue families,
+        // we either have to explicitly transfer ownership of images between the
+        // queues, or we have to create the swapchain with imageSharingMode
+        // as VK_SHARING_MODE_CONCURRENT
+        swapchain_ci.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        swapchain_ci.queueFamilyIndexCount = 2;
+        swapchain_ci.pQueueFamilyIndices = queueFamilyIndices;
+    }
 
-    res =
-        vkCreateSwapchainKHR(info.device, &swap_chain, NULL, &info.swap_chain);
+    res = vkCreateSwapchainKHR(info.device, &swapchain_ci, NULL,
+                               &info.swap_chain);
     assert(res == VK_SUCCESS);
 
     res = vkGetSwapchainImagesKHR(info.device, info.swap_chain,
@@ -1277,7 +1295,7 @@ void execute_queue_command_buffer(struct sample_info &info) {
     submit_info[0].signalSemaphoreCount = 0;
     submit_info[0].pSignalSemaphores = NULL;
 
-    res = vkQueueSubmit(info.queue, 1, submit_info, drawFence);
+    res = vkQueueSubmit(info.graphics_queue, 1, submit_info, drawFence);
     assert(res == VK_SUCCESS);
 
     do {
@@ -1293,7 +1311,13 @@ void init_device_queue(struct sample_info &info) {
     /* DEPENDS on init_swapchain_extension() */
 
     vkGetDeviceQueue(info.device, info.graphics_queue_family_index, 0,
-                     &info.queue);
+                     &info.graphics_queue);
+    if (info.graphics_queue_family_index == info.present_queue_family_index) {
+        info.present_queue = info.graphics_queue;
+    } else {
+        vkGetDeviceQueue(info.device, info.present_queue_family_index, 0,
+                         &info.present_queue);
+    }
 }
 
 void init_vertex_buffer(struct sample_info &info, const void *vertexData,
@@ -1809,7 +1833,7 @@ void init_image(struct sample_info &info, texture_object &texObj,
     submit_info[0].pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, cmdFence);
+    res = vkQueueSubmit(info.graphics_queue, 1, submit_info, cmdFence);
     assert(res == VK_SUCCESS);
 
     VkImageSubresource subres = {};

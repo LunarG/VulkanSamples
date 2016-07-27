@@ -128,7 +128,7 @@ void set_image_layout(struct sample_info &info, VkImage image,
     /* DEPENDS on info.cmd and info.queue initialized */
 
     assert(info.cmd != VK_NULL_HANDLE);
-    assert(info.queue != VK_NULL_HANDLE);
+    assert(info.graphics_queue != VK_NULL_HANDLE);
 
     VkImageMemoryBarrier image_memory_barrier = {};
     image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -699,7 +699,7 @@ void write_ppm(struct sample_info &info, const char *basename) {
     submit_info[0].pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, cmdFence);
+    res = vkQueueSubmit(info.graphics_queue, 1, submit_info, cmdFence);
     assert(res == VK_SUCCESS);
 
     /* Make sure command buffer is finished before mapping */
