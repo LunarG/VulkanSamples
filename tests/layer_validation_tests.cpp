@@ -14290,6 +14290,65 @@ TEST_F(VkLayerTest, DrawTimeImageViewTypeMismatchWithPipeline) {
     EndCommandBuffer();
 }
 
+TEST_F(VkLayerTest, DrawTimeImageMultisampleMismatchWithPipeline) {
+    TEST_DESCRIPTION("Test that an error is produced when a multisampled images "
+                     "are consumed via singlesample images types in the shader, or vice versa.");
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "requires bound image to have multiple samples");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    char const *vsSource =
+        "#version 450\n"
+        "\n"
+        "out gl_PerVertex { vec4 gl_Position; };\n"
+        "void main() { gl_Position = vec4(0); }\n";
+    char const *fsSource =
+        "#version 450\n"
+        "\n"
+        "layout(set=0, binding=0) uniform sampler2DMS s;\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main() {\n"
+        "   color = texelFetch(s, ivec2(0), 0);\n"
+        "}\n";
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
+
+    VkTextureObj texture(m_device, nullptr);
+    VkSamplerObj sampler(m_device);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendSamplerTexture(&sampler, &texture);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    VkResult err = pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+    ASSERT_VK_SUCCESS(err);
+
+    BeginCommandBuffer();
+
+    m_commandBuffer->BindPipeline(pipe);
+    m_commandBuffer->BindDescriptorSet(descriptorSet);
+
+    VkViewport viewport = { 0, 0, 16, 16, 0, 1 };
+    vkCmdSetViewport(m_commandBuffer->handle(), 0, 1, &viewport);
+    VkRect2D scissor = { { 0, 0 }, { 16, 16 } };
+    vkCmdSetScissor(m_commandBuffer->handle(), 0, 1, &scissor);
+
+    // error produced here.
+    vkCmdDraw(m_commandBuffer->handle(), 3, 1, 0, 0);
+
+    m_errorMonitor->VerifyFound();
+
+    EndCommandBuffer();
+}
+
 #endif // SHADER_CHECKER_TESTS
 
 #if DEVICE_LIMITS_TESTS
