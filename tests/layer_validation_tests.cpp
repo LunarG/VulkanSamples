@@ -8957,6 +8957,12 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
         "Gfx Pipeline viewportCount is 1, but pViewports is NULL. ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+
+    if (!m_device->phy().features().multiViewport) {
+        printf("Device does not support multiple viewports/scissors; skipped.\n");
+        return;
+    }
+
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkDescriptorPoolSize ds_type_count = {};
@@ -9096,8 +9102,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
     // pViewports
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Dynamic scissorCount from vkCmdSetScissor() is 2, but PSO "
-        "scissorCount is 1. These counts must match.");
+        "Dynamic scissor(s) 0 are used by PSO, ");
 
     VkViewport vp = {}; // Just need dummy vp to point to
     vp_state_ci.pViewports = &vp;
@@ -9107,9 +9112,9 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch) {
     BeginCommandBuffer();
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(),
                       VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-    VkRect2D scissors[2] = {}; // don't care about data
+    VkRect2D scissors[1] = {}; // don't care about data
     // Count of 2 doesn't match PSO count of 1
-    vkCmdSetScissor(m_commandBuffer->GetBufferHandle(), 0, 2, scissors);
+    vkCmdSetScissor(m_commandBuffer->GetBufferHandle(), 1, 1, scissors);
     Draw(1, 0, 0, 0);
 
     m_errorMonitor->VerifyFound();
@@ -9131,6 +9136,12 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
         "Gfx Pipeline scissorCount is 1, but pScissors is NULL. ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+
+    if (!m_device->phy().features().multiViewport) {
+        printf("Device does not support multiple viewports/scissors; skipped.\n");
+        return;
+    }
+
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkDescriptorPoolSize ds_type_count = {};
@@ -9271,8 +9282,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
     // pViewports
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Dynamic viewportCount from vkCmdSetViewport() is 2, but PSO "
-        "viewportCount is 1. These counts must match.");
+        "Dynamic viewport(s) 0 are used by PSO, ");
 
     VkRect2D sc = {}; // Just need dummy vp to point to
     vp_state_ci.pScissors = &sc;
@@ -9282,9 +9292,9 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch) {
     BeginCommandBuffer();
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(),
                       VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-    VkViewport viewports[2] = {}; // don't care about data
+    VkViewport viewports[1] = {}; // don't care about data
     // Count of 2 doesn't match PSO count of 1
-    vkCmdSetViewport(m_commandBuffer->GetBufferHandle(), 0, 2, viewports);
+    vkCmdSetViewport(m_commandBuffer->GetBufferHandle(), 1, 1, viewports);
     Draw(1, 0, 0, 0);
 
     m_errorMonitor->VerifyFound();
