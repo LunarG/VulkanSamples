@@ -2851,6 +2851,18 @@ static VkSampleCountFlagBits getNumSamples(PIPELINE_NODE const *pipe) {
     return VK_SAMPLE_COUNT_1_BIT;
 }
 
+static void list_bits(std::ostream& s, uint32_t bits) {
+    for (int i = 0; i < 32 && bits; i++) {
+        if (bits & (1 << i)) {
+            s << i;
+            bits &= ~(1 << i);
+            if (bits) {
+                s << ",";
+            }
+        }
+    }
+}
+
 // Validate draw-time state related to the PSO
 static bool validatePipelineDrawtimeState(layer_data const *my_data,
                                           LAST_BOUND_STATE const &state,
@@ -2886,22 +2898,32 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
         pPipeline->graphicsPipelineCI.pViewportState) {
         bool dynViewport = isDynamic(pPipeline, VK_DYNAMIC_STATE_VIEWPORT);
         bool dynScissor = isDynamic(pPipeline, VK_DYNAMIC_STATE_SCISSOR);
+
         if (dynViewport) {
-            if (pCB->viewports.size() != pPipeline->graphicsPipelineCI.pViewportState->viewportCount) {
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                  __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                                  "Dynamic viewportCount from vkCmdSetViewport() is " PRINTF_SIZE_T_SPECIFIER
-                                  ", but PSO viewportCount is %u. These counts must match.",
-                                  pCB->viewports.size(), pPipeline->graphicsPipelineCI.pViewportState->viewportCount);
+            auto requiredViewportsMask = (1 << pPipeline->graphicsPipelineCI.pViewportState->viewportCount) - 1;
+            auto missingViewportMask = ~pCB->viewportMask & requiredViewportsMask;
+            if (missingViewportMask) {
+                std::stringstream ss;
+                ss << "Dynamic viewport(s) ";
+                list_bits(ss, missingViewportMask);
+                ss << " are used by PSO, but were not provided via calls to vkCmdSetViewport().";
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                                     __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                                     "%s", ss.str().c_str());
             }
         }
+
         if (dynScissor) {
-            if (pCB->scissors.size() != pPipeline->graphicsPipelineCI.pViewportState->scissorCount) {
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                  __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                                  "Dynamic scissorCount from vkCmdSetScissor() is " PRINTF_SIZE_T_SPECIFIER
-                                  ", but PSO scissorCount is %u. These counts must match.",
-                                  pCB->scissors.size(), pPipeline->graphicsPipelineCI.pViewportState->scissorCount);
+            auto requiredScissorMask = (1 << pPipeline->graphicsPipelineCI.pViewportState->scissorCount) - 1;
+            auto missingScissorMask = ~pCB->scissorMask & requiredScissorMask;
+            if (missingScissorMask) {
+                std::stringstream ss;
+                ss << "Dynamic scissor(s) ";
+                list_bits(ss, missingScissorMask);
+                ss << " are used by PSO, but were not provided via calls to vkCmdSetScissor().";
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0,
+                                     __LINE__, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                                     "%s", ss.str().c_str());
             }
         }
     }
@@ -3841,8 +3863,8 @@ static void resetCB(layer_data *dev_data, const VkCommandBuffer cb) {
         pCB->state = CB_NEW;
         pCB->submitCount = 0;
         pCB->status = 0;
-        pCB->viewports.clear();
-        pCB->scissors.clear();
+        pCB->viewportMask = 0;
+        pCB->scissorMask = 0;
 
         for (uint32_t i = 0; i < VK_PIPELINE_BIND_POINT_RANGE_SIZE; ++i) {
             // Before clearing lastBoundState, remove any CB bindings from all uniqueBoundSets
@@ -6623,8 +6645,7 @@ CmdSetViewport(VkCommandBuffer commandBuffer, uint32_t firstViewport, uint32_t v
     if (pCB) {
         skip_call |= addCmd(dev_data, pCB, CMD_SETVIEWPORTSTATE, "vkCmdSetViewport()");
         pCB->status |= CBSTATUS_VIEWPORT_SET;
-        pCB->viewports.resize(viewportCount);
-        memcpy(pCB->viewports.data(), pViewports, viewportCount * sizeof(VkViewport));
+        pCB->viewportMask |= ((1u<<viewportCount) - 1u) << firstViewport;
     }
     lock.unlock();
     if (!skip_call)
@@ -6640,8 +6661,7 @@ CmdSetScissor(VkCommandBuffer commandBuffer, uint32_t firstScissor, uint32_t sci
     if (pCB) {
         skip_call |= addCmd(dev_data, pCB, CMD_SETSCISSORSTATE, "vkCmdSetScissor()");
         pCB->status |= CBSTATUS_SCISSOR_SET;
-        pCB->scissors.resize(scissorCount);
-        memcpy(pCB->scissors.data(), pScissors, scissorCount * sizeof(VkRect2D));
+        pCB->scissorMask |= ((1u<<scissorCount) - 1u) << firstScissor;
     }
     lock.unlock();
     if (!skip_call)

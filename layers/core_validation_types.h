@@ -506,8 +506,8 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     // Store last bound state for Gfx & Compute pipeline bind points
     LAST_BOUND_STATE lastBound[VK_PIPELINE_BIND_POINT_RANGE_SIZE];
 
-    std::vector<VkViewport> viewports;
-    std::vector<VkRect2D> scissors;
+    uint32_t viewportMask;
+    uint32_t scissorMask;
     VkRenderPassBeginInfo activeRenderPassBeginInfo;
     RENDER_PASS_NODE *activeRenderPass;
     VkSubpassContents activeSubpassContents;
