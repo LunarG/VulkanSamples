@@ -316,6 +316,8 @@ struct demo {
     VkQueue present_queue;
     uint32_t graphics_queue_family_index;
     uint32_t present_queue_family_index;
+    VkSemaphore image_acquired_semaphore;
+    VkSemaphore draw_complete_semaphore;
     VkPhysicalDeviceProperties gpu_props;
     VkQueueFamilyProperties *queue_props;
     VkPhysicalDeviceMemoryProperties memory_properties;
@@ -476,14 +478,20 @@ static bool memory_type_from_properties(struct demo *demo, uint32_t typeBits,
 static void demo_flush_init_cmd(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
 
+    // This function could get called twice if the texture uses a staging buffer
+    // In that case the second call should be ignored
     if (demo->cmd == VK_NULL_HANDLE)
         return;
 
     err = vkEndCommandBuffer(demo->cmd);
     assert(!err);
 
+    VkFence fence;
+    VkFenceCreateInfo fence_ci = {.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+                                  .pNext = NULL,
+                                  .flags = 0};
+    vkCreateFence(demo->device, &fence_ci, NULL, &fence);
     const VkCommandBuffer cmd_bufs[] = {demo->cmd};
-    VkFence nullFence = VK_NULL_HANDLE;
     VkSubmitInfo submit_info = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
                                 .pNext = NULL,
                                 .waitSemaphoreCount = 0,
@@ -494,13 +502,14 @@ static void demo_flush_init_cmd(struct demo *demo) {
                                 .signalSemaphoreCount = 0,
                                 .pSignalSemaphores = NULL};
 
-    err = vkQueueSubmit(demo->graphics_queue, 1, &submit_info, nullFence);
+    err = vkQueueSubmit(demo->graphics_queue, 1, &submit_info, fence);
     assert(!err);
 
-    err = vkQueueWaitIdle(demo->graphics_queue);
+    err = vkWaitForFences(demo->device, 1, &fence, VK_TRUE, UINT64_MAX);
     assert(!err);
 
     vkFreeCommandBuffers(demo->device, demo->cmd_pool, 1, cmd_bufs);
+    vkDestroyFence(demo->device, fence, NULL);
     demo->cmd = VK_NULL_HANDLE;
 }
 
@@ -576,7 +585,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf) {
     const VkCommandBufferBeginInfo cmd_buf_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .pNext = NULL,
-        .flags = 0,
+        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
         .pInheritanceInfo = NULL,
     };
     const VkClearValue clear_values[2] = {
@@ -614,9 +623,9 @@ static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf) {
         .image = demo->buffers[demo->current_buffer].image,
         .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
 
-    vkCmdPipelineBarrier(cmd_buf, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0,
-                         NULL, 1, &image_memory_barrier);
+    vkCmdPipelineBarrier(cmd_buf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0,
+                         NULL, 0, NULL, 1, &image_memory_barrier);
 
     vkCmdBeginRenderPass(cmd_buf, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -674,34 +683,16 @@ void demo_update_data_buffer(struct demo *demo) {
 
 static void demo_draw(struct demo *demo) {
     VkResult U_ASSERT_ONLY err;
-    VkSemaphore imageAcquiredSemaphore, drawCompleteSemaphore;
-    VkSemaphoreCreateInfo semaphoreCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        .pNext = NULL,
-        .flags = 0,
-    };
-    VkFence nullFence = VK_NULL_HANDLE;
-
-    err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo,
-                            NULL, &imageAcquiredSemaphore);
-    assert(!err);
-
-    err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo,
-                            NULL, &drawCompleteSemaphore);
-    assert(!err);
 
     // Get the index of the next available swapchain image:
     err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, UINT64_MAX,
-                                      imageAcquiredSemaphore,
-                                      (VkFence)0, // TODO: Show use of fence
+                                      demo->image_acquired_semaphore, (VkFence)0,
                                       &demo->current_buffer);
     if (err == VK_ERROR_OUT_OF_DATE_KHR) {
         // demo->swapchain is out of date (e.g. the window was resized) and
         // must be recreated:
         demo_resize(demo);
         demo_draw(demo);
-        vkDestroySemaphore(demo->device, imageAcquiredSemaphore, NULL);
-        vkDestroySemaphore(demo->device, drawCompleteSemaphore, NULL);
         return;
     } else if (err == VK_SUBOPTIMAL_KHR) {
         // demo->swapchain is not as optimal as it could be, but the platform's
@@ -710,25 +701,23 @@ static void demo_draw(struct demo *demo) {
         assert(!err);
     }
 
-    demo_flush_init_cmd(demo);
-
-    // Wait for the present complete semaphore to be signaled to ensure
+    // Wait for the image acquired semaphore to be signaled to ensure
     // that the image won't be rendered to until the presentation
     // engine has fully released ownership to the application, and it is
     // okay to render to the image.
-
+    VkFence nullFence = NULL;
     VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-    VkSubmitInfo submit_info = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                                .pNext = NULL,
-                                .waitSemaphoreCount = 1,
-                                .pWaitSemaphores = &imageAcquiredSemaphore,
-                                .pWaitDstStageMask = &pipe_stage_flags,
-                                .commandBufferCount = 1,
-                                .pCommandBuffers =
-                                    &demo->buffers[demo->current_buffer].cmd,
-                                .signalSemaphoreCount = 1,
-                                .pSignalSemaphores = &drawCompleteSemaphore};
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkSubmitInfo submit_info = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext = NULL,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &demo->image_acquired_semaphore,
+        .pWaitDstStageMask = &pipe_stage_flags,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &demo->buffers[demo->current_buffer].cmd,
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores = &demo->draw_complete_semaphore};
 
     err = vkQueueSubmit(demo->graphics_queue, 1, &submit_info, nullFence);
     assert(!err);
@@ -740,7 +729,7 @@ static void demo_draw(struct demo *demo) {
         .pSwapchains = &demo->swapchain,
         .pImageIndices = &demo->current_buffer,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &drawCompleteSemaphore,
+        .pWaitSemaphores = &demo->draw_complete_semaphore,
     };
 
     // TBD/TODO: SHOULD THE "present" PARAMETER BE "const" IN THE HEADER?
@@ -755,12 +744,6 @@ static void demo_draw(struct demo *demo) {
     } else {
         assert(!err);
     }
-
-    err = vkQueueWaitIdle(demo->present_queue);
-    assert(err == VK_SUCCESS);
-
-    vkDestroySemaphore(demo->device, imageAcquiredSemaphore, NULL);
-    vkDestroySemaphore(demo->device, drawCompleteSemaphore, NULL);
 }
 
 static void demo_prepare_buffers(struct demo *demo) {
@@ -1852,6 +1835,7 @@ static void demo_cleanup(struct demo *demo) {
     uint32_t i;
 
     demo->prepared = false;
+    vkDeviceWaitIdle(demo->device);
 
     for (i = 0; i < demo->swapchainImageCount; i++) {
         vkDestroyFramebuffer(demo->device, demo->framebuffers[i], NULL);
@@ -1890,6 +1874,8 @@ static void demo_cleanup(struct demo *demo) {
     free(demo->queue_props);
 
     vkDestroyCommandPool(demo->device, demo->cmd_pool, NULL);
+    vkDestroySemaphore(demo->device, demo->image_acquired_semaphore, NULL);
+    vkDestroySemaphore(demo->device, demo->draw_complete_semaphore, NULL);
     vkDestroyDevice(demo->device, NULL);
     if (demo->validate) {
         demo->DestroyDebugReportCallback(demo->inst, demo->msg_callback, NULL);
@@ -1932,6 +1918,7 @@ static void demo_resize(struct demo *demo) {
     //
     // First, perform part of the demo_cleanup() function:
     demo->prepared = false;
+    vkDeviceWaitIdle(demo->device);
 
     for (i = 0; i < demo->swapchainImageCount; i++) {
         vkDestroyFramebuffer(demo->device, demo->framebuffers[i], NULL);
@@ -1979,15 +1966,9 @@ struct demo demo;
 static void demo_run(struct demo *demo) {
     if (!demo->prepared)
         return;
-    // Wait for work to finish before updating MVP.
-    vkDeviceWaitIdle(demo->device);
+
     demo_update_data_buffer(demo);
-
     demo_draw(demo);
-
-    // Wait for work to finish before updating MVP.
-    vkDeviceWaitIdle(demo->device);
-
     demo->curFrame++;
     if (demo->frameCount != INT_MAX && demo->curFrame == demo->frameCount) {
         PostQuitMessage(validation_error);
@@ -2155,14 +2136,8 @@ static void demo_run_xlib(struct demo *demo) {
             }
         }
 
-        // Wait for work to finish before updating MVP.
-        vkDeviceWaitIdle(demo->device);
         demo_update_data_buffer(demo);
-
         demo_draw(demo);
-
-        // Wait for work to finish before updating MVP.
-        vkDeviceWaitIdle(demo->device);
         demo->curFrame++;
         if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
             demo->quit = true;
@@ -2231,14 +2206,8 @@ static void demo_run_xcb(struct demo *demo) {
             free(event);
         }
 
-        // Wait for work to finish before updating MVP.
-        vkDeviceWaitIdle(demo->device);
         demo_update_data_buffer(demo);
-
         demo_draw(demo);
-
-        // Wait for work to finish before updating MVP.
-        vkDeviceWaitIdle(demo->device);
         demo->curFrame++;
         if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
             demo->quit = true;
@@ -2287,14 +2256,8 @@ static void demo_create_xcb_window(struct demo *demo) {
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 static void demo_run(struct demo *demo) {
     while (!demo->quit) {
-        // Wait for work to finish before updating MVP.
-        vkDeviceWaitIdle(demo->device);
         demo_update_data_buffer(demo);
-
         demo_draw(demo);
-
-        // Wait for work to finish before updating MVP.
-        vkDeviceWaitIdle(demo->device);
         demo->curFrame++;
         if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
             demo->quit = true;
@@ -2342,15 +2305,8 @@ static void demo_run(struct demo *demo) {
     if (!demo->prepared)
         return;
 
-    // Wait for work to finish before updating MVP.
-    vkDeviceWaitIdle(demo->device);
     demo_update_data_buffer(demo);
-
     demo_draw(demo);
-
-    // Wait for work to finish before updating MVP.
-    vkDeviceWaitIdle(demo->device);
-
     demo->curFrame++;
 }
 #endif
@@ -2938,6 +2894,21 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 
     demo->quit = false;
     demo->curFrame = 0;
+
+    // Create semaphores to synchronize acquiring presentable buffers before
+    // rendering and waiting for drawing to be complete before presenting
+    VkSemaphoreCreateInfo semaphoreCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = NULL,
+        .flags = 0,
+    };
+    err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo, NULL,
+                            &demo->image_acquired_semaphore);
+    assert(!err);
+
+    err = vkCreateSemaphore(demo->device, &semaphoreCreateInfo, NULL,
+                            &demo->draw_complete_semaphore);
+    assert(!err);
 
     // Get Memory information and properties
     vkGetPhysicalDeviceMemoryProperties(demo->gpu, &demo->memory_properties);
