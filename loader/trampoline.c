@@ -156,7 +156,7 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
                 loader_add_to_ext_list(NULL, &local_ext_list, ext_list->count,
                                        ext_list->list);
             }
-            loader_destroy_layer_list(NULL, NULL, &local_list);
+            loader_delete_layer_properties(NULL, &local_list);
             global_ext_list = &local_ext_list;
 
         } else {
@@ -219,7 +219,7 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
 
 out:
     loader_destroy_generic_list(NULL, (struct loader_generic_list *)&local_ext_list);
-    loader_destroy_layer_list(NULL, NULL, &instance_layers);
+    loader_delete_layer_properties(NULL, &instance_layers);
     return res;
 }
 
