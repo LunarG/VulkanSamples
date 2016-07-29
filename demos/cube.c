@@ -151,21 +151,6 @@ struct vktexcube_vs_uniform {
 // Mesh and VertexFormat Data
 //--------------------------------------------------------------------------------------
 // clang-format off
-struct Vertex
-{
-    float     posX, posY, posZ, posW;    // Position data
-    float     r, g, b, a;                // Color
-};
-
-struct VertexPosTex
-{
-    float     posX, posY, posZ, posW;    // Position data
-    float     u, v, s, t;                // Texcoord
-};
-
-#define XYZ1(_x_, _y_, _z_)         (_x_), (_y_), (_z_), 1.f
-#define UV(_u_, _v_)                (_u_), (_v_), 0.f, 1.f
-
 static const float g_vertex_buffer_data[] = {
     -1.0f,-1.0f,-1.0f,  // -X side
     -1.0f,-1.0f, 1.0f,
@@ -211,47 +196,47 @@ static const float g_vertex_buffer_data[] = {
 };
 
 static const float g_uv_buffer_data[] = {
-    0.0f, 0.0f,  // -X side
+    0.0f, 1.0f,  // -X side
+    1.0f, 1.0f,
     1.0f, 0.0f,
-    1.0f, 1.0f,
-    1.0f, 1.0f,
-    0.0f, 1.0f,
-    0.0f, 0.0f,
-
-    1.0f, 0.0f,  // -Z side
-    0.0f, 1.0f,
-    0.0f, 0.0f,
     1.0f, 0.0f,
-    1.0f, 1.0f,
-    0.0f, 1.0f,
-
-    1.0f, 1.0f,  // -Y side
-    1.0f, 0.0f,
-    0.0f, 0.0f,
-    1.0f, 1.0f,
     0.0f, 0.0f,
     0.0f, 1.0f,
 
-    1.0f, 1.0f,  // +Y side
+    1.0f, 1.0f,  // -Z side
+    0.0f, 0.0f,
+    0.0f, 1.0f,
+    1.0f, 1.0f,
+    1.0f, 0.0f,
+    0.0f, 0.0f,
+
+    1.0f, 0.0f,  // -Y side
+    1.0f, 1.0f,
+    0.0f, 1.0f,
+    1.0f, 0.0f,
     0.0f, 1.0f,
     0.0f, 0.0f,
-    1.0f, 1.0f,
-    0.0f, 0.0f,
-    1.0f, 0.0f,
 
-    1.0f, 1.0f,  // +X side
+    1.0f, 0.0f,  // +Y side
+    0.0f, 0.0f,
     0.0f, 1.0f,
-    0.0f, 0.0f,
-    0.0f, 0.0f,
     1.0f, 0.0f,
+    0.0f, 1.0f,
     1.0f, 1.0f,
 
-    0.0f, 1.0f,  // +Z side
+    1.0f, 0.0f,  // +X side
     0.0f, 0.0f,
+    0.0f, 1.0f,
+    0.0f, 1.0f,
     1.0f, 1.0f,
-    0.0f, 0.0f,
     1.0f, 0.0f,
+
+    0.0f, 0.0f,  // +Z side
+    0.0f, 1.0f,
+    1.0f, 0.0f,
+    0.0f, 1.0f,
     1.0f, 1.0f,
+    1.0f, 0.0f,
 };
 // clang-format on
 
