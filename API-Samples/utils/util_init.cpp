@@ -777,7 +777,7 @@ void execute_queue_cmdbuf(struct sample_info &info,
     VkResult U_ASSERT_ONLY res;
 
     VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1283,7 +1283,7 @@ void execute_queue_command_buffer(struct sample_info &info) {
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
     VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

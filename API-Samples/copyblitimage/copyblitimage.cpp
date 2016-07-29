@@ -144,7 +144,7 @@ int sample_main(int argc, char *argv[]) {
     VkFence cmdFence;
     init_fence(info, cmdFence);
     VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info = {};
     submit_info.pNext = NULL;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

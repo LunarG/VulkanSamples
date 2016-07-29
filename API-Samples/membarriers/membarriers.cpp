@@ -283,7 +283,7 @@ int sample_main(int argc, char **argv)
 
     VkSubmitInfo submit_info = {};
     VkPipelineStageFlags pipe_stage_flags =
-           VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+           VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     init_submit_info(info, submit_info, pipe_stage_flags);
     assert(res == VK_SUCCESS);
 

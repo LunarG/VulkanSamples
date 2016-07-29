@@ -205,7 +205,7 @@ int sample_main(int argc, char *argv[]) {
     VkFence clearFence;
     init_fence(info, clearFence);
     VkPipelineStageFlags pipe_stage_flags =
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
