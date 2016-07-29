@@ -794,7 +794,6 @@ void execute_queue_cmdbuf(struct sample_info &info,
     res = vkQueueSubmit(info.graphics_queue, 1, submit_info, fence);
     assert(!res);
 }
-
 void execute_pre_present_barrier(struct sample_info &info) {
     /* DEPENDS on init_swap_chain() */
     /* Add mem barrier to change layout to present */
@@ -814,11 +813,11 @@ void execute_pre_present_barrier(struct sample_info &info) {
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    vkCmdPipelineBarrier(info.cmd,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                          VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0,
                          NULL, 1, &prePresentBarrier);
 }
-
 void execute_present_image(struct sample_info &info) {
     /* DEPENDS on init_presentable_image() and init_swap_chain()*/
     /* Present the image in the window */
@@ -1124,7 +1123,8 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info,
     assert(res == VK_SUCCESS);
 }
 
-void init_renderpass(struct sample_info &info, bool include_depth, bool clear) {
+void init_renderpass(struct sample_info &info, bool include_depth, bool clear,
+                     VkImageLayout finalLayout) {
     /* DEPENDS on init_swap_chain() and init_depth_buffer() */
 
     VkResult U_ASSERT_ONLY res;
@@ -1138,7 +1138,7 @@ void init_renderpass(struct sample_info &info, bool include_depth, bool clear) {
     attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    attachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachments[0].finalLayout = finalLayout;
     attachments[0].flags = 0;
 
     if (include_depth) {

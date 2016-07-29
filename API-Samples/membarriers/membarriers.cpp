@@ -125,7 +125,8 @@ int sample_main(int argc, char **argv)
                  VK_FORMAT_FEATURE_BLIT_DST_BIT);
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info, true);
-    init_renderpass(info, DEPTH_PRESENT, false);
+    init_renderpass(info, DEPTH_PRESENT, false,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, DEPTH_PRESENT);
     init_vertex_buffer(info, vb_Data, sizeof(vb_Data), sizeof(vb_Data[0]), true);
@@ -272,7 +273,8 @@ int sample_main(int argc, char **argv)
     vkCmdDraw(info.cmd, 2 * 3, 1, 6, 0);
     vkCmdEndRenderPass(info.cmd);
 
-    // Change the present buffer from COLOR_ATTACHMENT_OPTIMAL to PRESENT_SOURCE_KHR
+    // Change the present buffer from COLOR_ATTACHMENT_OPTIMAL to
+    // PRESENT_SOURCE_KHR
     // so it can be presented
     execute_pre_present_barrier(info);
 

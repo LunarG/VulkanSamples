@@ -308,9 +308,6 @@ int sample_main(int argc, char *argv[]) {
     vkCmdDraw(info.cmd, 3, 1, 0, 0);
 
     vkCmdEndRenderPass(info.cmd);
-
-    execute_pre_present_barrier(info);
-
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = {info.cmd};
 

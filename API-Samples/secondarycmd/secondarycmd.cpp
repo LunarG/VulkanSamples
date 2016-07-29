@@ -87,7 +87,8 @@ int sample_main(int argc, char *argv[]) {
     init_depth_buffer(info);
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info, true);
-    init_renderpass(info, depthPresent);
+    init_renderpass(info, depthPresent, true,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, depthPresent);
     init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
@@ -312,9 +313,10 @@ int sample_main(int argc, char *argv[]) {
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, NULL, 0, NULL,
-                         1, &prePresentBarrier);
+    vkCmdPipelineBarrier(info.cmd,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0,
+                         NULL, 1, &prePresentBarrier);
 
     res = vkEndCommandBuffer(info.cmd);
     assert(res == VK_SUCCESS);

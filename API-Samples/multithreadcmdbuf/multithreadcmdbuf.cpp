@@ -146,9 +146,12 @@ int sample_main(int argc, char *argv[]) {
     res = vkCreatePipelineLayout(info.device, &pPipelineLayoutCreateInfo, NULL,
                                  &info.pipeline_layout);
     assert(res == VK_SUCCESS);
-    init_renderpass(
-        info, depthPresent,
-        false); // Can't clear in renderpass load because we re-use pipeline
+    init_renderpass(info, depthPresent, false,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL); // Can't clear in
+                                                               // renderpass
+                                                               // load because
+                                                               // we re-use
+                                                               // pipeline
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, depthPresent);
 
@@ -259,7 +262,8 @@ int sample_main(int argc, char *argv[]) {
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    vkCmdPipelineBarrier(threadCmdBufs[3], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    vkCmdPipelineBarrier(threadCmdBufs[3],
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                          VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0,
                          NULL, 1, &prePresentBarrier);
 
