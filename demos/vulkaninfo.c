@@ -816,7 +816,7 @@ static void app_create_win32_window(struct app_instance *inst) {
     }
 }
 
-static void app_create_win32_surface(struct app_instance *inst, struct app_gpu *gpu) {
+static void app_create_win32_surface(struct app_instance *inst) {
     VkResult U_ASSERT_ONLY err;
     VkWin32SurfaceCreateInfoKHR createInfo;
     createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -873,7 +873,7 @@ static void app_create_xcb_window(struct app_instance *inst) {
   free(reply);
 }
 
-static void app_create_xcb_surface(struct app_instance *inst, struct app_gpu *gpu) {
+static void app_create_xcb_surface(struct app_instance *inst) {
     VkResult U_ASSERT_ONLY err;
     VkXcbSurfaceCreateInfoKHR xcb_createInfo;
     xcb_createInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
@@ -911,7 +911,7 @@ static void app_create_xlib_window(struct app_instance *inst) {
     XSync(inst->xlib_display,false);
 }
 
-static void app_create_xlib_surface(struct app_instance *inst, struct app_gpu *gpu) {
+static void app_create_xlib_surface(struct app_instance *inst) {
     VkResult U_ASSERT_ONLY err;
     VkXlibSurfaceCreateInfoKHR createInfo;
     createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
@@ -1476,7 +1476,7 @@ int main(int argc, char **argv) {
                       inst.global_extension_count, inst.global_extensions)) {
         app_create_win32_window(&inst);
         for (i = 0; i < gpu_count; i++) {
-            app_create_win32_surface(&inst, &gpus[i]);
+            app_create_win32_surface(&inst);
             printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
             printf("Surface type : %s\n", VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
             formatCount += app_dump_surface_formats(&inst, &gpus[i]);
@@ -1491,7 +1491,7 @@ int main(int argc, char **argv) {
                       inst.global_extension_count, inst.global_extensions)) {
         app_create_xcb_window(&inst);
         for (i = 0; i < gpu_count; i++) {
-            app_create_xcb_surface(&inst, &gpus[i]);
+            app_create_xcb_surface(&inst);
             printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
             printf("Surface type : %s\n", VK_KHR_XCB_SURFACE_EXTENSION_NAME);
             formatCount += app_dump_surface_formats(&inst, &gpus[i]);
@@ -1506,7 +1506,7 @@ int main(int argc, char **argv) {
                       inst.global_extension_count, inst.global_extensions)) {
         app_create_xlib_window(&inst);
         for (i = 0; i < gpu_count; i++) {
-            app_create_xlib_surface(&inst, &gpus[i]);
+            app_create_xlib_surface(&inst);
             printf("GPU id       : %u (%s)\n", i, gpus[i].props.deviceName);
             printf("Surface type : %s\n", VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
             formatCount += app_dump_surface_formats(&inst, &gpus[i]);
