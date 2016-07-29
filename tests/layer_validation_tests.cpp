@@ -3868,6 +3868,116 @@ TEST_F(VkLayerTest, RenderPassInitialLayoutUndefined) {
     vkDestroyImageView(m_device->device(), view, nullptr);
 }
 
+TEST_F(VkLayerTest, FramebufferBindingDestroyCommandPool) {
+    TEST_DESCRIPTION("This test should pass. Create a Framebuffer and "
+                     "command buffer, bind them together, then destroy "
+                     "command pool and framebuffer and verify there are no "
+                     "errors.");
+
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // A renderpass with one color attachment.
+    VkAttachmentDescription attachment = {
+        0, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    };
+
+    VkAttachmentReference att_ref = {
+        0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    };
+
+    VkSubpassDescription subpass = {
+        0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr,
+        1, &att_ref, nullptr, nullptr, 0, nullptr
+    };
+
+    VkRenderPassCreateInfo rpci = {
+        VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr,
+        0, 1, &attachment, 1, &subpass, 0, nullptr
+    };
+
+    VkRenderPass rp;
+    VkResult err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    // A compatible framebuffer.
+    VkImageObj image(m_device);
+    image.init(32, 32, VK_FORMAT_R8G8B8A8_UNORM,
+               VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+               VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+
+    VkImageViewCreateInfo ivci = {
+        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr,
+        0, image.handle(), VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM,
+        {
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY
+        },
+        {
+            VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1
+        },
+    };
+    VkImageView view;
+    err = vkCreateImageView(m_device->device(), &ivci, nullptr, &view);
+    ASSERT_VK_SUCCESS(err);
+
+    VkFramebufferCreateInfo fci = {
+        VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr,
+        0, rp, 1, &view,
+        32, 32, 1
+    };
+    VkFramebuffer fb;
+    err = vkCreateFramebuffer(m_device->device(), &fci, nullptr, &fb);
+    ASSERT_VK_SUCCESS(err);
+
+    // Explicitly create a command buffer to bind the FB to so that we can then
+    //  destroy the command pool in order to implicitly free command buffer
+    VkCommandPool command_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device->device(), &pool_create_info, nullptr,
+                        &command_pool);
+
+    VkCommandBuffer command_buffer;
+    VkCommandBufferAllocateInfo command_buffer_allocate_info{};
+    command_buffer_allocate_info.sType =
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_allocate_info.commandPool = command_pool;
+    command_buffer_allocate_info.commandBufferCount = 1;
+    command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vkAllocateCommandBuffers(m_device->device(), &command_buffer_allocate_info,
+                             &command_buffer);
+
+    // Begin our cmd buffer with renderpass using our framebuffer
+    VkRenderPassBeginInfo rpbi = {
+        VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr,
+        rp, fb, { { 0, 0 } , { 32, 32 } },
+        0, nullptr
+    };
+    VkCommandBufferBeginInfo begin_info{};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    vkBeginCommandBuffer(command_buffer, &begin_info);
+
+    vkCmdBeginRenderPass(command_buffer, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdEndRenderPass(command_buffer);
+    vkEndCommandBuffer(command_buffer);
+    // Destroy command pool to implicitly free command buffer
+    vkDestroyCommandPool(m_device->device(), command_pool, NULL);
+    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+    m_errorMonitor->VerifyNotFound();
+}
+
 TEST_F(VkLayerTest, RenderPassSubpassZeroTransitionsApplied) {
     TEST_DESCRIPTION("Ensure that CmdBeginRenderPass applies the layout "
                      "transitions for the first subpass");
