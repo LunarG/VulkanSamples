@@ -156,7 +156,7 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
                 loader_add_to_ext_list(NULL, &local_ext_list, ext_list->count,
                                        ext_list->list);
             }
-            loader_delete_layer_properties(NULL, &local_list);
+            loader_destroy_layer_list(NULL, NULL, &local_list);
             global_ext_list = &local_ext_list;
 
         } else {
