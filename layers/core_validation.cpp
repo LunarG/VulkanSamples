@@ -3595,6 +3595,12 @@ void SetLayout(const layer_data *dev_data, GLOBAL_CB_NODE *pCB, VkImageView imag
         for (uint32_t k = 0; k < subRange.layerCount; k++) {
             uint32_t layer = subRange.baseArrayLayer + k;
             VkImageSubresource sub = {subRange.aspectMask, level, layer};
+            // TODO: If ImageView was created with depth or stencil, transition both layouts as
+            // the aspectMask is ignored and both are used. Verify that the extra implicit layout
+            // is OK for descriptor set layout validation
+            if (subRange.aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
+                sub.aspectMask |= (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+            }
             SetLayout(pCB, image, sub, layout);
         }
     }
