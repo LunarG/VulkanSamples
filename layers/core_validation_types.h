@@ -85,6 +85,23 @@ template <> struct hash<VK_OBJECT> {
 };
 }
 
+
+// Flags describing requirements imposed by the pipeline on a descriptor. These
+// can't be checked at pipeline creation time as they depend on the Image or
+// ImageView bound.
+enum descriptor_req {
+    DESCRIPTOR_REQ_VIEW_TYPE_1D = 1 << VK_IMAGE_VIEW_TYPE_1D,
+    DESCRIPTOR_REQ_VIEW_TYPE_1D_ARRAY = 1 << VK_IMAGE_VIEW_TYPE_1D_ARRAY,
+    DESCRIPTOR_REQ_VIEW_TYPE_2D = 1 << VK_IMAGE_VIEW_TYPE_2D,
+    DESCRIPTOR_REQ_VIEW_TYPE_2D_ARRAY = 1 << VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    DESCRIPTOR_REQ_VIEW_TYPE_3D = 1 << VK_IMAGE_VIEW_TYPE_3D,
+    DESCRIPTOR_REQ_VIEW_TYPE_CUBE = 1 << VK_IMAGE_VIEW_TYPE_CUBE,
+    DESCRIPTOR_REQ_VIEW_TYPE_CUBE_ARRAY = 1 << VK_IMAGE_VIEW_TYPE_CUBE_ARRAY,
+
+    DESCRIPTOR_REQ_SINGLE_SAMPLE = 2 << VK_IMAGE_VIEW_TYPE_END_RANGE,
+    DESCRIPTOR_REQ_MULTI_SAMPLE = DESCRIPTOR_REQ_SINGLE_SAMPLE << 1,
+};
+
 struct DESCRIPTOR_POOL_NODE {
     VkDescriptorPool pool;
     uint32_t maxSets;       // Max descriptor sets allowed in this pool
@@ -489,8 +506,8 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     // Store last bound state for Gfx & Compute pipeline bind points
     LAST_BOUND_STATE lastBound[VK_PIPELINE_BIND_POINT_RANGE_SIZE];
 
-    std::vector<VkViewport> viewports;
-    std::vector<VkRect2D> scissors;
+    uint32_t viewportMask;
+    uint32_t scissorMask;
     VkRenderPassBeginInfo activeRenderPassBeginInfo;
     RENDER_PASS_NODE *activeRenderPass;
     VkSubpassContents activeSubpassContents;
@@ -538,7 +555,7 @@ struct CB_SUBMISSION {
     std::vector<VkSemaphore> semaphores;
 };
 
-// Fwd declarations of layer_data and helpers to look-up state from layer_data maps
+// Fwd declarations of layer_data and helpers to look-up/validate state from layer_data maps
 namespace core_validation {
 struct layer_data;
 cvdescriptorset::DescriptorSet *getSetNode(const layer_data *, VkDescriptorSet);
@@ -553,6 +570,7 @@ VkImageViewCreateInfo *getImageViewData(const layer_data *, VkImageView);
 VkSwapchainKHR getSwapchainFromImage(const layer_data *, VkImage);
 SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, VkSwapchainKHR);
 void invalidateCommandBuffers(std::unordered_set<GLOBAL_CB_NODE *>, VK_OBJECT);
+bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_NODE *, const char *);
 }
 
 #endif // CORE_VALIDATION_TYPES_H_

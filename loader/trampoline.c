@@ -219,7 +219,7 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
 
 out:
     loader_destroy_generic_list(NULL, (struct loader_generic_list *)&local_ext_list);
-    loader_destroy_layer_list(NULL, NULL, &instance_layers);
+    loader_delete_layer_properties(NULL, &instance_layers);
     return res;
 }
 
@@ -253,11 +253,13 @@ vkEnumerateInstanceLayerProperties(uint32_t *pPropertyCount,
     }
 
     *pPropertyCount = copy_size;
-    loader_destroy_layer_list(NULL, NULL, &instance_layer_list);
 
     if (copy_size < instance_layer_list.count) {
+        loader_destroy_layer_list(NULL, NULL, &instance_layer_list);
         return VK_INCOMPLETE;
     }
+
+    loader_destroy_layer_list(NULL, NULL, &instance_layer_list);
 
     return VK_SUCCESS;
 }

@@ -151,21 +151,6 @@ struct vktexcube_vs_uniform {
 // Mesh and VertexFormat Data
 //--------------------------------------------------------------------------------------
 // clang-format off
-struct Vertex
-{
-    float     posX, posY, posZ, posW;    // Position data
-    float     r, g, b, a;                // Color
-};
-
-struct VertexPosTex
-{
-    float     posX, posY, posZ, posW;    // Position data
-    float     u, v, s, t;                // Texcoord
-};
-
-#define XYZ1(_x_, _y_, _z_)         (_x_), (_y_), (_z_), 1.f
-#define UV(_u_, _v_)                (_u_), (_v_), 0.f, 1.f
-
 static const float g_vertex_buffer_data[] = {
     -1.0f,-1.0f,-1.0f,  // -X side
     -1.0f,-1.0f, 1.0f,
@@ -211,47 +196,47 @@ static const float g_vertex_buffer_data[] = {
 };
 
 static const float g_uv_buffer_data[] = {
-    0.0f, 0.0f,  // -X side
+    0.0f, 1.0f,  // -X side
+    1.0f, 1.0f,
     1.0f, 0.0f,
-    1.0f, 1.0f,
-    1.0f, 1.0f,
-    0.0f, 1.0f,
-    0.0f, 0.0f,
-
-    1.0f, 0.0f,  // -Z side
-    0.0f, 1.0f,
-    0.0f, 0.0f,
     1.0f, 0.0f,
-    1.0f, 1.0f,
-    0.0f, 1.0f,
-
-    1.0f, 1.0f,  // -Y side
-    1.0f, 0.0f,
-    0.0f, 0.0f,
-    1.0f, 1.0f,
     0.0f, 0.0f,
     0.0f, 1.0f,
 
-    1.0f, 1.0f,  // +Y side
+    1.0f, 1.0f,  // -Z side
+    0.0f, 0.0f,
+    0.0f, 1.0f,
+    1.0f, 1.0f,
+    1.0f, 0.0f,
+    0.0f, 0.0f,
+
+    1.0f, 0.0f,  // -Y side
+    1.0f, 1.0f,
+    0.0f, 1.0f,
+    1.0f, 0.0f,
     0.0f, 1.0f,
     0.0f, 0.0f,
-    1.0f, 1.0f,
-    0.0f, 0.0f,
-    1.0f, 0.0f,
 
-    1.0f, 1.0f,  // +X side
+    1.0f, 0.0f,  // +Y side
+    0.0f, 0.0f,
     0.0f, 1.0f,
-    0.0f, 0.0f,
-    0.0f, 0.0f,
     1.0f, 0.0f,
+    0.0f, 1.0f,
     1.0f, 1.0f,
 
-    0.0f, 1.0f,  // +Z side
+    1.0f, 0.0f,  // +X side
     0.0f, 0.0f,
+    0.0f, 1.0f,
+    0.0f, 1.0f,
     1.0f, 1.0f,
-    0.0f, 0.0f,
     1.0f, 0.0f,
+
+    0.0f, 0.0f,  // +Z side
+    0.0f, 1.0f,
+    1.0f, 0.0f,
+    0.0f, 1.0f,
     1.0f, 1.0f,
+    1.0f, 0.0f,
 };
 // clang-format on
 
@@ -327,8 +312,10 @@ struct demo {
     VkInstance inst;
     VkPhysicalDevice gpu;
     VkDevice device;
-    VkQueue queue;
-    uint32_t graphics_queue_node_index;
+    VkQueue graphics_queue;
+    VkQueue present_queue;
+    uint32_t graphics_queue_family_index;
+    uint32_t present_queue_family_index;
     VkPhysicalDeviceProperties gpu_props;
     VkQueueFamilyProperties *queue_props;
     VkPhysicalDeviceMemoryProperties memory_properties;
@@ -507,10 +494,10 @@ static void demo_flush_init_cmd(struct demo *demo) {
                                 .signalSemaphoreCount = 0,
                                 .pSignalSemaphores = NULL};
 
-    err = vkQueueSubmit(demo->queue, 1, &submit_info, nullFence);
+    err = vkQueueSubmit(demo->graphics_queue, 1, &submit_info, nullFence);
     assert(!err);
 
-    err = vkQueueWaitIdle(demo->queue);
+    err = vkQueueWaitIdle(demo->graphics_queue);
     assert(!err);
 
     vkFreeCommandBuffers(demo->device, demo->cmd_pool, 1, cmd_bufs);
@@ -758,7 +745,7 @@ static void demo_draw(struct demo *demo) {
                                 .signalSemaphoreCount = 1,
                                 .pSignalSemaphores = &drawCompleteSemaphore};
 
-    err = vkQueueSubmit(demo->queue, 1, &submit_info, nullFence);
+    err = vkQueueSubmit(demo->graphics_queue, 1, &submit_info, nullFence);
     assert(!err);
 
     VkPresentInfoKHR present = {
@@ -772,7 +759,7 @@ static void demo_draw(struct demo *demo) {
     };
 
     // TBD/TODO: SHOULD THE "present" PARAMETER BE "const" IN THE HEADER?
-    err = demo->fpQueuePresentKHR(demo->queue, &present);
+    err = demo->fpQueuePresentKHR(demo->present_queue, &present);
     if (err == VK_ERROR_OUT_OF_DATE_KHR) {
         // demo->swapchain is out of date (e.g. the window was resized) and
         // must be recreated:
@@ -784,7 +771,7 @@ static void demo_draw(struct demo *demo) {
         assert(!err);
     }
 
-    err = vkQueueWaitIdle(demo->queue);
+    err = vkQueueWaitIdle(demo->present_queue);
     assert(err == VK_SUCCESS);
 
     vkDestroySemaphore(demo->device, imageAcquiredSemaphore, NULL);
@@ -847,6 +834,8 @@ static void demo_prepare_buffers(struct demo *demo) {
     // queued for display):
     uint32_t desiredNumberOfSwapchainImages =
         surfCapabilities.minImageCount + 1;
+    // If maxImageCount is 0, we can ask for as many images as we want, otherwise
+    // we're limited to maxImageCount
     if ((surfCapabilities.maxImageCount > 0) &&
         (desiredNumberOfSwapchainImages > surfCapabilities.maxImageCount)) {
         // Application must settle for fewer images than desired:
@@ -861,7 +850,7 @@ static void demo_prepare_buffers(struct demo *demo) {
         preTransform = surfCapabilities.currentTransform;
     }
 
-    const VkSwapchainCreateInfoKHR swapchain = {
+    VkSwapchainCreateInfoKHR swapchain_ci = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .pNext = NULL,
         .surface = demo->surface,
@@ -884,8 +873,18 @@ static void demo_prepare_buffers(struct demo *demo) {
         .clipped = true,
     };
     uint32_t i;
+    uint32_t queueFamilyIndices[2] = {(uint32_t) demo->graphics_queue_family_index, (uint32_t) demo->present_queue_family_index};
+    if (demo->graphics_queue_family_index != demo->present_queue_family_index)
+    {
+        // If the graphics and present queues are from different queue families, we either have to
+        // explicitly transfer ownership of images between the queues, or we have to create the swapchain
+        // with imageSharingMode as VK_SHARING_MODE_CONCURRENT
+        swapchain_ci.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        swapchain_ci.queueFamilyIndexCount = 2;
+        swapchain_ci.pQueueFamilyIndices = queueFamilyIndices;
+    }
 
-    err = demo->fpCreateSwapchainKHR(demo->device, &swapchain, NULL,
+    err = demo->fpCreateSwapchainKHR(demo->device, &swapchain_ci, NULL,
                                      &demo->swapchain);
     assert(!err);
 
@@ -1814,7 +1813,7 @@ static void demo_prepare(struct demo *demo) {
     const VkCommandPoolCreateInfo cmd_pool_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .pNext = NULL,
-        .queueFamilyIndex = demo->graphics_queue_node_index,
+        .queueFamilyIndex = demo->graphics_queue_family_index,
         .flags = 0,
     };
     err = vkCreateCommandPool(demo->device, &cmd_pool_info, NULL,
@@ -2798,7 +2797,7 @@ static void demo_create_device(struct demo *demo) {
     const VkDeviceQueueCreateInfo queue = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .pNext = NULL,
-        .queueFamilyIndex = demo->graphics_queue_node_index,
+        .queueFamilyIndex = demo->graphics_queue_family_index,
         .queueCount = 1,
         .pQueuePriorities = queue_priorities};
 
@@ -2893,48 +2892,25 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     uint32_t graphicsQueueNodeIndex = UINT32_MAX;
     uint32_t presentQueueNodeIndex = UINT32_MAX;
     for (i = 0; i < demo->queue_count; i++) {
-        if ((demo->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
-            if (graphicsQueueNodeIndex == UINT32_MAX) {
-                graphicsQueueNodeIndex = i;
-            }
+        if ((demo->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0
+                && graphicsQueueNodeIndex == UINT32_MAX) {
+            graphicsQueueNodeIndex = i;
+        }
 
-            if (supportsPresent[i] == VK_TRUE) {
-                graphicsQueueNodeIndex = i;
-                presentQueueNodeIndex = i;
-                break;
-            }
+        if (supportsPresent[i] == VK_TRUE && presentQueueNodeIndex == UINT32_MAX) {
+            presentQueueNodeIndex = i;
         }
     }
-    if (presentQueueNodeIndex == UINT32_MAX) {
-        // If didn't find a queue that supports both graphics and present, then
-        // find a separate present queue.
-        for (uint32_t i = 0; i < demo->queue_count; ++i) {
-            if (supportsPresent[i] == VK_TRUE) {
-                presentQueueNodeIndex = i;
-                break;
-            }
-        }
-    }
-    free(supportsPresent);
 
     // Generate error if could not find both a graphics and a present queue
     if (graphicsQueueNodeIndex == UINT32_MAX ||
         presentQueueNodeIndex == UINT32_MAX) {
-        ERR_EXIT("Could not find a graphics and a present queue\n",
+        ERR_EXIT("Could not find both graphics and present queues\n",
                  "Swapchain Initialization Failure");
     }
 
-    // TODO: Add support for separate queues, including presentation,
-    //       synchronization, and appropriate tracking for QueueSubmit.
-    // NOTE: While it is possible for an application to use a separate graphics
-    //       and a present queues, this demo program assumes it is only using
-    //       one:
-    if (graphicsQueueNodeIndex != presentQueueNodeIndex) {
-        ERR_EXIT("Could not find a common graphics and a present queue\n",
-                 "Swapchain Initialization Failure");
-    }
-
-    demo->graphics_queue_node_index = graphicsQueueNodeIndex;
+    demo->graphics_queue_family_index = graphicsQueueNodeIndex;
+    demo->present_queue_family_index = presentQueueNodeIndex;
 
     demo_create_device(demo);
 
@@ -2944,8 +2920,15 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     GET_DEVICE_PROC_ADDR(demo->device, AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(demo->device, QueuePresentKHR);
 
-    vkGetDeviceQueue(demo->device, demo->graphics_queue_node_index, 0,
-                     &demo->queue);
+    vkGetDeviceQueue(demo->device, demo->graphics_queue_family_index, 0,
+                     &demo->graphics_queue);
+
+    if (demo->graphics_queue_family_index == demo->present_queue_family_index) {
+        demo->present_queue = demo->graphics_queue;
+    } else {
+        vkGetDeviceQueue(demo->device, demo->present_queue_family_index, 0,
+                         &demo->present_queue);
+    }
 
     // Get the list of VkFormat's that are supported:
     uint32_t formatCount;

@@ -442,44 +442,55 @@ static bool validate_string_array(debug_report_data *report_data, const char *ap
  * verify that pNext is null.
  *
  * @param report_data debug_report_data object for routing validation messages.
- * @param apiName Name of API call being validated.
- * @param parameterName Name of parameter being validated.
- * @param allowedStructNames Names of allowed structs.
+ * @param api_name Name of API call being validated.
+ * @param parameter_name Name of parameter being validated.
+ * @param allowed_struct_names Names of allowed structs.
  * @param next Pointer to validate.
- * @param allowedTypeCount total number of allowed structure types.
- * @param allowedTypes array of strcuture types allowed for pNext.
+ * @param allowed_type_count Total number of allowed structure types.
+ * @param allowed_types Array of strcuture types allowed for pNext.
+ * @param header_version Version of header defining the pNext validation rules.
  * @return Boolean value indicating that the call should be skipped.
  */
-static bool validate_struct_pnext(debug_report_data *report_data, const char *apiName, const char *parameterName,
-                                  const char *allowedStructNames, const void *next, size_t allowedTypeCount,
-                                  const VkStructureType *allowedTypes) {
-    bool skipCall = false;
+static bool validate_struct_pnext(debug_report_data *report_data, const char *api_name, const char *parameter_name,
+                                  const char *allowed_struct_names, const void *next, size_t allowed_type_count,
+                                  const VkStructureType *allowed_types, uint32_t header_version) {
+    bool skip_call = false;
+    const char disclaimer[] = "This warning is based on the Valid Usage documentation for version %d of the Vulkan header.  It "
+                              "is possible that you are using a struct from a private extension or an extension that was added "
+                              "to a later version of the Vulkan header, in which case your use of %s is perfectly valid but "
+                              "is not guaranteed to work correctly with validation enabled";
 
     if (next != NULL) {
-        if (allowedTypeCount == 0) {
-            skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                                INVALID_STRUCT_PNEXT, LayerName, "%s: value of %s must be NULL", apiName, parameterName);
+        if (allowed_type_count == 0) {
+            std::string message = "%s: value of %s must be NULL.  ";
+            message += disclaimer;
+            skip_call |=
+                log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                        INVALID_STRUCT_PNEXT, LayerName, message.c_str(), api_name, parameter_name, header_version, parameter_name);
         } else {
-            const VkStructureType *start = allowedTypes;
-            const VkStructureType *end = allowedTypes + allowedTypeCount;
+            const VkStructureType *start = allowed_types;
+            const VkStructureType *end = allowed_types + allowed_type_count;
             const GenericHeader *current = reinterpret_cast<const GenericHeader *>(next);
 
             while (current != NULL) {
                 if (std::find(start, end, current->sType) == end) {
-                    std::string typeName = string_VkStructureType(current->sType);
+                    std::string type_name = string_VkStructureType(current->sType);
 
-                    if (typeName == UnsupportedStructureTypeString) {
-                        skipCall |= log_msg(
-                            report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            INVALID_STRUCT_PNEXT, LayerName,
-                            "%s: %s chain includes a structure with unexpected VkStructureType (%d); Allowed structures are [%s]",
-                            apiName, parameterName, current->sType, allowedStructNames);
+                    if (type_name == UnsupportedStructureTypeString) {
+                        std::string message = "%s: %s chain includes a structure with unexpected VkStructureType (%d); Allowed "
+                                              "structures are [%s].  ";
+                        message += disclaimer;
+                        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,
+                                             0, __LINE__, INVALID_STRUCT_PNEXT, LayerName, message.c_str(), api_name,
+                                             parameter_name, current->sType, allowed_struct_names, header_version, parameter_name);
                     } else {
-                        skipCall |= log_msg(
-                            report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
-                            INVALID_STRUCT_PNEXT, LayerName,
-                            "%s: %s chain includes a structure with unexpected VkStructureType %s; Allowed structures are [%s]",
-                            apiName, parameterName, typeName.c_str(), allowedStructNames);
+                        std::string message =
+                            "%s: %s chain includes a structure with unexpected VkStructureType %s; Allowed structures are [%s].  ";
+                        message += disclaimer;
+                        skip_call |=
+                            log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                    __LINE__, INVALID_STRUCT_PNEXT, LayerName, message.c_str(), api_name, parameter_name,
+                                    type_name.c_str(), allowed_struct_names, header_version, parameter_name);
                     }
                 }
 
@@ -488,7 +499,7 @@ static bool validate_struct_pnext(debug_report_data *report_data, const char *ap
         }
     }
 
-    return skipCall;
+    return skip_call;
 }
 
 /**

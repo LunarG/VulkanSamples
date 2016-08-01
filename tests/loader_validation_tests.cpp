@@ -25,7 +25,11 @@
  * Author: Jeremy Hayes <jeremy@lunarG.com>
  */
 
+#include <algorithm>
+#include <iostream>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include <vulkan/vulkan.h>
 #include "test_common.h"
@@ -297,6 +301,23 @@ struct DeviceCreateInfo
 
 }
 
+struct CommandLine : public ::testing::Test
+{
+    static void Initialize(int argc, char **argv)
+    {
+        arguments.assign(argv, argv + argc);
+    };
+
+    static void SetUpTestCase() {};
+    static void TearDownTestCase() {};
+
+    static std::vector<std::string> arguments;
+};
+std::vector<std::string> CommandLine::arguments;
+
+struct EnumerateInstanceLayerProperties : public CommandLine {};
+struct EnumerateInstanceExtensionProperties : public CommandLine {};
+
 // Test groups:
 // LX = lunar exchange
 // LVLGH = loader and validation github
@@ -319,6 +340,8 @@ TEST(LX435, InstanceCreateInfoConst)
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(&info, VK_NULL_HANDLE, &instance);
     EXPECT_EQ(result, VK_SUCCESS);
+
+    vkDestroyInstance(instance, nullptr);
 }
 
 TEST(LX475, DestroyInstanceNullHandle)
@@ -341,6 +364,8 @@ TEST(CreateInstance, ExtensionNotPresent)
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
     ASSERT_EQ(result, VK_ERROR_EXTENSION_NOT_PRESENT);
+
+    // It's not necessary to destroy the instance because it will not be created successfully.
 }
 
 TEST(CreateInstance, LayerNotPresent)
@@ -353,6 +378,8 @@ TEST(CreateInstance, LayerNotPresent)
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
     ASSERT_EQ(result, VK_ERROR_LAYER_NOT_PRESENT);
+
+    // It's not necessary to destroy the instance because it will not be created successfully.
 }
 
 // Used by run_loader_tests.sh to test for layer insertion.
@@ -366,6 +393,8 @@ TEST(CreateInstance, LayerPresent)
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
     ASSERT_EQ(result, VK_SUCCESS);
+
+    vkDestroyInstance(instance, nullptr);
 }
 
 TEST(CreateDevice, ExtensionNotPresent)
@@ -422,8 +451,12 @@ TEST(CreateDevice, ExtensionNotPresent)
             VkDevice device;
             result = vkCreateDevice(physical[p], deviceInfo, nullptr, &device);
             ASSERT_EQ(result, VK_ERROR_EXTENSION_NOT_PRESENT);
+
+            // It's not necessary to destroy the device because it will not be created successfully.
         }
     }
+
+    vkDestroyInstance(instance, nullptr);
 }
 
 // LX535 / MI-76: Device layers are deprecated.
@@ -483,8 +516,301 @@ TEST(CreateDevice, LayersNotPresent)
             VkDevice device;
             result = vkCreateDevice(physical[p], deviceInfo, nullptr, &device);
             ASSERT_EQ(result, VK_SUCCESS);
+
+            vkDestroyDevice(device, nullptr);
         }
     }
+
+    vkDestroyInstance(instance, nullptr);
+}
+
+TEST_F(EnumerateInstanceLayerProperties, PropertyCountLessThanAvailable)
+{
+    uint32_t count = 0u;
+    VkResult result = vkEnumerateInstanceLayerProperties(&count, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    // We need atleast two for the test to be relevant.
+    if(count < 2u)
+    {
+        return;
+    }
+
+    std::unique_ptr<VkLayerProperties[]> properties(new VkLayerProperties[count]);
+    count = 1;
+    result = vkEnumerateInstanceLayerProperties(&count, properties.get());
+    ASSERT_EQ(result, VK_INCOMPLETE);
+}
+
+TEST(EnumerateDeviceLayerProperties, PropertyCountLessThanAvailable)
+{
+    VkInstance instance = VK_NULL_HANDLE;
+    VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount = 0;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    for(uint32_t p = 0; p < physicalCount; ++p)
+    {
+        uint32_t count = 0u;
+        result = vkEnumerateDeviceLayerProperties(physical[p], &count, nullptr);
+        ASSERT_EQ(result, VK_SUCCESS);
+
+        // We need atleast two for the test to be relevant.
+        if(count < 2u)
+        {
+            continue;
+        }
+
+        std::unique_ptr<VkLayerProperties[]> properties(new VkLayerProperties[count]);
+        count = 1;
+        result = vkEnumerateDeviceLayerProperties(physical[p], &count, properties.get());
+        ASSERT_EQ(result, VK_INCOMPLETE);
+    }
+
+    vkDestroyInstance(instance, nullptr);
+}
+
+TEST_F(EnumerateInstanceLayerProperties, Count)
+{
+    uint32_t count = 0u;
+    VkResult result = vkEnumerateInstanceLayerProperties(&count, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    if(std::find(arguments.begin(), arguments.end(), "count") != arguments.end())
+    {
+        std::cout << "count=" << count << '\n';
+    }
+}
+
+TEST_F(EnumerateInstanceLayerProperties, OnePass)
+{
+    // Count required for this test.
+    if(std::find(arguments.begin(), arguments.end(), "count") == arguments.end())
+    {
+        return;
+    }
+
+    uint32_t count = std::stoul(arguments[2]);
+
+    std::unique_ptr<VkLayerProperties[]> properties(new VkLayerProperties[count]);
+    VkResult result = vkEnumerateInstanceLayerProperties(&count, properties.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    if(std::find(arguments.begin(), arguments.end(), "properties") != arguments.end())
+    {
+        for(uint32_t p = 0; p < count; ++p)
+        {
+            std::cout << "properties[" << p << "] ="
+                << ' ' << properties[p].layerName
+                << ' ' << properties[p].specVersion
+                << ' ' << properties[p].implementationVersion
+                << ' ' << properties[p].description << '\n';
+        }
+    }
+}
+
+TEST_F(EnumerateInstanceLayerProperties, TwoPass)
+{
+    uint32_t count = 0u;
+    VkResult result = vkEnumerateInstanceLayerProperties(&count, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    std::unique_ptr<VkLayerProperties[]> properties(new VkLayerProperties[count]);
+    result = vkEnumerateInstanceLayerProperties(&count, properties.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    if(std::find(arguments.begin(), arguments.end(), "properties") != arguments.end())
+    {
+        for(uint32_t p = 0; p < count; ++p)
+        {
+            std::cout << "properties[" << p << "] ="
+                << ' ' << properties[p].layerName
+                << ' ' << properties[p].specVersion
+                << ' ' << properties[p].implementationVersion
+                << ' ' << properties[p].description << '\n';
+        }
+    }
+}
+
+TEST_F(EnumerateInstanceExtensionProperties, PropertyCountLessThanAvailable)
+{
+    uint32_t count = 0u;
+    VkResult result = vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    // We need atleast two for the test to be relevant.
+    if(count < 2u)
+    {
+        return;
+    }
+
+    std::unique_ptr<VkExtensionProperties[]> properties(new VkExtensionProperties[count]);
+    count = 1;
+    result = vkEnumerateInstanceExtensionProperties(nullptr, &count, properties.get());
+    ASSERT_EQ(result, VK_INCOMPLETE);
+}
+
+TEST(EnumerateDeviceExtensionProperties, PropertyCountLessThanAvailable)
+{
+    VkInstance instance = VK_NULL_HANDLE;
+    VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount = 0;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    for(uint32_t p = 0; p < physicalCount; ++p)
+    {
+        uint32_t count = 0u;
+        result = vkEnumerateDeviceExtensionProperties(physical[p], nullptr, &count, nullptr);
+        ASSERT_EQ(result, VK_SUCCESS);
+
+        // We need atleast two for the test to be relevant.
+        if(count < 2u)
+        {
+            continue;
+        }
+
+        std::unique_ptr<VkExtensionProperties[]> properties(new VkExtensionProperties[count]);
+        count = 1;
+        result = vkEnumerateDeviceExtensionProperties(physical[p], nullptr, &count, properties.get());
+        ASSERT_EQ(result, VK_INCOMPLETE);
+    }
+
+    vkDestroyInstance(instance, nullptr);
+}
+
+TEST_F(EnumerateInstanceExtensionProperties, Count)
+{
+    uint32_t count = 0u;
+    VkResult result = vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    if(std::find(arguments.begin(), arguments.end(), "count") != arguments.end())
+    {
+        std::cout << "count=" << count << '\n';
+    }
+}
+
+TEST_F(EnumerateInstanceExtensionProperties, OnePass)
+{
+    // Count required for this test.
+    if(std::find(arguments.begin(), arguments.end(), "count") == arguments.end())
+    {
+        return;
+    }
+
+    uint32_t count = std::stoul(arguments[2]);
+
+    std::unique_ptr<VkExtensionProperties[]> properties(new VkExtensionProperties[count]);
+    VkResult result = vkEnumerateInstanceExtensionProperties(nullptr, &count, properties.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    if(std::find(arguments.begin(), arguments.end(), "properties") != arguments.end())
+    {
+        for(uint32_t p = 0; p < count; ++p)
+        {
+            std::cout << "properties[" << p << "] ="
+                << ' ' << properties[p].extensionName
+                << ' ' << properties[p].specVersion << '\n';
+        }
+    }
+}
+
+TEST_F(EnumerateInstanceExtensionProperties, TwoPass)
+{
+    uint32_t count = 0u;
+    VkResult result = vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    std::unique_ptr<VkExtensionProperties[]> properties(new VkExtensionProperties[count]);
+    result = vkEnumerateInstanceExtensionProperties(nullptr, &count, properties.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    if(std::find(arguments.begin(), arguments.end(), "properties") != arguments.end())
+    {
+        for(uint32_t p = 0; p < count; ++p)
+        {
+            std::cout << "properties[" << p << "] ="
+                << ' ' << properties[p].extensionName
+                << ' ' << properties[p].specVersion << '\n';
+        }
+    }
+}
+
+TEST_F(EnumerateInstanceExtensionProperties, InstanceExtensionEnumerated)
+{
+    uint32_t count = 0u;
+    VkResult result = vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    std::unique_ptr<VkExtensionProperties[]> properties(new VkExtensionProperties[count]);
+    result = vkEnumerateInstanceExtensionProperties(nullptr, &count, properties.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    ASSERT_NE(std::find_if(
+        &properties[0],
+        &properties[count],
+        [](VkExtensionProperties const& properties)
+        {
+            return strcmp(properties.extensionName, "VK_KHR_surface") == 0;
+        }),
+        &properties[count]);
+}
+
+TEST(EnumerateDeviceExtensionProperties, DeviceExtensionEnumerated)
+{
+    VkInstance instance = VK_NULL_HANDLE;
+    VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount = 0;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    for(uint32_t p = 0; p < physicalCount; ++p)
+    {
+        uint32_t count = 0u;
+        result = vkEnumerateDeviceExtensionProperties(physical[p], nullptr, &count, nullptr);
+        ASSERT_EQ(result, VK_SUCCESS);
+
+        std::unique_ptr<VkExtensionProperties[]> properties(new VkExtensionProperties[count]);
+        result = vkEnumerateDeviceExtensionProperties(physical[p], nullptr, &count, properties.get());
+        ASSERT_EQ(result, VK_SUCCESS);
+
+        ASSERT_NE(std::find_if(
+            &properties[0],
+            &properties[count],
+            [](VkExtensionProperties const& properties)
+            {
+                return strcmp(properties.extensionName, "VK_KHR_swapchain") == 0;
+            }),
+            &properties[count]);
+    }
+
+    vkDestroyInstance(instance, nullptr);
 }
 
 TEST(WrapObjects, Insert)
@@ -538,8 +864,12 @@ TEST(WrapObjects, Insert)
             VkDevice device;
             result = vkCreateDevice(physical[p], deviceInfo, nullptr, &device);
             ASSERT_EQ(result, VK_SUCCESS);
+
+            vkDestroyDevice(device, nullptr);
         }
     }
+
+    vkDestroyInstance(instance, nullptr);
 }
 
 int main(int argc, char **argv)
@@ -547,6 +877,11 @@ int main(int argc, char **argv)
     int result;
 
     ::testing::InitGoogleTest(&argc, argv);
+
+    if(argc > 0)
+    {
+        CommandLine::Initialize(argc, argv);
+    }
 
     result = RUN_ALL_TESTS();
 

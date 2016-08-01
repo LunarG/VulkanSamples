@@ -313,10 +313,10 @@ class DescriptorSet : public BASE_NODE {
     // Is this set compatible with the given layout?
     bool IsCompatible(const DescriptorSetLayout *, std::string *) const;
     // For given bindings validate state at time of draw is correct, returning false on error and writing error details into string*
-    bool ValidateDrawState(const std::unordered_set<uint32_t> &, const std::vector<uint32_t> &, std::string *) const;
+    bool ValidateDrawState(const std::unordered_map<uint32_t, descriptor_req> &, const std::vector<uint32_t> &, std::string *) const;
     // For given set of bindings, add any buffers and images that will be updated to their respective unordered_sets & return number
     // of objects inserted
-    uint32_t GetStorageUpdates(const std::unordered_set<uint32_t> &, std::unordered_set<VkBuffer> *,
+    uint32_t GetStorageUpdates(const std::unordered_map<uint32_t, descriptor_req> &, std::unordered_set<VkBuffer> *,
                                std::unordered_set<VkImageView> *) const;
 
     // Descriptor Update functions. These functions validate state and perform update separately

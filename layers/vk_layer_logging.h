@@ -133,14 +133,7 @@ static inline debug_report_data *
 debug_report_create_instance(VkLayerInstanceDispatchTable *table, VkInstance inst, uint32_t extension_count,
                              const char *const *ppEnabledExtensions) // layer or extension name to be enabled
 {
-    debug_report_data *debug_data;
-    PFN_vkGetInstanceProcAddr gpa = table->GetInstanceProcAddr;
-
-    table->CreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)gpa(inst, "vkCreateDebugReportCallbackEXT");
-    table->DestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT)gpa(inst, "vkDestroyDebugReportCallbackEXT");
-    table->DebugReportMessageEXT = (PFN_vkDebugReportMessageEXT)gpa(inst, "vkDebugReportMessageEXT");
-
-    debug_data = (debug_report_data *)malloc(sizeof(debug_report_data));
+    debug_report_data *debug_data = (debug_report_data *)malloc(sizeof(debug_report_data));
     if (!debug_data)
         return NULL;
 

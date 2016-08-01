@@ -54,9 +54,9 @@ layer_inputs = { 'draw_state' : {'header' : 'layers/core_validation_error_enums.
                                  'generated' : False,
                                  'error_enum' : 'DRAW_STATE_ERROR'},
                  'shader_checker' : {'header' : 'layers/core_validation_error_enums.h',
-                                 'source' : 'layers/core_validation.cpp',
-                                 'generated' : False,
-                                 'error_enum' : 'SHADER_CHECKER_ERROR'},
+                                     'source' : 'layers/core_validation.cpp',
+                                     'generated' : False,
+                                     'error_enum' : 'SHADER_CHECKER_ERROR'},
                  'mem_tracker' : {'header' : 'layers/core_validation_error_enums.h',
                                   'source' : 'layers/core_validation.cpp',
                                   'generated' : False,
@@ -65,22 +65,22 @@ layer_inputs = { 'draw_state' : {'header' : 'layers/core_validation_error_enums.
                                     'source' : 'layers/core_validation.cpp',
                                     'generated' : False,
                                     'error_enum' : 'DEV_LIMITS_ERROR',},
+                 'object_tracker' : {'header' : 'layers/object_tracker.h',
+                                     'source' : 'layers/object_tracker.cpp',
+                                     'generated' : False,
+                                     'error_enum' : 'OBJECT_TRACK_ERROR',},
                  'threading' : {'header' : 'layers/threading.h',
                                 'source' : 'dbuild/layers/threading.cpp',
                                 'generated' : True,
                                 'error_enum' : 'THREADING_CHECKER_ERROR'},
-                 'object_tracker' : {'header' : 'layers/object_tracker.h',
-                                'source' : 'dbuild/layers/object_tracker.cpp',
-                                'generated' : True,
-                                'error_enum' : 'OBJECT_TRACK_ERROR',},
                  'image' : {'header' : 'layers/image.h',
                             'source' : 'layers/image.cpp',
                             'generated' : False,
                             'error_enum' : 'IMAGE_ERROR',},
                  'swapchain' : {'header' : 'layers/swapchain.h',
-                            'source' : 'layers/swapchain.cpp',
-                            'generated' : False,
-                            'error_enum' : 'SWAPCHAIN_ERROR',},
+                                'source' : 'layers/swapchain.cpp',
+                                'generated' : False,
+                                'error_enum' : 'SWAPCHAIN_ERROR',},
                  'parameter_validation' : {'header' : 'layers/parameter_validation_utils.h',
                                            'source' : 'layers/parameter_validation.cpp',
                                            'generated' : False,
@@ -263,9 +263,7 @@ class LayerDoc:
                         detail_sections = line.split('|')
                         #print("Details elements from line %s: %s" % (line, detail_sections))
                         check_name = '%s%s' % (enum_prefix, detail_sections[3].strip())
-                        if '_NA' in check_name:
-                            # TODO : Should clean up these NA checks in the doc, skipping them for now
-                            continue
+
                         self.enum_list.append(check_name)
                         self.layer_doc_dict[layer_name][check_name] = {}
                         self.layer_doc_dict[layer_name][check_name]['summary_txt'] = detail_sections[1].strip()
@@ -306,6 +304,8 @@ class LayerDoc:
         # Count number of errors found and return it
         errors_found = 0
         warnings_found = 0
+        # A few checks that are allowed to not have tests
+        no_test_checks = ['DRAWSTATE_INTERNAL_ERROR', 'DRAWSTATE_OUT_OF_MEMORY', 'MEMTRACK_INTERNAL_ERROR', 'OBJTRACK_INTERNAL_ERROR']
         # First we'll go through the doc datastructures and flag any issues
         for chk in self.enum_list:
             doc_layer_found = False
@@ -350,7 +350,8 @@ class LayerDoc:
                                 break
                     elif test not in tests_set and not chk.endswith('_NONE'):
                         if test == 'TODO':
-                            warnings_found += 1
+                            if chk not in no_test_checks:
+                                warnings_found += 1
                         else:
                             print(self.txt_color.red() + 'Validation check %s has missing or invalid test : %s' % (chk, test))
                             errors_found += 1

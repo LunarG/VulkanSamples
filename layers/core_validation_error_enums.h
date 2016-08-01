@@ -50,13 +50,11 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_NONE,                          // Used for INFO & other non-error messages
     DRAWSTATE_INTERNAL_ERROR,                // Error with DrawState internal data structures
     DRAWSTATE_NO_PIPELINE_BOUND,             // Unable to identify a bound pipeline
-    DRAWSTATE_INVALID_POOL,                  // Invalid DS pool
     DRAWSTATE_INVALID_SET,                   // Invalid DS
     DRAWSTATE_INVALID_RENDER_AREA,           // Invalid renderArea
     DRAWSTATE_INVALID_LAYOUT,                // Invalid DS layout
     DRAWSTATE_INVALID_IMAGE_LAYOUT,          // Invalid Image layout
     DRAWSTATE_INVALID_PIPELINE,              // Invalid Pipeline handle referenced
-    DRAWSTATE_INVALID_PIPELINE_LAYOUT,       // Invalid PipelineLayout
     DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, // Attempt to create a pipeline
                                              // with invalid state
     DRAWSTATE_INVALID_COMMAND_BUFFER,        // Invalid CommandBuffer referenced
@@ -64,7 +62,6 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_INVALID_BUFFER,                // Invalid Buffer
     DRAWSTATE_INVALID_QUERY,                 // Invalid Query
     DRAWSTATE_INVALID_FENCE,                 // Invalid Fence
-    DRAWSTATE_INVALID_SEMAPHORE,             // Invalid Semaphore
     DRAWSTATE_INVALID_EVENT,                 // Invalid Event
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,       // binding in vkCmdBindVertexData() too
                                              // large for PSO's

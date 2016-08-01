@@ -104,7 +104,7 @@ else()
 endif()
 
 add_custom_command(OUTPUT vk_dispatch_table_helper.h
-    COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py ${DisplayServer} dispatch-table-ops layer > vk_dispatch_table_helper.h
+    COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py AllPlatforms dispatch-table-ops layer > vk_dispatch_table_helper.h
     DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vulkan.py)
 
 run_vk_helper(gen_enum_string_helper vk_enum_string_helper.h)
@@ -136,7 +136,6 @@ add_custom_target(generate_vk_layer_helpers DEPENDS
     vk_safe_struct.cpp
 )
 
-run_vk_layer_generate(object_tracker object_tracker.cpp)
 run_vk_layer_xml_generate(Threading thread_check.h)
 run_vk_layer_generate(unique_objects unique_objects.cpp)
 run_vk_layer_xml_generate(ParamChecker parameter_validation.h)
@@ -152,10 +151,10 @@ else()
 endif()
 
 add_vk_layer(core_validation core_validation.cpp vk_layer_table.cpp vk_safe_struct.cpp descriptor_sets.cpp)
+add_vk_layer(object_tracker object_tracker.cpp vk_layer_table.cpp)
 add_vk_layer(image image.cpp vk_layer_table.cpp)
 add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
 # generated
-add_vk_layer(object_tracker object_tracker.cpp vk_layer_table.cpp)
 add_vk_layer(threading threading.cpp thread_check.h vk_layer_table.cpp)
 add_vk_layer(unique_objects unique_objects.cpp vk_layer_table.cpp vk_safe_struct.cpp)
 add_vk_layer(parameter_validation parameter_validation.cpp parameter_validation.h vk_layer_table.cpp)
