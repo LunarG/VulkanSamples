@@ -553,12 +553,20 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     ~GLOBAL_CB_NODE();
 };
 
+struct SEMAPHORE_WAIT {
+    VkSemaphore semaphore;
+    VkQueue queue;
+    uint64_t seq;
+};
+
 struct CB_SUBMISSION {
-    CB_SUBMISSION(std::vector<VkCommandBuffer> const &cbs, std::vector<VkSemaphore> const &semaphores)
-        : cbs(cbs), semaphores(semaphores) {}
+    CB_SUBMISSION(std::vector<VkCommandBuffer> const &cbs, std::vector<SEMAPHORE_WAIT> const &waitSemaphores, std::vector<VkSemaphore> const &signalSemaphores, VkFence fence)
+        : cbs(cbs), waitSemaphores(waitSemaphores), signalSemaphores(signalSemaphores), fence(fence) {}
 
     std::vector<VkCommandBuffer> cbs;
-    std::vector<VkSemaphore> semaphores;
+    std::vector<SEMAPHORE_WAIT> waitSemaphores;
+    std::vector<VkSemaphore> signalSemaphores;
+    VkFence fence;
 };
 
 // Fwd declarations of layer_data and helpers to look-up/validate state from layer_data maps

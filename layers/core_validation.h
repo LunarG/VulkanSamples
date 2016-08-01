@@ -59,6 +59,7 @@
 #include <unordered_set>
 #include <vector>
 #include <list>
+#include <deque>
 
 #if MTMERGE
 
@@ -209,9 +210,7 @@ class FENCE_NODE {
   public:
     VkFence fence;
     VkFenceCreateInfo createInfo;
-    std::unordered_set<VkQueue> queues;
-    std::vector<CB_SUBMISSION> submissions;
-    std::vector<VkFence> priorFences;
+    std::pair<VkQueue, uint64_t> signaler;
     FENCE_STATE state;
 
     // Default constructor
@@ -221,8 +220,8 @@ class FENCE_NODE {
 class SEMAPHORE_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
+    std::pair<VkQueue, uint64_t> signaler;
     bool signaled;
-    VkQueue queue;
 };
 
 class EVENT_NODE : public BASE_NODE {
@@ -237,10 +236,11 @@ class QUEUE_NODE {
   public:
     VkQueue queue;
     uint32_t queueFamilyIndex;
-    std::vector<VkFence> lastFences;
-    std::vector<CB_SUBMISSION> untrackedSubmissions;
     std::unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
     std::unordered_map<QueryObject, bool> queryToStateMap; // 0 is unavailable, 1 is available
+
+    uint64_t seq;
+    std::deque<CB_SUBMISSION> submissions;
 };
 
 class QUERY_POOL_NODE : public BASE_NODE {
