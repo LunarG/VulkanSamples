@@ -2623,14 +2623,14 @@ static uint32_t descriptor_type_to_reqs(shader_module const *module, uint32_t ty
 
             switch (dim) {
             case spv::Dim1D:
-                return DESCRIPTOR_REQ_VIEW_TYPE_1D << arrayed;
+                return arrayed ? DESCRIPTOR_REQ_VIEW_TYPE_1D_ARRAY : DESCRIPTOR_REQ_VIEW_TYPE_1D;
             case spv::Dim2D:
                 return (msaa ? DESCRIPTOR_REQ_MULTI_SAMPLE : DESCRIPTOR_REQ_SINGLE_SAMPLE) |
-                    (DESCRIPTOR_REQ_VIEW_TYPE_2D << arrayed);
+                    (arrayed ? DESCRIPTOR_REQ_VIEW_TYPE_2D_ARRAY : DESCRIPTOR_REQ_VIEW_TYPE_2D);
             case spv::Dim3D:
                 return DESCRIPTOR_REQ_VIEW_TYPE_3D;
             case spv::DimCube:
-                return DESCRIPTOR_REQ_VIEW_TYPE_CUBE << arrayed;
+                return arrayed ? DESCRIPTOR_REQ_VIEW_TYPE_CUBE_ARRAY : DESCRIPTOR_REQ_VIEW_TYPE_CUBE;
             default:  // subpass, buffer, etc.
                 return 0;
             }
