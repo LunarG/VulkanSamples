@@ -2492,8 +2492,9 @@ loader_add_layer_properties(const struct loader_instance *inst,
  * location is used to look for manifest files. The location
  * is interpreted as  Registry path on Windows and a directory path(s)
  * on Linux. "home_location" is an additional directory in the users home
- * directory to look at. It is exapanded into the dir path $HOME/home_location.
- * This "home_location" is only used on Linux.
+ * directory to look at. It is expanded into the dir path
+ * $XDG_DATA_HOME/home_location or $HOME/.local/share/home_location depending
+ * on environment variables. This "home_location" is only used on Linux.
  *
  * \returns
  * VKResult
@@ -2707,10 +2708,11 @@ static VkResult loader_get_manifest_files(
 #if !defined(_WIN32)
         if (home_location != NULL &&
             (next_file == NULL || *next_file == '\0') && override == NULL) {
-            char *home = secure_getenv("HOME");
-            if (home != NULL) {
-                size_t len;
-                char *home_loc = loader_stack_alloc(strlen(home) + 2 +
+            char *xdgdatahome = secure_getenv("XDG_DATA_HOME");
+            size_t len;
+            if (xdgdatahome != NULL) {
+
+                char *home_loc = loader_stack_alloc(strlen(xdgdatahome) + 2 +
                                                     strlen(home_location));
                 if (home_loc == NULL) {
                     loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
@@ -2718,7 +2720,7 @@ static VkResult loader_get_manifest_files(
                     res = VK_ERROR_OUT_OF_HOST_MEMORY;
                     goto out;
                 }
-                strcpy(home_loc, home);
+                strcpy(home_loc, xdgdatahome);
                 // Add directory separator if needed
                 if (home_location[0] != DIRECTORY_SYMBOL) {
                     len = strlen(home_loc);
@@ -2732,9 +2734,49 @@ static VkResult loader_get_manifest_files(
 
                 loader_log(
                     inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
-                    "Searching the following paths for manifest files: %s\n",
+                    "Searching the following path for manifest files: %s\n",
                     home_loc);
                 list_is_dirs = true;
+
+            } else {
+
+                char *home = secure_getenv("HOME");
+                if (home != NULL) {
+                    char *home_loc = loader_stack_alloc(strlen(home) + 16 +
+                                                        strlen(home_location));
+                    if (home_loc == NULL) {
+                        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+                                "Out of memory can't get manifest files");
+                        res = VK_ERROR_OUT_OF_HOST_MEMORY;
+                        goto out;
+                    }
+                    strcpy(home_loc, home);
+
+                    len = strlen(home);
+                    if (home[len] != DIRECTORY_SYMBOL) {
+                        home_loc[len] = DIRECTORY_SYMBOL;
+                        home_loc[len + 1] = '\0';
+                    }
+                    strcat(home_loc, ".local/share");
+
+                    if (home_location[0] != DIRECTORY_SYMBOL) {
+                        len = strlen(home_loc);
+                        home_loc[len] = DIRECTORY_SYMBOL;
+                        home_loc[len + 1] = '\0';
+                    }
+                    strcat(home_loc, home_location);
+                    file = home_loc;
+                    next_file = loader_get_next_path(file);
+                    home_location = NULL;
+
+                    loader_log(
+                        inst, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0,
+                        "Searching the following path for manifest files: %s\n",
+                        home_loc);
+                    list_is_dirs = true;
+                } else {
+                    // without knowing HOME, we just.. give up
+                }
             }
         }
 #endif
