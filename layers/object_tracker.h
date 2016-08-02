@@ -81,42 +81,6 @@ struct instance_extension_enables {
     bool win32_enabled;
 };
 
-/* LUGMAL
-<<<<<<< 373469f006399d6b5204ee05db3b56beb168b36f
-// We need additionally validate image usage using a separate map
-// of swapchain-created images
-static std::unordered_map<uint64_t, OBJTRACK_NODE *> swapchainImageMap;
-
-static long long unsigned int object_track_index = 0;
-static std::mutex global_lock;
-
-#define NUM_OBJECT_TYPES (VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT + 1)
-
-static uint64_t numObjs[NUM_OBJECT_TYPES] = {0};
-static uint64_t numTotalObjs = 0;
-std::vector<VkQueueFamilyProperties> queue_family_properties;
-
-//
-// Internal Object Tracker Functions
-//
-
-static void createDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo, VkDevice device) {
-    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-
-    my_device_data->wsi_enabled = false;
-    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
-            my_device_data->wsi_enabled = true;
-
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], "OBJTRACK_EXTENSIONS") == 0)
-            my_device_data->objtrack_extensions_enabled = true;
-    }
-}
-
-static void createInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance) {
-    VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(object_tracker_instance_table_map, instance);
-=======
-*/
 struct layer_data {
     VkInstance instance;
     VkPhysicalDevice physical_device;
@@ -143,9 +107,6 @@ struct layer_data {
     std::unordered_map<uint64_t, OBJTRACK_NODE *> swapchainImageMap;
     // Map of queue information structures, one per queue
     std::unordered_map<VkQueue, OT_QUEUE_INFO *> queue_info_map;
-    // Preinitialized array of name strings for object types
-    // LUGMAL std::unordered_map<VkDebugReportObjectTypeEXT, std::string> object_name;
-
 
     // Default constructor
     layer_data()
