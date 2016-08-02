@@ -743,9 +743,10 @@ bool VkImageObj::IsCompatible(VkFlags usage, VkFlags features) {
     return true;
 }
 
-void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage,
+void VkImageObj::init_no_layout(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage,
                       VkImageTiling requested_tiling,
                       VkMemoryPropertyFlags reqs) {
+
     VkFormatProperties image_fmt;
     VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 
@@ -783,6 +784,13 @@ void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage,
     imageCreateInfo.usage = usage;
 
     vk_testing::Image::init(*m_device, imageCreateInfo, reqs);
+}
+
+void VkImageObj::init(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage,
+                      VkImageTiling requested_tiling,
+                      VkMemoryPropertyFlags reqs) {
+
+    init_no_layout(w, h, fmt, usage, requested_tiling, reqs);
 
     VkImageLayout newLayout;
     if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)

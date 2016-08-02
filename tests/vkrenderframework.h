@@ -278,6 +278,10 @@ class VkImageObj : public vk_testing::Image {
               VkImageTiling tiling = VK_IMAGE_TILING_LINEAR,
               VkMemoryPropertyFlags reqs = 0);
 
+    void init_no_layout(uint32_t w, uint32_t h, VkFormat fmt, VkFlags usage,
+              VkImageTiling tiling = VK_IMAGE_TILING_LINEAR,
+              VkMemoryPropertyFlags reqs = 0);
+
     //    void clear( CommandBuffer*, uint32_t[4] );
 
     void layout(VkImageLayout layout) {
