@@ -81,6 +81,7 @@ struct instance_extension_enables {
     bool win32_enabled;
 };
 
+typedef std::unordered_map<uint64_t, OBJTRACK_NODE *> object_map_type;
 struct layer_data {
     VkInstance instance;
     VkPhysicalDevice physical_device;
@@ -101,8 +102,8 @@ struct layer_data {
 
     std::vector<VkQueueFamilyProperties> queue_family_properties;
 
-    // Array of unordered_maps per object type to hold OBJTRACK_NODE info
-    std::unordered_map<uint64_t, OBJTRACK_NODE *> object_map[VK_DEBUG_REPORT_OBJECT_TYPE_RANGE_SIZE_EXT + 1];
+    // Vector of unordered_maps per object type to hold OBJTRACK_NODE info
+    std::vector<object_map_type> object_map;
     // Special-case map for swapchain images
     std::unordered_map<uint64_t, OBJTRACK_NODE *> swapchainImageMap;
     // Map of queue information structures, one per queue
@@ -112,7 +113,9 @@ struct layer_data {
     layer_data()
         : instance(nullptr), physical_device(nullptr), num_objects{}, num_total_objects(0), report_data(nullptr),
           wsi_enabled(false), objtrack_extensions_enabled(false), num_tmp_callbacks(0), tmp_dbg_create_infos(nullptr),
-          tmp_callbacks(nullptr), object_map{} {}
+		  tmp_callbacks(nullptr), object_map{} {
+        object_map.resize(VK_DEBUG_REPORT_OBJECT_TYPE_RANGE_SIZE_EXT + 1);
+    }
 };
 
 
