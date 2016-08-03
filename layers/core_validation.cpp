@@ -2873,13 +2873,16 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
     // Verify Vtx binding
     if (pPipeline->vertexBindingDescriptions.size() > 0) {
         for (size_t i = 0; i < pPipeline->vertexBindingDescriptions.size(); i++) {
-            if ((pCB->currentDrawData.buffers.size() < (i + 1)) || (pCB->currentDrawData.buffers[i] == VK_NULL_HANDLE)) {
-                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                  __LINE__, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
-                                  "The Pipeline State Object (0x%" PRIxLEAST64
-                                  ") expects that this Command Buffer's vertex binding Index " PRINTF_SIZE_T_SPECIFIER
-                                  " should be set via vkCmdBindVertexBuffers.",
-                                  (uint64_t)state.pipeline, i);
+            auto vertex_binding = pPipeline->vertexBindingDescriptions[i].binding;
+            if ((pCB->currentDrawData.buffers.size() < (vertex_binding + 1)) ||
+                (pCB->currentDrawData.buffers[vertex_binding] == VK_NULL_HANDLE)) {
+                skip_call |= log_msg(
+                    my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                    DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
+                    "The Pipeline State Object (0x%" PRIxLEAST64 ") expects that this Command Buffer's vertex binding Index %u "
+                    "should be set via vkCmdBindVertexBuffers. This is because VkVertexInputBindingDescription struct "
+                    "at index " PRINTF_SIZE_T_SPECIFIER " of pVertexBindingDescriptions has a binding value of %u.",
+                    (uint64_t)state.pipeline, vertex_binding, i, vertex_binding);
             }
         }
     } else {
