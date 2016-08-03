@@ -106,6 +106,7 @@ myDbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
           uint64_t srcObject, size_t location, int32_t msgCode,
           const char *pLayerPrefix, const char *pMsg, void *pUserData);
 
+
 // ********************************************************
 // ErrorMonitor Usage:
 //
@@ -139,24 +140,22 @@ class ErrorMonitor {
         test_platform_thread_unlock_mutex(&m_mutex);
     }
 
-    VkBool32 CheckForDesiredMsg(VkFlags msgFlags, const char *msgString) {
+    VkBool32 CheckForDesiredMsg(const char *msgString) {
         VkBool32 result = VK_FALSE;
         test_platform_thread_lock_mutex(&m_mutex);
         if (m_bailout != NULL) {
             *m_bailout = true;
         }
         string errorString(msgString);
-        if (msgFlags & m_msgFlags) {
-            if (errorString.find(m_desiredMsg) != string::npos) {
-                if (m_msgFound) { /* if multiple matches, don't lose all but the last! */
-                    m_otherMsgs.push_back(m_failureMsg);
-                }
-                m_failureMsg = errorString;
-                m_msgFound = VK_TRUE;
-                result = VK_TRUE;
-            } else {
-                m_otherMsgs.push_back(errorString);
+        if (errorString.find(m_desiredMsg) != string::npos) {
+            if (m_msgFound) { // If multiple matches, don't lose all but the last!
+                m_otherMsgs.push_back(m_failureMsg);
             }
+            m_failureMsg = errorString;
+            m_msgFound = VK_TRUE;
+            result = VK_TRUE;
+        } else {
+            m_otherMsgs.push_back(errorString);
         }
         test_platform_thread_unlock_mutex(&m_mutex);
         return result;
@@ -165,6 +164,8 @@ class ErrorMonitor {
     vector<string> GetOtherFailureMsgs(void) { return m_otherMsgs; }
 
     string GetFailureMsg(void) { return m_failureMsg; }
+
+    VkDebugReportFlagsEXT GetMessageFlags(void) { return m_msgFlags; }
 
     VkBool32 DesiredMsgFound(void) { return m_msgFound; }
 
@@ -178,11 +179,13 @@ class ErrorMonitor {
         }
     }
 
-    /* helpers */
+    // Helpers
 
-    void ExpectSuccess() {
-        // match anything
-        SetDesiredFailureMsg(~0u, "");
+    // ExpectSuccess now takes an optional argument allowing a custom combination of debug flags
+    void ExpectSuccess(VkDebugReportFlagsEXT message_flag_mask = VK_DEBUG_REPORT_ERROR_BIT_EXT) {
+        m_msgFlags = message_flag_mask;
+        // Match ANY message matching specified type
+        SetDesiredFailureMsg(message_flag_mask, "");
     }
 
     void VerifyFound() {
@@ -217,11 +220,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL
 myDbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
           uint64_t srcObject, size_t location, int32_t msgCode,
           const char *pLayerPrefix, const char *pMsg, void *pUserData) {
-    if (msgFlags &
-        (VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
-         VK_DEBUG_REPORT_ERROR_BIT_EXT)) {
-        ErrorMonitor *errMonitor = (ErrorMonitor *)pUserData;
-        return errMonitor->CheckForDesiredMsg(msgFlags, pMsg);
+    ErrorMonitor *errMonitor = (ErrorMonitor *)pUserData;
+    if (msgFlags & errMonitor->GetMessageFlags()) {
+        return errMonitor->CheckForDesiredMsg(pMsg);
     }
     return false;
 }
