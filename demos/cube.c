@@ -705,7 +705,7 @@ static void demo_draw(struct demo *demo) {
     // that the image won't be rendered to until the presentation
     // engine has fully released ownership to the application, and it is
     // okay to render to the image.
-    VkFence nullFence = NULL;
+    VkFence nullFence = VK_NULL_HANDLE;
     VkPipelineStageFlags pipe_stage_flags =
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submit_info = {
