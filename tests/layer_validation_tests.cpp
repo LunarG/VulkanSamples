@@ -3971,6 +3971,7 @@ TEST_F(VkLayerTest, FramebufferBindingDestroyCommandPool) {
     vkCmdBeginRenderPass(command_buffer, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdEndRenderPass(command_buffer);
     vkEndCommandBuffer(command_buffer);
+    vkDestroyImageView(m_device->device(), view, nullptr);
     // Destroy command pool to implicitly free command buffer
     vkDestroyCommandPool(m_device->device(), command_pool, NULL);
     vkDestroyFramebuffer(m_device->device(), fb, nullptr);
