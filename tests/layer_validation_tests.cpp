@@ -12190,6 +12190,141 @@ TEST_F(VkLayerTest, VtxBufferBadIndex) {
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
+TEST_F(VkLayerTest, MismatchCountQueueCreateRequestedFeature) {
+    TEST_DESCRIPTION("Use an invalid count in a vkEnumeratePhysicalDevices call."
+                     "Use invalid Queue Family Index in vkCreateDevice");
+
+    const char *mismatch_count_message =
+            "Call to vkEnumeratePhysicalDevices() "
+            "w/ pPhysicalDeviceCount value ";
+
+    const char *invalid_queueFamilyIndex_message =
+            "Invalid queue create request in vkCreateDevice(). Invalid "
+            "queueFamilyIndex ";
+
+    const char *unavailable_feature_message =
+            "While calling vkCreateDevice(), requesting feature #";
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                                         mismatch_count_message);
+    uint32_t count = static_cast<uint32_t>(~0);
+    VkPhysicalDevice physical_device;
+    vkEnumeratePhysicalDevices(instance(), &count, &physical_device);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         invalid_queueFamilyIndex_message);
+    float queue_priority = 0.0;
+
+    VkDeviceQueueCreateInfo queue_create_info = {};
+    queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_create_info.queueCount = 1;
+    queue_create_info.pQueuePriorities = &queue_priority;
+    queue_create_info.queueFamilyIndex = static_cast<uint32_t>(~0);
+
+    VkPhysicalDeviceFeatures features = m_device->phy().features();
+    VkDevice testDevice;
+    VkDeviceCreateInfo device_create_info = {};
+    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_create_info.queueCreateInfoCount = 1;
+    device_create_info.pQueueCreateInfos = &queue_create_info;
+    device_create_info.pEnabledFeatures = &features;
+    vkCreateDevice(gpu(), &device_create_info, nullptr, &testDevice);
+    m_errorMonitor->VerifyFound();
+
+    queue_create_info.queueFamilyIndex = 1;
+
+    unsigned feature_count = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
+    VkBool32 *feature_array = reinterpret_cast<VkBool32 *>(&features);
+    for (unsigned i = 0; i < feature_count; i++) {
+        if (VK_FALSE == feature_array[i]) {
+            feature_array[i] = VK_TRUE;
+            m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                                 unavailable_feature_message);
+            device_create_info.pEnabledFeatures = &features;
+            vkCreateDevice(gpu(), &device_create_info, nullptr, &testDevice);
+            m_errorMonitor->VerifyFound();
+            break;
+        }
+    }
+}
+
+TEST_F(VkLayerTest, InvalidQueueIndexInvalidQuery) {
+    TEST_DESCRIPTION("Use an invalid queue index in a vkCmdWaitEvents call."
+                     "End a command buffer with a query still in progress.");
+
+    const char *invalid_queue_index =
+            "was created with sharingMode of VK_SHARING_MODE_EXCLUSIVE. If one "
+            "of src- or dstQueueFamilyIndex is VK_QUEUE_FAMILY_IGNORED, both "
+            "must be.";
+
+    const char *invalid_query =
+            "Ending command buffer with in progress query: queryPool 0x";
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         invalid_queue_index);
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkEvent event;
+    VkEventCreateInfo event_create_info{};
+    event_create_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+    vkCreateEvent(m_device->device(), &event_create_info, nullptr, &event);
+
+
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(m_device->device(), m_device->graphics_queue_node_index_,
+                     0, &queue);
+
+    BeginCommandBuffer();
+
+    VkImageObj image(m_device);
+    image.init(128, 128, VK_FORMAT_B8G8R8A8_UNORM,
+               VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+    VkImageMemoryBarrier img_barrier = {};
+    img_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    img_barrier.pNext = NULL;
+    img_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+    img_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    img_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    img_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    img_barrier.image = image.handle();
+    img_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    img_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    img_barrier.subresourceRange.baseArrayLayer = 0;
+    img_barrier.subresourceRange.baseMipLevel = 0;
+    img_barrier.subresourceRange.layerCount = 1;
+    img_barrier.subresourceRange.levelCount = 1;
+    vkCmdWaitEvents(m_commandBuffer->handle(), 1, &event,
+                    VK_PIPELINE_STAGE_HOST_BIT,
+                    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, nullptr, 0,
+                    nullptr, 1, &img_barrier);
+    m_errorMonitor->VerifyFound();
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         invalid_query);
+
+    VkQueryPool query_pool;
+    VkQueryPoolCreateInfo query_pool_create_info = {};
+    query_pool_create_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    query_pool_create_info.queryType = VK_QUERY_TYPE_OCCLUSION;
+    query_pool_create_info.queryCount = 1;
+    vkCreateQueryPool(m_device->device(), &query_pool_create_info, nullptr,
+                      &query_pool);
+
+    vkCmdResetQueryPool(m_commandBuffer->handle(), query_pool, 0 /*startQuery*/,
+                        1 /*queryCount*/);
+    vkCmdBeginQuery(m_commandBuffer->handle(), query_pool, 0, 0);
+
+    vkEndCommandBuffer(m_commandBuffer->handle());
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyQueryPool(m_device->device(), query_pool, nullptr);
+    vkDestroyEvent(m_device->device(), event, nullptr);
+}
+
 TEST_F(VkLayerTest, VertexBufferInvalid) {
     TEST_DESCRIPTION("Submit a command buffer using deleted vertex buffer, "
                      "delete a buffer twice, use an invalid offset for each "
