@@ -10035,32 +10035,42 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
     if (!skip_call)
         dev_data->device_dispatch_table->CmdExecuteCommands(commandBuffer, commandBuffersCount, pCommandBuffers);
 }
+// Return true if given range intersects with offset and size, else false
+// Prereq : size > 0 and range->end - range->start > 0. Both of these cases should have already resulted
+//  in an error (During MapMemory and AllocateMemory respectively) so not checking them here
+static bool rangesIntersect(MEMORY_RANGE const *range, VkDeviceSize offset, VkDeviceSize size) {
+    auto range2_end = offset + size - 1;
+    if ((range->start >= offset && range->start <= (range2_end)) || (range->end >= offset && range->end <= range2_end)) {
+        return true;
+    }
+    return false;
+}
 
-static bool ValidateMapImageLayouts(VkDevice device, VkDeviceMemory mem) {
+// For any image objects that overlap mapped memory, verify that their layouts are PREINIT or GENERAL
+static bool ValidateMapImageLayouts(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size) {
     bool skip_call = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     auto mem_info = getMemObjInfo(dev_data, mem);
     if (mem_info) {
-        // TODO : Update this code to only check images that overlap given map range
-        //        for (auto bound_object : mem_info->obj_bindings) {
-        //            if (bound_object.type == VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT) {
-        //                std::vector<VkImageLayout> layouts;
-        //                if (FindLayouts(dev_data, VkImage(bound_object.handle), layouts)) {
-        //                    for (auto layout : layouts) {
-        //                        if (layout != VK_IMAGE_LAYOUT_PREINITIALIZED && layout != VK_IMAGE_LAYOUT_GENERAL) {
-        //                            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        //                            (VkDebugReportObjectTypeEXT)0, 0,
-        //                                                 __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS", "Cannot map an image with
-        //                                                 layout %s. Only "
-        //                                                                                                 "GENERAL or
-        //                                                                                                 PREINITIALIZED are
-        //                                                                                                 supported.",
-        //                                                 string_VkImageLayout(layout));
-        //                        }
-        //                    }
-        //                }
-        //            }
-        //        }
+        // Iterate over all bound image ranges and verify that for any that overlap the
+        //  map ranges, the layouts are VK_IMAGE_LAYOUT_PREINITIALIZED or VK_IMAGE_LAYOUT_GENERAL
+        // TODO : This can be optimized if we store ranges based on starting address and early exit when we pass our range
+        for (auto range : mem_info->image_ranges) {
+            if (rangesIntersect(&range, offset, size)) {
+                std::vector<VkImageLayout> layouts;
+                if (FindLayouts(dev_data, VkImage(range.handle), layouts)) {
+                    for (auto layout : layouts) {
+                        if (layout != VK_IMAGE_LAYOUT_PREINITIALIZED && layout != VK_IMAGE_LAYOUT_GENERAL) {
+                            skip_call |=
+                                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
+                                        __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS", "Cannot map an image with layout %s. Only "
+                                                                                        "GENERAL or PREINITIALIZED are supported.",
+                                        string_VkImageLayout(layout));
+                        }
+                    }
+                }
+            }
+        }
     }
     return skip_call;
 }
@@ -10086,7 +10096,7 @@ MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize
     }
     skip_call |= ValidateMapMemRange(dev_data, mem, offset, size);
 #endif
-    skip_call |= ValidateMapImageLayouts(device, mem);
+    skip_call |= ValidateMapImageLayouts(device, mem, offset, size);
     lock.unlock();
 
     if (!skip_call) {
