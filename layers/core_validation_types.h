@@ -225,12 +225,12 @@ struct DEVICE_MEM_INFO {
     std::unordered_set<VkCommandBuffer> commandBufferBindings; // cmd buffers referencing this memory
     std::vector<MEMORY_RANGE> bufferRanges;
     std::vector<MEMORY_RANGE> imageRanges;
-    VkImage image; // If memory is bound to image, this will have VkImage handle, else VK_NULL_HANDLE
+
     MemRange memRange;
     void *pData, *pDriverData;
     DEVICE_MEM_INFO(void *disp_object, const VkDeviceMemory in_mem, const VkMemoryAllocateInfo *p_alloc_info)
-        : object(disp_object), valid(false), stencil_valid(false), mem(in_mem), allocInfo(*p_alloc_info),
-          image(VK_NULL_HANDLE), memRange{}, pData(0), pDriverData(0){};
+        : object(disp_object), valid(false), stencil_valid(false), mem(in_mem), allocInfo(*p_alloc_info), memRange{}, pData(0),
+          pDriverData(0){};
 };
 
 class SWAPCHAIN_NODE {

@@ -5347,7 +5347,6 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
         if (mem_info) {
             remove_memory_ranges(reinterpret_cast<uint64_t &>(image), img_node->mem, mem_info->imageRanges);
             clear_object_binding(dev_data, reinterpret_cast<uint64_t &>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
-            mem_info->image = VK_NULL_HANDLE;
         }
         // Remove image from imageMap
         dev_data->imageMap.erase(img_node->image);
@@ -10037,18 +10036,27 @@ static bool ValidateMapImageLayouts(VkDevice device, VkDeviceMemory mem) {
     bool skip_call = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     auto mem_info = getMemObjInfo(dev_data, mem);
-    if ((mem_info) && (mem_info->image != VK_NULL_HANDLE)) {
-        std::vector<VkImageLayout> layouts;
-        if (FindLayouts(dev_data, mem_info->image, layouts)) {
-            for (auto layout : layouts) {
-                if (layout != VK_IMAGE_LAYOUT_PREINITIALIZED && layout != VK_IMAGE_LAYOUT_GENERAL) {
-                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0,
-                                         __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS", "Cannot map an image with layout %s. Only "
-                                                                                         "GENERAL or PREINITIALIZED are supported.",
-                                         string_VkImageLayout(layout));
-                }
-            }
-        }
+    if (mem_info) {
+        // TODO : Update this code to only check images that overlap given map range
+        //        for (auto bound_object : mem_info->objBindings) {
+        //            if (bound_object.type == VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT) {
+        //                std::vector<VkImageLayout> layouts;
+        //                if (FindLayouts(dev_data, VkImage(bound_object.handle), layouts)) {
+        //                    for (auto layout : layouts) {
+        //                        if (layout != VK_IMAGE_LAYOUT_PREINITIALIZED && layout != VK_IMAGE_LAYOUT_GENERAL) {
+        //                            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        //                            (VkDebugReportObjectTypeEXT)0, 0,
+        //                                                 __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS", "Cannot map an image with
+        //                                                 layout %s. Only "
+        //                                                                                                 "GENERAL or
+        //                                                                                                 PREINITIALIZED are
+        //                                                                                                 supported.",
+        //                                                 string_VkImageLayout(layout));
+        //                        }
+        //                    }
+        //                }
+        //            }
+        //        }
     }
     return skip_call;
 }
@@ -10227,7 +10235,6 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
         if (!skip_call) {
             result = dev_data->device_dispatch_table->BindImageMemory(device, image, mem, memoryOffset);
             lock.lock();
-            dev_data->memObjMap[mem].get()->image = image;
             image_node->mem = mem;
             image_node->memOffset = memoryOffset;
             image_node->memSize = memRequirements.size;
