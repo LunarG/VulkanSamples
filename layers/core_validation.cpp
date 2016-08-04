@@ -4885,7 +4885,11 @@ FreeMemory(VkDevice device, VkDeviceMemory mem, const VkAllocationCallbacks *pAl
     }
 }
 
-static bool validateMemRange(layer_data *my_data, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size) {
+// Validate that given Map memory range is valid. This means that the memory should not already be mapped,
+//  and that the size of the map range should be:
+//  1. Not zero
+//  2. Within the size of the memory allocation
+static bool ValidateMapMemRange(layer_data *my_data, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size) {
     bool skip_call = false;
 
     if (size == 0) {
@@ -10080,7 +10084,7 @@ MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize
                         "Mapping Memory without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT set: mem obj 0x%" PRIxLEAST64, (uint64_t)mem);
         }
     }
-    skip_call |= validateMemRange(dev_data, mem, offset, size);
+    skip_call |= ValidateMapMemRange(dev_data, mem, offset, size);
 #endif
     skip_call |= ValidateMapImageLayouts(device, mem);
     lock.unlock();
