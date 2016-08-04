@@ -220,17 +220,17 @@ struct DEVICE_MEM_INFO {
     bool stencil_valid; // TODO: Stores if the stencil memory has valid data or not. The validity of this memory may ultimately need
                         // to be tracked separately from the depth/stencil/buffer memory
     VkDeviceMemory mem;
-    VkMemoryAllocateInfo allocInfo;
-    std::unordered_set<MT_OBJ_HANDLE_TYPE> objBindings;        // objects bound to this memory
-    std::unordered_set<VkCommandBuffer> commandBufferBindings; // cmd buffers referencing this memory
-    std::vector<MEMORY_RANGE> bufferRanges;
-    std::vector<MEMORY_RANGE> imageRanges;
+    VkMemoryAllocateInfo alloc_info;
+    std::unordered_set<MT_OBJ_HANDLE_TYPE> obj_bindings;         // objects bound to this memory
+    std::unordered_set<VkCommandBuffer> command_buffer_bindings; // cmd buffers referencing this memory
+    std::vector<MEMORY_RANGE> buffer_ranges;
+    std::vector<MEMORY_RANGE> image_ranges;
 
-    MemRange memRange;
-    void *pData, *pDriverData;
+    MemRange mem_range;
+    void *p_data, *p_driver_data;
     DEVICE_MEM_INFO(void *disp_object, const VkDeviceMemory in_mem, const VkMemoryAllocateInfo *p_alloc_info)
-        : object(disp_object), valid(false), stencil_valid(false), mem(in_mem), allocInfo(*p_alloc_info), memRange{}, pData(0),
-          pDriverData(0){};
+        : object(disp_object), valid(false), stencil_valid(false), mem(in_mem), alloc_info(*p_alloc_info), mem_range{}, p_data(0),
+          p_driver_data(0){};
 };
 
 class SWAPCHAIN_NODE {
