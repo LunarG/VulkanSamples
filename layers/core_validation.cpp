@@ -3598,9 +3598,10 @@ void SetLayout(const layer_data *dev_data, GLOBAL_CB_NODE *pCB, VkImageView imag
             // TODO: If ImageView was created with depth or stencil, transition both layouts as
             // the aspectMask is ignored and both are used. Verify that the extra implicit layout
             // is OK for descriptor set layout validation
-            if (subRange.aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
-                sub.aspectMask |= (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
-            }
+            // TODO : Temporarily disabling this workaround as it breaks cube/tri --validate
+//            if (subRange.aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
+//                sub.aspectMask |= (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+//            }
             SetLayout(pCB, image, sub, layout);
         }
     }
