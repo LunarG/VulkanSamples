@@ -1684,10 +1684,13 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
         SwpSurface *pSurface = ((pPhysicalDevice) ? pPhysicalDevice->supportedSurfaces[pCreateInfo->surface] : NULL);
         if (!pSurface) {
             skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_CREATE_UNSUPPORTED_SURFACE,
-                                  "%s() called with pCreateInfo->surface that "
-                                  "was not returned by "
+                                  "The surface in pCreateInfo->surface, that "
+                                  "was given to %s(), must be a surface that "
+                                  "is supported by the device as determined "
+                                  "by vkGetPhysicalDeviceSurfaceSupportKHR().  "
+                                  "However, "
                                   "vkGetPhysicalDeviceSurfaceSupportKHR() "
-                                  "for the device.",
+                                  "was never called with this surface.",
                                   fn);
         }
 
