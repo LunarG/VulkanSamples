@@ -221,7 +221,7 @@ DETAILS TABLE PENDING
 | Check | Overview | ENUM IMAGE_* | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
 | Image Format | Verifies that requested format is a supported Vulkan format on this device | FORMAT_UNSUPPORTED | vkCreateImage vkCreateRenderPass | ImageLayerUnsupportedFormat | NA |
-| RenderPass Attachments | Validates that attachment image layouts, loadOps, and storeOps are valid Vulkan values | RENDERPASS_INVALID_ATTACHMENT | vkCreateRenderPass | TODO | NA |
+| RenderPass Attachments | Validates that attachment image format, layouts, loadOps, and storeOps are valid Vulkan values | RENDERPASS_INVALID_ATTACHMENT | vkCreateRenderPass | AttachmentDescriptionUndefinedFormat | Tests are needed for loadops, storeops, layouts, and bad depth format |
 | Subpass DS Settings | Verifies that if there is no depth attachment then the subpass attachment is set to VK_ATTACHMENT_UNUSED | RENDERPASS_INVALID_DS_ATTACHMENT | vkCreateRenderPass | TODO | NA |
 | View Creation | Verify that requested Image View Creation parameters are reasonable for the image that the view is being created for | VIEW_CREATE_ERROR | vkCreateImageView | ImageLayerViewTests | NA |
 | Image Aspects | Verify that Image commands are using valid Image Aspect flags | INVALID_IMAGE_ASPECT | vkCreateImageView vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdClearAttachments vkCmdCopyImage vkCmdCopyImageToBuffer vkCmdCopyBufferToImage vkCmdResolveImage vkCmdBlitImage | InvalidImageViewAspect | NA |
