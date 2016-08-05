@@ -405,6 +405,13 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
     bool depth_format_present = false;
 
     for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
+        if (pCreateInfo->pAttachments[i].format == VK_FORMAT_UNDEFINED) {
+            std::stringstream ss;
+            ss << "vkCreateRenderPass: pCreateInfo->pAttachments[" << i << "].format is VK_FORMAT_UNDEFINED";
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                                 IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
+        }
+
         if (!validate_VkImageLayoutKHR(pCreateInfo->pAttachments[i].initialLayout) ||
             !validate_VkImageLayoutKHR(pCreateInfo->pAttachments[i].finalLayout)) {
             std::stringstream ss;
@@ -413,6 +420,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                  IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
         }
+
         if (!validate_VkAttachmentLoadOp(pCreateInfo->pAttachments[i].loadOp)) {
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkAttachmentLoadOp in pCreateInfo->pAttachments[" << i << "], is unrecognized";
@@ -420,6 +428,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                  IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
         }
+
         if (!validate_VkAttachmentStoreOp(pCreateInfo->pAttachments[i].storeOp)) {
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkAttachmentStoreOp in pCreateInfo->pAttachments[" << i << "], is unrecognized";
@@ -427,6 +436,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateRenderPass(VkDevice device, const VkRenderP
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
                                  IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
         }
+
         // Any depth buffers specified as attachments?
         depth_format_present |= vk_format_is_depth_or_stencil(pCreateInfo->pAttachments[i].format);
     }
