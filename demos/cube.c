@@ -2200,10 +2200,11 @@ static void demo_run_xcb(struct demo *demo) {
             event = xcb_wait_for_event(demo->connection);
         } else {
             event = xcb_poll_for_event(demo->connection);
-        }
-        if (event) {
-            demo_handle_xcb_event(demo, event);
-            free(event);
+            while(event) {
+                demo_handle_xcb_event(demo, event);
+                free(event);
+                event = xcb_poll_for_event(demo->connection);
+            }
         }
 
         demo_update_data_buffer(demo);
