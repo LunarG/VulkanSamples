@@ -29,7 +29,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <signal.h>
-#ifdef __linux__
+#if defined(__linux__) && !defined(ANDROID)
 #include <X11/Xutil.h>
 #endif
 
