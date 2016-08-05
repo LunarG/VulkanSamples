@@ -14811,6 +14811,41 @@ TEST_F(VkLayerTest, CreateImageLimitsViolationMinWidth) {
 #endif // DEVICE_LIMITS_TESTS
 
 #if IMAGE_TESTS
+TEST_F(VkLayerTest, AttachmentDescriptionUndefinedFormat) {
+    TEST_DESCRIPTION("Create a render pass with an attachment description "
+                     "format set to VK_FORMAT_UNDEFINED");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "format is VK_FORMAT_UNDEFINED");
+
+    VkAttachmentReference color_attach = {};
+    color_attach.layout = VK_IMAGE_LAYOUT_GENERAL;
+    color_attach.attachment = 0;
+    VkSubpassDescription subpass = {};
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color_attach;
+
+    VkRenderPassCreateInfo rpci = {};
+    rpci.subpassCount = 1;
+    rpci.pSubpasses = &subpass;
+    rpci.attachmentCount = 1;
+    VkAttachmentDescription attach_desc = {};
+    attach_desc.format = VK_FORMAT_UNDEFINED;
+    rpci.pAttachments = &attach_desc;
+    rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    VkRenderPass rp;
+    VkResult result = vkCreateRenderPass(m_device->device(), &rpci, NULL, &rp);
+
+    m_errorMonitor->VerifyFound();
+
+    if (result == VK_SUCCESS) {
+        vkDestroyRenderPass(m_device->device(), rp, NULL);
+    }
+}
+
 TEST_F(VkLayerTest, InvalidImageView) {
     VkResult err;
 
