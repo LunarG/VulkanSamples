@@ -459,20 +459,21 @@ void Hologram::create_command_buffers()
 
 void Hologram::create_buffers()
 {
-    VkDeviceSize object_data_size = sizeof(ShaderParamBlock);
     // align object data to device limit
     const VkDeviceSize &alignment =
         physical_dev_props_.limits.minStorageBufferOffsetAlignment;
-    if (object_data_size % alignment)
-        object_data_size += alignment - (object_data_size % alignment);
+
+    aligned_object_data_size = sizeof(ShaderParamBlock);
+    if (aligned_object_data_size % alignment)
+        aligned_object_data_size += alignment - (aligned_object_data_size % alignment);
 
     // update simulation
-    assert(object_data_size <= UINT32_MAX);
-    sim_.set_frame_data_size(static_cast<uint32_t>(object_data_size));
+    assert(aligned_object_data_size <= UINT32_MAX);
+    sim_.set_frame_data_size(static_cast<uint32_t>(aligned_object_data_size));
 
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buf_info.size = object_data_size * sim_.objects().size();
+    buf_info.size = aligned_object_data_size * sim_.objects().size();
     buf_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -741,7 +742,7 @@ void Hologram::draw_objects(Worker &worker)
         range.pNext = nullptr;
         range.memory = frame_data_mem_;
         range.offset = (data.base - frame_data_[0].base) + sim_.objects()[worker.object_begin_].frame_data_offset;
-        range.size = sizeof(ShaderParamBlock) * (worker.object_end_ - worker.object_begin_);
+        range.size = aligned_object_data_size * (worker.object_end_ - worker.object_begin_);
 
         vk::FlushMappedMemoryRanges(dev_, 1, &range);
     }

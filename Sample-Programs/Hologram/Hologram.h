@@ -142,6 +142,7 @@ private:
     VkQueue queue_;
     uint32_t queue_family_;
     VkFormat format_;
+    VkDeviceSize aligned_object_data_size;
 
     VkPhysicalDeviceProperties physical_dev_props_;
     std::vector<VkMemoryPropertyFlags> mem_flags_;
