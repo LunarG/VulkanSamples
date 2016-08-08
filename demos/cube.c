@@ -2051,7 +2051,7 @@ static void demo_create_window(struct demo *demo) {
     demo->minsize.x = GetSystemMetrics(SM_CXMINTRACK);
     demo->minsize.y = GetSystemMetrics(SM_CYMINTRACK)+1;
 }
-#elif defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
 static void demo_create_xlib_window(struct demo *demo) {
 
     demo->display = XOpenDisplay(NULL);
@@ -2143,7 +2143,8 @@ static void demo_run_xlib(struct demo *demo) {
             demo->quit = true;
     }
 }
-
+#endif // VK_USE_PLATFORM_XLIB_KHR
+#ifdef VK_USE_PLATFORM_XCB_KHR
 static void demo_handle_xcb_event(struct demo *demo,
                               const xcb_generic_event_t *event) {
     uint8_t event_code = event->response_type & 0x7f;
@@ -2254,7 +2255,8 @@ static void demo_create_xcb_window(struct demo *demo) {
     xcb_configure_window(demo->connection, demo->xcb_window,
                          XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
 }
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+#endif // VK_USE_PLATFORM_XCB_KHR
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
 static void demo_run(struct demo *demo) {
     while (!demo->quit) {
         demo_update_data_buffer(demo);
@@ -2995,10 +2997,12 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             demo->validate = true;
             continue;
         }
+#if defined(VK_USE_PLATFORM_XLIB_KHR)
         if (strcmp(argv[i], "--xlib") == 0) {
             demo->use_xlib = true;
             continue;
         }
+#endif
         if (strcmp(argv[i], "--c") == 0 && demo->frameCount == INT32_MAX &&
             i < argc - 1 && sscanf(argv[i + 1], "%d", &demo->frameCount) == 1 &&
             demo->frameCount >= 0) {
@@ -3011,6 +3015,9 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
         }
 
         fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--break] "
+#if defined(VK_USE_PLATFORM_XLIB_KHR)
+                        "[--xlib] "
+#endif
                         "[--c <framecount>] [--suppress_popups]\n",
                 APP_SHORT_NAME);
         fflush(stderr);
@@ -3202,11 +3209,15 @@ int main(int argc, char **argv) {
     struct demo demo;
 
     demo_init(&demo, argc, argv);
-#if defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(VK_USE_PLATFORM_XLIB_KHR) && defined(VK_USE_PLATFORM_XCB_KHR)
     if (demo.use_xlib)
         demo_create_xlib_window(&demo);
     else
         demo_create_xcb_window(&demo);
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+    demo_create_xcb_window(&demo);
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+    demo_create_xlib_window(&demo);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     demo_create_window(&demo);
 #endif
@@ -3215,11 +3226,15 @@ int main(int argc, char **argv) {
 
     demo_prepare(&demo);
 
-#if defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(VK_USE_PLATFORM_XLIB_KHR) && defined(VK_USE_PLATFORM_XCB_KHR)
     if (demo.use_xlib)
         demo_run_xlib(&demo);
     else
         demo_run_xcb(&demo);
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+    demo_run_xcb(&demo);
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+    demo_run_xlib(&demo);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     demo_run(&demo);
 #endif
