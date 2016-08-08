@@ -254,10 +254,10 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
             SwpPhysicalDevice *pPhysicalDevice = it->second;
             if (pPhysicalDevice) {
                 if (pPhysicalDevice->pDevice) {
-                    LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, instance, "VkInstance", SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN,
-                              "%s() called before all of its associated "
-                              "VkDevices were destroyed.",
-                              __FUNCTION__);
+                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            (uint64_t)pPhysicalDevice->pDevice->device, __LINE__, SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN,
+                            swapchain_layer_name,
+                            "VkDestroyInstance() called before all of its associated VkDevices were destroyed.");
                 }
                 free(pPhysicalDevice->pSurfaceFormats);
                 free(pPhysicalDevice->pPresentModes);
@@ -272,10 +272,9 @@ VKAPI_ATTR void VKAPI_CALL DestroyInstance(VkInstance instance, const VkAllocati
             // Free memory that was allocated for/by this SwpPhysicalDevice:
             SwpSurface *pSurface = it->second;
             if (pSurface) {
-                LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, instance, "VkInstance", SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN,
-                          "%s() called before all of its associated "
-                          "VkSurfaceKHRs were destroyed.",
-                          __FUNCTION__);
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                        (uint64_t)pInstance->instance, __LINE__, SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN, swapchain_layer_name,
+                        "VkDestroyInstance() called before all of its associated VkSurfaceKHRs were destroyed.");
             }
         }
         my_data->instanceMap.erase(instance);
@@ -340,9 +339,10 @@ CreateAndroidSurfaceKHR(VkInstance instance, const VkAndroidSurfaceCreateInfoKHR
 
     // Validate that the platform extension was enabled:
     if (pInstance && !pInstance->androidSurfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pInstance, "VkInstance", SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                            (uint64_t)instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+                            "vkCreateAndroidSurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
+                            VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
     }
 
     if (!pCreateInfo) {
@@ -402,9 +402,10 @@ CreateMirSurfaceKHR(VkInstance instance, const VkMirSurfaceCreateInfoKHR *pCreat
 
     // Validate that the platform extension was enabled:
     if (pInstance && !pInstance->mirSurfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pInstance, "VkInstance", SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_MIR_SURFACE_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                            (uint64_t)instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+                            "vkCreateMirSurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
+                            VK_KHR_MIR_SURFACE_EXTENSION_NAME);
     }
 
     if (!pCreateInfo) {
@@ -462,10 +463,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceMirPresentationSupportKHR(VkPhys
 
     // Validate that the platform extension was enabled:
     if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->mirSurfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
-                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_MIR_SURFACE_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                            (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                            swapchain_layer_name, "vkGetPhysicalDeviceMirPresentationSupportKHR() called even though the %s "
+                                                  "extension was not enabled for this VkInstance.",
+                            VK_KHR_MIR_SURFACE_EXTENSION_NAME);
     }
     if (pPhysicalDevice->gotQueueFamilyPropertyCount && (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
         skipCall |=
@@ -499,9 +501,10 @@ CreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR
 
     // Validate that the platform extension was enabled:
     if (pInstance && !pInstance->waylandSurfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pInstance, "VkInstance", SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+            (uint64_t)instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+            "vkCreateWaylandSurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
+            VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
     }
 
     if (!pCreateInfo) {
@@ -559,10 +562,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWaylandPresentationSupportKHR(Vk
 
     // Validate that the platform extension was enabled:
     if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->waylandSurfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
-                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                            (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                            swapchain_layer_name, "vkGetPhysicalDeviceWaylandPresentationSupportKHR() called even though the %s "
+                                                  "extension was not enabled for this VkInstance.",
+                            VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
     }
     if (pPhysicalDevice->gotQueueFamilyPropertyCount && (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
         skipCall |=
@@ -596,9 +600,10 @@ CreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pC
 
     // Validate that the platform extension was enabled:
     if (pInstance && !pInstance->win32SurfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pInstance, "VkInstance", SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                            (uint64_t)instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+                            "vkCreateWin32SurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
+                            VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     }
 
     if (!pCreateInfo) {
@@ -655,10 +660,11 @@ GetPhysicalDeviceWin32PresentationSupportKHR(VkPhysicalDevice physicalDevice, ui
 
     // Validate that the platform extension was enabled:
     if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->win32SurfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
-                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    skipCall |= log_msg(
+        my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+        (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+        "vkGetPhysicalDeviceWin32PresentationSupportKHR() called even though the %s extension was not enabled for this VkInstance.",
+        VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     }
     if (pPhysicalDevice->gotQueueFamilyPropertyCount && (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
         skipCall |=
@@ -691,9 +697,10 @@ CreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreat
 
     // Validate that the platform extension was enabled:
     if (pInstance && !pInstance->xcbSurfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pInstance, "VkInstance", SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                            (uint64_t)instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+                            "vkCreateXcbSurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
+                            VK_KHR_XCB_SURFACE_EXTENSION_NAME);
     }
 
     if (!pCreateInfo) {
@@ -751,10 +758,11 @@ GetPhysicalDeviceXcbPresentationSupportKHR(VkPhysicalDevice physicalDevice, uint
 
     // Validate that the platform extension was enabled:
     if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->xcbSurfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
-                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                            (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                            swapchain_layer_name, "vkGetPhysicalDeviceXcbPresentationSupportKHR() called even though the %s "
+                                                  "extension was not enabled for this VkInstance.",
+                            VK_KHR_XCB_SURFACE_EXTENSION_NAME);
     }
     if (pPhysicalDevice->gotQueueFamilyPropertyCount && (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
         skipCall |=
@@ -788,9 +796,10 @@ CreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCre
 
     // Validate that the platform extension was enabled:
     if (pInstance && !pInstance->xlibSurfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pInstance, "VkInstance", SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                            (uint64_t)instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+                            "vkCreateXlibSurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
+                            VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
     }
 
     if (!pCreateInfo) {
@@ -848,10 +857,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXlibPresentationSupportKHR(VkPhy
 
     // Validate that the platform extension was enabled:
     if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->xlibSurfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
-                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                            (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                            swapchain_layer_name, "vkGetPhysicalDeviceXlibPresentationSupportKHR() called even though the %s "
+                                                  "extension was not enabled for this VkInstance.",
+                            VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
     }
     if (pPhysicalDevice->gotQueueFamilyPropertyCount && (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
         skipCall |=
@@ -882,10 +892,11 @@ GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalDevice physicalDevice, uint32_t 
     }
 
     if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->displayExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
-                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_DISPLAY_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                            (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                            swapchain_layer_name, "vkGetPhysicalDeviceDisplayPropertiesKHR() called even though the %s "
+                                                  "extension was not enabled for this VkInstance.",
+                            VK_KHR_DISPLAY_EXTENSION_NAME);
     }
 
     if (!pPropertyCount) {
@@ -914,10 +925,11 @@ GetPhysicalDeviceDisplayPlanePropertiesKHR(VkPhysicalDevice physicalDevice, uint
     }
 
     if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->displayExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
-                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_DISPLAY_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                            (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                            swapchain_layer_name, "vkGetPhysicalDeviceDisplayPlanePropertiesKHR() called even though the %s "
+                                                  "extension was not enabled for this VkInstance.",
+                            VK_KHR_DISPLAY_EXTENSION_NAME);
     }
 
     if (!pPropertyCount) {
@@ -956,10 +968,11 @@ GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDevice physicalDevice, uint32_t pl
     }
 
     if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->displayExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
-                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_DISPLAY_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                            (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                            swapchain_layer_name, "vkGetDisplayPlaneSupportedDisplaysKHR() called even though the %s "
+                                                  "extension was not enabled for this VkInstance.",
+                            VK_KHR_DISPLAY_EXTENSION_NAME);
     }
 
     if (!pDisplayCount) {
@@ -977,12 +990,12 @@ GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDevice physicalDevice, uint32_t pl
 
     if (pPhysicalDevice->gotDisplayPlanePropertyCount && planeIndex >= pPhysicalDevice->displayPlanePropertyCount)
     {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "planeIndex",
-                SWAPCHAIN_PLANE_INDEX_TOO_LARGE,
-                "%s(): %s must be in the range [0, %d] that was returned by vkGetPhysicalDeviceDisplayPlanePropertiesKHR. Do you have the plane index hardcoded?",
-                __FUNCTION__,
-                "planeIndex",
-                pPhysicalDevice->displayPlanePropertyCount - 1);
+        skipCall |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                    (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_PLANE_INDEX_TOO_LARGE, swapchain_layer_name,
+                    "vkGetDisplayPlaneSupportedDisplaysKHR(): planeIndex must be in the range [0, %d] that was returned by "
+                    "vkGetPhysicalDeviceDisplayPlanePropertiesKHR. Do you have the plane index hardcoded?",
+                    pPhysicalDevice->displayPlanePropertyCount - 1);
     }
     lock.unlock();
 
@@ -1008,10 +1021,11 @@ GetDisplayModePropertiesKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR displa
     }
 
     if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->displayExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
-                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_DISPLAY_EXTENSION_NAME);
+        skipCall |= log_msg(
+            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+            (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+            "vkGetDisplayModePropertiesKHR() called even though the %s extension was not enabled for this VkInstance.",
+            VK_KHR_DISPLAY_EXTENSION_NAME);
     }
 
     if (!pPropertyCount) {
@@ -1041,10 +1055,11 @@ CreateDisplayModeKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR display, cons
     }
 
     if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->displayExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
-                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_DISPLAY_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                            (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                            swapchain_layer_name,
+                            "vkCreateDisplayModeKHR() called even though the %s extension was not enabled for this VkInstance.",
+                            VK_KHR_DISPLAY_EXTENSION_NAME);
     }
 
     if (!pCreateInfo) {
@@ -1074,10 +1089,11 @@ GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkDisplayModeKHR
     }
 
     if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->displayExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
-                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_DISPLAY_EXTENSION_NAME);
+        skipCall |= log_msg(
+            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+            (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+            "vkGetDisplayPlaneCapabilitiesKHR) called even though the %s extension was not enabled for this VkInstance.",
+            VK_KHR_DISPLAY_EXTENSION_NAME);
     }
 
     if (!pPhysicalDevice->gotDisplayPlanePropertyCount)
@@ -1090,12 +1106,12 @@ GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkDisplayModeKHR
 
     if (pPhysicalDevice->gotDisplayPlanePropertyCount && planeIndex >= pPhysicalDevice->displayPlanePropertyCount)
     {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "planeIndex",
-                SWAPCHAIN_PLANE_INDEX_TOO_LARGE,
-                "%s(): %s must be in the range [0, %d] that was returned by vkGetPhysicalDeviceDisplayPlanePropertiesKHR. Do you have the plane index hardcoded?",
-                __FUNCTION__,
-                "planeIndex",
-                pPhysicalDevice->displayPlanePropertyCount - 1);
+        skipCall |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                    (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_PLANE_INDEX_TOO_LARGE, swapchain_layer_name,
+                    "vkGetDisplayPlaneCapabilitiesKHR(): planeIndex must be in the range [0, %d] that was returned by "
+                    "vkGetPhysicalDeviceDisplayPlanePropertiesKHR. Do you have the plane index hardcoded?",
+                    pPhysicalDevice->displayPlanePropertyCount - 1);
     }
 
     if (!pCapabilities) {
@@ -1122,9 +1138,11 @@ CreateDisplayPlaneSurfaceKHR(VkInstance instance, const VkDisplaySurfaceCreateIn
 
     // Validate that the platform extension was enabled:
     if (pInstance && !pInstance->displayExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pInstance, "VkInstance", SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_DISPLAY_EXTENSION_NAME);
+        skipCall |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                    (uint64_t)instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+                    "vkCreateDisplayPlaneSurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
+                    VK_KHR_DISPLAY_EXTENSION_NAME);
     }
 
     if (!pCreateInfo) {
@@ -1182,9 +1200,10 @@ DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface, const VkAllocationC
 
     // Validate that the platform extension was enabled:
     if (pInstance && !pInstance->surfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pInstance, "VkInstance", SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_SURFACE_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                            (uint64_t)instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+                            "vkDestroySurfaceKHR() called even though the %s extension was not enabled for this VkInstance.",
+                            VK_KHR_DISPLAY_EXTENSION_NAME);
     }
 
     // Regardless of skipCall value, do some internal cleanup:
@@ -1194,11 +1213,11 @@ DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface, const VkAllocationC
             pSurface->pInstance->surfaces.erase(surface);
         }
         if (!pSurface->swapchains.empty()) {
-            LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, instance, "VkInstance", SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN,
-                      "%s() called before all of its associated "
-                      "VkSwapchainKHRs were destroyed.",
-                      __FUNCTION__);
-            // Empty and then delete all SwpSwapchain's
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                                (uint64_t)instance, __LINE__, SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN, swapchain_layer_name,
+                                "vkDestroySurfaceKHR() called before all of its associated VkSwapchainKHRs were destroyed.");
+
+            // Empty and then delete all SwpSwapchains
             for (auto it = pSurface->swapchains.begin(); it != pSurface->swapchains.end(); it++) {
                 // Delete all SwpImage's
                 it->second->images.clear();
@@ -1213,10 +1232,9 @@ DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface, const VkAllocationC
             pSurface->swapchains.clear();
         }
         if ((pAllocator != NULL) != pSurface->usedAllocatorToCreate) {
-            LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, instance, "VkInstance", SWAPCHAIN_INCOMPATIBLE_ALLOCATOR,
-                      "%s() called with incompatible pAllocator from when "
-                      "the object was created.",
-                      __FUNCTION__);
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                                (uint64_t)instance, __LINE__, SWAPCHAIN_INCOMPATIBLE_ALLOCATOR, swapchain_layer_name,
+                                "vkDestroySurfaceKHR() called with incompatible pAllocator from when the object was created.");
         }
         my_data->surfaceMap.erase(surface);
     }
@@ -1318,10 +1336,10 @@ VKAPI_ATTR void VKAPI_CALL DestroyDevice(VkDevice device, const VkAllocationCall
             pDevice->pPhysicalDevice->pDevice = NULL;
         }
         if (!pDevice->swapchains.empty()) {
-            LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN,
-                      "%s() called before all of its associated "
-                      "VkSwapchainKHRs were destroyed.",
-                      __FUNCTION__);
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, (uint64_t)device,
+                    __LINE__, SWAPCHAIN_DEL_OBJECT_BEFORE_CHILDREN, swapchain_layer_name,
+                    "vkDestroyDevice() called before all of its associated VkSwapchainKHRs were destroyed.");
+
             // Empty and then delete all SwpSwapchain's
             for (auto it = pDevice->swapchains.begin(); it != pDevice->swapchains.end(); it++) {
                 // Delete all SwpImage's
@@ -1357,17 +1375,17 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
 
     // Validate that the surface extension was enabled:
     if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
-                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_SURFACE_EXTENSION_NAME);
+        skipCall |= log_msg(
+            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+            (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+            "vkGetPhysicalDeviceSurfaceSupportKHR() called even though the %s extension was not enabled for this VkInstance.",
+            VK_KHR_SURFACE_EXTENSION_NAME);
     }
     if (!pPhysicalDevice->gotQueueFamilyPropertyCount) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, pPhysicalDevice, "VkPhysicalDevice",
-                              SWAPCHAIN_DID_NOT_QUERY_QUEUE_FAMILIES, "%s() called before calling the "
-                                                                      "vkGetPhysicalDeviceQueueFamilyProperties "
-                                                                      "function.",
-                              __FUNCTION__);
+        skipCall |= log_msg(
+            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+            (uint64_t)pPhysicalDevice->physicalDevice, __LINE__, SWAPCHAIN_DID_NOT_QUERY_QUEUE_FAMILIES, swapchain_layer_name,
+            "vkGetPhysicalDeviceSurfaceSupportKHR() called before calling the vkGetPhysicalDeviceQueueFamilyProperties function.");
     } else if (pPhysicalDevice->gotQueueFamilyPropertyCount && (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
         skipCall |=
             LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, pPhysicalDevice,
@@ -1431,10 +1449,11 @@ GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkSurfa
 
     // Validate that the surface extension was enabled:
     if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
-                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_SURFACE_EXTENSION_NAME);
+        skipCall |= log_msg(
+            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+            (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+            "vkGetPhysicalDeviceSurfaceCapabilitiesKHR() called even though the %s extension was not enabled for this VkInstance.",
+            VK_KHR_DISPLAY_EXTENSION_NAME);
     }
     if (!pSurfaceCapabilities) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pSurfaceCapabilities");
@@ -1480,10 +1499,11 @@ GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR
 
     // Validate that the surface extension was enabled:
     if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
-                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_SURFACE_EXTENSION_NAME);
+        skipCall |= log_msg(
+            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+            (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+            "vkGetPhysicalDeviceSurfaceFormatsKHR() called even though the %s extension was not enabled for this VkInstance.",
+            VK_KHR_DISPLAY_EXTENSION_NAME);
     }
     if (!pSurfaceFormatCount) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pSurfaceFormatCount");
@@ -1557,10 +1577,11 @@ GetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, VkSurfa
 
     // Validate that the surface extension was enabled:
     if (pPhysicalDevice && pPhysicalDevice->pInstance && !pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "VkInstance",
-                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkInstance.", __FUNCTION__,
-                              VK_KHR_SURFACE_EXTENSION_NAME);
+        skipCall |= log_msg(
+            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+            (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+            "vkGetPhysicalDeviceSurfacePresentModesKHR() called even though the %s extension was not enabled for this VkInstance.",
+            VK_KHR_DISPLAY_EXTENSION_NAME);
     }
     if (!pPresentModeCount) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pPresentModeCount");
@@ -1636,9 +1657,10 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
 
     // Validate that the swapchain extension was enabled:
     if (pDevice && !pDevice->swapchainExtensionEnabled) {
-        return LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                         "%s() called even though the %s extension was not enabled for this VkDevice.", fn,
-                         VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+        return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                       (uint64_t)device, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+                       "vkCreateSwapchainKHR() called even though the %s extension was not enabled for this VkDevice.",
+                       VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
     if (!pCreateInfo) {
         return LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
@@ -1673,25 +1695,20 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
     // Validate pCreateInfo values with the results of
     // vkGetPhysicalDeviceSurfaceCapabilitiesKHR():
     if (!pPhysicalDevice || !pPhysicalDevice->gotSurfaceCapabilities) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,
-                              "%s() called before calling "
-                              "vkGetPhysicalDeviceSurfaceCapabilitiesKHR().",
-                              fn);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY, swapchain_layer_name,
+                            "vkCreateSwapchainKHR() called before calling vkGetPhysicalDeviceSurfaceCapabilitiesKHR().");
     } else if (pCreateInfo) {
         // Validate pCreateInfo->surface to make sure that
         // vkGetPhysicalDeviceSurfaceSupportKHR() reported this as a supported
         // surface:
         SwpSurface *pSurface = ((pPhysicalDevice) ? pPhysicalDevice->supportedSurfaces[pCreateInfo->surface] : NULL);
         if (!pSurface) {
-            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_CREATE_UNSUPPORTED_SURFACE,
-                                  "The surface in pCreateInfo->surface, that "
-                                  "was given to %s(), must be a surface that "
-                                  "is supported by the device as determined "
-                                  "by vkGetPhysicalDeviceSurfaceSupportKHR().  "
-                                  "However, "
-                                  "vkGetPhysicalDeviceSurfaceSupportKHR() "
-                                  "was never called with this surface.",
-                                  fn);
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_UNSUPPORTED_SURFACE, swapchain_layer_name,
+                                "The surface in pCreateInfo->surface, that was given to vkCreateSwapchainKHR(), must be a surface "
+                                "that is supported by the device as determined by vkGetPhysicalDeviceSurfaceSupportKHR().  "
+                                "However, vkGetPhysicalDeviceSurfaceSupportKHR() was never called with this surface.");
         }
 
         // Validate pCreateInfo->minImageCount against
@@ -1699,12 +1716,12 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
         VkSurfaceCapabilitiesKHR *pCapabilities = &pPhysicalDevice->surfaceCapabilities;
         if ((pCreateInfo->minImageCount < pCapabilities->minImageCount) ||
             ((pCapabilities->maxImageCount > 0) && (pCreateInfo->minImageCount > pCapabilities->maxImageCount))) {
-            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                                  SWAPCHAIN_CREATE_SWAP_BAD_MIN_IMG_COUNT, "%s() called with pCreateInfo->minImageCount "
-                                                                           "= %d, which is outside the bounds returned "
-                                                                           "by vkGetPhysicalDeviceSurfaceCapabilitiesKHR() (i.e. "
-                                                                           "minImageCount = %d, maxImageCount = %d).",
-                                  fn, pCreateInfo->minImageCount, pCapabilities->minImageCount, pCapabilities->maxImageCount);
+            skipCall |=
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                        (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_MIN_IMG_COUNT, swapchain_layer_name,
+                        "vkCreateSwapchainKHR() called with pCreateInfo->minImageCount = %d, which is outside the bounds returned "
+                        "by vkGetPhysicalDeviceSurfaceCapabilitiesKHR() (i.e. minImageCount = %d, maxImageCount = %d).",
+                        pCreateInfo->minImageCount, pCapabilities->minImageCount, pCapabilities->maxImageCount);
         }
         // Validate pCreateInfo->imageExtent against
         // VkSurfaceCapabilitiesKHR::{current|min|max}ImageExtent:
@@ -1713,27 +1730,25 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
              (pCreateInfo->imageExtent.width > pCapabilities->maxImageExtent.width) ||
              (pCreateInfo->imageExtent.height < pCapabilities->minImageExtent.height) ||
              (pCreateInfo->imageExtent.height > pCapabilities->maxImageExtent.height))) {
-            skipCall |= LOG_ERROR(
-                VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS,
-                "%s() called with pCreateInfo->imageExtent = "
-                "(%d,%d), which is outside the bounds "
-                "returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR(): "
-                "currentExtent = (%d,%d), minImageExtent = "
-                "(%d,%d), maxImageExtent = (%d,%d).",
-                fn, pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height, pCapabilities->currentExtent.width,
-                pCapabilities->currentExtent.height, pCapabilities->minImageExtent.width, pCapabilities->minImageExtent.height,
-                pCapabilities->maxImageExtent.width, pCapabilities->maxImageExtent.height);
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS, swapchain_layer_name,
+                                "vkCreateSwapchainKHR() called with pCreateInfo->imageExtent = (%d,%d), which is outside the "
+                                "bounds returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR(): currentExtent = (%d,%d), "
+                                "minImageExtent = (%d,%d), maxImageExtent = (%d,%d).",
+                                pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height, pCapabilities->currentExtent.width,
+                                pCapabilities->currentExtent.height, pCapabilities->minImageExtent.width,
+                                pCapabilities->minImageExtent.height, pCapabilities->maxImageExtent.width,
+                                pCapabilities->maxImageExtent.height);
         }
         if ((pCapabilities->currentExtent.width != -1) &&
             ((pCreateInfo->imageExtent.width != pCapabilities->currentExtent.width) ||
              (pCreateInfo->imageExtent.height != pCapabilities->currentExtent.height))) {
-            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                                  SWAPCHAIN_CREATE_SWAP_EXTENTS_NO_MATCH_WIN, "%s() called with pCreateInfo->imageExtent = "
-                                                                              "(%d,%d), which is not equal to the "
-                                                                              "currentExtent = (%d,%d) returned by "
-                                                                              "vkGetPhysicalDeviceSurfaceCapabilitiesKHR().",
-                                  fn, pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height,
-                                  pCapabilities->currentExtent.width, pCapabilities->currentExtent.height);
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_EXTENTS_NO_MATCH_WIN, swapchain_layer_name,
+                                "vkCreateSwapchainKHR() called with pCreateInfo->imageExtent = (%d,%d), which is not equal to the "
+                                "currentExtent = (%d,%d) returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR().",
+                                pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height, pCapabilities->currentExtent.width,
+                                pCapabilities->currentExtent.height);
         }
         // Validate pCreateInfo->preTransform has one bit set (1st two
         // lines of if-statement), which bit is also set in
@@ -1796,30 +1811,29 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
         // Validate pCreateInfo->imageArrayLayers against
         // VkSurfaceCapabilitiesKHR::maxImageArrayLayers:
         if ((pCreateInfo->imageArrayLayers < 1) || (pCreateInfo->imageArrayLayers > pCapabilities->maxImageArrayLayers)) {
-            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                                  SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_LAYERS, "%s() called with a non-supported "
-                                                                              "pCreateInfo->imageArrayLayers (i.e. %d).  "
-                                                                              "Minimum value is 1, maximum value is %d.",
-                                  fn, pCreateInfo->imageArrayLayers, pCapabilities->maxImageArrayLayers);
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_LAYERS, swapchain_layer_name,
+                                "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageArrayLayers (i.e. %d).  "
+                                "Minimum value is 1, maximum value is %d.",
+                                pCreateInfo->imageArrayLayers, pCapabilities->maxImageArrayLayers);
         }
         // Validate pCreateInfo->imageUsage against
         // VkSurfaceCapabilitiesKHR::supportedUsageFlags:
         if (pCreateInfo->imageUsage != (pCreateInfo->imageUsage & pCapabilities->supportedUsageFlags)) {
-            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                                  SWAPCHAIN_CREATE_SWAP_BAD_IMG_USAGE_FLAGS, "%s() called with a non-supported "
-                                                                             "pCreateInfo->imageUsage (i.e. 0x%08x)."
-                                                                             "  Supported flag bits are 0x%08x.",
-                                  fn, pCreateInfo->imageUsage, pCapabilities->supportedUsageFlags);
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_IMG_USAGE_FLAGS, swapchain_layer_name,
+                                "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageUsage (i.e. 0x%08x).  "
+                                "Supported flag bits are 0x%08x.",
+                                pCreateInfo->imageUsage, pCapabilities->supportedUsageFlags);
         }
     }
 
     // Validate pCreateInfo values with the results of
     // vkGetPhysicalDeviceSurfaceFormatsKHR():
     if (!pPhysicalDevice || !pPhysicalDevice->surfaceFormatCount) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,
-                              "%s() called before calling "
-                              "vkGetPhysicalDeviceSurfaceFormatsKHR().",
-                              fn);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY, swapchain_layer_name,
+                            "vkCreateSwapchainKHR() called before calling vkGetPhysicalDeviceSurfaceFormatsKHR().");
     } else if (pCreateInfo) {
         // Validate pCreateInfo->imageFormat against
         // VkSurfaceFormatKHR::format:
@@ -1844,24 +1858,25 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
         if (!foundMatch) {
             if (!foundFormat) {
                 if (!foundColorSpace) {
-                    skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                                          SWAPCHAIN_CREATE_SWAP_BAD_IMG_FMT_CLR_SP, "%s() called with neither a "
-                                                                                    "supported pCreateInfo->imageFormat "
-                                                                                    "(i.e. %d) nor a supported "
-                                                                                    "pCreateInfo->imageColorSpace "
-                                                                                    "(i.e. %d).",
-                                          fn, pCreateInfo->imageFormat, pCreateInfo->imageColorSpace);
+                    skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                        (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_IMG_FMT_CLR_SP, swapchain_layer_name,
+                                        "vkCreateSwapchainKHR() called with neither a supported pCreateInfo->imageFormat "
+                                        "(i.e. %d) nor a supported "
+                                        "pCreateInfo->imageColorSpace (i.e. %d).",
+                                        pCreateInfo->imageFormat, pCreateInfo->imageColorSpace);
                 } else {
-                    skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                                          SWAPCHAIN_CREATE_SWAP_BAD_IMG_FORMAT, "%s() called with a non-supported "
-                                                                                "pCreateInfo->imageFormat (i.e. %d).",
-                                          fn, pCreateInfo->imageFormat);
+                    skipCall |=
+                        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_IMG_FORMAT, swapchain_layer_name,
+                                "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageFormat (i.e. %d)",
+                                pCreateInfo->imageFormat);
                 }
             } else if (!foundColorSpace) {
-                skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                                      SWAPCHAIN_CREATE_SWAP_BAD_IMG_COLOR_SPACE, "%s() called with a non-supported "
-                                                                                 "pCreateInfo->imageColorSpace (i.e. %d).",
-                                      fn, pCreateInfo->imageColorSpace);
+                skipCall |=
+                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_IMG_COLOR_SPACE, swapchain_layer_name,
+                            "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageColorSpace (i.e. %d).",
+                            pCreateInfo->imageColorSpace);
             }
         }
     }
@@ -1870,10 +1885,10 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
     // vkGetPhysicalDeviceSurfacePresentModesKHR():
     if (!pPhysicalDevice || !pPhysicalDevice->presentModeCount) {
         if (!pCreateInfo || (pCreateInfo->presentMode != VK_PRESENT_MODE_FIFO_KHR)) {
-            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,
-                                  "%s() called before calling "
-                                  "vkGetPhysicalDeviceSurfacePresentModesKHR().",
-                                  fn);
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY, swapchain_layer_name,
+                                "vkCreateSwapchainKHR() called before calling "
+                                "vkGetPhysicalDeviceSurfacePresentModesKHR().");
         }
     } else if (pCreateInfo) {
         // Validate pCreateInfo->presentMode against
@@ -1886,38 +1901,36 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
             }
         }
         if (!foundMatch) {
-            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                                  SWAPCHAIN_CREATE_SWAP_BAD_PRESENT_MODE, "%s() called with a non-supported "
-                                                                          "pCreateInfo->presentMode (i.e. %s).",
-                                  fn, presentModeStr(pCreateInfo->presentMode));
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_PRESENT_MODE, swapchain_layer_name,
+                                "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->presentMode (i.e. %s).",
+                                presentModeStr(pCreateInfo->presentMode));
         }
     }
 
     // Validate pCreateInfo->imageSharingMode and related values:
     if (pCreateInfo->imageSharingMode == VK_SHARING_MODE_CONCURRENT) {
         if ((pCreateInfo->queueFamilyIndexCount <= 1) || !pCreateInfo->pQueueFamilyIndices) {
-            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                                  SWAPCHAIN_CREATE_SWAP_BAD_SHARING_VALUES, "%s() called with a supported "
-                                                                            "pCreateInfo->sharingMode of (i.e. %s), "
-                                                                            "but with a bad value(s) for "
-                                                                            "pCreateInfo->queueFamilyIndexCount or "
-                                                                            "pCreateInfo->pQueueFamilyIndices).",
-                                  fn, sharingModeStr(pCreateInfo->imageSharingMode));
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_SHARING_VALUES, swapchain_layer_name,
+                                "vkCreateSwapchainKHR() called with a supported pCreateInfo->sharingMode of (i.e. %s), but with a "
+                                "bad value(s) for pCreateInfo->queueFamilyIndexCount or pCreateInfo->pQueueFamilyIndices).",
+                                sharingModeStr(pCreateInfo->imageSharingMode));
         }
     } else if (pCreateInfo->imageSharingMode != VK_SHARING_MODE_EXCLUSIVE) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_CREATE_SWAP_BAD_SHARING_MODE,
-                              "%s() called with a non-supported "
-                              "pCreateInfo->imageSharingMode (i.e. %s).",
-                              fn, sharingModeStr(pCreateInfo->imageSharingMode));
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_BAD_SHARING_MODE, swapchain_layer_name,
+                            "vkCreateSwapchainKHR() called with a non-supported pCreateInfo->imageSharingMode (i.e. %s).",
+                            sharingModeStr(pCreateInfo->imageSharingMode));
     }
 
     // Validate pCreateInfo->clipped:
     if (pCreateInfo && (pCreateInfo->clipped != VK_FALSE) && (pCreateInfo->clipped != VK_TRUE)) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_BAD_BOOL,
-                              "%s() called with a VkBool32 value that is "
-                              "neither VK_TRUE nor VK_FALSE, but has the "
-                              "numeric value of %d.",
-                              fn, pCreateInfo->clipped);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            (uint64_t)device, __LINE__, SWAPCHAIN_BAD_BOOL, swapchain_layer_name,
+                            "vkCreateSwapchainKHR() called with a VkBool32 value that is neither VK_TRUE nor VK_FALSE, but "
+                            "has the numeric value of %d.",
+                            pCreateInfo->clipped);
     }
 
     // Validate pCreateInfo->oldSwapchain:
@@ -1929,17 +1942,15 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
         }
         if (pOldSwapchain) {
             if (device != pOldSwapchain->pDevice->device) {
-                skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                                      SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE, "%s() called with a different VkDevice "
-                                                                          "than the VkSwapchainKHR was created with.",
-                                      __FUNCTION__);
+                skipCall |= log_msg(
+                    my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, (uint64_t)device,
+                    __LINE__, SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE, swapchain_layer_name,
+                    "vkCreateSwapchainKHR() called with a different VkDevice than the VkSwapchainKHR was created with.");
             }
             if (pCreateInfo->surface != pOldSwapchain->pSurface->surface) {
-                skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                                      SWAPCHAIN_CREATE_SWAP_DIFF_SURFACE, "%s() called with pCreateInfo->oldSwapchain "
-                                                                          "that has a different VkSurfaceKHR than "
-                                                                          "pCreateInfo->surface.",
-                                      fn);
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                    (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_DIFF_SURFACE, swapchain_layer_name,
+                                    "vkCreateSwapchainKHR() called with pCreateInfo->oldSwapchain pCreateInfo->surface.");
             }
         } else {
             // TBD: Leave this in (not sure object_track will check this)?
@@ -2016,9 +2027,10 @@ DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocatio
 
     // Validate that the swapchain extension was enabled:
     if (pDevice && !pDevice->swapchainExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkDevice.", __FUNCTION__,
-                              VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            (uint64_t)device, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+                            "vkDestroySwapchainKHR() called even though the %s extension was not enabled for this VkDevice.",
+                            VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
 
     // Regardless of skipCall value, do some internal cleanup:
@@ -2032,10 +2044,10 @@ DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocatio
         if (pSwapchain->pDevice) {
             pSwapchain->pDevice->swapchains.erase(swapchain);
             if (device != pSwapchain->pDevice->device) {
-                LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE,
-                          "%s() called with a different VkDevice than the "
-                          "VkSwapchainKHR was created with.",
-                          __FUNCTION__);
+                skipCall |=
+                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            (uint64_t)device, __LINE__, SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE, swapchain_layer_name,
+                            "vkDestroySwapchainKHR() called with a different VkDevice than the VkSwapchainKHR was created with.");
             }
         }
         if (pSwapchain->pSurface) {
@@ -2045,10 +2057,9 @@ DestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain, const VkAllocatio
             pSwapchain->images.clear();
         }
         if ((pAllocator != NULL) != pSwapchain->usedAllocatorToCreate) {
-            LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, instance, "VkInstance", SWAPCHAIN_INCOMPATIBLE_ALLOCATOR,
-                      "%s() called with incompatible pAllocator from when "
-                      "the object was created.",
-                      __FUNCTION__);
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                (uint64_t)device, __LINE__, SWAPCHAIN_INCOMPATIBLE_ALLOCATOR, swapchain_layer_name,
+                                "vkDestroySwapchainKHR() called with incompatible pAllocator from when the object was created.");
         }
         my_data->swapchainMap.erase(swapchain);
     }
@@ -2074,9 +2085,10 @@ GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSwap
 
     // Validate that the swapchain extension was enabled:
     if (pDevice && !pDevice->swapchainExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkDevice.", __FUNCTION__,
-                              VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            (uint64_t)device, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+                            "vkGetSwapchainImagesKHR() called even though the %s extension was not enabled for this VkDevice.",
+                            VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
     SwpSwapchain *pSwapchain = NULL;
     {
@@ -2161,14 +2173,16 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
 
     // Validate that the swapchain extension was enabled:
     if (pDevice && !pDevice->swapchainExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the %s extension was not enabled for this VkDevice.", __FUNCTION__,
-                              VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            (uint64_t)device, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+                            "vkAcquireNextImageKHR() called even though the %s extension was not enabled for this VkDevice.",
+                            VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
     if ((semaphore == VK_NULL_HANDLE) && (fence == VK_NULL_HANDLE)) {
-        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice", SWAPCHAIN_NO_SYNC_FOR_ACQUIRE,
-                              "%s() called with both the semaphore and fence parameters set to "
-                              "VK_NULL_HANDLE (at least one should be used).", __FUNCTION__);
+        skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            (uint64_t)device, __LINE__, SWAPCHAIN_NO_SYNC_FOR_ACQUIRE, swapchain_layer_name,
+                            "vkAcquireNextImageKHR() called with both the semaphore and fence parameters set to VK_NULL_HANDLE (at "
+                            "least one should be used).");
     }
     SwpSwapchain *pSwapchain = NULL;
     {
@@ -2188,20 +2202,14 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
             }
         }
         if (imagesAcquiredByApp > (pSwapchain->imageCount - minImageCount)) {
-            skipCall |= LOG_ERROR(
-                VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-                swapchain, "VkSwapchainKHR",
-                SWAPCHAIN_APP_ACQUIRES_TOO_MANY_IMAGES,
-                "%s() called when it cannot succeed.  The application has "
-                "acquired %d image(s) that have not yet been presented.  The "
-                "maximum number of images that the application can "
-                "simultaneously acquire from this swapchain (including this "
-                "call to %s()) is %d.  That value is derived by subtracting "
-                "VkSurfaceCapabilitiesKHR::minImageCount (%d) from the number "
-                "of images in the swapchain (%d) and adding 1.\n",
-                __FUNCTION__, imagesAcquiredByApp, __FUNCTION__,
-                (pSwapchain->imageCount - minImageCount + 1),
-                minImageCount, pSwapchain->imageCount);
+            skipCall |= log_msg(
+                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, (uint64_t)device,
+                __LINE__, SWAPCHAIN_APP_ACQUIRES_TOO_MANY_IMAGES, swapchain_layer_name,
+                "vkAcquireNextImageKHR() called when it cannot succeed.  The application has acquired %d image(s) that have not yet "
+                "been presented.  The maximum number of images that the application can simultaneously acquire from this swapchain "
+                "(including this call to vkCreateSwapchainKHR()) is %d.  That value is derived by subtracting "
+                "VkSurfaceCapabilitiesKHR::minImageCount (%d) from the number of images in the swapchain (%d) and adding 1.",
+                imagesAcquiredByApp, (pSwapchain->imageCount - minImageCount + 1), minImageCount, pSwapchain->imageCount);
         }
     }
     if (!pImageIndex) {
@@ -2275,24 +2283,26 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
         }
         if (pSwapchain) {
             if (!pSwapchain->pDevice->swapchainExtensionEnabled) {
-                skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, pSwapchain->pDevice, "VkDevice",
-                                      SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                                      "%s() called even though the %s extension was not enabled for this VkDevice.", __FUNCTION__,
-                                      VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                    (uint64_t)pSwapchain->pDevice->device, __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
+                                    swapchain_layer_name,
+                                    "vkQueuePresentKHR() called even though the %s extension was not enabled for this VkDevice.",
+                                    VK_KHR_SWAPCHAIN_EXTENSION_NAME);
             }
             if (index >= pSwapchain->imageCount) {
-                skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, pPresentInfo->pSwapchains[i], "VkSwapchainKHR",
-                                      SWAPCHAIN_INDEX_TOO_LARGE, "%s() called for an index that is too "
-                                                                 "large (i.e. %d).  There are only %d "
-                                                                 "images in this VkSwapchainKHR.\n",
-                                      __FUNCTION__, index, pSwapchain->imageCount);
+                skipCall |=
+                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                            (uint64_t)pPresentInfo->pSwapchains[i], __LINE__, SWAPCHAIN_INDEX_TOO_LARGE, swapchain_layer_name,
+                            "vkQueuePresentKHR() called for an index that is too large (i.e. %d).  There are only %d images in "
+                            "this VkSwapchainKHR.\n",
+                            index, pSwapchain->imageCount);
             } else {
                 if (!pSwapchain->images[index].acquiredByApp) {
-                    skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, pPresentInfo->pSwapchains[i],
-                                          "VkSwapchainKHR", SWAPCHAIN_INDEX_NOT_IN_USE, "%s() returned an index (i.e. %d) "
-                                                                                        "for an image that is not acquired by "
-                                                                                        "the application.",
-                                          __FUNCTION__, index);
+                    skipCall |= log_msg(
+                        my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
+                        (uint64_t)pPresentInfo->pSwapchains[i], __LINE__, SWAPCHAIN_INDEX_NOT_IN_USE, swapchain_layer_name,
+                        "vkQueuePresentKHR() returned an index (i.e. %d) for an image that is not acquired by the application.",
+                        index);
                 }
             }
             SwpQueue *pQueue = NULL;
@@ -2307,14 +2317,12 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
                 // and the 2nd test is the validation check:
                 if ((pSurface->numQueueFamilyIndexSupport > queueFamilyIndex) &&
                     (!pSurface->pQueueFamilyIndexSupport[queueFamilyIndex])) {
-                    skipCall |=
-                        LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, pPresentInfo->pSwapchains[i], "VkSwapchainKHR",
-                                  SWAPCHAIN_SURFACE_NOT_SUPPORTED_WITH_QUEUE, "%s() called with a swapchain whose "
-                                                                              "surface is not supported for "
-                                                                              "presention on this device with the "
-                                                                              "queueFamilyIndex (i.e. %d) of the "
-                                                                              "given queue.",
-                                  __FUNCTION__, queueFamilyIndex);
+                    skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                        VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, (uint64_t)pPresentInfo->pSwapchains[i],
+                                        __LINE__, SWAPCHAIN_SURFACE_NOT_SUPPORTED_WITH_QUEUE, swapchain_layer_name,
+                                        "vkQueuePresentKHR() called with a swapchain whose surface is not supported for presention "
+                                        "on this device with the queueFamilyIndex (i.e. %d) of the given queue.",
+                                        queueFamilyIndex);
                 }
             }
         }
