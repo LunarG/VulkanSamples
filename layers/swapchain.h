@@ -84,10 +84,6 @@ const char * swapchain_layer_name = "Swapchain";
 
 #define LAYER_NAME (char *) "Swapchain"
 
-#define LOG_PERF_WARNING(objType, type, obj, enm, fmt, ...)                                                                        \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (objType), (uint64_t)(obj), __LINE__,   \
-                        (enm), LAYER_NAME, (fmt), __VA_ARGS__)                                                                     \
-              : VK_FALSE
 #define LOG_WARNING(objType, type, obj, enm, fmt, ...)                                                                             \
     (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (objType), (uint64_t)(obj), __LINE__, (enm),        \
                         LAYER_NAME, (fmt), __VA_ARGS__)                                                                            \
