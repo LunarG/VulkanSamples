@@ -1453,8 +1453,11 @@ GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR
         if (pPhysicalDevice->surfaceFormatCount == 0) {
             // Since we haven't recorded a preliminary value of *pSurfaceFormatCount, that likely means that the application didn't
             // previously call this function with a NULL value of pSurfaceFormats:
-            skipCall |= LOG_ERROR_ZERO_PRIOR_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice,
-                                                   "pSurfaceFormatCount", "pSurfaceFormats");
+            skipCall |=
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                        (uint64_t)pPhysicalDevice->physicalDevice, __LINE__, SWAPCHAIN_PRIOR_COUNT, swapchain_layer_name,
+                        "vkGetPhysicalDeviceSurfaceFormatsKHR() called with non-NULL pSurfaceFormatCount; but no prior positive "
+                        "value has been seen for pSurfaceFormats.");
         } else if (*pSurfaceFormatCount > pPhysicalDevice->surfaceFormatCount) {
             skipCall |= log_msg(
                 my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
@@ -1527,8 +1530,11 @@ GetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, VkSurfa
         if (pPhysicalDevice->presentModeCount == 0) {
             // Since we haven't recorded a preliminary value of *pPresentModeCount, that likely means that the application didn't
             // previously call this function with a NULL value of pPresentModes:
-            skipCall |= LOG_ERROR_ZERO_PRIOR_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice,
-                                                   "pPresentModeCount", "pPresentModes");
+            skipCall |=
+                log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                        (uint64_t)pPhysicalDevice->physicalDevice, __LINE__, SWAPCHAIN_PRIOR_COUNT, swapchain_layer_name,
+                        "vkGetPhysicalDeviceSurfacePresentModesKHR() called with non-NULL pPresentModeCount; but no prior positive "
+                        "value has been seen for pPresentModes.");
         } else if (*pPresentModeCount > pPhysicalDevice->presentModeCount) {
             skipCall |= log_msg(
                 my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
@@ -2025,8 +2031,10 @@ GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSwap
         if (pSwapchain->imageCount == 0) {
             // Since we haven't recorded a preliminary value of *pSwapchainImageCount, that likely means that the application didn't
             // previously call this function with a NULL value of pSwapchainImages:
-            skipCall |= LOG_ERROR_ZERO_PRIOR_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pSwapchainImageCount",
-                                                   "pSwapchainImages");
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                (uint64_t)device, __LINE__, SWAPCHAIN_PRIOR_COUNT, swapchain_layer_name,
+                                "vkGetSwapchainImagesKHR() called with non-NULL pSwapchainImageCount; but no prior positive "
+                                "value has been seen for pSwapchainImages.");
         } else if (*pSwapchainImageCount > pSwapchain->imageCount) {
             skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                 (uint64_t)device, __LINE__, SWAPCHAIN_INVALID_COUNT, swapchain_layer_name,
