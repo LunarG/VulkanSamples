@@ -5273,54 +5273,123 @@ static bool validateIdleBuffer(const layer_data *my_data, VkBuffer buffer) {
     return skip_call;
 }
 
-static bool print_memory_range_error(layer_data *dev_data, const uint64_t object_handle, const uint64_t other_handle,
-                                     VkDebugReportObjectTypeEXT object_type) {
-    if (object_type == VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT) {
-        return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, 0,
-                       MEMTRACK_INVALID_ALIASING, "MEM", "Buffer 0x%" PRIx64 " is aliased with image 0x%" PRIx64, object_handle,
-                       other_handle);
-    } else {
-        return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, 0,
-                       MEMTRACK_INVALID_ALIASING, "MEM", "Image 0x%" PRIx64 " is aliased with buffer 0x%" PRIx64, object_handle,
-                       other_handle);
+// Return true if given ranges intersect, else false
+// Prereq : For both ranges, range->end - range->start > 0. This case should have already resulted
+//  in an error so not checking that here
+// pad_ranges bool indicates a linear and non-linear comparison which requires padding
+// In the case where padding is required, if an alias is encountered then a validation error is reported and skip_call
+//  may be set by the callback function so caller should merge in skip_call value if padding case is possible.
+static bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *range1, MEMORY_RANGE const *range2, bool &skip_call) {
+    skip_call = false;
+    auto r1_start = range1->start;
+    auto r1_end = range1->end;
+    auto r2_start = range2->start;
+    auto r2_end = range2->end;
+    VkDeviceSize pad_align = 1;
+    if (range1->linear != range2->linear) {
+        pad_align = dev_data->phys_dev_properties.properties.limits.bufferImageGranularity;
     }
+    if ((r1_end & ~(pad_align - 1)) < (r2_start & ~(pad_align - 1)))
+        return false;
+    if ((r1_start & ~(pad_align - 1)) > (r2_end & ~(pad_align - 1)))
+        return false;
+
+    if (range1->linear != range2->linear) {
+        // In linear vs. non-linear case, it's an error to alias
+        const char *r1_linear_str = range1->linear ? "Linear" : "Non-linear";
+        const char *r1_type_str = range1->image ? "image" : "buffer";
+        const char *r2_linear_str = range2->linear ? "linear" : "non-linear";
+        const char *r2_type_str = range2->image ? "image" : "buffer";
+        auto obj_type = range1->image ? VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT : VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT;
+        skip_call |=
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, range1->handle, 0, MEMTRACK_INVALID_ALIASING,
+                    "MEM", "%s %s 0x%" PRIx64 " is aliased with %s %s 0x%" PRIx64
+                           " which is in violation of the Buffer-Image Granularity section of the Vulkan specification.",
+                    r1_linear_str, r1_type_str, range1->handle, r2_linear_str, r2_type_str, range2->handle);
+    }
+    // Ranges intersect
+    return true;
+}
+// Simplified rangesIntersect that calls above function with limited params
+static bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *range1, VkDeviceSize offset, VkDeviceSize size) {
+    // Create a local MEMORY_RANGE struct to wrap offset/size
+    MEMORY_RANGE range_wrap;
+    // Synch linear with range1 to avoid padding and potential validation error case
+    range_wrap.linear = range1->linear;
+    range_wrap.start = offset;
+    range_wrap.end = offset + size - 1;
+    bool tmp_bool;
+    return rangesIntersect(dev_data, range1, &range_wrap, tmp_bool);
 }
 
-static bool validate_memory_range(layer_data *dev_data, const vector<MEMORY_RANGE> &ranges, const MEMORY_RANGE &new_range,
-                                  VkDebugReportObjectTypeEXT object_type) {
+// Object with given handle is being bound to memory w/ given mem_info struct.
+//  Track the newly bound memory range with given memoryOffset
+//  Also scan any previous ranges, track aliased ranges with new range, and flag an error if a linear
+//  and non-linear range incorrectly overlap.
+// Return true if an error is flagged and the user callback returns "true", otherwise false
+// is_image indicates an image object, otherwise handle is for a buffer
+// is_linear indicates a buffer or linear image
+static bool InsertMemoryRange(layer_data const *dev_data, uint64_t handle, DEVICE_MEM_INFO *mem_info, VkDeviceSize memoryOffset,
+                              VkMemoryRequirements memRequirements, bool is_image, bool is_linear) {
     bool skip_call = false;
+    MEMORY_RANGE range; // range to be inserted and returned
 
-    for (auto range : ranges) {
-        if ((range.end & ~(dev_data->phys_dev_properties.properties.limits.bufferImageGranularity - 1)) <
-            (new_range.start & ~(dev_data->phys_dev_properties.properties.limits.bufferImageGranularity - 1)))
-            continue;
-        if ((range.start & ~(dev_data->phys_dev_properties.properties.limits.bufferImageGranularity - 1)) >
-            (new_range.end & ~(dev_data->phys_dev_properties.properties.limits.bufferImageGranularity - 1)))
-            continue;
-        skip_call |= print_memory_range_error(dev_data, new_range.handle, range.handle, object_type);
+    range.image = is_image;
+    range.handle = handle;
+    range.linear = is_linear;
+    range.memory = mem_info->mem;
+    range.start = memoryOffset;
+    range.size = memRequirements.size;
+    range.end = memoryOffset + memRequirements.size - 1;
+    // Update Memory aliasing prior to inserting new range
+    for (auto &obj_range_pair : mem_info->bound_ranges) {
+        bool intersection_error = false;
+        auto check_range = &obj_range_pair.second;
+        if (rangesIntersect(dev_data, &range, check_range, intersection_error)) {
+            skip_call |= intersection_error;
+            range.aliases.insert(check_range);
+            check_range->aliases.insert(&range);
+        }
     }
+    mem_info->bound_ranges[handle] = range;
+    if (is_image)
+        mem_info->bound_images.insert(handle);
+    else
+        mem_info->bound_buffers.insert(handle);
+
     return skip_call;
 }
 
-static MEMORY_RANGE insert_memory_ranges(uint64_t handle, VkDeviceMemory mem, VkDeviceSize memoryOffset,
-                                         VkMemoryRequirements memRequirements, vector<MEMORY_RANGE> &ranges) {
-    MEMORY_RANGE range;
-    range.handle = handle;
-    range.memory = mem;
-    range.start = memoryOffset;
-    range.end = memoryOffset + memRequirements.size - 1;
-    ranges.push_back(range);
-    return range;
+static bool InsertImageMemoryRange(layer_data const *dev_data, uint64_t handle, DEVICE_MEM_INFO *mem_info, VkDeviceSize mem_offset,
+                                   VkMemoryRequirements mem_reqs, bool is_linear) {
+    return InsertMemoryRange(dev_data, handle, mem_info, mem_offset, mem_reqs, true, is_linear);
 }
 
-static void remove_memory_ranges(uint64_t handle, VkDeviceMemory mem, vector<MEMORY_RANGE> &ranges) {
-    for (uint32_t item = 0; item < ranges.size(); item++) {
-        if ((ranges[item].handle == handle) && (ranges[item].memory == mem)) {
-            ranges.erase(ranges.begin() + item);
-            break;
-        }
-    }
+static bool InsertBufferMemoryRange(layer_data const *dev_data, uint64_t handle, DEVICE_MEM_INFO *mem_info, VkDeviceSize mem_offset,
+                                    VkMemoryRequirements mem_reqs) {
+    return InsertMemoryRange(dev_data, handle, mem_info, mem_offset, mem_reqs, false, true);
 }
+
+// Remove MEMORY_RANGE struct for give handle from bound_ranges of mem_info
+//  is_image indicates if handle is for image or buffer
+//  This function will also remove the handle-to-index mapping from the appropriate
+//  map and clean up any aliases for range being removed.
+static void RemoveMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info, bool is_image) {
+    auto erase_range = &mem_info->bound_ranges[handle];
+    for (auto alias_range : erase_range->aliases) {
+        alias_range->aliases.erase(erase_range);
+        erase_range->aliases.erase(alias_range);
+    }
+    mem_info->bound_ranges.erase(handle);
+    if (is_image)
+        mem_info->bound_images.erase(handle);
+    else
+        mem_info->bound_buffers.erase(handle);
+}
+
+static void RemoveBufferMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info) { RemoveMemoryRange(handle, mem_info, false); }
+
+static void RemoveImageMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info) { RemoveMemoryRange(handle, mem_info, true); }
 
 VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
                                          const VkAllocationCallbacks *pAllocator) {
@@ -5335,7 +5404,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyBuffer(VkDevice device, VkBuffer buffer,
                                      {reinterpret_cast<uint64_t &>(buff_node->buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT});
             auto mem_info = getMemObjInfo(dev_data, buff_node->mem);
             if (mem_info) {
-                remove_memory_ranges(reinterpret_cast<uint64_t &>(buffer), buff_node->mem, mem_info->buffer_ranges);
+                RemoveBufferMemoryRange(reinterpret_cast<uint64_t &>(buffer), mem_info);
             }
             clear_object_binding(dev_data, reinterpret_cast<uint64_t &>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
             dev_data->bufferMap.erase(buff_node->buffer);
@@ -5370,7 +5439,7 @@ VKAPI_ATTR void VKAPI_CALL DestroyImage(VkDevice device, VkImage image, const Vk
         // Clean up memory mapping, bindings and range references for image
         auto mem_info = getMemObjInfo(dev_data, img_node->mem);
         if (mem_info) {
-            remove_memory_ranges(reinterpret_cast<uint64_t &>(image), img_node->mem, mem_info->image_ranges);
+            RemoveImageMemoryRange(reinterpret_cast<uint64_t &>(image), mem_info);
             clear_object_binding(dev_data, reinterpret_cast<uint64_t &>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
         }
         // Remove image from imageMap
@@ -5420,9 +5489,7 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
         // Track and validate bound memory range information
         auto mem_info = getMemObjInfo(dev_data, mem);
         if (mem_info) {
-            const MEMORY_RANGE range =
-                insert_memory_ranges(buffer_handle, mem, memoryOffset, memRequirements, mem_info->buffer_ranges);
-            skip_call |= validate_memory_range(dev_data, mem_info->image_ranges, range, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
+            skip_call |= InsertBufferMemoryRange(dev_data, buffer_handle, mem_info, memoryOffset, memRequirements);
             skip_call |= ValidateMemoryTypes(dev_data, mem_info, memRequirements.memoryTypeBits, "BindBufferMemory");
         }
 
@@ -10088,16 +10155,6 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
     if (!skip_call)
         dev_data->device_dispatch_table->CmdExecuteCommands(commandBuffer, commandBuffersCount, pCommandBuffers);
 }
-// Return true if given range intersects with offset and size, else false
-// Prereq : size > 0 and range->end - range->start > 0. Both of these cases should have already resulted
-//  in an error (During MapMemory and AllocateMemory respectively) so not checking them here
-static bool rangesIntersect(MEMORY_RANGE const *range, VkDeviceSize offset, VkDeviceSize size) {
-    auto range2_end = offset + size - 1;
-    if ((range->start >= offset && range->start <= (range2_end)) || (range->end >= offset && range->end <= range2_end)) {
-        return true;
-    }
-    return false;
-}
 
 // For any image objects that overlap mapped memory, verify that their layouts are PREINIT or GENERAL
 static bool ValidateMapImageLayouts(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size) {
@@ -10108,10 +10165,11 @@ static bool ValidateMapImageLayouts(VkDevice device, VkDeviceMemory mem, VkDevic
         // Iterate over all bound image ranges and verify that for any that overlap the
         //  map ranges, the layouts are VK_IMAGE_LAYOUT_PREINITIALIZED or VK_IMAGE_LAYOUT_GENERAL
         // TODO : This can be optimized if we store ranges based on starting address and early exit when we pass our range
-        for (auto range : mem_info->image_ranges) {
-            if (rangesIntersect(&range, offset, size)) {
+        for (auto image_handle : mem_info->bound_images) {
+            auto range = &mem_info->bound_ranges[image_handle];
+            if (rangesIntersect(dev_data, range, offset, size)) {
                 std::vector<VkImageLayout> layouts;
-                if (FindLayouts(dev_data, VkImage(range.handle), layouts)) {
+                if (FindLayouts(dev_data, VkImage(image_handle), layouts)) {
                     for (auto layout : layouts) {
                         if (layout != VK_IMAGE_LAYOUT_PREINITIALIZED && layout != VK_IMAGE_LAYOUT_GENERAL) {
                             skip_call |=
@@ -10291,9 +10349,8 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
         // Track and validate bound memory range information
         auto mem_info = getMemObjInfo(dev_data, mem);
         if (mem_info) {
-            const MEMORY_RANGE range =
-                insert_memory_ranges(image_handle, mem, memoryOffset, memRequirements, mem_info->image_ranges);
-            skip_call |= validate_memory_range(dev_data, mem_info->buffer_ranges, range, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
+            skip_call |= InsertImageMemoryRange(dev_data, image_handle, mem_info, memoryOffset, memRequirements,
+                                                image_node->createInfo.tiling == VK_IMAGE_TILING_LINEAR);
             skip_call |= ValidateMemoryTypes(dev_data, mem_info, memRequirements.memoryTypeBits, "vkBindImageMemory");
         }
 

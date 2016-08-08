@@ -1929,7 +1929,8 @@ TEST_F(VkLayerTest, InvalidMemoryAliasing) {
     image_create_info.mipLevels = 1;
     image_create_info.arrayLayers = 1;
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+    // Image tiling must be optimal to trigger error when aliasing linear buffer
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
     image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     image_create_info.queueFamilyIndexCount = 0;
@@ -1949,8 +1950,8 @@ TEST_F(VkLayerTest, InvalidMemoryAliasing) {
     // Ensure memory is big enough for both bindings
     alloc_info.allocationSize = buff_mem_reqs.size + img_mem_reqs.size;
     pass = m_device->phy().set_memory_type(
-        buff_mem_reqs.memoryTypeBits | img_mem_reqs.memoryTypeBits, &alloc_info,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        buff_mem_reqs.memoryTypeBits & img_mem_reqs.memoryTypeBits, &alloc_info,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     if (!pass) {
         vkDestroyBuffer(m_device->device(), buffer, NULL);
         vkDestroyImage(m_device->device(), image, NULL);
@@ -1962,7 +1963,7 @@ TEST_F(VkLayerTest, InvalidMemoryAliasing) {
     ASSERT_VK_SUCCESS(err);
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " is aliased with buffer 0x");
+                                         " is aliased with linear buffer 0x");
     // VALIDATION FAILURE due to image mapping overlapping buffer mapping
     err = vkBindImageMemory(m_device->device(), image, mem, 0);
     m_errorMonitor->VerifyFound();
@@ -1976,7 +1977,7 @@ TEST_F(VkLayerTest, InvalidMemoryAliasing) {
     err = vkBindImageMemory(m_device->device(), image, mem_img, 0);
     ASSERT_VK_SUCCESS(err);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         " is aliased with image 0x");
+                                         "is aliased with non-linear image 0x");
     err = vkBindBufferMemory(m_device->device(), buffer2, mem_img, 0);
     m_errorMonitor->VerifyFound();
 

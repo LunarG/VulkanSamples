@@ -208,9 +208,14 @@ struct MemRange {
 
 struct MEMORY_RANGE {
     uint64_t handle;
+    bool image; // True for image, false for buffer
+    bool linear; // True for buffers and linear images
     VkDeviceMemory memory;
     VkDeviceSize start;
-    VkDeviceSize end;
+    VkDeviceSize size;
+    VkDeviceSize end; // Store this pre-computed for simplicity
+    // Set of ptrs to every range aliased with this one
+    std::unordered_set<MEMORY_RANGE *> aliases;
 };
 
 // Data struct for tracking memory object
@@ -223,8 +228,10 @@ struct DEVICE_MEM_INFO {
     VkMemoryAllocateInfo alloc_info;
     std::unordered_set<MT_OBJ_HANDLE_TYPE> obj_bindings;         // objects bound to this memory
     std::unordered_set<VkCommandBuffer> command_buffer_bindings; // cmd buffers referencing this memory
-    std::vector<MEMORY_RANGE> buffer_ranges;
-    std::vector<MEMORY_RANGE> image_ranges;
+    std::unordered_map<uint64_t, MEMORY_RANGE> bound_ranges;     // Map of object to its binding range
+    // Convenience vectors image/buff handles to speed up iterating over images or buffers independently
+    std::unordered_set<uint64_t> bound_images;
+    std::unordered_set<uint64_t> bound_buffers;
 
     MemRange mem_range;
     void *p_data, *p_driver_data;
