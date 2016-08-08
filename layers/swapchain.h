@@ -84,11 +84,6 @@ const char * swapchain_layer_name = "Swapchain";
 
 #define LAYER_NAME (char *) "Swapchain"
 
-#define LOG_INFO_WRONG_NEXT(objType, type, obj)                                                                                    \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (objType), (uint64_t)(obj), 0,                  \
-                        SWAPCHAIN_WRONG_NEXT, LAYER_NAME, "%s() called with non-NULL value for %s->pNext.", __FUNCTION__, (obj))   \
-              : VK_FALSE
-
 // NOTE: The following struct's/typedef's are for keeping track of
 // info that is used for validating the WSI extensions.
 
