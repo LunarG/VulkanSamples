@@ -927,10 +927,11 @@ GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDevice physicalDevice, uint32_t pl
 
     if (!pPhysicalDevice->gotDisplayPlanePropertyCount)
     {
-        LOG_WARNING(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "planeIndex",
-                SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY,
-                "Potential problem with calling %s() without first querying vkGetPhysicalDeviceDisplayPlanePropertiesKHR.",
-                __FUNCTION__);
+        skipCall |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                    (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY,
+                    swapchain_layer_name, "Potential problem with calling vkGetDisplayPlaneSupportedDisplaysKHR() without first "
+                                          "querying vkGetPhysicalDeviceDisplayPlanePropertiesKHR.");
     }
 
     if (pPhysicalDevice->gotDisplayPlanePropertyCount && planeIndex >= pPhysicalDevice->displayPlanePropertyCount)
@@ -1037,10 +1038,11 @@ GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkDisplayModeKHR
 
     if (!pPhysicalDevice->gotDisplayPlanePropertyCount)
     {
-        LOG_WARNING(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "planeIndex",
-                SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY,
-                "Potential problem with calling %s() without first querying vkGetPhysicalDeviceDisplayPlanePropertiesKHR.",
-                __FUNCTION__);
+        skipCall |=
+            log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                    (uint64_t)pPhysicalDevice->pInstance->instance, __LINE__, SWAPCHAIN_GET_SUPPORTED_DISPLAYS_WITHOUT_QUERY,
+                    swapchain_layer_name, "Potential problem with calling vkGetDisplayPlaneCapabilitiesKHR() without first "
+                                          "querying vkGetPhysicalDeviceDisplayPlanePropertiesKHR.");
     }
 
     if (pPhysicalDevice->gotDisplayPlanePropertyCount && planeIndex >= pPhysicalDevice->displayPlanePropertyCount)

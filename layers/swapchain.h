@@ -84,10 +84,6 @@ const char * swapchain_layer_name = "Swapchain";
 
 #define LAYER_NAME (char *) "Swapchain"
 
-#define LOG_WARNING(objType, type, obj, enm, fmt, ...)                                                                             \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (objType), (uint64_t)(obj), __LINE__, (enm),        \
-                        LAYER_NAME, (fmt), __VA_ARGS__)                                                                            \
-              : VK_FALSE
 #define LOG_INFO_WRONG_NEXT(objType, type, obj)                                                                                    \
     (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (objType), (uint64_t)(obj), 0,                  \
                         SWAPCHAIN_WRONG_NEXT, LAYER_NAME, "%s() called with non-NULL value for %s->pNext.", __FUNCTION__, (obj))   \
