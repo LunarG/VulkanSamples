@@ -345,10 +345,6 @@ CreateAndroidSurfaceKHR(VkInstance instance, const VkAndroidSurfaceCreateInfoKHR
                             VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
     }
 
-    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR) {
-        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                          "VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR");
-    }
     if (pCreateInfo->pNext != NULL) {
         skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
@@ -404,10 +400,6 @@ CreateMirSurfaceKHR(VkInstance instance, const VkMirSurfaceCreateInfoKHR *pCreat
                             VK_KHR_MIR_SURFACE_EXTENSION_NAME);
     }
 
-    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_MIR_SURFACE_CREATE_INFO_KHR) {
-        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                          "VK_STRUCTURE_TYPE_MIR_SURFACE_CREATE_INFO_KHR");
-    }
     if (pCreateInfo->pNext != NULL) {
         skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
@@ -499,10 +491,6 @@ CreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR
             VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
     }
 
-    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR) {
-        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                          "VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR");
-    }
     if (pCreateInfo->pNext != NULL) {
         skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
@@ -594,10 +582,6 @@ CreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pC
                             VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     }
 
-    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR) {
-        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                          "VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR");
-    }
     if (pCreateInfo->pNext != NULL) {
         skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
@@ -687,10 +671,6 @@ CreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreat
                             VK_KHR_XCB_SURFACE_EXTENSION_NAME);
     }
 
-    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR) {
-        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                          "VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR");
-    }
     if (pCreateInfo->pNext != NULL) {
         skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
@@ -782,10 +762,6 @@ CreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCre
                             VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
     }
 
-    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR) {
-        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                          "VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR");
-    }
     if (pCreateInfo->pNext != NULL) {
         skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
@@ -1097,10 +1073,6 @@ CreateDisplayPlaneSurfaceKHR(VkInstance instance, const VkDisplaySurfaceCreateIn
                     VK_KHR_DISPLAY_EXTENSION_NAME);
     }
 
-    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR) {
-        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                          "VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR");
-    }
     if (pCreateInfo->pNext != NULL) {
         skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
@@ -1604,10 +1576,6 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
                        VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
 
-    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR) {
-        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                          "VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR");
-    }
     if (pCreateInfo->pNext != NULL) {
         skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
@@ -2177,10 +2145,6 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
 
-    if (pPresentInfo->sType != VK_STRUCTURE_TYPE_PRESENT_INFO_KHR) {
-        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pPresentInfo",
-                                          "VK_STRUCTURE_TYPE_PRESENT_INFO_KHR");
-    }
     if (pPresentInfo->pNext != NULL) {
         skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pPresentInfo");
     }

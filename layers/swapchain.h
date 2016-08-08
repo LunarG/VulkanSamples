@@ -84,12 +84,6 @@ const char * swapchain_layer_name = "Swapchain";
 
 #define LAYER_NAME (char *) "Swapchain"
 
-#define LOG_ERROR_WRONG_STYPE(objType, type, obj, val)                                                                             \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), 0, SWAPCHAIN_WRONG_STYPE, \
-                        LAYER_NAME, "%s() called with the wrong value for %s->sType "                                              \
-                                    "(expected %s).",                                                                              \
-                        __FUNCTION__, (obj), (val))                                                                                \
-              : VK_FALSE
 #define LOG_ERROR_ZERO_VALUE(objType, type, obj)                                                                                   \
     (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), 0, SWAPCHAIN_ZERO_VALUE,  \
                         LAYER_NAME, "%s() called with a zero value for %s.", __FUNCTION__, (obj))                                  \
