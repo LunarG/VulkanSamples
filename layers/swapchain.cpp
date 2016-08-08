@@ -2148,9 +2148,6 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     if (pPresentInfo->pNext != NULL) {
         skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pPresentInfo");
     }
-    if (!pPresentInfo->swapchainCount) {
-        skipCall |= LOG_ERROR_ZERO_VALUE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pPresentInfo->swapchainCount");
-    }
     // Note: pPresentInfo->pResults is allowed to be NULL
 
     std::unique_lock<std::mutex> lock(global_lock);

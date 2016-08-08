@@ -84,10 +84,6 @@ const char * swapchain_layer_name = "Swapchain";
 
 #define LAYER_NAME (char *) "Swapchain"
 
-#define LOG_ERROR_ZERO_VALUE(objType, type, obj)                                                                                   \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), 0, SWAPCHAIN_ZERO_VALUE,  \
-                        LAYER_NAME, "%s() called with a zero value for %s.", __FUNCTION__, (obj))                                  \
-              : VK_FALSE
 #define LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(objType, type, obj, val1, val2)                                                     \
     (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), 0,                        \
                         SWAPCHAIN_QUEUE_FAMILY_INDEX_TOO_LARGE, LAYER_NAME, "%s() called with a queueFamilyIndex that is too "     \
