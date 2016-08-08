@@ -1456,9 +1456,12 @@ GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR
             skipCall |= LOG_ERROR_ZERO_PRIOR_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice,
                                                    "pSurfaceFormatCount", "pSurfaceFormats");
         } else if (*pSurfaceFormatCount > pPhysicalDevice->surfaceFormatCount) {
-            skipCall |=
-                LOG_ERROR_INVALID_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pSurfaceFormatCount",
-                                        "pSurfaceFormats", *pSurfaceFormatCount, pPhysicalDevice->surfaceFormatCount);
+            skipCall |= log_msg(
+                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                (uint64_t)pPhysicalDevice->physicalDevice, __LINE__, SWAPCHAIN_INVALID_COUNT, swapchain_layer_name,
+                "vkGetPhysicalDeviceSurfaceFormatsKHR() called with non-NULL pSurfaceFormatCount, and with pSurfaceFormats set to "
+                "a value (%d) that is greater than the value (%d) that was returned when pSurfaceFormatCount was NULL.",
+                *pSurfaceFormatCount, pPhysicalDevice->surfaceFormatCount);
         }
     }
     lock.unlock();
@@ -1527,9 +1530,12 @@ GetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, VkSurfa
             skipCall |= LOG_ERROR_ZERO_PRIOR_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice,
                                                    "pPresentModeCount", "pPresentModes");
         } else if (*pPresentModeCount > pPhysicalDevice->presentModeCount) {
-            skipCall |=
-                LOG_ERROR_INVALID_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pPresentModeCount",
-                                        "pPresentModes", *pPresentModeCount, pPhysicalDevice->presentModeCount);
+            skipCall |= log_msg(
+                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                (uint64_t)pPhysicalDevice->physicalDevice, __LINE__, SWAPCHAIN_INVALID_COUNT, swapchain_layer_name,
+                "vkGetPhysicalDeviceSurfacePresentModesKHR() called with non-NULL pPresentModeCount, and with pPresentModes set to "
+                "a value (%d) that is greater than the value (%d) that was returned when pPresentModeCount was NULL.",
+                *pPresentModeCount, pPhysicalDevice->presentModeCount);
         }
     }
     lock.unlock();
@@ -2022,8 +2028,12 @@ GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSwap
             skipCall |= LOG_ERROR_ZERO_PRIOR_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pSwapchainImageCount",
                                                    "pSwapchainImages");
         } else if (*pSwapchainImageCount > pSwapchain->imageCount) {
-            skipCall |= LOG_ERROR_INVALID_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pSwapchainImageCount",
-                                                "pSwapchainImages", *pSwapchainImageCount, pSwapchain->imageCount);
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                (uint64_t)device, __LINE__, SWAPCHAIN_INVALID_COUNT, swapchain_layer_name,
+                                "vkGetSwapchainImagesKHR() called with non-NULL pSwapchainImageCount, and with "
+                                "pSwapchainImages set to a value (%d) that is greater than the value (%d) that was returned when "
+                                "pSwapchainImageCount was NULL.",
+                                *pSwapchainImageCount, pSwapchain->imageCount);
         }
     }
     lock.unlock();

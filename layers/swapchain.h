@@ -84,13 +84,6 @@ const char * swapchain_layer_name = "Swapchain";
 
 #define LAYER_NAME (char *) "Swapchain"
 
-#define LOG_ERROR_INVALID_COUNT(objType, type, obj, obj2, val, val2)                                                               \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), 0,                        \
-                        SWAPCHAIN_INVALID_COUNT, LAYER_NAME, "%s() called with non-NULL %s, and with %s set to a "                 \
-                                                             "value (%d) that is greater than the value (%d) that "                \
-                                                             "was returned when %s was NULL.",                                     \
-                        __FUNCTION__, (obj2), (obj), (val), (val2), (obj2))                                                        \
-              : VK_FALSE
 #define LOG_ERROR_ZERO_PRIOR_COUNT(objType, type, obj, obj2)                                                                       \
     (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), 0,                        \
                         SWAPCHAIN_PRIOR_COUNT, LAYER_NAME, "%s() called with non-NULL %s; but no prior "                           \
