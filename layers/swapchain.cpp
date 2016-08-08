@@ -345,16 +345,12 @@ CreateAndroidSurfaceKHR(VkInstance instance, const VkAndroidSurfaceCreateInfoKHR
                             VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
     }
 
-    if (!pCreateInfo) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-    } else {
-        if (pCreateInfo->sType != VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR) {
-            skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                              "VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR");
-        }
-        if (pCreateInfo->pNext != NULL) {
-            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-        }
+    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR) {
+        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
+                                          "VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR");
+    }
+    if (pCreateInfo->pNext != NULL) {
+        skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
     lock.unlock();
 
@@ -408,16 +404,12 @@ CreateMirSurfaceKHR(VkInstance instance, const VkMirSurfaceCreateInfoKHR *pCreat
                             VK_KHR_MIR_SURFACE_EXTENSION_NAME);
     }
 
-    if (!pCreateInfo) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-    } else {
-        if (pCreateInfo->sType != VK_STRUCTURE_TYPE_MIR_SURFACE_CREATE_INFO_KHR) {
-            skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                              "VK_STRUCTURE_TYPE_MIR_SURFACE_CREATE_INFO_KHR");
-        }
-        if (pCreateInfo->pNext != NULL) {
-            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-        }
+    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_MIR_SURFACE_CREATE_INFO_KHR) {
+        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
+                                          "VK_STRUCTURE_TYPE_MIR_SURFACE_CREATE_INFO_KHR");
+    }
+    if (pCreateInfo->pNext != NULL) {
+        skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
     lock.unlock();
 
@@ -507,16 +499,12 @@ CreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR
             VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
     }
 
-    if (!pCreateInfo) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-    } else {
-        if (pCreateInfo->sType != VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR) {
-            skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                              "VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR");
-        }
-        if (pCreateInfo->pNext != NULL) {
-            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-        }
+    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR) {
+        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
+                                          "VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR");
+    }
+    if (pCreateInfo->pNext != NULL) {
+        skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
     lock.unlock();
 
@@ -606,16 +594,12 @@ CreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pC
                             VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     }
 
-    if (!pCreateInfo) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-    } else {
-        if (pCreateInfo->sType != VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR) {
-            skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                              "VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR");
-        }
-        if (pCreateInfo->pNext != NULL) {
-            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-        }
+    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR) {
+        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
+                                          "VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR");
+    }
+    if (pCreateInfo->pNext != NULL) {
+        skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
     lock.unlock();
 
@@ -703,16 +687,12 @@ CreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreat
                             VK_KHR_XCB_SURFACE_EXTENSION_NAME);
     }
 
-    if (!pCreateInfo) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-    } else {
-        if (pCreateInfo->sType != VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR) {
-            skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                              "VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR");
-        }
-        if (pCreateInfo->pNext != NULL) {
-            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-        }
+    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR) {
+        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
+                                          "VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR");
+    }
+    if (pCreateInfo->pNext != NULL) {
+        skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
     lock.unlock();
 
@@ -802,16 +782,12 @@ CreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCre
                             VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
     }
 
-    if (!pCreateInfo) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-    } else {
-        if (pCreateInfo->sType != VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR) {
-            skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                              "VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR");
-        }
-        if (pCreateInfo->pNext != NULL) {
-            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-        }
+    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR) {
+        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
+                                          "VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR");
+    }
+    if (pCreateInfo->pNext != NULL) {
+        skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
     lock.unlock();
 
@@ -898,11 +874,6 @@ GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalDevice physicalDevice, uint32_t 
                                                   "extension was not enabled for this VkInstance.",
                             VK_KHR_DISPLAY_EXTENSION_NAME);
     }
-
-    if (!pPropertyCount) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pPropertyCount");
-    }
-    // TODO add check for the count being consistent
     lock.unlock();
 
     if (!skipCall) {
@@ -931,11 +902,6 @@ GetPhysicalDeviceDisplayPlanePropertiesKHR(VkPhysicalDevice physicalDevice, uint
                                                   "extension was not enabled for this VkInstance.",
                             VK_KHR_DISPLAY_EXTENSION_NAME);
     }
-
-    if (!pPropertyCount) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pPropertyCount");
-    }
-    // TODO add check for the count being consistent
     lock.unlock();
 
     if (!skipCall) {
@@ -974,11 +940,6 @@ GetDisplayPlaneSupportedDisplaysKHR(VkPhysicalDevice physicalDevice, uint32_t pl
                                                   "extension was not enabled for this VkInstance.",
                             VK_KHR_DISPLAY_EXTENSION_NAME);
     }
-
-    if (!pDisplayCount) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pDisplayCount");
-    }
-    // TODO add check for the count being consistent
 
     if (!pPhysicalDevice->gotDisplayPlanePropertyCount)
     {
@@ -1028,10 +989,7 @@ GetDisplayModePropertiesKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR displa
             VK_KHR_DISPLAY_EXTENSION_NAME);
     }
 
-    if (!pPropertyCount) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pPropertyCount");
-    }
-    // TODO add check for the count being consistent
+
     lock.unlock();
 
     if (!skipCall) {
@@ -1062,9 +1020,6 @@ CreateDisplayModeKHR(VkPhysicalDevice physicalDevice, VkDisplayKHR display, cons
                             VK_KHR_DISPLAY_EXTENSION_NAME);
     }
 
-    if (!pCreateInfo) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pCreateInfo");
-    }
     lock.unlock();
 
     // TODO more validation checks needed
@@ -1114,9 +1069,6 @@ GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkDisplayModeKHR
                     pPhysicalDevice->displayPlanePropertyCount - 1);
     }
 
-    if (!pCapabilities) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, pPhysicalDevice->pInstance, "pCapabilities");
-    }
     lock.unlock();
 
     if (!skipCall) {
@@ -1145,16 +1097,12 @@ CreateDisplayPlaneSurfaceKHR(VkInstance instance, const VkDisplaySurfaceCreateIn
                     VK_KHR_DISPLAY_EXTENSION_NAME);
     }
 
-    if (!pCreateInfo) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-    } else {
-        if (pCreateInfo->sType != VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR) {
-            skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                              "VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR");
-        }
-        if (pCreateInfo->pNext != NULL) {
-            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-        }
+    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR) {
+        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
+                                          "VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR");
+    }
+    if (pCreateInfo->pNext != NULL) {
+        skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
 
     // TODO more validation checks
@@ -1391,9 +1339,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
             LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, pPhysicalDevice,
                                                    "VkPhysicalDevice", queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies);
     }
-    if (!pSupported) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pSupported");
-    }
+
     lock.unlock();
 
     if (!skipCall) {
@@ -1455,9 +1401,6 @@ GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkSurfa
             "vkGetPhysicalDeviceSurfaceCapabilitiesKHR() called even though the %s extension was not enabled for this VkInstance.",
             VK_KHR_DISPLAY_EXTENSION_NAME);
     }
-    if (!pSurfaceCapabilities) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pSurfaceCapabilities");
-    }
     lock.unlock();
 
     if (!skipCall) {
@@ -1505,24 +1448,17 @@ GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR
             "vkGetPhysicalDeviceSurfaceFormatsKHR() called even though the %s extension was not enabled for this VkInstance.",
             VK_KHR_DISPLAY_EXTENSION_NAME);
     }
-    if (!pSurfaceFormatCount) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pSurfaceFormatCount");
-    } else if (pPhysicalDevice && pSurfaceFormats) {
-        // Compare the preliminary value of *pSurfaceFormatCount with the
-        // value this time:
+    if (pPhysicalDevice && pSurfaceFormats) {
+        // Compare the preliminary value of *pSurfaceFormatCount with the value this time:
         if (pPhysicalDevice->surfaceFormatCount == 0) {
-            // Since we haven't recorded a preliminary value of
-            // *pSurfaceFormatCount, that likely means that the application
-            // didn't previously call this function with a NULL value of
-            // pSurfaceFormats:
-            skipCall |= LOG_ERROR_ZERO_PRIOR_COUNT(
-                VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                physicalDevice, "pSurfaceFormatCount", "pSurfaceFormats");
+            // Since we haven't recorded a preliminary value of *pSurfaceFormatCount, that likely means that the application didn't
+            // previously call this function with a NULL value of pSurfaceFormats:
+            skipCall |= LOG_ERROR_ZERO_PRIOR_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice,
+                                                   "pSurfaceFormatCount", "pSurfaceFormats");
         } else if (*pSurfaceFormatCount > pPhysicalDevice->surfaceFormatCount) {
-            skipCall |= LOG_ERROR_INVALID_COUNT(
-                VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                physicalDevice, "pSurfaceFormatCount", "pSurfaceFormats",
-                *pSurfaceFormatCount, pPhysicalDevice->surfaceFormatCount);
+            skipCall |=
+                LOG_ERROR_INVALID_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pSurfaceFormatCount",
+                                        "pSurfaceFormats", *pSurfaceFormatCount, pPhysicalDevice->surfaceFormatCount);
         }
     }
     lock.unlock();
@@ -1583,24 +1519,17 @@ GetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, VkSurfa
             "vkGetPhysicalDeviceSurfacePresentModesKHR() called even though the %s extension was not enabled for this VkInstance.",
             VK_KHR_DISPLAY_EXTENSION_NAME);
     }
-    if (!pPresentModeCount) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pPresentModeCount");
-    } else if (pPhysicalDevice && pPresentModes) {
-        // Compare the preliminary value of *pPresentModeCount with the
-        // value this time:
+    if (pPhysicalDevice && pPresentModes) {
+        // Compare the preliminary value of *pPresentModeCount with the value this time:
         if (pPhysicalDevice->presentModeCount == 0) {
-            // Since we haven't recorded a preliminary value of
-            // *pPresentModeCount, that likely means that the application
-            // didn't previously call this function with a NULL value of
-            // pPresentModes:
-            skipCall |= LOG_ERROR_ZERO_PRIOR_COUNT(
-                VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                physicalDevice, "pPresentModeCount", "pPresentModes");
+            // Since we haven't recorded a preliminary value of *pPresentModeCount, that likely means that the application didn't
+            // previously call this function with a NULL value of pPresentModes:
+            skipCall |= LOG_ERROR_ZERO_PRIOR_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice,
+                                                   "pPresentModeCount", "pPresentModes");
         } else if (*pPresentModeCount > pPhysicalDevice->presentModeCount) {
-            skipCall |= LOG_ERROR_INVALID_COUNT(
-                VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                physicalDevice, "pPresentModeCount", "pPresentModes",
-                *pPresentModeCount, pPhysicalDevice->presentModeCount);
+            skipCall |=
+                LOG_ERROR_INVALID_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, physicalDevice, "pPresentModeCount",
+                                        "pPresentModes", *pPresentModeCount, pPhysicalDevice->presentModeCount);
         }
     }
     lock.unlock();
@@ -1662,19 +1591,13 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
                        "vkCreateSwapchainKHR() called even though the %s extension was not enabled for this VkDevice.",
                        VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
-    if (!pCreateInfo) {
-        return LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-    } else {
-        if (pCreateInfo->sType != VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR) {
-            skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
-                                              "VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR");
-        }
-        if (pCreateInfo->pNext != NULL) {
-            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
-        }
+
+    if (pCreateInfo->sType != VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR) {
+        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo",
+                                          "VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR");
     }
-    if (!pSwapchain) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pSwapchain");
+    if (pCreateInfo->pNext != NULL) {
+        skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pCreateInfo");
     }
 
     // Keep around a useful pointer to pPhysicalDevice:
@@ -2091,24 +2014,16 @@ GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSwap
         auto it = my_data->swapchainMap.find(swapchain);
         pSwapchain = (it == my_data->swapchainMap.end()) ? NULL : &it->second;
     }
-    if (!pSwapchainImageCount) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pSwapchainImageCount");
-    } else if (pSwapchain && pSwapchainImages) {
-        // Compare the preliminary value of *pSwapchainImageCount with the
-        // value this time:
+    if (pSwapchain && pSwapchainImages) {
+        // Compare the preliminary value of *pSwapchainImageCount with the value this time:
         if (pSwapchain->imageCount == 0) {
-            // Since we haven't recorded a preliminary value of
-            // *pSwapchainImageCount, that likely means that the application
-            // didn't previously call this function with a NULL value of
-            // pSwapchainImages:
-            skipCall |= LOG_ERROR_ZERO_PRIOR_COUNT(
-                VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                device, "pSwapchainImageCount", "pSwapchainImages");
+            // Since we haven't recorded a preliminary value of *pSwapchainImageCount, that likely means that the application didn't
+            // previously call this function with a NULL value of pSwapchainImages:
+            skipCall |= LOG_ERROR_ZERO_PRIOR_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pSwapchainImageCount",
+                                                   "pSwapchainImages");
         } else if (*pSwapchainImageCount > pSwapchain->imageCount) {
-            skipCall |= LOG_ERROR_INVALID_COUNT(
-                VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                device, "pSwapchainImageCount", "pSwapchainImages",
-                *pSwapchainImageCount, pSwapchain->imageCount);
+            skipCall |= LOG_ERROR_INVALID_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pSwapchainImageCount",
+                                                "pSwapchainImages", *pSwapchainImageCount, pSwapchain->imageCount);
         }
     }
     lock.unlock();
@@ -2208,9 +2123,6 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
                 imagesAcquiredByApp, (pSwapchain->imageCount - minImageCount + 1), minImageCount, pSwapchain->imageCount);
         }
     }
-    if (!pImageIndex) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pImageIndex");
-    }
     lock.unlock();
 
     if (!skipCall) {
@@ -2247,27 +2159,17 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     bool skipCall = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
 
-    if (!pPresentInfo) {
-        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pPresentInfo");
-    } else {
-        if (pPresentInfo->sType != VK_STRUCTURE_TYPE_PRESENT_INFO_KHR) {
-            skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pPresentInfo",
-                                              "VK_STRUCTURE_TYPE_PRESENT_INFO_KHR");
-        }
-        if (pPresentInfo->pNext != NULL) {
-            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pPresentInfo");
-        }
-        if (!pPresentInfo->swapchainCount) {
-            skipCall |= LOG_ERROR_ZERO_VALUE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pPresentInfo->swapchainCount");
-        }
-        if (!pPresentInfo->pSwapchains) {
-            skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pPresentInfo->pSwapchains");
-        }
-        if (!pPresentInfo->pImageIndices) {
-            skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pPresentInfo->pImageIndices");
-        }
-        // Note: pPresentInfo->pResults is allowed to be NULL
+    if (pPresentInfo->sType != VK_STRUCTURE_TYPE_PRESENT_INFO_KHR) {
+        skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pPresentInfo",
+                                          "VK_STRUCTURE_TYPE_PRESENT_INFO_KHR");
     }
+    if (pPresentInfo->pNext != NULL) {
+        skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pPresentInfo");
+    }
+    if (!pPresentInfo->swapchainCount) {
+        skipCall |= LOG_ERROR_ZERO_VALUE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "pPresentInfo->swapchainCount");
+    }
+    // Note: pPresentInfo->pResults is allowed to be NULL
 
     std::unique_lock<std::mutex> lock(global_lock);
     for (uint32_t i = 0; pPresentInfo && (i < pPresentInfo->swapchainCount); i++) {
