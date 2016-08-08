@@ -84,10 +84,6 @@ const char * swapchain_layer_name = "Swapchain";
 
 #define LAYER_NAME (char *) "Swapchain"
 
-#define LOG_ERROR_NON_VALID_OBJ(objType, type, obj)                                                                                \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), __LINE__,                 \
-                        SWAPCHAIN_INVALID_HANDLE, LAYER_NAME, "%s() called with a non-valid %s.", __FUNCTION__, (obj))             \
-              : VK_FALSE
 #define LOG_ERROR_NULL_POINTER(objType, type, obj)                                                                                 \
     (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), 0,                        \
                         SWAPCHAIN_NULL_POINTER, LAYER_NAME, "%s() called with NULL pointer %s.", __FUNCTION__, (obj))              \

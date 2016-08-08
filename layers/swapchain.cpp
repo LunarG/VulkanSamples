@@ -1952,10 +1952,6 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
                                     (uint64_t)device, __LINE__, SWAPCHAIN_CREATE_SWAP_DIFF_SURFACE, swapchain_layer_name,
                                     "vkCreateSwapchainKHR() called with pCreateInfo->oldSwapchain pCreateInfo->surface.");
             }
-        } else {
-            // TBD: Leave this in (not sure object_track will check this)?
-            skipCall |=
-                LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, pCreateInfo->oldSwapchain, "VkSwapchainKHR");
         }
     }
 
