@@ -187,6 +187,19 @@ static const char *sharingModeStr(VkSharingMode value) {
     return string_VkSharingMode(value);
 }
 
+static bool ValidateQueueFamilyIndex(layer_data *my_data, uint32_t queue_family_index, uint32_t queue_family_count,
+                                     VkPhysicalDevice physical_device, const char *function) {
+    bool skip_call = false;
+    if (queue_family_index >= queue_family_count) {
+        skip_call = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                         (uint64_t)physical_device, __LINE__, SWAPCHAIN_QUEUE_FAMILY_INDEX_TOO_LARGE, swapchain_layer_name,
+                         "%s() called with a queueFamilyIndex that is too large (i.e. %d).  The maximum value (returned by "
+                         "vkGetPhysicalDeviceQueueFamilyProperties) is only %d.",
+                         function, queue_family_index, queue_family_count);
+    }
+    return skip_call;
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL
 CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkInstance *pInstance) {
     VkLayerInstanceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
@@ -453,10 +466,9 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceMirPresentationSupportKHR(VkPhys
                                                   "extension was not enabled for this VkInstance.",
                             VK_KHR_MIR_SURFACE_EXTENSION_NAME);
     }
-    if (pPhysicalDevice->gotQueueFamilyPropertyCount && (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
-        skipCall |=
-            LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, pPhysicalDevice,
-                                                   "VkPhysicalDevice", queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies);
+    if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
+        skipCall |= ValidateQueueFamilyIndex(my_data, queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies,
+                                             pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceMirPresentationSupportKHR");
     }
     lock.unlock();
 
@@ -544,10 +556,9 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWaylandPresentationSupportKHR(Vk
                                                   "extension was not enabled for this VkInstance.",
                             VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
     }
-    if (pPhysicalDevice->gotQueueFamilyPropertyCount && (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
-        skipCall |=
-            LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, pPhysicalDevice,
-                                                   "VkPhysicalDevice", queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies);
+    if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
+        skipCall |= ValidateQueueFamilyIndex(my_data, queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies,
+                                             pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceWaylandPresentationSupportKHR");
     }
     lock.unlock();
 
@@ -634,10 +645,9 @@ GetPhysicalDeviceWin32PresentationSupportKHR(VkPhysicalDevice physicalDevice, ui
         "vkGetPhysicalDeviceWin32PresentationSupportKHR() called even though the %s extension was not enabled for this VkInstance.",
         VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     }
-    if (pPhysicalDevice->gotQueueFamilyPropertyCount && (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
-        skipCall |=
-            LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, pPhysicalDevice,
-                                                   "VkPhysicalDevice", queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies);
+    if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
+        skipCall |= ValidateQueueFamilyIndex(my_data, queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies,
+                                             pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceWin32PresentationSupportKHR");
     }
     lock.unlock();
 
@@ -724,10 +734,9 @@ GetPhysicalDeviceXcbPresentationSupportKHR(VkPhysicalDevice physicalDevice, uint
                                                   "extension was not enabled for this VkInstance.",
                             VK_KHR_XCB_SURFACE_EXTENSION_NAME);
     }
-    if (pPhysicalDevice->gotQueueFamilyPropertyCount && (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
-        skipCall |=
-            LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, pPhysicalDevice,
-                                                   "VkPhysicalDevice", queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies);
+    if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
+        skipCall |= ValidateQueueFamilyIndex(my_data, queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies,
+                                             pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceXcbPresentationSupportKHR");
     }
     lock.unlock();
 
@@ -815,10 +824,9 @@ VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXlibPresentationSupportKHR(VkPhy
                                                   "extension was not enabled for this VkInstance.",
                             VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
     }
-    if (pPhysicalDevice->gotQueueFamilyPropertyCount && (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
-        skipCall |=
-            LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, pPhysicalDevice,
-                                                   "VkPhysicalDevice", queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies);
+    if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
+        skipCall |= ValidateQueueFamilyIndex(my_data, queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies,
+                                             pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceXlibPresentationSupportKHR");
     }
     lock.unlock();
 
@@ -1306,10 +1314,9 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevi
             my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
             (uint64_t)pPhysicalDevice->physicalDevice, __LINE__, SWAPCHAIN_DID_NOT_QUERY_QUEUE_FAMILIES, swapchain_layer_name,
             "vkGetPhysicalDeviceSurfaceSupportKHR() called before calling the vkGetPhysicalDeviceQueueFamilyProperties function.");
-    } else if (pPhysicalDevice->gotQueueFamilyPropertyCount && (queueFamilyIndex >= pPhysicalDevice->numOfQueueFamilies)) {
-        skipCall |=
-            LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, pPhysicalDevice,
-                                                   "VkPhysicalDevice", queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies);
+    } else if (pPhysicalDevice->gotQueueFamilyPropertyCount) {
+        skipCall |= ValidateQueueFamilyIndex(my_data, queueFamilyIndex, pPhysicalDevice->numOfQueueFamilies,
+            pPhysicalDevice->physicalDevice, "vkGetPhysicalDeviceSurfaceSupportKHR");
     }
 
     lock.unlock();
@@ -1587,11 +1594,8 @@ static bool validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateI
     // vkGetPhysicalDeviceQueueFamilyProperties
     if (pPhysicalDevice && pPhysicalDevice->gotQueueFamilyPropertyCount) {
         for (uint32_t i = 0; i < pCreateInfo->queueFamilyIndexCount; i++) {
-            if (pCreateInfo->pQueueFamilyIndices[i] >= pPhysicalDevice->numOfQueueFamilies) {
-                skipCall |= LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, pPhysicalDevice,
-                                                                   "VkPhysicalDevice", pCreateInfo->pQueueFamilyIndices[i],
-                                                                   pPhysicalDevice->numOfQueueFamilies);
-            }
+            skipCall |= ValidateQueueFamilyIndex(my_data, pCreateInfo->pQueueFamilyIndices[i], pPhysicalDevice->numOfQueueFamilies,
+                                                 pPhysicalDevice->physicalDevice, "vkCreateSwapchainKHR");
         }
     }
 
