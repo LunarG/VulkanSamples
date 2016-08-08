@@ -280,7 +280,6 @@ class VkLayerTest : public VkRenderFramework {
 
     virtual void SetUp() {
         std::vector<const char *> instance_layer_names;
-        std::vector<const char *> device_layer_names;
         std::vector<const char *> instance_extension_names;
         std::vector<const char *> device_extension_names;
 
@@ -299,14 +298,6 @@ class VkLayerTest : public VkRenderFramework {
         instance_layer_names.push_back("VK_LAYER_LUNARG_image");
         instance_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
         instance_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
-
-        device_layer_names.push_back("VK_LAYER_GOOGLE_threading");
-        device_layer_names.push_back("VK_LAYER_LUNARG_parameter_validation");
-        device_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
-        device_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
-        device_layer_names.push_back("VK_LAYER_LUNARG_image");
-        device_layer_names.push_back("VK_LAYER_LUNARG_swapchain");
-        device_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
 
         if (m_enableWSI) {
             instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -341,9 +332,8 @@ class VkLayerTest : public VkRenderFramework {
         this->app_info.apiVersion = VK_API_VERSION_1_0;
 
         m_errorMonitor = new ErrorMonitor;
-        InitFramework(instance_layer_names, device_layer_names,
-                      instance_extension_names, device_extension_names,
-                      myDbgFunc, m_errorMonitor);
+        InitFramework(instance_layer_names, instance_extension_names,
+                      device_extension_names, myDbgFunc, m_errorMonitor);
     }
 
     virtual void TearDown() {
@@ -3205,14 +3195,7 @@ TEST_F(VkLayerTest, LeakAnObject) {
         queue_info.push_back(qi);
     }
 
-    std::vector<const char *> device_layer_names;
     std::vector<const char *> device_extension_names;
-    device_layer_names.push_back("VK_LAYER_GOOGLE_threading");
-    device_layer_names.push_back("VK_LAYER_LUNARG_parameter_validation");
-    device_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
-    device_layer_names.push_back("VK_LAYER_LUNARG_core_validation");
-    device_layer_names.push_back("VK_LAYER_LUNARG_image");
-    device_layer_names.push_back("VK_LAYER_GOOGLE_unique_objects");
 
     // The sacrificial device object
     VkDevice testDevice;
@@ -3222,8 +3205,8 @@ TEST_F(VkLayerTest, LeakAnObject) {
     device_create_info.pNext = NULL;
     device_create_info.queueCreateInfoCount = queue_info.size();
     device_create_info.pQueueCreateInfos = queue_info.data();
-    device_create_info.enabledLayerCount = device_layer_names.size();
-    device_create_info.ppEnabledLayerNames = device_layer_names.data();
+    device_create_info.enabledLayerCount = 0;
+    device_create_info.ppEnabledLayerNames = NULL;
     device_create_info.pEnabledFeatures = &features;
     err = vkCreateDevice(gpu(), &device_create_info, NULL, &testDevice);
     ASSERT_VK_SUCCESS(err);

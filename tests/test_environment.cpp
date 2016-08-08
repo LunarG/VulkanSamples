@@ -85,7 +85,6 @@ void Environment::SetUp() {
 
     std::vector<const char *> instance_extension_names;
     std::vector<const char *> device_extension_names;
-    std::vector<const char *> device_layer_names;
 
     instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -150,7 +149,7 @@ void Environment::SetUp() {
     for (uint32_t i = 0; i < count; i++) {
         devs_.push_back(new Device(gpus[i]));
         if (i == default_dev_) {
-            devs_[i]->init(device_layer_names, device_extension_names);
+            devs_[i]->init(device_extension_names);
             ASSERT_NE(true, devs_[i]->graphics_queues().empty());
         }
     }

@@ -148,13 +148,11 @@ class Device : public internal::Handle<VkDevice> {
 
     // vkCreateDevice()
     void init(const VkDeviceCreateInfo &info);
-    void init(std::vector<const char *> &layers,
-              std::vector<const char *> &
-                  extensions); // all queues, all extensions, etc
+    void init(std::vector<const char *>
+                  &extensions); // all queues, all extensions, etc
     void init() {
-        std::vector<const char *> layers;
         std::vector<const char *> extensions;
-        init(layers, extensions);
+        init(extensions);
     };
 
     const PhysicalDevice &phy() const { return phy_; }

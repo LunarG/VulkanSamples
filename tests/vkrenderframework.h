@@ -38,7 +38,6 @@ class VkDeviceObj : public vk_testing::Device {
   public:
     VkDeviceObj(uint32_t id, VkPhysicalDevice obj);
     VkDeviceObj(uint32_t id, VkPhysicalDevice obj,
-                std::vector<const char *> &layers,
                 std::vector<const char *> &extension_names);
 
     VkDevice device() { return handle(); }
@@ -72,7 +71,6 @@ class VkRenderFramework : public VkTestFramework {
     void InitRenderTarget(uint32_t targets, VkImageView *dsBinding);
     void InitFramework();
     void InitFramework(std::vector<const char *> instance_layer_names,
-                       std::vector<const char *> device_layer_names,
                        std::vector<const char *> instance_extension_names,
                        std::vector<const char *> device_extension_names,
                        PFN_vkDebugReportCallbackEXT = NULL,

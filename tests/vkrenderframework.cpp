@@ -95,7 +95,6 @@ VkRenderFramework::~VkRenderFramework() {}
 
 void VkRenderFramework::InitFramework() {
     std::vector<const char *> instance_layer_names;
-    std::vector<const char *> device_layer_names;
     std::vector<const char *> instance_extension_names;
     std::vector<const char *> device_extension_names;
     instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -107,13 +106,12 @@ void VkRenderFramework::InitFramework() {
 #ifdef VK_USE_PLATFORM_XCB_KHR
     instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #endif
-    InitFramework(instance_layer_names, device_layer_names,
-                  instance_extension_names, device_extension_names);
+    InitFramework(instance_layer_names, instance_extension_names,
+                  device_extension_names);
 }
 
 void VkRenderFramework::InitFramework(
     std::vector<const char *> instance_layer_names,
-    std::vector<const char *> device_layer_names,
     std::vector<const char *> instance_extension_names,
     std::vector<const char *> device_extension_names,
     PFN_vkDebugReportCallbackEXT dbgFunction, void *userData) {
@@ -178,8 +176,7 @@ void VkRenderFramework::InitFramework(
     }
 
     /* TODO: Verify requested physical device extensions are available */
-    m_device =
-        new VkDeviceObj(0, objs[0], device_layer_names, device_extension_names);
+    m_device = new VkDeviceObj(0, objs[0], device_extension_names);
 
     /* Now register callback on device */
     if (0) {
@@ -440,10 +437,9 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj)
 }
 
 VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj,
-                         std::vector<const char *> &layer_names,
                          std::vector<const char *> &extension_names)
     : vk_testing::Device(obj), id(id) {
-    init(layer_names, extension_names);
+    init(extension_names);
 
     props = phy().properties();
     queue_props = phy().queue_properties();
