@@ -267,6 +267,17 @@ class VkIndexBufferObj : public VkConstantBufferObj {
     VkIndexType m_indexType;
 };
 
+class VkRenderpassObj {
+  public:
+    VkRenderpassObj(VkDeviceObj *device);
+    ~VkRenderpassObj();
+    VkRenderPass handle() {return m_renderpass;}
+
+  protected:
+    VkRenderPass m_renderpass;
+    VkDevice device;
+};
+
 class VkImageObj : public vk_testing::Image {
   public:
     VkImageObj(VkDeviceObj *dev);

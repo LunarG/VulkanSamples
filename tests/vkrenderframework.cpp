@@ -585,6 +585,37 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(
     }
 }
 
+VkRenderpassObj::VkRenderpassObj(VkDeviceObj *dev) {
+    // Create a renderPass with a single color attachment
+    VkAttachmentReference attach = {};
+    attach.layout = VK_IMAGE_LAYOUT_GENERAL;
+
+    VkSubpassDescription subpass = {};
+    subpass.pColorAttachments = &attach;
+    subpass.colorAttachmentCount = 1;
+
+    VkRenderPassCreateInfo rpci = {};
+    rpci.subpassCount = 1;
+    rpci.pSubpasses = &subpass;
+    rpci.attachmentCount = 1;
+
+    VkAttachmentDescription attach_desc = {};
+    attach_desc.format = VK_FORMAT_B8G8R8A8_UNORM;
+    attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+    rpci.pAttachments = &attach_desc;
+    rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+
+    device = dev->device();
+    vkCreateRenderPass(device, &rpci, NULL, &m_renderpass);
+}
+
+VkRenderpassObj::~VkRenderpassObj() {
+    vkDestroyRenderPass(device, m_renderpass, NULL);
+}
+
 VkImageObj::VkImageObj(VkDeviceObj *dev) {
     m_device = dev;
     m_descriptorImageInfo.imageView = VK_NULL_HANDLE;
