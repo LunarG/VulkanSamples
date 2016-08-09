@@ -1651,7 +1651,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice,
             my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
             initDeviceTable(*pDevice, fpGetDeviceProcAddr, pc_device_table_map);
 
-
             uint32_t count;
             VkLayerInstanceDispatchTable *instance_dispatch_table = get_dispatch_table(pc_instance_table_map, physicalDevice);
             instance_dispatch_table->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, nullptr);
@@ -1666,6 +1665,13 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice,
             instance_dispatch_table->GetPhysicalDeviceProperties(physicalDevice, &device_properties);
             memcpy(&my_device_data->device_limits, &device_properties.limits, sizeof(VkPhysicalDeviceLimits));
             my_device_data->physical_device = physicalDevice;
+
+            // Save app-enabled features in this device's layer_data structure
+            if (pCreateInfo->pEnabledFeatures) {
+                my_device_data->physical_device_features = *pCreateInfo->pEnabledFeatures;
+            } else {
+                memset(&my_device_data->physical_device_features, 0, sizeof(VkPhysicalDeviceFeatures));
+            }
         }
     }
 
