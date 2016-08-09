@@ -76,7 +76,7 @@ const unsigned char NATIVE_TO_HID[256] = {
 /*
 //---------------------------------------------------------
 // Quick and dirty hack, to convert keycodes to ascii.
-// Works only for standard US keyboards.  TODO: Use XKB instead? (XKB adds 230kb of bloat)
+// Works only for standard US keyboards.  TODO: Use XKB instead?
 char KeyCodeToChar(int code,bool shift){
     char lower[]={ 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
                   '1','2','3','4','5','6','7','8','9','0',
@@ -105,6 +105,52 @@ char* KeyCodeToStr(int code,bool shift){
 }
 //---------------------------------------------------------
 */
+
+
+struct IWindow{
+    virtual ~IWindow(){}
+    virtual bool PollEvent()=0;
+    virtual void Close()=0;
+};
+
+
+//---------------------------------------------------------
+class Window_xcb : public IWindow{
+    CInstance* instance;
+
+    xcb_connection_t *xcb_connection;
+    xcb_screen_t     *xcb_screen;
+    xcb_window_t      xcb_window;
+    //--
+    xcb_intern_atom_reply_t *atom_wm_delete_window;
+    //--
+
+    //---xkb Keyboard---
+    xkb_context* k_ctx;     //context for xkbcommon keyboard input
+    xkb_keymap*  k_keymap;
+    xkb_state*   k_state;
+    //------------------
+
+
+    VkSurfaceKHR surface;
+    int width_, height_;
+    bool running;
+    void CreateSurface(VkInstance instance);
+    void MouseEvent(uint8_t type, int16_t x, int16_t y,uint8_t btn, uint8_t flags);
+
+public:
+
+    //Window_xcb(const char* title,uint width,uint height);
+    Window_xcb(CInstance& inst, const char* title, uint width, uint height);
+    virtual ~Window_xcb();
+    CInstance& Instance(){return *instance;}
+    bool PollEvent();
+    void Close(){running=false;}   //Closes the window.
+};
+//---------------------------------------------------------
+
+
+
 
 Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint height)
     : instance(&inst), width_(width), height_(height), running(true){
@@ -202,10 +248,8 @@ void Window_xcb::MouseEvent(uint8_t type, int16_t x, int16_t y, uint8_t btn, uin
 }
 
 
-bool Window_xcb::Update(){
+bool Window_xcb::PollEvent(){
     xcb_generic_event_t* event;
-    //xkb_keysym_t keysym=0;
-
     while ( (event = xcb_poll_for_event(xcb_connection)) ) {
         xcb_button_press_event_t* e = (xcb_button_press_event_t*)event; //xcb_motion_notify_event_t
         switch(event->response_type & ~0x80) {
@@ -268,22 +312,16 @@ bool Window_xcb::Update(){
 }
 
 
-
-
-
-
-
-
 #endif //VK_USE_PLATFORM_XCB_KHR
 //-----------------------------------------------------------
 
 
-
+//==============================================================
 
 
 //==============================================================
+/*
 WSIWindow::WSIWindow(const char* title,uint width,uint height){
-
 #ifdef VK_USE_PLATFORM_XCB_KHR
     printf("XCB\n");
 #endif
@@ -303,4 +341,16 @@ WSIWindow::WSIWindow(const char* title,uint width,uint height){
     printf("WIN32\n");
 #endif
 }
+*/
+
+WSIWindow::WSIWindow(CInstance& inst,const char* title,uint width,uint height){
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    printf("XCB\n");
+    pimpl=new Window_xcb(inst,title,width,height);
+#endif
+}
+
+WSIWindow::~WSIWindow()    { delete(pimpl); }
+bool WSIWindow::PollEvent(){ pimpl->PollEvent(); }
+void WSIWindow::Close()    { pimpl->Close(); }
 

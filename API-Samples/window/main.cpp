@@ -12,9 +12,13 @@ int main(int argc, char *argv[])
     //window.Test();
 
     CInstance Inst;
-    Window_xcb xcb(Inst,"XCB",640,480);
-    while(xcb.Update()){
+//    Window_xcb xcb(Inst,"XCB",640,480);
+//    while(xcb.PollEvent()){
+//    }
 
+
+    WSIWindow Window(Inst,"LunarG",640,480);
+    while(Window.PollEvent()){
     }
 
     return 0;
