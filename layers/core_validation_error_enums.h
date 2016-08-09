@@ -219,6 +219,8 @@ enum DRAW_STATE_ERROR {
                                              // must be a valid VkLogicOp value
     DRAWSTATE_INVALID_QUEUE_INDEX,           // Specified queue index exceeds number
                                              // of queried queue families
+    DRAWSTATE_INVALID_QUEUE_FAMILY,          // Command buffer submitted on queue is from
+                                             // a different queue family
     DRAWSTATE_PUSH_CONSTANTS_ERROR,          // Push constants exceed maxPushConstantSize
 };
 
