@@ -88,8 +88,8 @@ function(sampleWithSingleFile)
 
             # Include resource files.
             set (SAMPLE_WITH_RESOURCES
-             drawtexturedcube inittexture immutable_sampler multiple_sets pipeline_cache
-             pipeline_derivative secondarycmd separate_image_sampler spirv_assembly
+             draw_textured_cube init_texture immutable_sampler multiple_sets pipeline_cache
+             pipeline_derivative secondary_command_buffer separate_image_sampler spirv_assembly
              spirv_specialization template)
             if (";${SAMPLE_WITH_RESOURCES};" MATCHES ";${SAMPLE_NAME};")
                 set (ASSET_DIR "srcDir '../../data/'")
@@ -102,7 +102,7 @@ function(sampleWithSingleFile)
             endif()
 
             # Add validation layer settings.
-            set (SAMPLE_WITH_TOOLS dbgcreatemsgcallback enable_validation_with_callback)
+            set (SAMPLE_WITH_TOOLS dbg_create_msg_callback enable_validation_with_callback)
             if (";${SAMPLE_WITH_TOOLS};" MATCHES ";${SAMPLE_NAME};")
                 set (VALIDATIONLAYER_LINKAGE "project \":threading\"
                     project \":parameter_validation\"
@@ -230,19 +230,19 @@ endif()
 option(ANDROID OFF)
 
 # simple one file sample targets, no additional files
-set (S_TARGETS instance device enumerate enumerate-adv
-    depthbuffer initswapchain inittexture uniformbuffer
-    descriptor_pipeline_layouts initcommandbuffer
-    initrenderpass initframebuffers vertexbuffer
-    allocdescriptorsets initshaders initpipeline multithreadcmdbuf
-    drawcube drawtexturedcube dynamicuniform texelbuffer
+set (S_TARGETS init_instance init_device enumerate_devices enumerate_adv
+    init_depth_buffer init_swapchain init_texture init_uniform_buffer
+    init_pipeline_layout init_command_buffer
+    init_render_pass init_frame_buffers init_vertex_buffer
+    init_descriptor_set init_shaders init_pipeline multithreaded_command_buffer
+    draw_cube draw_textured_cube dynamic_uniform texel_buffer
     instance_layer_properties instance_extension_properties
-    instance_layer_extension_properties dbgcreatemsgcallback
+    instance_layer_extension_properties dbg_create_msg_callback
     enable_validation_with_callback multiple_sets
-    copyblitimage template separate_image_sampler
+    copy_blit_image template separate_image_sampler
     occlusion_query pipeline_cache pipeline_derivative
-    immutable_sampler push_constants drawsubpasses secondarycmd
-    spirv_assembly spirv_specialization membarriers)
+    immutable_sampler push_constants draw_subpasses secondary_command_buffer
+    spirv_assembly spirv_specialization memory_barriers)
 sampleWithSingleFile()
 
 add_subdirectory(utils)
