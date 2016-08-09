@@ -65,6 +65,17 @@ struct GenericHeader {
 // Layer name string to be logged with validation messages.
 const char LayerName[] = "ParameterValidation";
 
+// Enables for display-related instance extensions
+struct instance_extension_enables {
+    bool wsi_enabled;
+    bool xlib_enabled;
+    bool xcb_enabled;
+    bool wayland_enabled;
+    bool mir_enabled;
+    bool android_enabled;
+    bool win32_enabled;
+};
+
 // String returned by string_VkStructureType for an unrecognized type.
 const std::string UnsupportedStructureTypeString = "Unhandled VkStructureType";
 

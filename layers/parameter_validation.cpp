@@ -71,11 +71,14 @@ struct layer_data {
     VkPhysicalDeviceFeatures physical_device_features;
     VkPhysicalDevice physical_device;
 
+    bool wsi_enabled;
+
     layer_data()
         : report_data(nullptr), num_tmp_callbacks(0), tmp_dbg_create_infos(nullptr), tmp_callbacks(nullptr), device_limits{},
-          physical_device_features{}, physical_device{} {};
+          physical_device_features{}, physical_device{}, wsi_enabled(false) {};
 };
 
+static std::unordered_map<void *, struct instance_extension_enables> instanceExtMap;
 static std::unordered_map<void *, layer_data *> layer_data_map;
 static device_table_map pc_device_table_map;
 static instance_table_map pc_instance_table_map;
@@ -1583,6 +1586,59 @@ void validateDeviceCreateInfo(VkPhysicalDevice physicalDevice, const VkDeviceCre
     }
 }
 
+static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance) {
+    VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(pc_instance_table_map, instance);
+
+    instanceExtMap[pDisp] = {};
+
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
+            instanceExtMap[pDisp].wsi_enabled = true;
+        }
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
+            instanceExtMap[pDisp].xlib_enabled = true;
+        }
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0) {
+            instanceExtMap[pDisp].xcb_enabled = true;
+        }
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0) {
+            instanceExtMap[pDisp].wayland_enabled = true;
+        }
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0) {
+            instanceExtMap[pDisp].mir_enabled = true;
+        }
+#endif
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0) {
+            instanceExtMap[pDisp].android_enabled = true;
+        }
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0) {
+            instanceExtMap[pDisp].win32_enabled = true;
+        }
+#endif
+    }
+}
+
+static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo, VkDevice device) {
+    layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    device_data->wsi_enabled = false;
+
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
+            device_data->wsi_enabled = true;
+        }
+    }
+}
+
 void storeCreateDeviceData(VkDevice device, const VkDeviceCreateInfo *pCreateInfo) {
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
@@ -1650,6 +1706,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice physicalDevice,
 
             my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
             initDeviceTable(*pDevice, fpGetDeviceProcAddr, pc_device_table_map);
+
+            CheckDeviceRegisterExtensions(pCreateInfo, *pDevice);
 
             uint32_t count;
             VkLayerInstanceDispatchTable *instance_dispatch_table = get_dispatch_table(pc_instance_table_map, physicalDevice);
@@ -4620,11 +4678,373 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceExtensionProperties(VkPhysicalDevi
         ->EnumerateDeviceExtensionProperties(physicalDevice, NULL, pCount, pProperties);
 }
 
+
+// WSI Extension Functions
+
+VKAPI_ATTR VkResult VKAPI_CALL CreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
+                                                    const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchain) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= parameter_validation_vkCreateSwapchainKHR(my_data->report_data, pCreateInfo, pAllocator, pSwapchain);
+
+    if (!skipCall) {
+        result = get_dispatch_table(pc_device_table_map, device)->CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
+
+        validate_result(my_data->report_data, "vkCreateSwapchainKHR", result);
+    }
+
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t *pSwapchainImageCount,
+                                                       VkImage *pSwapchainImages) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |=
+        parameter_validation_vkGetSwapchainImagesKHR(my_data->report_data, swapchain, pSwapchainImageCount, pSwapchainImages);
+
+    if (!skipCall) {
+        result = get_dispatch_table(pc_device_table_map, device)
+                     ->GetSwapchainImagesKHR(device, swapchain, pSwapchainImageCount, pSwapchainImages);
+
+        validate_result(my_data->report_data, "vkGetSwapchainImagesKHR", result);
+    }
+
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout,
+    VkSemaphore semaphore, VkFence fence, uint32_t *pImageIndex) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |=
+        parameter_validation_vkAcquireNextImageKHR(my_data->report_data, swapchain, timeout, semaphore, fence, pImageIndex);
+
+    if (!skipCall) {
+        result = get_dispatch_table(pc_device_table_map, device)
+            ->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
+
+        validate_result(my_data->report_data, "vkAcquireNextImageKHR", result);
+    }
+
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= parameter_validation_vkQueuePresentKHR(my_data->report_data, pPresentInfo);
+
+    if (!skipCall) {
+        result = get_dispatch_table(pc_device_table_map, queue)->QueuePresentKHR(queue, pPresentInfo);
+
+        validate_result(my_data->report_data, "vkQueuePresentKHR", result);
+    }
+
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
+                                                                  VkSurfaceKHR surface, VkBool32 *pSupported) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |=
+        parameter_validation_vkGetPhysicalDeviceSurfaceSupportKHR(my_data->report_data, queueFamilyIndex, surface, pSupported);
+
+    if (!skipCall) {
+        result = get_dispatch_table(pc_instance_table_map, physicalDevice)
+                     ->GetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIndex, surface, pSupported);
+
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceSurfaceSupportKHR", result);
+    }
+
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+                                                                       VkSurfaceCapabilitiesKHR *pSurfaceCapabilities) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= parameter_validation_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(my_data->report_data, surface, pSurfaceCapabilities);
+
+    if (!skipCall) {
+        result = get_dispatch_table(pc_instance_table_map, physicalDevice)
+                     ->GetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, pSurfaceCapabilities);
+
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR", result);
+    }
+
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+                                                                  uint32_t *pSurfaceFormatCount,
+                                                                  VkSurfaceFormatKHR *pSurfaceFormats) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= parameter_validation_vkGetPhysicalDeviceSurfaceFormatsKHR(my_data->report_data, surface, pSurfaceFormatCount,
+                                                                          pSurfaceFormats);
+
+    if (!skipCall) {
+        result = get_dispatch_table(pc_instance_table_map, physicalDevice)
+                     ->GetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, pSurfaceFormatCount, pSurfaceFormats);
+
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceSurfaceFormatsKHR", result);
+    }
+
+    return result;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
+                                                                       uint32_t *pPresentModeCount,
+                                                                       VkPresentModeKHR *pPresentModes) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skipCall = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    assert(my_data != NULL);
+
+    skipCall |= parameter_validation_vkGetPhysicalDeviceSurfacePresentModesKHR(my_data->report_data, surface, pPresentModeCount,
+                                                                               pPresentModes);
+
+    if (!skipCall) {
+        result = get_dispatch_table(pc_instance_table_map, physicalDevice)
+                     ->GetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, pPresentModeCount, pPresentModes);
+
+        validate_result(my_data->report_data, "vkGetPhysicalDeviceSurfacePresentModesKHR", result);
+    }
+
+    return result;
+}
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+VKAPI_ATTR VkResult VKAPI_CALL CreateWin32SurfaceKHR(VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
+                                                     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    assert(my_data != NULL);
+
+    bool skipCall = parameter_validation_vkCreateWin32SurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
+
+    if (!skipCall) {
+        result =
+            get_dispatch_table(pc_instance_table_map, instance)->CreateWin32SurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+    }
+
+    validate_result(my_data->report_data, "vkCreateWin32SurfaceKHR", result);
+
+    return result;
+}
+#endif // VK_USE_PLATFORM_WIN32_KHR
+
+#ifdef VK_USE_PLATFORM_XCB_KHR
+VKAPI_ATTR VkResult VKAPI_CALL CreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
+                                                   const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    assert(my_data != NULL);
+
+    bool skipCall = parameter_validation_vkCreateXcbSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
+
+    if (!skipCall) {
+        result =
+            get_dispatch_table(pc_instance_table_map, instance)->CreateXcbSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+    }
+
+    validate_result(my_data->report_data, "vkCreateXcbSurfaceKHR", result);
+
+    return result;
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXcbPresentationSupportKHR(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, xcb_connection_t *connection, xcb_visualid_t visual_id) {
+    VkBool32 result = false;
+
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    assert(my_data != NULL);
+
+    bool skipCall = parameter_validation_vkGetPhysicalDeviceXcbPresentationSupportKHR(my_data->report_data, queueFamilyIndex, connection, visual_id);
+
+    if (!skipCall) {
+        result =
+            get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceXcbPresentationSupportKHR(physicalDevice, queueFamilyIndex, connection, visual_id);
+    }
+
+    return result;
+
+}
+#endif // VK_USE_PLATFORM_XCB_KHR
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+VKAPI_ATTR VkResult VKAPI_CALL CreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    assert(my_data != NULL);
+
+    bool skipCall = parameter_validation_vkCreateXlibSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
+
+    if (!skipCall) {
+        result =
+            get_dispatch_table(pc_instance_table_map, instance)->CreateXlibSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+    }
+
+    validate_result(my_data->report_data, "vkCreateXlibSurfaceKHR", result);
+
+    return result;
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceXlibPresentationSupportKHR(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, Display *dpy, VisualID visualID) {
+    VkBool32 result = false;
+
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    assert(my_data != NULL);
+
+    bool skipCall = parameter_validation_vkGetPhysicalDeviceXlibPresentationSupportKHR(my_data->report_data, queueFamilyIndex, dpy, visualID);
+
+    if (!skipCall) {
+        result =
+            get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceXlibPresentationSupportKHR(physicalDevice, queueFamilyIndex, dpy, visualID);
+    }
+
+}
+#endif // VK_USE_PLATFORM_XLIB_KHR
+
+#ifdef VK_USE_PLATFORM_MIR_KHR
+VKAPI_ATTR VkResult VKAPI_CALL CreateMirSurfaceKHR(VkInstance instance, const VkMirSurfaceCreateInfoKHR *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    assert(my_data != NULL);
+
+    bool skipCall = parameter_validation_vkCreateMirSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
+
+    if (!skipCall) {
+        result =
+            get_dispatch_table(pc_instance_table_map, instance)->CreateMirSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+    }
+
+    validate_result(my_data->report_data, "vkCreateMirSurfaceKHR", result);
+
+    return result;
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceMirPresentationSupportKHR(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, MirConnection *connection) {
+    VkBool32 result = false;
+
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    assert(my_data != NULL);
+
+    bool skipCall = parameter_validation_vkGetPhysicalDeviceMirPresentationSupportKHR(my_data->report_data, queueFamilyIndex, connection);
+
+    if (!skipCall) {
+        result =
+            get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceMirPresentationSupportKHR(physicalDevice, queueFamilyIndex, connection);
+    }
+
+}
+#endif // VK_USE_PLATFORM_MIR_KHR
+
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+VKAPI_ATTR VkResult VKAPI_CALL CreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    assert(my_data != NULL);
+
+    bool skipCall = parameter_validation_vkCreateWaylandSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
+
+    if (!skipCall) {
+        result =
+            get_dispatch_table(pc_instance_table_map, instance)->CreateWaylandSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+    }
+
+    validate_result(my_data->report_data, "vkCreateWaylandSurfaceKHR", result);
+
+    return result;
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL GetPhysicalDeviceWaylandPresentationSupportKHR(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, struct wl_display *display) {
+    VkBool32 result = false;
+
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    assert(my_data != NULL);
+
+    bool skipCall = parameter_validation_vkGetPhysicalDeviceWaylandPresentationSupportKHR(my_data->report_data, queueFamilyIndex, display);
+
+    if (!skipCall) {
+        result =
+            get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceWaylandPresentationSupportKHR(physicalDevice, queueFamilyIndex, display);
+    }
+}
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, const VkAndroidSurfaceCreateInfoKHR *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    assert(my_data != NULL);
+
+    bool skipCall = parameter_validation_vkCreateAndroidSurfaceKHR(my_data->report_data, pCreateInfo, pAllocator, pSurface);
+
+    if (!skipCall) {
+        result =
+            get_dispatch_table(pc_instance_table_map, instance)->CreateAndroidSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+    }
+
+    validate_result(my_data->report_data, "vkCreateAndroidSurfaceKHR", result);
+
+    return result;
+}
+#endif // VK_USE_PLATFORM_ANDROID_KHR
+
+
+
+
+
+
+
+
+
+
+
 static PFN_vkVoidFunction
 intercept_core_instance_command(const char *name);
 
 static PFN_vkVoidFunction
 intercept_core_device_command(const char *name);
+
+static PFN_vkVoidFunction
+InterceptWsiEnabledCommand(const char *name, VkDevice device);
+
+static PFN_vkVoidFunction
+InterceptWsiEnabledCommand(const char *name, VkInstance instance);
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char *funcName) {
     assert(device);
@@ -4639,6 +5059,10 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, cons
     if (proc)
         return proc;
 
+    proc = InterceptWsiEnabledCommand(funcName, device);
+    if (proc)
+        return proc;
+
     if (get_dispatch_table(pc_device_table_map, device)->GetDeviceProcAddr == NULL)
         return NULL;
     return get_dispatch_table(pc_device_table_map, device)->GetDeviceProcAddr(device, funcName);
@@ -4648,6 +5072,10 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
     PFN_vkVoidFunction proc = intercept_core_instance_command(funcName);
     if (!proc)
         proc = intercept_core_device_command(funcName);
+
+    if (!proc)
+        proc = InterceptWsiEnabledCommand(funcName, VkDevice(VK_NULL_HANDLE));
+    
     if (proc)
         return proc;
 
@@ -4656,6 +5084,9 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance
     layer_data *data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
 
     proc = debug_report_get_instance_proc_addr(data->report_data, funcName);
+    if (!proc)
+        proc = InterceptWsiEnabledCommand(funcName, instance);
+
     if (proc)
         return proc;
 
@@ -4825,6 +5256,88 @@ intercept_core_device_command(const char *name) {
         if (!strcmp(core_device_commands[i].name, name))
             return core_device_commands[i].proc;
     }
+
+    return nullptr;
+}
+
+static PFN_vkVoidFunction
+InterceptWsiEnabledCommand(const char *name, VkDevice device) {
+    static const struct {
+        const char *name;
+        PFN_vkVoidFunction proc;
+    } wsi_device_commands[] = {
+        { "vkCreateSwapchainKHR", reinterpret_cast<PFN_vkVoidFunction>(CreateSwapchainKHR) },
+        { "vkGetSwapchainImagesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetSwapchainImagesKHR) },
+        { "vkAcquireNextImageKHR", reinterpret_cast<PFN_vkVoidFunction>(AcquireNextImageKHR) },
+        { "vkQueuePresentKHR", reinterpret_cast<PFN_vkVoidFunction>(QueuePresentKHR) },
+    };
+
+    if (device) {
+        layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+        if (!device_data->wsi_enabled)
+            return nullptr;
+    }
+
+    for (size_t i = 0; i < ARRAY_SIZE(wsi_device_commands); i++) {
+        if (!strcmp(wsi_device_commands[i].name, name))
+            return wsi_device_commands[i].proc;
+    }
+
+    return nullptr;
+}
+
+static PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, VkInstance instance) {
+    static const struct {
+        const char *name;
+        PFN_vkVoidFunction proc;
+    } wsi_instance_commands[] = {
+        { "vkGetPhysicalDeviceSurfaceSupportKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceSupportKHR)},
+        { "vkGetPhysicalDeviceSurfaceCapabilitiesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceCapabilitiesKHR)},
+        { "vkGetPhysicalDeviceSurfaceFormatsKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfaceFormatsKHR)},
+        { "vkGetPhysicalDeviceSurfacePresentModesKHR", reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceSurfacePresentModesKHR)},
+    };
+
+    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, instance);
+    if (instanceExtMap.size() == 0 || !instanceExtMap[pTable].wsi_enabled)
+        return nullptr;
+
+    for (size_t i = 0; i < ARRAY_SIZE(wsi_instance_commands); i++) {
+        if (!strcmp(wsi_instance_commands[i].name, name))
+            return wsi_instance_commands[i].proc;
+    }
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    if ((instanceExtMap[pTable].win32_enabled == true) && !strcmp("vkCreateWin32SurfaceKHR", name))
+        return reinterpret_cast<PFN_vkVoidFunction>(CreateWin32SurfaceKHR);
+#endif // VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    if ((instanceExtMap[pTable].xcb_enabled == true) && !strcmp("vkCreateXcbSurfaceKHR", name))
+        return reinterpret_cast<PFN_vkVoidFunction>(CreateXcbSurfaceKHR);
+    if ((instanceExtMap[pTable].xcb_enabled == true) && !strcmp("vkGetPhysicalDeviceXcbPresentationSupportKHR", name))
+        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXcbPresentationSupportKHR);
+#endif // VK_USE_PLATFORM_XCB_KHR
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    if ((instanceExtMap[pTable].xlib_enabled == true) && !strcmp("vkCreateXlibSurfaceKHR", name))
+        return reinterpret_cast<PFN_vkVoidFunction>(CreateXlibSurfaceKHR);
+    if ((instanceExtMap[pTable].xlib_enabled == true) && !strcmp("vkGetPhysicalDeviceXlibPresentationSupportKHR", name))
+        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceXlibPresentationSupportKHR);
+#endif // VK_USE_PLATFORM_XLIB_KHR
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    if ((instanceExtMap[pTable].mir_enabled == true) && !strcmp("vkCreateMirSurfaceKHR", name))
+        return reinterpret_cast<PFN_vkVoidFunction>(CreateMirSurfaceKHR);
+    if ((instanceExtMap[pTable].mir_enabled == true) && !strcmp("vkGetPhysicalDeviceMirPresentationSupportKHR", name))
+        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceMirPresentationSupportKHR);
+#endif // VK_USE_PLATFORM_MIR_KHR
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    if ((instanceExtMap[pTable].wayland_enabled == true) && !strcmp("vkCreateWaylandSurfaceKHR", name))
+        return reinterpret_cast<PFN_vkVoidFunction>(CreateWaylandSurfaceKHR);
+    if ((instanceExtMap[pTable].wayland_enabled == true) && !strcmp("vkGetPhysicalDeviceWaylandPresentationSupportKHR", name))
+        return reinterpret_cast<PFN_vkVoidFunction>(GetPhysicalDeviceWaylandPresentationSupportKHR);
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    if ((instanceExtMap[pTable].android_enabled == true) && !strcmp("vkCreateAndroidSurfaceKHR", name))
+        return reinterpret_cast<PFN_vkVoidFunction>(CreateAndroidSurfaceKHR);
+#endif // VK_USE_PLATFORM_ANDROID_KHR
 
     return nullptr;
 }
