@@ -97,17 +97,6 @@ int sample_main(int argc, char *argv[]) {
     init_shaders(info, vertShaderText, fragShaderText);
 
     /* VULKAN_KEY_START */
-    VkPipelineCacheCreateInfo pipelineCache;
-    pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-    pipelineCache.pNext = NULL;
-    pipelineCache.initialDataSize = 0;
-    pipelineCache.pInitialData = NULL;
-    pipelineCache.flags = 0;
-
-    res = vkCreatePipelineCache(info.device, &pipelineCache, NULL,
-                                &info.pipelineCache);
-    assert(res == VK_SUCCESS);
-
     VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
     VkPipelineDynamicStateCreateInfo dynamicState = {};
     memset(dynamicStateEnables, 0, sizeof dynamicStateEnables);
@@ -234,7 +223,7 @@ int sample_main(int argc, char *argv[]) {
     pipeline.renderPass = info.render_pass;
     pipeline.subpass = 0;
 
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1,
+    res = vkCreateGraphicsPipelines(info.device, VK_NULL_HANDLE, 1,
                                     &pipeline, NULL, &info.pipeline);
     assert(res == VK_SUCCESS);
     execute_end_command_buffer(info);
@@ -242,7 +231,6 @@ int sample_main(int argc, char *argv[]) {
     /* VULKAN_KEY_END */
 
     vkDestroyPipeline(info.device, info.pipeline, NULL);
-    vkDestroyPipelineCache(info.device, info.pipelineCache, NULL);
     destroy_descriptor_pool(info);
     destroy_vertex_buffer(info);
     destroy_framebuffers(info);
