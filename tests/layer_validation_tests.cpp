@@ -3652,6 +3652,43 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject) {
 
 #if DRAW_STATE_TESTS
 
+TEST_F(VkLayerTest, MismatchedQueueFamiliesOnSubmit) {
+    VkResult err;
+    TEST_DESCRIPTION("Submit command buffer created using one queue family and "
+                     "attempt to submit them on a queue created in a different "
+                     "queue family.");
+
+    // This test is meaningless unless we have multiple queue families
+    auto queue_family_properties = m_device->phy().queue_properties();
+    if (queue_family_properties.size() < 2) {
+        return;
+    }
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         " is being submitted on queue ");
+    // Get safe index of another queue family
+    uint32_t other_queue_family = (m_device->graphics_queue_node_index_ == 0) ? 1 : 0;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    // Create a second queue using a different queue family
+    VkQueue other_queue;
+    vkGetDeviceQueue(m_device->device(), other_queue_family, 0, &other_queue);
+
+    // Record an empty cmd buffer
+    VkCommandBufferBeginInfo cmdBufBeginDesc = {};
+    cmdBufBeginDesc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    vkBeginCommandBuffer(m_commandBuffer->handle(), &cmdBufBeginDesc);
+    vkEndCommandBuffer(m_commandBuffer->handle());
+
+    // And submit on the wrong queue
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    err = vkQueueSubmit(other_queue, 1, &submit_info, VK_NULL_HANDLE);
+
+    m_errorMonitor->VerifyFound();
+
+}
+
 TEST_F(VkLayerTest, RenderPassInitialLayoutUndefined) {
     TEST_DESCRIPTION("Ensure that CmdBeginRenderPass with an attachment's "
                      "initialLayout of VK_IMAGE_LAYOUT_UNDEFINED works when "
