@@ -2794,6 +2794,16 @@ bool PreCreateGraphicsPipelines(VkDevice device, const VkGraphicsPipelineCreateI
                         "unrecognized enumerator");
                 return false;
             }
+
+            if ((pCreateInfos->pRasterizationState->polygonMode != VK_POLYGON_MODE_FILL) &&
+                (data->physical_device_features.fillModeNonSolid == false)) {
+                log_msg(
+                    mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    DEVICE_FEATURE, LayerName,
+                    "vkCreateGraphicsPipelines parameter, VkPolygonMode pCreateInfos->pRasterizationState->polygonMode cannot be "
+                    "VK_POLYGON_MODE_POINT or VK_POLYGON_MODE_LINE if VkPhysicalDeviceFeatures->fillModeNonSolid is false.");
+                return false;
+            }
         }
 
         int i = 0;
