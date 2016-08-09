@@ -437,9 +437,10 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj)
 }
 
 VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj,
-                         std::vector<const char *> &extension_names)
+                         std::vector<const char *> &extension_names,
+                         VkPhysicalDeviceFeatures *features)
     : vk_testing::Device(obj), id(id) {
-    init(extension_names);
+    init(extension_names, features);
 
     props = phy().properties();
     queue_props = phy().queue_properties();
