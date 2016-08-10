@@ -19,6 +19,7 @@
 #include <vulkan/vulkan.h>
 
 #include "CInstance.h"
+#include "keycode.h"
 
 #ifndef WSIWINDOW_H
 #define WSIWINDOW_H
