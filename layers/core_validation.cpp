@@ -5353,6 +5353,7 @@ static bool InsertMemoryRange(layer_data const *dev_data, uint64_t handle, DEVIC
     range.image = is_image;
     range.handle = handle;
     range.linear = is_linear;
+    range.valid = mem_info->global_valid;
     range.memory = mem_info->mem;
     range.start = memoryOffset;
     range.size = memRequirements.size;
@@ -10230,6 +10231,8 @@ MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize
     std::unique_lock<std::mutex> lock(global_lock);
     DEVICE_MEM_INFO *mem_info = getMemObjInfo(dev_data, mem);
     if (mem_info) {
+        // TODO : This could me more fine-grained to track just region that is valid
+        mem_info->global_valid = true;
         auto end_address = (VK_WHOLE_SIZE == size) ? mem_info->alloc_info.allocationSize - 1 : offset + size - 1;
         skip_call |= ValidateMapImageLayouts(device, mem_info, offset, end_address);
         // TODO : Do we need to create new "bound_range" for the mapped range?
