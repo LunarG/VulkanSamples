@@ -3653,7 +3653,6 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject) {
 #if DRAW_STATE_TESTS
 
 TEST_F(VkLayerTest, MismatchedQueueFamiliesOnSubmit) {
-    VkResult err;
     TEST_DESCRIPTION("Submit command buffer created using one queue family and "
                      "attempt to submit them on a queue created in a different "
                      "queue family.");
@@ -3683,7 +3682,7 @@ TEST_F(VkLayerTest, MismatchedQueueFamiliesOnSubmit) {
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
-    err = vkQueueSubmit(other_queue, 1, &submit_info, VK_NULL_HANDLE);
+    vkQueueSubmit(other_queue, 1, &submit_info, VK_NULL_HANDLE);
 
     m_errorMonitor->VerifyFound();
 
