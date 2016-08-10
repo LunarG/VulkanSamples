@@ -73,8 +73,7 @@ const unsigned char NATIVE_TO_HID[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 };
 
-/*
-//---------------------------------------------------------
+/*//---------------------------------------------------------
 // Quick and dirty hack, to convert keycodes to ascii.
 // Works only for standard US keyboards.  TODO: Use XKB instead?
 char KeyCodeToChar(int code,bool shift){
@@ -103,57 +102,76 @@ char* KeyCodeToStr(int code,bool shift){
     str[0]=KeyCodeToChar(code,shift);
     return str;
 }
-//---------------------------------------------------------
-*/
-
-
-struct IWindow{
-    virtual ~IWindow(){}
-    virtual bool PollEvent()=0;
-    virtual void Close()=0;
-};
-
-
-//---------------------------------------------------------
-class Window_xcb : public IWindow{
+*///---------------------------------------------------------
+class WindowImpl{
+protected:
     CInstance* instance;
+    VkSurfaceKHR surface;
+    int width, height;
+    bool running;
+    void MouseEvent(eMouseEvent type, int16_t x, int16_t y,uint8_t btn, uint8_t flags); //Mouse event
+    void KeyEvent(eKeyEvent type, uint8_t keycode, uint8_t flags);                      //Key pressed/released
+    void CharEvent(const char* text, uint8_t flags);                                    //Character typed
+public:
+    //WindowImpl(CInstance& inst, const char* title, uint width, uint height);
+    WindowImpl(): instance(0),width(64),height(64),running(false){}
+    virtual ~WindowImpl(){}
+    virtual bool PollEvent()=0;
+    virtual void Close(){running=false;}
+    CInstance& Instance(){return *instance;}
+};
+//---------------------------------------------------------
 
+void WindowImpl::MouseEvent(eMouseEvent type, int16_t x, int16_t y, uint8_t btn, uint8_t flags){
+    switch(type){
+    case mMOVE: printf("MOVE : "); break;
+    case mDOWN: printf("DOWN : "); break;
+    case mUP  : printf("UP   : "); break;
+    }
+    printf("%d x %d : %d %d\n",x,y,btn,flags); fflush(stdout);
+}
+
+void WindowImpl::KeyEvent(eKeyEvent type, uint8_t key, uint8_t flags){
+    switch(type){
+    case keyDOWN: printf("\tDOWN : "); break;
+    case keyUP  : printf("\tUP   : "); break;
+    }
+    printf("%4d %4d\n",key,flags); fflush(stdout);
+}
+
+void WindowImpl::CharEvent(const char* text, uint8_t flags){
+    printf("%s",text);  fflush(stdout);
+}
+
+//===========================XCB================================
+class Window_xcb : public WindowImpl{
     xcb_connection_t *xcb_connection;
     xcb_screen_t     *xcb_screen;
     xcb_window_t      xcb_window;
     //--
     xcb_intern_atom_reply_t *atom_wm_delete_window;
     //--
-
     //---xkb Keyboard---
     xkb_context* k_ctx;     //context for xkbcommon keyboard input
     xkb_keymap*  k_keymap;
     xkb_state*   k_state;
     //------------------
 
-
-    VkSurfaceKHR surface;
-    int width_, height_;
-    bool running;
     void CreateSurface(VkInstance instance);
-    void MouseEvent(uint8_t type, int16_t x, int16_t y,uint8_t btn, uint8_t flags);
-
 public:
 
     //Window_xcb(const char* title,uint width,uint height);
     Window_xcb(CInstance& inst, const char* title, uint width, uint height);
     virtual ~Window_xcb();
-    CInstance& Instance(){return *instance;}
     bool PollEvent();
-    void Close(){running=false;}   //Closes the window.
 };
-//---------------------------------------------------------
-
-
-
-
-Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint height)
-    : instance(&inst), width_(width), height_(height), running(true){
+//==============================================================
+//=======================XCB IMPLEMENTATION=====================
+Window_xcb::Window_xcb(CInstance& inst, const char* title, uint _width, uint _height){
+    instance=&inst;
+    width=_width;
+    height=_height;
+    running=true;
 
     printf("Window_xcb\n"); fflush(stdout);
     //--Init Connection--
@@ -238,59 +256,34 @@ Window_xcb::~Window_xcb(){
     free(k_ctx);  //xkb keyboard
 }
 
-void Window_xcb::MouseEvent(uint8_t type, int16_t x, int16_t y, uint8_t btn, uint8_t flags){
-    switch(type){
-    case 0: printf("MOVE : "); break;
-    case 1: printf("DOWN : "); break;
-    case 2: printf("UP   : "); break;
-    }
-    printf("%d x %d : %d %d\n",x,y,btn,flags); fflush(stdout);
-}
-
-
 bool Window_xcb::PollEvent(){
     xcb_generic_event_t* event;
     while ( (event = xcb_poll_for_event(xcb_connection)) ) {
         xcb_button_press_event_t* e = (xcb_button_press_event_t*)event; //xcb_motion_notify_event_t
         switch(event->response_type & ~0x80) {
-            case XCB_MOTION_NOTIFY : MouseEvent(0,e->event_x,e->event_y,e->detail,e->state); break;
-            case XCB_BUTTON_PRESS  : MouseEvent(1,e->event_x,e->event_y,e->detail,e->state); break;
-            case XCB_BUTTON_RELEASE: MouseEvent(2,e->event_x,e->event_y,e->detail,e->state); break;
+            case XCB_MOTION_NOTIFY : MouseEvent(mMOVE,e->event_x,e->event_y,e->detail,e->state); break;
+            case XCB_BUTTON_PRESS  : MouseEvent(mDOWN,e->event_x,e->event_y,e->detail,e->state); break;
+            case XCB_BUTTON_RELEASE: MouseEvent(mUP  ,e->event_x,e->event_y,e->detail,e->state); break;
 
         case XCB_KEY_PRESS:{
             xcb_button_press_event_t* key = (xcb_button_press_event_t*)event;
             uint8_t  detail=key->detail;
             uint16_t state =key->state;
-            /*
-            printf("Key : %d %d %c ",state,detail,KeyCodeToChar(detail,state&1));  //fflush(stdout);
-            //printf("%s",KeyCodeToStr(detail,state&1));
-
-            keysym = xkb_state_key_get_one_sym(k_state, detail);
-            printf(" xkb=%d",keysym); fflush(stdout);
-
-            xkb_state_update_key(k_state, detail, XKB_KEY_DOWN);
-            break;
-            */
-/*
-            xkb_keysym_t keysym = xkb_state_key_get_one_sym(k_state, detail);
-            printf(" xkb=%d",keysym); fflush(stdout);
-*/
-            printf("HID:%d ",NATIVE_TO_HID[detail]);
-
+            KeyEvent(keyDOWN,NATIVE_TO_HID[detail],state);             //key pressed event
             static char buf[4]={};
             xkb_state_key_get_utf8(k_state,detail,buf,sizeof(buf));
-            printf(" %s",buf); fflush(stdout);
+            if(buf[0]) CharEvent(buf,state);                           //text typed event
             xkb_state_update_key(k_state, detail, XKB_KEY_DOWN);
             break;
         }
 
         case XCB_KEY_RELEASE:{
-
             xcb_button_press_event_t* key = (xcb_button_press_event_t*)event;
             uint8_t  detail=key->detail;
+            uint16_t state =key->state;
+            KeyEvent(keyUP,NATIVE_TO_HID[detail],state);               //key released event
             xkb_state_update_key(k_state, detail, XKB_KEY_UP);
-
-            printf(".\n"); fflush(stdout);
+            //printf(".\n"); fflush(stdout);
             break;
         }
 
@@ -302,18 +295,75 @@ bool Window_xcb::PollEvent(){
                 }
                 break;
 
-            default: break;
+        default: break;
         }
         free (event);
     }
-    //printf(".");  fflush(stdout);
+    return running;
+}
 
+#endif //VK_USE_PLATFORM_XCB_KHR
+//==============================================================
+
+
+
+
+
+//==========================Win32================================
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+class Window_win32 : public IWindow{
+    void CreateSurface(VkInstance instance);
+public:
+    Window_win32(CInstance& inst, const char* title, uint width, uint height);
+    virtual ~Window_win32();
+    bool PollEvent();
+};
+//==============================================================
+//=====================Win32 IMPLEMENTATION=====================
+Window_win32::Window_win32(CInstance& inst, const char* title, uint _width, uint _height){
+    instance=&inst;
+    width=_width;
+    height=_height;
+    running=true;
+    printf("Window_win32\n"); fflush(stdout);
+}
+
+
+void Window_win32::CreateSurface(VkInstance instance){
+    VkResult U_ASSERT_ONLY err;
+    VkXcbSurfaceCreateInfoKHR win32_createInfo;
+    xcb_createInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    xcb_createInfo.pNext      = NULL;
+    xcb_createInfo.flags      = 0;
+    xcb_createInfo.connection = NULL;
+    xcb_createInfo.window     = win32_window;
+    err = vkCreateXcbSurfaceKHR(instance, &win32_createInfo, NULL, &surface);
+    VKERRCHECK(err);
+    //assert(!err);
+    printf("Surface created\n"); fflush(stdout);
+}
+
+bool Window_xcb::PollEvent(){
     return running;
 }
 
 
-#endif //VK_USE_PLATFORM_XCB_KHR
-//-----------------------------------------------------------
+#endif //VK_USE_PLATFORM_WIN32_KHR
+//==============================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 //==============================================================
@@ -347,6 +397,10 @@ WSIWindow::WSIWindow(CInstance& inst,const char* title,uint width,uint height){
 #ifdef VK_USE_PLATFORM_XCB_KHR
     printf("XCB\n");
     pimpl=new Window_xcb(inst,title,width,height);
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    printf("WIN32\n");
+
 #endif
 }
 

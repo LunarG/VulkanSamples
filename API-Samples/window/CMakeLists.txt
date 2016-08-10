@@ -12,8 +12,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")  #for fi
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     option(BUILD_WSI_XCB_SUPPORT     "Build XCB WSI support"     ON)
     option(BUILD_WSI_XLIB_SUPPORT    "Build Xlib WSI support"    OFF)
-    option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" OFF)
-    option(BUILD_WSI_MIR_SUPPORT     "Build Mir WSI support"     OFF)
+    #option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" OFF)
+    #option(BUILD_WSI_MIR_SUPPORT     "Build Mir WSI support"     OFF)
 
     if (BUILD_WSI_XCB_SUPPORT)
         add_definitions(-DVK_USE_PLATFORM_XCB_KHR)
@@ -24,7 +24,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         target_link_libraries(${PROJECT_NAME} ${XCB_LIBRARIES})  # /usr/lib/x86_64-linux-gnu/libxcb.so
         #find_library(XKB "xkbcommon")                            # /usr/lib/x86_64-linux-gnu/
         #target_link_libraries(${PROJECT_NAME} ${XKB})            # keyboard support as static link library (adds 243Kb)
-
         LINK_DIRECTORIES("/usr/lib/x86_64-linux-gnu/")
         TARGET_LINK_LIBRARIES(${PROJECT_NAME} "libxkbcommon.so")  #xkb keyboard support as shared library
     endif()
@@ -44,9 +43,18 @@ endif()
 
 #=====================Find Vulkan SDK======================
 if(NOT DEFINED ENV{VULKAN_SDK})
-  set(ENV{VULKAN_SDK} "~/vulkan/VulkanSDK/1.0.21.1/x86_64")  # Default path to SDK
+    if(WIN32)
+        set(ENV{VULKAN_SDK} "C:/VulkanSDK/1.0.21.1")         # Default path to SDK for Windows
+        message("VULKAN_SDK env-variable not found!  Have you installed the Vulkan SDK?")
+    else()
+        set(ENV{VULKAN_SDK}  "~/VulkanSDK/1.0.21.1/x86_64")  # Default path to SDK for Linux
+        message("VULKAN_SDK env-variable not found!  Did you run cmake-gui from the command line? (You should!)")
+    endif()
 endif()
+
+#set(VULKAN_SDK $ENV{VULKAN_SDK})
 set(VULKAN_SDK $ENV{VULKAN_SDK} CACHE FILEPATH "Path to where Vulkan's SDK include directory can be found.")
+
 #==========================================================
 
 include_directories("${VULKAN_SDK}/include")

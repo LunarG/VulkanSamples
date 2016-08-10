@@ -11,7 +11,6 @@
 
     #include <xkbcommon/xkbcommon.h>
 
-
 #elif __ANDROID__
     #define VK_USE_PLATFORM_ANDROID_KHR
 #endif
@@ -25,11 +24,13 @@
 #define WSIWINDOW_H
 
 typedef unsigned int uint;
+enum eMouseEvent{ mMOVE, mDOWN, mUP };
+enum eKeyEvent{ keyDOWN, keyUP };
 
-class IWindow;  //
+class WindowImpl;
 
 class WSIWindow{
-    IWindow* pimpl;
+    WindowImpl* pimpl;
 public:
     WSIWindow(CInstance& inst, const char* title, uint width, uint height);
     //WSIWindow(const char* title,uint width,uint height);
