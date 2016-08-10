@@ -238,47 +238,10 @@ VIAddVersionKey  "LegalCopyright" ""
 !macro ConfigLayersAndVulkanDLL un
 Function ${un}ConfigLayersAndVulkanDLL
 
-    ${If} ${RunningX64}
-        Strcpy $1 64
-    ${Else}
-        Strcpy $1 32
-    ${Endif}
-
-    # Create the script, the first two lines are the majorabi and ossize.
-    nsExec::ExecToStack 'cmd /k echo $$majorabi=${VERSION_ABI_MAJOR} >"$TEMP\VulkanRT\VulkanRT.ps1"'
-    nsExec::ExecToStack 'cmd /k echo $$ossize=$1 >>"$TEMP\VulkanRT\VulkanRT.ps1"'
-    nsExec::ExecToStack 'cmd /k type ConfigLayersAndVulkanDLL.ps1 >>"$TEMP\VulkanRT\VulkanRT.ps1"'
-
-    # Exectute the script by piping it to powershell.exe. This gets around possible OS
-    # security restrictions on running powershell scripts.
-    nsExec::ExecToStack 'cmd /k type "$TEMP\VulkanRT\VulkanRT.ps1" | powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command -'
-    Delete "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL1.${un}log"
-    Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL1.${un}log"
+    # Execute the configuration program
+    nsExec::ExecToStack 'ConfigureRT.exe --abi-major ${VERSION_ABI_MAJOR}'
+    Rename "configure_rt.log" "$TEMP\VulkanRT\configure_rt.log"
     pop $0
-
-    # If it failed, try again, with a full path to powershell.exe
-    ${If} $0 != 0
-        nsExec::ExecToStack 'cmd /k type "$TEMP\VulkanRT\VulkanRT.ps1" | "$WINDIR\System32\WindowsPowerShell\v1.0\powershell" -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command -'
-        pop $0
-        Delete "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL2.${un}log"
-        Rename "$TEMP\ConfigLayersAndVulkanDLL.log" "$TEMP\VulkanRT\ConfigLayersAndVulkanDLL2.${un}log"
-    ${Endif}
-
-    # Read the return value of the script and put it in $0, stripping trailing newline
-    FileOpen $1 "$TEMP\ConfigLayersAndVulkanDLL.stat" r
-    ${If} $1 != ""
-        FileRead $1 $2
-        FileClose $1
-        ${StrRep} $3 $2 "$\n" ""
-        ${StrRep} $0 $3 "$\r" ""
-    ${Else}
-       # error
-       StrCpy $0 -1
-    ${Endif}
-
-    # Cleanup
-    Delete "$TEMP\ConfigLayersAndVulkanDLL.stat"
-    Delete "$TEMP\VulkanRT\VulkanRT.ps1"
 
     # Ignore errors. If something went wrong, the return value will indicate it.
     ClearErrors
@@ -293,17 +256,9 @@ FunctionEnd
 # On entry $0, contains the return value from ConfigLayersAndVulkanDll.ps1. It shouldn't be changed.
 !macro DiagConfigLayersAndVulkanDLL un
 Function ${un}DiagConfigLayersAndVulkanDLL
-    LogText "ConfigLayersAndVulkanDLL.ps1 rval is $0"
-    nsExec::ExecToStack 'powershell -NoProfile -NoLogo -NonInteractive -WindowStyle Hidden -inputformat none -Command Write-Output Diagnostic0 | Out-File  -encoding ascii -filePath "$TEMP\VulkanRT\Diagnostic0.${un}log"'
-    pop $1
-    LogText "ps cmd rval is $1"
-    nsExec::ExecToStack 'cmd /k echo %PATH% >"$TEMP\VulkanRT\Diagnostic1.${un}log"'
-    pop $1
-    LogText "cmd1 rval is $1"
-    nsExec::ExecToStack 'cmd /k dir "$WINDIR\System32\WindowsPowerShell\v1.0" >"$TEMP\VulkanRT\Diagnostic2.${un}log"'
-    pop $1
-    LogText "cmd2 rval is $1"
-    
+    # Report the failure
+    LogText "ConfigureRT.exe failed with return code $0"
+
     # Ignore errors
     ClearErrors
 
@@ -375,7 +330,7 @@ Section
     File ${ICOFILE}
     File VULKANRT_LICENSE.RTF
     File /oname=LICENSE.txt ..\COPYRIGHT.txt
-    File ConfigLayersAndVulkanDLL.ps1
+    File Release\ConfigureRT.exe
     StrCpy $1 15
     Call CheckForError
 
@@ -540,7 +495,7 @@ Section
 
     # We are done using ConfigLayersAndVulkanDLL.ps1, delete it. It will be re-installed
     # by the uninstaller when it needs to be run again during uninstall.
-    Delete ConfigLayersAndVulkanDLL.ps1
+    Delete ConfigureRT.exe
 
     # Finish logging and move log file to TEMP dir
     LogSet off
@@ -615,7 +570,7 @@ Section "uninstall"
 
     # Install the ConfigLayersAndVulkanDLL.ps1 so we can run it.
     # It will be deleted later when we remove the install directory.
-    File ConfigLayersAndVulkanDLL.ps1
+    File Release\ConfigureRT.exe
 
     # If running on a 64-bit OS machine
     ${If} ${RunningX64}
@@ -689,7 +644,7 @@ Section "uninstall"
         Delete /REBOOTOK "$IDir\LICENSE.txt"
         Delete /REBOOTOK "$IDir\Uninstall${PRODUCTNAME}.exe"
         Delete /REBOOTOK "$IDir\V.ico"
-        Delete /REBOOTOK "$IDir\ConfigLayersAndVulkanDLL.ps1"
+        Delete /REBOOTOK "$IDir\ConfigureRT.exe"
         Delete /REBOOTOK "$IDir\vulkaninfo.exe"
 
         # If running on a 64-bit OS machine
