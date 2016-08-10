@@ -102,6 +102,7 @@ The Draw State portion of the core validation layer tracks state leading into Dr
 | Enabled Logic Operations  | If logic operations is not enabled, logicOpEnable must be VK_FALSE | DISABLED_LOGIC_OP | vkCreateGraphicsPipelines | ColorBlendLogicOpTests | NA |
 | Valid Logic Operations  | If logicOpEnable is VK_TRUE, logicOp must be a valid VkLogicOp value | INVALID_LOGIC_OP | vkCreateGraphicsPipelines | ColorBlendLogicOpTests | NA |
 | QueueFamilyIndex is Valid | Validates that QueueFamilyIndices are less an the number of QueueFamilies | INVALID_QUEUE_INDEX | vkCmdWaitEvents vkCmdPipelineBarrier vkCreateBuffer vkCreateImage | TODO | Create test |
+| Invalid Queue Family Consistency | Validates that items created in one Queue Family are not submitted using a different one | INVALID_QUEUE_FAMILY | vkCmdExecuteCommands vkQueueSubmit | MismatchedQueueFamiliesOnSubmit |
 | Push Constants | Validate that the size of push constant ranges and updates does not exceed maxPushConstantSize | PUSH_CONSTANTS_ERROR | vkCreatePipelineLayout vkCmdPushConstants | InvalidPushConstants | NA |
 | Attachment Image Usage | Validate that Image attachment location does not conflict with the image's USAGE flags | INVALID_IMAGE_USAGE | vkCreateFramebuffer | FramebufferCreateErrors | NA |
 | Attachment Image Index | Validate that Image attachment references are appropriate and not out-of-bounds | INVALID_ATTACHMENT_INDEX | vkCreateRenderPass vkCreateFramebuffer | UnusedPreserveAttachment | NA |
