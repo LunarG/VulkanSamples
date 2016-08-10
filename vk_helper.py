@@ -1046,7 +1046,7 @@ class StructWrapperGen:
                         sh_funcs.append('    ss[%u].str("");' % index)
             # Now print one-line info for all data members
             index = 0
-            final_str = ''
+            final_str = []
             for m in sorted(self.struct_dict[s]):
                 if not is_type(self.struct_dict[s][m]['type'], 'enum'):
                     if is_type(self.struct_dict[s][m]['type'], 'struct') and not self.struct_dict[s][m]['ptr']:
@@ -1106,12 +1106,12 @@ class StructWrapperGen:
                     # For single enum just print the string representation
                     else:
                         value_print = 'string_%s(pStruct->%s)' % (self.struct_dict[s][m]['type'], self.struct_dict[s][m]['name'])
-                final_str += ' + prefix + "%s = " + %s + "\\n"' % (self.struct_dict[s][m]['name'], value_print)
-            final_str = final_str[3:] # strip off the initial ' + '
+                final_str.append('+ prefix + "%s = " + %s + "\\n"' % (self.struct_dict[s][m]['name'], value_print))
             if 0 != num_stps: # Append data for any embedded structs
-                final_str += " + %s" % " + ".join(['stp_strs[%u]' % n for n in reversed(range(num_stps))])
+                final_str.append("+ %s" % " + ".join(['stp_strs[%u]' % n for n in reversed(range(num_stps))]))
             sh_funcs.append('%s' % lineinfo.get())
-            sh_funcs.append('    final_str = %s;' % final_str)
+            for final_str_part in final_str:
+                sh_funcs.append('    final_str = final_str %s;' % final_str_part)
             sh_funcs.append('    return final_str;\n}')
 
             # End of platform wrapped section

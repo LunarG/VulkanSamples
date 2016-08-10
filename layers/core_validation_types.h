@@ -220,17 +220,17 @@ struct DEVICE_MEM_INFO {
     bool stencil_valid; // TODO: Stores if the stencil memory has valid data or not. The validity of this memory may ultimately need
                         // to be tracked separately from the depth/stencil/buffer memory
     VkDeviceMemory mem;
-    VkMemoryAllocateInfo allocInfo;
-    std::unordered_set<MT_OBJ_HANDLE_TYPE> objBindings;        // objects bound to this memory
-    std::unordered_set<VkCommandBuffer> commandBufferBindings; // cmd buffers referencing this memory
-    std::vector<MEMORY_RANGE> bufferRanges;
-    std::vector<MEMORY_RANGE> imageRanges;
-    VkImage image; // If memory is bound to image, this will have VkImage handle, else VK_NULL_HANDLE
-    MemRange memRange;
-    void *pData, *pDriverData;
+    VkMemoryAllocateInfo alloc_info;
+    std::unordered_set<MT_OBJ_HANDLE_TYPE> obj_bindings;         // objects bound to this memory
+    std::unordered_set<VkCommandBuffer> command_buffer_bindings; // cmd buffers referencing this memory
+    std::vector<MEMORY_RANGE> buffer_ranges;
+    std::vector<MEMORY_RANGE> image_ranges;
+
+    MemRange mem_range;
+    void *p_data, *p_driver_data;
     DEVICE_MEM_INFO(void *disp_object, const VkDeviceMemory in_mem, const VkMemoryAllocateInfo *p_alloc_info)
-        : object(disp_object), valid(false), stencil_valid(false), mem(in_mem), allocInfo(*p_alloc_info),
-          image(VK_NULL_HANDLE), memRange{}, pData(0), pDriverData(0){};
+        : object(disp_object), valid(false), stencil_valid(false), mem(in_mem), alloc_info(*p_alloc_info), mem_range{}, p_data(0),
+          p_driver_data(0){};
 };
 
 class SWAPCHAIN_NODE {
@@ -399,9 +399,9 @@ enum CBStatusFlagBits {
     CBSTATUS_STENCIL_READ_MASK_SET  = 0x00000020,   // Stencil read mask has been set
     CBSTATUS_STENCIL_WRITE_MASK_SET = 0x00000040,   // Stencil write mask has been set
     CBSTATUS_STENCIL_REFERENCE_SET  = 0x00000080,   // Stencil reference has been set
-    CBSTATUS_INDEX_BUFFER_BOUND     = 0x00000100,   // Index buffer has been set
-    CBSTATUS_SCISSOR_SET            = 0x00000200,   // Scissor has been set
-    CBSTATUS_ALL                    = 0x000003FF,   // All dynamic state set
+    CBSTATUS_SCISSOR_SET            = 0x00000100,   // Scissor has been set
+    CBSTATUS_INDEX_BUFFER_BOUND     = 0x00000200,   // Index buffer has been set
+    CBSTATUS_ALL                    = 0x000001FF,   // All dynamic state set (intentionally exclude index buffer)
     // clang-format on
 };
 

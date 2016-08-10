@@ -25,6 +25,7 @@ set BUILD_DIR=%ANDROID_BUILD_DIR%..
 set BASE_DIR=%BUILD_DIR%\external
 set GLSLANG_DIR=%BASE_DIR%\glslang
 set SPIRV_TOOLS_DIR=%BASE_DIR%\spirv-tools
+set SPIRV_HEADERS_DIR=%BASE_DIR%\spirv-tools\external\spirv-headers
 set SHADERC_DIR=%BASE_DIR%\shaderc
 
 for %%X in (where.exe) do (set FOUND=%%~$PATH:X)
@@ -78,6 +79,13 @@ if not exist %ANDROID_BUILD_DIR%\spirv-tools_revision_android (
    goto:error
 )
 
+if not exist %ANDROID_BUILD_DIR%\spirv-headers_revision_android (
+   echo.
+   echo Missing spirv-headers_revision_android file. Place it in %ANDROID_BUILD_DIR%
+   set errorCode=1
+   goto:error
+)
+
 if not exist %ANDROID_BUILD_DIR%\shaderc_revision_android (
    echo.
    echo Missing shaderc_revision_android file. Place it in %ANDROID_BUILD_DIR%
@@ -87,16 +95,19 @@ if not exist %ANDROID_BUILD_DIR%\shaderc_revision_android (
 
 set /p GLSLANG_REVISION= < glslang_revision_android
 set /p SPIRV_TOOLS_REVISION= < spirv-tools_revision_android
+set /p SPIRV_HEADERS_REVISION= < spirv-headers_revision_android
 set /p SHADERC_REVISION= < shaderc_revision_android
 echo GLSLANG_REVISION=%GLSLANG_REVISION%
 echo SPIRV_TOOLS_REVISION=%SPIRV_TOOLS_REVISION%
+echo SPIRV_HEADERS_REVISION=%SPIRV_HEADERS_REVISION%
 echo SHADERC_REVISION=%SHADERC_REVISION%
 
 
-echo Creating and/or updating glslang, spirv-tools, shaderc in %BASE_DIR%
+echo Creating and/or updating glslang, spirv-tools, spirv-headers, shaderc in %BASE_DIR%
 
 set sync-glslang=1
 set sync-spirv-tools=1
+set sync-spirv-headers=1
 set sync-shaderc=1
 set build-shaderc=1
 
@@ -122,6 +133,19 @@ if %sync-spirv-tools% equ 1 (
    )
    if %errorCode% neq 0 (goto:error)
    call:update_spirv-tools
+   if %errorCode% neq 0 (goto:error)
+)
+
+if %sync-spirv-headers% equ 1 (
+   if exist %SPIRV_HEADERS_DIR% (
+      rd /S /Q %SPIRV_HEADERS_DIR%
+   )
+   if %ERRORLEVEL% neq 0 (goto:error)
+   if not exist %SPIRV_HEADERS_DIR% (
+      call:create_spirv-headers
+   )
+   if %errorCode% neq 0 (goto:error)
+   call:update_spirv-headers
    if %errorCode% neq 0 (goto:error)
 )
 
@@ -154,6 +178,8 @@ goto:finish
 :finish
 if not "%cd%\" == "%BUILD_DIR%" ( cd %BUILD_DIR% )
 endlocal
+REM This needs a fix to return error, something like exit %errorCode%
+REM Right now it is returning 0
 goto:eof
 
 
@@ -206,6 +232,31 @@ goto:eof
    git checkout %SPIRV_TOOLS_REVISION%
    if not exist %SPIRV_TOOLS_DIR%\source (
       echo spirv-tools source update failed!
+      set errorCode=1
+   )
+goto:eof
+
+:create_spirv-headers
+   echo.
+   echo Creating local spirv-headers repository %SPIRV_HEADERS_DIR%
+   mkdir %SPIRV_HEADERS_DIR%
+   cd %SPIRV_HEADERS_DIR%
+   git clone https://github.com/KhronosGroup/SPIRV-Headers.git .
+   git checkout %SPIRV_HEADERS_REVISION%
+   if not exist %SPIRV_HEADERS_DIR%\include (
+      echo spirv-headers source download failed!
+      set errorCode=1
+   )
+goto:eof
+
+:update_spirv-headers
+   echo.
+   echo Updating %SPIRV_HEADERS_DIR%
+   cd %SPIRV_HEADERS_DIR%
+   git fetch --all
+   git checkout %SPIRV_HEADERS_REVISION%
+   if not exist %SPIRV_HEADERS_DIR%\include (
+      echo spirv-headers source update failed!
       set errorCode=1
    )
 goto:eof

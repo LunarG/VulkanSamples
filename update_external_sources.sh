@@ -60,6 +60,7 @@ function update_spirv-tools () {
    else
       cd $BASEDIR/spirv-tools/external/spirv-headers
       git fetch --all
+      git checkout master
       git pull
    fi
 }
