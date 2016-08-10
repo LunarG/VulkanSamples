@@ -201,7 +201,7 @@ The VK_LAYER_LUNARG_parameter_validation layer validates parameter values and fl
 | Reserved Parameter | Verifies that a parameter reserved for future use was specified as 0 or NULL | RESERVED_PARAMETER | | ReservedParameter | NA |
 | Unrecognized Value | Verifies that a Vulkan enumeration, VkFlags, or VkBool32 parameter contains a value that is recognized as valid for that type | UNRECOGNIZED_VALUE | | UnrecognizedValue | NA |
 | Device Limit Violation | Verifies that a parameter is within the limits advertised by the gpu | DEVICE_LIMIT | vkUpdateDescriptorSets vkCreateRenderPass | TODO | NA |
-| Device Feature Violation | Verifies that a requested feature is supported by the gpu | DEVICE_FEATURE | vkBeginCommandBuffer | TODO | NA |
+| Device Feature Violation | Verifies that a requested feature is supported by the gpu | DEVICE_FEATURE | vkBeginCommandBuffer vkCreateGraphicsPipelines | PSOPolygonModeInvalid | NA |
 | Failed Call Return Code | Provides a description of a failure code returned by a Vulkan API call | FAILURE_RETURN_CODE | | FailedReturnValue | NA |
 | NA | Enum used for informational messages | NONE | | TODO | None |
 
