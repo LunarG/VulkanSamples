@@ -1993,7 +1993,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         // with width=0 and height=0.
         if (wParam != SIZE_MINIMIZED) {
             demo.width = lParam & 0xffff;
-            demo.height = lParam & 0xffff0000 >> 16;
+            demo.height = (lParam & 0xffff0000) >> 16;
             demo_resize(&demo);
         }
         break;
