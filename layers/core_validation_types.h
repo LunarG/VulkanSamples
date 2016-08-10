@@ -210,6 +210,7 @@ struct MEMORY_RANGE {
     uint64_t handle;
     bool image; // True for image, false for buffer
     bool linear; // True for buffers and linear images
+    bool valid;  // True if this range is know to be valid
     VkDeviceMemory memory;
     VkDeviceSize start;
     VkDeviceSize size;
@@ -221,7 +222,8 @@ struct MEMORY_RANGE {
 // Data struct for tracking memory object
 struct DEVICE_MEM_INFO {
     void *object; // Dispatchable object used to create this memory (device of swapchain)
-    bool valid; // Stores if the color/depth/buffer memory has valid data or not
+    // bool valid; // Stores if the color/depth/buffer memory has valid data or not
+    // TODO : What to do with this guy in migrating valid to range?
     bool stencil_valid; // TODO: Stores if the stencil memory has valid data or not. The validity of this memory may ultimately need
                         // to be tracked separately from the depth/stencil/buffer memory
     VkDeviceMemory mem;
@@ -236,7 +238,7 @@ struct DEVICE_MEM_INFO {
     MemRange mem_range;
     void *p_data, *p_driver_data;
     DEVICE_MEM_INFO(void *disp_object, const VkDeviceMemory in_mem, const VkMemoryAllocateInfo *p_alloc_info)
-        : object(disp_object), valid(false), stencil_valid(false), mem(in_mem), alloc_info(*p_alloc_info), mem_range{}, p_data(0),
+        : object(disp_object), stencil_valid(false), mem(in_mem), alloc_info(*p_alloc_info), mem_range{}, p_data(0),
           p_driver_data(0){};
 };
 
