@@ -5332,7 +5332,7 @@ static bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *rang
 static bool InsertMemoryRange(layer_data const *dev_data, uint64_t handle, DEVICE_MEM_INFO *mem_info, VkDeviceSize memoryOffset,
                               VkMemoryRequirements memRequirements, bool is_image, bool is_linear) {
     bool skip_call = false;
-    MEMORY_RANGE range; // range to be inserted and returned
+    MEMORY_RANGE range;
 
     range.image = is_image;
     range.handle = handle;
@@ -5341,17 +5341,24 @@ static bool InsertMemoryRange(layer_data const *dev_data, uint64_t handle, DEVIC
     range.start = memoryOffset;
     range.size = memRequirements.size;
     range.end = memoryOffset + memRequirements.size - 1;
-    // Update Memory aliasing prior to inserting new range
+    range.aliases.clear();
+    // Update Memory aliasing
+    // Save aliase ranges so we can copy into final map entry below. Can't do it in loop b/c we don't yet have final ptr. If we
+    // inserted into map before loop to get the final ptr, then we may enter loop when not needed & we check range against itself
+    std::unordered_set<MEMORY_RANGE *> tmp_alias_ranges;
     for (auto &obj_range_pair : mem_info->bound_ranges) {
-        bool intersection_error = false;
         auto check_range = &obj_range_pair.second;
+        bool intersection_error = false;
         if (rangesIntersect(dev_data, &range, check_range, intersection_error)) {
             skip_call |= intersection_error;
             range.aliases.insert(check_range);
-            check_range->aliases.insert(&range);
+            tmp_alias_ranges.insert(check_range);
         }
     }
-    mem_info->bound_ranges[handle] = range;
+    mem_info->bound_ranges[handle] = std::move(range);
+    for (auto tmp_range : tmp_alias_ranges) {
+        tmp_range->aliases.insert(&mem_info->bound_ranges[handle]);
+    }
     if (is_image)
         mem_info->bound_images.insert(handle);
     else
@@ -5378,8 +5385,8 @@ static void RemoveMemoryRange(uint64_t handle, DEVICE_MEM_INFO *mem_info, bool i
     auto erase_range = &mem_info->bound_ranges[handle];
     for (auto alias_range : erase_range->aliases) {
         alias_range->aliases.erase(erase_range);
-        erase_range->aliases.erase(alias_range);
     }
+    erase_range->aliases.clear();
     mem_info->bound_ranges.erase(handle);
     if (is_image)
         mem_info->bound_images.erase(handle);
