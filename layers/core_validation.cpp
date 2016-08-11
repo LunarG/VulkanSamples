@@ -5384,14 +5384,14 @@ static bool InsertMemoryRange(layer_data const *dev_data, uint64_t handle, DEVIC
     return skip_call;
 }
 
-static bool InsertImageMemoryRange(layer_data const *dev_data, uint64_t handle, DEVICE_MEM_INFO *mem_info, VkDeviceSize mem_offset,
+static bool InsertImageMemoryRange(layer_data const *dev_data, VkImage image, DEVICE_MEM_INFO *mem_info, VkDeviceSize mem_offset,
                                    VkMemoryRequirements mem_reqs, bool is_linear) {
-    return InsertMemoryRange(dev_data, handle, mem_info, mem_offset, mem_reqs, true, is_linear);
+    return InsertMemoryRange(dev_data, reinterpret_cast<uint64_t &>(image), mem_info, mem_offset, mem_reqs, true, is_linear);
 }
 
-static bool InsertBufferMemoryRange(layer_data const *dev_data, uint64_t handle, DEVICE_MEM_INFO *mem_info, VkDeviceSize mem_offset,
+static bool InsertBufferMemoryRange(layer_data const *dev_data, VkBuffer buffer, DEVICE_MEM_INFO *mem_info, VkDeviceSize mem_offset,
                                     VkMemoryRequirements mem_reqs) {
-    return InsertMemoryRange(dev_data, handle, mem_info, mem_offset, mem_reqs, false, true);
+    return InsertMemoryRange(dev_data, reinterpret_cast<uint64_t &>(buffer), mem_info, mem_offset, mem_reqs, false, true);
 }
 
 // Remove MEMORY_RANGE struct for give handle from bound_ranges of mem_info
@@ -5500,7 +5500,7 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     std::unique_lock<std::mutex> lock(global_lock);
     // Track objects tied to memory
-    uint64_t buffer_handle = (uint64_t)(buffer);
+    uint64_t buffer_handle = reinterpret_cast<uint64_t &>(buffer);
     bool skip_call = set_mem_binding(dev_data, mem, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory");
     auto buffer_node = getBufferNode(dev_data, buffer);
     if (buffer_node) {
@@ -5513,7 +5513,7 @@ BindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceS
         // Track and validate bound memory range information
         auto mem_info = getMemObjInfo(dev_data, mem);
         if (mem_info) {
-            skip_call |= InsertBufferMemoryRange(dev_data, buffer_handle, mem_info, memoryOffset, memRequirements);
+            skip_call |= InsertBufferMemoryRange(dev_data, buffer, mem_info, memoryOffset, memRequirements);
             skip_call |= ValidateMemoryTypes(dev_data, mem_info, memRequirements.memoryTypeBits, "BindBufferMemory");
         }
 
@@ -10386,7 +10386,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BindImageMemory(VkDevice device, VkImage image, V
         // Track and validate bound memory range information
         auto mem_info = getMemObjInfo(dev_data, mem);
         if (mem_info) {
-            skip_call |= InsertImageMemoryRange(dev_data, image_handle, mem_info, memoryOffset, memRequirements,
+            skip_call |= InsertImageMemoryRange(dev_data, image, mem_info, memoryOffset, memRequirements,
                                                 image_node->createInfo.tiling == VK_IMAGE_TILING_LINEAR);
             skip_call |= ValidateMemoryTypes(dev_data, mem_info, memRequirements.memoryTypeBits, "vkBindImageMemory");
         }
