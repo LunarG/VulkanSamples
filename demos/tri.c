@@ -2418,7 +2418,7 @@ static void demo_init_connection(struct demo *demo) {
     int scr;
 
     demo->connection = xcb_connect(NULL, &scr);
-    if (demo->connection == NULL) {
+    if (xcb_connection_has_error(demo->connection) > 0) {
         printf("Cannot find a compatible Vulkan installable client driver "
                "(ICD).\nExiting ...\n");
         fflush(stdout);
