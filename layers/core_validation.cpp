@@ -7404,10 +7404,10 @@ CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
         skip_call |= addCommandBufferBindingImage(dev_data, cb_node, src_img_node, "vkCmdCopyImage()");
         skip_call |= addCommandBufferBindingImage(dev_data, cb_node, dst_img_node, "vkCmdCopyImage()");
         // Validate that SRC & DST images have correct usage flags set
-        skip_call |= validateImageUsageFlags(dev_data, src_img_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, "vkCmdCopyImage()",
-                                             "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
-        skip_call |= validateImageUsageFlags(dev_data, dst_img_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, "vkCmdCopyImage()",
-                                             "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+        skip_call |= validateImageUsageFlags(dev_data, src_img_node, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true, "vkCmdCopyImage()",
+                                             "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
+        skip_call |= validateImageUsageFlags(dev_data, dst_img_node, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true, "vkCmdCopyImage()",
+                                             "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             return validate_memory_is_valid(dev_data, src_img_node->mem, "vkCmdCopyImage()", srcImage);
         };
@@ -7450,10 +7450,10 @@ CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
         skip_call |= addCommandBufferBindingImage(dev_data, cb_node, src_img_node, "vkCmdBlitImage()");
         skip_call |= addCommandBufferBindingImage(dev_data, cb_node, dst_img_node, "vkCmdBlitImage()");
         // Validate that SRC & DST images have correct usage flags set
-        skip_call |= validateImageUsageFlags(dev_data, src_img_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true, "vkCmdBlitImage()",
-                                             "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
-        skip_call |= validateImageUsageFlags(dev_data, dst_img_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, "vkCmdBlitImage()",
-                                             "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+        skip_call |= validateImageUsageFlags(dev_data, src_img_node, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true, "vkCmdBlitImage()",
+                                             "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
+        skip_call |= validateImageUsageFlags(dev_data, dst_img_node, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true, "vkCmdBlitImage()",
+                                             "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             return validate_memory_is_valid(dev_data, src_img_node->mem, "vkCmdBlitImage()", srcImage);
         };
@@ -7492,8 +7492,8 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
         skip_call |= addCommandBufferBindingImage(dev_data, cb_node, dst_img_node, "vkCmdCopyBufferToImage()");
         skip_call |= validateBufferUsageFlags(dev_data, src_buff_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true,
                                               "vkCmdCopyBufferToImage()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
-        skip_call |= validateImageUsageFlags(dev_data, dst_img_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
-                                             "vkCmdCopyBufferToImage()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
+        skip_call |= validateImageUsageFlags(dev_data, dst_img_node, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true,
+                                             "vkCmdCopyBufferToImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
             set_memory_valid(dev_data, dst_img_node->mem, true, dstImage);
             return false;
@@ -7533,8 +7533,8 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
         skip_call |= addCommandBufferBindingImage(dev_data, cb_node, src_img_node, "vkCmdCopyImageToBuffer()");
         skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, dst_buff_node, "vkCmdCopyImageToBuffer()");
         // Validate that SRC image & DST buffer have correct usage flags set
-        skip_call |= validateImageUsageFlags(dev_data, src_img_node, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true,
-                                             "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
+        skip_call |= validateImageUsageFlags(dev_data, src_img_node, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, true,
+                                             "vkCmdCopyImageToBuffer()", "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
         skip_call |= validateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
                                               "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
