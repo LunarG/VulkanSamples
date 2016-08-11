@@ -449,44 +449,60 @@ static void add_mem_obj_info(layer_data *my_data, void *object, const VkDeviceMe
     my_data->memObjMap[mem] = unique_ptr<DEVICE_MEM_INFO>(new DEVICE_MEM_INFO(object, mem, pAllocateInfo));
 }
 // For given bound_object_handle, bound to given mem allocation, verify that the range for the bound object is valid
-static bool validate_memory_is_valid(layer_data *dev_data, VkDeviceMemory mem, uint64_t bound_object_handle,
-                                     const char *functionName) {
-    if (mem == MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
-        auto const image_node = getImageNode(dev_data, reinterpret_cast<VkImage &>(bound_object_handle));
-        if (image_node && !image_node->valid) {
+static bool ValidateMemoryIsValid(layer_data *dev_data, VkDeviceMemory mem, uint64_t bound_object_handle,
+                                  const char *functionName) {
+    DEVICE_MEM_INFO *mem_info = getMemObjInfo(dev_data, mem);
+    if (mem_info) {
+        if (!mem_info->bound_ranges[bound_object_handle].valid) {
             return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                           (uint64_t)(mem), __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
-                           "%s: Cannot read invalid swapchain image 0x%" PRIx64 ", please fill the memory before using.",
-                           functionName, bound_object_handle);
-        }
-    } else {
-        DEVICE_MEM_INFO *p_mem_obj = getMemObjInfo(dev_data, mem);
-        if (p_mem_obj) {
-            if (!p_mem_obj->bound_ranges[bound_object_handle].valid) {
-                return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                               (uint64_t)(mem), __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
-                               "%s: Cannot read invalid memory 0x%" PRIx64 ", please fill the memory before using.", functionName,
-                               (uint64_t)(mem));
-            }
+                           reinterpret_cast<uint64_t &>(mem), __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
+                           "%s: Cannot read invalid memory 0x%" PRIx64 ", please fill the memory before using.", functionName,
+                           reinterpret_cast<uint64_t &>(mem));
         }
     }
     return false;
 }
-// For the given bound_object_handle, bound to the given mem allocation, set its bound_range valid state to the valid param
-static void set_memory_valid(layer_data *dev_data, VkDeviceMemory mem, uint64_t bound_object_handle, bool valid) {
-    if (mem == MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
-        auto image_node = getImageNode(dev_data, reinterpret_cast<VkImage &>(bound_object_handle));
-        if (image_node) {
-            image_node->valid = valid;
+// For given image_node
+//  If mem is special swapchain key, then verify that image_node valid member is true
+//  Else verify that the image's bound memory range is valid
+static bool ValidateImageMemoryIsValid(layer_data *dev_data, IMAGE_NODE *image_node, const char *functionName) {
+    if (image_node->mem == MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
+        if (!image_node->valid) {
+            return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                           reinterpret_cast<uint64_t &>(image_node->mem), __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
+                           "%s: Cannot read invalid swapchain image 0x%" PRIx64 ", please fill the memory before using.",
+                           functionName, reinterpret_cast<uint64_t &>(image_node->image));
         }
     } else {
-        DEVICE_MEM_INFO *p_mem_obj = getMemObjInfo(dev_data, mem);
-        if (p_mem_obj) {
-            p_mem_obj->bound_ranges[bound_object_handle].valid = valid;
-        }
+        return ValidateMemoryIsValid(dev_data, image_node->mem, reinterpret_cast<uint64_t &>(image_node->image), functionName);
+    }
+    return false;
+}
+// For given buffer_node, verify that the range it's bound to is valid
+static bool ValidateBufferMemoryIsValid(layer_data *dev_data, BUFFER_NODE *buffer_node, const char *functionName) {
+    return ValidateMemoryIsValid(dev_data, buffer_node->mem, reinterpret_cast<uint64_t &>(buffer_node->buffer), functionName);
+}
+// For the given memory allocation, set the range bound by the given handle object to the valid param value
+static void SetMemoryValid(layer_data *dev_data, VkDeviceMemory mem, uint64_t handle, bool valid) {
+    DEVICE_MEM_INFO *mem_info = getMemObjInfo(dev_data, mem);
+    if (mem_info) {
+        mem_info->bound_ranges[handle].valid = valid;
     }
 }
-
+// For given image node
+//  If mem is special swapchain key, then set entire image_node to valid param value
+//  Else set the image's bound memory range to valid param value
+static void SetImageMemoryValid(layer_data *dev_data, IMAGE_NODE *image_node, bool valid) {
+    if (image_node->mem == MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
+        image_node->valid = valid;
+    } else {
+        SetMemoryValid(dev_data, image_node->mem, reinterpret_cast<uint64_t &>(image_node->image), valid);
+    }
+}
+// For given buffer node set the buffer's bound memory range to valid param value
+static void SetBufferMemoryValid(layer_data *dev_data, BUFFER_NODE *buffer_node, bool valid) {
+    SetMemoryValid(dev_data, buffer_node->mem, reinterpret_cast<uint64_t &>(buffer_node->buffer), valid);
+}
 // Find CB Info and add mem reference to list container
 // Find Mem Obj Info and add CB reference to list container
 static bool update_cmd_buf_and_mem_references(layer_data *dev_data, const VkCommandBuffer cb, const VkDeviceMemory mem,
@@ -7099,8 +7115,7 @@ CmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize 
     if (cb_node && buff_node) {
         skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buff_node, "vkCmdBindIndexBuffer()");
         std::function<bool()> function = [=]() {
-            return validate_memory_is_valid(dev_data, buff_node->mem, reinterpret_cast<const uint64_t &>(buffer),
-                                            "vkCmdBindIndexBuffer()");
+            return ValidateBufferMemoryIsValid(dev_data, buff_node, "vkCmdBindIndexBuffer()");
         };
         cb_node->validate_functions.push_back(function);
         skip_call |= addCmd(dev_data, cb_node, CMD_BINDINDEXBUFFER, "vkCmdBindIndexBuffer()");
@@ -7158,8 +7173,7 @@ VKAPI_ATTR void VKAPI_CALL CmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
             assert(buff_node);
             skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buff_node, "vkCmdBindVertexBuffers()");
             std::function<bool()> function = [=]() {
-                return validate_memory_is_valid(dev_data, buff_node->mem, reinterpret_cast<const uint64_t &>(pBuffers[i]),
-                                                "vkCmdBindVertexBuffers()");
+                return ValidateBufferMemoryIsValid(dev_data, buff_node, "vkCmdBindVertexBuffers()");
             };
             cb_node->validate_functions.push_back(function);
         }
@@ -7185,7 +7199,7 @@ static bool markStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_N
         auto img_node = getImageNode(dev_data, iv_data->image);
         assert(img_node);
         std::function<bool()> function = [=]() {
-            set_memory_valid(dev_data, img_node->mem, reinterpret_cast<uint64_t &>(iv_data->image), true);
+            SetImageMemoryValid(dev_data, img_node, true);
             return false;
         };
         pCB->validate_functions.push_back(function);
@@ -7194,7 +7208,7 @@ static bool markStoreImagesAndBuffersAsWritten(layer_data *dev_data, GLOBAL_CB_N
         auto buff_node = getBufferNode(dev_data, buffer);
         assert(buff_node);
         std::function<bool()> function = [=]() {
-            set_memory_valid(dev_data, buff_node->mem, reinterpret_cast<uint64_t &>(buff_node->buffer), true);
+            SetBufferMemoryValid(dev_data, buff_node, true);
             return false;
         };
         pCB->validate_functions.push_back(function);
@@ -7380,12 +7394,11 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
                                               "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
 
         std::function<bool()> function = [=]() {
-            return validate_memory_is_valid(dev_data, src_buff_node->mem, reinterpret_cast<const uint64_t &>(srcBuffer),
-                                            "vkCmdCopyBuffer()");
+            return ValidateBufferMemoryIsValid(dev_data, src_buff_node, "vkCmdCopyBuffer()");
         };
         cb_node->validate_functions.push_back(function);
         function = [=]() {
-            set_memory_valid(dev_data, dst_buff_node->mem, reinterpret_cast<const uint64_t &>(dstBuffer), true);
+            SetBufferMemoryValid(dev_data, dst_buff_node, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);
@@ -7502,13 +7515,10 @@ CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
                                              "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
         skip_call |= ValidateImageUsageFlags(dev_data, dst_img_node, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true, "vkCmdCopyImage()",
                                              "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
-        std::function<bool()> function = [=]() {
-            return validate_memory_is_valid(dev_data, src_img_node->mem, reinterpret_cast<const uint64_t &>(srcImage),
-                                            "vkCmdCopyImage()");
-        };
+        std::function<bool()> function = [=]() { return ValidateImageMemoryIsValid(dev_data, src_img_node, "vkCmdCopyImage()"); };
         cb_node->validate_functions.push_back(function);
         function = [=]() {
-            set_memory_valid(dev_data, dst_img_node->mem, reinterpret_cast<const uint64_t &>(dstImage), true);
+            SetImageMemoryValid(dev_data, dst_img_node, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);
@@ -7549,13 +7559,10 @@ CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
                                              "VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
         skip_call |= ValidateImageUsageFlags(dev_data, dst_img_node, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true, "vkCmdBlitImage()",
                                              "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
-        std::function<bool()> function = [=]() {
-            return validate_memory_is_valid(dev_data, src_img_node->mem, reinterpret_cast<const uint64_t &>(srcImage),
-                                            "vkCmdBlitImage()");
-        };
+        std::function<bool()> function = [=]() { return ValidateImageMemoryIsValid(dev_data, src_img_node, "vkCmdBlitImage()"); };
         cb_node->validate_functions.push_back(function);
         function = [=]() {
-            set_memory_valid(dev_data, dst_img_node->mem, reinterpret_cast<const uint64_t &>(dstImage), true);
+            SetImageMemoryValid(dev_data, dst_img_node, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);
@@ -7591,14 +7598,11 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
         skip_call |= ValidateImageUsageFlags(dev_data, dst_img_node, VK_IMAGE_USAGE_TRANSFER_DST_BIT, true,
                                              "vkCmdCopyBufferToImage()", "VK_IMAGE_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
-            set_memory_valid(dev_data, dst_img_node->mem, reinterpret_cast<const uint64_t &>(dstImage), true);
+            SetImageMemoryValid(dev_data, dst_img_node, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);
-        function = [=]() {
-            return validate_memory_is_valid(dev_data, src_buff_node->mem, reinterpret_cast<const uint64_t &>(srcBuffer),
-                                            "vkCmdCopyBufferToImage()");
-        };
+        function = [=]() { return ValidateBufferMemoryIsValid(dev_data, src_buff_node, "vkCmdCopyBufferToImage()"); };
         cb_node->validate_functions.push_back(function);
 
         skip_call |= addCmd(dev_data, cb_node, CMD_COPYBUFFERTOIMAGE, "vkCmdCopyBufferToImage()");
@@ -7637,12 +7641,11 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
         skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
                                               "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
-            return validate_memory_is_valid(dev_data, src_img_node->mem, reinterpret_cast<const uint64_t &>(srcImage),
-                                            "vkCmdCopyImageToBuffer()");
+            return ValidateImageMemoryIsValid(dev_data, src_img_node, "vkCmdCopyImageToBuffer()");
         };
         cb_node->validate_functions.push_back(function);
         function = [=]() {
-            set_memory_valid(dev_data, dst_buff_node->mem, reinterpret_cast<const uint64_t &>(dstBuffer), true);
+            SetBufferMemoryValid(dev_data, dst_buff_node, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);
@@ -7677,7 +7680,7 @@ VKAPI_ATTR void VKAPI_CALL CmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
         skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
                                               "vkCmdUpdateBuffer()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
-            set_memory_valid(dev_data, dst_buff_node->mem, reinterpret_cast<const uint64_t &>(dstBuffer), true);
+            SetBufferMemoryValid(dev_data, dst_buff_node, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);
@@ -7708,7 +7711,7 @@ CmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize ds
         skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true, "vkCmdFillBuffer()",
                                               "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
-            set_memory_valid(dev_data, dst_buff_node->mem, reinterpret_cast<const uint64_t &>(dstBuffer), true);
+            SetBufferMemoryValid(dev_data, dst_buff_node, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);
@@ -7807,7 +7810,7 @@ VKAPI_ATTR void VKAPI_CALL CmdClearColorImage(VkCommandBuffer commandBuffer, VkI
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, img_node, "vkCmdClearColorImage()");
         skip_call |= addCommandBufferBindingImage(dev_data, cb_node, img_node, "vkCmdClearColorImage()");
         std::function<bool()> function = [=]() {
-            set_memory_valid(dev_data, img_node->mem, reinterpret_cast<const uint64_t &>(image), true);
+            SetImageMemoryValid(dev_data, img_node, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);
@@ -7837,7 +7840,7 @@ CmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageL
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, img_node, "vkCmdClearDepthStencilImage()");
         skip_call |= addCommandBufferBindingImage(dev_data, cb_node, img_node, "vkCmdClearDepthStencilImage()");
         std::function<bool()> function = [=]() {
-            set_memory_valid(dev_data, img_node->mem, reinterpret_cast<const uint64_t &>(image), true);
+            SetImageMemoryValid(dev_data, img_node, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);
@@ -7870,12 +7873,11 @@ CmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout s
         skip_call |= addCommandBufferBindingImage(dev_data, cb_node, src_img_node, "vkCmdCopyImage()");
         skip_call |= addCommandBufferBindingImage(dev_data, cb_node, dst_img_node, "vkCmdCopyImage()");
         std::function<bool()> function = [=]() {
-            return validate_memory_is_valid(dev_data, src_img_node->mem, reinterpret_cast<const uint64_t &>(srcImage),
-                                            "vkCmdResolveImage()");
+            return ValidateImageMemoryIsValid(dev_data, src_img_node, "vkCmdResolveImage()");
         };
         cb_node->validate_functions.push_back(function);
         function = [=]() {
-            set_memory_valid(dev_data, dst_img_node->mem, reinterpret_cast<const uint64_t &>(dstImage), true);
+            SetImageMemoryValid(dev_data, dst_img_node, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);
@@ -8560,7 +8562,7 @@ CmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, ui
         skip_call |= ValidateBufferUsageFlags(dev_data, dst_buff_node, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true,
                                               "vkCmdCopyQueryPoolResults()", "VK_BUFFER_USAGE_TRANSFER_DST_BIT");
         std::function<bool()> function = [=]() {
-            set_memory_valid(dev_data, dst_buff_node->mem, reinterpret_cast<const uint64_t &>(dstBuffer), true);
+            SetBufferMemoryValid(dev_data, dst_buff_node, true);
             return false;
         };
         cb_node->validate_functions.push_back(function);
@@ -9743,7 +9745,7 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                                                          VK_ATTACHMENT_LOAD_OP_CLEAR)) {
                     clear_op_size = static_cast<uint32_t>(i) + 1;
                     std::function<bool()> function = [=]() {
-                        set_memory_valid(dev_data, fb_info.mem, reinterpret_cast<const uint64_t &>(fb_info.image), true);
+                        SetImageMemoryValid(dev_data, getImageNode(dev_data, fb_info.image), true);
                         return false;
                     };
                     pCB->validate_functions.push_back(function);
@@ -9751,7 +9753,7 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                                                                 renderPass->attachments[i].stencil_load_op,
                                                                 VK_ATTACHMENT_LOAD_OP_DONT_CARE)) {
                     std::function<bool()> function = [=]() {
-                        set_memory_valid(dev_data, fb_info.mem, reinterpret_cast<const uint64_t &>(fb_info.image), false);
+                        SetImageMemoryValid(dev_data, getImageNode(dev_data, fb_info.image), false);
                         return false;
                     };
                     pCB->validate_functions.push_back(function);
@@ -9759,15 +9761,15 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                                                                 renderPass->attachments[i].stencil_load_op,
                                                                 VK_ATTACHMENT_LOAD_OP_LOAD)) {
                     std::function<bool()> function = [=]() {
-                        return validate_memory_is_valid(dev_data, fb_info.mem, reinterpret_cast<const uint64_t &>(fb_info.image),
-                                                        "vkCmdBeginRenderPass()");
+                        return ValidateImageMemoryIsValid(dev_data, getImageNode(dev_data, fb_info.image),
+                                                          "vkCmdBeginRenderPass()");
                     };
                     pCB->validate_functions.push_back(function);
                 }
                 if (renderPass->attachment_first_read[renderPass->attachments[i].attachment]) {
                     std::function<bool()> function = [=]() {
-                        return validate_memory_is_valid(dev_data, fb_info.mem, reinterpret_cast<const uint64_t &>(fb_info.image),
-                                                        "vkCmdBeginRenderPass()");
+                        return ValidateImageMemoryIsValid(dev_data, getImageNode(dev_data, fb_info.image),
+                                                          "vkCmdBeginRenderPass()");
                     };
                     pCB->validate_functions.push_back(function);
                 }
@@ -9847,7 +9849,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
                 if (FormatSpecificLoadAndStoreOpSettings(format, pRPNode->attachments[i].store_op,
                                                          pRPNode->attachments[i].stencil_store_op, VK_ATTACHMENT_STORE_OP_STORE)) {
                     std::function<bool()> function = [=]() {
-                        set_memory_valid(dev_data, fb_info.mem, reinterpret_cast<const uint64_t &>(fb_info.image), true);
+                        SetImageMemoryValid(dev_data, getImageNode(dev_data, fb_info.image), true);
                         return false;
                     };
                     pCB->validate_functions.push_back(function);
@@ -9855,7 +9857,7 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
                                                                 pRPNode->attachments[i].stencil_store_op,
                                                                 VK_ATTACHMENT_STORE_OP_DONT_CARE)) {
                     std::function<bool()> function = [=]() {
-                        set_memory_valid(dev_data, fb_info.mem, reinterpret_cast<const uint64_t &>(fb_info.image), false);
+                        SetImageMemoryValid(dev_data, getImageNode(dev_data, fb_info.image), false);
                         return false;
                     };
                     pCB->validate_functions.push_back(function);
@@ -10672,8 +10674,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
         auto swapchain_data = getSwapchainNode(dev_data, pPresentInfo->pSwapchains[i]);
         if (swapchain_data && pPresentInfo->pImageIndices[i] < swapchain_data->images.size()) {
             VkImage image = swapchain_data->images[pPresentInfo->pImageIndices[i]];
-            skip_call |= validate_memory_is_valid(dev_data, getImageNode(dev_data, image)->mem, reinterpret_cast<uint64_t &>(image),
-                                                  "vkQueuePresentKHR()");
+            skip_call |= ValidateImageMemoryIsValid(dev_data, getImageNode(dev_data, image), "vkQueuePresentKHR()");
             vector<VkImageLayout> layouts;
             if (FindLayouts(dev_data, image, layouts)) {
                 for (auto layout : layouts) {
