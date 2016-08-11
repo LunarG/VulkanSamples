@@ -138,14 +138,14 @@ bool ValidateGreaterThan(debug_report_data *report_data, const char *api_name, c
  */
 static bool validate_required_pointer(debug_report_data *report_data, const char *apiName, const char *parameterName,
                                       const void *value) {
-    bool skipCall = false;
+    bool skip_call = false;
 
     if (value == NULL) {
-        skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                             REQUIRED_PARAMETER, LayerName, "%s: required parameter %s specified as NULL", apiName, parameterName);
     }
 
-    return skipCall;
+    return skip_call;
 }
 
 /**
@@ -168,21 +168,21 @@ static bool validate_required_pointer(debug_report_data *report_data, const char
 template <typename T>
 bool validate_array(debug_report_data *report_data, const char *apiName, const char *countName, const char *arrayName, T count,
                     const void *array, bool countRequired, bool arrayRequired) {
-    bool skipCall = false;
+    bool skip_call = false;
 
     // Count parameters not tagged as optional cannot be 0
     if ((count == 0) && countRequired) {
-        skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                             REQUIRED_PARAMETER, LayerName, "%s: parameter %s must be greater than 0", apiName, countName);
     }
 
     // Array parameters not tagged as optional cannot be NULL, unless the count is 0
     if ((array == NULL) && arrayRequired && (count != 0)) {
-        skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                             REQUIRED_PARAMETER, LayerName, "%s: required parameter %s specified as NULL", apiName, arrayName);
     }
 
-    return skipCall;
+    return skip_call;
 }
 
 /**
@@ -208,19 +208,19 @@ bool validate_array(debug_report_data *report_data, const char *apiName, const c
 template <typename T>
 bool validate_array(debug_report_data *report_data, const char *apiName, const char *countName, const char *arrayName,
     const T *count, const void *array, bool countPtrRequired, bool countValueRequired, bool arrayRequired) {
-    bool skipCall = false;
+    bool skip_call = false;
 
     if (count == NULL) {
         if (countPtrRequired) {
-            skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                 REQUIRED_PARAMETER, LayerName, "%s: required parameter %s specified as NULL", apiName, countName);
         }
     }
     else {
-        skipCall |= validate_array(report_data, apiName, countName, arrayName, (*count), array, countValueRequired, arrayRequired);
+        skip_call |= validate_array(report_data, apiName, countName, arrayName, (*count), array, countValueRequired, arrayRequired);
     }
 
-    return skipCall;
+    return skip_call;
 }
 
 /**
@@ -242,21 +242,21 @@ bool validate_array(debug_report_data *report_data, const char *apiName, const c
 template <typename T>
 bool validate_struct_type(debug_report_data *report_data, const char *apiName, const char *parameterName, const char *sTypeName,
                           const T *value, VkStructureType sType, bool required) {
-    bool skipCall = false;
+    bool skip_call = false;
 
     if (value == NULL) {
         if (required) {
-            skipCall |=
+            skip_call |=
                 log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                         REQUIRED_PARAMETER, LayerName, "%s: required parameter %s specified as NULL", apiName, parameterName);
         }
     } else if (value->sType != sType) {
-        skipCall |=
+        skip_call |=
             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                     INVALID_STRUCT_STYPE, LayerName, "%s: parameter %s->sType must be %s", apiName, parameterName, sTypeName);
     }
 
-    return skipCall;
+    return skip_call;
 }
 
 /**
@@ -284,19 +284,19 @@ template <typename T>
 bool validate_struct_type_array(debug_report_data *report_data, const char *apiName, const char *countName, const char *arrayName,
                                 const char *sTypeName, const uint32_t *count, const T *array, VkStructureType sType,
                                 bool countPtrRequired, bool countValueRequired, bool arrayRequired) {
-    bool skipCall = false;
+    bool skip_call = false;
 
     if (count == NULL) {
         if (countPtrRequired) {
-            skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+            skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                                 REQUIRED_PARAMETER, LayerName, "%s: required parameter %s specified as NULL", apiName, countName);
         }
     } else {
-        skipCall |= validate_struct_type_array(report_data, apiName, countName, arrayName, sTypeName, (*count), array, sType,
+        skip_call |= validate_struct_type_array(report_data, apiName, countName, arrayName, sTypeName, (*count), array, sType,
                                                countValueRequired, arrayRequired);
     }
 
-    return skipCall;
+    return skip_call;
 }
 
 /**
@@ -322,22 +322,22 @@ template <typename T>
 bool validate_struct_type_array(debug_report_data *report_data, const char *apiName, const char *countName, const char *arrayName,
                                 const char *sTypeName, uint32_t count, const T *array, VkStructureType sType, bool countRequired,
                                 bool arrayRequired) {
-    bool skipCall = false;
+    bool skip_call = false;
 
     if ((count == 0) || (array == NULL)) {
-        skipCall |= validate_array(report_data, apiName, countName, arrayName, count, array, countRequired, arrayRequired);
+        skip_call |= validate_array(report_data, apiName, countName, arrayName, count, array, countRequired, arrayRequired);
     } else {
         // Verify that all structs in the array have the correct type
         for (uint32_t i = 0; i < count; ++i) {
             if (array[i].sType != sType) {
-                skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                     __LINE__, INVALID_STRUCT_STYPE, LayerName, "%s: parameter %s[%d].sType must be %s", apiName,
                                     arrayName, i, sTypeName);
             }
         }
     }
 
-    return skipCall;
+    return skip_call;
 }
 
 /**
@@ -427,22 +427,22 @@ bool validate_handle_array(debug_report_data *report_data, const char *api_name,
  */
 static bool validate_string_array(debug_report_data *report_data, const char *apiName, const char *countName, const char *arrayName,
                                   uint32_t count, const char *const *array, bool countRequired, bool arrayRequired) {
-    bool skipCall = false;
+    bool skip_call = false;
 
     if ((count == 0) || (array == NULL)) {
-        skipCall |= validate_array(report_data, apiName, countName, arrayName, count, array, countRequired, arrayRequired);
+        skip_call |= validate_array(report_data, apiName, countName, arrayName, count, array, countRequired, arrayRequired);
     } else {
         // Verify that strings in the array are not NULL
         for (uint32_t i = 0; i < count; ++i) {
             if (array[i] == NULL) {
-                skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                     __LINE__, REQUIRED_PARAMETER, LayerName, "%s: required parameter %s[%d] specified as NULL",
                                     apiName, arrayName, i);
             }
         }
     }
 
-    return skipCall;
+    return skip_call;
 }
 
 /**
@@ -525,15 +525,15 @@ static bool validate_struct_pnext(debug_report_data *report_data, const char *ap
 * @return Boolean value indicating that the call should be skipped.
 */
 static bool validate_bool32(debug_report_data *report_data, const char *apiName, const char *parameterName, VkBool32 value) {
-    bool skipCall = false;
+    bool skip_call = false;
 
     if ((value != VK_TRUE) && (value != VK_FALSE)) {
-        skipCall |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+        skip_call |= log_msg(report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                             UNRECOGNIZED_VALUE, LayerName, "%s: value of %s (%d) is neither VK_TRUE nor VK_FALSE", apiName,
                             parameterName, value);
     }
 
-    return skipCall;
+    return skip_call;
 }
 
 /**
@@ -558,17 +558,17 @@ static bool validate_bool32(debug_report_data *report_data, const char *apiName,
 template <typename T>
 bool validate_ranged_enum(debug_report_data *report_data, const char *apiName, const char *parameterName, const char *enumName,
                           T begin, T end, T value) {
-    bool skipCall = false;
+    bool skip_call = false;
 
     if (((value < begin) || (value > end)) && !is_extension_added_token(value)) {
-        skipCall |=
+        skip_call |=
             log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
                     UNRECOGNIZED_VALUE, LayerName, "%s: value of %s (%d) does not fall within the begin..end range of the core %s "
                                                    "enumeration tokens and is not an extension added token",
                     apiName, parameterName, value, enumName);
     }
 
-    return skipCall;
+    return skip_call;
 }
 
 /**
@@ -598,14 +598,14 @@ template <typename T>
 static bool validate_ranged_enum_array(debug_report_data *report_data, const char *apiName, const char *countName,
                                        const char *arrayName, const char *enumName, T begin, T end, uint32_t count, const T *array,
                                        bool countRequired, bool arrayRequired) {
-    bool skipCall = false;
+    bool skip_call = false;
 
     if ((count == 0) || (array == NULL)) {
-        skipCall |= validate_array(report_data, apiName, countName, arrayName, count, array, countRequired, arrayRequired);
+        skip_call |= validate_array(report_data, apiName, countName, arrayName, count, array, countRequired, arrayRequired);
     } else {
         for (uint32_t i = 0; i < count; ++i) {
             if (((array[i] < begin) || (array[i] > end)) && !is_extension_added_token(array[i])) {
-                skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                skip_call |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
                                     __LINE__, UNRECOGNIZED_VALUE, LayerName,
                                     "%s: value of %s[%d] (%d) does not fall within the begin..end range of the core %s "
                                     "enumeration tokens and is not an extension added token",
@@ -614,7 +614,7 @@ static bool validate_ranged_enum_array(debug_report_data *report_data, const cha
         }
     }
 
-    return skipCall;
+    return skip_call;
 }
 
 /**
