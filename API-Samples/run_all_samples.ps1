@@ -39,8 +39,8 @@ echo "Initialize Device"
 Exec {init_device}
 echo "Enable Validation and Debug Message Callback"
 Exec {enable_validation_with_callback}
-echo "Create Debug Message Callback"
-Exec {dbg_create_msg_callback}
+echo "Create Debug Report Callback"
+Exec {create_debug_report_callback}
 echo "Initialize Swapchain"
 Exec {init_swapchain}
 echo "Initialize Command Buffer"
@@ -82,7 +82,7 @@ Exec {memory_barriers}
 echo "Multiple Descriptor Sets"
 Exec {multiple_sets}
 echo "Multithreaded Command Buffers"
-Exec {multithreaded_command_buffer}
+Exec {multithreaded_command_buffers}
 echo "Push Constants"
 Exec {push_constants}
 echo "Separate image sampler"

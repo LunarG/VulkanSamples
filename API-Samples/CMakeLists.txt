@@ -102,7 +102,7 @@ function(sampleWithSingleFile)
             endif()
 
             # Add validation layer settings.
-            set (SAMPLE_WITH_TOOLS dbg_create_msg_callback enable_validation_with_callback)
+            set (SAMPLE_WITH_TOOLS create_debug_report_callback enable_validation_with_callback)
             if (";${SAMPLE_WITH_TOOLS};" MATCHES ";${SAMPLE_NAME};")
                 set (VALIDATIONLAYER_LINKAGE "project \":threading\"
                     project \":parameter_validation\"
@@ -230,14 +230,14 @@ endif()
 option(ANDROID OFF)
 
 # simple one file sample targets, no additional files
-set (S_TARGETS init_instance init_device enumerate_devices enumerate_adv
+set (S_TARGETS init_instance init_device enumerate_devices enumerate_devices_adv
     init_depth_buffer init_swapchain init_texture init_uniform_buffer
     init_pipeline_layout init_command_buffer
     init_render_pass init_frame_buffers init_vertex_buffer
-    init_descriptor_set init_shaders init_pipeline multithreaded_command_buffer
+    init_descriptor_set init_shaders init_pipeline multithreaded_command_buffers
     draw_cube draw_textured_cube dynamic_uniform texel_buffer
     instance_layer_properties instance_extension_properties
-    instance_layer_extension_properties dbg_create_msg_callback
+    instance_layer_extension_properties create_debug_report_callback
     enable_validation_with_callback multiple_sets
     copy_blit_image template separate_image_sampler
     occlusion_query pipeline_cache pipeline_derivative
