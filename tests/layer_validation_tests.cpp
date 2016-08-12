@@ -3328,6 +3328,7 @@ TEST_F(VkLayerTest, InvalidCommandPoolConsistency) {
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "FreeCommandBuffers is attempting to free Command Buffer");
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     VkCommandPool command_pool_one;
     VkCommandPool command_pool_two;
 
@@ -3753,6 +3754,7 @@ TEST_F(VkLayerTest, MismatchedQueueFamiliesOnSubmit) {
                      "attempt to submit them on a queue created in a different "
                      "queue family.");
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     // This test is meaningless unless we have multiple queue families
     auto queue_family_properties = m_device->phy().queue_properties();
     if (queue_family_properties.size() < 2) {
@@ -4317,6 +4319,7 @@ TEST_F(VkLayerTest, DisabledIndependentBlend) {
 TEST_F(VkLayerTest, RenderPassDepthStencilAttachmentUnused) {
     TEST_DESCRIPTION("Specify no depth attachement in renderpass then specify "
                      "depth attachments in subpass");
+    ASSERT_NO_FATAL_FAILURE(InitState());
 
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -5037,6 +5040,7 @@ TEST_F(VkLayerTest, WaitEventThenSet) {
         "Wait on a event then set it after the wait has been submitted.");
 
     m_errorMonitor->ExpectSuccess();
+    ASSERT_NO_FATAL_FAILURE(InitState());
 
     VkEvent event;
     VkEventCreateInfo event_create_info{};
@@ -5101,6 +5105,7 @@ TEST_F(VkLayerTest, QueryAndCopySecondaryCommandBuffers) {
     TEST_DESCRIPTION(
         "Issue a query on a secondary command buffery and copy it on a primary.");
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     if ((m_device->queue_props.empty()) ||
         (m_device->queue_props[0].queueCount < 2))
         return;
@@ -5232,6 +5237,7 @@ TEST_F(VkLayerTest, QueryAndCopyMultipleCommandBuffers) {
     TEST_DESCRIPTION(
         "Issue a query and copy from it on a second command buffer.");
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     if ((m_device->queue_props.empty()) ||
         (m_device->queue_props[0].queueCount < 2))
         return;
@@ -5346,6 +5352,7 @@ TEST_F(VkLayerTest, ResetEventThenSet) {
 
     m_errorMonitor->ExpectSuccess();
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     VkEvent event;
     VkEventCreateInfo event_create_info{};
     event_create_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
@@ -5396,10 +5403,9 @@ TEST_F(VkLayerTest, ResetEventThenSet) {
         vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
     }
     {
-        m_errorMonitor->SetDesiredFailureMsg(
-            VK_DEBUG_REPORT_ERROR_BIT_EXT, "Cannot call vkSetEvent() on event "
-                                           "0x1 that is already in use by a "
-                                           "command buffer.");
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "that is already in use by a "
+                                             "command buffer.");
         vkSetEvent(m_device->device(), event);
         m_errorMonitor->VerifyFound();
     }
@@ -5494,6 +5500,7 @@ TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceQWI) {
     TEST_DESCRIPTION("Two command buffers, each in a separate QueueSubmit call "
         "submitted on separate queues followed by a QueueWaitIdle.");
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     if ((m_device->queue_props.empty()) ||
         (m_device->queue_props[0].queueCount < 2))
         return;
@@ -5601,6 +5608,7 @@ TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFenceQWIFenc
                      "submitted on separate queues, the second having a fence"
                      "followed by a QueueWaitIdle.");
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     if ((m_device->queue_props.empty()) ||
         (m_device->queue_props[0].queueCount < 2))
         return;
@@ -5716,6 +5724,7 @@ TEST_F(VkLayerTest,
         "submitted on separate queues, the second having a fence"
         "followed by two consecutive WaitForFences calls on the same fence.");
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     if ((m_device->queue_props.empty()) ||
         (m_device->queue_props[0].queueCount < 2))
         return;
@@ -5824,6 +5833,8 @@ TEST_F(VkLayerTest,
 }
 
 TEST_F(VkLayerTest, TwoQueuesEnsureCorrectRetirementWithWorkStolen) {
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
     if ((m_device->queue_props.empty()) ||
         (m_device->queue_props[0].queueCount < 2)) {
         printf("Test requires two queues, skipping\n");
@@ -5910,12 +5921,14 @@ TEST_F(VkLayerTest, TwoQueueSubmitsSeparateQueuesWithSemaphoreAndOneFence) {
                      "submitted on separate queues, the second having a fence, "
                      "followed by a WaitForFences call.");
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     if ((m_device->queue_props.empty()) ||
         (m_device->queue_props[0].queueCount < 2))
         return;
 
     m_errorMonitor->ExpectSuccess();
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     VkFence fence;
     VkFenceCreateInfo fence_create_info{};
     fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -6027,6 +6040,7 @@ TEST_F(VkLayerTest, TwoQueueSubmitsOneQueueWithSemaphoreAndOneFence) {
 
     m_errorMonitor->ExpectSuccess();
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     VkFence fence;
     VkFenceCreateInfo fence_create_info{};
     fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -6133,6 +6147,7 @@ TEST_F(VkLayerTest, TwoQueueSubmitsOneQueueNullQueueSubmitWithFence) {
 
     m_errorMonitor->ExpectSuccess();
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     VkFence fence;
     VkFenceCreateInfo fence_create_info{};
     fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -6235,6 +6250,7 @@ TEST_F(VkLayerTest, TwoQueueSubmitsOneQueueOneFence) {
 
     m_errorMonitor->ExpectSuccess();
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     VkFence fence;
     VkFenceCreateInfo fence_create_info{};
     fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -6330,6 +6346,7 @@ TEST_F(VkLayerTest, TwoSubmitInfosWithSemaphoreOneQueueSubmitsOneFence) {
     TEST_DESCRIPTION(
         "Two command buffers each in a separate SubmitInfo sent in a single "
         "QueueSubmit call followed by a WaitForFences call.");
+    ASSERT_NO_FATAL_FAILURE(InitState());
 
     m_errorMonitor->ExpectSuccess();
 
@@ -6439,6 +6456,7 @@ TEST_F(VkLayerTest, DynamicDepthBiasNotBound) {
         "Run a simple draw calls to validate failure when Depth Bias dynamic "
         "state is required but not correctly bound.");
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     // Dynamic depth bias
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -6453,6 +6471,7 @@ TEST_F(VkLayerTest, DynamicLineWidthNotBound) {
         "Run a simple draw calls to validate failure when Line Width dynamic "
         "state is required but not correctly bound.");
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     // Dynamic line width
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -6467,6 +6486,7 @@ TEST_F(VkLayerTest, DynamicViewportNotBound) {
         "Run a simple draw calls to validate failure when Viewport dynamic "
         "state is required but not correctly bound.");
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     // Dynamic viewport state
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -6481,6 +6501,7 @@ TEST_F(VkLayerTest, DynamicScissorNotBound) {
         "Run a simple draw calls to validate failure when Scissor dynamic "
         "state is required but not correctly bound.");
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     // Dynamic scissor state
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -6494,6 +6515,8 @@ TEST_F(VkLayerTest, DynamicBlendConstantsNotBound) {
     TEST_DESCRIPTION(
         "Run a simple draw calls to validate failure when Blend Constants "
         "dynamic state is required but not correctly bound.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
     // Dynamic blend constant state
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -6507,6 +6530,8 @@ TEST_F(VkLayerTest, DynamicDepthBoundsNotBound) {
     TEST_DESCRIPTION(
         "Run a simple draw calls to validate failure when Depth Bounds dynamic "
         "state is required but not correctly bound.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
     if (!m_device->phy().features().depthBounds) {
         printf("Device does not support depthBounds test; skipped.\n");
         return;
@@ -6524,6 +6549,8 @@ TEST_F(VkLayerTest, DynamicStencilReadNotBound) {
     TEST_DESCRIPTION(
         "Run a simple draw calls to validate failure when Stencil Read dynamic "
         "state is required but not correctly bound.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
     // Dynamic stencil read mask
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -6537,6 +6564,8 @@ TEST_F(VkLayerTest, DynamicStencilWriteNotBound) {
     TEST_DESCRIPTION(
         "Run a simple draw calls to validate failure when Stencil Write dynamic"
         " state is required but not correctly bound.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
     // Dynamic stencil write mask
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -6550,6 +6579,8 @@ TEST_F(VkLayerTest, DynamicStencilRefNotBound) {
     TEST_DESCRIPTION(
         "Run a simple draw calls to validate failure when Stencil Ref dynamic "
         "state is required but not correctly bound.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
     // Dynamic stencil reference
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -6561,6 +6592,8 @@ TEST_F(VkLayerTest, DynamicStencilRefNotBound) {
 
 TEST_F(VkLayerTest, IndexBufferNotBound) {
     TEST_DESCRIPTION("Run an indexed draw call without an index buffer bound.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "Index buffer object not bound to this command buffer when Indexed ");
@@ -6741,6 +6774,8 @@ TEST_F(VkLayerTest, FreeDescriptorFromOneShotPool) {
 TEST_F(VkLayerTest, InvalidDescriptorPool) {
     // Attempt to clear Descriptor Pool with bad object.
     // ObjectTracker should catch this.
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Invalid Descriptor Pool Object 0xbaad6001");
     uint64_t fake_pool_handle = 0xbaad6001;
@@ -6804,7 +6839,7 @@ TEST_F(VkLayerTest, InvalidDescriptorSetLayout) {
     VkDescriptorSetLayout bad_layout = reinterpret_cast<VkDescriptorSetLayout &>(fake_layout_handle);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "Invalid Descriptor Set Layout Object 0xbaad6001");
-
+    ASSERT_NO_FATAL_FAILURE(InitState());
     VkPipelineLayout pipeline_layout;
     VkPipelineLayoutCreateInfo plci = {};
     plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -12189,6 +12224,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex) {
 TEST_F(VkLayerTest, MismatchCountQueueCreateRequestedFeature) {
     TEST_DESCRIPTION("Use an invalid count in a vkEnumeratePhysicalDevices call."
                      "Use invalid Queue Family Index in vkCreateDevice");
+    ASSERT_NO_FATAL_FAILURE(InitState());
 
     const char *mismatch_count_message =
             "Call to vkEnumeratePhysicalDevices() "
@@ -15722,6 +15758,7 @@ TEST_F(VkLayerTest, ImageFormatLimits) {
 
     TEST_DESCRIPTION("Exceed the limits of image format ");
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "CreateImage extents exceed allowable limits for format");
