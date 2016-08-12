@@ -5328,7 +5328,7 @@ static bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *rang
     // Ranges intersect
     return true;
 }
-// Simplified rangesIntersect that calls above function with limited params: base_address to start at and size to consider
+// Simplified rangesIntersect that calls above function to check range1 for intersection with offset & end addresses
 static bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *range1, VkDeviceSize offset, VkDeviceSize end) {
     // Create a local MEMORY_RANGE struct to wrap offset/size
     MEMORY_RANGE range_wrap;
@@ -10196,7 +10196,7 @@ CmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, 
 
 // For any image objects that overlap mapped memory, verify that their layouts are PREINIT or GENERAL
 static bool ValidateMapImageLayouts(VkDevice device, DEVICE_MEM_INFO const *mem_info, VkDeviceSize offset,
-                                    VkDeviceSize end_address) {
+                                    VkDeviceSize end_offset) {
     bool skip_call = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     // Iterate over all bound image ranges and verify that for any that overlap the
@@ -10205,7 +10205,7 @@ static bool ValidateMapImageLayouts(VkDevice device, DEVICE_MEM_INFO const *mem_
     for (auto image_handle : mem_info->bound_images) {
         auto img_it = mem_info->bound_ranges.find(image_handle);
         if (img_it != mem_info->bound_ranges.end()) {
-            if (rangesIntersect(dev_data, &img_it->second, offset, end_address)) {
+            if (rangesIntersect(dev_data, &img_it->second, offset, end_offset)) {
                 std::vector<VkImageLayout> layouts;
                 if (FindLayouts(dev_data, VkImage(image_handle), layouts)) {
                     for (auto layout : layouts) {
@@ -10235,10 +10235,10 @@ MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize
     if (mem_info) {
         // TODO : This could me more fine-grained to track just region that is valid
         mem_info->global_valid = true;
-        auto end_address = (VK_WHOLE_SIZE == size) ? mem_info->alloc_info.allocationSize - 1 : offset + size - 1;
-        skip_call |= ValidateMapImageLayouts(device, mem_info, offset, end_address);
+        auto end_offset = (VK_WHOLE_SIZE == size) ? mem_info->alloc_info.allocationSize - 1 : offset + size - 1;
+        skip_call |= ValidateMapImageLayouts(device, mem_info, offset, end_offset);
         // TODO : Do we need to create new "bound_range" for the mapped range?
-        SetMemRangesValid(dev_data, mem_info, offset, end_address);
+        SetMemRangesValid(dev_data, mem_info, offset, end_offset);
         if ((dev_data->phys_dev_mem_props.memoryTypes[mem_info->alloc_info.memoryTypeIndex].propertyFlags &
              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0) {
             skip_call =
