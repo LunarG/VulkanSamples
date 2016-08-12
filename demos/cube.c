@@ -3040,6 +3040,8 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
                        1.0f, 0.1f, 100.0f);
     mat4x4_look_at(demo->view_matrix, eye, origin, up);
     mat4x4_identity(demo->model_matrix);
+
+    demo->projection_matrix[1][1]*=-1;  //Flip projection matrix from GL to Vulkan orientation.
 }
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
