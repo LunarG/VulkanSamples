@@ -233,7 +233,7 @@ VIAddVersionKey  "LegalCopyright" ""
 !endif
 
 
-# Function to run ConfigLayersAndVulkanDll ps script.
+# Function to run ConfigureRT program.
 # Return value is in $0 - 0 is success, all else is failure.
 !macro ConfigLayersAndVulkanDLL un
 Function ${un}ConfigLayersAndVulkanDLL
@@ -252,8 +252,8 @@ FunctionEnd
 !insertmacro ConfigLayersAndVulkanDLL "un."
 
 
-# Function to run diagnostics if ConfigLayersAndVulkanDll ps script failed.
-# On entry $0, contains the return value from ConfigLayersAndVulkanDll.ps1. It shouldn't be changed.
+# Function to run diagnostics if ConfigureRT program failed.
+# On entry $0, contains the return value from ConfigureRT.exe. It shouldn't be changed.
 !macro DiagConfigLayersAndVulkanDLL un
 Function ${un}DiagConfigLayersAndVulkanDLL
     # Report the failure
@@ -466,7 +466,7 @@ Section
 
     ${Endif}
 
-    # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
+    # Run the ConfigureRT program to copy the most recent version of
     # vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll, and to set up layer registry
     # entries to use layers from the corresponding SDK
     SetOutPath "$INSTDIR"
@@ -475,7 +475,7 @@ Section
         SetOutPath "$INSTDIR"
         Call DiagConfigLayersAndVulkanDLL
 
-        # The Powershell script failed, and we don't know why.
+        # The program failed, and we don't know why.
         # Simply configure system to use our loader and vulkaninfo.
         MessageBox MB_OK "Warning!$\n$\nPowershell script called by VulkanRT Installer failed with error $0. Is Powershell installed on your system?$\n$\nWill configure system with Vulkan $FileVersion." /SD IDOK
         ${If} ${RunningX64}
@@ -493,7 +493,7 @@ Section
     StrCpy $1 60
     Call CheckForError
 
-    # We are done using ConfigLayersAndVulkanDLL.ps1, delete it. It will be re-installed
+    # We are done using ConfigureRT.exe, delete it. It will be re-installed
     # by the uninstaller when it needs to be run again during uninstall.
     Delete ConfigureRT.exe
 
@@ -568,7 +568,7 @@ Section "uninstall"
     Call un.CheckForError
 
 
-    # Install the ConfigLayersAndVulkanDLL.ps1 so we can run it.
+    # Install ConfigureRT.exe so we can run it.
     # It will be deleted later when we remove the install directory.
     File Release\ConfigureRT.exe
 
@@ -615,7 +615,7 @@ Section "uninstall"
 
     ${Endif}
 
-    # Run the ConfigLayersAndVulkanDLL.ps1 script to copy the most recent version of
+    # Run the ConfigureRT.exe program to copy the most recent version of
     # vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll, and to set up layer registry
     # entries to use layers from the corresponding SDK
     SetOutPath "$IDir"

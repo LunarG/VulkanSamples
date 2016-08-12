@@ -30,9 +30,8 @@
  * - Set the layer registry entried to point to the layer json files in
  *   the Vulkan SDK associated with the most recent vulkan*.dll
  *
- * The program must be called with the following two parameters:
+ * The program must be called with the following parameters:
  *     --major-abi: A single number specifying the major abi version
- *     --ossize: A single integer indicating a 32 or 64 bit OS
  */
 
 // Compile with: `cl.exe configure_runtime.c /link advapi32.lib`
@@ -50,6 +49,10 @@
 #if _MSC_VER < 1900
 #define inline __inline
 #define snprintf _snprintf
+#endif
+
+#if defined(_WIN64)
+#error "This program is designed only as a 32-bit program. It should not be built as 64-bit."
 #endif
 
 #define COPY_BUFFER_SIZE (1024)
@@ -74,7 +77,6 @@ struct SDKVersion
 };
 
 const char* FLAG_ABI_MAJOR = "--abi-major";
-const char* FLAG_OS_SIZE = "--ossize";
 const char* PATH_SYSTEM32 = "\\SYSTEM32\\";
 const char* PATH_SYSWOW64 = "\\SysWOW64\\";
 
@@ -93,11 +95,6 @@ int add_explicit_layers(FILE* log, const char* install_path, enum Platform platf
 //
 // Returns: Zero if they are equal, below zero if a predates b, greater than zero if b predates a
 int compare_versions(const struct SDKVersion* a, const struct SDKVersion* b);
-
-// Copy a binary file
-//
-// Returns: Zero on success, an error code on failure
-int copy_file(const char* destination, const char* source);
 
 // Locate all of the SDK installations
 //
@@ -163,11 +160,11 @@ int update_registry_layers(FILE* log, enum Platform platform, const struct SDKVe
 // extension (input) - The file extensions of the file to be updated
 // path (input) - The directory of the file (usually System32 or SysWOW64)
 // abi_major (input) - The ABI major version to be updated
-// append_abi_major (input) - Whether or not the ABI number should be appended to the filename
+// leave_abi_major (input) - Whether or not the ABI number be left on the output filename
 // latest_version (output) - The version of the runtime which the file was updated to
 // Returns: Zero on success, an error code on failure
 int update_system_file(FILE* log, const char* name, const char* extension, const char* path,
-    long abi_major, bool append_abi_major, struct SDKVersion* latest_version);
+    long abi_major, bool leave_abi_major, struct SDKVersion* latest_version);
 
 // Update vulkan.dll and vulkaninfo.exe in all of the windows directories (System32 and SysWOW64)
 //
@@ -221,6 +218,8 @@ int add_explicit_layers(FILE* log, const char* install_path, enum Platform platf
         break;
     }
 
+    // If this is a 32 bit system, we allow redirection to point this at the 32-bit registries.
+    // If not, we add the flag KEY_WOW64_64KEY, to disable redirection for this node.
     HKEY hKey;
     REGSAM flags = KEY_ALL_ACCESS;
     if(platform == PLATFORM_X64) {
@@ -283,46 +282,14 @@ int compare_versions(const struct SDKVersion* a, const struct SDKVersion* b)
     return strncmp(a->extended, b->extended, SDK_VERSION_BUFFER_SIZE);
 }
 
-int copy_file(const char* destination, const char* source)
-{
-    // Open files for reading and writing
-    FILE* src = fopen(source, "rb");
-    FILE* dest = fopen(destination, "wb");
-    if(src == NULL || dest == NULL) {
-        return 60;
-    }
-    
-    // Stream the data between the two files
-    uint8_t buffer[COPY_BUFFER_SIZE];
-    size_t read_size;
-    do {
-        read_size = fread(buffer, sizeof(uint8_t), COPY_BUFFER_SIZE, src);
-        if(ferror(src)) {
-            fclose(src);
-            fclose(dest);
-            return 70;
-        }
-        size_t write_size = fwrite(buffer, sizeof(uint8_t), read_size, dest);
-        if(ferror(dest)) {
-            fclose(src);
-            fclose(dest);
-            return 80;
-        }
-    } while(read_size == COPY_BUFFER_SIZE);
-    
-    // Clean up
-    fclose(src);
-    fclose(dest);
-    
-    return 0;
-}
-
 int find_installations(char*** install_paths, struct SDKVersion** install_versions, size_t* count)
 {
     *install_paths = malloc(sizeof(char*) * 64);
     *install_versions = malloc(sizeof(struct SDKVersion) * 64);
     *count = 0;
 
+    // We want the 64-bit registries on 64-bit windows, and the 32-bit registries on 32-bit Windows.
+    // KEY_WOW64_64KEY accomplishes this because it gets ignored on 32-bit Windows.
     HKEY hKey;
     if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
         0, KEY_READ | KEY_WOW64_64KEY, &hKey) != ERROR_SUCCESS) {
@@ -502,6 +469,8 @@ int remove_explicit_layers(FILE* log, const char** install_paths, size_t count, 
 
     bool removed_one;
     do {
+        // If this is a 32 bit system, we allow redirection to point this at the 32-bit registries.
+        // If not, we add the flag KEY_WOW64_64KEY, to disable redirection for this node.
         HKEY hKey;
         REGSAM flags = KEY_ALL_ACCESS;
         if(platform == PLATFORM_X64) {
@@ -585,27 +554,16 @@ int update_registry_layers(FILE* log, enum Platform platform, const struct SDKVe
 }
 
 int update_system_file(FILE* log, const char* name, const char* extension, const char* path,
-    long abi_major, bool append_abi_major, struct SDKVersion* latest_version)
+    long abi_major, bool leave_abi_major, struct SDKVersion* latest_version)
 {
     // Generate the filter string
-    char* filter;
-    if(append_abi_major) {
-        const char* pattern = "%s%s-%ld-*-*-*-*%s";
-        int filter_size = snprintf(NULL, 0, pattern, path, name, abi_major, extension) + 1;
-        if(filter_size < 0) {
-            return 180;
-        }
-        filter = malloc(filter_size);
-        snprintf(filter, filter_size, pattern, path, name, abi_major, extension);
-    } else {
-        const char* pattern = "%s%s-*-*-*-*%s";
-        int filter_size = snprintf(NULL, 0, pattern, path, name, extension) + 1;
-        if(filter_size < 0) {
-            return 190;
-        }
-        filter = malloc(filter_size);
-        snprintf(filter, filter_size, pattern, path, name, extension);
+    const char* pattern = "%s%s-%ld-*-*-*-*%s";
+    int filter_size = snprintf(NULL, 0, pattern, path, name, abi_major, extension) + 1;
+    if(filter_size < 0) {
+        return 180;
     }
+    char* filter = malloc(filter_size);
+    snprintf(filter, filter_size, pattern, path, name, abi_major, extension);
     
     // Find all of the files that match the pattern
     char* latest_filename = malloc(64);
@@ -622,14 +580,14 @@ int update_system_file(FILE* log, const char* name, const char* extension, const
         // Decide if this is the latest file
         if(compare_versions(latest_version, &version) < 0) {
             *latest_version = version;
-            const char* pattern = "%s%s";
-            int size = snprintf(NULL, 0, pattern, path, find_data.cFileName) + 1;
+            const char* latestPattern = "%s%s";
+            int size = snprintf(NULL, 0, latestPattern, path, find_data.cFileName) + 1;
             if(size < 0) {
                 free(latest_filename);
                 return 200;
             }
             latest_filename = realloc(latest_filename, size);
-            snprintf(latest_filename, size, pattern, path, find_data.cFileName);
+            snprintf(latest_filename, size, latestPattern, path, find_data.cFileName);
         }
     }
     FindClose(find);
@@ -645,13 +603,26 @@ int update_system_file(FILE* log, const char* name, const char* extension, const
         latest_version->minor, latest_version->patch, latest_version->build);
         
     // Generate output filename
-    const char* pattern = "%s%s%s";
-    int out_size = snprintf(NULL, 0, pattern, path, name, extension) + 1;
-    if(out_size < 0) {
-        return 210;
+    char* output_filename;
+    if(leave_abi_major) {
+        const char* outPattern = "%s%s-%ld%s";
+        int out_size = snprintf(NULL, 0, outPattern, path, name, abi_major, extension) + 1;
+        if(out_size < 0) {
+            free(latest_filename);
+            return 205;
+        }
+        output_filename = malloc(out_size);
+        snprintf(output_filename, out_size, outPattern, path, name, abi_major, extension);
+    } else {
+        const char* outPattern = "%s%s%s";
+        int out_size = snprintf(NULL, 0, outPattern, path, name, extension) + 1;
+        if(out_size < 0) {
+            free(latest_filename);
+            return 210;
+        }
+        output_filename = malloc(out_size);
+        snprintf(output_filename, out_size, outPattern, path, name, extension);
     }
-    char* output_filename = malloc(out_size);
-    snprintf(output_filename, out_size, pattern, path, name, extension);
     
     // Remove any older version of the output file
     if(remove(output_filename) == 0) {
@@ -661,9 +632,14 @@ int update_system_file(FILE* log, const char* name, const char* extension, const
     }
     
     fprintf(log, "Attempting to copy file %s to %s\n", latest_filename, output_filename);
-    CHECK_ERROR_HANDLED(copy_file(output_filename, latest_filename), { free(latest_filename); });
+    if(CopyFile(latest_filename, output_filename, false) == 0) {
+        free(latest_filename);
+        free(output_filename);
+        return 215;
+    }
     
     free(latest_filename);
+    free(output_filename);
     return 0;
 }
 
@@ -677,25 +653,28 @@ int update_windows_directories(FILE* log, long abi_major, enum Platform platform
 
     strcpy(system_path + windows_path_size - 1, PATH_SYSTEM32);
     fprintf(log, "Updating system directory: %s\n", system_path);
-    CHECK_ERROR_HANDLED(update_system_file(log, "vulkan-1", ".dll", system_path, abi_major, false,
+    CHECK_ERROR_HANDLED(update_system_file(log, "vulkan", ".dll", system_path, abi_major, true,
         latest_runtime_version), { free(system_path); });
-    CHECK_ERROR_HANDLED(update_system_file(log, "vulkaninfo", ".exe", system_path, abi_major, true,
+    CHECK_ERROR_HANDLED(update_system_file(log, "vulkaninfo", ".exe", system_path, abi_major, false,
         &version), { free(system_path); });
     if(compare_versions(latest_runtime_version, &version) != 0) {
+        free(system_path);
         return 220;
     }
 
     if(platform == PLATFORM_X64) {
         strcpy(system_path + windows_path_size - 1, PATH_SYSWOW64);
         fprintf(log, "\nUpdating system directory: %s\n", system_path);
-        CHECK_ERROR_HANDLED(update_system_file(log, "vulkan-1", ".dll", system_path, abi_major,
-            false, &version), { free(system_path); });
+        CHECK_ERROR_HANDLED(update_system_file(log, "vulkan", ".dll", system_path, abi_major,
+            true, &version), { free(system_path); });
         if(compare_versions(latest_runtime_version, &version) != 0) {
+            free(system_path);
             return 230;
         }
         CHECK_ERROR_HANDLED(update_system_file(log, "vulkaninfo", ".exe", system_path, abi_major,
-            true, &version), { free(system_path); });
+            false, &version), { free(system_path); });
         if(compare_versions(latest_runtime_version, &version) != 0) {
+            free(system_path);
             return 240;
         }
     }
