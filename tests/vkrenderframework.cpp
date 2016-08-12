@@ -210,10 +210,10 @@ void VkRenderFramework::ShutdownFramework() {
         vkDestroyInstance(this->inst, NULL);
 }
 
-void VkRenderFramework::InitState() {
+void VkRenderFramework::InitState(VkPhysicalDeviceFeatures *features) {
     VkResult U_ASSERT_ONLY err;
 
-    m_device = new VkDeviceObj(0, objs[0], device_extension_names);
+    m_device = new VkDeviceObj(0, objs[0], device_extension_names, features);
     m_device->get_device_queue();
 
     m_depthStencil = new VkDepthStencilObj(m_device);
