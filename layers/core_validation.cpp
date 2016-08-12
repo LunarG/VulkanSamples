@@ -5297,8 +5297,8 @@ static bool validateIdleBuffer(const layer_data *my_data, VkBuffer buffer) {
 // pad_ranges bool indicates a linear and non-linear comparison which requires padding
 // In the case where padding is required, if an alias is encountered then a validation error is reported and skip_call
 //  may be set by the callback function so caller should merge in skip_call value if padding case is possible.
-static bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *range1, MEMORY_RANGE const *range2, bool &skip_call) {
-    skip_call = false;
+static bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *range1, MEMORY_RANGE const *range2, bool *skip_call) {
+    *skip_call = false;
     auto r1_start = range1->start;
     auto r1_end = range1->end;
     auto r2_start = range2->start;
@@ -5319,7 +5319,7 @@ static bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *rang
         const char *r2_linear_str = range2->linear ? "linear" : "non-linear";
         const char *r2_type_str = range2->image ? "image" : "buffer";
         auto obj_type = range1->image ? VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT : VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT;
-        skip_call |=
+        *skip_call |=
             log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_type, range1->handle, 0, MEMTRACK_INVALID_ALIASING,
                     "MEM", "%s %s 0x%" PRIx64 " is aliased with %s %s 0x%" PRIx64
                            " which is in violation of the Buffer-Image Granularity section of the Vulkan specification.",
@@ -5337,7 +5337,7 @@ static bool rangesIntersect(layer_data const *dev_data, MEMORY_RANGE const *rang
     range_wrap.start = offset;
     range_wrap.end = end;
     bool tmp_bool;
-    return rangesIntersect(dev_data, range1, &range_wrap, tmp_bool);
+    return rangesIntersect(dev_data, range1, &range_wrap, &tmp_bool);
 }
 // For given mem_info, set all ranges valid that intersect [offset-end] range
 // TODO : For ranges where there is no alias, we may want to create new buffer ranges that are valid
@@ -5348,7 +5348,7 @@ static void SetMemRangesValid(layer_data const *dev_data, DEVICE_MEM_INFO *mem_i
     map_range.start = offset;
     map_range.end = end;
     for (auto &handle_range_pair : mem_info->bound_ranges) {
-        if (rangesIntersect(dev_data, &handle_range_pair.second, &map_range, tmp_bool)) {
+        if (rangesIntersect(dev_data, &handle_range_pair.second, &map_range, &tmp_bool)) {
             // TODO : WARN here if tmp_bool true?
             handle_range_pair.second.valid = true;
         }
@@ -5382,7 +5382,7 @@ static bool InsertMemoryRange(layer_data const *dev_data, uint64_t handle, DEVIC
     for (auto &obj_range_pair : mem_info->bound_ranges) {
         auto check_range = &obj_range_pair.second;
         bool intersection_error = false;
-        if (rangesIntersect(dev_data, &range, check_range, intersection_error)) {
+        if (rangesIntersect(dev_data, &range, check_range, &intersection_error)) {
             skip_call |= intersection_error;
             range.aliases.insert(check_range);
             tmp_alias_ranges.insert(check_range);
