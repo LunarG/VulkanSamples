@@ -1,3 +1,26 @@
+#ifdef _WIN32
+    #include <Windows.h>
+    #ifndef VK_USE_PLATFORM_WIN32_KHR
+    #define VK_USE_PLATFORM_WIN32_KHR
+    #endif
+#elif __gnu_linux__
+//    #if !defined(VK_USE_PLATFORM_XCB_KHR)  && \
+//        !defined(VK_USE_PLATFORM_XLIB_KHR) && \
+//        !defined(VK_USE_PLATFORM_MIR_KHR)  && \
+//        !defined(VK_USE_PLATFORM_WAYLAND_KHR)
+//        #define VK_USE_PLATFORM_XCB_KHR        //On Linux, default to XCB
+//    #endif
+    #include <xkbcommon/xkbcommon.h>
+#elif
+    #ifndef VK_USE_PLATFORM_ANDROID_KHR
+    #define VK_USE_PLATFORM_ANDROID_KHR
+    #endif
+#endif
+
+
+//----------------------------------------------------------------------------------
+
+
 #ifndef CINSTANCE_H
 #define CINSTANCE_H
 
@@ -17,18 +40,11 @@
 #endif
 */
 
-  const char* VkResultStr(VkResult err);
-/*
-#define VKERRCHECK(VKRESULT) if(VKRESULT){             \
-            printf("Error: %s in File:%s Line:%d\n",   \
-            VkResultStr(VKRESULT),__FILE__,__LINE__);  \
-            fflush(stdout);                    \
-            assert(!VKRESULT); \
-        }
-*/
+typedef unsigned int uint;
+const char* VkResultStr(VkResult err);  //Convert vulkan result code to a string.
 
 //-------------------------Macros-----------------------------
-#define forCount(COUNT) for(int i=0; i<COUNT; ++i)
+#define forCount(COUNT) for(uint i=0; i<COUNT; ++i)
 
 #define VKERRCHECK(VKRESULT) if(VKRESULT){                                  \
                                printf("Error: %s ",VkResultStr(VKRESULT));  \
@@ -36,13 +52,11 @@
                              }
 //------------------------------------------------------------
 
-  //template <class TYPE> struct TArray{
+//template <class TYPE> struct TArray{
 //}
 
-
-class Layers{
-};
-
+//class Layers{
+//};
 
 class CExtensions{
     uint32_t count;                            //Number of extensions found
@@ -56,7 +70,8 @@ public:
     int  Count(){ return count; }              //returns number of available extensions
     VkExtensionProperties* begin() const {return  extProps;}         // for range-based for-loops
     VkExtensionProperties*   end() const {return &extProps[count];}  //
-    VkExtensionProperties* operator[](const uint i) const {return (i<count)? &extProps[i]:0;}
+    VkExtensionProperties* operator[](const uint i) const { return (i<count) ? &extProps[i] : NULL; }
+
     int IndexOf(const char* extName);          //Returns the intex of the named extension, or -1 if not found.
 
     //bool Has(const char* extName);           //Returns true if named extension is in the list.

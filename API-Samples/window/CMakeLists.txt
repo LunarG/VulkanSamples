@@ -9,6 +9,7 @@ add_definitions(-std=c++11)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")  #for find_package
 
+#==============================LINUX==============================
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     option(BUILD_WSI_XCB_SUPPORT     "Build XCB WSI support"     ON)
     option(BUILD_WSI_XLIB_SUPPORT    "Build Xlib WSI support"    OFF)
@@ -40,8 +41,18 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         add_definitions(-DVK_USE_PLATFORM_MIR_KHR)
     endif()
 endif()
+#=============================WINDOWS=============================
+if(WIN32)
+    add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
+endif()
+#=============================ANDROID=============================
+if(ANDROID)
+    add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
+endif()
+#=================================================================
 
-#=====================Find Vulkan SDK======================
+
+#=========================Find Vulkan SDK=========================
 if(NOT DEFINED ENV{VULKAN_SDK})
     if(WIN32)
         set(ENV{VULKAN_SDK} "C:/VulkanSDK/1.0.21.1")         # Default path to SDK for Windows
@@ -55,12 +66,12 @@ endif()
 #set(VULKAN_SDK $ENV{VULKAN_SDK})
 set(VULKAN_SDK $ENV{VULKAN_SDK} CACHE FILEPATH "Path to where Vulkan's SDK include directory can be found.")
 
-#==========================================================
+#=================================================================
 
 include_directories("${VULKAN_SDK}/include")
 
 if(WIN32)
-    target_link_libraries(${PROJECT_NAME} "${VULKAN_SDK}/lib/vulkan-1.dll")
+    target_link_libraries(${PROJECT_NAME} "${VULKAN_SDK}/bin/vulkan-1.lib")
 else()
     target_link_libraries(${PROJECT_NAME} "${VULKAN_SDK}/lib/libvulkan.so")
 endif()

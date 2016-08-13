@@ -1,3 +1,13 @@
+// TODO:
+//
+// Enable/Disable text event for better performance, and allows Android to show/hide on-screen keyboard.
+// Multi-touch input
+// Window Resize event
+// Documentation
+
+
+
+/*
 #ifdef _WIN32
     #include <Windows.h>
     #define VK_USE_PLATFORM_WIN32_KHR
@@ -14,12 +24,12 @@
 #elif __ANDROID__
     #define VK_USE_PLATFORM_ANDROID_KHR
 #endif
-
+*/
 #include <stdio.h>
 #include <vulkan/vulkan.h>
 
 #include "CInstance.h"
-#include "keycode.h"
+#include "keycodes.h"
 
 #ifndef WSIWINDOW_H
 #define WSIWINDOW_H
@@ -37,6 +47,7 @@ public:
     //WSIWindow(const char* title,uint width,uint height);
     virtual ~WSIWindow();
     bool PollEvent();
+    bool GetKeyState(eKeycode key);  //Returns true if specified key is pressed.
     void Close();
 };
 

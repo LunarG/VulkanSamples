@@ -66,7 +66,7 @@ CExtensions::~CExtensions(){
 }
 
 int CExtensions::IndexOf(const char* extName){
-    for(int i=0;i<count;++i)
+    forCount(count)
         if(!strcmp(extName, extProps[i].extensionName)) return i;
     return -1;
 }
@@ -88,7 +88,7 @@ bool CExtensions::Pick(const char* extName){
 
 void CExtensions::Print(){
   printf("Extension count:%d\n",count);
-  for(int i=0;i<count;++i){
+  forCount(count){
     printf("\t%s\n",extProps[i].extensionName);
   }
   //for(auto& prop : *this) printf("%s\n",prop.extensionName);
@@ -96,7 +96,7 @@ void CExtensions::Print(){
 
 void CExtensions::PrintPicked(){
   printf("Picked Extension count:%d\n",pickCount);
-  for(int i=0;i<pickCount;++i){
+  forCount(pickCount){
     printf("\t%s\n",pickList[i]);
   }
   //for(auto& prop : *this) printf("%s\n",prop.extensionName);
@@ -162,7 +162,7 @@ void CInstance::Create(CExtensions& extensions, const char* appName, const char*
     VkResult res;
     res = vkCreateInstance(&inst_info, NULL, &instance);
     VKERRCHECK(res);
-    printf("Instance created\n");
+    printf("Vulkan Instance created\n");
 }
 
 void CInstance::Print(){ printf("->Instance %s created.\n",(!!instance)?"":"NOT"); }
@@ -170,7 +170,7 @@ void CInstance::Print(){ printf("->Instance %s created.\n",(!!instance)?"":"NOT"
 
 CInstance::~CInstance(){
     vkDestroyInstance(instance, NULL);
-    printf("Instance destroyed\n");
+    printf("Vulkan Instance destroyed\n");
 }
 
 

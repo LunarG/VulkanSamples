@@ -142,8 +142,8 @@ enum eKeycode{
     KP_8 = 96,
     KP_9 = 97,
     KP_0 = 98,
-    KP_Point = 99,          // . and Del
-  //KEY_NonUSBackslash = 100,//\ and |
+    KP_Point = 99,             // . and Del
+  //KEY_NonUSBackslash = 100,  // \ and |
     KP_Equals = 103,
     KEY_F13 = 104,
     KEY_F14 = 105,
@@ -164,7 +164,7 @@ enum eKeycode{
     KEY_LeftAlt     = 226,
     KEY_LeftGUI     = 227,
     KEY_RightControl= 228,
-    KEY_RightShift  = 229,
+    KEY_RightShift  = 229,  //WARNING: Linux Only! Win32 returns KEY_LeftShift for both shift keys!
     KEY_RightAlt    = 230,
     KEY_RightGUI    = 231
 };

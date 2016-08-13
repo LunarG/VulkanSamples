@@ -3,23 +3,15 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]){
     printf("WSI-Window\n");
 
-    //LunarG::WSIWindow window();
-    //WSIWindow window("WSI-Window",640,480);
-    //window.Test();
+    CInstance Inst;                              //Create a Vulkan Instance
+    WSIWindow Window(Inst,"LunarG",640,480);     //Create a Vulkan window
 
-    CInstance Inst;
-//    Window_xcb xcb(Inst,"XCB",640,480);
-//    while(xcb.PollEvent()){
-//    }
-
-
-    WSIWindow Window(Inst,"LunarG",640,480);
-    while(Window.PollEvent()){
+    while(Window.PollEvent()){                   //Window message loop, for handling keyboard & mouse events
+        bool KeyPressed = Window.GetKeyState(KEY_LeftShift);
+        if (KeyPressed) printf("LEFT SHIFT PRESSED\r");
     }
-
     return 0;
 }
