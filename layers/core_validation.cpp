@@ -10317,7 +10317,8 @@ static bool validateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32
         auto mem_info = getMemObjInfo(my_data, pMemRanges[i].memory);
         if (mem_info) {
             if (mem_info->p_data) {
-                VkDeviceSize size = mem_info->mem_range.size;
+                VkDeviceSize size =
+                    (mem_info->mem_range.size != VK_WHOLE_SIZE) ? mem_info->mem_range.size : mem_info->alloc_info.allocationSize;
                 VkDeviceSize half_size = (size / 2);
                 char *data = static_cast<char *>(mem_info->p_data);
                 for (auto j = 0; j < half_size; ++j) {
