@@ -1708,7 +1708,7 @@ TEST_F(VkLayerTest, PSOPolygonModeInvalid) {
     VkShaderObj fs(&test_device, bindStateFragShaderText,
         VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
-    // Set polygonMode to unsupporte value POINT, should fail
+    // Set polygonMode to unsupported value POINT, should fail
     m_errorMonitor->SetDesiredFailureMsg(
         VK_DEBUG_REPORT_ERROR_BIT_EXT,
         "polygonMode cannot be VK_POLYGON_MODE_POINT or VK_POLYGON_MODE_LINE");
