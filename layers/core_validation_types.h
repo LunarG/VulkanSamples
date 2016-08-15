@@ -233,10 +233,15 @@ struct DEVICE_MEM_INFO {
     std::unordered_set<uint64_t> bound_buffers;
 
     MemRange mem_range;
-    void *p_data, *p_driver_data;
+    void *shadow_copy_base;     // Base of layer's allocation for guard band, data, and alignment space
+    void *shadow_copy;          // Pointer to start of guard-band data before mapped region
+    uint64_t shadow_pad_size;   // Size of the guard-band data before and after actual data. It MUST be a
+                                // multiple of limits.minMemoryMapAlignment
+    void *p_driver_data;        // Pointer to application's actual memory
+
     DEVICE_MEM_INFO(void *disp_object, const VkDeviceMemory in_mem, const VkMemoryAllocateInfo *p_alloc_info)
-        : object(disp_object), global_valid(false), mem(in_mem), alloc_info(*p_alloc_info), mem_range{}, p_data(0),
-          p_driver_data(0){};
+        : object(disp_object), global_valid(false), mem(in_mem), alloc_info(*p_alloc_info), mem_range{}, shadow_copy_base(0),
+          shadow_copy(0), shadow_pad_size(0), p_driver_data(0){};
 };
 
 class SWAPCHAIN_NODE {

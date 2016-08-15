@@ -4906,34 +4906,53 @@ static bool deleteMemRanges(layer_data *my_data, VkDeviceMemory mem) {
                                 "Unmapping Memory without memory being mapped: mem obj 0x%" PRIxLEAST64, (uint64_t)mem);
         }
         mem_info->mem_range.size = 0;
-        if (mem_info->p_data) {
-            free(mem_info->p_data);
-            mem_info->p_data = 0;
+        if (mem_info->shadow_copy) {
+            free(mem_info->shadow_copy_base);
+            mem_info->shadow_copy_base = 0;
+            mem_info->shadow_copy = 0;
         }
     }
     return skip_call;
 }
 
+// Guard value for pad data
 static char NoncoherentMemoryFillValue = 0xb;
 
-static void initializeAndTrackMemory(layer_data *dev_data, VkDeviceMemory mem, VkDeviceSize size, void **ppData) {
+static void initializeAndTrackMemory(layer_data *dev_data, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size,
+                                     void **ppData) {
     auto mem_info = getMemObjInfo(dev_data, mem);
     if (mem_info) {
         mem_info->p_driver_data = *ppData;
         uint32_t index = mem_info->alloc_info.memoryTypeIndex;
         if (dev_data->phys_dev_mem_props.memoryTypes[index].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
-            mem_info->p_data = 0;
+            mem_info->shadow_copy = 0;
         } else {
             if (size == VK_WHOLE_SIZE) {
-                size = mem_info->alloc_info.allocationSize;
+                size = mem_info->alloc_info.allocationSize - offset;
             }
-            size_t convSize = (size_t)(size);
-            mem_info->p_data = malloc(2 * convSize);
-            memset(mem_info->p_data, NoncoherentMemoryFillValue, 2 * convSize);
-            *ppData = static_cast<char *>(mem_info->p_data) + (convSize / 2);
+            mem_info->shadow_pad_size = dev_data->phys_dev_properties.properties.limits.minMemoryMapAlignment;
+            assert(vk_safe_modulo(mem_info->shadow_pad_size,
+                                  dev_data->phys_dev_properties.properties.limits.minMemoryMapAlignment) == 0);
+            // Ensure start of mapped region reflects hardware alignment constraints
+            uint64_t map_alignment = dev_data->phys_dev_properties.properties.limits.minMemoryMapAlignment;
+
+            // From spec: (ppData - offset) must be aligned to at least limits::minMemoryMapAlignment.
+            uint64_t start_offset = offset % map_alignment;
+            // Data passed to driver will be wrapped by a guardband of data to detect over- or under-writes.
+            mem_info->shadow_copy_base = malloc(2 * mem_info->shadow_pad_size + size + map_alignment + start_offset);
+
+            mem_info->shadow_copy =
+                reinterpret_cast<char *>((reinterpret_cast<uintptr_t>(mem_info->shadow_copy_base) + map_alignment) &
+                                         ~(map_alignment - 1)) + start_offset;
+            assert(vk_safe_modulo(reinterpret_cast<uintptr_t>(mem_info->shadow_copy) + mem_info->shadow_pad_size - start_offset,
+                                  map_alignment) == 0);
+
+            memset(mem_info->shadow_copy, NoncoherentMemoryFillValue, 2 * mem_info->shadow_pad_size + size);
+            *ppData = static_cast<char *>(mem_info->shadow_copy) + mem_info->shadow_pad_size;
         }
     }
 }
+
 // Verify that state for fence being waited on is appropriate. That is,
 //  a fence being waited on should not already be signaled and
 //  it should have been submitted on a queue or during acquire next image
@@ -10186,7 +10205,7 @@ MapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize
             lock.lock();
             // TODO : What's the point of this range? See comment on creating new "bound_range" above, which may replace this
             storeMemRanges(dev_data, mem, offset, size);
-            initializeAndTrackMemory(dev_data, mem, size, ppData);
+            initializeAndTrackMemory(dev_data, mem, offset, size, ppData);
             lock.unlock();
         }
     }
@@ -10242,12 +10261,20 @@ static bool ValidateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32
     for (uint32_t i = 0; i < memRangeCount; ++i) {
         auto mem_info = getMemObjInfo(my_data, pMemRanges[i].memory);
         if (mem_info) {
-            if (mem_info->p_data) {
-                VkDeviceSize size =
-                    (mem_info->mem_range.size != VK_WHOLE_SIZE) ? mem_info->mem_range.size : mem_info->alloc_info.allocationSize;
-                VkDeviceSize half_size = (size / 2);
-                char *data = static_cast<char *>(mem_info->p_data);
-                for (auto j = 0; j < half_size; ++j) {
+            if (mem_info->shadow_copy) {
+                VkDeviceSize size = (mem_info->mem_range.size != VK_WHOLE_SIZE)
+                                        ? mem_info->mem_range.size
+                                        : (mem_info->alloc_info.allocationSize - pMemRanges[i].offset);
+                char *data = static_cast<char *>(mem_info->shadow_copy);
+                for (uint64_t j = 0; j < mem_info->shadow_pad_size; ++j) {
+                    if (data[j] != NoncoherentMemoryFillValue) {
+                        skip_call |= log_msg(
+                            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
+                            (uint64_t)pMemRanges[i].memory, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
+                            "Memory underflow was detected on mem obj 0x%" PRIxLEAST64, (uint64_t)pMemRanges[i].memory);
+                    }
+                }
+                for (uint64_t j = (size + mem_info->shadow_pad_size); j < (2 * mem_info->shadow_pad_size + size); ++j) {
                     if (data[j] != NoncoherentMemoryFillValue) {
                         skip_call |= log_msg(
                             my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
@@ -10255,30 +10282,23 @@ static bool ValidateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32
                             "Memory overflow was detected on mem obj 0x%" PRIxLEAST64, (uint64_t)pMemRanges[i].memory);
                     }
                 }
-                for (auto j = size + half_size; j < 2 * size; ++j) {
-                    if (data[j] != NoncoherentMemoryFillValue) {
-                        skip_call |= log_msg(
-                            my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
-                            (uint64_t)pMemRanges[i].memory, __LINE__, MEMTRACK_INVALID_MAP, "MEM",
-                            "Memory overflow was detected on mem obj 0x%" PRIxLEAST64, (uint64_t)pMemRanges[i].memory);
-                    }
-                }
-                memcpy(mem_info->p_driver_data, static_cast<void *>(data + (size_t)(half_size)), (size_t)(size));
+                memcpy(mem_info->p_driver_data, static_cast<void *>(data + mem_info->shadow_pad_size), (size_t)(size));
             }
         }
     }
     return skip_call;
 }
 
-static void CopyNoncoherentMemoryFromDriver(layer_data *my_data, uint32_t memory_range_count, const VkMappedMemoryRange *mem_ranges) {
+static void CopyNoncoherentMemoryFromDriver(layer_data *my_data, uint32_t memory_range_count,
+                                            const VkMappedMemoryRange *mem_ranges) {
     for (uint32_t i = 0; i < memory_range_count; ++i) {
         auto mem_info = getMemObjInfo(my_data, mem_ranges[i].memory);
-        if (mem_info && mem_info->p_data) {
-            VkDeviceSize size =
-                (mem_info->mem_range.size != VK_WHOLE_SIZE) ? mem_info->mem_range.size : mem_info->alloc_info.allocationSize;
-            VkDeviceSize half_size = (size / 2);
-            char *data = static_cast<char *>(mem_info->p_data);
-            memcpy(static_cast<void *>(data + (size_t)(half_size)), mem_info->p_driver_data, (size_t)(size));
+        if (mem_info && mem_info->shadow_copy) {
+            VkDeviceSize size = (mem_info->mem_range.size != VK_WHOLE_SIZE)
+                                    ? mem_info->mem_range.size
+                                    : (mem_info->alloc_info.allocationSize - mem_ranges[i].offset);
+            char *data = static_cast<char *>(mem_info->shadow_copy);
+            memcpy(data + mem_info->shadow_pad_size, mem_info->p_driver_data, (size_t)(size));
         }
     }
 }
