@@ -78,7 +78,7 @@ Some notes on the behavior of the Windows Vulkan Runtime Installer:
       the Vulkan runtime.  When it is run on a 32-bit version of
       Windows, it will install the 32 bit version of the Vulkan runtime.
 
-   o  The VulkanRT-<version>-Installer.exe created with the above ste`
+   o  The VulkanRT-<version>-Installer.exe created with the above steps
       can be run in silent mode by using the /S command line option when
       invoking the installer.
 

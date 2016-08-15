@@ -635,6 +635,7 @@ Section "uninstall"
         StrCpy $1 85
     ${Endif}
     Call un.CheckForError
+    Rename "$IDir\configure_rt.log" "$TEMP\VulkanRT\configure_rt_uninstall.log"
 
     # If Ref Count is zero, remove install dir
     ${If} $IC <= 0
