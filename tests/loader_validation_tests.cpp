@@ -317,6 +317,7 @@ std::vector<std::string> CommandLine::arguments;
 
 struct EnumerateInstanceLayerProperties : public CommandLine {};
 struct EnumerateInstanceExtensionProperties : public CommandLine {};
+struct ImplicitLayer : public CommandLine {};
 
 // Test groups:
 // LX = lunar exchange
@@ -579,6 +580,65 @@ TEST(EnumerateDeviceLayerProperties, PropertyCountLessThanAvailable)
     vkDestroyInstance(instance, nullptr);
 }
 
+TEST(EnumerateDeviceLayerProperties, CreateInstanceWithoutLayers)
+{
+    VkInstance instance = VK_NULL_HANDLE;
+    VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount = 0;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    for(uint32_t p = 0; p < physicalCount; ++p)
+    {
+        uint32_t count = 0u;
+        result = vkEnumerateDeviceLayerProperties(physical[p], &count, nullptr);
+        ASSERT_EQ(result, VK_SUCCESS);
+        ASSERT_EQ(count, 0u);
+    }
+
+    vkDestroyInstance(instance, nullptr);
+}
+
+TEST(EnumerateDeviceLayerProperties, CreateInstanceWithLayer)
+{
+    char const*const names[] = {"VK_LAYER_LUNARG_core_validation"}; // Temporary required due to MSVC bug.
+    auto const info = VK::InstanceCreateInfo().
+        enabledLayerCount(1).
+        ppEnabledLayerNames(names);
+
+    VkInstance instance = VK_NULL_HANDLE;
+    VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
+
+    uint32_t physicalCount = 0;
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, nullptr);
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    std::unique_ptr<VkPhysicalDevice[]> physical(new VkPhysicalDevice[physicalCount]);
+    result = vkEnumeratePhysicalDevices(instance, &physicalCount, physical.get());
+    ASSERT_EQ(result, VK_SUCCESS);
+    ASSERT_GT(physicalCount, 0u);
+
+    for(uint32_t p = 0; p < physicalCount; ++p)
+    {
+        uint32_t count = 0u;
+        result = vkEnumerateDeviceLayerProperties(physical[p], &count, nullptr);
+        ASSERT_EQ(result, VK_SUCCESS);
+        ASSERT_EQ(count, 1u);
+    }
+
+    vkDestroyInstance(instance, nullptr);
+}
+
 TEST_F(EnumerateInstanceLayerProperties, Count)
 {
     uint32_t count = 0u;
@@ -809,6 +869,16 @@ TEST(EnumerateDeviceExtensionProperties, DeviceExtensionEnumerated)
             }),
             &properties[count]);
     }
+
+    vkDestroyInstance(instance, nullptr);
+}
+
+TEST_F(ImplicitLayer, Present)
+{
+    auto const info = VK::InstanceCreateInfo();
+    VkInstance instance = VK_NULL_HANDLE;
+    VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
 
     vkDestroyInstance(instance, nullptr);
 }
