@@ -1033,6 +1033,28 @@ CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
     bool skipCall = false;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
 
+    // Warn for zero-sized regions
+    for (uint32_t i = 0; i < regionCount; i++) {
+        if ((pRegions[i].srcOffsets[0].x == pRegions[i].srcOffsets[1].x) ||
+            (pRegions[i].srcOffsets[0].y == pRegions[i].srcOffsets[1].y) ||
+            (pRegions[i].srcOffsets[0].z == pRegions[i].srcOffsets[1].z)) {
+            std::stringstream ss;
+            ss << "vkCmdBlitImage: pRegions[" << i << "].srcOffsets specify a zero-volume area.";
+            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer),
+                __LINE__, IMAGE_INVALID_EXTENTS, "IMAGE", "%s", ss.str().c_str());
+        }
+        if ((pRegions[i].dstOffsets[0].x == pRegions[i].dstOffsets[1].x) ||
+            (pRegions[i].dstOffsets[0].y == pRegions[i].dstOffsets[1].y) ||
+            (pRegions[i].dstOffsets[0].z == pRegions[i].dstOffsets[1].z)) {
+            std::stringstream ss;
+            ss << "vkCmdBlitImage: pRegions[" << i << "].dstOffsets specify a zero-volume area.";
+            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, reinterpret_cast<uint64_t>(commandBuffer),
+                __LINE__, IMAGE_INVALID_EXTENTS, "IMAGE", "%s", ss.str().c_str());
+        }
+    }
+
     auto srcImageEntry = getImageState(device_data, srcImage);
     auto dstImageEntry = getImageState(device_data, dstImage);
 
