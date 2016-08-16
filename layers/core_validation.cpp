@@ -4224,6 +4224,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu, const VkDevice
     }
     skip_call |= ValidateRequestedQueueFamilyProperties(my_instance_data, pCreateInfo);
 
+    if (skip_call) {
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    }
+
     VkLayerDeviceCreateInfo *chain_info = get_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
     assert(chain_info->u.pLayerInfo);
