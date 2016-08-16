@@ -10310,7 +10310,7 @@ static bool validateMemoryIsMapped(layer_data *my_data, const char *funcName, ui
     return skip_call;
 }
 
-static bool validateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32_t memRangeCount,
+static bool ValidateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32_t memRangeCount,
                                                      const VkMappedMemoryRange *pMemRanges) {
     bool skip_call = false;
     for (uint32_t i = 0; i < memRangeCount; ++i) {
@@ -10344,6 +10344,19 @@ static bool validateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32
     return skip_call;
 }
 
+static void CopyNoncoherentMemoryFromDriver(layer_data *my_data, uint32_t memory_range_count, const VkMappedMemoryRange *mem_ranges) {
+    for (uint32_t i = 0; i < memory_range_count; ++i) {
+        auto mem_info = getMemObjInfo(my_data, mem_ranges[i].memory);
+        if (mem_info && mem_info->p_data) {
+            VkDeviceSize size =
+                (mem_info->mem_range.size != VK_WHOLE_SIZE) ? mem_info->mem_range.size : mem_info->alloc_info.allocationSize;
+            VkDeviceSize half_size = (size / 2);
+            char *data = static_cast<char *>(mem_info->p_data);
+            memcpy(static_cast<void *>(data + (size_t)(half_size)), mem_info->p_driver_data, (size_t)(size));
+        }
+    }
+}
+
 VkResult VKAPI_CALL
 FlushMappedMemoryRanges(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange *pMemRanges) {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
@@ -10351,7 +10364,7 @@ FlushMappedMemoryRanges(VkDevice device, uint32_t memRangeCount, const VkMappedM
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
     std::unique_lock<std::mutex> lock(global_lock);
-    skip_call |= validateAndCopyNoncoherentMemoryToDriver(my_data, memRangeCount, pMemRanges);
+    skip_call |= ValidateAndCopyNoncoherentMemoryToDriver(my_data, memRangeCount, pMemRanges);
     skip_call |= validateMemoryIsMapped(my_data, "vkFlushMappedMemoryRanges", memRangeCount, pMemRanges);
     lock.unlock();
     if (!skip_call) {
@@ -10371,6 +10384,8 @@ InvalidateMappedMemoryRanges(VkDevice device, uint32_t memRangeCount, const VkMa
     lock.unlock();
     if (!skip_call) {
         result = my_data->device_dispatch_table->InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
+        // Update our shadow copy with modified driver data
+        CopyNoncoherentMemoryFromDriver(my_data, memRangeCount, pMemRanges);
     }
     return result;
 }
