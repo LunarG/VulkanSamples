@@ -15545,6 +15545,14 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
                    16, &blitRegion, VK_FILTER_LINEAR);
     m_errorMonitor->VerifyFound();
 
+    // Look for NULL-blit warning
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                                         "Offsets specify a zero-volume area.");
+    vkCmdBlitImage(m_commandBuffer->GetBufferHandle(), intImage1.handle(),
+                   intImage1.layout(), intImage2.handle(), intImage2.layout(),
+                   1, &blitRegion, VK_FILTER_LINEAR);
+    m_errorMonitor->VerifyFound();
+
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "called with 0 in ppMemoryBarriers");
     VkImageMemoryBarrier img_barrier;
