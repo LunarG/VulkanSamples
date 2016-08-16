@@ -1419,7 +1419,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevi
             // Since we haven't recorded a preliminary value of *pSurfaceFormatCount, that likely means that the application didn't
             // previously call this function with a NULL value of pSurfaceFormats:
             skip_call |= log_msg(
-                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                 reinterpret_cast<uint64_t>(pPhysicalDevice->physicalDevice), __LINE__, SWAPCHAIN_PRIOR_COUNT, swapchain_layer_name,
                 "vkGetPhysicalDeviceSurfaceFormatsKHR() called with non-NULL pSurfaceFormatCount; but no prior positive "
                 "value has been seen for pSurfaceFormats.");
@@ -1497,7 +1497,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(VkPhysica
             // Since we haven't recorded a preliminary value of *pPresentModeCount, that likely means that the application didn't
             // previously call this function with a NULL value of pPresentModes:
             skip_call |= log_msg(
-                my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                 reinterpret_cast<uint64_t>(pPhysicalDevice->physicalDevice), __LINE__, SWAPCHAIN_PRIOR_COUNT, swapchain_layer_name,
                 "vkGetPhysicalDeviceSurfacePresentModesKHR() called with non-NULL pPresentModeCount; but no prior positive "
                 "value has been seen for pPresentModes.");
@@ -1995,7 +1995,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
         if (pSwapchain->imageCount == 0) {
             // Since we haven't recorded a preliminary value of *pSwapchainImageCount, that likely means that the application didn't
             // previously call this function with a NULL value of pSwapchainImages:
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                  reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_PRIOR_COUNT, swapchain_layer_name,
                                  "vkGetSwapchainImagesKHR() called with non-NULL pSwapchainImageCount; but no prior positive "
                                  "value has been seen for pSwapchainImages.");

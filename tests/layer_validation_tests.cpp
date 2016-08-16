@@ -2650,7 +2650,7 @@ TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
     // Next, call with a non-NULL pSurfaceFormats, even though we haven't
     // correctly done a 1st try (to get the count):
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        VK_DEBUG_REPORT_WARNING_BIT_EXT,
         "but no prior positive value has been seen for");
     surface_format_count = 0;
     vkGetPhysicalDeviceSurfaceFormatsKHR(
@@ -2706,7 +2706,7 @@ TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
     // Next, call with a non-NULL VkPresentModeKHR, even though we haven't
     // correctly done a 1st try (to get the count):
     m_errorMonitor->SetDesiredFailureMsg(
-        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        VK_DEBUG_REPORT_WARNING_BIT_EXT,
         "but no prior positive value has been seen for");
     surface_present_mode_count = 0;
     vkGetPhysicalDeviceSurfacePresentModesKHR(
