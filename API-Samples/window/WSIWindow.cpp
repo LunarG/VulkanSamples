@@ -42,42 +42,61 @@
 #define ASSERT(VAL,MSG) if(!VAL){ printf(MSG); fflush(stdout); exit(1); }
 #endif
 
+struct EventType{
+    enum{NONE, MOUSE, KEY, TEXT} tag;
+    union{
+        struct {eMouseAction action; int16_t x; int16_t y; uint8_t btn;}mouse;
+        struct {eKeyAction   action; uint8_t keycode;}key;
+        struct {const char* str;}text;
+    };
+};
+
+
+
 
 //=======================WSIWindow base class===================
-
 class WindowImpl {
     bool keystate[256] = {};
 protected:
     CInstance* instance;
     VkSurfaceKHR surface;
     int width, height;
-    bool running;
-    void MouseEvent(eMouseEvent type, int16_t x, int16_t y, uint8_t btn, uint8_t flags); //Mouse event
-    void KeyEvent(eKeyEvent type, uint8_t keycode, uint8_t flags);                       //Key pressed/released (see keycodes.h)
+    void MouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn, uint8_t flags); //Mouse event
+    void KeyEvent(eKeyAction action, uint8_t keycode, uint8_t flags);                       //Key pressed/released (see keycodes.h)
     void CharEvent(const char* text, uint8_t flags);                                     //Character typed
 public:
     //WindowImpl(CInstance& inst, const char* title, uint width, uint height);
     WindowImpl() : instance(0), width(64), height(64), running(false) {}
     virtual ~WindowImpl() {}
-    virtual bool PollEvent() = 0;
+    //virtual bool PollEvent() = 0;
     virtual void Close() { running = false; }
     CInstance& Instance() { return *instance; }
     bool KeyState(eKeycode key);
+
+    bool running;
+
+
+    virtual EventType GetEvent()=0; //fetch one event from the queue
+
+
+    //std::function< void() > OnMouseEvent = 0;
+    void (*OnMouseEvent)()=0;
 };
 
 
 
-void WindowImpl::MouseEvent(eMouseEvent type, int16_t x, int16_t y, uint8_t btn, uint8_t flags) {
-    switch (type) {
+void WindowImpl::MouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn, uint8_t flags) {
+    switch (action) {
     case mMOVE: printf("MOVE : "); break;
     case mDOWN: printf("DOWN : "); break;
     case mUP:   printf("UP   : "); break;
     }
     printf("%3d x %3d : button:%3d flags: %1d    \r", x, y, btn, flags); fflush(stdout);
+    //if(OnMouseEvent) OnMouseEvent();
 }
 
-void WindowImpl::KeyEvent(eKeyEvent type, uint8_t key, uint8_t flags) {
-    switch (type) {
+void WindowImpl::KeyEvent(eKeyAction action, uint8_t key, uint8_t flags) {
+    switch (action) {
     case keyDOWN: keystate[key] = true;   printf("  KEY DOWN : ");  break;
     case keyUP  : keystate[key] = false;  printf("  KEY UP   : ");  break;
     }
@@ -165,7 +184,8 @@ public:
     //Window_xcb(const char* title,uint width,uint height);
     Window_xcb(CInstance& inst, const char* title, uint width, uint height);
     virtual ~Window_xcb();
-    bool PollEvent();
+    //bool PollEvent();
+    EventType GetEvent();
 };
 //==============================================================
 //=======================XCB IMPLEMENTATION=====================
@@ -261,10 +281,11 @@ void Window_xcb::CreateSurface(VkInstance instance){
     //assert(!err);
     printf("Surface created\n"); fflush(stdout);
 }
-
+/*
 bool Window_xcb::PollEvent(){
     xcb_generic_event_t* event;
-    while ( (event = xcb_poll_for_event(xcb_connection)) ) {
+    //while ( (event = xcb_poll_for_event(xcb_connection)) ) {
+    if (event = xcb_poll_for_event(xcb_connection)) {
         xcb_button_press_event_t* e = (xcb_button_press_event_t*)event; //xcb_motion_notify_event_t
         switch(event->response_type & ~0x80) {
             case XCB_MOTION_NOTIFY : MouseEvent(mMOVE,e->event_x,e->event_y,e->detail,e->state); break;
@@ -301,9 +322,68 @@ bool Window_xcb::PollEvent(){
             default: break;
         }
         free (event);
+        return true;
     }
-    return running;
+    return false;
+    //return running;
 }
+*/
+
+EventType Window_xcb::GetEvent(){
+    EventType event;
+
+    //--Char event--
+    static char buf[4]={};
+    static bool charEvent=false;
+    if(charEvent){ charEvent=false;  event={EventType::TEXT}; event.text.str=buf; return event; }
+    //--------------
+
+    xcb_generic_event_t* x_event;
+    if (x_event = xcb_poll_for_event(xcb_connection)) {
+        xcb_button_press_event_t* e = (xcb_button_press_event_t*)x_event; //xcb_motion_notify_event_t
+        switch(x_event->response_type & ~0x80) {
+            case XCB_MOTION_NOTIFY : event={EventType::MOUSE,{mMOVE,e->event_x,e->event_y,e->detail}};  break;
+            case XCB_BUTTON_PRESS  : event={EventType::MOUSE,{mDOWN,e->event_x,e->event_y,e->detail}};  break;
+            case XCB_BUTTON_RELEASE: event={EventType::MOUSE,{mUP  ,e->event_x,e->event_y,e->detail}};  break;
+            case XCB_KEY_PRESS:{
+                xcb_button_press_event_t* key = (xcb_button_press_event_t*)x_event;
+                uint8_t  detail=key->detail;
+                event={EventType::KEY};
+                event.key={keyDOWN,EVDEV_TO_HID[detail]};  //key pressed event
+                buf[0]=0;
+                xkb_state_key_get_utf8(k_state,detail,buf,sizeof(buf));
+                charEvent=!!buf[0];                                        //text typed event
+                xkb_state_update_key(k_state, detail, XKB_KEY_DOWN);
+                break;
+            }
+            case XCB_KEY_RELEASE:{
+                xcb_button_press_event_t* key = (xcb_button_press_event_t*)x_event;
+                uint8_t  detail=key->detail;
+                event={EventType::KEY};
+                event.key={keyUP,EVDEV_TO_HID[detail]};                   //key released event
+                xkb_state_update_key(k_state, detail, XKB_KEY_UP);
+                break;
+            }
+            case XCB_CLIENT_MESSAGE:{                                     //window close event
+                if ((*(xcb_client_message_event_t *)x_event).data.data32[0] ==
+                    (*atom_wm_delete_window).atom) {
+                    printf("CLOSE\n"); fflush(stdout);
+                    running=false;
+                }
+                break;
+            }
+            default: break;
+        }
+        free (x_event);
+        return event;
+    }
+    return {EventType::NONE};
+}
+
+
+
+
+
 
 #endif //VK_USE_PLATFORM_XCB_KHR
 //==============================================================
@@ -548,6 +628,7 @@ WSIWindow::WSIWindow(const char* title,uint width,uint height){
 #endif
 }
 */
+//==============================================================
 
 WSIWindow::WSIWindow(CInstance& inst,const char* title,uint width,uint height){
 #ifdef VK_USE_PLATFORM_XCB_KHR
@@ -561,7 +642,47 @@ WSIWindow::WSIWindow(CInstance& inst,const char* title,uint width,uint height){
 }
 
 WSIWindow::~WSIWindow()    { delete(pimpl); }
-bool WSIWindow::PollEvent(){ return pimpl->PollEvent(); }
+//bool WSIWindow::PollEvent(){ return pimpl->PollEvent(); }
 bool WSIWindow::GetKeyState(eKeycode key){ return pimpl->KeyState(key); }
 void WSIWindow::Close()    { pimpl->Close(); }
+
+bool WSIWindow::ProcessEvents(){
+    EventType e=pimpl->GetEvent();
+    while(e.tag!=EventType::NONE){
+      switch(e.tag){
+        case EventType::MOUSE :if(OnMouseEvent) OnMouseEvent(e.mouse.action, e.mouse.x, e.mouse.y, e.mouse.btn); break;
+        case EventType::KEY   :if(OnKeyEvent)   OnKeyEvent  (e.key.action, e.key.keycode); break;
+        case EventType::TEXT  :if(OnTextEvent)  OnTextEvent (e.text.str); break;
+      }
+      e=pimpl->GetEvent();
+    }
+
+    return pimpl->running;
+
+
+}
+
+//==============================================================
+
+
+
+
+
+
+
+
+//==============================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
 

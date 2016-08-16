@@ -1,30 +1,13 @@
 // TODO:
 //
+// Prevent event message loop from blocking
 // Enable/Disable text event for better performance, and allows Android to show/hide on-screen keyboard.
 // Multi-touch input
 // Window Resize event
 // Documentation
 
 
-
-/*
-#ifdef _WIN32
-    #include <Windows.h>
-    #define VK_USE_PLATFORM_WIN32_KHR
-#elif __gnu_linux__
-//    #if !defined(VK_USE_PLATFORM_XCB_KHR)  && \
-//        !defined(VK_USE_PLATFORM_XLIB_KHR) && \
-//        !defined(VK_USE_PLATFORM_MIR_KHR)  && \
-//        !defined(VK_USE_PLATFORM_WAYLAND_KHR)
-//        #define VK_USE_PLATFORM_XCB_KHR        //On Linux, default to XCB
-//    #endif
-
-    #include <xkbcommon/xkbcommon.h>
-
-#elif __ANDROID__
-    #define VK_USE_PLATFORM_ANDROID_KHR
-#endif
-*/
+//#include <functional>
 #include <stdio.h>
 #include <vulkan/vulkan.h>
 
@@ -35,8 +18,8 @@
 #define WSIWINDOW_H
 
 typedef unsigned int uint;
-enum eMouseEvent{ mMOVE, mDOWN, mUP };
-enum eKeyEvent{ keyDOWN, keyUP };
+enum eMouseAction{ mMOVE, mDOWN, mUP };
+enum eKeyAction  { keyDOWN, keyUP };
 
 class WindowImpl;
 
@@ -46,9 +29,15 @@ public:
     WSIWindow(CInstance& inst, const char* title, uint width, uint height);
     //WSIWindow(const char* title,uint width,uint height);
     virtual ~WSIWindow();
-    bool PollEvent();
-    bool GetKeyState(eKeycode key);  //Returns true if specified key is pressed.
+    //bool PollEvent();
+    bool GetKeyState(eKeycode key);            //Returns true if specified key is pressed.
     void Close();
+
+    bool ProcessEvents();                      //Process keyboard and mouse events, and call user-callback functions.
+    void (*OnMouseEvent)(eMouseAction action, int16_t x, int16_t y, uint8_t btn)=0;        //Callback for mouse events
+    void (*OnKeyEvent)  (eKeyAction   action, uint8_t keycode)=0;                          //Callback for keyboard events (keycodes)
+    void (*OnTextEvent) (const char* str)=0;                                               //Callback for text typed events (text)
 };
+
 
 #endif

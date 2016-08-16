@@ -2,7 +2,7 @@
 #include <string.h>
 
 //---------------------Error Checking-------------------------
-//  Convert a VkResult return value to a string
+//  In Debug mode, convert a VkResult return value to a string.
 const char* VkResultStr(VkResult err){
 #if !defined(NDEBUG)
     switch (err) {
@@ -37,7 +37,6 @@ const char* VkResultStr(VkResult err){
     default:
         return "UNKNOWN_RESULT";
     }
-    return "?\n";
 #else
     (void)err;
     return "";
