@@ -2197,6 +2197,108 @@ TEST_F(VkLayerTest, InvalidMemoryMapping) {
     vkFreeMemory(m_device->device(), mem, NULL);
 }
 
+TEST_F(VkLayerTest, NonCoherentMemoryMapping) {
+
+    TEST_DESCRIPTION("Ensure that validations handling of non-coherent memory "
+                     "mapping while using VK_WHOLE_SIZE does not cause access "
+                     "violations");
+    VkResult err;
+    uint8_t *pData;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkDeviceMemory mem;
+    VkMemoryRequirements mem_reqs;
+    mem_reqs.memoryTypeBits = 0xFFFFFFFF;
+    VkMemoryAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.memoryTypeIndex = 0;
+
+    static const VkDeviceSize allocation_size = 0x1000;
+    alloc_info.allocationSize = allocation_size;
+
+    // Find a memory configurations WITHOUT a COHERENT bit, otherwise exit
+    bool pass =
+        m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &alloc_info,
+                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    if (!pass) {
+        pass = m_device->phy().set_memory_type(
+            mem_reqs.memoryTypeBits, &alloc_info,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        if (!pass) {
+            pass = m_device->phy().set_memory_type(
+                mem_reqs.memoryTypeBits, &alloc_info,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                    VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+                VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            if (!pass) {
+                return;
+            }
+        }
+    }
+
+    err = vkAllocateMemory(m_device->device(), &alloc_info, NULL, &mem);
+    ASSERT_VK_SUCCESS(err);
+
+    // Map/Flush/Invalidate using WHOLE_SIZE and zero offsets and entire
+    // mapped range
+    m_errorMonitor->ExpectSuccess();
+    err = vkMapMemory(m_device->device(), mem, 0, VK_WHOLE_SIZE, 0,
+                      (void **)&pData);
+    ASSERT_VK_SUCCESS(err);
+    VkMappedMemoryRange mmr = {};
+    mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    mmr.memory = mem;
+    mmr.offset = 0;
+    mmr.size = VK_WHOLE_SIZE;
+    err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    err = vkInvalidateMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    m_errorMonitor->VerifyNotFound();
+    vkUnmapMemory(m_device->device(), mem);
+
+    // Map/Flush/Invalidate using WHOLE_SIZE and a prime offset and entire
+    // mapped range
+    m_errorMonitor->ExpectSuccess();
+    err = vkMapMemory(m_device->device(), mem, 13, VK_WHOLE_SIZE, 0,
+                      (void **)&pData);
+    ASSERT_VK_SUCCESS(err);
+    mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    mmr.memory = mem;
+    mmr.offset = 13;
+    mmr.size = VK_WHOLE_SIZE;
+    err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    err = vkInvalidateMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    m_errorMonitor->VerifyNotFound();
+    vkUnmapMemory(m_device->device(), mem);
+
+    // Map with prime offset and size
+    // Flush/Invalidate subrange of mapped area with prime offset and size
+    m_errorMonitor->ExpectSuccess();
+    err = vkMapMemory(m_device->device(), mem, allocation_size - 137, 109, 0,
+                      (void **)&pData);
+    ASSERT_VK_SUCCESS(err);
+    mmr.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    mmr.memory = mem;
+    mmr.offset = allocation_size - 107;
+    mmr.size = 61;
+    err = vkFlushMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    err = vkInvalidateMappedMemoryRanges(m_device->device(), 1, &mmr);
+    ASSERT_VK_SUCCESS(err);
+    m_errorMonitor->VerifyNotFound();
+    vkUnmapMemory(m_device->device(), mem);
+
+    vkFreeMemory(m_device->device(), mem, NULL);
+}
+
 TEST_F(VkLayerTest, EnableWsiBeforeUse) {
     VkResult err;
     bool pass;
