@@ -7770,8 +7770,7 @@ TEST_F(VkLayerTest, InvalidPipeline) {
 }
 
 TEST_F(VkLayerTest, DescriptorSetNotUpdated) {
-    // Create and update CommandBuffer then call QueueSubmit w/o calling End on
-    // CommandBuffer
+    TEST_DESCRIPTION("Bind a descriptor set that hasn't been updated.");
     VkResult err;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
