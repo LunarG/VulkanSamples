@@ -2498,7 +2498,7 @@ TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
     // before successfully creating a surface:
     // First, try to create a surface without a VkXcbSurfaceCreateInfoKHR:
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "required parameter pCreateInfo specified as NULL");
+                                         "called with NULL pointer");
     err = vkCreateXcbSurfaceKHR(instance(), NULL, NULL, &surface);
     pass = (err != VK_SUCCESS);
     ASSERT_TRUE(pass);
@@ -2509,7 +2509,7 @@ TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
     VkXcbSurfaceCreateInfoKHR xcb_create_info = {};
     xcb_create_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "parameter pCreateInfo->sType must be");
+                                         "called with the wrong value for");
     err = vkCreateXcbSurfaceKHR(instance(), &xcb_create_info, NULL, &surface);
     pass = (err != VK_SUCCESS);
     ASSERT_TRUE(pass);
@@ -2640,8 +2640,7 @@ TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
 
     // First, try without a pointer to surface_format_count:
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "required parameter pSurfaceFormatCount "
-                                         "specified as NULL");
+                                         "called with NULL pointer");
     vkGetPhysicalDeviceSurfaceFormatsKHR(gpu(), surface, NULL, NULL);
     pass = (err == VK_SUCCESS);
     ASSERT_TRUE(pass);
@@ -2695,9 +2694,7 @@ TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
 
     // First, try without a pointer to surface_format_count:
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "required parameter pPresentModeCount "
-                                         "specified as NULL");
-
+                                         "called with NULL pointer");
     vkGetPhysicalDeviceSurfacePresentModesKHR(gpu(), surface, NULL, NULL);
     pass = (err == VK_SUCCESS);
     ASSERT_TRUE(pass);
@@ -2750,9 +2747,7 @@ TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
 
     // First, try without a pointer to swapchain_create_info:
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "required parameter pCreateInfo "
-                                         "specified as NULL");
-
+                                         "called with NULL pointer");
     err = vkCreateSwapchainKHR(m_device->device(), NULL, NULL, &swapchain);
     pass = (err != VK_SUCCESS);
     ASSERT_TRUE(pass);
@@ -2762,8 +2757,7 @@ TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
     // sType:
     swapchain_create_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "parameter pCreateInfo->sType must be");
-
+                                         "called with the wrong value for");
     err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL,
                                &swapchain);
     pass = (err != VK_SUCCESS);
@@ -2775,9 +2769,7 @@ TEST_F(VkWsiEnabledLayerTest, TestEnabledWsi) {
     swapchain_create_info.pNext = NULL;
     swapchain_create_info.flags = 0;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                         "required parameter pSwapchain "
-                                         "specified as NULL");
-
+                                         "called with NULL pointer");
     err = vkCreateSwapchainKHR(m_device->device(), &swapchain_create_info, NULL,
                                NULL);
     pass = (err != VK_SUCCESS);
@@ -12291,7 +12283,10 @@ TEST_F(VkLayerTest, InvalidQueueIndexInvalidQuery) {
     img_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     img_barrier.image = image.handle();
     img_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    img_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+    // QueueFamilyIndex must be VK_QUEUE_FAMILY_IGNORED, this verifies
+    // that layer validation catches the case when it is not.
+    img_barrier.dstQueueFamilyIndex = 0;
     img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     img_barrier.subresourceRange.baseArrayLayer = 0;
     img_barrier.subresourceRange.baseMipLevel = 0;
@@ -15678,14 +15673,6 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     vkCmdBlitImage(m_commandBuffer->GetBufferHandle(), intImage1.handle(),
                    intImage1.layout(), intImage2.handle(), intImage2.layout(),
                    16, &blitRegion, VK_FILTER_LINEAR);
-    m_errorMonitor->VerifyFound();
-
-    // Look for NULL-blit warning
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
-                                         "Offsets specify a zero-volume area.");
-    vkCmdBlitImage(m_commandBuffer->GetBufferHandle(), intImage1.handle(),
-                   intImage1.layout(), intImage2.handle(), intImage2.layout(),
-                   1, &blitRegion, VK_FILTER_LINEAR);
     m_errorMonitor->VerifyFound();
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
