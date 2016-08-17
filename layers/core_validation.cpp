@@ -3083,10 +3083,10 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
 }
 
 // Validate overall state at the time of a draw call
-static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *pCB, const bool indexedDraw,
+static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *cb_node, const bool indexedDraw,
                                            const VkPipelineBindPoint bindPoint, const char *function) {
     bool result = false;
-    auto const &state = pCB->lastBound[bindPoint];
+    auto const &state = cb_node->lastBound[bindPoint];
     PIPELINE_NODE *pPipe = state.pipeline_node;
     if (nullptr == pPipe) {
         result |= log_msg(
@@ -3099,7 +3099,7 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
     }
     // First check flag states
     if (VK_PIPELINE_BIND_POINT_GRAPHICS == bindPoint)
-        result = validate_draw_state_flags(my_data, pCB, pPipe, indexedDraw);
+        result = validate_draw_state_flags(my_data, cb_node, pPipe, indexedDraw);
 
     // Now complete other state checks
     if (VK_NULL_HANDLE != state.pipeline_layout.layout) {
@@ -3130,14 +3130,20 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
             } else { // Valid set is bound and layout compatible, validate that it's updated
                 // Pull the set node
                 cvdescriptorset::DescriptorSet *pSet = state.boundDescriptorSets[setIndex];
+                // Gather active bindings
+                std::unordered_set<uint32_t> bindings;
+                for (auto binding : setBindingPair.second) {
+                    bindings.insert(binding.first);
+                }
+                // Bind this set and its active descriptor resources to the command buffer
+                pSet->BindCommandBuffer(cb_node, bindings);
                 // Save vector of all active sets to verify dynamicOffsets below
-                activeSetBindingsPairs.push_back(std::make_tuple(pSet, setBindingPair.second,
-                                                                 &state.dynamicOffsets[setIndex]));
+                activeSetBindingsPairs.push_back(std::make_tuple(pSet, setBindingPair.second, &state.dynamicOffsets[setIndex]));
                 // Make sure set has been updated if it has no immutable samplers
                 //  If it has immutable samplers, we'll flag error later as needed depending on binding
                 if (!pSet->IsUpdated()) {
-                    for (auto binding : setBindingPair.second) {
-                        if (!pSet->GetImmutableSamplerPtrFromBinding(binding.first)) {
+                    for (auto binding : bindings) {
+                        if (!pSet->GetImmutableSamplerPtrFromBinding(binding)) {
                             result |= log_msg(
                                 my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                                 (uint64_t)pSet->GetSet(), __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
@@ -3150,12 +3156,12 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
             }
         }
         // For given active slots, verify any dynamic descriptors and record updated images & buffers
-        result |= validate_and_update_drawtime_descriptor_state(my_data, pCB, activeSetBindingsPairs, function);
+        result |= validate_and_update_drawtime_descriptor_state(my_data, cb_node, activeSetBindingsPairs, function);
     }
 
     // Check general pipeline state that needs to be validated at drawtime
     if (VK_PIPELINE_BIND_POINT_GRAPHICS == bindPoint)
-        result |= validatePipelineDrawtimeState(my_data, state, pCB, pPipe);
+        result |= validatePipelineDrawtimeState(my_data, state, cb_node, pPipe);
 
     return result;
 }
@@ -6998,7 +7004,6 @@ CmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelin
             for (uint32_t i = 0; i < setCount; i++) {
                 cvdescriptorset::DescriptorSet *pSet = getSetNode(dev_data, pDescriptorSets[i]);
                 if (pSet) {
-                    pSet->BindCommandBuffer(pCB);
                     pCB->lastBound[pipelineBindPoint].pipeline_layout = *pipeline_layout;
                     pCB->lastBound[pipelineBindPoint].boundDescriptorSets[i + firstSet] = pSet;
                     skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,

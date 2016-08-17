@@ -624,7 +624,11 @@ void cvdescriptorset::DescriptorSet::PerformCopyUpdate(const VkCopyDescriptorSet
     InvalidateBoundCmdBuffers();
 }
 
-void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node) {
+// Bind cb_node to this set and this set to cb_node.
+// Prereq: This should be called for a set that has been confirmed to be active for the given cb_node, meaning it's going
+//   to be used in a draw by the given cb_node
+// TODO: For all of the active bindings, bind their underlying image/buffer/sampler resources to the cb_node
+void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node, const std::unordered_set<uint32_t> &bindings) {
     // bind cb to this descriptor set
     cb_bindings.insert(cb_node);
     // Add bindings for descriptor set and individual objects in the set
@@ -632,6 +636,8 @@ void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node) 
     // TODO : Can bind individual objects from within each descriptor : buffers/images and their views, samplers & memory
     //  The trick is we should only bind the objects actually "in use" by the cmd buffer, meaning that we need to
     //  check active descriptor slots based on last bound state for this CB
+    // For the active slots, use set# to look up descriptorSet from boundDescriptorSets, and bind all of that descriptor set's
+    // resources
 }
 
 cvdescriptorset::SamplerDescriptor::SamplerDescriptor() : sampler_(VK_NULL_HANDLE), immutable_(false) {
