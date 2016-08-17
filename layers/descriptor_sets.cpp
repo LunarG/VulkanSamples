@@ -627,15 +627,11 @@ void cvdescriptorset::DescriptorSet::PerformCopyUpdate(const VkCopyDescriptorSet
 // Bind cb_node to this set and this set to cb_node.
 // Prereq: This should be called for a set that has been confirmed to be active for the given cb_node, meaning it's going
 //   to be used in a draw by the given cb_node
-// TODO: For all of the active bindings, bind their underlying image/buffer/sampler resources to the cb_node
 void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node, const std::unordered_set<uint32_t> &bindings) {
     // bind cb to this descriptor set
     cb_bindings.insert(cb_node);
     // Add bindings for descriptor set and individual objects in the set
     cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(set_), VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT});
-    // TODO : Can bind individual objects from within each descriptor : buffers/images and their views, samplers & memory
-    //  The trick is we should only bind the objects actually "in use" by the cmd buffer, meaning that we need to
-    //  check active descriptor slots based on last bound state for this CB
     // For the active slots, use set# to look up descriptorSet from boundDescriptorSets, and bind all of that descriptor set's
     // resources
     for (auto binding : bindings) {
@@ -869,12 +865,19 @@ void cvdescriptorset::ImageSamplerDescriptor::CopyUpdate(const Descriptor *src) 
 
 void cvdescriptorset::ImageSamplerDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data,
                                                                 GLOBAL_CB_NODE *cb_node) {
+    // First add binding for any non-immutable sampler
     if (!immutable_) {
         auto sampler_node = getSamplerNode(dev_data, sampler_);
         if (sampler_node)
             core_validation::AddCommandBufferBindingSampler(cb_node, sampler_node);
     }
-    // TODO : add cb_binding for image
+    // Add binding for image
+    auto iv_data = getImageViewData(dev_data, image_view_);
+    if (iv_data) {
+        auto image_node = getImageNode(dev_data, iv_data->image);
+        if (image_node)
+            core_validation::AddCommandBufferBindingImage(dev_data, cb_node, image_node);
+    }
 }
 
 cvdescriptorset::ImageDescriptor::ImageDescriptor(const VkDescriptorType type)
@@ -901,7 +904,13 @@ void cvdescriptorset::ImageDescriptor::CopyUpdate(const Descriptor *src) {
 }
 
 void cvdescriptorset::ImageDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
-    // TODO : bind image and cmd buffer
+    // Add binding for image
+    auto iv_data = getImageViewData(dev_data, image_view_);
+    if (iv_data) {
+        auto image_node = getImageNode(dev_data, iv_data->image);
+        if (image_node)
+            core_validation::AddCommandBufferBindingImage(dev_data, cb_node, image_node);
+    }
 }
 
 cvdescriptorset::BufferDescriptor::BufferDescriptor(const VkDescriptorType type)
@@ -934,7 +943,9 @@ void cvdescriptorset::BufferDescriptor::CopyUpdate(const Descriptor *src) {
 }
 
 void cvdescriptorset::BufferDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
-    // TODO : bind buffer and cmd buffer
+    auto buffer_node = getBufferNode(dev_data, buffer_);
+    if (buffer_node)
+        core_validation::AddCommandBufferBindingBuffer(dev_data, cb_node, buffer_node);
 }
 
 cvdescriptorset::TexelDescriptor::TexelDescriptor(const VkDescriptorType type) : buffer_view_(VK_NULL_HANDLE), storage_(false) {
@@ -955,7 +966,12 @@ void cvdescriptorset::TexelDescriptor::CopyUpdate(const Descriptor *src) {
 }
 
 void cvdescriptorset::TexelDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
-    // TODO : bind buffer and cmd buffer
+    auto bv_info = getBufferViewInfo(dev_data, buffer_view_);
+    if (bv_info) {
+        auto buffer_node = getBufferNode(dev_data, bv_info->buffer);
+        if (buffer_node)
+            core_validation::AddCommandBufferBindingBuffer(dev_data, cb_node, buffer_node);
+    }
 }
 
 // This is a helper function that iterates over a set of Write and Copy updates, pulls the DescriptorSet* for updated
