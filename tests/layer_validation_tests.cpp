@@ -3066,7 +3066,7 @@ TEST_F(VkLayerTest, ResetUnsignaledFence) {
 
     m_errorMonitor->VerifyNotFound();
 }
-
+#if 0 // A few devices have issues with this test so disabling for now
 TEST_F(VkLayerTest, LongFenceChain)
 {
     m_errorMonitor->ExpectSuccess();
@@ -3101,7 +3101,7 @@ TEST_F(VkLayerTest, LongFenceChain)
 
     m_errorMonitor->VerifyNotFound();
 }
-
+#endif
 TEST_F(VkLayerTest, CommandBufferSimultaneousUseSync)
 {
     m_errorMonitor->ExpectSuccess();
