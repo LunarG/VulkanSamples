@@ -12291,7 +12291,10 @@ TEST_F(VkLayerTest, InvalidQueueIndexInvalidQuery) {
     img_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     img_barrier.image = image.handle();
     img_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    img_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+    // QueueFamilyIndex must be VK_QUEUE_FAMILY_IGNORED, this verifies
+    // that layer validation catches the case when it is not.
+    img_barrier.dstQueueFamilyIndex = 0;
     img_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     img_barrier.subresourceRange.baseArrayLayer = 0;
     img_barrier.subresourceRange.baseMipLevel = 0;
