@@ -638,6 +638,13 @@ void cvdescriptorset::DescriptorSet::BindCommandBuffer(GLOBAL_CB_NODE *cb_node, 
     //  check active descriptor slots based on last bound state for this CB
     // For the active slots, use set# to look up descriptorSet from boundDescriptorSets, and bind all of that descriptor set's
     // resources
+    for (auto binding : bindings) {
+        auto start_idx = p_layout_->GetGlobalStartIndexFromBinding(binding);
+        auto end_idx = p_layout_->GetGlobalEndIndexFromBinding(binding);
+        for (uint32_t i = start_idx; i <= end_idx; ++i) {
+            descriptors_[i]->BindCommandBuffer(device_data_, cb_node);
+        }
+    }
 }
 
 cvdescriptorset::SamplerDescriptor::SamplerDescriptor() : sampler_(VK_NULL_HANDLE), immutable_(false) {
@@ -815,6 +822,14 @@ void cvdescriptorset::SamplerDescriptor::CopyUpdate(const Descriptor *src) {
     updated = true;
 }
 
+void cvdescriptorset::SamplerDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
+    if (!immutable_) {
+        auto sampler_node = getSamplerNode(dev_data, sampler_);
+        if (sampler_node)
+            core_validation::AddCommandBufferBindingSampler(cb_node, sampler_node);
+    }
+}
+
 cvdescriptorset::ImageSamplerDescriptor::ImageSamplerDescriptor()
     : sampler_(VK_NULL_HANDLE), immutable_(false), image_view_(VK_NULL_HANDLE), image_layout_(VK_IMAGE_LAYOUT_UNDEFINED) {
     updated = false;
@@ -852,6 +867,16 @@ void cvdescriptorset::ImageSamplerDescriptor::CopyUpdate(const Descriptor *src) 
     image_layout_ = image_layout;
 }
 
+void cvdescriptorset::ImageSamplerDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data,
+                                                                GLOBAL_CB_NODE *cb_node) {
+    if (!immutable_) {
+        auto sampler_node = getSamplerNode(dev_data, sampler_);
+        if (sampler_node)
+            core_validation::AddCommandBufferBindingSampler(cb_node, sampler_node);
+    }
+    // TODO : add cb_binding for image
+}
+
 cvdescriptorset::ImageDescriptor::ImageDescriptor(const VkDescriptorType type)
     : storage_(false), image_view_(VK_NULL_HANDLE), image_layout_(VK_IMAGE_LAYOUT_UNDEFINED) {
     updated = false;
@@ -873,6 +898,10 @@ void cvdescriptorset::ImageDescriptor::CopyUpdate(const Descriptor *src) {
     updated = true;
     image_view_ = image_view;
     image_layout_ = image_layout;
+}
+
+void cvdescriptorset::ImageDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
+    // TODO : bind image and cmd buffer
 }
 
 cvdescriptorset::BufferDescriptor::BufferDescriptor(const VkDescriptorType type)
@@ -904,6 +933,10 @@ void cvdescriptorset::BufferDescriptor::CopyUpdate(const Descriptor *src) {
     range_ = buff_desc->range_;
 }
 
+void cvdescriptorset::BufferDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
+    // TODO : bind buffer and cmd buffer
+}
+
 cvdescriptorset::TexelDescriptor::TexelDescriptor(const VkDescriptorType type) : buffer_view_(VK_NULL_HANDLE), storage_(false) {
     updated = false;
     descriptor_class = TexelBuffer;
@@ -920,6 +953,11 @@ void cvdescriptorset::TexelDescriptor::CopyUpdate(const Descriptor *src) {
     updated = true;
     buffer_view_ = static_cast<const TexelDescriptor *>(src)->buffer_view_;
 }
+
+void cvdescriptorset::TexelDescriptor::BindCommandBuffer(const core_validation::layer_data *dev_data, GLOBAL_CB_NODE *cb_node) {
+    // TODO : bind buffer and cmd buffer
+}
+
 // This is a helper function that iterates over a set of Write and Copy updates, pulls the DescriptorSet* for updated
 //  sets, and then calls their respective Validate[Write|Copy]Update functions.
 // If the update hits an issue for which the callback returns "true", meaning that the call down the chain should

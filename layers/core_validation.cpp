@@ -517,7 +517,13 @@ static bool update_cmd_buf_and_mem_references(layer_data *dev_data, const VkComm
     return skip_call;
 }
 
-// Create binding link between given iamge node and command buffer node
+// Create binding link between given sampler and command buffer node
+void AddCommandBufferBindingSampler(GLOBAL_CB_NODE *cb_node, SAMPLER_NODE *sampler_node) {
+    sampler_node->cb_bindings.insert(cb_node);
+    cb_node->object_bindings.insert({reinterpret_cast<uint64_t &>(sampler_node->sampler), VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT});
+}
+
+// Create binding link between given image node and command buffer node
 static bool addCommandBufferBindingImage(layer_data *dev_data, GLOBAL_CB_NODE *cb_node, IMAGE_NODE *img_node, const char *apiName) {
     bool skip_call = false;
     // Skip validation if this image was created through WSI
@@ -668,6 +674,8 @@ static const char *object_type_to_string(VkDebugReportObjectTypeEXT type) {
         return "query pool";
     case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT:
         return "pipeline";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT:
+        return "sampler";
     default:
         return "unknown";
     }
@@ -3943,6 +3951,12 @@ static void removeCommandBufferBinding(layer_data *dev_data, VK_OBJECT const *ob
             set_node->RemoveBoundCommandBuffer(cb_node);
         break;
     }
+    case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT: {
+        auto sampler_node = getSamplerNode(dev_data, reinterpret_cast<const VkSampler &>(object->handle));
+        if (sampler_node)
+            sampler_node->cb_bindings.erase(cb_node);
+        break;
+    }
     default:
         assert(0); // unhandled object type
     }
@@ -4478,6 +4492,17 @@ static bool ValidateAndIncrementBoundObjects(layer_data const *dev_data, GLOBAL_
             }
             break;
         }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT: {
+            auto sampler_node = getSamplerNode(dev_data, reinterpret_cast<VkSampler &>(obj.handle));
+            if (!sampler_node) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT,
+                                     obj.handle, __LINE__, DRAWSTATE_INVALID_SAMPLER, "DS",
+                                     "Cannot submit cmd buffer using deleted sampler 0x%" PRIx64 ".", obj.handle);
+            } else {
+                sampler_node->in_use.fetch_add(1);
+            }
+            break;
+        }
         default:
             // TODO : Merge handling of other objects types into this code
             break;
@@ -4569,6 +4594,11 @@ static void DecrementBoundResources(layer_data const *dev_data, GLOBAL_CB_NODE c
         case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT: {
             auto set_node = getSetNode(dev_data, reinterpret_cast<VkDescriptorSet &>(obj.handle));
             set_node->in_use.fetch_sub(1);
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT: {
+            auto sampler_node = getSamplerNode(dev_data, reinterpret_cast<VkSampler &>(obj.handle));
+            sampler_node->in_use.fetch_sub(1);
             break;
         }
         default:
@@ -5701,8 +5731,18 @@ DestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout, const Vk
 
 VKAPI_ATTR void VKAPI_CALL
 DestroySampler(VkDevice device, VkSampler sampler, const VkAllocationCallbacks *pAllocator) {
-    // TODO : Clean up any internal data structures using this obj.
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroySampler(device, sampler, pAllocator);
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    // TODO : Add detection for in-flight sampler
+    std::unique_lock<std::mutex> lock(global_lock);
+    auto sampler_node = getSamplerNode(dev_data, sampler);
+    if (sampler_node) {
+        // Any bound cmd buffers are now invalid
+        invalidateCommandBuffers(sampler_node->cb_bindings,
+                                 {reinterpret_cast<uint64_t &>(sampler), VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT});
+        dev_data->samplerMap.erase(sampler);
+    }
+    lock.unlock();
+    dev_data->device_dispatch_table->DestroySampler(device, sampler, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL

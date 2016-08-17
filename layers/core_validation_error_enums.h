@@ -63,6 +63,7 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_INVALID_QUERY,                 // Invalid Query
     DRAWSTATE_INVALID_FENCE,                 // Invalid Fence
     DRAWSTATE_INVALID_EVENT,                 // Invalid Event
+    DRAWSTATE_INVALID_SAMPLER,               // Invalid Sampler
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,       // binding in vkCmdBindVertexData() too
                                              // large for PSO's
                                              // pVertexBindingDescriptions array
