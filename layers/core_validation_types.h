@@ -658,6 +658,8 @@ SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, VkSwapchainKHR);
 void invalidateCommandBuffers(std::unordered_set<GLOBAL_CB_NODE *>, VK_OBJECT);
 bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_NODE *, const char *);
 void AddCommandBufferBindingSampler(GLOBAL_CB_NODE *, SAMPLER_NODE *);
+void AddCommandBufferBindingImage(const layer_data *, GLOBAL_CB_NODE *, IMAGE_NODE *);
+void AddCommandBufferBindingBuffer(const layer_data *, GLOBAL_CB_NODE *, BUFFER_NODE *);
 }
 
 #endif // CORE_VALIDATION_TYPES_H_
