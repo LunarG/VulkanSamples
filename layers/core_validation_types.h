@@ -44,13 +44,14 @@
 #define NOEXCEPT
 #endif
 
+#include "vk_safe_struct.h"
 #include "vulkan/vulkan.h"
 #include <atomic>
-#include <string.h>
-#include <unordered_set>
-#include <unordered_map>
-#include <vector>
 #include <functional>
+#include <string.h>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 // Fwd declarations
 namespace cvdescriptorset {
@@ -478,9 +479,80 @@ struct PIPELINE_LAYOUT_NODE {
     }
 };
 
+class PIPELINE_NODE : public BASE_NODE {
+  public:
+    VkPipeline pipeline;
+    safe_VkGraphicsPipelineCreateInfo graphicsPipelineCI;
+    safe_VkComputePipelineCreateInfo computePipelineCI;
+    // Flag of which shader stages are active for this pipeline
+    uint32_t active_shaders;
+    uint32_t duplicate_shaders;
+    // Capture which slots (set#->bindings) are actually used by the shaders of this pipeline
+    std::unordered_map<uint32_t, std::unordered_map<uint32_t, descriptor_req>> active_slots;
+    // Vtx input info (if any)
+    std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
+    std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions;
+    std::vector<VkPipelineColorBlendAttachmentState> attachments;
+    bool blendConstantsEnabled; // Blend constants enabled for any attachments
+    // Store RPCI b/c renderPass may be destroyed after Pipeline creation
+    safe_VkRenderPassCreateInfo render_pass_ci;
+    PIPELINE_LAYOUT_NODE pipeline_layout;
+
+    // Default constructor
+    PIPELINE_NODE()
+        : pipeline{}, graphicsPipelineCI{}, computePipelineCI{}, active_shaders(0), duplicate_shaders(0), active_slots(),
+          vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false), render_pass_ci(),
+          pipeline_layout() {}
+
+    void initGraphicsPipeline(const VkGraphicsPipelineCreateInfo *pCreateInfo) {
+        graphicsPipelineCI.initialize(pCreateInfo);
+        // Make sure compute pipeline is null
+        VkComputePipelineCreateInfo emptyComputeCI = {};
+        computePipelineCI.initialize(&emptyComputeCI);
+        for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
+            const VkPipelineShaderStageCreateInfo *pPSSCI = &pCreateInfo->pStages[i];
+            this->duplicate_shaders |= this->active_shaders & pPSSCI->stage;
+            this->active_shaders |= pPSSCI->stage;
+        }
+        if (pCreateInfo->pVertexInputState) {
+            const VkPipelineVertexInputStateCreateInfo *pVICI = pCreateInfo->pVertexInputState;
+            if (pVICI->vertexBindingDescriptionCount) {
+                this->vertexBindingDescriptions = std::vector<VkVertexInputBindingDescription>(
+                    pVICI->pVertexBindingDescriptions, pVICI->pVertexBindingDescriptions + pVICI->vertexBindingDescriptionCount);
+            }
+            if (pVICI->vertexAttributeDescriptionCount) {
+                this->vertexAttributeDescriptions = std::vector<VkVertexInputAttributeDescription>(
+                    pVICI->pVertexAttributeDescriptions,
+                    pVICI->pVertexAttributeDescriptions + pVICI->vertexAttributeDescriptionCount);
+            }
+        }
+        if (pCreateInfo->pColorBlendState) {
+            const VkPipelineColorBlendStateCreateInfo *pCBCI = pCreateInfo->pColorBlendState;
+            if (pCBCI->attachmentCount) {
+                this->attachments = std::vector<VkPipelineColorBlendAttachmentState>(pCBCI->pAttachments,
+                                                                                     pCBCI->pAttachments + pCBCI->attachmentCount);
+            }
+        }
+    }
+    void initComputePipeline(const VkComputePipelineCreateInfo *pCreateInfo) {
+        computePipelineCI.initialize(pCreateInfo);
+        // Make sure gfx pipeline is null
+        VkGraphicsPipelineCreateInfo emptyGraphicsCI = {};
+        graphicsPipelineCI.initialize(&emptyGraphicsCI);
+        switch (computePipelineCI.stage.stage) {
+        case VK_SHADER_STAGE_COMPUTE_BIT:
+            this->active_shaders |= VK_SHADER_STAGE_COMPUTE_BIT;
+            break;
+        default:
+            // TODO : Flag error
+            break;
+        }
+    }
+};
+
 // Track last states that are bound per pipeline bind point (Gfx & Compute)
 struct LAST_BOUND_STATE {
-    VkPipeline pipeline;
+    PIPELINE_NODE *pipeline_node;
     PIPELINE_LAYOUT_NODE pipeline_layout;
     // Track each set that has been bound
     // Ordered bound set tracking where index is set# that given set is bound to
@@ -489,7 +561,7 @@ struct LAST_BOUND_STATE {
     std::vector<std::vector<uint32_t>> dynamicOffsets;
 
     void reset() {
-        pipeline = VK_NULL_HANDLE;
+        pipeline_node = nullptr;
         pipeline_layout.reset();
         boundDescriptorSets.clear();
         dynamicOffsets.clear();
