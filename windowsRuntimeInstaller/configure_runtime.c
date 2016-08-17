@@ -160,11 +160,11 @@ int update_registry_layers(FILE* log, enum Platform platform, const struct SDKVe
 // extension (input) - The file extensions of the file to be updated
 // path (input) - The directory of the file (usually System32 or SysWOW64)
 // abi_major (input) - The ABI major version to be updated
-// leave_abi_major (input) - Whether or not the ABI number be left on the output filename
+// append_abi_major (input) - Whether or not the ABI number should be appended to the filename
 // latest_version (output) - The version of the runtime which the file was updated to
 // Returns: Zero on success, an error code on failure
 int update_system_file(FILE* log, const char* name, const char* extension, const char* path,
-    long abi_major, bool leave_abi_major, struct SDKVersion* latest_version);
+    long abi_major, bool append_abi_major, struct SDKVersion* latest_version);
 
 // Update vulkan.dll and vulkaninfo.exe in all of the windows directories (System32 and SysWOW64)
 //
@@ -225,8 +225,10 @@ int add_explicit_layers(FILE* log, const char* install_path, enum Platform platf
     if(platform == PLATFORM_X64) {
         flags |= KEY_WOW64_64KEY;
     }
-    if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\Khronos\\Vulkan\\ExplicitLayers",
-        0, flags, &hKey) != ERROR_SUCCESS) {
+    
+    // Create (if needed) and open the explicit layer key
+    if(RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\Khronos\\Vulkan\\ExplicitLayers",
+        0, NULL, REG_OPTION_NON_VOLATILE, flags, NULL, &hKey, NULL) != ERROR_SUCCESS) {
         return 20;
     }
 
@@ -476,8 +478,10 @@ int remove_explicit_layers(FILE* log, const char** install_paths, size_t count, 
         if(platform == PLATFORM_X64) {
             flags |= KEY_WOW64_64KEY;
         }
-        if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\Khronos\\Vulkan\\ExplicitLayers",
-            0, flags, &hKey) != ERROR_SUCCESS) {
+
+        // Create (if needed) and open the explicit layer key
+        if(RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\Khronos\\Vulkan\\ExplicitLayers",
+            0, NULL, REG_OPTION_NON_VOLATILE, flags, NULL, &hKey, NULL) != ERROR_SUCCESS) {
             return 160;
         }
 
@@ -553,6 +557,8 @@ int update_registry_layers(FILE* log, enum Platform platform, const struct SDKVe
     return 0;
 }
 
+//int update_system_file(FILE* log, const char* name, const char* extension, const char* path,
+//    long abi_major, bool append_abi_major, struct SDKVersion* latest_version)
 int update_system_file(FILE* log, const char* name, const char* extension, const char* path,
     long abi_major, bool leave_abi_major, struct SDKVersion* latest_version)
 {
