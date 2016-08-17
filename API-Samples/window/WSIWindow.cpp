@@ -1,25 +1,5 @@
 #include "WSIWindow.h"
-//#include <stdlib.h>
-//#include <stdio.h>
 #include <string.h>  //for strlen
-//#include <assert.h>
-
-//#include <stdlib.h>
-//#include <string.h>
-//#include <stdbool.h>
-//#include <signal.h>
-
-//#include <unistd.h>      /* pause() */
-//#include <xcb/xcb.h>
-//#include <xcb/xcb_keysyms.h>  //no longer available on ubuntu 16.04
-
-//#include <X11/Xutil.h>
-//#include <X11/X.h>
-//#include <X11/XKBlib.h>
-//#include <X11/Xlib.h>
-//#include <X11/keysym.h>
-
-//#include <xkbcommon/xkbcommon.h>
 
 #ifdef VK_USE_PLATFORM_XCB_KHR        // Linux XCB:
     #include <xcb/xcb.h>              //   window
@@ -42,6 +22,7 @@
 #define ASSERT(VAL,MSG) if(!VAL){ printf(MSG); fflush(stdout); exit(1); }
 #endif
 
+//==========================Event Message=======================
 struct EventType{
     enum{NONE, MOUSE, KEY, TEXT} tag;
     union{
@@ -49,21 +30,23 @@ struct EventType{
         struct {eKeyAction   action; uint8_t keycode;}key;
         struct {const char* str;}text;
     };
+    EventType& Mouse(eMouseAction _action, int16_t x, int16_t y, uint8_t btn) { return *this={MOUSE,{_action,x,y,btn}}; }
+    EventType& Key(eKeyAction _action, uint8_t _keycode) { tag=KEY; key={_action,_keycode}; return *this; }
+    EventType& Text(const char* str) { tag=TEXT; text.str=str; return *this; }
 };
+//==============================================================
 
-
-
-
-//=======================WSIWindow base class===================
+//=====================WSIWindow base class=====================
 class WindowImpl {
-    bool keystate[256] = {};
+    struct point_t{int16_t x; int16_t y;}mousepos;   //mouse position
+    bool btnstate[5]   = {};                         //mouse btn state
 protected:
     CInstance* instance;
     VkSurfaceKHR surface;
     int width, height;
-    void MouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn, uint8_t flags); //Mouse event
-    void KeyEvent(eKeyAction action, uint8_t keycode, uint8_t flags);                       //Key pressed/released (see keycodes.h)
-    void CharEvent(const char* text, uint8_t flags);                                     //Character typed
+    bool keystate[256] = {};      //keep track of keyboard state
+    EventType MouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn); //Mouse event
+    EventType KeyEvent(eKeyAction action, uint8_t key);
 public:
     //WindowImpl(CInstance& inst, const char* title, uint width, uint height);
     WindowImpl() : instance(0), width(64), height(64), running(false) {}
@@ -71,46 +54,33 @@ public:
     //virtual bool PollEvent() = 0;
     virtual void Close() { running = false; }
     CInstance& Instance() { return *instance; }
-    bool KeyState(eKeycode key);
+    bool KeyState(eKeycode key){ return keystate[key]; }
+    bool BtnState(uint8_t  btn){ return (btn<5)  ? btnstate[btn]:0; }
 
     bool running;
 
-
     virtual EventType GetEvent()=0; //fetch one event from the queue
-
-
-    //std::function< void() > OnMouseEvent = 0;
-    void (*OnMouseEvent)()=0;
+    //void (*OnMouseEvent)()=0;
 };
 
-
-
-void WindowImpl::MouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn, uint8_t flags) {
-    switch (action) {
-    case mMOVE: printf("MOVE : "); break;
-    case mDOWN: printf("DOWN : "); break;
-    case mUP:   printf("UP   : "); break;
+EventType WindowImpl::MouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn) {
+    mousepos={x,y};
+    switch(action) {
+    case mDOWN:  btnstate[btn]=true;   break;
+    case mUP  :  btnstate[btn]=false;  break;
     }
-    printf("%3d x %3d : button:%3d flags: %1d    \r", x, y, btn, flags); fflush(stdout);
-    //if(OnMouseEvent) OnMouseEvent();
+    EventType e;
+    return e.Mouse(action,x,y,btn);
 }
 
-void WindowImpl::KeyEvent(eKeyAction action, uint8_t key, uint8_t flags) {
-    switch (action) {
-    case keyDOWN: keystate[key] = true;   printf("  KEY DOWN : ");  break;
-    case keyUP  : keystate[key] = false;  printf("  KEY UP   : ");  break;
-    }
-    printf("     keycode:%3d flags: %1d    \r", key, flags); fflush(stdout);
+EventType WindowImpl::KeyEvent(eKeyAction action, uint8_t key) {
+    keystate[key] = (action==keyDOWN);
+    EventType e;
+    return e.Key(action, key);
 }
-
-void WindowImpl::CharEvent(const char* text, uint8_t flags) {
-    printf("\r%s\r", text);  fflush(stdout);
-}
-
-bool WindowImpl::KeyState(eKeycode key) { return keystate[key]; }
 //==============================================================
 
-//===========================XCB================================
+//============================XCB===============================
 #ifdef VK_USE_PLATFORM_XCB_KHR
 
 // Convert native EVDEV key-code to cross-platform USB HID code.
@@ -132,37 +102,6 @@ const unsigned char EVDEV_TO_HID[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 };
-
-/*//---------------------------------------------------------
-// Quick and dirty hack, to convert keycodes to ascii.
-// Works only for standard US keyboards.  TODO: Use XKB instead?
-char KeyCodeToChar(int code,bool shift){
-    char lower[]={ 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
-                  '1','2','3','4','5','6','7','8','9','0',
-                  '-','=', 0 , 0 ,'q','w','e','r','t','y',
-                  'u','i','o','p','[',']',92 , 0 ,'a','s',
-                  'd','f','g','h','j','k','l',';',39 , 0 ,
-                   0 , 0 ,'z','x','c','v','b','n','m',',',
-                  '.','/', 0 , 0 , 0 ,' ', 0 , 0 , 0 , 0 };
-
-    char upper[]={ 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
-                  '!','@','#','$','%','^','&','*','(',')',
-                  '_','+', 0 , 0 ,'Q','W','E','R','T','Y',
-                  'U','I','O','P','{','}','|', 0 ,'A','S',
-                  'D','F','G','H','J','K','L',':','"', 0 ,
-                   0 , 0 ,'Z','X','C','V','B','N','M','<',
-                  '>','?', 0 , 0 , 0 ,' ', 0 , 0 , 0 , 0 };
-    char chr=0;
-    if(code<sizeof(lower)){chr=(shift) ? upper[code] : lower[code];}
-    return chr;
-}
-
-char* KeyCodeToStr(int code,bool shift){
-    static char str[2]={};
-    str[0]=KeyCodeToChar(code,shift);
-    return str;
-}
-*///---------------------------------------------------------
 
 class Window_xcb : public WindowImpl{
     xcb_connection_t *xcb_connection;
@@ -281,53 +220,6 @@ void Window_xcb::CreateSurface(VkInstance instance){
     //assert(!err);
     printf("Surface created\n"); fflush(stdout);
 }
-/*
-bool Window_xcb::PollEvent(){
-    xcb_generic_event_t* event;
-    //while ( (event = xcb_poll_for_event(xcb_connection)) ) {
-    if (event = xcb_poll_for_event(xcb_connection)) {
-        xcb_button_press_event_t* e = (xcb_button_press_event_t*)event; //xcb_motion_notify_event_t
-        switch(event->response_type & ~0x80) {
-            case XCB_MOTION_NOTIFY : MouseEvent(mMOVE,e->event_x,e->event_y,e->detail,e->state); break;
-            case XCB_BUTTON_PRESS  : MouseEvent(mDOWN,e->event_x,e->event_y,e->detail,e->state); break;
-            case XCB_BUTTON_RELEASE: MouseEvent(mUP  ,e->event_x,e->event_y,e->detail,e->state); break;
-            case XCB_KEY_PRESS:{
-                xcb_button_press_event_t* key = (xcb_button_press_event_t*)event;
-                uint8_t  detail=key->detail;
-                uint16_t state =key->state;
-                KeyEvent(keyDOWN,EVDEV_TO_HID[detail],state);              //key pressed event
-                static char buf[4]={};
-                xkb_state_key_get_utf8(k_state,detail,buf,sizeof(buf));
-                if(buf[0]) CharEvent(buf,state);                           //text typed event
-                xkb_state_update_key(k_state, detail, XKB_KEY_DOWN);
-                break;
-            }
-            case XCB_KEY_RELEASE:{
-                xcb_button_press_event_t* key = (xcb_button_press_event_t*)event;
-                uint8_t  detail=key->detail;
-                uint16_t state =key->state;
-                KeyEvent(keyUP,EVDEV_TO_HID[detail],state);               //key released event
-                xkb_state_update_key(k_state, detail, XKB_KEY_UP);
-                //printf(".\n"); fflush(stdout);
-                break;
-            }
-            case XCB_CLIENT_MESSAGE:{  //window closed event
-                if ((*(xcb_client_message_event_t *)event).data.data32[0] ==
-                    (*atom_wm_delete_window).atom) {
-                    printf("CLOSE\n"); fflush(stdout);
-                    running=false;
-                }
-                break;
-            }
-            default: break;
-        }
-        free (event);
-        return true;
-    }
-    return false;
-    //return running;
-}
-*/
 
 EventType Window_xcb::GetEvent(){
     EventType event;
@@ -341,30 +233,30 @@ EventType Window_xcb::GetEvent(){
     xcb_generic_event_t* x_event;
     if (x_event = xcb_poll_for_event(xcb_connection)) {
         xcb_button_press_event_t* e = (xcb_button_press_event_t*)x_event; //xcb_motion_notify_event_t
+        int16_t mx =e->event_x;
+        int16_t my =e->event_y;
+        uint8_t btn=e->detail;
+        uint8_t bestBtn=BtnState(1) ? 1 : BtnState(2) ? 2 :BtnState(3) ? 3 : 0;
         switch(x_event->response_type & ~0x80) {
-            case XCB_MOTION_NOTIFY : event={EventType::MOUSE,{mMOVE,e->event_x,e->event_y,e->detail}};  break;
-            case XCB_BUTTON_PRESS  : event={EventType::MOUSE,{mDOWN,e->event_x,e->event_y,e->detail}};  break;
-            case XCB_BUTTON_RELEASE: event={EventType::MOUSE,{mUP  ,e->event_x,e->event_y,e->detail}};  break;
+            case XCB_MOTION_NOTIFY : event=MouseEvent(mMOVE,mx,my,bestBtn);  break;
+            case XCB_BUTTON_PRESS  : event=MouseEvent(mDOWN,mx,my,btn);      break;
+            case XCB_BUTTON_RELEASE: event=MouseEvent(mUP  ,mx,my,btn);      break;
             case XCB_KEY_PRESS:{
-                xcb_button_press_event_t* key = (xcb_button_press_event_t*)x_event;
-                uint8_t  detail=key->detail;
-                event={EventType::KEY};
-                event.key={keyDOWN,EVDEV_TO_HID[detail]};  //key pressed event
+                uint8_t keycode=EVDEV_TO_HID[btn];
+                KeyEvent(keyDOWN,keycode);                                   //key pressed event
                 buf[0]=0;
-                xkb_state_key_get_utf8(k_state,detail,buf,sizeof(buf));
-                charEvent=!!buf[0];                                        //text typed event
-                xkb_state_update_key(k_state, detail, XKB_KEY_DOWN);
+                xkb_state_key_get_utf8(k_state,btn,buf,sizeof(buf));
+                charEvent=!!buf[0];                                           //text typed event
+                xkb_state_update_key(k_state,btn,XKB_KEY_DOWN);
                 break;
             }
             case XCB_KEY_RELEASE:{
-                xcb_button_press_event_t* key = (xcb_button_press_event_t*)x_event;
-                uint8_t  detail=key->detail;
-                event={EventType::KEY};
-                event.key={keyUP,EVDEV_TO_HID[detail]};                   //key released event
-                xkb_state_update_key(k_state, detail, XKB_KEY_UP);
+                uint8_t keycode=EVDEV_TO_HID[btn];
+                KeyEvent(keyUP,keycode);                                     //key released event
+                xkb_state_update_key(k_state,btn,XKB_KEY_UP);
                 break;
             }
-            case XCB_CLIENT_MESSAGE:{                                     //window close event
+            case XCB_CLIENT_MESSAGE:{                                         //window close event
                 if ((*(xcb_client_message_event_t *)x_event).data.data32[0] ==
                     (*atom_wm_delete_window).atom) {
                     printf("CLOSE\n"); fflush(stdout);
@@ -379,10 +271,6 @@ EventType Window_xcb::GetEvent(){
     }
     return {EventType::NONE};
 }
-
-
-
-
 
 
 #endif //VK_USE_PLATFORM_XCB_KHR
@@ -419,7 +307,8 @@ class Window_win32 : public WindowImpl{
 public:
     Window_win32(CInstance& inst, const char* title, uint width, uint height);
     virtual ~Window_win32();
-    bool PollEvent();
+    //bool PollEvent();
+    EventType Window_win32::GetEvent();
 };
 //==============================================================
 //=====================Win32 IMPLEMENTATION=====================
@@ -496,59 +385,52 @@ void Window_win32::CreateSurface(VkInstance instance){
     printf("Surface created\n"); fflush(stdout);
 }
 
-bool Window_win32::PollEvent(){
+EventType Window_win32::GetEvent(){
+    EventType event;
+
     MSG msg = {};
-    running=(GetMessage(&msg, NULL, 0, 0)>0);
-    if(running){
+    running = (GetMessage(&msg, NULL, 0, 0)>0);  //TODO: Try PeekMessage?
+    if (running) {
         TranslateMessage(&msg);
 
-        int x = GET_X_LPARAM(msg.lParam);
-        int y = GET_Y_LPARAM(msg.lParam);
-
+        int16_t x = GET_X_LPARAM(msg.lParam);
+        int16_t y = GET_Y_LPARAM(msg.lParam);
         static char buf[4] = {};
-        int state = 0;  //flags for the state of modifier keys
-        if (GetKeyState(VK_SHIFT  ) & 128) state |= 1;   //Shift key
-        if (GetKeyState(VK_CAPITAL) & 1  ) state |= 2;   //Caps key (toggle)
-        if (GetKeyState(VK_CONTROL) & 128) state |= 4;   //Ctrl key
-        if (GetKeyState(VK_MENU   ) & 128) state |= 8;   //Alt key
-        if (GetKeyState(VK_NUMLOCK) & 1  ) state |= 16;  //Num Lock key (toggle)
-        if (GetKeyState(VK_LWIN   ) & 128) state |= 64;  //Win key (left)
-        if (GetKeyState(VK_RWIN   ) & 128) state |= 64;  //Win key (right)
+        uint8_t bestBtn=BtnState(1) ? 1 : BtnState(2) ? 2 :BtnState(3) ? 3 : 0;
 
         switch (msg.message) {
-            //--Mouse events--
-            case WM_MOUSEMOVE  : MouseEvent(mMOVE, x, y, 0, state);  break;
-            case WM_LBUTTONDOWN: MouseEvent(mDOWN, x, y, 1, state);  break;
-            case WM_MBUTTONDOWN: MouseEvent(mDOWN, x, y, 2, state);  break;
-            case WM_RBUTTONDOWN: MouseEvent(mDOWN, x, y, 3, state);  break;
-            case WM_LBUTTONUP  : MouseEvent(mUP  , x, y, 1, state);  break;
-            case WM_MBUTTONUP  : MouseEvent(mUP  , x, y, 2, state);  break;
-            case WM_RBUTTONUP  : MouseEvent(mUP  , x, y, 3, state);  break;
-            
-            //--Mouse wheel events--
-            case WM_MOUSEWHEEL: {
-                uint8_t wheel = (GET_WHEEL_DELTA_WPARAM(msg.wParam)>0) ? 4 : 5;
-                POINT point = {x,y};
-                ScreenToClient(msg.hwnd, &point);
-                MouseEvent(mDOWN, (int16_t)point.x, (int16_t)point.y, wheel, state);
-                MouseEvent(mUP  , (int16_t)point.x, (int16_t)point.y, wheel, state);  break;
-            }
+        //--Mouse events--
+        case WM_MOUSEMOVE  : return MouseEvent(mMOVE,x,y,bestBtn);
+        case WM_LBUTTONDOWN: return MouseEvent(mDOWN,x,y,1);
+        case WM_MBUTTONDOWN: return MouseEvent(mDOWN,x,y,2);
+        case WM_RBUTTONDOWN: return MouseEvent(mDOWN,x,y,3);
+        case WM_LBUTTONUP  : return MouseEvent(mUP  ,x,y,1);
+        case WM_MBUTTONUP  : return MouseEvent(mUP  ,x,y,2);
+        case WM_RBUTTONUP  : return MouseEvent(mUP  ,x,y,3);
+        //--Mouse wheel events--
+        case WM_MOUSEWHEEL: {
+            uint8_t wheel = (GET_WHEEL_DELTA_WPARAM(msg.wParam) > 0) ? 4 : 5;
+            POINT point = { x,y };
+            ScreenToClient(msg.hwnd, &point);
+            return{ EventType::MOUSE,{ mDOWN,(int16_t)point.x, (int16_t)point.y, wheel } };
+        }
+        //--Keyboard events--
 
-            //--Keyboard events--
-            case WM_KEYDOWN   : KeyEvent(keyDOWN, WIN32_TO_HID[msg.wParam], state);  break;
-            case WM_KEYUP     : KeyEvent(keyUP  , WIN32_TO_HID[msg.wParam], state);  break;
-            case WM_SYSKEYDOWN: KeyEvent(keyDOWN, WIN32_TO_HID[msg.wParam], state);  break; //+alt key
-            case WM_SYSKEYUP  : KeyEvent(keyUP  , WIN32_TO_HID[msg.wParam], state);  break; //+alt key
-            //--Char event--
-            case WM_CHAR : { strncpy_s(buf, (const char*)&msg.wParam,4);  CharEvent(buf, state);  break; } //return ascii code of key pressed
+        case WM_KEYDOWN   : return KeyEvent(keyDOWN, WIN32_TO_HID[msg.wParam]);
+        case WM_KEYUP     : return KeyEvent(keyUP  , WIN32_TO_HID[msg.wParam]);
+        case WM_SYSKEYDOWN: {MSG discard; GetMessage(&discard, NULL, 0, 0);        //Alt-key triggers a WM_MOUSEMOVE message... Discard it.
+                            return KeyEvent(keyDOWN, WIN32_TO_HID[msg.wParam]); }  //+alt key
+        case WM_SYSKEYUP  : return KeyEvent(keyUP  , WIN32_TO_HID[msg.wParam]);    //+alt key
 
-            default: break;
+        //--Char event--
+        case WM_CHAR: { strncpy_s(buf, (const char*)&msg.wParam, 4);  return event.Text(buf); } //return ascii code of key pressed
         }
         //printf(".");
         DispatchMessage(&msg);
     }
-    return running;
+    return{ EventType::NONE };
 }
+
 
 // MS-Windows event handling function:
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -586,14 +468,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
 #endif //VK_USE_PLATFORM_WIN32_KHR
 //==============================================================
-
-
-
-
-
-
-
-
 
 
 

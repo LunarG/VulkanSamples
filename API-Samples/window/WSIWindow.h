@@ -4,10 +4,9 @@
 // Enable/Disable text event for better performance, and allows Android to show/hide on-screen keyboard.
 // Multi-touch input
 // Window Resize event
+// Clipboard and IME
 // Documentation
 
-
-//#include <functional>
 #include <stdio.h>
 #include <vulkan/vulkan.h>
 
