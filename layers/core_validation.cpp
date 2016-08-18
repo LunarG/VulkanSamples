@@ -5733,10 +5733,14 @@ DestroyShaderModule(VkDevice device, VkShaderModule shaderModule, const VkAlloca
 VKAPI_ATTR void VKAPI_CALL
 DestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    // TODO : Add detection for in-flight pipeline
     std::unique_lock<std::mutex> lock(global_lock);
     auto pipe_node = getPipeline(dev_data, pipeline);
     if (pipe_node) {
+        if (pipe_node->in_use.load()) {
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                    reinterpret_cast<uint64_t &>(pipeline), __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
+                    "Pipeline 0x%" PRIx64 " being destroyed while in use.", reinterpret_cast<uint64_t &>(pipeline));
+        }
         // Any bound cmd buffers are now invalid
         invalidateCommandBuffers(pipe_node->cb_bindings,
                                  {reinterpret_cast<uint64_t &>(pipeline), VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT});

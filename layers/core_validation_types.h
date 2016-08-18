@@ -507,7 +507,7 @@ class PIPELINE_NODE : public BASE_NODE {
     PIPELINE_NODE()
         : pipeline{}, graphicsPipelineCI{}, computePipelineCI{}, active_shaders(0), duplicate_shaders(0), active_slots(),
           vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false), render_pass_ci(),
-          pipeline_layout() {}
+          pipeline_layout() { in_use.store(0); }
 
     void initGraphicsPipeline(const VkGraphicsPipelineCreateInfo *pCreateInfo) {
         graphicsPipelineCI.initialize(pCreateInfo);
