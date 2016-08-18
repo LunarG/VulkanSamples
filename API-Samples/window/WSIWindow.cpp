@@ -24,38 +24,44 @@
 
 //==========================Event Message=======================
 struct EventType{
-    enum{NONE, MOUSE, KEY, TEXT} tag;
+    enum{NONE, MOUSE, KEY, TEXT, SHAPE} tag;
     union{
         struct {eMouseAction action; int16_t x; int16_t y; uint8_t btn;}mouse;
         struct {eKeyAction   action; uint8_t keycode;}key;
         struct {const char* str;}text;
+        struct {int16_t x; int16_t y; uint16_t width; uint16_t height;}shape;
     };
-    EventType& Mouse(eMouseAction _action, int16_t x, int16_t y, uint8_t btn) { return *this={MOUSE,{_action,x,y,btn}}; }
-    EventType& Key(eKeyAction _action, uint8_t _keycode) { tag=KEY; key={_action,_keycode}; return *this; }
-    EventType& Text(const char* str) { tag=TEXT; text.str=str; return *this; }
+    EventType& SetMouse(eMouseAction _action, int16_t x, int16_t y, uint8_t btn) { return *this={MOUSE,{_action,x,y,btn}}; }
+    EventType& SetKey(eKeyAction _action, uint8_t _keycode) { tag=KEY; key={_action,_keycode}; return *this; }
+    EventType& SetText(const char* str) { tag=TEXT; text.str=str; return *this; }
+    EventType& SetShape(int16_t x, int16_t y, uint16_t width, uint16_t height) { tag = SHAPE; shape = { x,y,width,height }; return *this; }
 };
 //==============================================================
 
 //=====================WSIWindow base class=====================
 class WindowImpl {
-    struct point_t{int16_t x; int16_t y;}mousepos;   //mouse position
-    bool btnstate[5]   = {};                         //mouse btn state
+    struct {int16_t x; int16_t y;}mousepos = {};                           // mouse position
+    bool btnstate[5]   = {};                                               // mouse btn state
+    bool keystate[256] = {};                                               // keyboard state
 protected:
     CInstance* instance;
     VkSurfaceKHR surface;
-    int width, height;
-    bool keystate[256] = {};      //keep track of keyboard state
+    //int width, height;
+    struct {int16_t x; int16_t y; uint16_t width; uint16_t height;}shape;  // window shape
     EventType MouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn); //Mouse event
-    EventType KeyEvent(eKeyAction action, uint8_t key);
+    EventType KeyEvent  (eKeyAction action, uint8_t key);                         //Keyboard event
+    EventType ShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height);  //Window move/resize
 public:
     //WindowImpl(CInstance& inst, const char* title, uint width, uint height);
-    WindowImpl() : instance(0), width(64), height(64), running(false) {}
+    //WindowImpl() : instance(0), width(64), height(64), running(false) {}
+    WindowImpl() : instance(0), running(false) {}
     virtual ~WindowImpl() {}
     //virtual bool PollEvent() = 0;
     virtual void Close() { running = false; }
     CInstance& Instance() { return *instance; }
     bool KeyState(eKeycode key){ return keystate[key]; }
     bool BtnState(uint8_t  btn){ return (btn<5)  ? btnstate[btn]:0; }
+
 
     bool running;
 
@@ -70,14 +76,21 @@ EventType WindowImpl::MouseEvent(eMouseAction action, int16_t x, int16_t y, uint
     case mUP  :  btnstate[btn]=false;  break;
     }
     EventType e;
-    return e.Mouse(action,x,y,btn);
+    return e.SetMouse(action,x,y,btn);
 }
 
 EventType WindowImpl::KeyEvent(eKeyAction action, uint8_t key) {
     keystate[key] = (action==keyDOWN);
     EventType e;
-    return e.Key(action, key);
+    return e.SetKey(action, key);
 }
+
+EventType WindowImpl::ShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height) {
+    shape={x,y,width,height};
+    EventType e;
+    return e.SetShape(x,y,width,height);
+}
+
 //==============================================================
 
 //============================XCB===============================
@@ -128,10 +141,10 @@ public:
 };
 //==============================================================
 //=======================XCB IMPLEMENTATION=====================
-Window_xcb::Window_xcb(CInstance& inst, const char* title, uint _width, uint _height){
+Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint height){
     instance=&inst;
-    width=_width;
-    height=_height;
+    shape.width=width;
+    shape.height=height;
     running=true;
 
     printf("Creating XCB-Window...\n"); fflush(stdout);
@@ -154,11 +167,13 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint _width, uint _he
                     XCB_EVENT_MASK_KEY_RELEASE |        //2
                     XCB_EVENT_MASK_BUTTON_PRESS |       //4
                     XCB_EVENT_MASK_BUTTON_RELEASE |     //8
-                    //XCB_EVENT_MASK_KEYMAP_STATE |     //16384
-                    //XCB_EVENT_MASK_EXPOSURE |         //32768
-                    //XCB_EVENT_MASK_STRUCTURE_NOTIFY;  //131072
-                    XCB_EVENT_MASK_POINTER_MOTION |     // motion with no mouse button held
-                    XCB_EVENT_MASK_BUTTON_MOTION;       // motion with one or more mouse buttons held
+                    XCB_EVENT_MASK_POINTER_MOTION |     //64      motion with no mouse button held
+                    XCB_EVENT_MASK_BUTTON_MOTION  |     //8192    motion with one or more mouse buttons held
+                  //XCB_EVENT_MASK_KEYMAP_STATE |       //16384
+                  //XCB_EVENT_MASK_EXPOSURE |           //32768
+                  //XCB_EVENT_MASK_VISIBILITY_CHANGE,   //65536,
+                    XCB_EVENT_MASK_STRUCTURE_NOTIFY;    //131072  Window move/resize events
+                  //XCB_EVENT_MASK_RESIZE_REDIRECT |    //262144
     //--
 
     xcb_window = xcb_generate_id(xcb_connection);
@@ -185,7 +200,7 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint _width, uint _he
     k_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
     //xkb_rule_names names = {NULL,"pc105","is","dvorak","terminate:ctrl_alt_bksp"};
     //keymap = xkb_keymap_new_from_names(k_ctx, &names,XKB_KEYMAP_COMPILE_NO_FLAGS);
-    k_keymap = xkb_keymap_new_from_names(k_ctx, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);
+    k_keymap = xkb_keymap_new_from_names(k_ctx, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);  //use current keyboard settings
     k_state = xkb_state_new(k_keymap);
     //--------------------
 }
@@ -232,36 +247,43 @@ EventType Window_xcb::GetEvent(){
 
     xcb_generic_event_t* x_event;
     if (x_event = xcb_poll_for_event(xcb_connection)) {
-        xcb_button_press_event_t* e = (xcb_button_press_event_t*)x_event; //xcb_motion_notify_event_t
-        int16_t mx =e->event_x;
-        int16_t my =e->event_y;
-        uint8_t btn=e->detail;
+        xcb_button_press_event_t& e =*(xcb_button_press_event_t*)x_event; //xcb_motion_notify_event_t
+        int16_t mx =e.event_x;
+        int16_t my =e.event_y;
+        uint8_t btn=e.detail;
         uint8_t bestBtn=BtnState(1) ? 1 : BtnState(2) ? 2 :BtnState(3) ? 3 : 0;
+        //printf("%d %d\n",x_event->response_type,x_event->response_type & ~0x80);  //get event numerical value
         switch(x_event->response_type & ~0x80) {
-            case XCB_MOTION_NOTIFY : event=MouseEvent(mMOVE,mx,my,bestBtn);  break;
-            case XCB_BUTTON_PRESS  : event=MouseEvent(mDOWN,mx,my,btn);      break;
-            case XCB_BUTTON_RELEASE: event=MouseEvent(mUP  ,mx,my,btn);      break;
+            case XCB_MOTION_NOTIFY : event=MouseEvent(mMOVE,mx,my,bestBtn);  break;  //mouse move
+            case XCB_BUTTON_PRESS  : event=MouseEvent(mDOWN,mx,my,btn);      break;  //mouse btn press
+            case XCB_BUTTON_RELEASE: event=MouseEvent(mUP  ,mx,my,btn);      break;  //mouse btn release
             case XCB_KEY_PRESS:{
                 uint8_t keycode=EVDEV_TO_HID[btn];
-                KeyEvent(keyDOWN,keycode);                                   //key pressed event
+                KeyEvent(keyDOWN,keycode);                                           //key pressed event
                 buf[0]=0;
                 xkb_state_key_get_utf8(k_state,btn,buf,sizeof(buf));
-                charEvent=!!buf[0];                                           //text typed event
+                charEvent=!!buf[0];                                                  //text typed event
                 xkb_state_update_key(k_state,btn,XKB_KEY_DOWN);
                 break;
             }
             case XCB_KEY_RELEASE:{
                 uint8_t keycode=EVDEV_TO_HID[btn];
-                KeyEvent(keyUP,keycode);                                     //key released event
+                KeyEvent(keyUP,keycode);                                             //key released event
                 xkb_state_update_key(k_state,btn,XKB_KEY_UP);
                 break;
             }
-            case XCB_CLIENT_MESSAGE:{                                         //window close event
+            case XCB_CLIENT_MESSAGE:{                                                //window close event
                 if ((*(xcb_client_message_event_t *)x_event).data.data32[0] ==
                     (*atom_wm_delete_window).atom) {
                     printf("CLOSE\n"); fflush(stdout);
                     running=false;
                 }
+                break;
+            }
+            case XCB_CONFIGURE_NOTIFY:{                            // Window Reshape (move or resize)
+                if (!(e.response_type & 128)) break;               // only respond if message was sent with "SendEvent", (or x,y will be 0,0)
+                auto& e=*(xcb_configure_notify_event_t*)x_event;
+                ShapeEvent(e.x,e.y,e.width,e.height);
                 break;
             }
             default: break;
@@ -279,7 +301,7 @@ EventType Window_xcb::GetEvent(){
 //==========================Win32===============================
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 
-// Convert native Win32 keboard scancode to cross-platform USB HID code.
+// Convert native Win32 keyboard scancode to cross-platform USB HID code.
 const unsigned char WIN32_TO_HID[256] = {
       0,  0,  0,  0,  0,  0,  0,  0, 42, 43,  0,  0,  0, 40,  0,  0,
     225,224,226, 72, 57,  0,  0,  0,  0,  0,  0, 41,  0,  0,  0,  0,
@@ -314,10 +336,10 @@ public:
 //=====================Win32 IMPLEMENTATION=====================
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-Window_win32::Window_win32(CInstance& inst, const char* title, uint _width, uint _height){
+Window_win32::Window_win32(CInstance& inst, const char* title, uint width, uint height){
     instance=&inst;
-    width=_width;
-    height=_height;
+    shape.width=width;
+    shape.height=height;
     running=true;
     printf("Creating Win32 Window...\n"); fflush(stdout);
 
@@ -346,7 +368,7 @@ Window_win32::Window_win32(CInstance& inst, const char* title, uint _width, uint
         exit(1);
     }
     // Create window with the registered class:
-    RECT wr = { 0, 0, width, height };
+    RECT wr = { 0, 0, (LONG)width, (LONG)height };
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
     hWnd = CreateWindowEx(0,
         title,                // class name
@@ -423,7 +445,7 @@ EventType Window_win32::GetEvent(){
         case WM_SYSKEYUP  : return KeyEvent(keyUP  , WIN32_TO_HID[msg.wParam]);    //+alt key
 
         //--Char event--
-        case WM_CHAR: { strncpy_s(buf, (const char*)&msg.wParam, 4);  return event.Text(buf); } //return ascii code of key pressed
+        case WM_CHAR: { strncpy_s(buf, (const char*)&msg.wParam, 4);  return event.SetText(buf); } //return ascii code of key pressed
         }
         //printf(".");
         DispatchMessage(&msg);
@@ -516,24 +538,21 @@ WSIWindow::WSIWindow(CInstance& inst,const char* title,uint width,uint height){
 }
 
 WSIWindow::~WSIWindow()    { delete(pimpl); }
-//bool WSIWindow::PollEvent(){ return pimpl->PollEvent(); }
 bool WSIWindow::GetKeyState(eKeycode key){ return pimpl->KeyState(key); }
 void WSIWindow::Close()    { pimpl->Close(); }
 
 bool WSIWindow::ProcessEvents(){
     EventType e=pimpl->GetEvent();
     while(e.tag!=EventType::NONE){
-      switch(e.tag){
-        case EventType::MOUSE :if(OnMouseEvent) OnMouseEvent(e.mouse.action, e.mouse.x, e.mouse.y, e.mouse.btn); break;
-        case EventType::KEY   :if(OnKeyEvent)   OnKeyEvent  (e.key.action, e.key.keycode); break;
-        case EventType::TEXT  :if(OnTextEvent)  OnTextEvent (e.text.str); break;
-      }
-      e=pimpl->GetEvent();
+        switch(e.tag){
+            case EventType::MOUSE :if(OnMouseEvent) OnMouseEvent(e.mouse.action, e.mouse.x, e.mouse.y, e.mouse.btn);   break;
+            case EventType::KEY   :if(OnKeyEvent)   OnKeyEvent  (e.key.action, e.key.keycode);                         break;
+            case EventType::TEXT  :if(OnTextEvent)  OnTextEvent (e.text.str);                                          break;
+            case EventType::SHAPE :if(OnShapeEvent) OnShapeEvent(e.shape.x, e.shape.y, e.shape.width, e.shape.height); break;
+        }
+        e=pimpl->GetEvent();
     }
-
     return pimpl->running;
-
-
 }
 
 //==============================================================

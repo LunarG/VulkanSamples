@@ -17,7 +17,9 @@ void TextEvent(const char* str){                                          //Text
     printf("Text: %s\n",str); fflush(stdout);
 }
 
-
+void ShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height){   //Window move/resize event handler
+    printf("Shape: x=%4d y=%4d width=%4d height=%4d\n",x,y,width, height); fflush(stdout);
+}
 
 int main(int argc, char *argv[]){
     printf("WSI-Window\n");
@@ -27,11 +29,12 @@ int main(int argc, char *argv[]){
     Window.OnMouseEvent=MouseEvent;              //Register callback function for mouse events
     Window.OnKeyEvent  =KeyEvent;                //Register callback function for keyboard events
     Window.OnTextEvent =TextEvent;               //Register callback function for text typed
-
+    Window.OnShapeEvent=ShapeEvent;              //Register callback function for window move/resize
 
     while(Window.ProcessEvents()){
         bool KeyPressed = Window.GetKeyState(KEY_LeftShift);
         if (KeyPressed) printf("LEFT SHIFT PRESSED\r");
+         //printf(".");  fflush(stdout);
     }
 
 
