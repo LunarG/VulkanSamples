@@ -5759,10 +5759,14 @@ DestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout, const Vk
 VKAPI_ATTR void VKAPI_CALL
 DestroySampler(VkDevice device, VkSampler sampler, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    // TODO : Add detection for in-flight sampler
     std::unique_lock<std::mutex> lock(global_lock);
     auto sampler_node = getSamplerNode(dev_data, sampler);
     if (sampler_node) {
+        if (sampler_node->in_use.load()) {
+            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT,
+                    reinterpret_cast<uint64_t &>(sampler), __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
+                    "Sampler 0x%" PRIx64 " being destroyed while in use.", reinterpret_cast<uint64_t &>(sampler));
+        }
         // Any bound cmd buffers are now invalid
         invalidateCommandBuffers(sampler_node->cb_bindings,
                                  {reinterpret_cast<uint64_t &>(sampler), VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT});
