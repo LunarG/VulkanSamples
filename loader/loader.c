@@ -1651,6 +1651,7 @@ static bool loader_icd_init_entrys(struct loader_icd *icd, VkInstance inst,
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
     LOOKUP_GIPA(GetPhysicalDeviceWaylandPresentationSupportKHR, false);
 #endif
+    LOOKUP_GIPA(GetPhysicalDeviceExternalImageFormatPropertiesNV, false);
 
 #undef LOOKUP_GIPA
 

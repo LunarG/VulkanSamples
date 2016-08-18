@@ -58,17 +58,27 @@ terminator_GetPhysicalDeviceExternalImageFormatPropertiesNV(
     VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags,
     VkExternalMemoryHandleTypeFlagsNV externalHandleType,
     VkExternalImageFormatPropertiesNV *pExternalImageFormatProperties) {
-
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
     struct loader_icd *icd = phys_dev->this_icd;
 
-    assert(icd->GetPhysicalDeviceExternalImageFormatPropertiesNV &&
-           "loader: null GetPhysicalDeviceExternalImageFormatPropertiesNV ICD "
-           "pointer");
+    if (!icd->GetPhysicalDeviceExternalImageFormatPropertiesNV) {
+        if (externalHandleType) {
+            return VK_ERROR_FORMAT_NOT_SUPPORTED;
+        }
 
-    if (!icd->GetPhysicalDeviceExternalImageFormatPropertiesNV)
-        return VK_ERROR_INITIALIZATION_FAILED;
+        if (!icd->GetPhysicalDeviceImageFormatProperties) {
+            return VK_ERROR_INITIALIZATION_FAILED;
+        }
+
+        pExternalImageFormatProperties->externalMemoryFeatures = 0;
+        pExternalImageFormatProperties->exportFromImportedHandleTypes = 0;
+        pExternalImageFormatProperties->compatibleHandleTypes = 0;
+
+        return icd->GetPhysicalDeviceImageFormatProperties(
+            phys_dev->phys_dev, format, type, tiling, usage, flags,
+            &pExternalImageFormatProperties->imageFormatProperties);
+    }
 
     return icd->GetPhysicalDeviceExternalImageFormatPropertiesNV(
         phys_dev->phys_dev, format, type, tiling, usage, flags,
