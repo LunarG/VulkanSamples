@@ -159,11 +159,12 @@ class Proto(object):
                 (self.ret, self.name, param_str)
 
 class Extension(object):
-    def __init__(self, name, headers, objects, protos):
+    def __init__(self, name, headers, objects, protos, ifdef = None):
         self.name = name
         self.headers = headers
         self.objects = objects
         self.protos = protos
+        self.ifdef = ifdef
 
     def __repr__(self):
         lines = []
@@ -1160,6 +1161,7 @@ ext_khr_xlib_surface = Extension(
     name="VK_KHR_xlib_surface",
     headers=["vulkan/vulkan.h"],
     objects=[],
+    ifdef="VK_USE_PLATFORM_XLIB_KHR",
     protos=[
         Proto("VkResult", "CreateXlibSurfaceKHR",
             [Param("VkInstance", "instance"),
