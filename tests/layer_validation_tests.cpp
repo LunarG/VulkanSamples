@@ -4369,35 +4369,53 @@ TEST_F(VkLayerTest, DisabledIndependentBlend) {
     TEST_DESCRIPTION("Generate INDEPENDENT_BLEND by disabling independent "
                      "blend and then specifying different blend states for two "
                      "attachements");
-    VkPhysicalDeviceFeatures features = {};
-    features.independentBlend = VK_FALSE;
-    ASSERT_NO_FATAL_FAILURE(InitState(&features));
+    ASSERT_NO_FATAL_FAILURE(InitState());
 
     m_errorMonitor->SetDesiredFailureMsg(
-                VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                "Invalid Pipeline CreateInfo: If independent blend feature not "
-                "enabled, all elements of pAttachments must be identical");
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Invalid Pipeline CreateInfo: If independent blend feature not "
+        "enabled, all elements of pAttachments must be identical");
+    VkPhysicalDeviceFeatures features = {};
+    features.independentBlend = VK_FALSE;
+    std::vector<const char *> extension_names;
+    VkDeviceObj noib_device(0, gpu(), extension_names, &features);
 
-    VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+    VkCommandPool cmd_pool;
+    VkCommandPoolCreateInfo pool_create_info{};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = noib_device.graphics_queue_node_index_;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-    VkPipelineObj pipeline(m_device);
-    VkRenderpassObj renderpass(m_device);
-    VkShaderObj vs(m_device, bindStateVertShaderText,
-                   VK_SHADER_STAGE_VERTEX_BIT, this);
-    pipeline.AddShader(&vs);
+    vkCreateCommandPool(noib_device.device(), &pool_create_info, nullptr,
+                        &cmd_pool);
+    {
+        // Need cmd_buffer's destructor to be called before calling DestroyCommandPool
+        VkCommandBufferObj cmd_buffer(&noib_device, cmd_pool);
+        VkDescriptorSetObj descriptorSet(&noib_device);
+        descriptorSet.AppendDummy();
+        descriptorSet.CreateVKDescriptorSet(&cmd_buffer);
 
-    VkPipelineColorBlendAttachmentState att_state1 = {}, att_state2 = {};
-    att_state1.dstAlphaBlendFactor = VK_BLEND_FACTOR_CONSTANT_COLOR;
-    att_state1.blendEnable = VK_TRUE;
-    att_state2.dstAlphaBlendFactor = VK_BLEND_FACTOR_CONSTANT_COLOR;
-    att_state2.blendEnable = VK_FALSE;
-    pipeline.AddColorAttachment(0, &att_state1);
-    pipeline.AddColorAttachment(1, &att_state2);
-    pipeline.CreateVKPipeline(descriptorSet.GetPipelineLayout(),
-                              renderpass.handle());
-    m_errorMonitor->VerifyFound();
+        VkPipelineObj pipeline(&noib_device);
+
+        VkRenderpassObj renderpass(&noib_device);
+
+        VkShaderObj vs(&noib_device, bindStateVertShaderText,
+                       VK_SHADER_STAGE_VERTEX_BIT, this);
+
+        pipeline.AddShader(&vs);
+
+        VkPipelineColorBlendAttachmentState att_state1 = {}, att_state2 = {};
+        att_state1.dstAlphaBlendFactor = VK_BLEND_FACTOR_CONSTANT_COLOR;
+        att_state1.blendEnable = VK_TRUE;
+        att_state2.dstAlphaBlendFactor = VK_BLEND_FACTOR_CONSTANT_COLOR;
+        att_state2.blendEnable = VK_FALSE;
+        pipeline.AddColorAttachment(0, &att_state1);
+        pipeline.AddColorAttachment(1, &att_state2);
+        pipeline.CreateVKPipeline(descriptorSet.GetPipelineLayout(),
+                                  renderpass.handle());
+        m_errorMonitor->VerifyFound();
+    }
+    vkDestroyCommandPool(noib_device.device(), cmd_pool, NULL);
 }
 
 TEST_F(VkLayerTest, RenderPassDepthStencilAttachmentUnused) {
