@@ -449,9 +449,9 @@ VkResult loader_add_device_extensions(const struct loader_instance *inst,
                                       VkPhysicalDevice physical_device,
                                       const char *lib_name,
                                       struct loader_extension_list *ext_list);
-bool loader_init_generic_list(const struct loader_instance *inst,
-                              struct loader_generic_list *list_info,
-                              size_t element_size);
+VkResult loader_init_generic_list(const struct loader_instance *inst,
+                                  struct loader_generic_list *list_info,
+                                  size_t element_size);
 void loader_destroy_generic_list(const struct loader_instance *inst,
                                  struct loader_generic_list *list);
 void loader_destroy_layer_list(const struct loader_instance *inst,
@@ -489,7 +489,7 @@ void loader_layer_scan(const struct loader_instance *inst,
                        struct loader_layer_list *instance_layers);
 void loader_implicit_layer_scan(const struct loader_instance *inst,
                                 struct loader_layer_list *instance_layers);
-void loader_get_icd_loader_instance_extensions(
+VkResult loader_get_icd_loader_instance_extensions(
     const struct loader_instance *inst, struct loader_icd_libs *icd_libs,
     struct loader_extension_list *inst_exts);
 struct loader_icd *loader_get_icd_and_device(const VkDevice device,
