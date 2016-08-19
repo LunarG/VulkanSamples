@@ -176,7 +176,25 @@ void VkRenderFramework::InitFramework(
     }
 
     /* TODO: Verify requested physical device extensions are available */
-    this->device_extension_names = device_extension_names;
+    m_device = new VkDeviceObj(0, objs[0], device_extension_names);
+
+    /* Now register callback on device */
+    if (0) {
+        if (m_CreateDebugReportCallback) {
+            VkDebugReportCallbackCreateInfoEXT dbgInfo;
+            memset(&dbgInfo, 0, sizeof(dbgInfo));
+            dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+            dbgInfo.pfnCallback = dbgFunction;
+            dbgInfo.pUserData = userData;
+            dbgInfo.flags =
+                VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+            err = m_CreateDebugReportCallback(this->inst, &dbgInfo, NULL,
+                                              &m_devMsgCallback);
+            ASSERT_VK_SUCCESS(err);
+        }
+    }
+    m_device->get_device_queue();
+    m_depthStencil = new VkDepthStencilObj(m_device);
 }
 
 void VkRenderFramework::ShutdownFramework() {
@@ -212,11 +230,6 @@ void VkRenderFramework::ShutdownFramework() {
 
 void VkRenderFramework::InitState() {
     VkResult U_ASSERT_ONLY err;
-
-    m_device = new VkDeviceObj(0, objs[0], device_extension_names);
-    m_device->get_device_queue();
-
-    m_depthStencil = new VkDepthStencilObj(m_device);
 
     m_render_target_fmt = VkTestFramework::GetFormat(inst, m_device);
 
