@@ -24,8 +24,8 @@
 
 //==========================Event Message=======================
 struct EventType{
-    enum{NONE, MOUSE, KEY, TEXT, SHAPE} tag;
-    union{
+    enum{NONE, MOUSE, KEY, TEXT, SHAPE} tag;  //Message type
+    union{                                    //Check 'tag' to determine which union struct to use.
         struct {eMouseAction action; int16_t x; int16_t y; uint8_t btn;}mouse;
         struct {eKeyAction   action; uint8_t keycode;}key;
         struct {const char* str;}text;
@@ -36,29 +36,34 @@ struct EventType{
 
 //=====================WSIWindow base class=====================
 class WindowImpl {
-    struct mousepos_t{int16_t x; int16_t y;}mousepos = {};                 // mouse position
+    struct {int16_t x; int16_t y;}mousepos = {};                           // mouse position
     bool btnstate[5]   = {};                                               // mouse btn state
     bool keystate[256] = {};                                               // keyboard state
 protected:
     CInstance* instance;
     VkSurfaceKHR surface;
-    struct shape_t {int16_t x; int16_t y; uint16_t width; uint16_t height;}shape;  // window shape
-    EventType MouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn);  //Mouse event
-    EventType KeyEvent  (eKeyAction action, uint8_t key);                          //Keyboard event
-    EventType TextEvent (const char* str);                                         //Text event
-    EventType ShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height);   //Window move/resize
+    //int width, height;
+    struct {int16_t x; int16_t y; uint16_t width; uint16_t height;}shape;  // window shape
+    EventType MouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn); //Mouse event
+    EventType KeyEvent  (eKeyAction action, uint8_t key);                         //Keyboard event
+    EventType TextEvent (const char* str);                                        //Text event
+    EventType ShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height);  //Window move/resize
 public:
+    //WindowImpl(CInstance& inst, const char* title, uint width, uint height);
+    //WindowImpl() : instance(0), width(64), height(64), running(false) {}
     WindowImpl() : instance(0), running(false) {}
     virtual ~WindowImpl() {}
+    //virtual bool PollEvent() = 0;
     virtual void Close() { running = false; }
     CInstance& Instance() { return *instance; }
     bool KeyState(eKeycode key){ return keystate[key]; }
     bool BtnState(uint8_t  btn){ return (btn<5)  ? btnstate[btn]:0; }
-    mousepos_t MousePos() { return mousepos; }
+
 
     bool running;
 
     virtual EventType GetEvent()=0; //fetch one event from the queue
+    //void (*OnMouseEvent)()=0;
 };
 
 EventType WindowImpl::MouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn) {
@@ -325,12 +330,12 @@ const unsigned char WIN32_TO_HID[256] = {
 class Window_win32 : public WindowImpl{
     HINSTANCE hInstance;
     HWND      hWnd;
-    //bool ShapeMode;
 
     void CreateSurface(VkInstance instance);
 public:
     Window_win32(CInstance& inst, const char* title, uint width, uint height);
     virtual ~Window_win32();
+    //bool PollEvent();
     EventType Window_win32::GetEvent();
 };
 //==============================================================
@@ -341,7 +346,6 @@ Window_win32::Window_win32(CInstance& inst, const char* title, uint width, uint 
     instance=&inst;
     shape.width=width;
     shape.height=height;
-    //ShapeMode = false;
     running=true;
     printf("Creating Win32 Window...\n"); fflush(stdout);
 
@@ -409,115 +413,81 @@ void Window_win32::CreateSurface(VkInstance instance){
     printf("Surface created\n"); fflush(stdout);
 }
 
-#define WM_RESHAPE (WM_USER+0)
-
 EventType Window_win32::GetEvent(){
-    //printf(".\r");
-    //static int ctr = 0; char spin[] = { '|','/','~','\\' }; printf("%c\r", spin[(ctr++) & 3]);  fflush(stdout);
-
-    //EventType event;
+    EventType event;
 
     MSG msg = {};
-    //running = (GetMessage(&msg, NULL, 0, 0)>0); 
-    running = (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)>0);
-    
+    running = (GetMessage(&msg, NULL, 0, 0)>0);  //TODO: Try PeekMessage?
     if (running) {
+        TranslateMessage(&msg);
+
         int16_t x = GET_X_LPARAM(msg.lParam);
         int16_t y = GET_Y_LPARAM(msg.lParam);
-/*
-        if (ShapeMode==true) {
-            switch (msg.message) {
-                case WM_MOUSEMOVE:{ 
-                    SetWindowPos(hWnd,0, shape.x, shape.y, shape.width, shape.height-10, SWP_SHOWWINDOW); break;
-                }
-                case WM_LBUTTONUP:
-                case WM_MOUSELEAVE:
-                case WM_NCMOUSELEAVE:
-                case WM_NCLBUTTONUP: {printf("Exit ShapeMode\n"); fflush(stdout);  ShapeMode = false; return{ EventType::NONE }; break; }
-            }
-            return{ EventType::NONE };
-        }
-*/
-        TranslateMessage(&msg);
         static char buf[4] = {};
         uint8_t bestBtn=BtnState(1) ? 1 : BtnState(2) ? 2 :BtnState(3) ? 3 : 0;
-        switch (msg.message) {
-            //--Mouse events--
-            case WM_MOUSEMOVE  : return MouseEvent(mMOVE,x,y,bestBtn);
-            case WM_LBUTTONDOWN: return MouseEvent(mDOWN,x,y,1);
-            case WM_MBUTTONDOWN: return MouseEvent(mDOWN,x,y,2);
-            case WM_RBUTTONDOWN: return MouseEvent(mDOWN,x,y,3);
-            case WM_LBUTTONUP  : return MouseEvent(mUP  ,x,y,1);
-            case WM_MBUTTONUP  : return MouseEvent(mUP  ,x,y,2);
-            case WM_RBUTTONUP  : return MouseEvent(mUP  ,x,y,3);
-            //--Mouse wheel events--
-            case WM_MOUSEWHEEL: {
-                uint8_t wheel = (GET_WHEEL_DELTA_WPARAM(msg.wParam) > 0) ? 4 : 5;
-                POINT point = { x,y };
-                ScreenToClient(msg.hwnd, &point);
-                return{ EventType::MOUSE,{ mDOWN,(int16_t)point.x, (int16_t)point.y, wheel } };
-            }
-            //--Keyboard events--
-            case WM_KEYDOWN   : return KeyEvent(keyDOWN, WIN32_TO_HID[msg.wParam]);
-            case WM_KEYUP     : return KeyEvent(keyUP  , WIN32_TO_HID[msg.wParam]);
-            case WM_SYSKEYDOWN: {MSG discard; GetMessage(&discard, NULL, 0, 0);        //Alt-key triggers a WM_MOUSEMOVE message... Discard it.
-                                return KeyEvent(keyDOWN, WIN32_TO_HID[msg.wParam]); }  //+alt key
-            case WM_SYSKEYUP  : return KeyEvent(keyUP  , WIN32_TO_HID[msg.wParam]);    //+alt key
 
-            //--Char event--
-            case WM_CHAR: { strncpy_s(buf, (const char*)&msg.wParam, 4);  return TextEvent(buf); } //return UTF8 code of key pressed
-            //--Window events--
-            case WM_RESHAPE: { 
-                RECT r; GetWindowRect(hWnd, &r);
-                return ShapeEvent((int16_t)r.left, (int16_t)r.top, (uint16_t)(r.right - r.left), (uint16_t)(r.bottom - r.top));
-            }
-/*
-            case WM_NCLBUTTONDOWN: {  //Start window move/resize
-                printf("->NCL [%d]", msg.wParam);
-                RECT r; GetWindowRect(hWnd, &r);
-                shape = { (int16_t)r.left,(int16_t)r.top,(uint16_t)(r.right - r.left),(uint16_t)(r.bottom - r.top) };
-                if (msg.wParam == HTBOTTOM) {
-                    ShapeMode = true;
-                    return{ EventType::NONE };  //Dont Dispatch message, to prevent Windows from going modal
-                }
-            }
-*/
+        switch (msg.message) {
+        //--Mouse events--
+        case WM_MOUSEMOVE  : return MouseEvent(mMOVE,x,y,bestBtn);
+        case WM_LBUTTONDOWN: return MouseEvent(mDOWN,x,y,1);
+        case WM_MBUTTONDOWN: return MouseEvent(mDOWN,x,y,2);
+        case WM_RBUTTONDOWN: return MouseEvent(mDOWN,x,y,3);
+        case WM_LBUTTONUP  : return MouseEvent(mUP  ,x,y,1);
+        case WM_MBUTTONUP  : return MouseEvent(mUP  ,x,y,2);
+        case WM_RBUTTONUP  : return MouseEvent(mUP  ,x,y,3);
+        //--Mouse wheel events--
+        case WM_MOUSEWHEEL: {
+            uint8_t wheel = (GET_WHEEL_DELTA_WPARAM(msg.wParam) > 0) ? 4 : 5;
+            POINT point = { x,y };
+            ScreenToClient(msg.hwnd, &point);
+            return{ EventType::MOUSE,{ mDOWN,(int16_t)point.x, (int16_t)point.y, wheel } };
         }
+        //--Keyboard events--
+
+        case WM_KEYDOWN   : return KeyEvent(keyDOWN, WIN32_TO_HID[msg.wParam]);
+        case WM_KEYUP     : return KeyEvent(keyUP  , WIN32_TO_HID[msg.wParam]);
+        case WM_SYSKEYDOWN: {MSG discard; GetMessage(&discard, NULL, 0, 0);        //Alt-key triggers a WM_MOUSEMOVE message... Discard it.
+                            return KeyEvent(keyDOWN, WIN32_TO_HID[msg.wParam]); }  //+alt key
+        case WM_SYSKEYUP  : return KeyEvent(keyUP  , WIN32_TO_HID[msg.wParam]);    //+alt key
+
+        //--Char event--
+        case WM_CHAR: { strncpy_s(buf, (const char*)&msg.wParam, 4);  return event.SetText(buf); } //return ascii code of key pressed
+        }
+        //printf(".");
         DispatchMessage(&msg);
     }
     return{ EventType::NONE };
 }
 
+
 // MS-Windows event handling function:
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
-        case WM_CLOSE:
-            printf("WM_CLOSE\n");
-            DestroyWindow(hWnd);
-            return 0;
-        case WM_DESTROY:
-            printf("WM_DESTROY\n");
-            PostQuitMessage(0);
-            return 0;
-        case WM_PAINT:
-            //printf("WM_PAINT\n");
-            //demo_run(&demo);
-            return 0;
-        case WM_GETMINMAXINFO:     // set window's minimum size
-                                   //((MINMAXINFO*)lParam)->ptMinTrackSize = demo.minsize;
-            return 0;
-        //case WM_ENTERSIZEMOVE: {printf("ENTERSIZEMOVE "); break; }
-        //case WM_EXITSIZEMOVE: {printf("EXITSIZEMOVE "); break; }
-        case WM_EXITSIZEMOVE: { PostMessage(hWnd, WM_RESHAPE, 0, 0); break; }
-        
-        case WM_SIZE: {
-            if (wParam != SIZE_MINIMIZED) {
-                //width = lParam & 0xffff;
-                //height = (lParam & 0xffff0000) >> 16;
-                //demo_resize(&demo);
-            }
-            break;
+    case WM_CLOSE:
+        printf("WM_CLOSE\n");
+        DestroyWindow(hWnd);
+        return 0;
+    case WM_DESTROY:
+        printf("WM_DESTROY\n");
+        PostQuitMessage(0);
+        return 0;
+    case WM_PAINT:
+        //printf("WM_PAINT\n");
+        //demo_run(&demo);
+        return 0;
+    case WM_GETMINMAXINFO:     // set window's minimum size
+                               //((MINMAXINFO*)lParam)->ptMinTrackSize = demo.minsize;
+        return 0;
+    case WM_SIZE:
+        // Resize the application to the new window size, except when
+        // it was minimized. Vulkan doesn't support images or swapchains
+        // with width=0 and height=0.
+        if (wParam != SIZE_MINIMIZED) {
+            //width = lParam & 0xffff;
+            //height = (lParam & 0xffff0000) >> 16;
+            //demo_resize(&demo);
         }
+        break;
     default:
         break;
     }
