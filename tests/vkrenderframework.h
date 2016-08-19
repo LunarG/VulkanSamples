@@ -78,7 +78,7 @@ class VkRenderFramework : public VkTestFramework {
                        void *userData = NULL);
 
     void ShutdownFramework();
-    void InitState(VkPhysicalDeviceFeatures *features = nullptr);
+    void InitState();
 
     const VkRenderPassBeginInfo &renderPassBeginInfo() const {
         return m_renderPassBeginInfo;
