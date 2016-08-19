@@ -16110,6 +16110,55 @@ TEST_F(VkLayerTest, MiscImageLayerTests) {
     m_errorMonitor->VerifyFound();
     region.imageSubresource.layerCount = 1;
 
+    // BufferOffset must be a multiple of the calling command's VkImage parameter's texel size
+    // Introduce failure by setting bufferOffset to 1 and 1/2 texels
+    region.bufferOffset = 6;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "must be a multiple of this format's texel size");
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(),
+                           image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           1, &region);
+    m_errorMonitor->VerifyFound();
+
+    // BufferOffset must be a multiple of 4
+    // Introduce failure by setting bufferOffset to a value not divisible by 4
+    region.bufferOffset = 6;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "must be a multiple of 4");
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(),
+                           image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           1, &region);
+    m_errorMonitor->VerifyFound();
+
+    // BufferRowLength must be 0, or greater than or equal to the width member of imageExtent
+    region.bufferOffset = 0;
+    region.imageExtent.height = 128;
+    region.imageExtent.width = 128;
+    // Introduce failure by setting bufferRowLength > 0 but less than width
+    region.bufferRowLength = 64;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "must be zero or greater-than-or-equal-to imageExtent.width");
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(),
+                           image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           1, &region);
+    m_errorMonitor->VerifyFound();
+
+    // BufferImageHeight must be 0, or greater than or equal to the height member of imageExtent
+    region.bufferRowLength = 128;
+    // Introduce failure by setting bufferRowHeight > 0 but less than height
+    region.bufferImageHeight = 64;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "must be zero or greater-than-or-equal-to imageExtent.height");
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(),
+                           image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           1, &region);
+    m_errorMonitor->VerifyFound();
+
+    region.bufferImageHeight = 128;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          "aspectMasks for each region must "
                                          "specify only COLOR or DEPTH or "
