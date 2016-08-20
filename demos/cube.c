@@ -29,7 +29,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <signal.h>
-#if defined(__linux__) && !defined(ANDROID)
+#if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
 #include <X11/Xutil.h>
 #endif
 
