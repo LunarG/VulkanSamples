@@ -244,6 +244,7 @@ enum SHADER_CHECKER_ERROR {
     SHADER_CHECKER_FEATURE_NOT_ENABLED,                     // Shader uses capability requiring a feature not enabled on device
     SHADER_CHECKER_BAD_CAPABILITY,                          // Shader uses capability not supported by Vulkan (OpenCL features)
     SHADER_CHECKER_MISSING_INPUT_ATTACHMENT,   // Shader uses an input attachment but not declared in subpass
+    SHADER_CHECKER_INPUT_ATTACHMENT_TYPE_MISMATCH,          // Shader input attachment type does not match subpass format
 };
 
 // Device Limits ERROR codes

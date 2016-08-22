@@ -2801,8 +2801,16 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
                     pass = false;
                 }
             }
-
-            /* TODO: type match, etc */
+            else if (get_format_type(rpci->pAttachments[index].format) !=
+                    get_fundamental_type(module, use.second.type_id)) {
+                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
+                            SHADER_CHECKER_INPUT_ATTACHMENT_TYPE_MISMATCH, "SC",
+                            "Subpass input attachment %u format of %s does not match type used in shader `%s`",
+                            use.first, string_VkFormat(rpci->pAttachments[index].format),
+                            describe_type(module, use.second.type_id).c_str())) {
+                    pass = false;
+                }
+            }
         }
     }
 
