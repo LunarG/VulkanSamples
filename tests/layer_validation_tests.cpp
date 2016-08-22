@@ -14781,6 +14781,110 @@ TEST_F(VkLayerTest, CreatePipelineInputAttachmentMissing) {
     vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
 }
 
+TEST_F(VkLayerTest, CreatePipelineInputAttachmentPositive) {
+    TEST_DESCRIPTION("Positive test for a correctly matched input attachment");
+    m_errorMonitor->ExpectSuccess();
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    char const *vsSource =
+        "#version 450\n"
+        "\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "    gl_Position = vec4(1);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 450\n"
+        "\n"
+        "layout(input_attachment_index=0, set=0, binding=0) uniform subpassInput x;\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main() {\n"
+        "   color = subpassLoad(x);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkDescriptorSetLayoutBinding dslb = {
+        0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+        1, VK_SHADER_STAGE_FRAGMENT_BIT,
+        nullptr
+    };
+    VkDescriptorSetLayoutCreateInfo dslci = {
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        nullptr, 0,
+        1, &dslb
+    };
+    VkDescriptorSetLayout dsl;
+    VkResult err = vkCreateDescriptorSetLayout(
+            m_device->device(), &dslci, nullptr, &dsl);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo plci = {
+        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        nullptr, 0, 1, &dsl, 0, nullptr
+    };
+    VkPipelineLayout pl;
+    err = vkCreatePipelineLayout(
+            m_device->device(), &plci, nullptr, &pl);
+    ASSERT_VK_SUCCESS(err);
+
+    VkAttachmentDescription descs[2] = {
+        {
+            0, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT,
+            VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
+            VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        },
+        {
+            0, VK_FORMAT_R8G8B8A8_UNORM, VK_SAMPLE_COUNT_1_BIT,
+            VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
+            VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
+            VK_IMAGE_LAYOUT_GENERAL,
+            VK_IMAGE_LAYOUT_GENERAL
+        },
+    };
+    VkAttachmentReference color = {
+        0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
+    VkAttachmentReference input = {
+        1, VK_IMAGE_LAYOUT_GENERAL,
+    };
+
+    VkSubpassDescription sd = {
+        0, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        1, &input, 1, &color, nullptr, nullptr,
+        0, nullptr
+    };
+
+    VkRenderPassCreateInfo rpci = {
+        VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr,
+        0, 2, descs, 1, &sd, 0, nullptr
+    };
+    VkRenderPass rp;
+    err = vkCreateRenderPass(m_device->device(), &rpci, nullptr, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    // should be OK. would go wrong here if it's going to...
+    pipe.CreateVKPipeline(pl, rp);
+
+    m_errorMonitor->VerifyNotFound();
+
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+    vkDestroyPipelineLayout(m_device->device(), pl, nullptr);
+    vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
+}
+
 TEST_F(VkLayerTest, CreatePipelineInputAttachmentTypeMismatch) {
     TEST_DESCRIPTION("Test that an error is produced for a shader consuming an input attachment "
                      "with a format having a different fundamental type");
