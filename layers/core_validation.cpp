@@ -4021,7 +4021,7 @@ static void set_cb_pso_status(GLOBAL_CB_NODE *pCB, const PIPELINE_NODE *pPipe) {
     // Account for any dynamic state not set via this PSO
     if (!pPipe->graphicsPipelineCI.pDynamicState ||
         !pPipe->graphicsPipelineCI.pDynamicState->dynamicStateCount) { // All state is static
-        pCB->status = CBSTATUS_ALL;
+        pCB->status |= CBSTATUS_ALL;
     } else {
         // First consider all state on
         // Then unset any state that's noted as dynamic in PSO
