@@ -1565,16 +1565,16 @@ static void collect_interface_by_input_attachment_index(debug_report_data *repor
                     assert(def != src->end());
 
                     if (def.opcode() == spv::OpVariable && insn.word(3) == spv::StorageClassUniformConstant) {
-                        /* TODO: arrays of input attachments: the descriptor
-                         * side only consumes one binding, but each array
-                         * element will consume an additional attachment index */
-                        interface_var v;
-                        v.id = id;
-                        v.type_id = def.word(1);
-                        v.offset = 0;
-                        v.is_patch = false;
-                        v.is_block_member = false;
-                        out.emplace_back(attachment_index, v);
+                        auto num_locations = get_locations_consumed_by_type(src, def.word(1), false);
+                        for (unsigned int offset = 0; offset < num_locations; offset++) {
+                            interface_var v;
+                            v.id = id;
+                            v.type_id = def.word(1);
+                            v.offset = offset;
+                            v.is_patch = false;
+                            v.is_block_member = false;
+                            out.emplace_back(attachment_index + offset, v);
+                        }
                     }
                 }
             }
