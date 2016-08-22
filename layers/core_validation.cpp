@@ -1776,6 +1776,9 @@ static unsigned get_fundamental_type(shader_module const *src, unsigned type) {
         return get_fundamental_type(src, insn.word(2));
     case spv::OpTypePointer:
         return get_fundamental_type(src, insn.word(3));
+    case spv::OpTypeImage:
+        return get_fundamental_type(src, insn.word(2));
+
     default:
         return FORMAT_TYPE_UNDEFINED;
     }
