@@ -137,6 +137,8 @@ It flags errors when inconsistencies are found across interfaces between shader 
 | Descriptor type mismatch | Flags error if a descriptor type does not match the shader resource type. | DESCRIPTOR_TYPE_MISMATCH | vkCreateGraphicsPipelines | TODO | NA |
 | Feature not enabled | Flags error if a capability declared by the shader requires a feature not enabled on the device | FEATURE_NOT_ENABLED | vkCreateGraphicsPipelines | TODO | NA |
 | Bad capability | Flags error if a capability declared by the shader is not supported by Vulkan shaders | BAD_CAPABILITY | vkCreateGraphicsPipelines | TODO | NA |
+| Missing input attachment | Flags error if shader consumes an input attachment which is not provided in the subpass in which a pipeline will be used | MISSING_INPUT_ATTACHMENT | vkCreateGraphicsPipelines | CreatePipelineInputAttachment* | NA |
+| Input attachment type mismatch | Flags error if shader's declaration of an input attachment has a type inconsistent with the format declared in the renderpass | INPUT_ATTACHMENT_TYPE_MISMATCH | vkCreateGraphicsPipelines | CreatePipelineInputAttachmentTypeMismatch | NA |
 | NA | Enum used for informational messages | NONE | | TODO | None |
 
 ### VK_LAYER_LUNARG_core_validation Shader Checker Pending Work
