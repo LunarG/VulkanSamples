@@ -14781,6 +14781,74 @@ TEST_F(VkLayerTest, CreatePipelineInputAttachmentMissing) {
     vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
 }
 
+TEST_F(VkLayerTest, CreatePipelineInputAttachmentMissingArray) {
+    TEST_DESCRIPTION("Test that an error is produced for a shader consuming an input attachment "
+                     "which is not included in the subpass description -- array case");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "consumes input attachment index 1 but not provided in subpass");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    char const *vsSource =
+        "#version 450\n"
+        "\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
+        "void main(){\n"
+        "    gl_Position = vec4(1);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 450\n"
+        "\n"
+        "layout(input_attachment_index=0, set=0, binding=0) uniform subpassInput xs[2];\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main() {\n"
+        "   color = subpassLoad(xs[1]);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkDescriptorSetLayoutBinding dslb = {
+        0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+        2, VK_SHADER_STAGE_FRAGMENT_BIT,
+        nullptr
+    };
+    VkDescriptorSetLayoutCreateInfo dslci = {
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        nullptr, 0,
+        1, &dslb
+    };
+    VkDescriptorSetLayout dsl;
+    VkResult err = vkCreateDescriptorSetLayout(
+            m_device->device(), &dslci, nullptr, &dsl);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo plci = {
+        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        nullptr, 0, 1, &dsl, 0, nullptr
+    };
+    VkPipelineLayout pl;
+    err = vkCreatePipelineLayout(
+            m_device->device(), &plci, nullptr, &pl);
+    ASSERT_VK_SUCCESS(err);
+
+    // error here.
+    pipe.CreateVKPipeline(pl, renderPass());
+
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyPipelineLayout(m_device->device(), pl, nullptr);
+    vkDestroyDescriptorSetLayout(m_device->device(), dsl, nullptr);
+}
+
 TEST_F(VkLayerTest, CreateComputePipelineMissingDescriptor) {
     TEST_DESCRIPTION("Test that an error is produced for a compute pipeline consuming a "
                      "descriptor which is not provided in the pipeline layout");
