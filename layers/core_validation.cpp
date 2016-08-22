@@ -1550,6 +1550,38 @@ static void collect_interface_by_location(shader_module const *src, spirv_inst_i
     }
 }
 
+static void collect_interface_by_input_attachment_index(debug_report_data *report_data, shader_module const *src,
+                                                        std::unordered_set<uint32_t> const &accessible_ids,
+                                                        std::vector<std::pair<uint32_t, interface_var>> &out) {
+
+    for (auto insn : *src) {
+        if (insn.opcode() == spv::OpDecorate) {
+            if (insn.word(2) == spv::DecorationInputAttachmentIndex) {
+                auto attachment_index = insn.word(3);
+                auto id = insn.word(1);
+
+                if (accessible_ids.count(id)) {
+                    auto def = src->get_def(id);
+                    assert(def != src->end());
+
+                    if (def.opcode() == spv::OpVariable && insn.word(3) == spv::StorageClassUniformConstant) {
+                        /* TODO: arrays of input attachments: the descriptor
+                         * side only consumes one binding, but each array
+                         * element will consume an additional attachment index */
+                        interface_var v;
+                        v.id = id;
+                        v.type_id = def.word(1);
+                        v.offset = 0;
+                        v.is_patch = false;
+                        v.is_block_member = false;
+                        out.emplace_back(attachment_index, v);
+                    }
+                }
+            }
+        }
+    }
+}
+
 static void collect_interface_by_descriptor_slot(debug_report_data *report_data, shader_module const *src,
                                                  std::unordered_set<uint32_t> const &accessible_ids,
                                                  std::vector<std::pair<descriptor_slot_t, interface_var>> &out) {
