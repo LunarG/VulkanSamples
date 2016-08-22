@@ -47,6 +47,7 @@
 #include "vk_layer_utils.h"
 #include "vk_safe_struct.h"
 #include "vulkan/vk_layer.h"
+#include <map>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -320,10 +321,10 @@ class DescriptorSet : public BASE_NODE {
     // Is this set compatible with the given layout?
     bool IsCompatible(const DescriptorSetLayout *, std::string *) const;
     // For given bindings validate state at time of draw is correct, returning false on error and writing error details into string*
-    bool ValidateDrawState(const std::unordered_map<uint32_t, descriptor_req> &, const std::vector<uint32_t> &, std::string *) const;
+    bool ValidateDrawState(const std::map<uint32_t, descriptor_req> &, const std::vector<uint32_t> &, std::string *) const;
     // For given set of bindings, add any buffers and images that will be updated to their respective unordered_sets & return number
     // of objects inserted
-    uint32_t GetStorageUpdates(const std::unordered_map<uint32_t, descriptor_req> &, std::unordered_set<VkBuffer> *,
+    uint32_t GetStorageUpdates(const std::map<uint32_t, descriptor_req> &, std::unordered_set<VkBuffer> *,
                                std::unordered_set<VkImageView> *) const;
 
     // Descriptor Update functions. These functions validate state and perform update separately
