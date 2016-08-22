@@ -7512,6 +7512,115 @@ static bool VerifyDestImageLayout(layer_data *dev_data, GLOBAL_CB_NODE *cb_node,
     return skip_call;
 }
 
+// Test elements of a VkExtent3D structure against alignment constraints contained in another VkExtent3D structure
+static inline bool IsExtentAligned(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node, const VkExtent3D *extent,
+                                   VkExtent3D *granularity) {
+    bool valid = true;
+    auto pPool = getCommandPoolNode(dev_data, cb_node->createInfo.commandPool);
+    if (pPool) {
+        granularity = &dev_data->phys_dev_properties.queue_family_properties[pPool->queueFamilyIndex].minImageTransferGranularity;
+        if ((vk_safe_modulo(extent->depth, granularity->depth) != 0) || (vk_safe_modulo(extent->width, granularity->width) != 0) ||
+            (vk_safe_modulo(extent->height, granularity->height) != 0)) {
+            valid = false;
+        }
+    }
+    return valid;
+}
+
+// Check elements of a VkOffset3D structure against a queue family's Image Transfer Granularity values
+static inline bool CheckItgOffset(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node, const VkOffset3D *offset, const uint32_t i,
+                                  const char *function, const char *member) {
+    bool skip = false;
+    VkExtent3D granularity = {};
+    VkExtent3D extent = {};
+    extent.width = static_cast<uint32_t>(abs(offset->x));
+    extent.height = static_cast<uint32_t>(abs(offset->y));
+    extent.depth = static_cast<uint32_t>(abs(offset->z));
+    if (IsExtentAligned(dev_data, cb_node, &extent, &granularity) == false) {
+        skip |= log_msg(
+            dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+            DRAWSTATE_IMAGE_TRANSFER_GRANULARITY, "DS", "%s: pRegion[%d].%s (x=%d, y=%d, z=%d) must respect this command buffer's "
+                                                        "queue family image transfer granularity (w=%d, h=%d, d=%d).",
+            function, i, member, offset->x, offset->y, offset->z, granularity.width, granularity.height, granularity.depth);
+    }
+    return skip;
+}
+
+// Check elements of a VkExtent3D structure against a queue family's Image Transfer Granularity values
+static inline bool CheckItgExtent(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node, const VkExtent3D *extent, const uint32_t i,
+                                  const char *function, const char *member) {
+    bool skip = false;
+    VkExtent3D granularity = {};
+    if (IsExtentAligned(dev_data, cb_node, extent, &granularity) == false) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_IMAGE_TRANSFER_GRANULARITY, "DS",
+                        "%s: pRegion[%d].%s (w=%d, h=%d, d=%d) must respect this command buffer's "
+                        "queue family image transfer granularity (w=%d, h=%d, z=%d).",
+                        function, i, member, extent->width, extent->height, extent->depth, granularity.width, granularity.height,
+                        granularity.depth);
+    }
+    return skip;
+}
+
+// Check a uint32_t width or stride value against a queue family's Image Transfer Granularity width value
+static inline bool CheckItgInt(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node, const uint32_t value, const uint32_t i,
+                               const char *function, const char *member) {
+    bool skip = false;
+    VkExtent3D granularity = {};
+    VkExtent3D extent = {};
+    extent.width = value;
+    if (IsExtentAligned(dev_data, cb_node, &extent, &granularity) == false) {
+        skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                        DRAWSTATE_IMAGE_TRANSFER_GRANULARITY, "DS",
+                        "%s: pRegion[%d].%s (%d) must respect this command buffer's queue family image transfer granularity %d).",
+                        function, i, member, extent.width, granularity.width);
+    }
+    return skip;
+}
+
+// Check a VkDeviceSize value against a queue family's Image Transfer Granularity width value
+static inline bool CheckItgSize(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node, const VkDeviceSize value, const uint32_t i,
+                                const char *function, const char *member) {
+    bool skip = false;
+    VkExtent3D *granularity;
+    auto pPool = getCommandPoolNode(dev_data, cb_node->createInfo.commandPool);
+    if (pPool) {
+        granularity = &dev_data->phys_dev_properties.queue_family_properties[pPool->queueFamilyIndex].minImageTransferGranularity;
+        if (vk_safe_modulo(value, granularity->width) != 0) {
+            skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            DRAWSTATE_IMAGE_TRANSFER_GRANULARITY, "DS",
+                            "%s: pRegion[%d].%s (%" PRIdLEAST64
+                            ") must respect this command buffer's queue family image transfer granularity %d).",
+                            function, i, member, value, granularity->width);
+        }
+    }
+    return skip;
+}
+
+// Check valid usage Image Tranfer Granularity requirements for elements of a VkImageCopy structure
+static inline bool ValidateCopyImageTransferGranularityRequirements(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node,
+                                                                    const VkImageCopy *region, const uint32_t i,
+                                                                    const char *function) {
+    bool skip = false;
+    skip |= CheckItgOffset(dev_data, cb_node, &region->srcOffset, i, function, "srcOffset");
+    skip |= CheckItgOffset(dev_data, cb_node, &region->dstOffset, i, function, "dstOffset");
+    skip |= CheckItgExtent(dev_data, cb_node, &region->extent, i, function, "extent");
+    return skip;
+}
+
+// Check valid usage Image Tranfer Granularity requirements for elements of a VkBufferImageCopy structure
+static inline bool ValidateCopyBufferImageTransferGranularityRequirements(layer_data *dev_data, const GLOBAL_CB_NODE *cb_node,
+                                                                          const VkBufferImageCopy *region, const uint32_t i,
+                                                                          const char *function) {
+    bool skip = false;
+    skip |= CheckItgSize(dev_data, cb_node, region->bufferOffset, i, function, "bufferOffset");
+    skip |= CheckItgInt(dev_data, cb_node, region->bufferRowLength, i, function, "bufferRowLength");
+    skip |= CheckItgInt(dev_data, cb_node, region->bufferImageHeight, i, function, "bufferImageHeight");
+    skip |= CheckItgOffset(dev_data, cb_node, &region->imageOffset, i, function, "imageOffset");
+    skip |= CheckItgExtent(dev_data, cb_node, &region->imageExtent, i, function, "imageExtent");
+    return skip;
+}
+
 VKAPI_ATTR void VKAPI_CALL
 CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage,
              VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageCopy *pRegions) {
@@ -7546,6 +7655,7 @@ CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
         for (uint32_t i = 0; i < regionCount; ++i) {
             skip_call |= VerifySourceImageLayout(dev_data, cb_node, srcImage, pRegions[i].srcSubresource, srcImageLayout);
             skip_call |= VerifyDestImageLayout(dev_data, cb_node, dstImage, pRegions[i].dstSubresource, dstImageLayout);
+            skip_call |= ValidateCopyImageTransferGranularityRequirements(dev_data, cb_node, &pRegions[i], i, "vkCmdCopyImage()");
         }
     } else {
         assert(0);
@@ -7627,6 +7737,8 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
         skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyBufferToImage()");
         for (uint32_t i = 0; i < regionCount; ++i) {
             skip_call |= VerifyDestImageLayout(dev_data, cb_node, dstImage, pRegions[i].imageSubresource, dstImageLayout);
+            skip_call |=
+                ValidateCopyBufferImageTransferGranularityRequirements(dev_data, cb_node, &pRegions[i], i, "vkCmdCopyBufferToImage()");
         }
     } else {
         assert(0);
@@ -7672,6 +7784,8 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
         skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdCopyImageToBuffer()");
         for (uint32_t i = 0; i < regionCount; ++i) {
             skip_call |= VerifySourceImageLayout(dev_data, cb_node, srcImage, pRegions[i].imageSubresource, srcImageLayout);
+            skip_call |=
+                ValidateCopyBufferImageTransferGranularityRequirements(dev_data, cb_node, &pRegions[i], i, "CmdCopyImageToBuffer");
         }
     } else {
         assert(0);

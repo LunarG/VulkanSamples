@@ -221,6 +221,8 @@ enum DRAW_STATE_ERROR {
                                              // of queried queue families
     DRAWSTATE_INVALID_QUEUE_FAMILY,          // Command buffer submitted on queue is from
                                              // a different queue family
+    DRAWSTATE_IMAGE_TRANSFER_GRANULARITY,    // Violation of queue family's image transfer
+                                             // granularity
     DRAWSTATE_PUSH_CONSTANTS_ERROR,          // Push constants exceed maxPushConstantSize
 };
 
