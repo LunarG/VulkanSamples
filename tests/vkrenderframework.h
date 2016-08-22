@@ -78,7 +78,7 @@ class VkRenderFramework : public VkTestFramework {
                        void *userData = NULL);
 
     void ShutdownFramework();
-    void InitState();
+    void InitState(VkPhysicalDeviceFeatures *features = nullptr);
 
     const VkRenderPassBeginInfo &renderPassBeginInfo() const {
         return m_renderPassBeginInfo;
@@ -122,6 +122,7 @@ class VkRenderFramework : public VkTestFramework {
     PFN_vkDebugReportMessageEXT m_DebugReportMessage;
     VkDebugReportCallbackEXT m_globalMsgCallback;
     VkDebugReportCallbackEXT m_devMsgCallback;
+    std::vector<const char *> device_extension_names;
 
     /*
      * SetUp and TearDown are called by the Google Test framework
