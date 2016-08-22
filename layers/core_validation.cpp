@@ -2780,6 +2780,32 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
         }
     }
 
+    /* validate use of input attachments against subpass structure */
+    if (pStage->stage == VK_SHADER_STAGE_FRAGMENT_BIT) {
+        std::vector<std::pair<uint32_t, interface_var>> input_attachment_uses;
+        collect_interface_by_input_attachment_index(report_data, module, accessible_ids, input_attachment_uses);
+
+        auto rpci = pipeline->render_pass_ci.ptr();
+        auto subpass = pipeline->graphicsPipelineCI.subpass;
+
+        for (auto use : input_attachment_uses) {
+            auto input_attachments = rpci->pSubpasses[subpass].pInputAttachments;
+            auto index = (input_attachments && use.first < rpci->pSubpasses[subpass].inputAttachmentCount) ?
+                    input_attachments[use.first].attachment : VK_ATTACHMENT_UNUSED;
+
+            if (index == VK_ATTACHMENT_UNUSED) {
+                if (log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VkDebugReportObjectTypeEXT(0), 0, __LINE__,
+                            SHADER_CHECKER_MISSING_INPUT_ATTACHMENT, "SC",
+                            "Shader consumes input attachment index %d but not provided in subpass",
+                            use.first)) {
+                    pass = false;
+                }
+            }
+
+            /* TODO: type match, etc */
+        }
+    }
+
     return pass;
 }
 
