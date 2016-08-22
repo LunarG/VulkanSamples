@@ -13,23 +13,20 @@
 //TODO
 #endif
 
-
 #if defined(NDEBUG) && defined(__GNUC__)
 #define U_ASSERT_ONLY __attribute__((unused))
-#define ASSERT(VAL,MSG)
 #else
 #define U_ASSERT_ONLY
-#define ASSERT(VAL,MSG) if(!VAL){ printf(MSG); fflush(stdout); exit(1); }
 #endif
 
 //==========================Event Message=======================
 struct EventType{
     enum{NONE, MOUSE, KEY, TEXT, SHAPE} tag;
     union{
-        struct {eMouseAction action; int16_t x; int16_t y; uint8_t btn;}mouse;
-        struct {eKeyAction   action; uint8_t keycode;}key;
-        struct {const char* str;}text;
-        struct {int16_t x; int16_t y; uint16_t width; uint16_t height;}shape;
+        struct {eMouseAction action; int16_t x; int16_t y; uint8_t btn;}mouse;  //mouse move/click
+        struct {eKeyAction   action; uint8_t keycode;}key;                      //Keyboard key state
+        struct {const char* str;}text;                                          //Text entered
+        struct {int16_t x; int16_t y; uint16_t width; uint16_t height;}shape;   //Window move/resize
     };
 };
 //==============================================================
@@ -152,7 +149,7 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
     //--Init Connection--
     int scr;
     xcb_connection = xcb_connect(NULL, &scr);
-    ASSERT(xcb_connection, "XCB failed to connect to the X server.\n")
+    assert(xcb_connection && "XCB failed to connect to the X server.");
     const xcb_setup_t*   setup = xcb_get_setup(xcb_connection);
     xcb_screen_iterator_t iter = xcb_setup_roots_iterator(setup);
     while(scr-- > 0) xcb_screen_next(&iter);
@@ -314,7 +311,7 @@ const unsigned char WIN32_TO_HID[256] = {
      58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69,104,105,106,107,
     108,109,110,111,112,113,114,115,  0,  0,  0,  0,  0,  0,  0,  0,
      83, 71,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    225,229,224,228,226,230,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  //L/R shift/ctrl/alt
       0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 51, 46, 54, 45, 55, 56,
      53,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
       0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 47, 49, 48, 52,  0,
@@ -363,12 +360,9 @@ Window_win32::Window_win32(CInstance& inst, const char* title, uint width, uint 
     win_class.hInstance = hInstance;
     win_class.hIconSm = LoadIcon(NULL, IDI_WINLOGO);
     // Register window class:
-    if (!RegisterClassEx(&win_class)) {
-        // It didn't work, so try to give a useful error:
-        printf("Failed to register the window class!\n");
-        fflush(stdout);
-        exit(1);
-    }
+    ATOM U_ASSERT_ONLY atom=RegisterClassEx(&win_class);
+    assert(atom && "Failed to register the window class.");
+    
     // Create window with the registered class:
     RECT wr = { 0, 0, (LONG)width, (LONG)height };
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
@@ -384,12 +378,7 @@ Window_win32::Window_win32(CInstance& inst, const char* title, uint width, uint 
         NULL,                 // handle to menu
         hInstance,            // hInstance
         NULL);                // no extra parameters
-    if (!hWnd) {
-        // It didn't work, so try to give a useful error:
-        printf("Failed to create a window!\n");
-        fflush(stdout);
-        exit(1);
-    }
+    assert(hWnd && "Failed to create a window.");
 }
 
 Window_win32::~Window_win32(){
@@ -422,6 +411,7 @@ EventType Window_win32::GetEvent(){
     running = (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)>0);
     
     if (running) {
+        TranslateMessage(&msg);
         int16_t x = GET_X_LPARAM(msg.lParam);
         int16_t y = GET_Y_LPARAM(msg.lParam);
 /*
@@ -438,7 +428,20 @@ EventType Window_win32::GetEvent(){
             return{ EventType::NONE };
         }
 */
-        TranslateMessage(&msg);
+
+        //--Convert Shift / Ctrl / Alt key messages to LeftShift / RightShift / LeftCtrl / RightCtrl / LeftAlt / RightAlt--
+        if (msg.message == WM_KEYDOWN || msg.message == WM_KEYUP) {
+            if (msg.wParam == VK_CONTROL) msg.wParam = (msg.lParam&(1 << 24)) ? VK_RCONTROL : VK_LCONTROL;
+            if (msg.wParam == VK_SHIFT) {
+                if (!!(GetKeyState(VK_LSHIFT)&128) != KeyState(KEY_LeftShift )) PostMessage(hWnd, msg.message, VK_LSHIFT, 0);
+                if (!!(GetKeyState(VK_RSHIFT)&128) != KeyState(KEY_RightShift)) PostMessage(hWnd, msg.message, VK_RSHIFT, 0);
+                return{ EventType::NONE };
+            }
+        }else if (msg.message == WM_SYSKEYDOWN || msg.message == WM_SYSKEYUP) {
+            if (msg.wParam == VK_MENU) msg.wParam = (msg.lParam&(1 << 24)) ? VK_RMENU : VK_LMENU;
+        }
+        //-----------------------------------------------------------------------------------------------------------------
+        
         static char buf[4] = {};
         uint8_t bestBtn=BtnState(1) ? 1 : BtnState(2) ? 2 :BtnState(3) ? 3 : 0;
         switch (msg.message) {

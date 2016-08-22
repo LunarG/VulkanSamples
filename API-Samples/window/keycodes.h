@@ -164,7 +164,7 @@ enum eKeycode{
     KEY_LeftAlt     = 226,
     KEY_LeftGUI     = 227,
     KEY_RightControl= 228,
-    KEY_RightShift  = 229,  //WARNING: Linux Only! Win32 returns KEY_LeftShift for both shift keys!
+    KEY_RightShift  = 229,  //WARNING : Win32 fails to send a WM_KEYUP message if both shift keys are pressed, and then one is released.
     KEY_RightAlt    = 230,
     KEY_RightGUI    = 231
 };
