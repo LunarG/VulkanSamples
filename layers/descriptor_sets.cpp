@@ -345,7 +345,7 @@ bool cvdescriptorset::DescriptorSet::IsCompatible(const DescriptorSetLayout *lay
     return layout->IsCompatible(p_layout_, error);
 }
 
-// Validate that the state of this set is appropriate for the given bindings and dynami_offsets at Draw time
+// Validate that the state of this set is appropriate for the given bindings and dynamic_offsets at Draw time
 //  This includes validating that all descriptors in the given bindings are updated,
 //  that any update buffers are valid, and that any dynamic offsets are within the bounds of their buffers.
 // Return true if state is acceptable, or false and write an error message into error string
