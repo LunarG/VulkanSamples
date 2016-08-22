@@ -3850,6 +3850,194 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject) {
 
 #if DRAW_STATE_TESTS
 
+TEST_F(VkLayerTest, DSImageTransferGranularityTests) {
+    VkResult err;
+    bool pass;
+
+    TEST_DESCRIPTION("Tests for validaiton of Queue Family property minImageTransferGranularity.");
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // If w/d/h granularity is 1, test is not meaningful
+    // TODO: When virtual device limits are available, create a set of limits for this test that
+    // will always have a granularity of > 1 for w, h, and d
+    auto index = m_device->graphics_queue_node_index_;
+    auto queue_family_properties = m_device->phy().queue_properties();
+
+    if ((queue_family_properties[index].minImageTransferGranularity.depth < 4) ||
+        (queue_family_properties[index].minImageTransferGranularity.width < 4) ||
+        (queue_family_properties[index].minImageTransferGranularity.height < 4)) {
+        return;
+    }
+
+    // Create two images of different types and try to copy between them
+    VkImage srcImage;
+    VkImage dstImage;
+    VkDeviceMemory srcMem;
+    VkDeviceMemory destMem;
+    VkMemoryRequirements memReqs;
+
+
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+    image_create_info.extent.width = 32;
+    image_create_info.extent.height = 32;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 4;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    image_create_info.flags = 0;
+
+    err =
+        vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
+    ASSERT_VK_SUCCESS(err);
+
+    err =
+        vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
+    ASSERT_VK_SUCCESS(err);
+
+    // Allocate memory
+    VkMemoryAllocateInfo memAlloc = {};
+    memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memAlloc.pNext = NULL;
+    memAlloc.allocationSize = 0;
+    memAlloc.memoryTypeIndex = 0;
+
+    vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
+    memAlloc.allocationSize = memReqs.size;
+    pass =
+        m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &srcMem);
+    ASSERT_VK_SUCCESS(err);
+
+    vkGetImageMemoryRequirements(m_device->device(), dstImage, &memReqs);
+    memAlloc.allocationSize = memReqs.size;
+    pass =
+        m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &destMem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkBindImageMemory(m_device->device(), srcImage, srcMem, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), dstImage, destMem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    BeginCommandBuffer();
+    VkImageCopy copyRegion;
+    copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.srcSubresource.mipLevel = 0;
+    copyRegion.srcSubresource.baseArrayLayer = 0;
+    copyRegion.srcSubresource.layerCount = 1;
+    copyRegion.srcOffset.x = 0;
+    copyRegion.srcOffset.y = 0;
+    copyRegion.srcOffset.z = 0;
+    copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.dstSubresource.mipLevel = 0;
+    copyRegion.dstSubresource.baseArrayLayer = 0;
+    copyRegion.dstSubresource.layerCount = 1;
+    copyRegion.dstOffset.x = 0;
+    copyRegion.dstOffset.y = 0;
+    copyRegion.dstOffset.z = 0;
+    copyRegion.extent.width = 1;
+    copyRegion.extent.height = 1;
+    copyRegion.extent.depth = 1;
+
+    // Introduce failure by setting srcOffset to a bad granularity value
+    copyRegion.srcOffset.y = 3;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "queue family image transfer granularity");
+    m_commandBuffer->CopyImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, dstImage,
+        VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    m_errorMonitor->VerifyFound();
+
+    // Introduce failure by setting extent to a bad granularity value
+    copyRegion.srcOffset.y = 0;
+    copyRegion.extent.width = 3;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "queue family image transfer granularity");
+    m_commandBuffer->CopyImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, dstImage,
+        VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    m_errorMonitor->VerifyFound();
+
+    // Now do some buffer/image copies
+    vk_testing::Buffer buffer;
+    VkMemoryPropertyFlags reqs = 0;
+    buffer.init_as_dst(*m_device, 128 * 128, reqs);
+    VkBufferImageCopy region = {};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 3;
+    region.bufferImageHeight = 128;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.layerCount = 1;
+    region.imageExtent.height = 16;
+    region.imageExtent.width = 16;
+    region.imageExtent.depth = 1;
+    region.imageOffset.x = 0;
+    region.imageOffset.y = 0;
+    region.imageOffset.z = 0;
+
+    // Introduce failure by setting bufferRowLength to a bad granularity value
+    region.bufferRowLength = 3;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "queue family image transfer granularity");
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(),
+        srcImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    m_errorMonitor->VerifyFound();
+    region.bufferRowLength = 128;
+
+    // Introduce failure by setting bufferOffset to a bad granularity value
+    region.bufferOffset = 3;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "queue family image transfer granularity");
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), srcImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, buffer.handle(), 1, &region);
+    m_errorMonitor->VerifyFound();
+    region.bufferOffset = 0;
+
+    // Introduce failure by setting bufferImageHeight to a bad granularity value
+    region.bufferImageHeight = 3;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "queue family image transfer granularity");
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), srcImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, buffer.handle(), 1, &region);
+    m_errorMonitor->VerifyFound();
+    region.bufferImageHeight = 128;
+
+    // Introduce failure by setting imageExtent to a bad granularity value
+    region.imageExtent.width = 3;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "queue family image transfer granularity");
+    vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(), srcImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, buffer.handle(), 1, &region);
+    m_errorMonitor->VerifyFound();
+    region.imageExtent.width = 16;
+
+    // Introduce failure by setting imageOffset to a bad granularity value
+    region.imageOffset.z = 3;
+    m_errorMonitor->SetDesiredFailureMsg(
+        VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "queue family image transfer granularity");
+    vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(), buffer.handle(),
+        srcImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    m_errorMonitor->VerifyFound();
+
+    EndCommandBuffer();
+
+    vkDestroyImage(m_device->device(), srcImage, NULL);
+    vkDestroyImage(m_device->device(), dstImage, NULL);
+    vkFreeMemory(m_device->device(), srcMem, NULL);
+    vkFreeMemory(m_device->device(), destMem, NULL);
+}
+
 TEST_F(VkLayerTest, MismatchedQueueFamiliesOnSubmit) {
     TEST_DESCRIPTION("Submit command buffer created using one queue family and "
                      "attempt to submit them on a queue created in a different "
