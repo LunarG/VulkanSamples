@@ -1397,7 +1397,7 @@ static spirv_inst_iter get_struct_type(shader_module const *src, spirv_inst_iter
 }
 
 static void collect_interface_block_members(shader_module const *src,
-                                            std::map<location_t, interface_var> &out,
+                                            std::map<location_t, interface_var> *out,
                                             std::unordered_map<unsigned, unsigned> const &blocks, bool is_array_of_verts,
                                             uint32_t id, uint32_t type_id, bool is_patch) {
     /* Walk down the type_id presented, trying to determine whether it's actually an interface block. */
@@ -1441,16 +1441,17 @@ static void collect_interface_block_members(shader_module const *src,
                     v.offset = offset;
                     v.is_patch = is_patch;
                     v.is_block_member = true;
-                    out[std::make_pair(location + offset, component)] = v;
+                    (*out)[std::make_pair(location + offset, component)] = v;
                 }
             }
         }
     }
 }
 
-static void collect_interface_by_location(shader_module const *src, spirv_inst_iter entrypoint,
-                                          spv::StorageClass sinterface, std::map<location_t, interface_var> &out,
-                                          bool is_array_of_verts) {
+static std::map<location_t, interface_var> collect_interface_by_location(
+        shader_module const *src, spirv_inst_iter entrypoint,
+        spv::StorageClass sinterface, bool is_array_of_verts) {
+
     std::unordered_map<unsigned, unsigned> var_locations;
     std::unordered_map<unsigned, unsigned> var_builtins;
     std::unordered_map<unsigned, unsigned> var_components;
@@ -1498,6 +1499,8 @@ static void collect_interface_by_location(shader_module const *src, spirv_inst_i
     }
     ++word;
 
+    std::map<location_t, interface_var> out;
+
     for (; word < entrypoint.len(); word++) {
         auto insn = src->get_def(entrypoint.word(word));
         assert(insn != src->end());
@@ -1535,15 +1538,19 @@ static void collect_interface_by_location(shader_module const *src, spirv_inst_i
                 }
             } else if (builtin == -1) {
                 /* An interface block instance */
-                collect_interface_block_members(src, out, blocks, is_array_of_verts, id, type, is_patch);
+                collect_interface_block_members(src, &out, blocks, is_array_of_verts, id, type, is_patch);
             }
         }
     }
+
+    return out;
 }
 
-static void collect_interface_by_input_attachment_index(debug_report_data *report_data, shader_module const *src,
-                                                        std::unordered_set<uint32_t> const &accessible_ids,
-                                                        std::vector<std::pair<uint32_t, interface_var>> &out) {
+static std::vector<std::pair<uint32_t, interface_var>> collect_interface_by_input_attachment_index(
+        debug_report_data *report_data, shader_module const *src,
+        std::unordered_set<uint32_t> const &accessible_ids) {
+
+    std::vector<std::pair<uint32_t, interface_var>> out;
 
     for (auto insn : *src) {
         if (insn.opcode() == spv::OpDecorate) {
@@ -1571,11 +1578,13 @@ static void collect_interface_by_input_attachment_index(debug_report_data *repor
             }
         }
     }
+
+    return out;
 }
 
-static void collect_interface_by_descriptor_slot(debug_report_data *report_data, shader_module const *src,
-                                                 std::unordered_set<uint32_t> const &accessible_ids,
-                                                 std::vector<std::pair<descriptor_slot_t, interface_var>> &out) {
+static std::vector<std::pair<descriptor_slot_t, interface_var>> collect_interface_by_descriptor_slot(
+        debug_report_data *report_data, shader_module const *src,
+        std::unordered_set<uint32_t> const &accessible_ids) {
 
     std::unordered_map<unsigned, unsigned> var_sets;
     std::unordered_map<unsigned, unsigned> var_bindings;
@@ -1595,6 +1604,8 @@ static void collect_interface_by_descriptor_slot(debug_report_data *report_data,
         }
     }
 
+    std::vector<std::pair<descriptor_slot_t, interface_var>> out;
+
     for (auto id : accessible_ids) {
         auto insn = src->get_def(id);
         assert(insn != src->end());
@@ -1613,19 +1624,18 @@ static void collect_interface_by_descriptor_slot(debug_report_data *report_data,
             out.emplace_back(std::make_pair(set, binding), v);
         }
     }
+
+    return out;
 }
 
 static bool validate_interface_between_stages(debug_report_data *report_data, shader_module const *producer,
                                               spirv_inst_iter producer_entrypoint, shader_stage_attributes const *producer_stage,
                                               shader_module const *consumer, spirv_inst_iter consumer_entrypoint,
                                               shader_stage_attributes const *consumer_stage) {
-    std::map<location_t, interface_var> outputs;
-    std::map<location_t, interface_var> inputs;
-
     bool pass = true;
 
-    collect_interface_by_location(producer, producer_entrypoint, spv::StorageClassOutput, outputs, producer_stage->arrayed_output);
-    collect_interface_by_location(consumer, consumer_entrypoint, spv::StorageClassInput, inputs, consumer_stage->arrayed_input);
+    auto outputs = collect_interface_by_location(producer, producer_entrypoint, spv::StorageClassOutput, producer_stage->arrayed_output);
+    auto inputs = collect_interface_by_location(consumer, consumer_entrypoint, spv::StorageClassInput, consumer_stage->arrayed_input);
 
     auto a_it = outputs.begin();
     auto b_it = inputs.begin();
@@ -1806,10 +1816,9 @@ static bool validate_vi_consistency(debug_report_data *report_data, VkPipelineVe
 
 static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipelineVertexInputStateCreateInfo const *vi,
                                           shader_module const *vs, spirv_inst_iter entrypoint) {
-    std::map<location_t, interface_var> inputs;
     bool pass = true;
 
-    collect_interface_by_location(vs, entrypoint, spv::StorageClassInput, inputs, false);
+    auto inputs = collect_interface_by_location(vs, entrypoint, spv::StorageClassInput, false);
 
     /* Build index by location */
     std::map<uint32_t, VkVertexInputAttributeDescription const *> attribs;
@@ -1873,7 +1882,6 @@ static bool validate_vi_against_vs_inputs(debug_report_data *report_data, VkPipe
 static bool validate_fs_outputs_against_render_pass(debug_report_data *report_data, shader_module const *fs,
                                                     spirv_inst_iter entrypoint, VkRenderPassCreateInfo const *rpci,
                                                     uint32_t subpass_index) {
-    std::map<location_t, interface_var> outputs;
     std::map<uint32_t, VkFormat> color_attachments;
     auto subpass = rpci->pSubpasses[subpass_index];
     for (auto i = 0u; i < subpass.colorAttachmentCount; ++i) {
@@ -1889,7 +1897,7 @@ static bool validate_fs_outputs_against_render_pass(debug_report_data *report_da
 
     /* TODO: dual source blend index (spv::DecIndex, zero if not provided) */
 
-    collect_interface_by_location(fs, entrypoint, spv::StorageClassOutput, outputs, false);
+    auto outputs = collect_interface_by_location(fs, entrypoint, spv::StorageClassOutput, false);
 
     auto it_a = outputs.begin();
     auto it_b = color_attachments.begin();
@@ -1946,7 +1954,8 @@ static bool validate_fs_outputs_against_render_pass(debug_report_data *report_da
  * TODO: The set of interesting opcodes here was determined by eyeballing the SPIRV spec. It might be worth
  * converting parts of this to be generated from the machine-readable spec instead.
  */
-static void mark_accessible_ids(shader_module const *src, spirv_inst_iter entrypoint, std::unordered_set<uint32_t> &ids) {
+static std::unordered_set<uint32_t> mark_accessible_ids(shader_module const *src, spirv_inst_iter entrypoint) {
+    std::unordered_set<uint32_t> ids;
     std::unordered_set<uint32_t> worklist;
     worklist.insert(entrypoint.word(2));
 
@@ -2052,6 +2061,8 @@ static void mark_accessible_ids(shader_module const *src, spirv_inst_iter entryp
             break;
         }
     }
+
+    return ids;
 }
 
 static bool validate_push_constant_block_against_pipeline(debug_report_data *report_data,
@@ -2714,12 +2725,10 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
     pass &= validate_shader_capabilities(report_data, module, enabledFeatures);
 
     /* mark accessible ids */
-    std::unordered_set<uint32_t> accessible_ids;
-    mark_accessible_ids(module, entrypoint, accessible_ids);
+    auto accessible_ids = mark_accessible_ids(module, entrypoint);
 
     /* validate descriptor set layout against what the entrypoint actually uses */
-    std::vector<std::pair<descriptor_slot_t, interface_var>> descriptor_uses;
-    collect_interface_by_descriptor_slot(report_data, module, accessible_ids, descriptor_uses);
+    auto descriptor_uses = collect_interface_by_descriptor_slot(report_data, module, accessible_ids);
 
     auto pipelineLayout = pipeline->pipeline_layout;
 
@@ -2776,8 +2785,7 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
 
     /* validate use of input attachments against subpass structure */
     if (pStage->stage == VK_SHADER_STAGE_FRAGMENT_BIT) {
-        std::vector<std::pair<uint32_t, interface_var>> input_attachment_uses;
-        collect_interface_by_input_attachment_index(report_data, module, accessible_ids, input_attachment_uses);
+        auto input_attachment_uses = collect_interface_by_input_attachment_index(report_data, module, accessible_ids);
 
         auto rpci = pipeline->render_pass_ci.ptr();
         auto subpass = pipeline->graphicsPipelineCI.subpass;
