@@ -3850,6 +3850,153 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject) {
 
 #if DRAW_STATE_TESTS
 
+TEST_F(VkLayerTest, ImageSampleCounts) {
+
+    TEST_DESCRIPTION("Use bad sample counts in image transfer calls to trigger "
+                     "validation errors.");
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkMemoryPropertyFlags reqs = 0;
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+    image_create_info.extent.width = 256;
+    image_create_info.extent.height = 256;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.flags = 0;
+
+    VkImageBlit blit_region = {};
+    blit_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blit_region.srcSubresource.baseArrayLayer = 0;
+    blit_region.srcSubresource.layerCount = 1;
+    blit_region.srcSubresource.mipLevel = 0;
+    blit_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blit_region.dstSubresource.baseArrayLayer = 0;
+    blit_region.dstSubresource.layerCount = 1;
+    blit_region.dstSubresource.mipLevel = 0;
+
+    // Create two images, the source with sampleCount = 2, and attempt to blit
+    // between them
+    {
+        image_create_info.samples = VK_SAMPLE_COUNT_2_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                  VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        vk_testing::Image src_image;
+        src_image.init(*m_device, (const VkImageCreateInfo &)image_create_info,
+                       reqs);
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        vk_testing::Image dst_image;
+        dst_image.init(*m_device, (const VkImageCreateInfo &)image_create_info,
+                       reqs);
+        m_commandBuffer->BeginCommandBuffer();
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "was created with a sample count "
+                                             "of VK_SAMPLE_COUNT_2_BIT but "
+                                             "must be VK_SAMPLE_COUNT_1_BIT");
+        vkCmdBlitImage(m_commandBuffer->GetBufferHandle(), src_image.handle(),
+                       VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                       dst_image.handle(),
+                       VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1,
+                       &blit_region, VK_FILTER_NEAREST);
+        m_errorMonitor->VerifyFound();
+        m_commandBuffer->EndCommandBuffer();
+    }
+
+    // Create two images, the dest with sampleCount = 4, and attempt to blit
+    // between them
+    {
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                  VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        vk_testing::Image src_image;
+        src_image.init(*m_device, (const VkImageCreateInfo &)image_create_info,
+                       reqs);
+        image_create_info.samples = VK_SAMPLE_COUNT_4_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        vk_testing::Image dst_image;
+        dst_image.init(*m_device, (const VkImageCreateInfo &)image_create_info,
+                       reqs);
+        m_commandBuffer->BeginCommandBuffer();
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "was created with a sample count "
+                                             "of VK_SAMPLE_COUNT_4_BIT but "
+                                             "must be VK_SAMPLE_COUNT_1_BIT");
+        vkCmdBlitImage(m_commandBuffer->GetBufferHandle(), src_image.handle(),
+                       VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                       dst_image.handle(),
+                       VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1,
+                       &blit_region, VK_FILTER_NEAREST);
+        m_errorMonitor->VerifyFound();
+        m_commandBuffer->EndCommandBuffer();
+    }
+
+    VkBufferImageCopy copy_region = {};
+    copy_region.bufferRowLength = 128;
+    copy_region.bufferImageHeight = 128;
+    copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.imageSubresource.layerCount = 1;
+    copy_region.imageExtent.height = 64;
+    copy_region.imageExtent.width = 64;
+    copy_region.imageExtent.depth = 1;
+
+    // Create src buffer and dst image with sampleCount = 4 and attempt to copy
+    // buffer to image
+    {
+        vk_testing::Buffer src_buffer;
+        VkMemoryPropertyFlags reqs = 0;
+        src_buffer.init_as_src(*m_device, 128 * 128 * 4, reqs);
+        image_create_info.samples = VK_SAMPLE_COUNT_8_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        vk_testing::Image dst_image;
+        dst_image.init(*m_device, (const VkImageCreateInfo &)image_create_info,
+                       reqs);
+        m_commandBuffer->BeginCommandBuffer();
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "was created with a sample count "
+                                             "of VK_SAMPLE_COUNT_8_BIT but "
+                                             "must be VK_SAMPLE_COUNT_1_BIT");
+        vkCmdCopyBufferToImage(m_commandBuffer->GetBufferHandle(),
+                               src_buffer.handle(), dst_image.handle(),
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                               &copy_region);
+        m_errorMonitor->VerifyFound();
+        m_commandBuffer->EndCommandBuffer();
+    }
+
+    // Create dst buffer and src image with sampleCount = 2 and attempt to copy
+    // image to buffer
+    {
+        vk_testing::Buffer dst_buffer;
+        dst_buffer.init_as_dst(*m_device, 128 * 128 * 4, reqs);
+        image_create_info.samples = VK_SAMPLE_COUNT_2_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                  VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        vk_testing::Image src_image;
+        src_image.init(*m_device, (const VkImageCreateInfo &)image_create_info,
+                       reqs);
+        m_commandBuffer->BeginCommandBuffer();
+        m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             "was created with a sample count "
+                                             "of VK_SAMPLE_COUNT_2_BIT but "
+                                             "must be VK_SAMPLE_COUNT_1_BIT");
+        vkCmdCopyImageToBuffer(m_commandBuffer->GetBufferHandle(),
+                               src_image.handle(),
+                               VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                               dst_buffer.handle(), 1, &copy_region);
+        m_errorMonitor->VerifyFound();
+        m_commandBuffer->EndCommandBuffer();
+    }
+}
+
 TEST_F(VkLayerTest, DSImageTransferGranularityTests) {
     VkResult err;
     bool pass;
