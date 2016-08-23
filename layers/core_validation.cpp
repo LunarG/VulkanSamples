@@ -7739,6 +7739,20 @@ CmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
                                                       regionCount, pRegions);
 }
 
+// Validate that an image's sampleCount matches the requirement for a specific API call
+static inline bool ValidateImageSampleCount(layer_data *dev_data, IMAGE_NODE *image_node, VkSampleCountFlagBits sample_count,
+                                            const char *location) {
+    bool skip = false;
+    if (image_node->createInfo.samples != sample_count) {
+        skip = log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                       reinterpret_cast<uint64_t &>(image_node->image), 0, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
+                       "%s for image 0x%" PRIxLEAST64 " was created with a sample count of %s but must be %s.", location,
+                       reinterpret_cast<uint64_t &>(image_node->image),
+                       string_VkSampleCountFlagBits(image_node->createInfo.samples), string_VkSampleCountFlagBits(sample_count));
+    }
+    return skip;
+}
+
 VKAPI_ATTR void VKAPI_CALL
 CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage,
              VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageBlit *pRegions, VkFilter filter) {
@@ -7750,6 +7764,8 @@ CmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcI
     auto src_img_node = getImageNode(dev_data, srcImage);
     auto dst_img_node = getImageNode(dev_data, dstImage);
     if (cb_node && src_img_node && dst_img_node) {
+        skip_call |= ValidateImageSampleCount(dev_data, src_img_node, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): srcImage");
+        skip_call |= ValidateImageSampleCount(dev_data, dst_img_node, VK_SAMPLE_COUNT_1_BIT, "vkCmdBlitImage(): dstImage");
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, src_img_node, "vkCmdBlitImage()");
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, dst_img_node, "vkCmdBlitImage()");
         // Update bindings between images and cmd buffer
@@ -7790,6 +7806,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
     auto src_buff_node = getBufferNode(dev_data, srcBuffer);
     auto dst_img_node = getImageNode(dev_data, dstImage);
     if (cb_node && src_buff_node && dst_img_node) {
+        skip_call |= ValidateImageSampleCount(dev_data, dst_img_node, VK_SAMPLE_COUNT_1_BIT, "vkCmdCopyBufferToImage(): dstImage");
         skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, src_buff_node, "vkCmdCopyBufferToImage()");
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, dst_img_node, "vkCmdCopyBufferToImage()");
         AddCommandBufferBindingBuffer(dev_data, cb_node, src_buff_node);
@@ -7833,6 +7850,7 @@ VKAPI_ATTR void VKAPI_CALL CmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
     auto src_img_node = getImageNode(dev_data, srcImage);
     auto dst_buff_node = getBufferNode(dev_data, dstBuffer);
     if (cb_node && src_img_node && dst_buff_node) {
+        skip_call |= ValidateImageSampleCount(dev_data, src_img_node, VK_SAMPLE_COUNT_1_BIT, "vkCmdCopyImageToBuffer(): srcImage");
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, src_img_node, "vkCmdCopyImageToBuffer()");
         skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, dst_buff_node, "vkCmdCopyImageToBuffer()");
         // Update bindings between buffer/image and cmd buffer
