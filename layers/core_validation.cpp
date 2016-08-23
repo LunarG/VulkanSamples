@@ -2910,7 +2910,7 @@ cvdescriptorset::DescriptorSet *getSetNode(const layer_data *my_data, VkDescript
 static bool validate_and_update_drawtime_descriptor_state(
     layer_data *dev_data, GLOBAL_CB_NODE *pCB,
     const vector<std::tuple<cvdescriptorset::DescriptorSet *, unordered_map<uint32_t, descriptor_req>,
-                            std::vector<uint32_t> const *>> &activeSetBindingsPairs) {
+                            std::vector<uint32_t> const *>> &activeSetBindingsPairs, const char *function) {
     bool result = false;
     for (auto set_bindings_pair : activeSetBindingsPairs) {
         cvdescriptorset::DescriptorSet *set_node = std::get<0>(set_bindings_pair);
@@ -2921,8 +2921,8 @@ static bool validate_and_update_drawtime_descriptor_state(
             auto set = set_node->GetSet();
             result |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
                               reinterpret_cast<const uint64_t &>(set), __LINE__, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
-                              "DS 0x%" PRIxLEAST64 " encountered the following validation error at draw time: %s",
-                              reinterpret_cast<const uint64_t &>(set), err_str.c_str());
+                              "DS 0x%" PRIxLEAST64 " encountered the following validation error at %s() time: %s",
+                              reinterpret_cast<const uint64_t &>(set), function, err_str.c_str());
         }
         set_node->GetStorageUpdates(std::get<1>(set_bindings_pair), &pCB->updateBuffers, &pCB->updateImages);
     }
@@ -3094,7 +3094,7 @@ static bool validatePipelineDrawtimeState(layer_data const *my_data,
 
 // Validate overall state at the time of a draw call
 static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *pCB, const bool indexedDraw,
-                                           const VkPipelineBindPoint bindPoint) {
+                                           const VkPipelineBindPoint bindPoint, const char *function) {
     bool result = false;
     auto const &state = pCB->lastBound[bindPoint];
     PIPELINE_NODE *pPipe = getPipeline(my_data, state.pipeline);
@@ -3160,7 +3160,7 @@ static bool validate_and_update_draw_state(layer_data *my_data, GLOBAL_CB_NODE *
             }
         }
         // For given active slots, verify any dynamic descriptors and record updated images & buffers
-        result |= validate_and_update_drawtime_descriptor_state(my_data, pCB, activeSetBindingsPairs);
+        result |= validate_and_update_drawtime_descriptor_state(my_data, pCB, activeSetBindingsPairs, function);
     }
 
     // Check general pipeline state that needs to be validated at drawtime
@@ -7243,7 +7243,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDraw(VkCommandBuffer commandBuffer, uint32_t verte
     if (pCB) {
         skip_call |= addCmd(dev_data, pCB, CMD_DRAW, "vkCmdDraw()");
         pCB->drawCount[DRAW]++;
-        skip_call |= validate_and_update_draw_state(dev_data, pCB, false, VK_PIPELINE_BIND_POINT_GRAPHICS);
+        skip_call |= validate_and_update_draw_state(dev_data, pCB, false, VK_PIPELINE_BIND_POINT_GRAPHICS, "vkCmdDraw");
         skip_call |= markStoreImagesAndBuffersAsWritten(dev_data, pCB);
         // TODO : Need to pass commandBuffer as srcObj here
         skip_call |=
@@ -7270,7 +7270,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_
     if (pCB) {
         skip_call |= addCmd(dev_data, pCB, CMD_DRAWINDEXED, "vkCmdDrawIndexed()");
         pCB->drawCount[DRAW_INDEXED]++;
-        skip_call |= validate_and_update_draw_state(dev_data, pCB, true, VK_PIPELINE_BIND_POINT_GRAPHICS);
+        skip_call |= validate_and_update_draw_state(dev_data, pCB, true, VK_PIPELINE_BIND_POINT_GRAPHICS, "vkCmdDrawIndexed");
         skip_call |= markStoreImagesAndBuffersAsWritten(dev_data, pCB);
         // TODO : Need to pass commandBuffer as srcObj here
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
@@ -7301,7 +7301,7 @@ CmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize off
         skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, buff_node, "vkCmdDrawIndirect()");
         skip_call |= addCmd(dev_data, cb_node, CMD_DRAWINDIRECT, "vkCmdDrawIndirect()");
         cb_node->drawCount[DRAW_INDIRECT]++;
-        skip_call |= validate_and_update_draw_state(dev_data, cb_node, false, VK_PIPELINE_BIND_POINT_GRAPHICS);
+        skip_call |= validate_and_update_draw_state(dev_data, cb_node, false, VK_PIPELINE_BIND_POINT_GRAPHICS, "vkCmdDrawIndirect");
         skip_call |= markStoreImagesAndBuffersAsWritten(dev_data, cb_node);
         // TODO : Need to pass commandBuffer as srcObj here
         skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
@@ -7333,7 +7333,8 @@ CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceS
         skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, buff_node, "vkCmdDrawIndexedIndirect()");
         skip_call |= addCmd(dev_data, cb_node, CMD_DRAWINDEXEDINDIRECT, "vkCmdDrawIndexedIndirect()");
         cb_node->drawCount[DRAW_INDEXED_INDIRECT]++;
-        skip_call |= validate_and_update_draw_state(dev_data, cb_node, true, VK_PIPELINE_BIND_POINT_GRAPHICS);
+        skip_call |=
+            validate_and_update_draw_state(dev_data, cb_node, true, VK_PIPELINE_BIND_POINT_GRAPHICS, "vkCmdDrawIndexedIndirect");
         skip_call |= markStoreImagesAndBuffersAsWritten(dev_data, cb_node);
         // TODO : Need to pass commandBuffer as srcObj here
         skip_call |=
@@ -7359,7 +7360,7 @@ VKAPI_ATTR void VKAPI_CALL CmdDispatch(VkCommandBuffer commandBuffer, uint32_t x
     std::unique_lock<std::mutex> lock(global_lock);
     GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
-        skip_call |= validate_and_update_draw_state(dev_data, pCB, false, VK_PIPELINE_BIND_POINT_COMPUTE);
+        skip_call |= validate_and_update_draw_state(dev_data, pCB, false, VK_PIPELINE_BIND_POINT_COMPUTE, "vkCmdDispatch");
         skip_call |= markStoreImagesAndBuffersAsWritten(dev_data, pCB);
         skip_call |= addCmd(dev_data, pCB, CMD_DISPATCH, "vkCmdDispatch()");
         skip_call |= insideRenderPass(dev_data, pCB, "vkCmdDispatch");
@@ -7380,7 +7381,8 @@ CmdDispatchIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize
     if (cb_node && buff_node) {
         skip_call |= ValidateMemoryIsBoundToBuffer(dev_data, buff_node, "vkCmdDispatchIndirect()");
         skip_call |= addCommandBufferBindingBuffer(dev_data, cb_node, buff_node, "vkCmdDispatchIndirect()");
-        skip_call |= validate_and_update_draw_state(dev_data, cb_node, false, VK_PIPELINE_BIND_POINT_COMPUTE);
+        skip_call |=
+            validate_and_update_draw_state(dev_data, cb_node, false, VK_PIPELINE_BIND_POINT_COMPUTE, "vkCmdDispatchIndirect");
         skip_call |= markStoreImagesAndBuffersAsWritten(dev_data, cb_node);
         skip_call |= addCmd(dev_data, cb_node, CMD_DISPATCHINDIRECT, "vkCmdDispatchIndirect()");
         skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdDispatchIndirect()");
