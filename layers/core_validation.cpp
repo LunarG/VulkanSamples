@@ -5238,18 +5238,23 @@ VKAPI_ATTR void VKAPI_CALL
 DestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocationCallbacks *pAllocator) {
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
+    bool skip_call = false;
     std::unique_lock<std::mutex> lock(global_lock);
     auto item = dev_data->semaphoreMap.find(semaphore);
     if (item != dev_data->semaphoreMap.end()) {
         if (item->second.in_use.load()) {
-            log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
-                    reinterpret_cast<uint64_t &>(semaphore), __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
-                    "Cannot delete semaphore 0x%" PRIx64 " which is in use.", reinterpret_cast<uint64_t &>(semaphore));
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,
+                                 reinterpret_cast<uint64_t &>(semaphore), __LINE__, DRAWSTATE_OBJECT_INUSE, "DS",
+                                 "Cannot delete semaphore 0x%" PRIx64 " which is in use.", reinterpret_cast<uint64_t &>(semaphore));
         }
-        dev_data->semaphoreMap.erase(semaphore);
+        if (!skip_call) {
+            dev_data->semaphoreMap.erase(semaphore);
+        }
     }
     lock.unlock();
-    dev_data->device_dispatch_table->DestroySemaphore(device, semaphore, pAllocator);
+    if (!skip_call) {
+        dev_data->device_dispatch_table->DestroySemaphore(device, semaphore, pAllocator);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const VkAllocationCallbacks *pAllocator) {
