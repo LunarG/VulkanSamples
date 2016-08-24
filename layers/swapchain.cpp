@@ -331,7 +331,12 @@ VKAPI_ATTR void VKAPI_CALL GetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevi
         auto it = my_data->physicalDeviceMap.find(physicalDevice);
         pPhysicalDevice = (it == my_data->physicalDeviceMap.end()) ? NULL : &it->second;
     }
-    if (pPhysicalDevice && pQueueFamilyPropertyCount && !pQueueFamilyProperties) {
+    // Note: for poorly-written applications (e.g. that don't call this command
+    // twice, the first time with pQueueFamilyProperties set to NULL, and the
+    // second time with a non-NULL pQueueFamilyProperties and with the same
+    // count as returned the first time), record the count when
+    // pQueueFamilyProperties is non-NULL:
+    if (pPhysicalDevice && pQueueFamilyPropertyCount && pQueueFamilyProperties) {
         pPhysicalDevice->gotQueueFamilyPropertyCount = true;
         pPhysicalDevice->numOfQueueFamilies = *pQueueFamilyPropertyCount;
     }
@@ -1449,9 +1454,14 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevi
         if ((result == VK_SUCCESS) && pPhysicalDevice && !pSurfaceFormats && pSurfaceFormatCount) {
             // Record the result of this preliminary query:
             pPhysicalDevice->surfaceFormatCount = *pSurfaceFormatCount;
-        } else if ((result == VK_SUCCESS) && pPhysicalDevice && pSurfaceFormats && pSurfaceFormatCount &&
-                   (*pSurfaceFormatCount > 0)) {
+        } else if (((result == VK_SUCCESS) || (result == VK_INCOMPLETE)) && pPhysicalDevice && pSurfaceFormats &&
+                   pSurfaceFormatCount && (*pSurfaceFormatCount > 0)) {
             // Record the result of this query:
+
+            // Note: for poorly-written applications (e.g. that don't call this command
+            // twice, the first time with pSurfaceFormats set to NULL, and the second time
+            // with a non-NULL pSurfaceFormats and with the same count as returned the
+            // first time), record again the count when pSurfaceFormats is non-NULL:
             pPhysicalDevice->surfaceFormatCount = *pSurfaceFormatCount;
             pPhysicalDevice->pSurfaceFormats = (VkSurfaceFormatKHR *)malloc(*pSurfaceFormatCount * sizeof(VkSurfaceFormatKHR));
             if (pPhysicalDevice->pSurfaceFormats) {
@@ -1527,8 +1537,14 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfacePresentModesKHR(VkPhysica
         if ((result == VK_SUCCESS) && pPhysicalDevice && !pPresentModes && pPresentModeCount) {
             // Record the result of this preliminary query:
             pPhysicalDevice->presentModeCount = *pPresentModeCount;
-        } else if ((result == VK_SUCCESS) && pPhysicalDevice && pPresentModes && pPresentModeCount && (*pPresentModeCount > 0)) {
+        } else if (((result == VK_SUCCESS) || (result == VK_INCOMPLETE)) && pPhysicalDevice &&
+                   pPresentModes && pPresentModeCount && (*pPresentModeCount > 0)) {
             // Record the result of this query:
+
+            // Note: for poorly-written applications (e.g. that don't call this command
+            // twice, the first time with pPresentModes set to NULL, and the second time
+            // with a non-NULL pPresentModes and with the same count as returned the
+            // first time), record again the count when pPresentModes is non-NULL:
             pPhysicalDevice->presentModeCount = *pPresentModeCount;
             pPhysicalDevice->pPresentModes = (VkPresentModeKHR *)malloc(*pPresentModeCount * sizeof(VkPresentModeKHR));
             if (pPhysicalDevice->pPresentModes) {
