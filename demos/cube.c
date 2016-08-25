@@ -2255,8 +2255,8 @@ static void demo_create_xcb_window(struct demo *demo) {
     xcb_configure_window(demo->connection, demo->xcb_window,
                          XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
 }
-#endif // VK_USE_PLATFORM_XCB_KHR
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+// VK_USE_PLATFORM_XCB_KHR
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 static void demo_run(struct demo *demo) {
     while (!demo->quit) {
         demo_update_data_buffer(demo);

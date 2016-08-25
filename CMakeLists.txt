@@ -18,8 +18,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
     add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
     set(DisplayServer Android)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    #   TODO: Basic support is present for Xlib but is untested.
-    #         Mir support is stubbed in but unimplemented and untested.
+    #   Note: Supported configurations are XCB, XCB + Xlib, Wayland.  
+    #         MIR is stubbed and untested 
     option(BUILD_WSI_XCB_SUPPORT "Build XCB WSI support" ON)
     option(BUILD_WSI_XLIB_SUPPORT "Build Xlib WSI support" ON)
     option(BUILD_WSI_WAYLAND_SUPPORT "Build Wayland WSI support" OFF)
