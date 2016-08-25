@@ -13902,15 +13902,19 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
 }
 
-TEST_F(VkLayerTest, QueueForwardProgress) {
+TEST_F(VkLayerTest, QueueForwardProgressFenceWait) {
     TEST_DESCRIPTION("Call VkQueueSubmit with a semaphore that is already "
-                     "signaled but not waited on by the queue.");
+                     "signaled but not waited on by the queue. Wait on a "
+                     "fence that has not yet been submitted to a queue.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     const char *queue_forward_progress_message =
             " that has already been signaled but not waited on by queue 0x";
+    const char *invalid_fence_wait_message =
+            " which has not been submitted on a Queue or during "
+            "acquire next image.";
 
     BeginCommandBuffer();
     EndCommandBuffer();
@@ -13936,7 +13940,19 @@ TEST_F(VkLayerTest, QueueForwardProgress) {
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
     m_errorMonitor->VerifyFound();
 
+    VkFenceCreateInfo fence_create_info = {};
+    fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    VkFence fence;
+    ASSERT_VK_SUCCESS(vkCreateFence(m_device->device(), &fence_create_info,
+                                    nullptr, &fence));
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
+                                         invalid_fence_wait_message);
+    vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
+    m_errorMonitor->VerifyFound();
+
     m_errorMonitor->SetDesiredFailureMsg(0, "");
+    vkDestroyFence(m_device->device(), fence, nullptr);
     vkDestroySemaphore(m_device->device(), semaphore, nullptr);
 }
 
