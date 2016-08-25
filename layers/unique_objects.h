@@ -48,6 +48,15 @@ static uint64_t global_unique_id = 1;
 struct layer_data {
     VkInstance instance;
 
+    debug_report_data *report_data;
+    std::vector<VkDebugReportCallbackEXT> logging_callback;
+
+    // The following are for keeping track of the temporary callbacks that can
+    // be used in vkCreateInstance and vkDestroyInstance:
+    uint32_t num_tmp_callbacks;
+    VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos;
+    VkDebugReportCallbackEXT *tmp_callbacks;
+
     bool wsi_enabled;
     std::unordered_map<uint64_t, uint64_t> unique_id_mapping; // Map uniqueID to actual object handle
     VkPhysicalDevice gpu;
@@ -91,6 +100,10 @@ template <typename T> bool ContainsExtStruct(const T *target, VkStructureType ex
     }
 
     return false;
+}
+
+static void init_unique_objects(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
+    layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "google_unique_objects");
 }
 
 // Handle CreateInstance
@@ -153,18 +166,52 @@ VkResult explicit_CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const 
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     my_data->instance = *pInstance;
-    initInstanceTable(*pInstance, fpGetInstanceProcAddr, unique_objects_instance_table_map);
+    VkLayerInstanceDispatchTable *pTable = initInstanceTable(*pInstance, fpGetInstanceProcAddr, unique_objects_instance_table_map);
 
+    my_data->instance = *pInstance;
+    my_data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->enabledExtensionCount,
+        pCreateInfo->ppEnabledExtensionNames);
+
+    // Set up temporary debug callbacks to output messages at CreateInstance-time
+    if (!layer_copy_tmp_callbacks(pCreateInfo->pNext, &my_data->num_tmp_callbacks, &my_data->tmp_dbg_create_infos,
+                                  &my_data->tmp_callbacks)) {
+        if (my_data->num_tmp_callbacks > 0) {
+            if (layer_enable_tmp_callbacks(my_data->report_data, my_data->num_tmp_callbacks, my_data->tmp_dbg_create_infos,
+                                           my_data->tmp_callbacks)) {
+                layer_free_tmp_callbacks(my_data->tmp_dbg_create_infos, my_data->tmp_callbacks);
+                my_data->num_tmp_callbacks = 0;
+            }
+        }
+    }
+
+    init_unique_objects(my_data, pAllocator);
     checkInstanceRegisterExtensions(pCreateInfo, *pInstance);
+
+    // Disable and free tmp callbacks, no longer necessary
+    if (my_data->num_tmp_callbacks > 0) {
+        layer_disable_tmp_callbacks(my_data->report_data, my_data->num_tmp_callbacks, my_data->tmp_callbacks);
+        layer_free_tmp_callbacks(my_data->tmp_dbg_create_infos, my_data->tmp_callbacks);
+        my_data->num_tmp_callbacks = 0;
+    }
 
     return result;
 }
 
 void explicit_DestroyInstance(VkInstance instance, const VkAllocationCallbacks *pAllocator) {
     dispatch_key key = get_dispatch_key(instance);
+    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(unique_objects_instance_table_map, instance);
     instanceExtMap.erase(pDisp);
     pDisp->DestroyInstance(instance, pAllocator);
+
+    // Clean up logging callback, if any
+    while (my_data->logging_callback.size() > 0) {
+        VkDebugReportCallbackEXT callback = my_data->logging_callback.back();
+        layer_destroy_msg_callback(my_data->report_data, callback, pAllocator);
+        my_data->logging_callback.pop_back();
+    }
+
+    layer_debug_report_destroy_instance(my_data->report_data);
     layer_data_map.erase(key);
 }
 
@@ -206,12 +253,15 @@ VkResult explicit_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *p
         return result;
     }
 
+    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+    my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
+
     // Setup layer's device dispatch table
     initDeviceTable(*pDevice, fpGetDeviceProcAddr, unique_objects_device_table_map);
 
     createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     // Set gpu for this device in order to get at any objects mapped at instance level
-    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+
     my_device_data->gpu = gpu;
 
     return result;
@@ -219,6 +269,7 @@ VkResult explicit_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *p
 
 void explicit_DestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
     dispatch_key key = get_dispatch_key(device);
+    layer_debug_report_destroy_device(device);
     get_dispatch_table(unique_objects_device_table_map, device)->DestroyDevice(device, pAllocator);
     layer_data_map.erase(key);
 }
