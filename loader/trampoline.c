@@ -418,8 +418,6 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
          * if enabled.
          */
         loader_activate_instance_layer_extensions(ptr_instance, *pInstance);
-    } else {
-        // TODO: cleanup here.
     }
 
 out:
