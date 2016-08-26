@@ -3306,7 +3306,8 @@ TEST_F(VkLayerTest, InvalidUsageBits)
     VkImageObj image(m_device);
     // Initialize image with USAGE_INPUT_ATTACHMENT
     image.init(128, 128, VK_FORMAT_D24_UNORM_S8_UINT,
-               VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL, 0);
+               VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL,
+               0);
     ASSERT_TRUE(image.initialized());
 
     VkImageView dsv;
