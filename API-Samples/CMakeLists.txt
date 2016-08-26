@@ -230,12 +230,13 @@ endif()
 option(ANDROID OFF)
 
 # simple one file sample targets, no additional files
-set (S_TARGETS init_instance init_device enumerate_devices enumerate_devices_adv
-    init_depth_buffer init_swapchain init_texture init_uniform_buffer
-    init_pipeline_layout init_command_buffer
-    init_render_pass init_frame_buffers init_vertex_buffer
-    init_descriptor_set init_shaders init_pipeline multithreaded_command_buffers
-    draw_cube draw_textured_cube dynamic_uniform texel_buffer
+set (S_TARGETS 
+    01-init_instance 02-enumerate_devices 03-init_device 04-init_command_buffer
+    05-init_swapchain 06-init_depth_buffer 07-init_uniform_buffer
+    08-init_pipeline_layout 09-init_descriptor_set 10-init_render_pass
+    11-init_shaders 12-init_frame_buffers 13-init_vertex_buffer 14-init_pipeline 15-draw_cube
+    enumerate_devices_adv init_texture multithreaded_command_buffers
+    draw_textured_cube dynamic_uniform texel_buffer
     instance_layer_properties instance_extension_properties
     instance_layer_extension_properties create_debug_report_callback
     enable_validation_with_callback multiple_sets

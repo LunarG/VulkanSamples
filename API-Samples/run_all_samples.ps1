@@ -24,49 +24,47 @@ function Exec
 }
 
 echo "Initialize Instance"
-Exec {init_instance}
-echo "Instance Layer Properties"
-Exec {instance_layer_properties}
+Exec {01-init_instance}
+echo "Enumerate Devices"
+Exec {02-enumerate_devices}
+echo "Initialize Device"
+Exec {03-init_device}
+echo "Initialize Command Buffer"
+Exec {04-init_command_buffer}
+echo "Initialize Swapchain"
+Exec {05-init_swapchain}
+echo "Initialize Depth Buffer"
+Exec {06-init_depth_buffer}
+echo "Initialize Uniform Buffer"
+Exec {07-init_uniform_buffer}
+echo "Initialize Pipeline Layout"
+Exec {08-init_pipeline_layout}
+echo "Initialize Descriptor Set"
+Exec {09-init_descriptor_set}
+echo "Initialize Render Pass"
+Exec {10-init_render_pass}
+echo "Initialize Shaders"
+Exec {11-init_shaders}
+echo "Initialize Frame Buffers"
+Exec {12-init_frame_buffers}
+echo "Initialize Vertex Buffer"
+Exec {13-init_vertex_buffer}
+echo "Initialize Pipeline"
+Exec {14-init_pipeline}
+echo "Draw Cube"
+Exec {15-draw_cube}
 echo "Instance Layer Properties"
 Exec {instance_layer_properties}
 echo "Instance Extension Properties"
 Exec {instance_extension_properties}
 echo "Instance Layer ExtensionProperties"
 Exec {instance_layer_extension_properties}
-echo "Enumerate Devices"
-Exec {enumerate_devices}
-echo "Initialize Device"
-Exec {init_device}
 echo "Enable Validation and Debug Message Callback"
 Exec {enable_validation_with_callback}
 echo "Create Debug Report Callback"
 Exec {create_debug_report_callback}
-echo "Initialize Swapchain"
-Exec {init_swapchain}
-echo "Initialize Command Buffer"
-Exec {init_command_buffer}
-echo "Initialize Depth Buffer"
-Exec {init_depth_buffer}
 echo "Initialize Texture"
 Exec {init_texture}
-echo "Initialize Uniform Buffer"
-Exec {init_uniform_buffer}
-echo "Initialize Render Pass"
-Exec {init_render_pass}
-echo "Initialize Frame Buffers"
-Exec {init_frame_buffers}
-echo "Initialize Pipeline Layout"
-Exec {init_pipeline_layout}
-echo "Initialize Vertex Buffer"
-Exec {init_vertex_buffer}
-echo "Initialize Descriptor Set"
-Exec {init_descriptor_set}
-echo "Initialize Shaders"
-Exec {init_shaders}
-echo "Initialize Pipeline"
-Exec {init_pipeline}
-echo "Draw Cube"
-Exec {draw_cube}
 echo "Copy/Blit Image"
 Exec {copy_blit_image}
 echo "Draw Textured Cube"
