@@ -217,9 +217,6 @@ goto:eof
    cd %GLSLANG_DIR%
    git fetch --all
    git checkout %GLSLANG_REVISION%
-   REM Revert glslang a5c33d6ffb34ccede5b233bc724c907166b6e479
-   REM See https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/issues/681
-   git apply --whitespace=fix %BUILD_DIR%\glslang_revert_a5c33d.patch.txt
 goto:eof
 
 :create_spirv-tools
