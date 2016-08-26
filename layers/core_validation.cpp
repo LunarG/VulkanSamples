@@ -6098,10 +6098,11 @@ static bool PreCallValidateCreateImageView(layer_data *dev_data, const VkImageVi
     bool skip_call = false;
     IMAGE_NODE *image_node = getImageNode(dev_data, pCreateInfo->image);
     if (image_node) {
-        skip_call |= ValidateImageUsageFlags(dev_data, image_node,
-                                             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
-                                                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                                             false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
+        skip_call |= ValidateImageUsageFlags(
+            dev_data, image_node, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
+                                      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            false, "vkCreateImageView()",
+            "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT|DEPTH_STENCIL_ATTACHMENT|INPUT_ATTACHMENT]_BIT");
         // If this isn't a sparse image, it needs to have memory backing it at CreateImageView time
         skip_call |= ValidateMemoryIsBoundToImage(dev_data, image_node, "vkCreateImageView()");
     }
