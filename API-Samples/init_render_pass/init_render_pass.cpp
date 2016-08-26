@@ -19,7 +19,7 @@
 
 /*
 VULKAN_SAMPLE_SHORT_DESCRIPTION
-Initialize Renderpass
+Initialize Render Pass
 */
 
 /* This is part of the draw cube progression */
@@ -53,7 +53,7 @@ int sample_main(int argc, char *argv[]) {
     /* VULKAN_KEY_START */
 
     // A semaphore (or fence) is required in order to acquire a
-    // swapchain image to prepare it for use in a renderpass.
+    // swapchain image to prepare it for use in a render pass.
     // The semaphore is normally used to hold back the rendering
     // operation until the image is actually available.
     // But since this sample does not render, the semaphore
@@ -77,11 +77,19 @@ int sample_main(int argc, char *argv[]) {
 
     // Set the layout for the color buffer, transitioning it from
     // undefined to an optimal color attachment to make it usable in
-    // a renderpass.
+    // a render pass.
     // The depth buffer layout has already been set by init_depth_buffer().
     set_image_layout(info, info.buffers[info.current_buffer].image,
                      VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+    // Stop recording the command buffer here since this sample will not
+    // actually put the render pass in the command buffer (via vkCmdBeginRenderPass).
+    // An actual application might leave the command buffer in recording mode
+    // and insert a BeginRenderPass command after the image layout transition
+    // memory barrier commands.
+    // This sample simply creates and defines the render pass.
+    execute_end_command_buffer(info);
 
     /* Need attachments for render target and depth buffer */
     VkAttachmentDescription attachments[2];
@@ -139,8 +147,6 @@ int sample_main(int argc, char *argv[]) {
 
     res = vkCreateRenderPass(info.device, &rp_info, NULL, &info.render_pass);
     assert(res == VK_SUCCESS);
-    execute_end_command_buffer(info);
-    execute_queue_command_buffer(info);
     /* VULKAN_KEY_END */
 
     vkDestroyRenderPass(info.device, info.render_pass, NULL);
