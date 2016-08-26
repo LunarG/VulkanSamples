@@ -50,7 +50,6 @@
 #include "core_validation_types.h"
 #include "descriptor_sets.h"
 #include "vk_layer_logging.h"
-#include "vk_safe_struct.h"
 #include "vulkan/vk_layer.h"
 #include <atomic>
 #include <functional>
@@ -59,6 +58,7 @@
 #include <unordered_set>
 #include <vector>
 #include <list>
+#include <deque>
 
 #if MTMERGE
 
@@ -125,77 +125,6 @@ struct IMAGE_LAYOUT_NODE {
     VkFormat format;
 };
 
-class PIPELINE_NODE : public BASE_NODE {
-  public:
-    VkPipeline pipeline;
-    safe_VkGraphicsPipelineCreateInfo graphicsPipelineCI;
-    safe_VkComputePipelineCreateInfo computePipelineCI;
-    // Flag of which shader stages are active for this pipeline
-    uint32_t active_shaders;
-    uint32_t duplicate_shaders;
-    // Capture which slots (set#->bindings) are actually used by the shaders of this pipeline
-    std::unordered_map<uint32_t, std::unordered_map<uint32_t, descriptor_req>> active_slots;
-    // Vtx input info (if any)
-    std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
-    std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions;
-    std::vector<VkPipelineColorBlendAttachmentState> attachments;
-    bool blendConstantsEnabled; // Blend constants enabled for any attachments
-    // Store RPCI b/c renderPass may be destroyed after Pipeline creation
-    safe_VkRenderPassCreateInfo render_pass_ci;
-    PIPELINE_LAYOUT_NODE pipeline_layout;
-
-    // Default constructor
-    PIPELINE_NODE()
-        : pipeline{}, graphicsPipelineCI{}, computePipelineCI{}, active_shaders(0), duplicate_shaders(0), active_slots(),
-          vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false), render_pass_ci(),
-          pipeline_layout() {}
-
-    void initGraphicsPipeline(const VkGraphicsPipelineCreateInfo *pCreateInfo) {
-        graphicsPipelineCI.initialize(pCreateInfo);
-        // Make sure compute pipeline is null
-        VkComputePipelineCreateInfo emptyComputeCI = {};
-        computePipelineCI.initialize(&emptyComputeCI);
-        for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
-            const VkPipelineShaderStageCreateInfo *pPSSCI = &pCreateInfo->pStages[i];
-            this->duplicate_shaders |= this->active_shaders & pPSSCI->stage;
-            this->active_shaders |= pPSSCI->stage;
-        }
-        if (pCreateInfo->pVertexInputState) {
-            const VkPipelineVertexInputStateCreateInfo *pVICI = pCreateInfo->pVertexInputState;
-            if (pVICI->vertexBindingDescriptionCount) {
-                this->vertexBindingDescriptions = std::vector<VkVertexInputBindingDescription>(
-                    pVICI->pVertexBindingDescriptions, pVICI->pVertexBindingDescriptions + pVICI->vertexBindingDescriptionCount);
-            }
-            if (pVICI->vertexAttributeDescriptionCount) {
-                this->vertexAttributeDescriptions = std::vector<VkVertexInputAttributeDescription>(
-                    pVICI->pVertexAttributeDescriptions,
-                    pVICI->pVertexAttributeDescriptions + pVICI->vertexAttributeDescriptionCount);
-            }
-        }
-        if (pCreateInfo->pColorBlendState) {
-            const VkPipelineColorBlendStateCreateInfo *pCBCI = pCreateInfo->pColorBlendState;
-            if (pCBCI->attachmentCount) {
-                this->attachments = std::vector<VkPipelineColorBlendAttachmentState>(pCBCI->pAttachments,
-                                                                                     pCBCI->pAttachments + pCBCI->attachmentCount);
-            }
-        }
-    }
-    void initComputePipeline(const VkComputePipelineCreateInfo *pCreateInfo) {
-        computePipelineCI.initialize(pCreateInfo);
-        // Make sure gfx pipeline is null
-        VkGraphicsPipelineCreateInfo emptyGraphicsCI = {};
-        graphicsPipelineCI.initialize(&emptyGraphicsCI);
-        switch (computePipelineCI.stage.stage) {
-        case VK_SHADER_STAGE_COMPUTE_BIT:
-            this->active_shaders |= VK_SHADER_STAGE_COMPUTE_BIT;
-            break;
-        default:
-            // TODO : Flag error
-            break;
-        }
-    }
-};
-
 class PHYS_DEV_PROPERTIES_NODE {
   public:
     VkPhysicalDeviceProperties properties;
@@ -209,9 +138,7 @@ class FENCE_NODE {
   public:
     VkFence fence;
     VkFenceCreateInfo createInfo;
-    std::unordered_set<VkQueue> queues;
-    std::vector<CB_SUBMISSION> submissions;
-    std::vector<VkFence> priorFences;
+    std::pair<VkQueue, uint64_t> signaler;
     FENCE_STATE state;
 
     // Default constructor
@@ -221,8 +148,8 @@ class FENCE_NODE {
 class SEMAPHORE_NODE : public BASE_NODE {
   public:
     using BASE_NODE::in_use;
+    std::pair<VkQueue, uint64_t> signaler;
     bool signaled;
-    VkQueue queue;
 };
 
 class EVENT_NODE : public BASE_NODE {
@@ -236,10 +163,12 @@ class EVENT_NODE : public BASE_NODE {
 class QUEUE_NODE {
   public:
     VkQueue queue;
-    std::vector<VkFence> lastFences;
-    std::vector<CB_SUBMISSION> untrackedSubmissions;
+    uint32_t queueFamilyIndex;
     std::unordered_map<VkEvent, VkPipelineStageFlags> eventToStageMap;
     std::unordered_map<QueryObject, bool> queryToStateMap; // 0 is unavailable, 1 is available
+
+    uint64_t seq;
+    std::deque<CB_SUBMISSION> submissions;
 };
 
 class QUERY_POOL_NODE : public BASE_NODE {

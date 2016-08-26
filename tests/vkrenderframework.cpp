@@ -176,25 +176,7 @@ void VkRenderFramework::InitFramework(
     }
 
     /* TODO: Verify requested physical device extensions are available */
-    m_device = new VkDeviceObj(0, objs[0], device_extension_names);
-
-    /* Now register callback on device */
-    if (0) {
-        if (m_CreateDebugReportCallback) {
-            VkDebugReportCallbackCreateInfoEXT dbgInfo;
-            memset(&dbgInfo, 0, sizeof(dbgInfo));
-            dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-            dbgInfo.pfnCallback = dbgFunction;
-            dbgInfo.pUserData = userData;
-            dbgInfo.flags =
-                VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
-            err = m_CreateDebugReportCallback(this->inst, &dbgInfo, NULL,
-                                              &m_devMsgCallback);
-            ASSERT_VK_SUCCESS(err);
-        }
-    }
-    m_device->get_device_queue();
-    m_depthStencil = new VkDepthStencilObj(m_device);
+    this->device_extension_names = device_extension_names;
 }
 
 void VkRenderFramework::ShutdownFramework() {
@@ -228,8 +210,13 @@ void VkRenderFramework::ShutdownFramework() {
         vkDestroyInstance(this->inst, NULL);
 }
 
-void VkRenderFramework::InitState() {
+void VkRenderFramework::InitState(VkPhysicalDeviceFeatures *features) {
     VkResult U_ASSERT_ONLY err;
+
+    m_device = new VkDeviceObj(0, objs[0], device_extension_names, features);
+    m_device->get_device_queue();
+
+    m_depthStencil = new VkDepthStencilObj(m_device);
 
     m_render_target_fmt = VkTestFramework::GetFormat(inst, m_device);
 
@@ -437,9 +424,10 @@ VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj)
 }
 
 VkDeviceObj::VkDeviceObj(uint32_t id, VkPhysicalDevice obj,
-                         std::vector<const char *> &extension_names)
+                         std::vector<const char *> &extension_names,
+                         VkPhysicalDeviceFeatures *features)
     : vk_testing::Device(obj), id(id) {
-    init(extension_names);
+    init(extension_names, features);
 
     props = phy().properties();
     queue_props = phy().queue_properties();
@@ -582,6 +570,37 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(
         // do the updates
         m_device->update_descriptor_sets(m_writes);
     }
+}
+
+VkRenderpassObj::VkRenderpassObj(VkDeviceObj *dev) {
+    // Create a renderPass with a single color attachment
+    VkAttachmentReference attach = {};
+    attach.layout = VK_IMAGE_LAYOUT_GENERAL;
+
+    VkSubpassDescription subpass = {};
+    subpass.pColorAttachments = &attach;
+    subpass.colorAttachmentCount = 1;
+
+    VkRenderPassCreateInfo rpci = {};
+    rpci.subpassCount = 1;
+    rpci.pSubpasses = &subpass;
+    rpci.attachmentCount = 1;
+
+    VkAttachmentDescription attach_desc = {};
+    attach_desc.format = VK_FORMAT_B8G8R8A8_UNORM;
+    attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
+    attach_desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attach_desc.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+    rpci.pAttachments = &attach_desc;
+    rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+
+    device = dev->device();
+    vkCreateRenderPass(device, &rpci, NULL, &m_renderpass);
+}
+
+VkRenderpassObj::~VkRenderpassObj() {
+    vkDestroyRenderPass(device, m_renderpass, NULL);
 }
 
 VkImageObj::VkImageObj(VkDeviceObj *dev) {

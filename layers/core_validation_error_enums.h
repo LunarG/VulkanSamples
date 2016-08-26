@@ -63,6 +63,7 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_INVALID_QUERY,                 // Invalid Query
     DRAWSTATE_INVALID_FENCE,                 // Invalid Fence
     DRAWSTATE_INVALID_EVENT,                 // Invalid Event
+    DRAWSTATE_INVALID_SAMPLER,               // Invalid Sampler
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,       // binding in vkCmdBindVertexData() too
                                              // large for PSO's
                                              // pVertexBindingDescriptions array
@@ -219,6 +220,10 @@ enum DRAW_STATE_ERROR {
                                              // must be a valid VkLogicOp value
     DRAWSTATE_INVALID_QUEUE_INDEX,           // Specified queue index exceeds number
                                              // of queried queue families
+    DRAWSTATE_INVALID_QUEUE_FAMILY,          // Command buffer submitted on queue is from
+                                             // a different queue family
+    DRAWSTATE_IMAGE_TRANSFER_GRANULARITY,    // Violation of queue family's image transfer
+                                             // granularity
     DRAWSTATE_PUSH_CONSTANTS_ERROR,          // Push constants exceed maxPushConstantSize
 };
 
@@ -241,6 +246,8 @@ enum SHADER_CHECKER_ERROR {
     SHADER_CHECKER_DESCRIPTOR_NOT_ACCESSIBLE_FROM_STAGE,    // Descriptor used by shader, but not accessible from stage
     SHADER_CHECKER_FEATURE_NOT_ENABLED,                     // Shader uses capability requiring a feature not enabled on device
     SHADER_CHECKER_BAD_CAPABILITY,                          // Shader uses capability not supported by Vulkan (OpenCL features)
+    SHADER_CHECKER_MISSING_INPUT_ATTACHMENT,   // Shader uses an input attachment but not declared in subpass
+    SHADER_CHECKER_INPUT_ATTACHMENT_TYPE_MISMATCH,          // Shader input attachment type does not match subpass format
 };
 
 // Device Limits ERROR codes

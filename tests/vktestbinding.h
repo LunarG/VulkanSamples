@@ -149,7 +149,7 @@ class Device : public internal::Handle<VkDevice> {
     // vkCreateDevice()
     void init(const VkDeviceCreateInfo &info);
     void init(std::vector<const char *>
-                  &extensions); // all queues, all extensions, etc
+                  &extensions, VkPhysicalDeviceFeatures *features = nullptr); // all queues, all extensions, etc
     void init() {
         std::vector<const char *> extensions;
         init(extensions);

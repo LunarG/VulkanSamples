@@ -38,7 +38,8 @@ class VkDeviceObj : public vk_testing::Device {
   public:
     VkDeviceObj(uint32_t id, VkPhysicalDevice obj);
     VkDeviceObj(uint32_t id, VkPhysicalDevice obj,
-                std::vector<const char *> &extension_names);
+                std::vector<const char *> &extension_names,
+                VkPhysicalDeviceFeatures *features = nullptr);
 
     VkDevice device() { return handle(); }
     void get_device_queue();
@@ -77,7 +78,7 @@ class VkRenderFramework : public VkTestFramework {
                        void *userData = NULL);
 
     void ShutdownFramework();
-    void InitState();
+    void InitState(VkPhysicalDeviceFeatures *features = nullptr);
 
     const VkRenderPassBeginInfo &renderPassBeginInfo() const {
         return m_renderPassBeginInfo;
@@ -121,6 +122,7 @@ class VkRenderFramework : public VkTestFramework {
     PFN_vkDebugReportMessageEXT m_DebugReportMessage;
     VkDebugReportCallbackEXT m_globalMsgCallback;
     VkDebugReportCallbackEXT m_devMsgCallback;
+    std::vector<const char *> device_extension_names;
 
     /*
      * SetUp and TearDown are called by the Google Test framework
@@ -264,6 +266,17 @@ class VkIndexBufferObj : public VkConstantBufferObj {
 
   protected:
     VkIndexType m_indexType;
+};
+
+class VkRenderpassObj {
+  public:
+    VkRenderpassObj(VkDeviceObj *device);
+    ~VkRenderpassObj();
+    VkRenderPass handle() {return m_renderpass;}
+
+  protected:
+    VkRenderPass m_renderpass;
+    VkDevice device;
 };
 
 class VkImageObj : public vk_testing::Image {

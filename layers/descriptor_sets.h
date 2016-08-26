@@ -47,6 +47,7 @@
 #include "vk_layer_utils.h"
 #include "vk_safe_struct.h"
 #include "vulkan/vk_layer.h"
+#include <map>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -149,6 +150,8 @@ class Descriptor {
     virtual ~Descriptor(){};
     virtual void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) = 0;
     virtual void CopyUpdate(const Descriptor *) = 0;
+    // Create binding between resources of this descriptor and given cb_node
+    virtual void BindCommandBuffer(const core_validation::layer_data *, GLOBAL_CB_NODE *) = 0;
     virtual DescriptorClass GetClass() const { return descriptor_class; };
     // Special fast-path check for SamplerDescriptors that are immutable
     virtual bool IsImmutableSampler() const { return false; };
@@ -170,6 +173,7 @@ class SamplerDescriptor : public Descriptor {
     SamplerDescriptor(const VkSampler *);
     void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
     void CopyUpdate(const Descriptor *) override;
+    void BindCommandBuffer(const core_validation::layer_data *, GLOBAL_CB_NODE *) override;
     virtual bool IsImmutableSampler() const override { return immutable_; };
     VkSampler GetSampler() const { return sampler_; }
 
@@ -185,6 +189,7 @@ class ImageSamplerDescriptor : public Descriptor {
     ImageSamplerDescriptor(const VkSampler *);
     void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
     void CopyUpdate(const Descriptor *) override;
+    void BindCommandBuffer(const core_validation::layer_data *, GLOBAL_CB_NODE *) override;
     virtual bool IsImmutableSampler() const override { return immutable_; };
     VkSampler GetSampler() const { return sampler_; }
     VkImageView GetImageView() const { return image_view_; }
@@ -202,6 +207,7 @@ class ImageDescriptor : public Descriptor {
     ImageDescriptor(const VkDescriptorType);
     void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
     void CopyUpdate(const Descriptor *) override;
+    void BindCommandBuffer(const core_validation::layer_data *, GLOBAL_CB_NODE *) override;
     virtual bool IsStorage() const override { return storage_; }
     VkImageView GetImageView() const { return image_view_; }
     VkImageLayout GetImageLayout() const { return image_layout_; }
@@ -217,6 +223,7 @@ class TexelDescriptor : public Descriptor {
     TexelDescriptor(const VkDescriptorType);
     void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
     void CopyUpdate(const Descriptor *) override;
+    void BindCommandBuffer(const core_validation::layer_data *, GLOBAL_CB_NODE *) override;
     virtual bool IsStorage() const override { return storage_; }
     VkBufferView GetBufferView() const { return buffer_view_; }
 
@@ -230,6 +237,7 @@ class BufferDescriptor : public Descriptor {
     BufferDescriptor(const VkDescriptorType);
     void WriteUpdate(const VkWriteDescriptorSet *, const uint32_t) override;
     void CopyUpdate(const Descriptor *) override;
+    void BindCommandBuffer(const core_validation::layer_data *, GLOBAL_CB_NODE *) override;
     virtual bool IsDynamic() const override { return dynamic_; }
     virtual bool IsStorage() const override { return storage_; }
     VkBuffer GetBuffer() const { return buffer_; }
@@ -313,10 +321,10 @@ class DescriptorSet : public BASE_NODE {
     // Is this set compatible with the given layout?
     bool IsCompatible(const DescriptorSetLayout *, std::string *) const;
     // For given bindings validate state at time of draw is correct, returning false on error and writing error details into string*
-    bool ValidateDrawState(const std::unordered_map<uint32_t, descriptor_req> &, const std::vector<uint32_t> &, std::string *) const;
+    bool ValidateDrawState(const std::map<uint32_t, descriptor_req> &, const std::vector<uint32_t> &, std::string *) const;
     // For given set of bindings, add any buffers and images that will be updated to their respective unordered_sets & return number
     // of objects inserted
-    uint32_t GetStorageUpdates(const std::unordered_map<uint32_t, descriptor_req> &, std::unordered_set<VkBuffer> *,
+    uint32_t GetStorageUpdates(const std::map<uint32_t, descriptor_req> &, std::unordered_set<VkBuffer> *,
                                std::unordered_set<VkImageView> *) const;
 
     // Descriptor Update functions. These functions validate state and perform update separately
@@ -334,7 +342,7 @@ class DescriptorSet : public BASE_NODE {
     // Return unordered_set of all command buffers that this set is bound to
     std::unordered_set<GLOBAL_CB_NODE *> GetBoundCmdBuffers() const { return cb_bindings; }
     // Bind given cmd_buffer to this descriptor set
-    void BindCommandBuffer(GLOBAL_CB_NODE *cb_node) { cb_bindings.insert(cb_node); }
+    void BindCommandBuffer(GLOBAL_CB_NODE *, const std::unordered_set<uint32_t> &);
     // If given cmd_buffer is in the cb_bindings set, remove it
     void RemoveBoundCommandBuffer(GLOBAL_CB_NODE *cb_node) { cb_bindings.erase(cb_node); }
     VkSampler const *GetImmutableSamplerPtrFromBinding(const uint32_t index) const {

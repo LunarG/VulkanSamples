@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 2.8.11)
 
 set(LAYER_JSON_FILES
     VkLayer_wrap_objects
+    VkLayer_test
     )
 
 set(VK_LAYER_RPATH /usr/lib/x86_64-linux-gnu/vulkan/layer:/usr/lib/i386-linux-gnu/vulkan/layer)
@@ -82,5 +83,12 @@ set (WRAP_SRCS
 	   ${CMAKE_CURRENT_SOURCE_DIR}/../../layers/vk_layer_extension_utils.cpp
 	   )
 add_vk_layer(wrap_objects ${WRAP_SRCS})
+
+set (TEST_SRCS
+       test.cpp
+	   ${CMAKE_CURRENT_SOURCE_DIR}/../../layers/vk_layer_table.cpp
+	   ${CMAKE_CURRENT_SOURCE_DIR}/../../layers/vk_layer_extension_utils.cpp
+	   )
+add_vk_layer(test ${TEST_SRCS})
 
 

@@ -32,7 +32,7 @@
 #include <io.h>
 #endif // _WIN32
 
-#ifdef __linux__
+#if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
 #include <X11/Xutil.h>
 #endif
 
@@ -842,35 +842,36 @@ static void app_destroy_surface(struct app_instance *inst) { //same for all plat
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
 static void app_create_xcb_window(struct app_instance *inst) {
-  //--Init Connection--
-  const xcb_setup_t *setup;
-  xcb_screen_iterator_t iter;
-  int scr;
+    //--Init Connection--
+    const xcb_setup_t *setup;
+    xcb_screen_iterator_t iter;
+    int scr;
 
-  inst->xcb_connection = xcb_connect(NULL, &scr);
-  if (inst->xcb_connection == NULL) {
-      printf("XCB failed to connect to the X server.\nExiting ...\n");
-      fflush(stdout);
-      exit(1);
-  }
+    inst->xcb_connection = xcb_connect(NULL, &scr);
+    if (inst->xcb_connection == NULL) {
+        printf("XCB failed to connect to the X server.\nExiting ...\n");
+        fflush(stdout);
+        exit(1);
+    }
 
-  setup = xcb_get_setup(inst->xcb_connection);
-  iter = xcb_setup_roots_iterator(setup);
-  while (scr-- > 0)
-      xcb_screen_next(&iter);
+    setup = xcb_get_setup(inst->xcb_connection);
+    iter = xcb_setup_roots_iterator(setup);
+    while (scr-- > 0) {
+        xcb_screen_next(&iter);
+    }
 
-  inst->xcb_screen = iter.data;
-  //-------------------
+    inst->xcb_screen = iter.data;
+    //-------------------
 
-  inst->xcb_window = xcb_generate_id(inst->xcb_connection);
-  xcb_create_window(inst->xcb_connection, XCB_COPY_FROM_PARENT, inst->xcb_window,
-                    inst->xcb_screen->root, 0, 0, inst->width, inst->height, 0,
-                    XCB_WINDOW_CLASS_INPUT_OUTPUT, inst->xcb_screen->root_visual,
-                    0, NULL);
+    inst->xcb_window = xcb_generate_id(inst->xcb_connection);
+    xcb_create_window(inst->xcb_connection, XCB_COPY_FROM_PARENT, inst->xcb_window,
+                      inst->xcb_screen->root, 0, 0, inst->width, inst->height, 0,
+                      XCB_WINDOW_CLASS_INPUT_OUTPUT, inst->xcb_screen->root_visual,
+                      0, NULL);
 
-  xcb_intern_atom_cookie_t cookie = xcb_intern_atom(inst->xcb_connection, 1, 12, "WM_PROTOCOLS");
-  xcb_intern_atom_reply_t *reply =  xcb_intern_atom_reply(inst->xcb_connection, cookie, 0);
-  free(reply);
+    xcb_intern_atom_cookie_t cookie = xcb_intern_atom(inst->xcb_connection, 1, 12, "WM_PROTOCOLS");
+    xcb_intern_atom_reply_t *reply =  xcb_intern_atom_reply(inst->xcb_connection, cookie, 0);
+    free(reply);
 }
 
 static void app_create_xcb_surface(struct app_instance *inst) {
@@ -932,19 +933,22 @@ static void app_destroy_xlib_window(struct app_instance *inst) {
 
 static int app_dump_surface_formats(struct app_instance *inst, struct app_gpu *gpu){
     // Get the list of VkFormat's that are supported:
-  VkResult U_ASSERT_ONLY err;
-  uint32_t formatCount=0;
-  err = inst->vkGetPhysicalDeviceSurfaceFormatsKHR(gpu->obj, inst->surface, &formatCount, NULL);
-  assert(!err);
-  VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
-  err = inst->vkGetPhysicalDeviceSurfaceFormatsKHR(gpu->obj, inst->surface, &formatCount, surfFormats);
-  assert(!err);
-  printf("Format count = %d\n",formatCount);
-  uint32_t i;
-  for(i=0;i<formatCount;i++) printf("\t%s\n",vk_format_string(surfFormats[i].format));
-  printf("\n");
-  fflush(stdout);
-  return formatCount;
+    VkResult U_ASSERT_ONLY err;
+    uint32_t formatCount = 0;
+    err = inst->vkGetPhysicalDeviceSurfaceFormatsKHR(gpu->obj, inst->surface, &formatCount, NULL);
+    assert(!err);
+
+    VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
+    err = inst->vkGetPhysicalDeviceSurfaceFormatsKHR(gpu->obj, inst->surface, &formatCount, surfFormats);
+    assert(!err);
+    printf("Format count = %d\n",formatCount);
+
+    for (uint32_t i = 0; i < formatCount; i++) {
+        printf("\t%s\n", vk_format_string(surfFormats[i].format));
+    }
+    printf("\n");
+    fflush(stdout);
+    return formatCount;
 }
 
 static void app_dev_dump_format_props(const struct app_dev *dev, VkFormat fmt)
@@ -954,7 +958,6 @@ static void app_dev_dump_format_props(const struct app_dev *dev, VkFormat fmt)
         const char *name;
         VkFlags flags;
     } features[3];
-    uint32_t i;
 
     features[0].name  = "linearTiling   FormatFeatureFlags";
     features[0].flags = props->linearTilingFeatures;
@@ -964,7 +967,7 @@ static void app_dev_dump_format_props(const struct app_dev *dev, VkFormat fmt)
     features[2].flags = props->bufferFeatures;
 
     printf("\nFORMAT_%s:", vk_format_string(fmt));
-    for (i = 0; i < ARRAY_SIZE(features); i++) {
+    for (uint32_t i = 0; i < ARRAY_SIZE(features); i++) {
         printf("\n\t%s:", features[i].name);
         if (features[i].flags == 0) {
             printf("\n\t\tNone");

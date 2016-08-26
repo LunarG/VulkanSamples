@@ -3372,27 +3372,27 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         return [checkedExpr]
     #
     # Generate the sType check string
-    def makeStructTypeCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, lenPtrRequired, funcPrintName, lenPrintName, valuePrintName):
+    def makeStructTypeCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, lenPtrRequired, funcPrintName, lenPrintName, valuePrintName, postProcSpec):
         checkExpr = []
         stype = self.structTypes[value.type]
         if lenValue:
             # This is an array with a pointer to a count value
             if lenValue.ispointer:
                 # When the length parameter is a pointer, there is an extra Boolean parameter in the function call to indicate if it is required
-                checkExpr.append('skipCall |= validate_struct_type_array(report_data, "{}", "{ldn}", "{dn}", "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {}, {});\n'.format(
-                    funcPrintName, lenPtrRequired, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, sv=stype.value, pf=prefix))
+                checkExpr.append('skipCall |= validate_struct_type_array(report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {}, {});\n'.format(
+                    funcPrintName, lenPtrRequired, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, sv=stype.value, pf=prefix, **postProcSpec))
             # This is an array with an integer count value
             else:
-                checkExpr.append('skipCall |= validate_struct_type_array(report_data, "{}", "{ldn}", "{dn}", "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {});\n'.format(
-                    funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, sv=stype.value, pf=prefix))
+                checkExpr.append('skipCall |= validate_struct_type_array(report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, "{sv}", {pf}{ln}, {pf}{vn}, {sv}, {}, {});\n'.format(
+                    funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, sv=stype.value, pf=prefix, **postProcSpec))
         # This is an individual struct
         else:
-            checkExpr.append('skipCall |= validate_struct_type(report_data, "{}", "{}", "{sv}", {}{vn}, {sv}, {});\n'.format(
-                funcPrintName, valuePrintName, prefix, valueRequired, vn=value.name, sv=stype.value))
+            checkExpr.append('skipCall |= validate_struct_type(report_data, "{}", {ppp}"{}"{pps}, "{sv}", {}{vn}, {sv}, {});\n'.format(
+                funcPrintName, valuePrintName, prefix, valueRequired, vn=value.name, sv=stype.value, **postProcSpec))
         return checkExpr
     #
     # Generate the handle check string
-    def makeHandleCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, funcPrintName, lenPrintName, valuePrintName):
+    def makeHandleCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, funcPrintName, lenPrintName, valuePrintName, postProcSpec):
         checkExpr = []
         if lenValue:
             if lenValue.ispointer:
@@ -3400,26 +3400,26 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 raise('Unsupported parameter validation case: Output handle array elements are not NULL checked')
             else:
                 # This is an array with an integer count value
-                checkExpr.append('skipCall |= validate_handle_array(report_data, "{}", "{ldn}", "{dn}", {pf}{ln}, {pf}{vn}, {}, {});\n'.format(
-                    funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix))
+                checkExpr.append('skipCall |= validate_handle_array(report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {});\n'.format(
+                    funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
         else:
             # This is assumed to be an output handle pointer
             raise('Unsupported parameter validation case: Output handles are not NULL checked')
         return checkExpr
     #
     # Generate check string for an array of VkFlags values
-    def makeFlagsArrayCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, funcPrintName, lenPrintName, valuePrintName):
+    def makeFlagsArrayCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, funcPrintName, lenPrintName, valuePrintName, postProcSpec):
         checkExpr = []
         flagBitsName = value.type.replace('Flags', 'FlagBits')
         if not flagBitsName in self.flagBits:
             raise('Unsupported parameter validation case: array of reserved VkFlags')
         else:
             allFlags = 'All' + flagBitsName
-            checkExpr.append('skipCall |= validate_flags_array(report_data, "{}", "{}", "{}", "{}", {}, {pf}{}, {pf}{}, {}, {});\n'.format(funcPrintName, lenPrintName, valuePrintName, flagBitsName, allFlags, lenValue.name, value.name, lenValueRequired, valueRequired, pf=prefix))
+            checkExpr.append('skipCall |= validate_flags_array(report_data, "{}", {ppp}"{}"{pps}, {ppp}"{}"{pps}, "{}", {}, {pf}{}, {pf}{}, {}, {});\n'.format(funcPrintName, lenPrintName, valuePrintName, flagBitsName, allFlags, lenValue.name, value.name, lenValueRequired, valueRequired, pf=prefix, **postProcSpec))
         return checkExpr
     #
     # Generate pNext check string
-    def makeStructNextCheck(self, prefix, value, funcPrintName, valuePrintName):
+    def makeStructNextCheck(self, prefix, value, funcPrintName, valuePrintName, postProcSpec):
         checkExpr = []
         # Generate an array of acceptable VkStructureType values for pNext
         extStructCount = 0
@@ -3431,12 +3431,12 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             extStructCount = 'ARRAY_SIZE(allowedStructs)'
             extStructVar = 'allowedStructs'
             extStructNames = '"' + ', '.join(structs) + '"'
-        checkExpr.append('skipCall |= validate_struct_pnext(report_data, "{}", "{}", {}, {}{}, {}, {}, GeneratedHeaderVersion);\n'.format(
-            funcPrintName, valuePrintName, extStructNames, prefix, value.name, extStructCount, extStructVar))
+        checkExpr.append('skipCall |= validate_struct_pnext(report_data, "{}", {ppp}"{}"{pps}, {}, {}{}, {}, {}, GeneratedHeaderVersion);\n'.format(
+            funcPrintName, valuePrintName, extStructNames, prefix, value.name, extStructCount, extStructVar, **postProcSpec))
         return checkExpr
     #
     # Generate the pointer check string
-    def makePointerCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, lenPtrRequired, funcPrintName, lenPrintName, valuePrintName):
+    def makePointerCheck(self, prefix, value, lenValue, valueRequired, lenValueRequired, lenPtrRequired, funcPrintName, lenPrintName, valuePrintName, postProcSpec):
         checkExpr = []
         if lenValue:
             # This is an array with a pointer to a count value
@@ -3444,16 +3444,16 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 # If count and array parameters are optional, there will be no validation
                 if valueRequired == 'true' or lenPtrRequired == 'true' or lenValueRequired == 'true':
                     # When the length parameter is a pointer, there is an extra Boolean parameter in the function call to indicate if it is required
-                    checkExpr.append('skipCall |= validate_array(report_data, "{}", "{ldn}", "{dn}", {pf}{ln}, {pf}{vn}, {}, {}, {});\n'.format(
-                        funcPrintName, lenPtrRequired, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix))
+                    checkExpr.append('skipCall |= validate_array(report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {}, {});\n'.format(
+                        funcPrintName, lenPtrRequired, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
             # This is an array with an integer count value
             else:
                 # If count and array parameters are optional, there will be no validation
                 if valueRequired == 'true' or lenValueRequired == 'true':
                     # Arrays of strings receive special processing
                     validationFuncName = 'validate_array' if value.type != 'char' else 'validate_string_array'
-                    checkExpr.append('skipCall |= {}(report_data, "{}", "{ldn}", "{dn}", {pf}{ln}, {pf}{vn}, {}, {});\n'.format(
-                        validationFuncName, funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix))
+                    checkExpr.append('skipCall |= {}(report_data, "{}", {ppp}"{ldn}"{pps}, {ppp}"{dn}"{pps}, {pf}{ln}, {pf}{vn}, {}, {});\n'.format(
+                        validationFuncName, funcPrintName, lenValueRequired, valueRequired, ln=lenValue.name, ldn=lenPrintName, dn=valuePrintName, vn=value.name, pf=prefix, **postProcSpec))
             if checkExpr:
                 if lenValue and ('->' in lenValue.name):
                     # Add checks to ensure the validation call does not dereference a NULL pointer to obtain the count
@@ -3462,31 +3462,66 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         elif not value.isoptional:
             # Function pointers need a reinterpret_cast to void*
             if value.type[:4] == 'PFN_':
-                checkExpr.append('skipCall |= validate_required_pointer(report_data, "{}", "{}", reinterpret_cast<const void*>({}{}));\n'.format(funcPrintName, valuePrintName, prefix, value.name))
+                checkExpr.append('skipCall |= validate_required_pointer(report_data, "{}", {ppp}"{}"{pps}, reinterpret_cast<const void*>({}{}));\n'.format(funcPrintName, valuePrintName, prefix, value.name, **postProcSpec))
             else:
-                checkExpr.append('skipCall |= validate_required_pointer(report_data, "{}", "{}", {}{});\n'.format(funcPrintName, valuePrintName, prefix, value.name))
+                checkExpr.append('skipCall |= validate_required_pointer(report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcPrintName, valuePrintName, prefix, value.name, **postProcSpec))
         return checkExpr
     #
     # Process struct member validation code, performing name suibstitution if required
-    def processStructMemberCode(self, line, funcName, memberNamePrefix, memberDisplayNamePrefix):
-        if any(token in line for token in ['{funcName}', '{valuePrefix}', '{displayNamePrefix}']):
-            return line.format(funcName=funcName, valuePrefix=memberNamePrefix, displayNamePrefix=memberDisplayNamePrefix)
+    def processStructMemberCode(self, line, funcName, memberNamePrefix, memberDisplayNamePrefix, postProcSpec):
+        # Build format specifier list
+        kwargs = {}
+        if '{postProcPrefix}' in line:
+            # If we have a tuple that includes a format string and format parameters, need to use ParameterName class
+            if type(memberDisplayNamePrefix) is tuple:
+                kwargs['postProcPrefix'] = 'ParameterName('
+            else:
+                kwargs['postProcPrefix'] = postProcSpec['ppp']
+        if '{postProcSuffix}' in line:
+            # If we have a tuple that includes a format string and format parameters, need to use ParameterName class
+            if type(memberDisplayNamePrefix) is tuple:
+                kwargs['postProcSuffix'] = ', ParameterName::IndexVector{{ {}{} }})'.format(postProcSpec['ppi'], memberDisplayNamePrefix[1])
+            else:
+                kwargs['postProcSuffix'] = postProcSpec['pps']
+        if '{postProcInsert}' in line:
+            # If we have a tuple that includes a format string and format parameters, need to use ParameterName class
+            if type(memberDisplayNamePrefix) is tuple:
+                kwargs['postProcInsert'] = '{}{}, '.format(postProcSpec['ppi'], memberDisplayNamePrefix[1])
+            else:
+                kwargs['postProcInsert'] = postProcSpec['ppi']
+        if '{funcName}' in line:
+            kwargs['funcName'] = funcName
+        if '{valuePrefix}' in line:
+            kwargs['valuePrefix'] = memberNamePrefix
+        if '{displayNamePrefix}' in line:
+            # Check for a tuple that includes a format string and format parameters to be used with the ParameterName class
+            if type(memberDisplayNamePrefix) is tuple:
+                kwargs['displayNamePrefix'] = memberDisplayNamePrefix[0]
+            else:
+                kwargs['displayNamePrefix'] = memberDisplayNamePrefix
+
+        if kwargs:
+            # Need to escape the C++ curly braces
+            if 'IndexVector' in line:
+                line = line.replace('IndexVector{ ', 'IndexVector{{ ')
+                line = line.replace(' }),', ' }}),')
+            return line.format(**kwargs)
         return line
     #
     # Process struct validation code for inclusion in function or parent struct validation code
-    def expandStructCode(self, lines, funcName, memberNamePrefix, memberDisplayNamePrefix, indent, output):
+    def expandStructCode(self, lines, funcName, memberNamePrefix, memberDisplayNamePrefix, indent, output, postProcSpec):
         for line in lines:
             if output:
                 output[-1] += '\n'
             if type(line) is list:
                 for sub in line:
-                    output.append(self.processStructMemberCode(indent + sub, funcName, memberNamePrefix, memberDisplayNamePrefix))
+                    output.append(self.processStructMemberCode(indent + sub, funcName, memberNamePrefix, memberDisplayNamePrefix, postProcSpec))
             else:
-                output.append(self.processStructMemberCode(indent + line, funcName, memberNamePrefix, memberDisplayNamePrefix))
+                output.append(self.processStructMemberCode(indent + line, funcName, memberNamePrefix, memberDisplayNamePrefix, postProcSpec))
         return output
     #
     # Process struct pointer/array validation code, perfoeming name substitution if required
-    def expandStructPointerCode(self, prefix, value, lenValue, funcName, valueDisplayName):
+    def expandStructPointerCode(self, prefix, value, lenValue, funcName, valueDisplayName, postProcSpec):
         expr = []
         expr.append('if ({}{} != NULL)\n'.format(prefix, value.name))
         expr.append('{')
@@ -3500,13 +3535,13 @@ class ParamCheckerOutputGenerator(OutputGenerator):
             indent = self.incIndent(indent)
             # Prefix for value name to display in error message
             memberNamePrefix = '{}{}[{}].'.format(prefix, value.name, indexName)
-            memberDisplayNamePrefix = '{}[i].'.format(valueDisplayName)
+            memberDisplayNamePrefix = ('{}[%i].'.format(valueDisplayName), indexName)
         else:
             memberNamePrefix = '{}{}->'.format(prefix, value.name)
             memberDisplayNamePrefix = '{}->'.format(valueDisplayName)
         #
         # Expand the struct validation lines
-        expr = self.expandStructCode(self.validatedStructs[value.type], funcName, memberNamePrefix, memberDisplayNamePrefix, indent, expr)
+        expr = self.expandStructCode(self.validatedStructs[value.type], funcName, memberNamePrefix, memberDisplayNamePrefix, indent, expr, postProcSpec)
         #
         if lenValue:
             # Close if and for scopes
@@ -3522,6 +3557,12 @@ class ParamCheckerOutputGenerator(OutputGenerator):
         for value in values:
             usedLines = []
             lenParam = None
+            #
+            # Prefix and suffix for post processing of parameter names for struct members.  Arrays of structures need special processing to include the array index in the full parameter name.
+            postProcSpec = {}
+            postProcSpec['ppp'] = '' if not structTypeName else '{postProcPrefix}'
+            postProcSpec['pps'] = '' if not structTypeName else '{postProcSuffix}'
+            postProcSpec['ppi'] = '' if not structTypeName else '{postProcInsert}'
             #
             # Generate the full name of the value, which will be printed in the error message, by adding the variable prefix to the value name
             valueDisplayName = '{}{}'.format(displayNamePrefix, value.name)
@@ -3567,27 +3608,27 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                     #
                     # If this is a pointer to a struct with an sType field, verify the type
                     if value.type in self.structTypes:
-                        usedLines += self.makeStructTypeCheck(valuePrefix, value, lenParam, req, cvReq, cpReq, funcName, lenDisplayName, valueDisplayName)
+                        usedLines += self.makeStructTypeCheck(valuePrefix, value, lenParam, req, cvReq, cpReq, funcName, lenDisplayName, valueDisplayName, postProcSpec)
                     # If this is an input handle array that is not allowed to contain NULL handles, verify that none of the handles are VK_NULL_HANDLE
                     elif value.type in self.handleTypes and value.isconst and not self.isHandleOptional(value, lenParam):
-                        usedLines += self.makeHandleCheck(valuePrefix, value, lenParam, req, cvReq, funcName, lenDisplayName, valueDisplayName)
+                        usedLines += self.makeHandleCheck(valuePrefix, value, lenParam, req, cvReq, funcName, lenDisplayName, valueDisplayName, postProcSpec)
                     elif value.type in self.flags and value.isconst:
-                        usedLines += self.makeFlagsArrayCheck(valuePrefix, value, lenParam, req, cvReq, funcName, lenDisplayName, valueDisplayName)
+                        usedLines += self.makeFlagsArrayCheck(valuePrefix, value, lenParam, req, cvReq, funcName, lenDisplayName, valueDisplayName, postProcSpec)
                     elif value.isbool and value.isconst:
-                        usedLines.append('skipCall |= validate_bool32_array(report_data, "{}", "{}", "{}", {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, lenParam.name, value.name, cvReq, req, pf=valuePrefix))
+                        usedLines.append('skipCall |= validate_bool32_array(report_data, "{}", {ppp}"{}"{pps}, {ppp}"{}"{pps}, {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, lenParam.name, value.name, cvReq, req, pf=valuePrefix, **postProcSpec))
                     elif value.israngedenum and value.isconst:
                         enumRange = self.enumRanges[value.type]
-                        usedLines.append('skipCall |= validate_ranged_enum_array(report_data, "{}", "{}", "{}", "{}", {}, {}, {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, value.type, enumRange[0], enumRange[1], lenParam.name, value.name, cvReq, req, pf=valuePrefix))
+                        usedLines.append('skipCall |= validate_ranged_enum_array(report_data, "{}", {ppp}"{}"{pps}, {ppp}"{}"{pps}, "{}", {}, {}, {pf}{}, {pf}{}, {}, {});\n'.format(funcName, lenDisplayName, valueDisplayName, value.type, enumRange[0], enumRange[1], lenParam.name, value.name, cvReq, req, pf=valuePrefix, **postProcSpec))
                     elif value.name == 'pNext':
                         # We need to ignore VkDeviceCreateInfo and VkInstanceCreateInfo, as the loader manipulates them in a way that is not documented in vk.xml
                         if not structTypeName in ['VkDeviceCreateInfo', 'VkInstanceCreateInfo']:
-                            usedLines += self.makeStructNextCheck(valuePrefix, value, funcName, valueDisplayName)
+                            usedLines += self.makeStructNextCheck(valuePrefix, value, funcName, valueDisplayName, postProcSpec)
                     else:
-                        usedLines += self.makePointerCheck(valuePrefix, value, lenParam, req, cvReq, cpReq, funcName, lenDisplayName, valueDisplayName)
+                        usedLines += self.makePointerCheck(valuePrefix, value, lenParam, req, cvReq, cpReq, funcName, lenDisplayName, valueDisplayName, postProcSpec)
                     #
                     # If this is a pointer to a struct (input), see if it contains members that need to be checked
                     if value.type in self.validatedStructs and value.isconst:
-                        usedLines.append(self.expandStructPointerCode(valuePrefix, value, lenParam, funcName, valueDisplayName))
+                        usedLines.append(self.expandStructPointerCode(valuePrefix, value, lenParam, funcName, valueDisplayName, postProcSpec))
             # Non-pointer types
             else:
                 #
@@ -3600,30 +3641,30 @@ class ParamCheckerOutputGenerator(OutputGenerator):
                 else:
                     if value.type in self.structTypes:
                         stype = self.structTypes[value.type]
-                        usedLines.append('skipCall |= validate_struct_type(report_data, "{}", "{}", "{sv}", &({}{vn}), {sv}, false);\n'.format(
-                            funcName, valueDisplayName, valuePrefix, vn=value.name, sv=stype.value))
+                        usedLines.append('skipCall |= validate_struct_type(report_data, "{}", {ppp}"{}"{pps}, "{sv}", &({}{vn}), {sv}, false);\n'.format(
+                            funcName, valueDisplayName, valuePrefix, vn=value.name, sv=stype.value, **postProcSpec))
                     elif value.type in self.handleTypes:
                         if not self.isHandleOptional(value, None):
-                            usedLines.append('skipCall |= validate_required_handle(report_data, "{}", "{}", {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name))
+                            usedLines.append('skipCall |= validate_required_handle(report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name, **postProcSpec))
                     elif value.type in self.flags:
                         flagBitsName = value.type.replace('Flags', 'FlagBits')
                         if not flagBitsName in self.flagBits:
-                            usedLines.append('skipCall |= validate_reserved_flags(report_data, "{}", "{}", {pf}{});\n'.format(funcName, valueDisplayName, value.name, pf=valuePrefix))
+                            usedLines.append('skipCall |= validate_reserved_flags(report_data, "{}", {ppp}"{}"{pps}, {pf}{});\n'.format(funcName, valueDisplayName, value.name, pf=valuePrefix, **postProcSpec))
                         else:
                             flagsRequired = 'false' if value.isoptional else 'true'
                             allFlagsName = 'All' + flagBitsName
-                            usedLines.append('skipCall |= validate_flags(report_data, "{}", "{}", "{}", {}, {pf}{}, {});\n'.format(funcName, valueDisplayName, flagBitsName, allFlagsName, value.name, flagsRequired, pf=valuePrefix))
+                            usedLines.append('skipCall |= validate_flags(report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {pf}{}, {});\n'.format(funcName, valueDisplayName, flagBitsName, allFlagsName, value.name, flagsRequired, pf=valuePrefix, **postProcSpec))
                     elif value.isbool:
-                        usedLines.append('skipCall |= validate_bool32(report_data, "{}", "{}", {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name))
+                        usedLines.append('skipCall |= validate_bool32(report_data, "{}", {ppp}"{}"{pps}, {}{});\n'.format(funcName, valueDisplayName, valuePrefix, value.name, **postProcSpec))
                     elif value.israngedenum:
                         enumRange = self.enumRanges[value.type]
-                        usedLines.append('skipCall |= validate_ranged_enum(report_data, "{}", "{}", "{}", {}, {}, {}{});\n'.format(funcName, valueDisplayName, value.type, enumRange[0], enumRange[1], valuePrefix, value.name))
+                        usedLines.append('skipCall |= validate_ranged_enum(report_data, "{}", {ppp}"{}"{pps}, "{}", {}, {}, {}{});\n'.format(funcName, valueDisplayName, value.type, enumRange[0], enumRange[1], valuePrefix, value.name, **postProcSpec))
                     #
                     # If this is a struct, see if it contains members that need to be checked
                     if value.type in self.validatedStructs:
                         memberNamePrefix = '{}{}.'.format(valuePrefix, value.name)
                         memberDisplayNamePrefix = '{}.'.format(valueDisplayName)
-                        usedLines.append(self.expandStructCode(self.validatedStructs[value.type], funcName, memberNamePrefix, memberDisplayNamePrefix, '', []))
+                        usedLines.append(self.expandStructCode(self.validatedStructs[value.type], funcName, memberNamePrefix, memberDisplayNamePrefix, '', [], postProcSpec))
             #
             # Append the parameter check to the function body for the current command
             if usedLines:

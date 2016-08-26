@@ -317,6 +317,7 @@ std::vector<std::string> CommandLine::arguments;
 
 struct EnumerateInstanceLayerProperties : public CommandLine {};
 struct EnumerateInstanceExtensionProperties : public CommandLine {};
+struct ImplicitLayer : public CommandLine {};
 
 // Test groups:
 // LX = lunar exchange
@@ -809,6 +810,16 @@ TEST(EnumerateDeviceExtensionProperties, DeviceExtensionEnumerated)
             }),
             &properties[count]);
     }
+
+    vkDestroyInstance(instance, nullptr);
+}
+
+TEST_F(ImplicitLayer, Present)
+{
+    auto const info = VK::InstanceCreateInfo();
+    VkInstance instance = VK_NULL_HANDLE;
+    VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
+    ASSERT_EQ(result, VK_SUCCESS);
 
     vkDestroyInstance(instance, nullptr);
 }

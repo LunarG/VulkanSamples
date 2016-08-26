@@ -44,13 +44,15 @@
 #define NOEXCEPT
 #endif
 
+#include "vk_safe_struct.h"
 #include "vulkan/vulkan.h"
 #include <atomic>
-#include <string.h>
-#include <unordered_set>
-#include <unordered_map>
-#include <vector>
 #include <functional>
+#include <map>
+#include <string.h>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 // Fwd declarations
 namespace cvdescriptorset {
@@ -158,7 +160,7 @@ class BUFFER_NODE : public BASE_NODE {
     };
 };
 
-struct SAMPLER_NODE {
+struct SAMPLER_NODE : public BASE_NODE {
     VkSampler sampler;
     VkSamplerCreateInfo createInfo;
 
@@ -208,29 +210,40 @@ struct MemRange {
 
 struct MEMORY_RANGE {
     uint64_t handle;
+    bool image; // True for image, false for buffer
+    bool linear; // True for buffers and linear images
+    bool valid;  // True if this range is know to be valid
     VkDeviceMemory memory;
     VkDeviceSize start;
-    VkDeviceSize end;
+    VkDeviceSize size;
+    VkDeviceSize end; // Store this pre-computed for simplicity
+    // Set of ptrs to every range aliased with this one
+    std::unordered_set<MEMORY_RANGE *> aliases;
 };
 
 // Data struct for tracking memory object
 struct DEVICE_MEM_INFO {
     void *object; // Dispatchable object used to create this memory (device of swapchain)
-    bool valid; // Stores if the color/depth/buffer memory has valid data or not
-    bool stencil_valid; // TODO: Stores if the stencil memory has valid data or not. The validity of this memory may ultimately need
-                        // to be tracked separately from the depth/stencil/buffer memory
+    bool global_valid; // If allocation is mapped, set to "true" to be picked up by subsequently bound ranges
     VkDeviceMemory mem;
     VkMemoryAllocateInfo alloc_info;
     std::unordered_set<MT_OBJ_HANDLE_TYPE> obj_bindings;         // objects bound to this memory
     std::unordered_set<VkCommandBuffer> command_buffer_bindings; // cmd buffers referencing this memory
-    std::vector<MEMORY_RANGE> buffer_ranges;
-    std::vector<MEMORY_RANGE> image_ranges;
+    std::unordered_map<uint64_t, MEMORY_RANGE> bound_ranges;     // Map of object to its binding range
+    // Convenience vectors image/buff handles to speed up iterating over images or buffers independently
+    std::unordered_set<uint64_t> bound_images;
+    std::unordered_set<uint64_t> bound_buffers;
 
     MemRange mem_range;
-    void *p_data, *p_driver_data;
+    void *shadow_copy_base;     // Base of layer's allocation for guard band, data, and alignment space
+    void *shadow_copy;          // Pointer to start of guard-band data before mapped region
+    uint64_t shadow_pad_size;   // Size of the guard-band data before and after actual data. It MUST be a
+                                // multiple of limits.minMemoryMapAlignment
+    void *p_driver_data;        // Pointer to application's actual memory
+
     DEVICE_MEM_INFO(void *disp_object, const VkDeviceMemory in_mem, const VkMemoryAllocateInfo *p_alloc_info)
-        : object(disp_object), valid(false), stencil_valid(false), mem(in_mem), alloc_info(*p_alloc_info), mem_range{}, p_data(0),
-          p_driver_data(0){};
+        : object(disp_object), global_valid(false), mem(in_mem), alloc_info(*p_alloc_info), mem_range{}, shadow_copy_base(0),
+          shadow_copy(0), shadow_pad_size(0), p_driver_data(0){};
 };
 
 class SWAPCHAIN_NODE {
@@ -467,22 +480,90 @@ struct PIPELINE_LAYOUT_NODE {
     }
 };
 
+class PIPELINE_NODE : public BASE_NODE {
+  public:
+    VkPipeline pipeline;
+    safe_VkGraphicsPipelineCreateInfo graphicsPipelineCI;
+    safe_VkComputePipelineCreateInfo computePipelineCI;
+    // Flag of which shader stages are active for this pipeline
+    uint32_t active_shaders;
+    uint32_t duplicate_shaders;
+    // Capture which slots (set#->bindings) are actually used by the shaders of this pipeline
+    std::unordered_map<uint32_t, std::map<uint32_t, descriptor_req>> active_slots;
+    // Vtx input info (if any)
+    std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
+    std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions;
+    std::vector<VkPipelineColorBlendAttachmentState> attachments;
+    bool blendConstantsEnabled; // Blend constants enabled for any attachments
+    // Store RPCI b/c renderPass may be destroyed after Pipeline creation
+    safe_VkRenderPassCreateInfo render_pass_ci;
+    PIPELINE_LAYOUT_NODE pipeline_layout;
+
+    // Default constructor
+    PIPELINE_NODE()
+        : pipeline{}, graphicsPipelineCI{}, computePipelineCI{}, active_shaders(0), duplicate_shaders(0), active_slots(),
+          vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false), render_pass_ci(),
+          pipeline_layout() {}
+
+    void initGraphicsPipeline(const VkGraphicsPipelineCreateInfo *pCreateInfo) {
+        graphicsPipelineCI.initialize(pCreateInfo);
+        // Make sure compute pipeline is null
+        VkComputePipelineCreateInfo emptyComputeCI = {};
+        computePipelineCI.initialize(&emptyComputeCI);
+        for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
+            const VkPipelineShaderStageCreateInfo *pPSSCI = &pCreateInfo->pStages[i];
+            this->duplicate_shaders |= this->active_shaders & pPSSCI->stage;
+            this->active_shaders |= pPSSCI->stage;
+        }
+        if (pCreateInfo->pVertexInputState) {
+            const VkPipelineVertexInputStateCreateInfo *pVICI = pCreateInfo->pVertexInputState;
+            if (pVICI->vertexBindingDescriptionCount) {
+                this->vertexBindingDescriptions = std::vector<VkVertexInputBindingDescription>(
+                    pVICI->pVertexBindingDescriptions, pVICI->pVertexBindingDescriptions + pVICI->vertexBindingDescriptionCount);
+            }
+            if (pVICI->vertexAttributeDescriptionCount) {
+                this->vertexAttributeDescriptions = std::vector<VkVertexInputAttributeDescription>(
+                    pVICI->pVertexAttributeDescriptions,
+                    pVICI->pVertexAttributeDescriptions + pVICI->vertexAttributeDescriptionCount);
+            }
+        }
+        if (pCreateInfo->pColorBlendState) {
+            const VkPipelineColorBlendStateCreateInfo *pCBCI = pCreateInfo->pColorBlendState;
+            if (pCBCI->attachmentCount) {
+                this->attachments = std::vector<VkPipelineColorBlendAttachmentState>(pCBCI->pAttachments,
+                                                                                     pCBCI->pAttachments + pCBCI->attachmentCount);
+            }
+        }
+    }
+    void initComputePipeline(const VkComputePipelineCreateInfo *pCreateInfo) {
+        computePipelineCI.initialize(pCreateInfo);
+        // Make sure gfx pipeline is null
+        VkGraphicsPipelineCreateInfo emptyGraphicsCI = {};
+        graphicsPipelineCI.initialize(&emptyGraphicsCI);
+        switch (computePipelineCI.stage.stage) {
+        case VK_SHADER_STAGE_COMPUTE_BIT:
+            this->active_shaders |= VK_SHADER_STAGE_COMPUTE_BIT;
+            break;
+        default:
+            // TODO : Flag error
+            break;
+        }
+    }
+};
+
 // Track last states that are bound per pipeline bind point (Gfx & Compute)
 struct LAST_BOUND_STATE {
-    VkPipeline pipeline;
+    PIPELINE_NODE *pipeline_node;
     PIPELINE_LAYOUT_NODE pipeline_layout;
     // Track each set that has been bound
-    // TODO : can unique be global per CB? (do we care about Gfx vs. Compute?)
-    std::unordered_set<cvdescriptorset::DescriptorSet *> uniqueBoundSets;
     // Ordered bound set tracking where index is set# that given set is bound to
     std::vector<cvdescriptorset::DescriptorSet *> boundDescriptorSets;
     // one dynamic offset per dynamic descriptor bound to this CB
     std::vector<std::vector<uint32_t>> dynamicOffsets;
 
     void reset() {
-        pipeline = VK_NULL_HANDLE;
+        pipeline_node = nullptr;
         pipeline_layout.reset();
-        uniqueBoundSets.clear();
         boundDescriptorSets.clear();
         dynamicOffsets.clear();
     }
@@ -543,16 +624,22 @@ struct GLOBAL_CB_NODE : public BASE_NODE {
     std::unordered_set<VkDeviceMemory> memObjs;
     std::vector<std::function<bool(VkQueue)>> eventUpdates;
     std::vector<std::function<bool(VkQueue)>> queryUpdates;
+};
 
-    ~GLOBAL_CB_NODE();
+struct SEMAPHORE_WAIT {
+    VkSemaphore semaphore;
+    VkQueue queue;
+    uint64_t seq;
 };
 
 struct CB_SUBMISSION {
-    CB_SUBMISSION(std::vector<VkCommandBuffer> const &cbs, std::vector<VkSemaphore> const &semaphores)
-        : cbs(cbs), semaphores(semaphores) {}
+    CB_SUBMISSION(std::vector<VkCommandBuffer> const &cbs, std::vector<SEMAPHORE_WAIT> const &waitSemaphores, std::vector<VkSemaphore> const &signalSemaphores, VkFence fence)
+        : cbs(cbs), waitSemaphores(waitSemaphores), signalSemaphores(signalSemaphores), fence(fence) {}
 
     std::vector<VkCommandBuffer> cbs;
-    std::vector<VkSemaphore> semaphores;
+    std::vector<SEMAPHORE_WAIT> waitSemaphores;
+    std::vector<VkSemaphore> signalSemaphores;
+    VkFence fence;
 };
 
 // Fwd declarations of layer_data and helpers to look-up/validate state from layer_data maps
@@ -571,6 +658,9 @@ VkSwapchainKHR getSwapchainFromImage(const layer_data *, VkImage);
 SWAPCHAIN_NODE *getSwapchainNode(const layer_data *, VkSwapchainKHR);
 void invalidateCommandBuffers(std::unordered_set<GLOBAL_CB_NODE *>, VK_OBJECT);
 bool ValidateMemoryIsBoundToBuffer(const layer_data *, const BUFFER_NODE *, const char *);
+void AddCommandBufferBindingSampler(GLOBAL_CB_NODE *, SAMPLER_NODE *);
+void AddCommandBufferBindingImage(const layer_data *, GLOBAL_CB_NODE *, IMAGE_NODE *);
+void AddCommandBufferBindingBuffer(const layer_data *, GLOBAL_CB_NODE *, BUFFER_NODE *);
 }
 
 #endif // CORE_VALIDATION_TYPES_H_

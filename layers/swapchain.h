@@ -80,62 +80,9 @@ enum SWAPCHAIN_ERROR {
 };
 
 // The following is for logging error messages:
+const char * swapchain_layer_name = "Swapchain";
+
 #define LAYER_NAME (char *) "Swapchain"
-#define LOG_ERROR_NON_VALID_OBJ(objType, type, obj)                                                                                \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), __LINE__,                 \
-                        SWAPCHAIN_INVALID_HANDLE, LAYER_NAME, "%s() called with a non-valid %s.", __FUNCTION__, (obj))             \
-              : VK_FALSE
-#define LOG_ERROR_NULL_POINTER(objType, type, obj)                                                                                 \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), 0,                        \
-                        SWAPCHAIN_NULL_POINTER, LAYER_NAME, "%s() called with NULL pointer %s.", __FUNCTION__, (obj))              \
-              : VK_FALSE
-#define LOG_ERROR_INVALID_COUNT(objType, type, obj, obj2, val, val2)                                                               \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), 0,                        \
-                        SWAPCHAIN_INVALID_COUNT, LAYER_NAME, "%s() called with non-NULL %s, and with %s set to a "                 \
-                                                             "value (%d) that is greater than the value (%d) that "                \
-                                                             "was returned when %s was NULL.",                                     \
-                        __FUNCTION__, (obj2), (obj), (val), (val2), (obj2))                                                        \
-              : VK_FALSE
-#define LOG_ERROR_ZERO_PRIOR_COUNT(objType, type, obj, obj2)                                                                       \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), 0,                        \
-                        SWAPCHAIN_PRIOR_COUNT, LAYER_NAME, "%s() called with non-NULL %s; but no prior "                           \
-                        "positive value has been seen for %s.",                                                                    \
-                        __FUNCTION__, (obj), (obj2))                                                                               \
-              : VK_FALSE
-#define LOG_ERROR_WRONG_STYPE(objType, type, obj, val)                                                                             \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), 0, SWAPCHAIN_WRONG_STYPE, \
-                        LAYER_NAME, "%s() called with the wrong value for %s->sType "                                              \
-                                    "(expected %s).",                                                                              \
-                        __FUNCTION__, (obj), (val))                                                                                \
-              : VK_FALSE
-#define LOG_ERROR_ZERO_VALUE(objType, type, obj)                                                                                   \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), 0, SWAPCHAIN_ZERO_VALUE,  \
-                        LAYER_NAME, "%s() called with a zero value for %s.", __FUNCTION__, (obj))                                  \
-              : VK_FALSE
-#define LOG_ERROR(objType, type, obj, enm, fmt, ...)                                                                               \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), __LINE__, (enm),          \
-                        LAYER_NAME, (fmt), __VA_ARGS__)                                                                            \
-              : VK_FALSE
-#define LOG_ERROR_QUEUE_FAMILY_INDEX_TOO_LARGE(objType, type, obj, val1, val2)                                                     \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), (uint64_t)(obj), 0,                        \
-                        SWAPCHAIN_QUEUE_FAMILY_INDEX_TOO_LARGE, LAYER_NAME, "%s() called with a queueFamilyIndex that is too "     \
-                                                                            "large (i.e. %d).  The maximum value (returned "       \
-                                                                            "by vkGetPhysicalDeviceQueueFamilyProperties) is "     \
-                                                                            "only %d.\n",                                          \
-                        __FUNCTION__, (val1), (val2))                                                                              \
-              : VK_FALSE
-#define LOG_PERF_WARNING(objType, type, obj, enm, fmt, ...)                                                                        \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT, (objType), (uint64_t)(obj), __LINE__,   \
-                        (enm), LAYER_NAME, (fmt), __VA_ARGS__)                                                                     \
-              : VK_FALSE
-#define LOG_WARNING(objType, type, obj, enm, fmt, ...)                                                                             \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (objType), (uint64_t)(obj), __LINE__, (enm),        \
-                        LAYER_NAME, (fmt), __VA_ARGS__)                                                                            \
-              : VK_FALSE
-#define LOG_INFO_WRONG_NEXT(objType, type, obj)                                                                                    \
-    (my_data) ? log_msg(my_data->report_data, VK_DEBUG_REPORT_INFORMATION_BIT_EXT, (objType), (uint64_t)(obj), 0,                  \
-                        SWAPCHAIN_WRONG_NEXT, LAYER_NAME, "%s() called with non-NULL value for %s->pNext.", __FUNCTION__, (obj))   \
-              : VK_FALSE
 
 // NOTE: The following struct's/typedef's are for keeping track of
 // info that is used for validating the WSI extensions.

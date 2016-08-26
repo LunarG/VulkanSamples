@@ -177,8 +177,11 @@ vkEnumerateInstanceExtensionProperties(const char *pLayerName,
             goto out;
         }
         /* get extensions from all ICD's, merge so no duplicates */
-        loader_get_icd_loader_instance_extensions(NULL, &icd_libs,
-                                                  &local_ext_list);
+        res = loader_get_icd_loader_instance_extensions(NULL, &icd_libs,
+                                                        &local_ext_list);
+        if (VK_SUCCESS != res) {
+            goto out;
+        }
         loader_scanned_icd_clear(NULL, &icd_libs);
 
         // Append implicit layers.
@@ -366,8 +369,11 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     }
 
     /* get extensions from all ICD's, merge so no duplicates, then validate */
-    loader_get_icd_loader_instance_extensions(
+    res = loader_get_icd_loader_instance_extensions(
         ptr_instance, &ptr_instance->icd_libs, &ptr_instance->ext_list);
+    if (res != VK_SUCCESS) {
+        goto out;
+    }
     res = loader_validate_instance_extensions(
         ptr_instance, &ptr_instance->ext_list,
         &ptr_instance->instance_layer_list, &ici);
@@ -658,9 +664,10 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     /* Get the physical device (ICD) extensions  */
     struct loader_extension_list icd_exts;
     icd_exts.list = NULL;
-    if (!loader_init_generic_list(inst, (struct loader_generic_list *)&icd_exts,
-                                  sizeof(VkExtensionProperties))) {
-        res = VK_ERROR_OUT_OF_HOST_MEMORY;
+    res =
+        loader_init_generic_list(inst, (struct loader_generic_list *)&icd_exts,
+                                 sizeof(VkExtensionProperties));
+    if (VK_SUCCESS != res) {
         goto out;
     }
 

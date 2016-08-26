@@ -109,9 +109,9 @@ Some notes on the behavior of the Windows Vulkan Runtime Installer:
 
    o  The Vulkan Runtime Installer installs the Vulkan loader as
       C:\Windows\System32\vulkan-<version>.dll. It then runs the
-      Powershell script ConfigLayersAndVulkanDLL.ps1, that compares
-      versions of the loader in C:\Windows\System32 that have the
-      same VERSION_ABI_MAJOR as the version being installed. The
+      program ConfigureRT.exe (the source for which is included), that
+      compares versions of the loader in C:\Windows\System32 that have
+      the same VERSION_ABI_MAJOR as the version being installed. The
       script selects the most recent one of these loader files and
       copies it to C:\Windows\System32\vulkan-<VERSION_ABI_MAJOR>.dll.
       For example, during the install of Vulkan Runtime version 2.0.1.1,
@@ -145,8 +145,8 @@ Some notes on the behavior of the Windows Vulkan Runtime Installer:
        HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\VulkanRT<version>\UninstallString
 
    o The Installer and Uninstaller create log files, which can be
-     found in the VulkanrRT folder in the current TEMP folder.
+     found in the VulkanRT folder in the current TEMP folder.
      (The TEMP folder is generally identified by the TEMP environment
      variable). In addition to installer/uninstaller logs files,
      the folder also contains a log from the last run of the
-     ConfigLayersAndVulkanDLL.ps1 script.
+     ConfigureRT.exe program.

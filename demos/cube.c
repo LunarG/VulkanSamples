@@ -29,7 +29,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <signal.h>
-#if defined(__linux__) && !defined(ANDROID)
+#if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
 #include <X11/Xutil.h>
 #endif
 
@@ -2255,8 +2255,8 @@ static void demo_create_xcb_window(struct demo *demo) {
     xcb_configure_window(demo->connection, demo->xcb_window,
                          XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
 }
-#endif // VK_USE_PLATFORM_XCB_KHR
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+// VK_USE_PLATFORM_XCB_KHR
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 static void demo_run(struct demo *demo) {
     while (!demo->quit) {
         demo_update_data_buffer(demo);
@@ -2947,7 +2947,7 @@ static void demo_init_connection(struct demo *demo) {
     int scr;
 
     demo->connection = xcb_connect(NULL, &scr);
-    if (demo->connection == NULL) {
+    if (xcb_connection_has_error(demo->connection) > 0) {
         printf("Cannot find a compatible Vulkan installable client driver "
                "(ICD).\nExiting ...\n");
         fflush(stdout);
@@ -3040,6 +3040,8 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
                        1.0f, 0.1f, 100.0f);
     mat4x4_look_at(demo->view_matrix, eye, origin, up);
     mat4x4_identity(demo->model_matrix);
+
+    demo->projection_matrix[1][1]*=-1;  //Flip projection matrix from GL to Vulkan orientation.
 }
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
