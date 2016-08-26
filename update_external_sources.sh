@@ -26,7 +26,7 @@ function update_glslang () {
    echo "Updating $BASEDIR/glslang"
    cd $BASEDIR/glslang
    git fetch --all
-   git checkout $GLSLANG_REVISION
+   git checkout --force $GLSLANG_REVISION
 }
 
 function create_spirv-tools () {
