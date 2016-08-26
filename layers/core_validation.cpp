@@ -5289,11 +5289,12 @@ VKAPI_ATTR void VKAPI_CALL DestroyEvent(VkDevice device, VkEvent event, const Vk
         skip |= ValidateObjectNotInUse(dev_data, event_node, obj_struct);
         // Any bound cmd buffers are now invalid
         invalidateCommandBuffers(event_node->cb_bindings, obj_struct);
-        dev_data->eventMap.erase(event);
     }
-    lock.unlock();
-    if (!skip)
+    if (!skip) {
+        dev_data->eventMap.erase(event);
+        lock.unlock();
         dev_data->device_dispatch_table->DestroyEvent(device, event, pAllocator);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -5307,11 +5308,12 @@ DestroyQueryPool(VkDevice device, VkQueryPool queryPool, const VkAllocationCallb
         skip |= ValidateObjectNotInUse(dev_data, qp_node, obj_struct);
         // Any bound cmd buffers are now invalid
         invalidateCommandBuffers(qp_node->cb_bindings, obj_struct);
-        dev_data->queryPoolMap.erase(queryPool);
     }
-    lock.unlock();
-    if (!skip)
+    if (!skip) {
+        dev_data->queryPoolMap.erase(queryPool);
+        lock.unlock();
         dev_data->device_dispatch_table->DestroyQueryPool(device, queryPool, pAllocator);
+    }
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL GetQueryPoolResults(VkDevice device, VkQueryPool queryPool, uint32_t firstQuery,
@@ -5745,11 +5747,12 @@ DestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocationCallback
         skip |= ValidateObjectNotInUse(dev_data, pipe_node, obj_struct);
         // Any bound cmd buffers are now invalid
         invalidateCommandBuffers(pipe_node->cb_bindings, obj_struct);
-        dev_data->pipelineMap.erase(pipeline);
     }
-    lock.unlock();
-    if (!skip)
+    if (!skip) {
+        dev_data->pipelineMap.erase(pipeline);
+        lock.unlock();
         dev_data->device_dispatch_table->DestroyPipeline(device, pipeline, pAllocator);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -5773,11 +5776,12 @@ DestroySampler(VkDevice device, VkSampler sampler, const VkAllocationCallbacks *
         skip |= ValidateObjectNotInUse(dev_data, sampler_node, obj_struct);
         // Any bound cmd buffers are now invalid
         invalidateCommandBuffers(sampler_node->cb_bindings, obj_struct);
-        dev_data->samplerMap.erase(sampler);
     }
-    lock.unlock();
-    if (!skip)
+    if (!skip) {
+        dev_data->samplerMap.erase(sampler);
+        lock.unlock();
         dev_data->device_dispatch_table->DestroySampler(device, sampler, pAllocator);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL
