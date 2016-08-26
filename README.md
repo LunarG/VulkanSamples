@@ -36,6 +36,14 @@ Information on how to enable the various Validation layers is in
 Architecture and interface information for the loader is in
 [loader/LoaderAndLayerInterface.md](loader/LoaderAndLayerInterface.md).
 
+#### **NOTE**: Update Nvidia Drivers
+- A recent glslang change exposed a bug in the texel fetch behavior on Nvidia devices under certain situations.
+- Previously, we reverted the glslang change which exposed it.
+- Nvidia has since resolved the issue, and we are now removing the workaround.
+- Driver installs with the fix are available on their download page, just look for:
+ - Linux Drivers starting with version 367.35
+ - Windows Drivers starting at version 372.54
+
 ## License
 This work is released as open source under a Apache-style license from Khronos including a Khronos copyright.
 
