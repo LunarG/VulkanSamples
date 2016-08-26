@@ -42,6 +42,44 @@
 
 namespace unique_objects {
 
+// The display-server-specific WSI extensions are handled explicitly
+static const char *kUniqueObjectsSupportedInstanceExtensions =
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    VK_KHR_XLIB_SURFACE_EXTENSION_NAME
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    VK_KHR_XCB_SURFACE_EXTENSION_NAME
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    VK_KHR_MIR_SURFACE_EXTENSION_NAME
+#endif
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+#endif
+    VK_EXT_DEBUG_MARKER_EXTENSION_NAME
+    VK_EXT_DEBUG_REPORT_EXTENSION_NAME
+    VK_KHR_DISPLAY_EXTENSION_NAME
+    VK_KHR_SURFACE_EXTENSION_NAME;
+
+static const char *kUniqueObjectsSupportedDeviceExtensions =
+    VK_AMD_RASTERIZATION_ORDER_EXTENSION_NAME
+    VK_AMD_SHADER_TRINARY_MINMAX_EXTENSION_NAME
+    VK_AMD_SHADER_EXPLICIT_VERTEX_PARAMETER_EXTENSION_NAME
+    VK_AMD_GCN_SHADER_EXTENSION_NAME
+    VK_IMG_FILTER_CUBIC_EXTENSION_NAME
+    VK_IMG_FORMAT_PVRTC_EXTENSION_NAME
+    VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME
+    VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME
+    VK_NV_GLSL_SHADER_EXTENSION_NAME;
+
 // All increments must be guarded by global_lock
 static uint64_t global_unique_id = 1;
 
@@ -114,34 +152,53 @@ static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
     instanceExtMap[pDisp] = {};
 
     for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0)
+
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].wsi_enabled = true;
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0)
+        }
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].display_enabled = true;
+        }
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].xlib_enabled = true;
+        }
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].xcb_enabled = true;
+        }
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].wayland_enabled = true;
+        }
 #endif
 #ifdef VK_USE_PLATFORM_MIR_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].mir_enabled = true;
+        }
 #endif
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].android_enabled = true;
+        }
 #endif
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].win32_enabled = true;
+        }
 #endif
+
+        // Check for recognized instance extensions
+        layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+        if (!white_list(pCreateInfo->ppEnabledExtensionNames[i], kUniqueObjectsSupportedInstanceExtensions)) {
+            log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    0, "UniqueObjects",
+                    "Instance Extension %s is not supported by this layer.  Using this extension may adversely affect "
+                    "validation results and/or produce undefined behavior.",
+                    pCreateInfo->ppEnabledExtensionNames[i]);
+        }
     }
 }
 
@@ -226,9 +283,19 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo
     pDisp->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR)gpa(device, "vkAcquireNextImageKHR");
     pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR)gpa(device, "vkQueuePresentKHR");
     my_device_data->wsi_enabled = false;
+
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
             my_device_data->wsi_enabled = true;
+        }
+        // Check for recognized device extensions
+        if (!white_list(pCreateInfo->ppEnabledExtensionNames[i], kUniqueObjectsSupportedDeviceExtensions)) {
+            log_msg(my_device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                    __LINE__, 0, "UniqueObjects",
+                    "Device Extension %s is not supported by this layer.  Using this extension may adversely affect "
+                    "validation results and/or produce undefined behavior.",
+                    pCreateInfo->ppEnabledExtensionNames[i]);
+        }
     }
 }
 
