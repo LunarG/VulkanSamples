@@ -116,6 +116,7 @@ unsigned int vk_format_get_channel_count(VkFormat format);
 VkFormatCompatibilityClass vk_format_get_compatibility_class(VkFormat format);
 VkDeviceSize vk_safe_modulo(VkDeviceSize dividend, VkDeviceSize divisor);
 VkStringErrorFlags vk_string_validate(const int max_length, const char *char_array);
+bool white_list(const char *item, const char *whitelist);
 
 static inline int u_ffs(int val) {
 #ifdef WIN32

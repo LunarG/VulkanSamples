@@ -629,6 +629,13 @@ VkStringErrorFlags vk_string_validate(const int max_length, const char *utf8) {
     return result;
 }
 
+// Utility function for finding a text string in another string
+bool white_list(const char *item, const char *list) {
+    std::string candidate(item);
+    std::string white_list(list);
+    return (white_list.find(candidate) != std::string::npos);
+}
+
 // Debug callbacks get created in three ways:
 //   o  Application-defined debug callbacks
 //   o  Through settings in a vk_layer_settings.txt file
