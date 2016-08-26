@@ -86,3 +86,7 @@ google_threading.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
 google_threading.report_flags = error,warn,perf
 google_threading.log_filename = stdout
 
+# VK_LAYER_GOOGLE_unique_objects Settings
+google_unique_objects.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
+google_unique_objects.report_flags = error,warn,perf
+google_unique_objects.log_filename = stdout
