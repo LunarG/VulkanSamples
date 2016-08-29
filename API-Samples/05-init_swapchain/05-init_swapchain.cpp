@@ -86,32 +86,40 @@ int sample_main(int argc, char *argv[]) {
     assert(res == VK_SUCCESS);
 
     // Iterate over each queue to learn whether it supports presenting:
-    VkBool32 *supportsPresent =
-        (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
-    for (uint32_t i = 0; i < info.queue_count; i++) {
+    VkBool32 *pSupportsPresent =
+        (VkBool32 *)malloc(info.queue_family_count * sizeof(VkBool32));
+    for (uint32_t i = 0; i < info.queue_family_count; i++) {
         vkGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i, info.surface,
-                                             &supportsPresent[i]);
+                                             &pSupportsPresent[i]);
     }
 
-    // Search for a graphics queue and a present queue in the array of queue
-    // families
-    info.graphics_queue_family_index = info.present_queue_family_index =
-        UINT32_MAX;
-    for (uint32_t i = 0; i < info.queue_count; i++) {
-        if ((info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 &&
-            info.graphics_queue_family_index == UINT32_MAX) {
-            info.graphics_queue_family_index = i;
-        }
-        if (supportsPresent[i] == VK_TRUE &&
-            info.present_queue_family_index == UINT32_MAX) {
-            info.present_queue_family_index = i;
-        }
-        if (info.graphics_queue_family_index != UINT32_MAX &&
-            info.present_queue_family_index != UINT32_MAX) {
-            break;
+    // Search for a graphics and a present queue in the array of queue
+    // families, try to find one that supports both
+    info.graphics_queue_family_index = UINT32_MAX;
+    info.present_queue_family_index = UINT32_MAX;
+    for (uint32_t i = 0; i < info.queue_family_count; ++i) {
+        if ((info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
+            if (info.graphics_queue_family_index == UINT32_MAX)
+                info.graphics_queue_family_index = i;
+
+            if (pSupportsPresent[i] == VK_TRUE) {
+                info.graphics_queue_family_index = i;
+                info.present_queue_family_index = i;
+                break;
+            }
         }
     }
-    free(supportsPresent);
+
+    if (info.present_queue_family_index == UINT32_MAX) {
+        // If didn't find a queue that supports both graphics and present, then
+        // find a separate present queue.
+        for (size_t i = 0; i < info.queue_family_count; ++i)
+            if (pSupportsPresent[i] == VK_TRUE) {
+                info.present_queue_family_index = i;
+                break;
+            }
+    }
+    free(pSupportsPresent);
 
     // Generate error if could not find queues that support graphics
     // and present

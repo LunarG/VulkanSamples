@@ -257,14 +257,14 @@ VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count) {
     res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, info.gpus.data());
     assert(!res && gpu_count >= req_count);
 
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count,
-                                             NULL);
-    assert(info.queue_count >= 1);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0],
+                                             &info.queue_family_count, NULL);
+    assert(info.queue_family_count >= 1);
 
-    info.queue_props.resize(info.queue_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count,
-                                             info.queue_props.data());
-    assert(info.queue_count >= 1);
+    info.queue_props.resize(info.queue_family_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(
+        info.gpus[0], &info.queue_family_count, info.queue_props.data());
+    assert(info.queue_family_count >= 1);
 
     /* This is as good a place as any to do this */
     vkGetPhysicalDeviceMemoryProperties(info.gpus[0], &info.memory_properties);
@@ -282,17 +282,17 @@ void init_queue_family_index(struct sample_info &info) {
      * family
      */
 
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count,
-                                             NULL);
-    assert(info.queue_count >= 1);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0],
+                                             &info.queue_family_count, NULL);
+    assert(info.queue_family_count >= 1);
 
-    info.queue_props.resize(info.queue_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count,
-                                             info.queue_props.data());
-    assert(info.queue_count >= 1);
+    info.queue_props.resize(info.queue_family_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(
+        info.gpus[0], &info.queue_family_count, info.queue_props.data());
+    assert(info.queue_family_count >= 1);
 
     bool found = false;
-    for (unsigned int i = 0; i < info.queue_count; i++) {
+    for (unsigned int i = 0; i < info.queue_family_count; i++) {
         if (info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             info.graphics_queue_family_index = i;
             found = true;
@@ -686,32 +686,40 @@ void init_swapchain_extension(struct sample_info &info) {
     assert(res == VK_SUCCESS);
 
     // Iterate over each queue to learn whether it supports presenting:
-    VkBool32 *supportsPresent =
-        (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
-    for (uint32_t i = 0; i < info.queue_count; i++) {
+    VkBool32 *pSupportsPresent =
+        (VkBool32 *)malloc(info.queue_family_count * sizeof(VkBool32));
+    for (uint32_t i = 0; i < info.queue_family_count; i++) {
         vkGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i, info.surface,
-                                             &supportsPresent[i]);
+                                             &pSupportsPresent[i]);
     }
 
-    // Search for a graphics queue and a present queue in the array of queue
-    // families
-    info.graphics_queue_family_index = info.present_queue_family_index =
-        UINT32_MAX;
-    for (uint32_t i = 0; i < info.queue_count; i++) {
-        if ((info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 &&
-            info.graphics_queue_family_index == UINT32_MAX) {
-            info.graphics_queue_family_index = i;
-        }
-        if (supportsPresent[i] == VK_TRUE &&
-            info.present_queue_family_index == UINT32_MAX) {
-            info.present_queue_family_index = i;
-        }
-        if (info.graphics_queue_family_index != UINT32_MAX &&
-            info.present_queue_family_index != UINT32_MAX) {
-            break;
+    // Search for a graphics and a present queue in the array of queue
+    // families, try to find one that supports both
+    info.graphics_queue_family_index = UINT32_MAX;
+    info.present_queue_family_index = UINT32_MAX;
+    for (uint32_t i = 0; i < info.queue_family_count; ++i) {
+        if ((info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
+            if (info.graphics_queue_family_index == UINT32_MAX)
+                info.graphics_queue_family_index = i;
+
+            if (pSupportsPresent[i] == VK_TRUE) {
+                info.graphics_queue_family_index = i;
+                info.present_queue_family_index = i;
+                break;
+            }
         }
     }
-    free(supportsPresent);
+
+    if (info.present_queue_family_index == UINT32_MAX) {
+        // If didn't find a queue that supports both graphics and present, then
+        // find a separate present queue.
+        for (size_t i = 0; i < info.queue_family_count; ++i)
+            if (pSupportsPresent[i] == VK_TRUE) {
+                info.present_queue_family_index = i;
+                break;
+            }
+    }
+    free(pSupportsPresent);
 
     // Generate error if could not find queues that support graphics
     // and present
@@ -720,7 +728,6 @@ void init_swapchain_extension(struct sample_info &info) {
         std::cout << "Could not find a queues for both graphics and present";
         exit(-1);
     }
-
 
     // Get the list of VkFormats that are supported:
     uint32_t formatCount;

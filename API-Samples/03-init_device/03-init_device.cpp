@@ -40,17 +40,17 @@ int sample_main(int argc, char *argv[]) {
 
     VkDeviceQueueCreateInfo queue_info = {};
 
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count,
-                                             NULL);
-    assert(info.queue_count >= 1);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0],
+                                             &info.queue_family_count, NULL);
+    assert(info.queue_family_count >= 1);
 
-    info.queue_props.resize(info.queue_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count,
-                                             info.queue_props.data());
-    assert(info.queue_count >= 1);
+    info.queue_props.resize(info.queue_family_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(
+        info.gpus[0], &info.queue_family_count, info.queue_props.data());
+    assert(info.queue_family_count >= 1);
 
     bool found = false;
-    for (unsigned int i = 0; i < info.queue_count; i++) {
+    for (unsigned int i = 0; i < info.queue_family_count; i++) {
         if (info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             queue_info.queueFamilyIndex = i;
             found = true;
@@ -58,7 +58,7 @@ int sample_main(int argc, char *argv[]) {
         }
     }
     assert(found);
-    assert(info.queue_count >= 1);
+    assert(info.queue_family_count >= 1);
 
     float queue_priorities[1] = {0.0};
     queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;

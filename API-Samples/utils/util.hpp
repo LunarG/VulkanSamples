@@ -234,7 +234,7 @@ struct sample_info {
     std::vector<VkDebugReportCallbackEXT> debug_report_callbacks;
 
     uint32_t current_buffer;
-    uint32_t queue_count;
+    uint32_t queue_family_count;
 
     VkViewport viewport;
     VkRect2D scissor;
