@@ -180,7 +180,16 @@ display hardware.
 
 Luckily, in Vulkan, there is a `VK_IMAGE_LAYOUT_PRESENT_SRC_KHR` layout, which is the most
 appropriate for presenting the image to the display.
-So, you need to perform this transition with another pipeline barrier, in much the same
+
+There are two ways to accomplish this transition.
+One way is with the memory barrier approach, which you used to transition image layouts
+before drawing.
+Another way is to program the layout transition as part of the render pass.
+Both are explained here.
+
+### Memory barrier approach
+
+You need to perform this transition with another pipeline barrier, in much the same
 way the `set_image_layout()` performs layout transitions:
 
     VkImageMemoryBarrier prePresentBarrier = {};
@@ -212,6 +221,29 @@ In the "worst case", these barriers might trigger some sort of memory copy
 operation to reformat the memory from one pattern to another.
 But in most devices that are "efficient", the display is able to read the optimum
 GPU layout.
+
+### Render pass approach
+
+For this approach, you need to go back to the render_pass section and change
+the description for the color attachment when you define the render pass:
+
+    VkAttachmentDescription attachments[2];
+    attachments[0].format = info.format;
+    attachments[0].samples = NUM_SAMPLES;
+    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;    //  <--- change
+    attachments[0].flags = 0;
+
+This just involves changing the final layout of the color attachment,
+which will be the layout after the render pass is complete.
+
+This render pass approach may be better than submitting another memory barrier command
+in the command buffer because it is easier to code and may be more efficient.
+The rest of the samples use this approach.
 
 ## Submit the Command Buffer
 

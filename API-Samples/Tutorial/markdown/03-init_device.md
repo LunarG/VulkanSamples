@@ -63,14 +63,14 @@ physical device:
 The sample program proceeds by making the following call to
 obtain the queue information:
 
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count,
-                                             info.queue_props.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(
+        info.gpus[0], &info.queue_family_count, info.queue_props.data());
 
 `info.queue_props` is a vector of `VkQueueFamilyProperties`.
 You can inspect the sample code to see that the sample
 follows the pattern described in the [Enumerate Devices](02-enumerate_devices.html) section
 explaining how to get lists of objects with the Vulkan API.
-it calls `vkGetPhysicalDeviceQueueFamilyProperties` once to get the count, and
+It calls `vkGetPhysicalDeviceQueueFamilyProperties` once to get the count, and
 calls it again to get the data.
 
 The `VkQueueFamilyProperties` structure is called a "family"
@@ -98,11 +98,11 @@ with multiple queue type flags set:
 
 ![1 Queue Families](../images/Device1QueueFamilies.png)
 
-Since the sample programs are really only interested in drawing
-simple graphics, they just need to look for the graphics bit:
+For now, assume that the sample programs are really only interested in drawing
+simple graphics, so they just need to look for the graphics bit:
 
     bool found = false;
-    for (unsigned int i = 0; i < info.queue_count; i++) {
+    for (unsigned int i = 0; i < info.queue_family_count; i++) {
         if (info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             queue_info.queueFamilyIndex = i;
             found = true;
