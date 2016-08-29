@@ -240,7 +240,7 @@ set (S_TARGETS
     instance_layer_properties instance_extension_properties
     instance_layer_extension_properties create_debug_report_callback
     enable_validation_with_callback multiple_sets
-    copy_blit_image template separate_image_sampler
+    copy_blit_image template separate_image_sampler input_attachment
     occlusion_query pipeline_cache pipeline_derivative
     immutable_sampler push_constants draw_subpasses secondary_command_buffer
     spirv_assembly spirv_specialization memory_barriers)
