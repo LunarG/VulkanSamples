@@ -17,16 +17,17 @@ per-application state.
 The application must create a Vulkan instance
 before performing any other Vulkan operations.
 
-Vulkan applications are linked to a Vulkan library and
-creating an instance initializes this library.
-The library also loads and initializes the low-level graphics driver,
-usually provided by the vendor of the GPU hardware.
-For this reason, the library is often referred to as
-the **loader**.
-
 The basic Vulkan architecture looks like:
 
 ![Basic App Loader](../images/BasicAppLoader.png)
+
+The above diagram shows that a Vulkan application is
+linked to a Vulkan library which is commonly referred to
+as the **loader**.
+Creating an instance initializes the loader.
+The loader also loads and initializes the
+low-level graphics driver,
+usually provided by the vendor of the GPU hardware.
 
 Note that there are layers depicted in this diagram,
 which are also loaded by the loader.

@@ -109,56 +109,65 @@ When the application wants to present an image to the display,
 it puts a present request onto one of the GPU's queues, using the
 `vkQueuePresentKHR()` function.
 Therefore, the queue referenced by this function must be able to support
-present requests.
+present requests, or graphics and present requests.
 The sample checks for this as follows:
 
     // Iterate over each queue to learn whether it supports presenting:
-    VkBool32 *supportsPresent =
-        (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
-    for (uint32_t i = 0; i < info.queue_count; i++) {
+    VkBool32 *pSupportsPresent =
+        (VkBool32 *)malloc(info.queue_family_count * sizeof(VkBool32));
+    for (uint32_t i = 0; i < info.queue_family_count; i++) {
         vkGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i, info.surface,
-                                             &supportsPresent[i]);
+                                             &pSupportsPresent[i]);
     }
 
-    // Search for a graphics queue and a present queue in the array of queue
+    // Search for a graphics and a present queue in the array of queue
     // families, try to find one that supports both
-    uint32_t graphicsQueueNodeIndex = UINT32_MAX;
-    for (uint32_t i = 0; i < info.queue_count; i++) {
+    info.graphics_queue_family_index = UINT32_MAX;
+    info.present_queue_family_index = UINT32_MAX;
+    for (uint32_t i = 0; i < info.queue_family_count; ++i) {
         if ((info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
-            if (supportsPresent[i] == VK_TRUE) {
-                graphicsQueueNodeIndex = i;
+            if (info.graphics_queue_family_index == UINT32_MAX)
+                info.graphics_queue_family_index = i;
+
+            if (pSupportsPresent[i] == VK_TRUE) {
+                info.graphics_queue_family_index = i;
+                info.present_queue_family_index = i;
                 break;
             }
         }
     }
-    free(supportsPresent);
 
-    // Generate error if could not find a queue that supports both a graphics
-    // and present
-    if (graphicsQueueNodeIndex == UINT32_MAX) {
-        std::cout << "Could not find a queue that supports both graphics and "
-                     "present\n";
-        exit(-1);
+    if (info.present_queue_family_index == UINT32_MAX) {
+        // If didn't find a queue that supports both graphics and present, then
+        // find a separate present queue.
+        for (size_t i = 0; i < info.queue_family_count; ++i)
+            if (pSupportsPresent[i] == VK_TRUE) {
+                info.present_queue_family_index = i;
+                break;
+            }
     }
+    free(pSupportsPresent);
 
-This code reuses the info.queue_count obtained earlier, since
-`vkGetPhysicalDeviceSurfaceSupportKHR()` returns one flag for
-each queue family.
+This code reuses the `info.queue_family_count` obtained earlier,
+since `vkGetPhysicalDeviceSurfaceSupportKHR()` returns
+one flag for each queue family.
 It then searches for a queue family that supports both
 present and graphics.
-Yes, this is a bit redundant with the previous search for a
-queue family that supported just graphics.
+If there is no queue family that supports both, the program
+remembers a queue family that supports graphics and then
+searches again for a queue that supports present.
+Since both `graphics_queue_family_index`
+and `present_queue_family_index` are set by this code,
+later on the samples must use a queue from `graphics_queue_family_index`
+for graphics commands and a queue from `present_queue_family_index` for presents.
+
+Yes, this is a bit redundant with the previous search performed in init_device
+for a queue family that supported just graphics,
+which was done only for illustrative purposes.
 A real application may do these steps in a different order to
 avoid the repetition.
 
 If no such queue family was found, the sample simply exits.
-It is pretty unusual to find a driver that does not provide a queue
-family that supports both graphics and present.
-But if the sample wanted to support this situation, it would set
-up two queues, one for graphics submissions and one for presents.
-
-But for now, you can assume that the queue you discovered here supports
-both graphics and present operations.
 
 ## Swapchain Create Info
 
@@ -216,10 +225,10 @@ usable by Vulkan for the platform window object.
 
 You then add the resulting surface to the swapchain create info structure:
 
-    VkSwapchainCreateInfoKHR swap_chain = {};
-    swap_chain.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    swap_chain.pNext = NULL;
-    swap_chain.surface = info.surface;
+    VkSwapchainCreateInfoKHR swapchain_ci = {};
+    swapchain_ci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchain_ci.pNext = NULL;
+    swapchain_ci.surface = info.surface;
 
 #### Device Surface Formats
 
@@ -244,7 +253,7 @@ arbitrary, but common, format if none are specified.
 Take a look at the code in the sample and see that it ends up
 setting the format in the create info structure:
 
-    swap_chain.imageFormat = info.format;
+    swapchain_ci.imageFormat = info.format;
 
 ### Surface Capabilities
 
@@ -254,11 +263,33 @@ and `vkGetPhysicalDeviceSurfacePresentModesKHR()` to
 get the needed information.
 It can then fill in the following fields:
 
-    swap_chain.minImageCount = desiredNumberOfSwapChainImages;
-    swap_chain.imageExtent.width = swapChainExtent.width;
-    swap_chain.imageExtent.height = swapChainExtent.height;
-    swap_chain.preTransform = preTransform;
-    swap_chain.presentMode = swapchainPresentMode;
+    swapchain_ci.minImageCount = desiredNumberOfSwapChainImages;
+    swapchain_ci.imageExtent.width = swapChainExtent.width;
+    swapchain_ci.imageExtent.height = swapChainExtent.height;
+    swapchain_ci.preTransform = preTransform;
+    swapchain_ci.presentMode = swapchainPresentMode;
+
+## Different Queue Families for Graphics and Present
+
+You determined above the queue families for graphics and present queues.
+If they are different, you need to do some additional work to allow the
+images to  be shared between queue families.
+
+    swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swapchain_ci.queueFamilyIndexCount = 0;
+    swapchain_ci.pQueueFamilyIndices = NULL;
+    uint32_t queueFamilyIndices[2] = {
+        (uint32_t)info.graphics_queue_family_index,
+        (uint32_t)info.present_queue_family_index};
+    if (info.graphics_queue_family_index != info.present_queue_family_index) {
+        // If the graphics and present queues are from different queue families,
+        // we either have to explicitly transfer ownership of images between the
+        // queues, or we have to create the swapchain with imageSharingMode
+        // as VK_SHARING_MODE_CONCURRENT
+        swapchain_ci.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        swapchain_ci.queueFamilyIndexCount = 2;
+        swapchain_ci.pQueueFamilyIndices = queueFamilyIndices;
+    }
 
 The above fields supply more of the basic info needed to create
 the swap chain.
@@ -271,7 +302,7 @@ the create info structure is filled out.
 With the swapchain create info structure filled out,
 you can now create the swapchain:
 
-    res = vkCreateSwapchainKHR(info.device, &swap_chain, NULL, &info.swap_chain);
+    res = vkCreateSwapchainKHR(info.device, &swapchain_ci, NULL, &info.swap_chain);
 
 This call creates a set of images that make up the swap chain.
 At some point, you need the handles to the individual images so that
