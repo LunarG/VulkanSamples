@@ -8,7 +8,7 @@ The tutorial is authored with Markdown which is converted to HTML.
 To create the HTML on a Linux platform or Windows platform with suitable
 Linux emulation, run the `build.sh` bash script.
 To create the HTML on a Windows platform without Linux tools, run the
-'build.bat' batch file.
+`build.bat` batch file.
 Both scripts creates a directory called `out` containing
 the generated HTML and all the other content needed to display the tutorial
 with a web browser.
