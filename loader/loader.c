@@ -1,4 +1,4 @@
-﻿/*
+/*
  *
  * Copyright (c) 2014-2016 The Khronos Group Inc.
  * Copyright (c) 2014-2016 Valve Corporation
@@ -42,6 +42,7 @@
 #include "table_ops.h"
 #include "debug_report.h"
 #include "wsi.h"
+#include "extensions.h"
 #include "vulkan/vk_icd.h"
 #include "cJSON.h"
 #include "murmurhash.h"
@@ -117,6 +118,8 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .CreateDebugReportCallbackEXT = terminator_CreateDebugReportCallback,
     .DestroyDebugReportCallbackEXT = terminator_DestroyDebugReportCallback,
     .DebugReportMessageEXT = terminator_DebugReportMessage,
+    .GetPhysicalDeviceExternalImageFormatPropertiesNV =
+        terminator_GetPhysicalDeviceExternalImageFormatPropertiesNV,
 #ifdef VK_USE_PLATFORM_MIR_KHR
     .CreateMirSurfaceKHR = terminator_CreateMirSurfaceKHR,
     .GetPhysicalDeviceMirPresentationSupportKHR =

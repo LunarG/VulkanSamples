@@ -584,6 +584,9 @@ static inline void loader_init_instance_extension_dispatch_table(
     table->GetPhysicalDeviceSurfacePresentModesKHR =
         (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)gpa(
             inst, "vkGetPhysicalDeviceSurfacePresentModesKHR");
+    table->GetPhysicalDeviceExternalImageFormatPropertiesNV =
+        (PFN_vkGetPhysicalDeviceExternalImageFormatPropertiesNV)gpa(
+            inst, "vkGetPhysicalDeviceExternalImageFormatPropertiesNV");
 #ifdef VK_USE_PLATFORM_MIR_KHR
     table->CreateMirSurfaceKHR =
         (PFN_vkCreateMirSurfaceKHR)gpa(inst, "vkCreateMirSurfaceKHR");
@@ -684,6 +687,8 @@ loader_lookup_instance_dispatch_table(const VkLayerInstanceDispatchTable *table,
         return (void *)table->GetPhysicalDeviceSurfaceFormatsKHR;
     if (!strcmp(name, "GetPhysicalDeviceSurfacePresentModesKHR"))
         return (void *)table->GetPhysicalDeviceSurfacePresentModesKHR;
+    if (!strcmp(name, "GetPhysicalDeviceExternalImageFormatPropertiesNV"))
+        return (void *)table->GetPhysicalDeviceExternalImageFormatPropertiesNV;
 #ifdef VK_USE_PLATFORM_MIR_KHR
     if (!strcmp(name, "CreateMirSurfaceKHR"))
         return (void *)table->CreateMirSurfaceKHR;

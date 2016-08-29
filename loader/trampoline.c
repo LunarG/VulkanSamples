@@ -30,6 +30,7 @@
 #include "loader.h"
 #include "debug_report.h"
 #include "wsi.h"
+#include "extensions.h"
 #include "gpa_helper.h"
 #include "table_ops.h"
 
@@ -406,6 +407,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     if (res == VK_SUCCESS) {
         wsi_create_instance(ptr_instance, &ici);
         debug_report_create_instance(ptr_instance, &ici);
+        extensions_create_instance(ptr_instance, &ici);
 
         *pInstance = created_instance;
 

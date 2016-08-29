@@ -209,6 +209,8 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR GetPhysicalDeviceSurfaceFormatsKHR;
     PFN_vkGetPhysicalDeviceSurfacePresentModesKHR
         GetPhysicalDeviceSurfacePresentModesKHR;
+    PFN_vkGetPhysicalDeviceExternalImageFormatPropertiesNV
+        GetPhysicalDeviceExternalImageFormatPropertiesNV;
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR
         GetPhysicalDeviceWin32PresentationSupportKHR;
