@@ -272,6 +272,10 @@ static inline void loader_init_device_extension_dispatch_table(
     table->CmdDrawIndexedIndirectCountAMD =
         (PFN_vkCmdDrawIndexedIndirectCountAMD)gpa(
             dev, "vkCmdDrawIndexedIndirectCountAMD");
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    table->GetMemoryWin32HandleNV =
+        (PFN_vkGetMemoryWin32HandleNV)gpa(dev, "vkGetMemoryWin32HandleNV");
+#endif // VK_USE_PLATFORM_WIN32_KHR
 }
 
 static inline void *

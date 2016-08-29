@@ -105,6 +105,28 @@ VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexedIndirectCountAMD(
                                          maxDrawCount, stride);
 }
 
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+
+// Definitions for the VK_NV_external_memory_win32 extension
+
+static const VkExtensionProperties nv_external_memory_win32_extension_info = {
+    .extensionName = VK_NV_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME,
+    .specVersion = VK_NV_EXTERNAL_MEMORY_WIN32_SPEC_VERSION,
+};
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetMemoryWin32HandleNV(
+    VkDevice device, VkDeviceMemory memory,
+    VkExternalMemoryHandleTypeFlagsNV handleType, HANDLE *pHandle) {
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+    return disp->GetMemoryWin32HandleNV(device, memory, handleType, pHandle);
+}
+
+#endif // VK_USE_PLATFORM_WIN32_KHR
+
+// GPA helpers for non-KHR extensions
+
 bool extension_instance_gpa(struct loader_instance *ptr_instance,
                             const char *name, void **addr) {
     *addr = NULL;
@@ -128,6 +150,17 @@ bool extension_instance_gpa(struct loader_instance *ptr_instance,
         return true;
     }
 
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+
+    // Functions for the VK_NV_external_memory_win32 extension
+
+    if (!strcmp("vkGetMemoryWin32HandleNV", name)) {
+        *addr = (void *)vkGetMemoryWin32HandleNV;
+        return true;
+    }
+
+#endif // VK_USE_PLATFORM_WIN32_KHR
+
     return false;
 }
 
@@ -146,5 +179,13 @@ void extensions_create_instance(struct loader_instance *ptr_instance,
             // Nothing to do;
             return;
         }
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
+                   VK_NV_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME) == 0) {
+            // Nothing to do;
+            return;
+        }
+#endif // VK_USE_PLATFORM_WIN32_KHR
     }
 }
