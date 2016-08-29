@@ -162,6 +162,11 @@ typedef struct VkLayerDispatchTable_ {
     PFN_vkGetSwapchainImagesKHR GetSwapchainImagesKHR;
     PFN_vkAcquireNextImageKHR AcquireNextImageKHR;
     PFN_vkQueuePresentKHR QueuePresentKHR;
+    PFN_vkCmdDrawIndirectCountAMD CmdDrawIndirectCountAMD;
+    PFN_vkCmdDrawIndexedIndirectCountAMD CmdDrawIndexedIndirectCountAMD;
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    PFN_vkGetMemoryWin32HandleNV GetMemoryWin32HandleNV;
+#endif
 } VkLayerDispatchTable;
 
 typedef struct VkLayerInstanceDispatchTable_ {
@@ -232,6 +237,8 @@ typedef struct VkLayerInstanceDispatchTable_ {
         GetDisplayPlaneCapabilitiesKHR;
     PFN_vkCreateDisplayPlaneSurfaceKHR
         CreateDisplayPlaneSurfaceKHR;
+    PFN_vkGetPhysicalDeviceExternalImageFormatPropertiesNV
+        GetPhysicalDeviceExternalImageFormatPropertiesNV;
 } VkLayerInstanceDispatchTable;
 
 // ------------------------------------------------------------------------------------------------
