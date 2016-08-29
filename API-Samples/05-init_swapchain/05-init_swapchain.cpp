@@ -162,16 +162,29 @@ int sample_main(int argc, char *argv[]) {
         info.gpus[0], info.surface, &presentModeCount, presentModes);
     assert(res == VK_SUCCESS);
 
-    VkExtent2D swapChainExtent;
-    // width and height are either both -1, or both not -1.
-    if (surfCapabilities.currentExtent.width == (uint32_t)-1) {
+    VkExtent2D swapchainExtent;
+    // width and height are either both 0xFFFFFFFF, or both not 0xFFFFFFFF.
+    if (surfCapabilities.currentExtent.width == 0xFFFFFFFF) {
         // If the surface size is undefined, the size is set to
         // the size of the images requested.
-        swapChainExtent.width = info.width;
-        swapChainExtent.height = info.height;
+        swapchainExtent.width = info.width;
+        swapchainExtent.height = info.height;
+        if (swapchainExtent.width < surfCapabilities.minImageExtent.width) {
+            swapchainExtent.width = surfCapabilities.minImageExtent.width;
+        } else if (swapchainExtent.width >
+                   surfCapabilities.maxImageExtent.width) {
+            swapchainExtent.width = surfCapabilities.maxImageExtent.width;
+        }
+
+        if (swapchainExtent.height < surfCapabilities.minImageExtent.height) {
+            swapchainExtent.height = surfCapabilities.minImageExtent.height;
+        } else if (swapchainExtent.height >
+                   surfCapabilities.maxImageExtent.height) {
+            swapchainExtent.height = surfCapabilities.maxImageExtent.height;
+        }
     } else {
         // If the surface size is defined, the swap chain size must match
-        swapChainExtent = surfCapabilities.currentExtent;
+        swapchainExtent = surfCapabilities.currentExtent;
     }
 
     // If mailbox mode is available, use it, as is the lowest-latency non-
@@ -215,8 +228,8 @@ int sample_main(int argc, char *argv[]) {
     swapchain_ci.surface = info.surface;
     swapchain_ci.minImageCount = desiredNumberOfSwapChainImages;
     swapchain_ci.imageFormat = info.format;
-    swapchain_ci.imageExtent.width = swapChainExtent.width;
-    swapchain_ci.imageExtent.height = swapChainExtent.height;
+    swapchain_ci.imageExtent.width = swapchainExtent.width;
+    swapchain_ci.imageExtent.height = swapchainExtent.height;
     swapchain_ci.preTransform = preTransform;
     swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     swapchain_ci.imageArrayLayers = 1;
