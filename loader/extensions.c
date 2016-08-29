@@ -75,13 +75,56 @@ terminator_GetPhysicalDeviceExternalImageFormatPropertiesNV(
         externalHandleType, pExternalImageFormatProperties);
 }
 
+// Definitions for the VK_AMD_draw_indirect_count extension
+
+static const VkExtensionProperties amd_draw_indirect_count_extension_info = {
+    .extensionName = VK_AMD_EXTENSION_DRAW_INDIRECT_COUNT_EXTENSION_NAME,
+    .specVersion = VK_AMD_EXTENSION_DRAW_INDIRECT_COUNT_SPEC_VERSION,
+};
+
+VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndirectCountAMD(
+    VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset,
+    VkBuffer countBuffer, VkDeviceSize countBufferOffset, uint32_t maxDrawCount,
+    uint32_t stride) {
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(commandBuffer);
+    disp->CmdDrawIndirectCountAMD(commandBuffer, buffer, offset, countBuffer,
+                                  countBufferOffset, maxDrawCount, stride);
+}
+
+VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexedIndirectCountAMD(
+    VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset,
+    VkBuffer countBuffer, VkDeviceSize countBufferOffset, uint32_t maxDrawCount,
+    uint32_t stride) {
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(commandBuffer);
+    disp->CmdDrawIndexedIndirectCountAMD(commandBuffer, buffer, offset,
+                                         countBuffer, countBufferOffset,
+                                         maxDrawCount, stride);
+}
+
 bool extension_instance_gpa(struct loader_instance *ptr_instance,
                             const char *name, void **addr) {
     *addr = NULL;
 
     // Functions for the VK_NV_external_memory_capabilities extension
+
     if (!strcmp("vkGetPhysicalDeviceExternalImageFormatPropertiesNV", name)) {
         *addr = (void *)vkGetPhysicalDeviceExternalImageFormatPropertiesNV;
+        return true;
+    }
+
+    // Functions for the VK_AMD_draw_indirect_count extension
+
+    if (!strcmp("vkCmdDrawIndirectCountAMD", name)) {
+        *addr = (void *)vkCmdDrawIndirectCountAMD;
+        return true;
+    }
+
+    if (!strcmp("vkCmdDrawIndexedIndirectCountAMD", name)) {
+        *addr = (void *)vkCmdDrawIndexedIndirectCountAMD;
         return true;
     }
 
@@ -94,6 +137,12 @@ void extensions_create_instance(struct loader_instance *ptr_instance,
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
                    VK_NV_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME) == 0) {
+            // Nothing to do;
+            return;
+        }
+
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
+                   VK_AMD_EXTENSION_DRAW_INDIRECT_COUNT_EXTENSION_NAME) == 0) {
             // Nothing to do;
             return;
         }
