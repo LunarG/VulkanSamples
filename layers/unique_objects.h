@@ -42,11 +42,58 @@
 
 namespace unique_objects {
 
+// The display-server-specific WSI extensions are handled explicitly
+static const char *kUniqueObjectsSupportedInstanceExtensions =
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    VK_KHR_XLIB_SURFACE_EXTENSION_NAME
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    VK_KHR_XCB_SURFACE_EXTENSION_NAME
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    VK_KHR_MIR_SURFACE_EXTENSION_NAME
+#endif
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+#endif
+    VK_EXT_DEBUG_MARKER_EXTENSION_NAME
+    VK_EXT_DEBUG_REPORT_EXTENSION_NAME
+    VK_KHR_DISPLAY_EXTENSION_NAME
+    VK_KHR_SURFACE_EXTENSION_NAME;
+
+static const char *kUniqueObjectsSupportedDeviceExtensions =
+    VK_AMD_RASTERIZATION_ORDER_EXTENSION_NAME
+    VK_AMD_SHADER_TRINARY_MINMAX_EXTENSION_NAME
+    VK_AMD_SHADER_EXPLICIT_VERTEX_PARAMETER_EXTENSION_NAME
+    VK_AMD_GCN_SHADER_EXTENSION_NAME
+    VK_IMG_FILTER_CUBIC_EXTENSION_NAME
+    VK_IMG_FORMAT_PVRTC_EXTENSION_NAME
+    VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME
+    VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME
+    VK_NV_GLSL_SHADER_EXTENSION_NAME;
+
 // All increments must be guarded by global_lock
 static uint64_t global_unique_id = 1;
 
 struct layer_data {
     VkInstance instance;
+
+    debug_report_data *report_data;
+    std::vector<VkDebugReportCallbackEXT> logging_callback;
+
+    // The following are for keeping track of the temporary callbacks that can
+    // be used in vkCreateInstance and vkDestroyInstance:
+    uint32_t num_tmp_callbacks;
+    VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos;
+    VkDebugReportCallbackEXT *tmp_callbacks;
 
     bool wsi_enabled;
     std::unordered_map<uint64_t, uint64_t> unique_id_mapping; // Map uniqueID to actual object handle
@@ -93,6 +140,10 @@ template <typename T> bool ContainsExtStruct(const T *target, VkStructureType ex
     return false;
 }
 
+static void init_unique_objects(layer_data *my_data, const VkAllocationCallbacks *pAllocator) {
+    layer_debug_actions(my_data->report_data, my_data->logging_callback, pAllocator, "google_unique_objects");
+}
+
 // Handle CreateInstance
 static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateInfo, VkInstance instance) {
     uint32_t i;
@@ -101,34 +152,53 @@ static void checkInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
     instanceExtMap[pDisp] = {};
 
     for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0)
+
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].wsi_enabled = true;
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0)
+        }
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].display_enabled = true;
+        }
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].xlib_enabled = true;
+        }
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].xcb_enabled = true;
+        }
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].wayland_enabled = true;
+        }
 #endif
 #ifdef VK_USE_PLATFORM_MIR_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].mir_enabled = true;
+        }
 #endif
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].android_enabled = true;
+        }
 #endif
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0) {
             instanceExtMap[pDisp].win32_enabled = true;
+        }
 #endif
+
+        // Check for recognized instance extensions
+        layer_data *instance_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+        if (!white_list(pCreateInfo->ppEnabledExtensionNames[i], kUniqueObjectsSupportedInstanceExtensions)) {
+            log_msg(instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0, __LINE__,
+                    0, "UniqueObjects",
+                    "Instance Extension %s is not supported by this layer.  Using this extension may adversely affect "
+                    "validation results and/or produce undefined behavior.",
+                    pCreateInfo->ppEnabledExtensionNames[i]);
+        }
     }
 }
 
@@ -153,18 +223,52 @@ VkResult explicit_CreateInstance(const VkInstanceCreateInfo *pCreateInfo, const 
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     my_data->instance = *pInstance;
-    initInstanceTable(*pInstance, fpGetInstanceProcAddr, unique_objects_instance_table_map);
+    VkLayerInstanceDispatchTable *pTable = initInstanceTable(*pInstance, fpGetInstanceProcAddr, unique_objects_instance_table_map);
 
+    my_data->instance = *pInstance;
+    my_data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->enabledExtensionCount,
+        pCreateInfo->ppEnabledExtensionNames);
+
+    // Set up temporary debug callbacks to output messages at CreateInstance-time
+    if (!layer_copy_tmp_callbacks(pCreateInfo->pNext, &my_data->num_tmp_callbacks, &my_data->tmp_dbg_create_infos,
+                                  &my_data->tmp_callbacks)) {
+        if (my_data->num_tmp_callbacks > 0) {
+            if (layer_enable_tmp_callbacks(my_data->report_data, my_data->num_tmp_callbacks, my_data->tmp_dbg_create_infos,
+                                           my_data->tmp_callbacks)) {
+                layer_free_tmp_callbacks(my_data->tmp_dbg_create_infos, my_data->tmp_callbacks);
+                my_data->num_tmp_callbacks = 0;
+            }
+        }
+    }
+
+    init_unique_objects(my_data, pAllocator);
     checkInstanceRegisterExtensions(pCreateInfo, *pInstance);
+
+    // Disable and free tmp callbacks, no longer necessary
+    if (my_data->num_tmp_callbacks > 0) {
+        layer_disable_tmp_callbacks(my_data->report_data, my_data->num_tmp_callbacks, my_data->tmp_callbacks);
+        layer_free_tmp_callbacks(my_data->tmp_dbg_create_infos, my_data->tmp_callbacks);
+        my_data->num_tmp_callbacks = 0;
+    }
 
     return result;
 }
 
 void explicit_DestroyInstance(VkInstance instance, const VkAllocationCallbacks *pAllocator) {
     dispatch_key key = get_dispatch_key(instance);
+    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(unique_objects_instance_table_map, instance);
     instanceExtMap.erase(pDisp);
     pDisp->DestroyInstance(instance, pAllocator);
+
+    // Clean up logging callback, if any
+    while (my_data->logging_callback.size() > 0) {
+        VkDebugReportCallbackEXT callback = my_data->logging_callback.back();
+        layer_destroy_msg_callback(my_data->report_data, callback, pAllocator);
+        my_data->logging_callback.pop_back();
+    }
+
+    layer_debug_report_destroy_instance(my_data->report_data);
     layer_data_map.erase(key);
 }
 
@@ -179,9 +283,19 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo
     pDisp->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR)gpa(device, "vkAcquireNextImageKHR");
     pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR)gpa(device, "vkQueuePresentKHR");
     my_device_data->wsi_enabled = false;
+
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
             my_device_data->wsi_enabled = true;
+        }
+        // Check for recognized device extensions
+        if (!white_list(pCreateInfo->ppEnabledExtensionNames[i], kUniqueObjectsSupportedDeviceExtensions)) {
+            log_msg(my_device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                    __LINE__, 0, "UniqueObjects",
+                    "Device Extension %s is not supported by this layer.  Using this extension may adversely affect "
+                    "validation results and/or produce undefined behavior.",
+                    pCreateInfo->ppEnabledExtensionNames[i]);
+        }
     }
 }
 
@@ -206,12 +320,15 @@ VkResult explicit_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *p
         return result;
     }
 
+    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+    my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
+
     // Setup layer's device dispatch table
     initDeviceTable(*pDevice, fpGetDeviceProcAddr, unique_objects_device_table_map);
 
     createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     // Set gpu for this device in order to get at any objects mapped at instance level
-    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+
     my_device_data->gpu = gpu;
 
     return result;
@@ -219,6 +336,7 @@ VkResult explicit_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo *p
 
 void explicit_DestroyDevice(VkDevice device, const VkAllocationCallbacks *pAllocator) {
     dispatch_key key = get_dispatch_key(device);
+    layer_debug_report_destroy_device(device);
     get_dispatch_table(unique_objects_device_table_map, device)->DestroyDevice(device, pAllocator);
     layer_data_map.erase(key);
 }

@@ -101,13 +101,13 @@ maintained in the master branch of the Khronos Vulkan Github project.
         <type category="define">// Vulkan 1.0 version number
 #define <name>VK_API_VERSION_1_0</name> <type>VK_MAKE_VERSION</type>(1, 0, 0)</type>    <!-- The patch version here should never be set to anything other than 0 -->
         <type category="define">// Version of this file
-#define <name>VK_HEADER_VERSION</name> 21</type>
+#define <name>VK_HEADER_VERSION</name> 24</type>
 
         <type category="define">
 #define <name>VK_DEFINE_HANDLE</name>(object) typedef struct object##_T* object;</type>
 
         <type category="define" name="VK_DEFINE_NON_DISPATCHABLE_HANDLE">
-#if defined(__LP64__) || defined(_WIN64) || defined(__x86_64__) || defined(_M_X64) || defined(__ia64) || defined (_M_IA64) || defined(__aarch64__) || defined(__powerpc64__)
+#if defined(__LP64__) || defined(_WIN64) || (defined(__x86_64__) &amp;&amp; !defined(__ILP32__) ) || defined(_M_X64) || defined(__ia64) || defined (_M_IA64) || defined(__aarch64__) || defined(__powerpc64__)
         #define VK_DEFINE_NON_DISPATCHABLE_HANDLE(object) typedef struct object##_T *object;
 #else
         #define VK_DEFINE_NON_DISPATCHABLE_HANDLE(object) typedef uint64_t object;
@@ -455,7 +455,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member><type>char</type>            <name>description</name>[<enum>VK_MAX_DESCRIPTION_SIZE</enum>]</member> <!-- Free-form description of the layer -->
         </type>
         <type category="struct" name="VkApplicationInfo">
-            <member><type>VkStructureType</type> <name>sType</name></member>                          <!-- Type of structure. Should be VK_STRUCTURE_TYPE_APPLICATION_INFO -->
+            <member values="VK_STRUCTURE_TYPE_APPLICATION_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*     <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true" len="null-terminated">const <type>char</type>*     <name>pApplicationName</name></member>
             <member><type>uint32_t</type>        <name>applicationVersion</name></member>
@@ -481,7 +481,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkDeviceQueueCreateInfo">
-            <member><type>VkStructureType</type> <name>sType</name></member>                          <!-- Should be VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*     <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkDeviceQueueCreateFlags</type>    <name>flags</name></member>              <!-- Reserved -->
             <member><type>uint32_t</type>        <name>queueFamilyIndex</name></member>
@@ -494,7 +494,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkDeviceCreateInfo">
-            <member><type>VkStructureType</type> <name>sType</name></member>                          <!-- Should be VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*     <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkDeviceCreateFlags</type>    <name>flags</name></member>                   <!-- Reserved -->
             <member><type>uint32_t</type>        <name>queueCreateInfoCount</name></member>
@@ -509,7 +509,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkInstanceCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Should be VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkInstanceCreateFlags</type>  <name>flags</name></member>                          <!-- Reserved -->
             <member optional="true">const <type>VkApplicationInfo</type>* <name>pApplicationInfo</name></member>
@@ -533,7 +533,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member><type>VkMemoryHeap</type>           <name>memoryHeaps</name>[<enum>VK_MAX_MEMORY_HEAPS</enum>]</member>
         </type>
         <type category="struct" name="VkMemoryAllocateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member validextensionstructs="VkDedicatedAllocationMemoryAllocateInfoNV">const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member><type>VkDeviceSize</type>           <name>allocationSize</name></member>                 <!-- Size of memory allocation -->
             <member><type>uint32_t</type>               <name>memoryTypeIndex</name></member>                <!-- Index of the of the memory type to allocate from -->
@@ -568,7 +568,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member optional="true"><type>VkMemoryHeapFlags</type>      <name>flags</name></member>                          <!-- Flags for the heap-->
         </type>
         <type category="struct" name="VkMappedMemoryRange">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE -->
+            <member values="VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member><type>VkDeviceMemory</type>         <name>memory</name></member>                            <!-- Mapped memory object -->
             <member><type>VkDeviceSize</type>           <name>offset</name></member>                         <!-- Offset within the memory object where the range starts -->
@@ -609,7 +609,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member noautovalidity="true"><type>VkImageLayout</type>   <name>imageLayout</name></member>                    <!-- Layout the image is expected to be in when accessed using this descriptor (only used if imageView is not VK_NULL_HANDLE). -->
         </type>
         <type category="struct" name="VkWriteDescriptorSet">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET -->
+            <member values="VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member><type>VkDescriptorSet</type>        <name>dstSet</name></member>                        <!-- Destination descriptor set -->
             <member><type>uint32_t</type>               <name>dstBinding</name></member>                    <!-- Binding within the destination descriptor set to write -->
@@ -623,24 +623,24 @@ maintained in the master branch of the Khronos Vulkan Github project.
                 <usage>pname:dstBinding must: be a valid binding point within pname:dstSet</usage>
                 <usage>pname:descriptorType must: match the type of pname:dstBinding within pname:dstSet</usage>
                 <usage>The sum of pname:dstArrayElement and pname:descriptorCount must: be less than or equal to the number of array elements in the descriptor set binding specified by pname:dstBinding, and all applicable consecutive bindings, as described by &lt;&lt;descriptorsets-updates-consecutive&gt;&gt;</usage>
-                <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_SAMPLER, ename:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, ename:VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, ename:VK_DESCRIPTOR_TYPE_STORAGE_IMAGE or ename:VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, pname:pImageInfo must: be a pointer to an array of pname:descriptorCount valid sname:VkDescriptorImageInfo structures</usage>
+                <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_SAMPLER, ename:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, ename:VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, ename:VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, or ename:VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, pname:pImageInfo must: be a pointer to an array of pname:descriptorCount valid sname:VkDescriptorImageInfo structures</usage>
                 <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER or ename:VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, pname:pTexelBufferView must: be a pointer to an array of pname:descriptorCount valid sname:VkBufferView handles</usage>
-                <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, ename:VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, ename:VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC or ename:VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, pname:pBufferInfo must: be a pointer to an array of pname:descriptorCount valid sname:VkDescriptorBufferInfo structures</usage>
-                <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_SAMPLER or ename:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, and pname:dstSet was not created with a layout that included immutable samplers for pname:dstBinding with pname:descriptorType, the pname:sampler member of any given element of pname:pImageInfo must: be a valid sname:VkSampler object</usage>
-                <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, ename:VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, ename:VK_DESCRIPTOR_TYPE_STORAGE_IMAGE or ename:VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, the pname:imageView and pname:imageLayout members of any given element of pname:pImageInfo must: be a valid sname:VkImageView and elink:VkImageLayout, respectively</usage>
+                <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, ename:VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, ename:VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, or ename:VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, pname:pBufferInfo must: be a pointer to an array of pname:descriptorCount valid sname:VkDescriptorBufferInfo structures</usage>
+                <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_SAMPLER or ename:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, and pname:dstSet was not allocated with a layout that included immutable samplers for pname:dstBinding with pname:descriptorType, the pname:sampler member of any given element of pname:pImageInfo must: be a valid sname:VkSampler object</usage>
+                <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, ename:VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, ename:VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, or ename:VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, the pname:imageView and pname:imageLayout members of any given element of pname:pImageInfo must: be a valid sname:VkImageView and elink:VkImageLayout, respectively</usage>
                 <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or ename:VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, the pname:offset member of any given element of pname:pBufferInfo must: be a multiple of sname:VkPhysicalDeviceLimits::pname:minUniformBufferOffsetAlignment</usage>
                 <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or ename:VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, the pname:offset member of any given element of pname:pBufferInfo must: be a multiple of sname:VkPhysicalDeviceLimits::pname:minStorageBufferOffsetAlignment</usage>
                 <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or ename:VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, the pname:buffer member of any given element of pname:pBufferInfo must: have been created with ename:VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT set</usage>
                 <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or ename:VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, the pname:buffer member of any given element of pname:pBufferInfo must: have been created with ename:VK_BUFFER_USAGE_STORAGE_BUFFER_BIT set</usage>
-                <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or ename:VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, the pname:range member of any given element of pname:pBufferInfo must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxUniformBufferRange</usage>
-                <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or ename:VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, the pname:range member of any given element of pname:pBufferInfo must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxStorageBufferRange</usage>
+                <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or ename:VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, the pname:range member of any given element of pname:pBufferInfo, or the effective range if pname:range is ename:VK_WHOLE_SIZE, must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxUniformBufferRange</usage>
+                <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or ename:VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, the pname:range member of any given element of pname:pBufferInfo, or the effective range if pname:range is ename:VK_WHOLE_SIZE, must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxStorageBufferRange</usage>
                 <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, the sname:VkBuffer that any given element of pname:pTexelBufferView was created from must: have been created with ename:VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT set</usage>
                 <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, the sname:VkBuffer that any given element of pname:pTexelBufferView was created from must: have been created with ename:VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT set</usage>
                 <usage>If pname:descriptorType is ename:VK_DESCRIPTOR_TYPE_STORAGE_IMAGE or ename:VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, the pname:imageView member of any given element of pname:pImageInfo must: have been created with the identity swizzle</usage>
             </validity>
         </type>
         <type category="struct" name="VkCopyDescriptorSet">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET -->
+            <member values="VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member><type>VkDescriptorSet</type>        <name>srcSet</name></member>                         <!-- Source descriptor set -->
             <member><type>uint32_t</type>               <name>srcBinding</name></member>                     <!-- Binding within the source descriptor set to copy from -->
@@ -658,7 +658,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkBufferCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member validextensionstructs="VkDedicatedAllocationBufferCreateInfoNV">const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure. -->
             <member optional="true"><type>VkBufferCreateFlags</type>    <name>flags</name></member>                          <!-- Buffer creation flags -->
             <member><type>VkDeviceSize</type>           <name>size</name></member>                           <!-- Specified in bytes -->
@@ -677,7 +677,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkBufferViewCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure. -->
             <member optional="true"><type>VkBufferViewCreateFlags</type><name>flags</name></member>                          <!-- Reserved -->
             <member><type>VkBuffer</type>               <name>buffer</name></member>
@@ -730,13 +730,13 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkMemoryBarrier">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_MEMORY_BARRIER -->
+            <member values="VK_STRUCTURE_TYPE_MEMORY_BARRIER"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure. -->
             <member optional="true"><type>VkAccessFlags</type>          <name>srcAccessMask</name></member>                  <!-- Memory accesses from the source of the dependency to synchronize -->
             <member optional="true"><type>VkAccessFlags</type>          <name>dstAccessMask</name></member>                  <!-- Memory accesses from the destination of the dependency to synchronize -->
         </type>
         <type category="struct" name="VkBufferMemoryBarrier">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER -->
+            <member values="VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure. -->
             <member optional="true"><type>VkAccessFlags</type>          <name>srcAccessMask</name></member>                  <!-- Memory accesses from the source of the dependency to synchronize -->
             <member optional="true"><type>VkAccessFlags</type>          <name>dstAccessMask</name></member>                  <!-- Memory accesses from the destination of the dependency to synchronize -->
@@ -755,7 +755,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkImageMemoryBarrier">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER -->
+            <member values="VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure. -->
             <member optional="true"><type>VkAccessFlags</type>          <name>srcAccessMask</name></member>                  <!-- Memory accesses from the source of the dependency to synchronize -->
             <member optional="true"><type>VkAccessFlags</type>          <name>dstAccessMask</name></member>                  <!-- Memory accesses from the destination of the dependency to synchronize -->
@@ -782,7 +782,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkImageCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member validextensionstructs="VkDedicatedAllocationImageCreateInfoNV">const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure. -->
             <member optional="true"><type>VkImageCreateFlags</type>     <name>flags</name></member>                          <!-- Image creation flags -->
             <member><type>VkImageType</type>            <name>imageType</name></member>
@@ -804,19 +804,21 @@ maintained in the master branch of the Khronos Vulkan Github project.
                 <usage>The pname:width, pname:height, and pname:depth members of pname:extent must: all be greater than `0`</usage>
                 <usage>pname:mipLevels must: be greater than `0`</usage>
                 <usage>pname:arrayLayers must: be greater than `0`</usage>
-                <usage>If pname:imageType is ename:VK_IMAGE_TYPE_1D, pname:extent.width must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxImageDimension1D, or sname:VkImageFormatProperties::pname:maxExtent.width (as returned by fname:vkGetPhysicalDeviceImageFormatProperties with pname:format, pname:type, pname:tiling, pname:usage and pname:flags equal to those in this structure) - whichever is higher</usage>
-                <usage>If pname:imageType is ename:VK_IMAGE_TYPE_2D and pname:flags does not contain ename:VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, pname:extent.width and pname:extent.height must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxImageDimension2D, or sname:VkImageFormatProperties::pname:maxExtent.width/height (as returned by fname:vkGetPhysicalDeviceImageFormatProperties with pname:format, pname:type, pname:tiling, pname:usage and pname:flags equal to those in this structure) - whichever is higher</usage>
-                <usage>If pname:imageType is ename:VK_IMAGE_TYPE_2D and pname:flags contains ename:VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, pname:extent.width and pname:extent.height must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxImageDimensionCube, or sname:VkImageFormatProperties::pname:maxExtent.width/height (as returned by fname:vkGetPhysicalDeviceImageFormatProperties with pname:format, pname:type, pname:tiling, pname:usage and pname:flags equal to those in this structure) - whichever is higher</usage>
+                <usage>If pname:flags contains ename:VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, pname:imageType must be ename:VK_IMAGE_TYPE_2D</usage>
+                <usage>If pname:imageType is ename:VK_IMAGE_TYPE_1D, pname:extent.width must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxImageDimension1D, or sname:VkImageFormatProperties::pname:maxExtent.width (as returned by fname:vkGetPhysicalDeviceImageFormatProperties with pname:format, pname:type, pname:tiling, pname:usage, and pname:flags equal to those in this structure) - whichever is higher</usage>
+                <usage>If pname:imageType is ename:VK_IMAGE_TYPE_2D and pname:flags does not contain ename:VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, pname:extent.width and pname:extent.height must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxImageDimension2D, or sname:VkImageFormatProperties::pname:maxExtent.width/height (as returned by fname:vkGetPhysicalDeviceImageFormatProperties with pname:format, pname:type, pname:tiling, pname:usage, and pname:flags equal to those in this structure) - whichever is higher</usage>
+                <usage>If pname:imageType is ename:VK_IMAGE_TYPE_2D and pname:flags contains ename:VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, pname:extent.width and pname:extent.height must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxImageDimensionCube, or sname:VkImageFormatProperties::pname:maxExtent.width/height (as returned by fname:vkGetPhysicalDeviceImageFormatProperties with pname:format, pname:type, pname:tiling, pname:usage, and pname:flags equal to those in this structure) - whichever is higher</usage>
                 <usage>If pname:imageType is ename:VK_IMAGE_TYPE_2D and pname:flags contains ename:VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, pname:extent.width and pname:extent.height must: be equal</usage>
-                <usage>If pname:imageType is ename:VK_IMAGE_TYPE_3D, pname:extent.width, pname:extent.height and pname:extent.depth must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxImageDimension3D, or sname:VkImageFormatProperties::pname:maxExtent.width/height/depth (as returned by fname:vkGetPhysicalDeviceImageFormatProperties with pname:format, pname:type, pname:tiling, pname:usage and pname:flags equal to those in this structure) - whichever is higher</usage>
+                <usage>If pname:imageType is ename:VK_IMAGE_TYPE_3D, pname:extent.width, pname:extent.height and pname:extent.depth must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxImageDimension3D, or sname:VkImageFormatProperties::pname:maxExtent.width/height/depth (as returned by fname:vkGetPhysicalDeviceImageFormatProperties with pname:format, pname:type, pname:tiling, pname:usage, and pname:flags equal to those in this structure) - whichever is higher</usage>
                 <usage>If pname:imageType is ename:VK_IMAGE_TYPE_1D, both pname:extent.height and pname:extent.depth must: be `1`</usage>
                 <usage>If pname:imageType is ename:VK_IMAGE_TYPE_2D, pname:extent.depth must: be `1`</usage>
                 <usage>pname:mipLevels must: be less than or equal to latexmath:[$\lfloor\log_2(\max(\mathit{extent.width}, \mathit{extent.height}, \mathit{extent.depth}))\rfloor + 1$]</usage>
-                <usage>If any of pname:extent.width, pname:extent.height or pname:extent.depth are greater than the equivalently named members of sname:VkPhysicalDeviceLimits::pname:maxImageDimension3D, pname:mipLevels must: be less than or equal to sname:VkImageFormatProperties::pname:maxMipLevels (as returned by fname:vkGetPhysicalDeviceImageFormatProperties with pname:format, pname:type, pname:tiling, pname:usage and pname:flags equal to those in this structure)</usage>
-                <usage>pname:arrayLayers must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxImageArrayLayers, or sname:VkImageFormatProperties::pname:maxArrayLayers (as returned by fname:vkGetPhysicalDeviceImageFormatProperties with pname:format, pname:type, pname:tiling, pname:usage and pname:flags equal to those in this structure) - whichever is higher</usage>
-                <usage>If pname:usage includes ename:VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, ename:VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, ename:VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT or ename:VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, pname:extent.width must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxFramebufferWidth</usage>
-                <usage>If pname:usage includes ename:VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, ename:VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, ename:VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT or ename:VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, pname:extent.height must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxFramebufferHeight</usage>
-                <usage>pname:samples must: be a bit value that is set in sname:VkImageFormatProperties::pname:sampleCounts returned by fname:vkGetPhysicalDeviceImageFormatProperties with pname:format, pname:type, pname:tiling, pname:usage and pname:flags equal to those in this structure</usage>
+                <usage>If any of pname:extent.width, pname:extent.height, or pname:extent.depth are greater than the equivalently named members of sname:VkPhysicalDeviceLimits::pname:maxImageDimension3D, pname:mipLevels must: be less than or equal to sname:VkImageFormatProperties::pname:maxMipLevels (as returned by fname:vkGetPhysicalDeviceImageFormatProperties with pname:format, pname:type, pname:tiling, pname:usage, and pname:flags equal to those in this structure)</usage>
+                <usage>pname:arrayLayers must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxImageArrayLayers, or sname:VkImageFormatProperties::pname:maxArrayLayers (as returned by fname:vkGetPhysicalDeviceImageFormatProperties with pname:format, pname:type, pname:tiling, pname:usage, and pname:flags equal to those in this structure) - whichever is higher</usage>
+                <usage>If pname:samples is not ename:VK_SAMPLE_COUNT_1_BIT, pname:imageType must: be ename:VK_IMAGE_TYPE_2D, pname:tiling must: be ename:VK_IMAGE_TILING_OPTIMAL, and pname:mipLevels must: be equal to `1`</usage>
+                <usage>If pname:usage includes ename:VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, ename:VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, ename:VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT, or ename:VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, pname:extent.width must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxFramebufferWidth</usage>
+                <usage>If pname:usage includes ename:VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, ename:VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, ename:VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT, or ename:VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, pname:extent.height must: be less than or equal to sname:VkPhysicalDeviceLimits::pname:maxFramebufferHeight</usage>
+                <usage>pname:samples must: be a bit value that is set in sname:VkImageFormatProperties::pname:sampleCounts returned by fname:vkGetPhysicalDeviceImageFormatProperties with pname:format, pname:type, pname:tiling, pname:usage, and pname:flags equal to those in this structure</usage>
                 <usage>If the &lt;&lt;features-features-textureCompressionETC2,ETC2 texture compression&gt;&gt; feature is not enabled, pname:format mustnot: be ename:VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK, ename:VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK, ename:VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK, ename:VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK, ename:VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK, ename:VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK, ename:VK_FORMAT_EAC_R11_UNORM_BLOCK, ename:VK_FORMAT_EAC_R11_SNORM_BLOCK, ename:VK_FORMAT_EAC_R11G11_UNORM_BLOCK, or ename:VK_FORMAT_EAC_R11G11_SNORM_BLOCK</usage>
                 <usage>If the &lt;&lt;features-features-textureCompressionASTC_LDR,ASTC LDR texture compression&gt;&gt; feature is not enabled, pname:format mustnot: be ename:VK_FORMAT_ASTC_4x4_UNORM_BLOCK, ename:VK_FORMAT_ASTC_4x4_SRGB_BLOCK, ename:VK_FORMAT_ASTC_5x4_UNORM_BLOCK, ename:VK_FORMAT_ASTC_5x4_SRGB_BLOCK, ename:VK_FORMAT_ASTC_5x5_UNORM_BLOCK, ename:VK_FORMAT_ASTC_5x5_SRGB_BLOCK, ename:VK_FORMAT_ASTC_6x5_UNORM_BLOCK, ename:VK_FORMAT_ASTC_6x5_SRGB_BLOCK, ename:VK_FORMAT_ASTC_6x6_UNORM_BLOCK, ename:VK_FORMAT_ASTC_6x6_SRGB_BLOCK, ename:VK_FORMAT_ASTC_8x5_UNORM_BLOCK, ename:VK_FORMAT_ASTC_8x5_SRGB_BLOCK, ename:VK_FORMAT_ASTC_8x6_UNORM_BLOCK, ename:VK_FORMAT_ASTC_8x6_SRGB_BLOCK, ename:VK_FORMAT_ASTC_8x8_UNORM_BLOCK, ename:VK_FORMAT_ASTC_8x8_SRGB_BLOCK, ename:VK_FORMAT_ASTC_10x5_UNORM_BLOCK, ename:VK_FORMAT_ASTC_10x5_SRGB_BLOCK, ename:VK_FORMAT_ASTC_10x6_UNORM_BLOCK, ename:VK_FORMAT_ASTC_10x6_SRGB_BLOCK, ename:VK_FORMAT_ASTC_10x8_UNORM_BLOCK, ename:VK_FORMAT_ASTC_10x8_SRGB_BLOCK, ename:VK_FORMAT_ASTC_10x10_UNORM_BLOCK, ename:VK_FORMAT_ASTC_10x10_SRGB_BLOCK, ename:VK_FORMAT_ASTC_12x10_UNORM_BLOCK, ename:VK_FORMAT_ASTC_12x10_SRGB_BLOCK, ename:VK_FORMAT_ASTC_12x12_UNORM_BLOCK, or ename:VK_FORMAT_ASTC_12x12_SRGB_BLOCK</usage>
                 <usage>If the &lt;&lt;features-features-textureCompressionBC,BC texture compression&gt;&gt; feature is not enabled, pname:format mustnot: be ename:VK_FORMAT_BC1_RGB_UNORM_BLOCK, ename:VK_FORMAT_BC1_RGB_SRGB_BLOCK, ename:VK_FORMAT_BC1_RGBA_UNORM_BLOCK, ename:VK_FORMAT_BC1_RGBA_SRGB_BLOCK, ename:VK_FORMAT_BC2_UNORM_BLOCK, ename:VK_FORMAT_BC2_SRGB_BLOCK, ename:VK_FORMAT_BC3_UNORM_BLOCK, ename:VK_FORMAT_BC3_SRGB_BLOCK, ename:VK_FORMAT_BC4_UNORM_BLOCK, ename:VK_FORMAT_BC4_SNORM_BLOCK, ename:VK_FORMAT_BC5_UNORM_BLOCK, ename:VK_FORMAT_BC5_SNORM_BLOCK, ename:VK_FORMAT_BC6H_UFLOAT_BLOCK, ename:VK_FORMAT_BC6H_SFLOAT_BLOCK, ename:VK_FORMAT_BC7_UNORM_BLOCK, or ename:VK_FORMAT_BC7_SRGB_BLOCK</usage>
@@ -828,10 +830,12 @@ maintained in the master branch of the Khronos Vulkan Github project.
                 <usage>If the &lt;&lt;features-features-sparseResidency4Samples,sparse residency for images with 4 samples&gt;&gt; feature is not enabled, pname:imageType is ename:VK_IMAGE_TYPE_2D, and pname:samples is ename:VK_SAMPLE_COUNT_4_BIT, pname:flags mustnot: contain ename:VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT</usage>
                 <usage>If the &lt;&lt;features-features-sparseResidency8Samples,sparse residency for images with 8 samples&gt;&gt; feature is not enabled, pname:imageType is ename:VK_IMAGE_TYPE_2D, and pname:samples is ename:VK_SAMPLE_COUNT_8_BIT, pname:flags mustnot: contain ename:VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT</usage>
                 <usage>If the &lt;&lt;features-features-sparseResidency16Samples,sparse residency for images with 16 samples&gt;&gt; feature is not enabled, pname:imageType is ename:VK_IMAGE_TYPE_2D, and pname:samples is ename:VK_SAMPLE_COUNT_16_BIT, pname:flags mustnot: contain ename:VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT</usage>
+                <usage>If pname:tiling is ename:VK_IMAGE_TILING_LINEAR, pname:format must: be a format that has at least one supported feature bit present in the value of sname:VkFormatProperties::pname:linearTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format</usage>
                 <usage>If pname:tiling is ename:VK_IMAGE_TILING_LINEAR, and sname:VkFormatProperties::pname:linearTilingFeatures (as returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format) does not include ename:VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT, pname:usage mustnot: contain ename:VK_IMAGE_USAGE_SAMPLED_BIT</usage>
                 <usage>If pname:tiling is ename:VK_IMAGE_TILING_LINEAR, and sname:VkFormatProperties::pname:linearTilingFeatures (as returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format) does not include ename:VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT, pname:usage mustnot: contain ename:VK_IMAGE_USAGE_STORAGE_BIT</usage>
                 <usage>If pname:tiling is ename:VK_IMAGE_TILING_LINEAR, and sname:VkFormatProperties::pname:linearTilingFeatures (as returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format) does not include ename:VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT, pname:usage mustnot: contain ename:VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT</usage>
                 <usage>If pname:tiling is ename:VK_IMAGE_TILING_LINEAR, and sname:VkFormatProperties::pname:linearTilingFeatures (as returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format) does not include ename:VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, pname:usage mustnot: contain ename:VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT</usage>
+                <usage>If pname:tiling is ename:VK_IMAGE_TILING_OPTIMAL, pname:format must: be a format that has at least one supported feature bit present in the value of sname:VkFormatProperties::pname:optimalTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format</usage>
                 <usage>If pname:tiling is ename:VK_IMAGE_TILING_OPTIMAL, and sname:VkFormatProperties::pname:optimalTilingFeatures (as returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format) does not include ename:VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT, pname:usage mustnot: contain ename:VK_IMAGE_USAGE_SAMPLED_BIT</usage>
                 <usage>If pname:tiling is ename:VK_IMAGE_TILING_OPTIMAL, and sname:VkFormatProperties::pname:optimalTilingFeatures (as returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format) does not include ename:VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT, pname:usage mustnot: contain ename:VK_IMAGE_USAGE_STORAGE_BIT</usage>
                 <usage>If pname:tiling is ename:VK_IMAGE_TILING_OPTIMAL, and sname:VkFormatProperties::pname:optimalTilingFeatures (as returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format) does not include ename:VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT, pname:usage mustnot: contain ename:VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT</usage>
@@ -847,7 +851,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member><type>VkDeviceSize</type>           <name>depthPitch</name></member>                     <!-- Specified in bytes -->
         </type>
         <type category="struct" name="VkImageViewCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkImageViewCreateFlags</type> <name>flags</name></member>                          <!-- Reserved -->
             <member><type>VkImage</type>                <name>image</name></member>
@@ -861,18 +865,20 @@ maintained in the master branch of the Khronos Vulkan Github project.
                 <usage>If the &lt;&lt;features-features-textureCompressionETC2,ETC2 texture compression&gt;&gt; feature is not enabled, pname:format mustnot: be ename:VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK, ename:VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK, ename:VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK, ename:VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK, ename:VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK, ename:VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK, ename:VK_FORMAT_EAC_R11_UNORM_BLOCK, ename:VK_FORMAT_EAC_R11_SNORM_BLOCK, ename:VK_FORMAT_EAC_R11G11_UNORM_BLOCK, or ename:VK_FORMAT_EAC_R11G11_SNORM_BLOCK</usage>
                 <usage>If the &lt;&lt;features-features-textureCompressionASTC_LDR,ASTC LDR texture compression&gt;&gt; feature is not enabled, pname:format mustnot: be ename:VK_FORMAT_ASTC_4x4_UNORM_BLOCK, ename:VK_FORMAT_ASTC_4x4_SRGB_BLOCK, ename:VK_FORMAT_ASTC_5x4_UNORM_BLOCK, ename:VK_FORMAT_ASTC_5x4_SRGB_BLOCK, ename:VK_FORMAT_ASTC_5x5_UNORM_BLOCK, ename:VK_FORMAT_ASTC_5x5_SRGB_BLOCK, ename:VK_FORMAT_ASTC_6x5_UNORM_BLOCK, ename:VK_FORMAT_ASTC_6x5_SRGB_BLOCK, ename:VK_FORMAT_ASTC_6x6_UNORM_BLOCK, ename:VK_FORMAT_ASTC_6x6_SRGB_BLOCK, ename:VK_FORMAT_ASTC_8x5_UNORM_BLOCK, ename:VK_FORMAT_ASTC_8x5_SRGB_BLOCK, ename:VK_FORMAT_ASTC_8x6_UNORM_BLOCK, ename:VK_FORMAT_ASTC_8x6_SRGB_BLOCK, ename:VK_FORMAT_ASTC_8x8_UNORM_BLOCK, ename:VK_FORMAT_ASTC_8x8_SRGB_BLOCK, ename:VK_FORMAT_ASTC_10x5_UNORM_BLOCK, ename:VK_FORMAT_ASTC_10x5_SRGB_BLOCK, ename:VK_FORMAT_ASTC_10x6_UNORM_BLOCK, ename:VK_FORMAT_ASTC_10x6_SRGB_BLOCK, ename:VK_FORMAT_ASTC_10x8_UNORM_BLOCK, ename:VK_FORMAT_ASTC_10x8_SRGB_BLOCK, ename:VK_FORMAT_ASTC_10x10_UNORM_BLOCK, ename:VK_FORMAT_ASTC_10x10_SRGB_BLOCK, ename:VK_FORMAT_ASTC_12x10_UNORM_BLOCK, ename:VK_FORMAT_ASTC_12x10_SRGB_BLOCK, ename:VK_FORMAT_ASTC_12x12_UNORM_BLOCK, or ename:VK_FORMAT_ASTC_12x12_SRGB_BLOCK</usage>
                 <usage>If the &lt;&lt;features-features-textureCompressionBC,BC texture compression&gt;&gt; feature is not enabled, pname:format mustnot: be ename:VK_FORMAT_BC1_RGB_UNORM_BLOCK, ename:VK_FORMAT_BC1_RGB_SRGB_BLOCK, ename:VK_FORMAT_BC1_RGBA_UNORM_BLOCK, ename:VK_FORMAT_BC1_RGBA_SRGB_BLOCK, ename:VK_FORMAT_BC2_UNORM_BLOCK, ename:VK_FORMAT_BC2_SRGB_BLOCK, ename:VK_FORMAT_BC3_UNORM_BLOCK, ename:VK_FORMAT_BC3_SRGB_BLOCK, ename:VK_FORMAT_BC4_UNORM_BLOCK, ename:VK_FORMAT_BC4_SNORM_BLOCK, ename:VK_FORMAT_BC5_UNORM_BLOCK, ename:VK_FORMAT_BC5_SNORM_BLOCK, ename:VK_FORMAT_BC6H_UFLOAT_BLOCK, ename:VK_FORMAT_BC6H_SFLOAT_BLOCK, ename:VK_FORMAT_BC7_UNORM_BLOCK, or ename:VK_FORMAT_BC7_SRGB_BLOCK</usage>
-                <usage>If pname:image was created with ename:VK_IMAGE_TILING_LINEAR and pname:usage containing ename:VK_IMAGE_USAGE_SAMPLED_BIT, pname:format must: be supported for sampled images, as specified by the ename:VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT flag in sname:VkFormatProperties::pname:linearTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties</usage>
-                <usage>If pname:image was created with ename:VK_IMAGE_TILING_LINEAR and pname:usage containing ename:VK_IMAGE_USAGE_STORAGE_BIT, pname:format must: be supported for storage images, as specified by the ename:VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT flag in sname:VkFormatProperties::pname:linearTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties</usage>
-                <usage>If pname:image was created with ename:VK_IMAGE_TILING_LINEAR and pname:usage containing ename:VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, pname:format must: be supported for color attachments, as specified by the ename:VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT flag in sname:VkFormatProperties::pname:linearTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties</usage>
-                <usage>If pname:image was created with ename:VK_IMAGE_TILING_LINEAR and pname:usage containing ename:VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, pname:format must: be supported for depth/stencil attachments, as specified by the ename:VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT flag in sname:VkFormatProperties::pname:linearTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties</usage>
-                <usage>If pname:image was created with ename:VK_IMAGE_TILING_OPTIMAL and pname:usage containing ename:VK_IMAGE_USAGE_SAMPLED_BIT, pname:format must: be supported for sampled images, as specified by the ename:VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT flag in sname:VkFormatProperties::pname:optimalTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties</usage>
-                <usage>If pname:image was created with ename:VK_IMAGE_TILING_OPTIMAL and pname:usage containing ename:VK_IMAGE_USAGE_STORAGE_BIT, pname:format must: be supported for storage images, as specified by the ename:VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT flag in sname:VkFormatProperties::pname:optimalTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties</usage>
-                <usage>If pname:image was created with ename:VK_IMAGE_TILING_OPTIMAL and pname:usage containing ename:VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, pname:format must: be supported for color attachments, as specified by the ename:VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT flag in sname:VkFormatProperties::pname:optimalTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties</usage>
-                <usage>If pname:image was created with ename:VK_IMAGE_TILING_OPTIMAL and pname:usage containing ename:VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, pname:format must: be supported for depth/stencil attachments, as specified by the ename:VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT flag in sname:VkFormatProperties::pname:optimalTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties</usage>
+                <usage>If pname:image was created with ename:VK_IMAGE_TILING_LINEAR, pname:format must: be format that has at least one supported feature bit present in the value of sname:VkFormatProperties::pname:linearTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format</usage>
+                <usage>If pname:image was created with ename:VK_IMAGE_TILING_LINEAR and pname:usage containing ename:VK_IMAGE_USAGE_SAMPLED_BIT, pname:format must: be supported for sampled images, as specified by the ename:VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT flag in sname:VkFormatProperties::pname:linearTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format</usage>
+                <usage>If pname:image was created with ename:VK_IMAGE_TILING_LINEAR and pname:usage containing ename:VK_IMAGE_USAGE_STORAGE_BIT, pname:format must: be supported for storage images, as specified by the ename:VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT flag in sname:VkFormatProperties::pname:linearTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format</usage>
+                <usage>If pname:image was created with ename:VK_IMAGE_TILING_LINEAR and pname:usage containing ename:VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, pname:format must: be supported for color attachments, as specified by the ename:VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT flag in sname:VkFormatProperties::pname:linearTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format</usage>
+                <usage>If pname:image was created with ename:VK_IMAGE_TILING_LINEAR and pname:usage containing ename:VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, pname:format must: be supported for depth/stencil attachments, as specified by the ename:VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT flag in sname:VkFormatProperties::pname:linearTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format</usage>
+                <usage>If pname:image was created with ename:VK_IMAGE_TILING_OPTIMAL, pname:format must: be format that has at least one supported feature bit present in the value of sname:VkFormatProperties::pname:optimalTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format</usage>
+                <usage>If pname:image was created with ename:VK_IMAGE_TILING_OPTIMAL and pname:usage containing ename:VK_IMAGE_USAGE_SAMPLED_BIT, pname:format must: be supported for sampled images, as specified by the ename:VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT flag in sname:VkFormatProperties::pname:optimalTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format</usage>
+                <usage>If pname:image was created with ename:VK_IMAGE_TILING_OPTIMAL and pname:usage containing ename:VK_IMAGE_USAGE_STORAGE_BIT, pname:format must: be supported for storage images, as specified by the ename:VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT flag in sname:VkFormatProperties::pname:optimalTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format</usage>
+                <usage>If pname:image was created with ename:VK_IMAGE_TILING_OPTIMAL and pname:usage containing ename:VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, pname:format must: be supported for color attachments, as specified by the ename:VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT flag in sname:VkFormatProperties::pname:optimalTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format</usage>
+                <usage>If pname:image was created with ename:VK_IMAGE_TILING_OPTIMAL and pname:usage containing ename:VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, pname:format must: be supported for depth/stencil attachments, as specified by the ename:VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT flag in sname:VkFormatProperties::pname:optimalTilingFeatures returned by fname:vkGetPhysicalDeviceFormatProperties with the same value of pname:format</usage>
                 <usage>pname:subresourceRange must: be a valid image subresource range for pname:image (see &lt;&lt;resources-image-views&gt;&gt;)</usage>
                 <usage>If pname:image was created with the ename:VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT flag, pname:format must: be compatible with the pname:format used to create pname:image, as defined in &lt;&lt;features-formats-compatibility-classes,Format Compatibility Classes&gt;&gt;</usage>
                 <usage>If pname:image was not created with the ename:VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT flag, pname:format must: be identical to the pname:format used to create pname:image</usage>
-                <usage>pname:subResourceRange and pname:viewType must: be compatible with the image, as described in the &lt;&lt;resources-image-views-compatibility,table below&gt;&gt;</usage>
+                <usage>pname:subResourceRange and pname:viewType must: be compatible with the image, as described in the &lt;&lt;resources-image-views-compatibility,compatibility table&gt;&gt;</usage>
             </validity>
         </type>
         <type category="struct" name="VkBufferCopy">
@@ -934,7 +940,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member len="bindCount">const <type>VkSparseImageMemoryBind</type>* <name>pBinds</name></member>
         </type>
         <type category="struct" name="VkBindSparseInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_BIND_SPARSE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_BIND_SPARSE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure. -->
             <member optional="true"><type>uint32_t</type>               <name>waitSemaphoreCount</name></member>
             <member len="waitSemaphoreCount">const <type>VkSemaphore</type>*     <name>pWaitSemaphores</name></member>
@@ -1040,7 +1046,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkShaderModuleCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkShaderModuleCreateFlags</type> <name>flags</name></member>                       <!-- Reserved -->
             <member><type>size_t</type>                 <name>codeSize</name></member>                       <!-- Specified in bytes -->
@@ -1067,7 +1073,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkDescriptorSetLayoutCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkDescriptorSetLayoutCreateFlags</type>    <name>flags</name></member>             <!-- Reserved -->
             <member optional="true"><type>uint32_t</type>               <name>bindingCount</name></member>                   <!-- Number of bindings in the descriptor set layout -->
@@ -1081,7 +1087,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkDescriptorPoolCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkDescriptorPoolCreateFlags</type>  <name>flags</name></member>
             <member><type>uint32_t</type>               <name>maxSets</name></member>
@@ -1092,7 +1098,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkDescriptorSetAllocateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member><type>VkDescriptorPool</type>       <name>descriptorPool</name></member>
             <member><type>uint32_t</type>               <name>descriptorSetCount</name></member>
@@ -1121,7 +1127,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkPipelineShaderStageCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineShaderStageCreateFlags</type>    <name>flags</name></member>             <!-- Reserved -->
             <member><type>VkShaderStageFlagBits</type>  <name>stage</name></member>                          <!-- Shader stage -->
@@ -1148,7 +1154,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkComputePipelineCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineCreateFlags</type>  <name>flags</name></member>                          <!-- Pipeline creation flags -->
             <member><type>VkPipelineShaderStageCreateInfo</type> <name>stage</name></member>
@@ -1188,7 +1194,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkPipelineVertexInputStateCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Should be VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineVertexInputStateCreateFlags</type>    <name>flags</name></member>        <!-- Reserved -->
             <member optional="true"><type>uint32_t</type>               <name>vertexBindingDescriptionCount</name></member>  <!-- number of bindings -->
@@ -1205,7 +1211,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkPipelineInputAssemblyStateCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_IINPUT_ASSEMBLY_STATE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineInputAssemblyStateCreateFlags</type>    <name>flags</name></member>      <!-- Reserved -->
             <member><type>VkPrimitiveTopology</type>    <name>topology</name></member>
@@ -1217,7 +1223,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkPipelineTessellationStateCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineTessellationStateCreateFlags</type>    <name>flags</name></member>        <!-- Reserved -->
             <member><type>uint32_t</type>               <name>patchControlPoints</name></member>
@@ -1226,7 +1232,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkPipelineViewportStateCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineViewportStateCreateFlags</type>    <name>flags</name></member>           <!-- Reserved -->
             <member><type>uint32_t</type>               <name>viewportCount</name></member>
@@ -1242,7 +1248,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkPipelineRasterizationStateCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member validextensionstructs="VkPipelineRasterizationStateRasterizationOrderAMD">const <type>void</type>* <name>pNext</name></member> <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineRasterizationStateCreateFlags</type>    <name>flags</name></member>             <!-- Reserved -->
             <member><type>VkBool32</type>               <name>depthClampEnable</name></member>
@@ -1261,7 +1267,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkPipelineMultisampleStateCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineMultisampleStateCreateFlags</type>    <name>flags</name></member>        <!-- Reserved -->
             <member><type>VkSampleCountFlagBits</type>  <name>rasterizationSamples</name></member>           <!-- Number of samples used for rasterization -->
@@ -1293,7 +1299,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkPipelineColorBlendStateCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineColorBlendStateCreateFlags</type>    <name>flags</name></member>         <!-- Reserved -->
             <member><type>VkBool32</type>               <name>logicOpEnable</name></member>
@@ -1308,7 +1314,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkPipelineDynamicStateCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineDynamicStateCreateFlags</type>    <name>flags</name></member>            <!-- Reserved -->
             <member><type>uint32_t</type>               <name>dynamicStateCount</name></member>
@@ -1324,7 +1330,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member><type>uint32_t</type>               <name>reference</name></member>
         </type>
         <type category="struct" name="VkPipelineDepthStencilStateCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineDepthStencilStateCreateFlags</type>    <name>flags</name></member>       <!-- Reserved -->
             <member><type>VkBool32</type>               <name>depthTestEnable</name></member>
@@ -1341,7 +1347,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkGraphicsPipelineCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineCreateFlags</type>  <name>flags</name></member>                          <!-- Pipeline creation flags -->
             <member><type>uint32_t</type>               <name>stageCount</name></member>
@@ -1403,7 +1409,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkPipelineCacheCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineCacheCreateFlags</type>    <name>flags</name></member>                   <!-- Reserved -->
             <member optional="true"><type>size_t</type>                 <name>initialDataSize</name></member>                <!-- Size of initial data to populate cache, in bytes -->
@@ -1425,7 +1431,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkPipelineLayoutCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkPipelineLayoutCreateFlags</type>    <name>flags</name></member>                  <!-- Reserved -->
             <member optional="true"><type>uint32_t</type>               <name>setLayoutCount</name></member>                 <!-- Number of descriptor sets interfaced by the pipeline -->
@@ -1442,7 +1448,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkSamplerCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkSamplerCreateFlags</type>   <name>flags</name></member>                          <!-- Reserved -->
             <member><type>VkFilter</type>               <name>magFilter</name></member>                      <!-- Filter mode for magnification -->
@@ -1476,7 +1482,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkCommandPoolCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkCommandPoolCreateFlags</type>   <name>flags</name></member>      <!-- Command pool creation flags -->
             <member><type>uint32_t</type>               <name>queueFamilyIndex</name></member>
@@ -1485,7 +1491,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
          </type>
          <type category="struct" name="VkCommandBufferAllocateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member><type>VkCommandPool</type>          <name>commandPool</name></member>
             <member><type>VkCommandBufferLevel</type>   <name>level</name></member>
@@ -1495,7 +1501,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkCommandBufferInheritanceInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true" noautovalidity="true"><type>VkRenderPass</type>    <name>renderPass</name></member>                     <!-- Render pass for secondary command buffers -->
             <member><type>uint32_t</type>               <name>subpass</name></member>
@@ -1510,7 +1516,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkCommandBufferBeginInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO -->
+            <member values="VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkCommandBufferUsageFlags</type>  <name>flags</name></member>                          <!-- Command buffer usage flags -->
             <member optional="true" noautovalidity="true">const <type>VkCommandBufferInheritanceInfo</type>*       <name>pInheritanceInfo</name></member>                          <!-- Pointer to inheritance info for secondary command buffers -->
@@ -1521,7 +1527,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkRenderPassBeginInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO -->
+            <member values="VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member><type>VkRenderPass</type>           <name>renderPass</name></member>
             <member><type>VkFramebuffer</type>          <name>framebuffer</name></member>
@@ -1529,7 +1535,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member optional="true"><type>uint32_t</type>               <name>clearValueCount</name></member>
             <member len="clearValueCount">const <type>VkClearValue</type>*    <name>pClearValues</name></member>
             <validity>
-                <usage>pname:clearValueCount must: be greater than or equal to the number of attachments in pname:renderPass that specify a pname:loadOp of ename:VK_ATTACHMENT_LOAD_OP_CLEAR</usage>
+                <usage>pname:clearValueCount must: be greater than the largest attachment index in pname:renderPass that specifies a pname:loadOp (or pname:stencilLoadOp, if the attachment has a depth/stencil format) of ename:VK_ATTACHMENT_LOAD_OP_CLEAR</usage>
             </validity>
         </type>
         <type category="union" name="VkClearColorValue" comment="// Union allowing specification of floating point, integer, or unsigned integer color data. Actual value selected is based on image/attachment being cleared.">
@@ -1564,10 +1570,16 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member><type>VkAttachmentStoreOp</type>    <name>stencilStoreOp</name></member>                 <!-- Store operation for stencil data -->
             <member><type>VkImageLayout</type>          <name>initialLayout</name></member>
             <member><type>VkImageLayout</type>          <name>finalLayout</name></member>
+            <validity>
+                <usage>pname:finalLayout mustnot: be ename:VK_IMAGE_LAYOUT_UNDEFINED or ename:VK_IMAGE_LAYOUT_PREINITIALIZED</usage>
+            </validity>
         </type>
         <type category="struct" name="VkAttachmentReference">
             <member><type>uint32_t</type>               <name>attachment</name></member>
             <member><type>VkImageLayout</type>          <name>layout</name></member>
+            <validity>
+                <usage>pname:layout mustnot: be ename:VK_IMAGE_LAYOUT_UNDEFINED or ename:VK_IMAGE_LAYOUT_PREINITIALIZED</usage>
+            </validity>
         </type>
         <type category="struct" name="VkSubpassDescription">
             <member optional="true"><type>VkSubpassDescriptionFlags</type> <name>flags</name></member>
@@ -1610,10 +1622,12 @@ maintained in the master branch of the Khronos Vulkan Github project.
                 <usage>If the &lt;&lt;features-features-tessellationShader,tessellation shaders&gt;&gt; feature is not enabled, pname:dstStageMask mustnot: contain ename:VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT or ename:VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT</usage>
                 <usage>pname:srcSubpass must: be less than or equal to pname:dstSubpass, unless one of them is ename:VK_SUBPASS_EXTERNAL, to avoid cyclic dependencies and ensure a valid execution order</usage>
                 <usage>pname:srcSubpass and pname:dstSubpass mustnot: both be equal to ename:VK_SUBPASS_EXTERNAL</usage>
+                <usage>If pname:srcSubpass is equal to pname:dstSubpass, pname:srcStageMask and pname:dstStageMask must: only contain one of ename:VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, ename:VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, ename:VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, ename:VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, ename:VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT, ename:VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT, ename:VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT, ename:VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ename:VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, ename:VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, ename:VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, ename:VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, or ename:VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT</usage>
+                <usage>If pname:srcSubpass is equal to pname:dstSubpass, the highest bit value included in pname:srcStageMask must: be less than or equal to the lowest bit value in pname:dstStageMask</usage>
             </validity>
         </type>
         <type category="struct" name="VkRenderPassCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkRenderPassCreateFlags</type>    <name>flags</name></member>                      <!-- Reserved -->
             <member optional="true"><type>uint32_t</type>   <name>attachmentCount</name></member>
@@ -1630,12 +1644,12 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkEventCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_EVENT_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_EVENT_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkEventCreateFlags</type>     <name>flags</name></member>                          <!-- Event creation flags -->
         </type>
         <type category="struct" name="VkFenceCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_FENCE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_FENCE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkFenceCreateFlags</type>     <name>flags</name></member>                          <!-- Fence creation flags -->
         </type>
@@ -1837,12 +1851,12 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member><type>VkDeviceSize</type>           <name>nonCoherentAtomSize</name></member>               <!-- minimum size and alignment for non-coherent host-mapped device memory access -->
         </type>
         <type category="struct" name="VkSemaphoreCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkSemaphoreCreateFlags</type> <name>flags</name></member>                          <!-- Semaphore creation flags -->
         </type>
         <type category="struct" name="VkQueryPoolCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkQueryPoolCreateFlags</type> <name>flags</name></member>                          <!-- Reserved -->
             <member><type>VkQueryType</type>            <name>queryType</name></member>
@@ -1854,7 +1868,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkFramebufferCreateInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Must be VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO -->
+            <member values="VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>VkFramebufferCreateFlags</type>    <name>flags</name></member>                     <!-- Reserved -->
             <member><type>VkRenderPass</type>           <name>renderPass</name></member>
@@ -1911,7 +1925,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkSubmitInfo">
-            <member><type>VkStructureType</type>        <name>sType</name></member>                          <!-- Type of structure. Should be VK_STRUCTURE_TYPE_SUBMIT_INFO -->
+            <member values="VK_STRUCTURE_TYPE_SUBMIT_INFO"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>                          <!-- Pointer to next structure -->
             <member optional="true"><type>uint32_t</type>       <name>waitSemaphoreCount</name></member>
             <member len="waitSemaphoreCount">const <type>VkSemaphore</type>*     <name>pWaitSemaphores</name></member>
@@ -1925,11 +1939,11 @@ maintained in the master branch of the Khronos Vulkan Github project.
                 <usage>Any given element of pname:pCommandBuffers must: either have been recorded with the ename:VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, or not currently be executing on the device</usage>
                 <usage>Any given element of pname:pCommandBuffers must: be in the executable state</usage>
                 <usage>If any given element of pname:pCommandBuffers contains commands that execute secondary command buffers, those secondary command buffers must: have been recorded with the ename:VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, or not currently be executing on the device</usage>
-                <usage>If any given element of pname:pCommandBuffers was created with ename:VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, it mustnot: have been previously submitted without re-recording that command buffer</usage>
-                <usage>If any given element of pname:pCommandBuffers contains commands that execute secondary command buffers created with ename:VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, each such secondary command buffer mustnot: have been previously submitted without re-recording that command buffer</usage>
+                <usage>If any given element of pname:pCommandBuffers was recorded with ename:VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, it mustnot: have been previously submitted without re-recording that command buffer</usage>
+                <usage>If any given element of pname:pCommandBuffers contains commands that execute secondary command buffers recorded with ename:VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, each such secondary command buffer mustnot: have been previously submitted without re-recording that command buffer</usage>
                 <usage>Any given element of pname:pCommandBuffers mustnot: contain commands that execute a secondary command buffer, if that secondary command buffer has been recorded in another primary command buffer after it was recorded into this sname:VkCommandBuffer</usage>
-                <usage>Any given element of pname:pCommandBuffers must: have been created on a sname:VkCommandPool that was created for the same queue family that the calling command's pname:queue belongs to</usage>
-                <usage>Any given element of pname:pCommandBuffers mustnot: have been created with ename:VK_COMMAND_BUFFER_LEVEL_SECONDARY</usage>
+                <usage>Any given element of pname:pCommandBuffers must: have been allocated from a sname:VkCommandPool that was created for the same queue family that the calling command's pname:queue belongs to</usage>
+                <usage>Any given element of pname:pCommandBuffers mustnot: have been allocated with ename:VK_COMMAND_BUFFER_LEVEL_SECONDARY</usage>
                 <usage>Any given element of sname:VkSemaphore in pname:pWaitSemaphores must: refer to a prior signal of that sname:VkSemaphore that will not be consumed by any other wait on that semaphore</usage>
                 <usage>If the &lt;&lt;features-features-geometryShader,geometry shaders&gt;&gt; feature is not enabled, any given element of pname:pWaitDstStageMask mustnot: contain ename:VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT</usage>
                 <usage>If the &lt;&lt;features-features-tessellationShader,tessellation shaders&gt;&gt; feature is not enabled, any given element of pname:pWaitDstStageMask mustnot: contain ename:VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT or ename:VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT</usage>
@@ -1958,7 +1972,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member><type>VkDisplayModeParametersKHR</type>       <name>parameters</name></member>               <!-- The parameters this mode uses. -->
         </type>
         <type category="struct" name="VkDisplayModeCreateInfoKHR">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_DISPLAY_MODE_CREATE_INFO_KHR -->
+            <member values="VK_STRUCTURE_TYPE_DISPLAY_MODE_CREATE_INFO_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member optional="true"><type>VkDisplayModeCreateFlagsKHR</type>      <name>flags</name></member>                    <!-- Reserved -->
             <member><type>VkDisplayModeParametersKHR</type>       <name>parameters</name></member>               <!-- The parameters this mode uses. -->
@@ -1979,7 +1993,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member><type>VkExtent2D</type>                       <name>maxDstExtent</name></member>
         </type>
         <type category="struct" name="VkDisplaySurfaceCreateInfoKHR">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR -->
+            <member values="VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member optional="true"><type>VkDisplaySurfaceCreateFlagsKHR</type>   <name>flags</name></member>                    <!-- Reserved -->
             <member><type>VkDisplayModeKHR</type>                 <name>displayMode</name></member>              <!-- The mode to use when displaying this surface -->
@@ -1998,7 +2012,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkDisplayPresentInfoKHR">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_DISPLAY_PRESENT_INFO_KHR -->
+            <member values="VK_STRUCTURE_TYPE_DISPLAY_PRESENT_INFO_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member><type>VkRect2D</type>                         <name>srcRect</name></member>                  <!-- Rectangle within the presentable image to read pixel data from when presenting to the display. -->
             <member><type>VkRect2D</type>                         <name>dstRect</name></member>                  <!-- Rectangle within the current display mode's visible region to display srcRectangle in. -->
@@ -2022,7 +2036,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member optional="true"><type>VkImageUsageFlags</type>                <name>supportedUsageFlags</name></member>      <!-- Supported image usage flags for the surface -->
         </type>
         <type category="struct" name="VkAndroidSurfaceCreateInfoKHR">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR -->
+            <member values="VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member optional="true"><type>VkAndroidSurfaceCreateFlagsKHR</type>   <name>flags</name></member>    <!-- Reserved -->
             <member><type>ANativeWindow</type>*                   <name>window</name></member>
@@ -2031,35 +2045,35 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkMirSurfaceCreateInfoKHR">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_MIR_SURFACE_CREATE_INFO_KHR -->
+            <member values="VK_STRUCTURE_TYPE_MIR_SURFACE_CREATE_INFO_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member optional="true"><type>VkMirSurfaceCreateFlagsKHR</type>   <name>flags</name></member>        <!-- Reserved -->
             <member><type>MirConnection</type>*                   <name>connection</name></member>
             <member><type>MirSurface</type>*                      <name>mirSurface</name></member>
         </type>
         <type category="struct" name="VkWaylandSurfaceCreateInfoKHR">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR -->
+            <member values="VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member optional="true"><type>VkWaylandSurfaceCreateFlagsKHR</type>   <name>flags</name></member>    <!-- Reserved -->
             <member>struct <type>wl_display</type>*               <name>display</name></member>
             <member>struct <type>wl_surface</type>*               <name>surface</name></member>
         </type>
         <type category="struct" name="VkWin32SurfaceCreateInfoKHR">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR -->
+            <member values="VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member optional="true"><type>VkWin32SurfaceCreateFlagsKHR</type>   <name>flags</name></member>      <!-- Reserved -->
             <member><type>HINSTANCE</type>                        <name>hinstance</name></member>
             <member><type>HWND</type>                             <name>hwnd</name></member>
         </type>
         <type category="struct" name="VkXlibSurfaceCreateInfoKHR">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR -->
+            <member values="VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member optional="true"><type>VkXlibSurfaceCreateFlagsKHR</type>   <name>flags</name></member>       <!-- Reserved -->
             <member><type>Display</type>*                         <name>dpy</name></member>
             <member><type>Window</type>                           <name>window</name></member>
         </type>
         <type category="struct" name="VkXcbSurfaceCreateInfoKHR">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR -->
+            <member values="VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member optional="true"><type>VkXcbSurfaceCreateFlagsKHR</type>   <name>flags</name></member>        <!-- Reserved -->
             <member><type>xcb_connection_t</type>*                <name>connection</name></member>
@@ -2070,7 +2084,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member><type>VkColorSpaceKHR</type>                  <name>colorSpace</name></member>               <!-- and colorspace for the surface -->
         </type>
         <type category="struct" name="VkSwapchainCreateInfoKHR">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR -->
+            <member values="VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member optional="true"><type>VkSwapchainCreateFlagsKHR</type>        <name>flags</name></member>                    <!-- Reserved -->
             <member><type>VkSurfaceKHR</type>                     <name>surface</name></member>                  <!-- The swapchain's target surface -->
@@ -2105,7 +2119,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkPresentInfoKHR">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_PRESENT_INFO_KHR -->
+            <member values="VK_STRUCTURE_TYPE_PRESENT_INFO_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member optional="true"><type>uint32_t</type>         <name>waitSemaphoreCount</name></member>       <!-- Number of semaphores to wait for before presenting -->
             <member optional="true" len="waitSemaphoreCount">const <type>VkSemaphore</type>* <name>pWaitSemaphores</name></member> <!-- Semaphores to wait for before presenting -->
@@ -2119,26 +2133,26 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkDebugReportCallbackCreateInfoEXT">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT -->
+            <member values="VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member><type>VkDebugReportFlagsEXT</type>            <name>flags</name></member>                    <!-- Indicates which events call this callback-->
             <member><type>PFN_vkDebugReportCallbackEXT</type>     <name>pfnCallback</name></member>              <!-- Function pointer of a callback function-->
             <member optional="true"><type>void</type>*            <name>pUserData</name></member>                <!-- User data provided to callback function -->
         </type>
         <type category="struct" name="VkPipelineRasterizationStateRasterizationOrderAMD">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_RASTERIZATION_ORDER_AMD -->
+            <member values="VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_RASTERIZATION_ORDER_AMD"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member><type>VkRasterizationOrderAMD</type>          <name>rasterizationOrder</name></member>       <!-- Rasterization order to use for the pipeline -->
         </type>
         <type category="struct" name="VkDebugMarkerObjectNameInfoEXT">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT -->
+            <member values="VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member><type>VkDebugReportObjectTypeEXT</type>       <name>objectType</name></member>               <!-- The type of the object -->
             <member><type>uint64_t</type>                         <name>object</name></member>                   <!-- The handle of the object, cast to uint64_t -->
             <member len="null-terminated">const <type>char</type>* <name>pObjectName</name></member>             <!-- Name to apply to the object -->
         </type>
         <type category="struct" name="VkDebugMarkerObjectTagInfoEXT">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_TAG_INFO_EXT -->
+            <member values="VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_TAG_INFO_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member><type>VkDebugReportObjectTypeEXT</type>       <name>objectType</name></member>               <!-- The type of the object -->
             <member><type>uint64_t</type>                         <name>object</name></member>                   <!-- The handle of the object, cast to uint64_t -->
@@ -2147,13 +2161,13 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member len="tagSize">const <type>void</type>*        <name>pTag</name></member>                     <!-- Tag data to attach to the object -->
         </type>
         <type category="struct" name="VkDebugMarkerMarkerInfoEXT">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT -->
+            <member values="VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member len="null-terminated">const <type>char</type>* <name>pMarkerName</name></member>             <!-- Name of the debug marker -->
             <member optional="true"><type>float</type>            <name>color</name>[4]</member>                 <!-- Optional color for debug marker -->
         </type>
         <type category="struct" name="VkDedicatedAllocationImageCreateInfoNV">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_IMAGE_CREATE_INFO_NV -->
+            <member values="VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_IMAGE_CREATE_INFO_NV"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member><type>VkBool32</type>                         <name>dedicatedAllocation</name></member>      <!-- Whether this image uses a dedicated allocation -->
             <validity>
@@ -2161,7 +2175,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkDedicatedAllocationBufferCreateInfoNV">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV -->
+            <member values="VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member><type>VkBool32</type>                         <name>dedicatedAllocation</name></member>      <!-- Whether this buffer uses a dedicated allocation -->
             <validity>
@@ -2169,7 +2183,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             </validity>
         </type>
         <type category="struct" name="VkDedicatedAllocationMemoryAllocateInfoNV">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV -->
+            <member values="VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
             <member optional="true"><type>VkImage</type>          <name>image</name></member>                    <!-- Image that this allocation will be bound to -->
             <member optional="true"><type>VkBuffer</type>         <name>buffer</name></member>                   <!-- Buffer that this allocation will be bound to -->
@@ -2695,6 +2709,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
         <enum value="-9"    name="VK_ERROR_INCOMPATIBLE_DRIVER" comment="Unable to find a Vulkan driver"/>
         <enum value="-10"   name="VK_ERROR_TOO_MANY_OBJECTS" comment="Too many objects of the type have already been created"/>
         <enum value="-11"   name="VK_ERROR_FORMAT_NOT_SUPPORTED" comment="Requested format is not supported on this device"/>
+        <enum value="-12"   name="VK_ERROR_FRAGMENTED_POOL" comment="A requested pool allocation has failed due to fragmentation of the pool's memory"/>
             <unused start="-12"/>
     </enums>
     <enums name="VkDynamicState" type="enum">
@@ -3018,17 +3033,11 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <proto><type>PFN_vkVoidFunction</type> <name>vkGetDeviceProcAddr</name></proto>
             <param><type>VkDevice</type> <name>device</name></param>
             <param len="null-terminated">const <type>char</type>* <name>pName</name></param>
-            <validity>
-            </validity>
         </command>
         <command>
             <proto><type>PFN_vkVoidFunction</type> <name>vkGetInstanceProcAddr</name></proto>
             <param optional="true"><type>VkInstance</type> <name>instance</name></param>
             <param len="null-terminated">const <type>char</type>* <name>pName</name></param>
-            <validity>
-                <usage>If pname:instance is `NULL`, pname:pName must: be "vkEnumerateInstanceExtensionProperties", "vkEnumerateInstanceLayerProperties", or "vkCreateInstance"</usage>
-                <usage>If pname:instance is not `NULL`, pname:pName mustnot: be "vkEnumerateInstanceExtensionProperties", "vkEnumerateInstanceLayerProperties", or "vkCreateInstance"</usage>
-            </validity>
         </command>
         <command>
             <proto><type>void</type> <name>vkGetPhysicalDeviceProperties</name></proto>
@@ -3089,7 +3098,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <param optional="false,true"><type>uint32_t</type>* <name>pPropertyCount</name></param>
             <param optional="true" len="pPropertyCount"><type>VkLayerProperties</type>* <name>pProperties</name></param>
         </command>
-        <command successcodes="VK_SUCCESS,VK_INCOMPLETE" errorcodes="VK_ERROR_OUT_OF_HOST_MEMORY,VK_ERROR_OUT_OF_DEVICE_MEMORY">
+        <command successcodes="VK_SUCCESS,VK_INCOMPLETE" errorcodes="VK_ERROR_OUT_OF_HOST_MEMORY,VK_ERROR_OUT_OF_DEVICE_MEMORY, VK_ERROR_LAYER_NOT_PRESENT">
             <proto><type>VkResult</type> <name>vkEnumerateInstanceExtensionProperties</name></proto>
             <param optional="true" len="null-terminated">const <type>char</type>* <name>pLayerName</name></param>
             <param optional="false,true"><type>uint32_t</type>* <name>pPropertyCount</name></param>
@@ -3100,11 +3109,11 @@ maintained in the master branch of the Khronos Vulkan Github project.
         </command>
         <command successcodes="VK_SUCCESS,VK_INCOMPLETE" errorcodes="VK_ERROR_OUT_OF_HOST_MEMORY,VK_ERROR_OUT_OF_DEVICE_MEMORY">
             <proto><type>VkResult</type> <name>vkEnumerateDeviceLayerProperties</name></proto>
-            <param optional="false,true"><type>VkPhysicalDevice</type> <name>physicalDevice</name></param>
+            <param><type>VkPhysicalDevice</type> <name>physicalDevice</name></param>
             <param optional="false,true"><type>uint32_t</type>* <name>pPropertyCount</name></param>
             <param optional="true" len="pPropertyCount"><type>VkLayerProperties</type>* <name>pProperties</name></param>
         </command>
-        <command successcodes="VK_SUCCESS,VK_INCOMPLETE" errorcodes="VK_ERROR_OUT_OF_HOST_MEMORY,VK_ERROR_OUT_OF_DEVICE_MEMORY">
+        <command successcodes="VK_SUCCESS,VK_INCOMPLETE" errorcodes="VK_ERROR_OUT_OF_HOST_MEMORY,VK_ERROR_OUT_OF_DEVICE_MEMORY,VK_ERROR_LAYER_NOT_PRESENT">
             <proto><type>VkResult</type> <name>vkEnumerateDeviceExtensionProperties</name></proto>
             <param><type>VkPhysicalDevice</type> <name>physicalDevice</name></param>
             <param optional="true" len="null-terminated">const <type>char</type>* <name>pLayerName</name></param>
@@ -3676,7 +3685,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
                 <usage>All uses of pname:descriptorPool (via any allocated descriptor sets) must: have completed execution</usage>
             </validity>
         </command>
-        <command successcodes="VK_SUCCESS" errorcodes="VK_ERROR_OUT_OF_HOST_MEMORY,VK_ERROR_OUT_OF_DEVICE_MEMORY">
+        <command successcodes="VK_SUCCESS" errorcodes="VK_ERROR_OUT_OF_HOST_MEMORY,VK_ERROR_OUT_OF_DEVICE_MEMORY,VK_ERROR_FRAGMENTED_POOL">
             <proto><type>VkResult</type> <name>vkAllocateDescriptorSets</name></proto>
             <param><type>VkDevice</type> <name>device</name></param>
             <param externsync="pAllocateInfo->descriptorPool">const <type>VkDescriptorSetAllocateInfo</type>* <name>pAllocateInfo</name></param>
@@ -3937,8 +3946,9 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <param optional="true"><type>uint32_t</type> <name>dynamicOffsetCount</name></param>
             <param len="dynamicOffsetCount">const <type>uint32_t</type>* <name>pDynamicOffsets</name></param>
             <validity>
-                <usage>Any given element of pname:pDescriptorSets must: have been created with a sname:VkDescriptorSetLayout that matches (is the same as, or defined identically to) the sname:VkDescriptorSetLayout at set _n_ in pname:layout, where _n_ is the sum of pname:firstSet and the index into pname:pDescriptorSets</usage>
+                <usage>Any given element of pname:pDescriptorSets must: have been allocated with a sname:VkDescriptorSetLayout that matches (is the same as, or defined identically to) the sname:VkDescriptorSetLayout at set _n_ in pname:layout, where _n_ is the sum of pname:firstSet and the index into pname:pDescriptorSets</usage>
                 <usage>pname:dynamicOffsetCount must: be equal to the total number of dynamic descriptors in pname:pDescriptorSets</usage>
+                <usage>The sum of pname:firstSet and pname:descriptorSetCount must: be less than or equal to sname:VkPipelineLayoutCreateInfo::pname:setLayoutCount provided when pname:layout was created</usage>
                 <usage>pname:pipelineBindPoint must: be supported by the pname:commandBuffer's parent sname:VkCommandPool's queue family</usage>
                 <usage>Any given element of pname:pDynamicOffsets must: satisfy the required alignment for the corresponding descriptor binding's descriptor type</usage>
             </validity>
@@ -4394,7 +4404,17 @@ maintained in the master branch of the Khronos Vulkan Github project.
                 <usage>If the &lt;&lt;features-features-geometryShader,geometry shaders&gt;&gt; feature is not enabled, pname:dstStageMask mustnot: contain ename:VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT</usage>
                 <usage>If the &lt;&lt;features-features-tessellationShader,tessellation shaders&gt;&gt; feature is not enabled, pname:srcStageMask mustnot: contain ename:VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT or ename:VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT</usage>
                 <usage>If the &lt;&lt;features-features-tessellationShader,tessellation shaders&gt;&gt; feature is not enabled, pname:dstStageMask mustnot: contain ename:VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT or ename:VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT</usage>
-                <usage>If fname:vkCmdPipelineBarrier is called within a render pass instance, the render pass must: declare at least one self-dependency from the current subpass to itself - see &lt;&lt;synchronization-pipeline-barriers-subpass-self-dependencies,Subpass Self-dependency&gt;&gt;</usage>
+                <usage>If fname:vkCmdPipelineBarrier is called within a render pass instance, the render pass must: have been created with a sname:VkSubpassDependency instance in pname:pDependencies that expresses a dependency from the current subpass to itself. Additionally:
+                    ** pname:srcStageMask must: contain a subset of the bit values in the pname:srcStageMask member of that instance of sname:VkSubpassDependency
+                    ** pname:dstStageMask must: contain a subset of the bit values in the pname:dstStageMask member of that instance of sname:VkSubpassDependency
+                    ** The pname:srcAccessMask of any element of pname:pMemoryBarriers or pname:pImageMemoryBarriers must: contain a subset of the bit values the pname:srcAccessMask member of that instance of sname:VkSubpassDependency
+                    ** The pname:dstAccessMask of any element of pname:pMemoryBarriers or pname:pImageMemoryBarriers must: contain a subset of the bit values the pname:dstAccessMask member of that instance of sname:VkSubpassDependency
+                    ** pname:dependencyFlags must: be equal to the pname:dependencyFlags member of that instance of sname:VkSubpassDependency</usage>
+                <usage>If fname:vkCmdPipelineBarrier is called within a render pass instance, pname:bufferMemoryBarrierCount must: be `0`</usage>
+                <usage>If fname:vkCmdPipelineBarrier is called within a render pass instance, the pname:image member of any element of pname:pImageMemoryBarriers must: be equal to one of the elements of pname:pAttachments that the current pname:framebuffer was created with, that is also referred to by one of the elements of the pname:pColorAttachments, pname:pResolveAttachments or pname:pDepthStencilAttachment members of the sname:VkSubpassDescription instance that the current subpass was created with</usage>
+                <usage>If fname:vkCmdPipelineBarrier is called within a render pass instance, the pname:oldLayout and pname:newLayout members of any element of pname:pImageMemoryBarriers must: be equal to the pname:layout member of an element of the pname:pColorAttachments, pname:pResolveAttachments or pname:pDepthStencilAttachment members of the sname:VkSubpassDescription instance that the current subpass was created with, that refers to the same pname:image</usage>
+                <usage>If fname:vkCmdPipelineBarrier is called within a render pass instance, the pname:oldLayout and pname:newLayout members of an element of pname:pImageMemoryBarriers must: be equal</usage>
+                <usage>If fname:vkCmdPipelineBarrier is called within a render pass instance, the pname:srcQueueFamilyIndex and pname:dstQueueFamilyIndex members of any element of pname:pImageMemoryBarriers must: be ename:VK_QUEUE_FAMILY_IGNORED</usage>
             </validity>
         </command>
         <command queues="graphics,compute" renderpass="both" cmdbufferlevel="primary,secondary">
@@ -4409,9 +4429,9 @@ maintained in the master branch of the Khronos Vulkan Github project.
                 <usage>If the &lt;&lt;features-features-occlusionQueryPrecise,precise occlusion queries&gt;&gt; feature is not enabled, or the pname:queryType used to create pname:queryPool was not ename:VK_QUERY_TYPE_OCCLUSION, pname:flags mustnot: contain ename:VK_QUERY_CONTROL_PRECISE_BIT</usage>
                 <usage>pname:queryPool must: have been created with a pname:queryType that differs from that of any other queries that have been made &lt;&lt;queries-operation-active,active&gt;&gt;, and are currently still active within pname:commandBuffer</usage>
                 <usage>pname:query must: be less than the number of queries in pname:queryPool</usage>
-                <usage>If the pname:queryType used to create pname:queryPool was ename:VK_QUERY_TYPE_OCCLUSION, the sname:VkCommandPool that pname:commandBuffer was created from must: support graphics operations</usage>
-                <usage>If the pname:queryType used to create pname:queryPool was ename:VK_QUERY_TYPE_PIPELINE_STATISTICS and any of the pname:pipelineStatistics indicate graphics operations, the sname:VkCommandPool that pname:commandBuffer was created from must: support graphics operations</usage>
-                <usage>If the pname:queryType used to create pname:queryPool was ename:VK_QUERY_TYPE_PIPELINE_STATISTICS and any of the pname:pipelineStatistics indicate compute operations, the sname:VkCommandPool that pname:commandBuffer was created from must: support compute operations</usage>
+                <usage>If the pname:queryType used to create pname:queryPool was ename:VK_QUERY_TYPE_OCCLUSION, the sname:VkCommandPool that pname:commandBuffer was allocated from must: support graphics operations</usage>
+                <usage>If the pname:queryType used to create pname:queryPool was ename:VK_QUERY_TYPE_PIPELINE_STATISTICS and any of the pname:pipelineStatistics indicate graphics operations, the sname:VkCommandPool that pname:commandBuffer was allocated from must: support graphics operations</usage>
+                <usage>If the pname:queryType used to create pname:queryPool was ename:VK_QUERY_TYPE_PIPELINE_STATISTICS and any of the pname:pipelineStatistics indicate compute operations, the sname:VkCommandPool that pname:commandBuffer was allocated from must: support compute operations</usage>
             </validity>
         </command>
         <command queues="graphics,compute" renderpass="both" cmdbufferlevel="primary,secondary">
@@ -4518,16 +4538,18 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <param><type>uint32_t</type> <name>commandBufferCount</name></param>
             <param len="commandBufferCount">const <type>VkCommandBuffer</type>* <name>pCommandBuffers</name></param>
             <validity>
-                <usage>pname:commandBuffer must: have been created with a pname:level of ename:VK_COMMAND_BUFFER_LEVEL_PRIMARY</usage>
-                <usage>Any given element of pname:pCommandBuffers must: have been created with a pname:level of ename:VK_COMMAND_BUFFER_LEVEL_SECONDARY</usage>
-                <usage>Any given element of pname:pCommandBuffers mustnot: be already pending execution in pname:commandBuffer, or appear twice in pname:pCommandBuffers, unless it was created with the ename:VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT flag</usage>
-                <usage>Any given element of pname:pCommandBuffers mustnot: be already pending execution in any other sname:VkCommandBuffer, unless it was created with the ename:VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT flag</usage>
+                <usage>pname:commandBuffer must: have been allocated with a pname:level of ename:VK_COMMAND_BUFFER_LEVEL_PRIMARY</usage>
+                <usage>Any given element of pname:pCommandBuffers must: have been allocated with a pname:level of ename:VK_COMMAND_BUFFER_LEVEL_SECONDARY</usage>
+                <usage>Any given element of pname:pCommandBuffers mustnot: be already pending execution in pname:commandBuffer, or appear twice in pname:pCommandBuffers, unless it was recorded with the ename:VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT flag</usage>
+                <usage>Any given element of pname:pCommandBuffers mustnot: be already pending execution in any other sname:VkCommandBuffer, unless it was recorded with the ename:VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT flag</usage>
                 <usage>Any given element of pname:pCommandBuffers must: be in the executable state</usage>
+                <usage>Any given element of pname:pCommandBuffers must: have been allocated from a sname:VkCommandPool that was created for the same queue family as the sname:VkCommandPool from which pname:commandBuffer was allocated</usage>
                 <usage>If fname:vkCmdExecuteCommands is being called within a render pass instance, that render pass instance must: have been begun with the pname:contents parameter of fname:vkCmdBeginRenderPass set to ename:VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS</usage>
                 <usage>If fname:vkCmdExecuteCommands is being called within a render pass instance, any given element of pname:pCommandBuffers must: have been recorded with the ename:VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT</usage>
                 <usage>If fname:vkCmdExecuteCommands is being called within a render pass instance, any given element of pname:pCommandBuffers must: have been recorded with sname:VkCommandBufferInheritanceInfo::pname:subpass set to the index of the subpass which the given command buffer will be executed in</usage>
                 <usage>If fname:vkCmdExecuteCommands is being called within a render pass instance, any given element of pname:pCommandBuffers must: have been recorded with a render pass that is compatible with the current render pass - see &lt;&lt;renderpass-compatibility&gt;&gt;</usage>
                 <usage>If fname:vkCmdExecuteCommands is being called within a render pass instance, and any given element of pname:pCommandBuffers was recorded with sname:VkCommandBufferInheritanceInfo::pname:framebuffer not equal to dlink:VK_NULL_HANDLE, that sname:VkFramebuffer must: match the sname:VkFramebuffer used in the current render pass instance</usage>
+                <usage>If fname:vkCmdExecuteCommands is not being called within a render pass instance, any given element of pname:pCommandBuffers mustnot: have been recorded with the ename:VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT</usage>
                 <usage>If the &lt;&lt;features-features-inheritedQueries,inherited queries&gt;&gt; feature is not enabled, pname:commandBuffer mustnot: have any queries &lt;&lt;queries-operation-active,active&gt;&gt;</usage>
                 <usage>If pname:commandBuffer has a ename:VK_QUERY_TYPE_OCCLUSION query &lt;&lt;queries-operation-active,active&gt;&gt;, then each element of pname:pCommandBuffers must: have been recorded with sname:VkCommandBufferInheritanceInfo::pname:occlusionQueryEnable set to ename:VK_TRUE</usage>
                 <usage>If pname:commandBuffer has a ename:VK_QUERY_TYPE_OCCLUSION query &lt;&lt;queries-operation-active,active&gt;&gt;, then each element of pname:pCommandBuffers must: have been recorded with sname:VkCommandBufferInheritanceInfo::pname:queryFlags having all bits set that are set for the query</usage>
@@ -4571,7 +4593,7 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <param optional="false,true"><type>uint32_t</type>* <name>pPropertyCount</name></param>
             <param optional="true" len="pPropertyCount"><type>VkDisplayModePropertiesKHR</type>* <name>pProperties</name></param>
         </command>
-        <command successcodes="VK_SUCCESS" errorcodes="VK_ERROR_OUT_OF_HOST_MEMORY,VK_ERROR_OUT_OF_DEVICE_MEMORY">
+        <command successcodes="VK_SUCCESS" errorcodes="VK_ERROR_OUT_OF_HOST_MEMORY,VK_ERROR_OUT_OF_DEVICE_MEMORY,VK_ERROR_INITIALIZATION_FAILED">
             <proto><type>VkResult</type> <name>vkCreateDisplayModeKHR</name></proto>
             <param><type>VkPhysicalDevice</type> <name>physicalDevice</name></param>
             <param externsync="true"><type>VkDisplayKHR</type> <name>display</name></param>
@@ -5514,6 +5536,26 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <require>
                 <enum value="0"                                         name="VK_NV_EXTENSION_53_SPEC_VERSION"/>
                 <enum value="&quot;VK_NV_extension_53&quot;"            name="VK_NV_EXTENSION_53_EXTENSION_NAME"/>
+            </require>
+        </extension>
+        <extension name="VK_NV_extension_54" number="54" author="NVIDIA" contact="Jeff Bolz @jbolz" supported="disabled">
+            <require>
+                <enum value="0"                                         name="VK_NV_EXTENSION_54_SPEC_VERSION"/>
+                <enum value="&quot;VK_NV_extension_54&quot;"            name="VK_NV_EXTENSION_54_EXTENSION_NAME"/>
+            </require>
+        </extension>
+        <extension name="VK_IMG_format_pvrtc" number="55" author="IMG" contact="Tobias Hector @tobias" supported="vulkan">
+            <require>
+                <enum value="1"                                         name="VK_IMG_FORMAT_PVRTC_SPEC_VERSION"/>
+                <enum value="&quot;VK_IMG_format_pvrtc&quot;"           name="VK_IMG_FORMAT_PVRTC_EXTENSION_NAME"/>
+                <enum offset="0" extends="VkFormat"                     name="VK_FORMAT_PVRTC1_2BPP_UNORM_BLOCK_IMG"/>
+                <enum offset="1" extends="VkFormat"                     name="VK_FORMAT_PVRTC1_4BPP_UNORM_BLOCK_IMG"/>
+                <enum offset="2" extends="VkFormat"                     name="VK_FORMAT_PVRTC2_2BPP_UNORM_BLOCK_IMG"/>
+                <enum offset="3" extends="VkFormat"                     name="VK_FORMAT_PVRTC2_4BPP_UNORM_BLOCK_IMG"/>
+                <enum offset="4" extends="VkFormat"                     name="VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG"/>
+                <enum offset="5" extends="VkFormat"                     name="VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG"/>
+                <enum offset="6" extends="VkFormat"                     name="VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG"/>
+                <enum offset="7" extends="VkFormat"                     name="VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG"/>
             </require>
         </extension>
     </extensions>

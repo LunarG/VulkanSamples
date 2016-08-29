@@ -27,8 +27,8 @@
 
 #define VERSION_MAJOR               1
 #define VERSION_MINOR               0
-#define VERSION_PATCH               12
-#define VERSION_BUILDNO             0
+#define VERSION_PATCH               1111
+#define VERSION_BUILDNO             2222
 
 #define VERSION_BUILD_DESCRIPTION   "Dev Build"
 
