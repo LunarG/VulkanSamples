@@ -39,7 +39,7 @@
 * dvorak keyboads, even though it is the same physical key.
 *
 * Therefore, use these keycodes for game controls, to ensure a consistent layout,
-* but when text input is required, use the OnCharEvent instead, to get the correct
+* but when text input is required, use the OnTextEvent instead, to get the correct
 * text symbol, according to the current configured keyboard layout settings.
 */
 

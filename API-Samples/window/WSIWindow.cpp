@@ -33,7 +33,7 @@ struct EventType{
 
 //=====================WSIWindow base class=====================
 class WindowImpl {
-    struct mousepos_t{int16_t x; int16_t y;}mousepos = {};                 // mouse position
+    struct {int16_t x; int16_t y;}mousepos = {};                           // mouse position
     bool btnstate[5]   = {};                                               // mouse btn state
     bool keystate[256] = {};                                               // keyboard state
 protected:
@@ -51,7 +51,7 @@ public:
     CInstance& Instance() { return *instance; }
     bool KeyState(eKeycode key){ return keystate[key]; }
     bool BtnState(uint8_t  btn){ return (btn<5)  ? btnstate[btn]:0; }
-    mousepos_t MousePos() { return mousepos; }
+    void MousePos(int16_t& x, int16_t& y){x=mousepos.x; y=mousepos.y; }
 
     bool running;
 
@@ -86,7 +86,6 @@ EventType WindowImpl::ShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t 
     EventType e={EventType::SHAPE};
     e.shape={x,y,width,height};
     return e;
-
 }
 
 //==============================================================
@@ -249,7 +248,7 @@ EventType Window_xcb::GetEvent(){
         int16_t mx =e.event_x;
         int16_t my =e.event_y;
         uint8_t btn=e.detail;
-        uint8_t bestBtn=BtnState(1) ? 1 : BtnState(2) ? 2 :BtnState(3) ? 3 : 0;
+        uint8_t bestBtn=BtnState(1) ? 1 : BtnState(2) ? 2 : BtnState(3) ? 3 : 0;
         //printf("%d %d\n",x_event->response_type,x_event->response_type & ~0x80);  //get event numerical value
         switch(x_event->response_type & ~0x80) {
             case XCB_MOTION_NOTIFY : event=MouseEvent(mMOVE,mx,my,bestBtn);  break;  //mouse move
@@ -257,7 +256,7 @@ EventType Window_xcb::GetEvent(){
             case XCB_BUTTON_RELEASE: event=MouseEvent(mUP  ,mx,my,btn);      break;  //mouse btn release
             case XCB_KEY_PRESS:{
                 uint8_t keycode=EVDEV_TO_HID[btn];
-                KeyEvent(keyDOWN,keycode);                                           //key pressed event
+                event=KeyEvent(keyDOWN,keycode);                                     //key pressed event
                 buf[0]=0;
                 xkb_state_key_get_utf8(k_state,btn,buf,sizeof(buf));
                 charEvent=!!buf[0];                                                  //text typed event
@@ -266,7 +265,7 @@ EventType Window_xcb::GetEvent(){
             }
             case XCB_KEY_RELEASE:{
                 uint8_t keycode=EVDEV_TO_HID[btn];
-                KeyEvent(keyUP,keycode);                                             //key released event
+                event=KeyEvent(keyUP,keycode);                                       //key released event
                 xkb_state_update_key(k_state,btn,XKB_KEY_UP);
                 break;
             }
@@ -281,7 +280,7 @@ EventType Window_xcb::GetEvent(){
             case XCB_CONFIGURE_NOTIFY:{                            // Window Reshape (move or resize)
                 if (!(e.response_type & 128)) break;               // only respond if message was sent with "SendEvent", (or x,y will be 0,0)
                 auto& e=*(xcb_configure_notify_event_t*)x_event;
-                ShapeEvent(e.x,e.y,e.width,e.height);
+                event=ShapeEvent(e.x,e.y,e.width,e.height);
                 break;
             }
             default: break;
@@ -539,32 +538,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
 //==============================================================
 
-
-//==============================================================
-/*
-WSIWindow::WSIWindow(const char* title,uint width,uint height){
-#ifdef VK_USE_PLATFORM_XCB_KHR
-    printf("XCB\n");
-#endif
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-    printf("XLIB\n");
-#endif
-#ifdef VK_USE_PLATFORM_MIR_KHR
-    printf("MIR\n");
-#endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    printf("WAYLAND\n");
-#endif
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
-    printf("ANDROID\n");
-#endif
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    printf("WIN32\n");
-#endif
-}
-*/
-//==============================================================
-
 WSIWindow::WSIWindow(CInstance& inst,const char* title,uint width,uint height){
 #ifdef VK_USE_PLATFORM_XCB_KHR
     printf("PLATFORM: XCB\n");
@@ -574,22 +547,41 @@ WSIWindow::WSIWindow(CInstance& inst,const char* title,uint width,uint height){
     printf("PLATFORM: WIN32\n");
     pimpl = new Window_win32(inst, title, width, height);
 #endif
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    printf("PLATFORM: ANDROID\n");
+    //pimpl = new Window_win32(inst, title, width, height);
+#endif
+/*
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    printf("XLIB\n");
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    printf("MIR\n");
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    printf("WAYLAND\n");
+#endif
+*/
 }
 
 WSIWindow::~WSIWindow()    { delete(pimpl); }
 bool WSIWindow::GetKeyState(eKeycode key){ return pimpl->KeyState(key); }
+bool WSIWindow::GetBtnState(uint8_t  btn){ return pimpl->BtnState(btn); }
+void WSIWindow::GetMousePos(int16_t& x, int16_t& y){ pimpl->MousePos(x,y); }
 void WSIWindow::Close()    { pimpl->Close(); }
 
 bool WSIWindow::ProcessEvents(){
     EventType e=pimpl->GetEvent();
     while(e.tag!=EventType::NONE){
-        switch(e.tag){
-            case EventType::MOUSE :if(OnMouseEvent) OnMouseEvent(e.mouse.action, e.mouse.x, e.mouse.y, e.mouse.btn);   break;
-            case EventType::KEY   :if(OnKeyEvent)   OnKeyEvent  (e.key.action, e.key.keycode);                         break;
-            case EventType::TEXT  :if(OnTextEvent)  OnTextEvent (e.text.str);                                          break;
-            case EventType::SHAPE :if(OnShapeEvent) OnShapeEvent(e.shape.x, e.shape.y, e.shape.width, e.shape.height); break;
-        }
-        e=pimpl->GetEvent();
+//     Using Virtual functions for event handlers
+       switch(e.tag){
+           case EventType::MOUSE :OnMouseEvent(e.mouse.action, e.mouse.x, e.mouse.y, e.mouse.btn);   break;
+           case EventType::KEY   :OnKeyEvent  (e.key.action, e.key.keycode);                         break;
+           case EventType::TEXT  :OnTextEvent (e.text.str);                                          break;
+           case EventType::SHAPE :OnShapeEvent(e.shape.x, e.shape.y, e.shape.width, e.shape.height); break;
+           default: break;
+       }
+       e=pimpl->GetEvent();
     }
     return pimpl->running;
 }

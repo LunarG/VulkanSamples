@@ -4,7 +4,7 @@
 //---------------------Error Checking-------------------------
 //  In Debug mode, convert a VkResult return value to a string.
 const char* VkResultStr(VkResult err){
-#if !defined(NDEBUG)
+//#if !defined(NDEBUG)
     switch (err) {
 #define STR(r) case r: return #r
         STR(VK_SUCCESS);      // 0
@@ -37,10 +37,10 @@ const char* VkResultStr(VkResult err){
     default:
         return "UNKNOWN_RESULT";
     }
-#else
-    (void)err;
-    return "";
-#endif
+//#else
+//    (void)err;
+//    return "";
+//#endif
 }
 
 //---------------------------------------------------------------
