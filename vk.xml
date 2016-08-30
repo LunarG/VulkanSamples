@@ -2148,11 +2148,6 @@ maintained in the master branch of the Khronos Vulkan Github project.
             <member><type>PFN_vkDebugReportCallbackEXT</type>     <name>pfnCallback</name></member>              <!-- Function pointer of a callback function-->
             <member optional="true"><type>void</type>*            <name>pUserData</name></member>                <!-- User data provided to callback function -->
         </type>
-        <type category="struct" name="VkDebugReportLayerFlagsEXT">
-            <member><type>VkStructureType</type>                  <name>sType</name></member>                    <!-- Must be VK_STRUCTURE_TYPE_DEBUG_REPORT_VALIDATION_FLAGS_EXT -->
-            <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
-            <member><type>uint64_t</type>                         <name>enabledValidationFlags</name></member>   <!-- Indicates classes of validation checks to enable -->
-        </type>
         <type category="struct" name="VkPipelineRasterizationStateRasterizationOrderAMD">
             <member values="VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_RASTERIZATION_ORDER_AMD"><type>VkStructureType</type> <name>sType</name></member>
             <member>const <type>void</type>*                      <name>pNext</name></member>                    <!-- Pointer to next structure -->
@@ -5384,15 +5379,13 @@ maintained in the master branch of the Khronos Vulkan Github project.
         </extension>
         <extension name="VK_EXT_debug_report" number="12" author="Google, Inc." contact="Courtney Goeltzenleuchter @courtney" supported="vulkan">
             <require>
-                <enum value="4"                                         name="VK_EXT_DEBUG_REPORT_SPEC_VERSION"/>
+                <enum value="3"                                         name="VK_EXT_DEBUG_REPORT_SPEC_VERSION"/>
                 <enum value="&quot;VK_EXT_debug_report&quot;"           name="VK_EXT_DEBUG_REPORT_EXTENSION_NAME"/>
                 <enum offset="0" extends="VkStructureType"              name="VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT"/>
                 <enum offset="1" dir="-" extends="VkResult"             name="VK_ERROR_VALIDATION_FAILED_EXT"/>
-                <enum offset="2" extends="VkStructureType"              name="VK_STRUCTURE_TYPE_DEBUG_REPORT_VALIDATION_FLAGS_EXT"/>
                 <enum value="VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT" name="VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT"/>
                 <type name="VkDebugReportObjectTypeEXT"/>
                 <type name="VkDebugReportErrorEXT"/>
-                <type name="VkDebugReportLayerFlagsEXT"/>
                 <command name="vkCreateDebugReportCallbackEXT"/>
                 <command name="vkDestroyDebugReportCallbackEXT"/>
                 <command name="vkDebugReportMessageEXT"/>
