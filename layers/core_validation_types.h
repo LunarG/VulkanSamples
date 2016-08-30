@@ -164,7 +164,9 @@ struct SAMPLER_NODE : public BASE_NODE {
     VkSampler sampler;
     VkSamplerCreateInfo createInfo;
 
-    SAMPLER_NODE(const VkSampler *ps, const VkSamplerCreateInfo *pci) : sampler(*ps), createInfo(*pci){};
+    SAMPLER_NODE(const VkSampler *ps, const VkSamplerCreateInfo *pci) : sampler(*ps), createInfo(*pci){
+        in_use.store(0);
+    };
 };
 
 class IMAGE_NODE : public BASE_NODE {

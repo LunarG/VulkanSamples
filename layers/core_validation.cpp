@@ -4596,12 +4596,16 @@ static void DecrementBoundResources(layer_data const *dev_data, GLOBAL_CB_NODE c
         switch (obj.type) {
         case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT: {
             auto set_node = getSetNode(dev_data, reinterpret_cast<VkDescriptorSet &>(obj.handle));
-            set_node->in_use.fetch_sub(1);
+            if (set_node) {
+                set_node->in_use.fetch_sub(1);
+            }
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT: {
             auto sampler_node = getSamplerNode(dev_data, reinterpret_cast<VkSampler &>(obj.handle));
-            sampler_node->in_use.fetch_sub(1);
+            if (sampler_node) {
+                sampler_node->in_use.fetch_sub(1);
+            }
             break;
         }
         default:
