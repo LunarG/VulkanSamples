@@ -128,14 +128,16 @@ more information.
 
 #### Image Layout Transitions in the Samples
 
-Look for a call to a function named `set_image_layout()` in the sample,
+Look for a call to a function named `set_image_layout()` in the sample
 near the beginning of the program.
 This is a helper function that generates a `vkCmdPipelineBarrier`
-command that goes into a command buffer and is then later sent to the
-GPU with the `execute_queue_command_buffer()` function
-towards the end of the sample.
+command and puts it into a command buffer.
 This helper function is designed to make it easy to transition
 image layouts in the samples.
+
+    set_image_layout(info, info.buffers[info.current_buffer].image,
+                     VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 In this case, it is changing the image layouts from
 `VK_IMAGE_LAYOUT_UNDEFINED`
@@ -144,10 +146,10 @@ to
 
 The old layouts are clearly undefined because the images were
 recently created by `vkCreateSwapchainKHR()`
-back in the swapchain sample and so have
-nothing in them that needs to be preserved.
+back in the swapchain sample and so are in an undefined state.
 
-The new layout is the layout needed for color buffers
+The new layout of `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL`
+is the layout needed for color buffers
 that are defined in the render pass as color attachments.
 
 The depth buffer layout also needs to be transitioned from
@@ -155,14 +157,13 @@ The depth buffer layout also needs to be transitioned from
 to
 `VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL`
 
-This is accomplished in basically the same way as for the color buffer
+Transitioning the depth buffer is accomplished in basically the same way as for the color buffer
 except that it is handled in the `init_depth_buffer()` helper function.
-in the same way you did it for the swap chain images, except that the
-new layout is the optimal one for depth buffers.
 
 Later in the sample, you can find where we close the command buffer
-by calling `execute_end_command_buffer()` and then execute it with
-`execute_queue_command_buffer()`.
+by calling `execute_end_command_buffer()`.
+You don't actually send these commands to the GPU in this sample, but
+you will use these commands in a later sample.
 
 As mentioned previously, it is unlikely that these commands will cause
 the GPU to do any work.
@@ -186,7 +187,7 @@ As mentioned at the top of this section, there are two attachments:
     attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    attachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     attachments[0].flags = 0;
 
     attachments[1].format = info.depth.format;
@@ -208,14 +209,25 @@ the display.
 
 Setting the `storeOp` member to DONT_CARE for the depth attachment means that
 you don't need the contents of the buffer when the render pass instance is complete.
-
-Telling the driver that you don't care about the contents of a buffer after it is used,
-as in the case of the depth buffer here, can be useful because it allows the driver to
+Telling the driver that you don't care about the contents of a buffer after it is used
+can be useful because it allows the driver to
 discard or page out that memory if it needed to without saving the contents.
 
-And since you have a command buffer ready to go that performs the image
-layout transitions,
-you can set the initial and final layouts in both attachments to optimal.
+For image layouts, you created a command buffer earlier in this section that
+transitions the image layouts to their optimum layouts.
+Therefore, you need to set the initial layouts in both attachments to optimal
+in order to match the result of the layout transitions.
+
+For the color attachment, you specify the final layout to be the
+`VK_IMAGE_LAYOUT_PRESENT_SRC_KHR` layout, which is the one that is
+appropriate for the present operation that occurs after the render pass is complete.
+This avoids needing to build up and submit a command in the command buffer to
+explicitly perform the layout transition.
+It also tells the GPU that it needs to perform an image layout transition at the end
+of the render pass.
+
+The depth buffer image final layout can remain the same as the initial layout,
+since it is not used after the render pass is complete.
 
 #### Subpass
 
