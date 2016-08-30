@@ -617,6 +617,7 @@ int sample_main(int argc, char *argv[]) {
 
     /* The second renderpass is complete */
     vkCmdEndRenderPass(info.cmd);
+    execute_pre_present_barrier(info);
     /* VULKAN_KEY_END */
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = {info.cmd};
