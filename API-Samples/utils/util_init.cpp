@@ -912,16 +912,12 @@ void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
     swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
 #endif
 
-    // Determine the number of VkImage's to use in the swap chain (we desire to
-    // own only 1 image at a time, besides the images being displayed and
-    // queued for display):
-    uint32_t desiredNumberOfSwapChainImages =
-        surfCapabilities.minImageCount + 1;
-    if ((surfCapabilities.maxImageCount > 0) &&
-        (desiredNumberOfSwapChainImages > surfCapabilities.maxImageCount)) {
-        // Application must settle for fewer images than desired:
-        desiredNumberOfSwapChainImages = surfCapabilities.maxImageCount;
-    }
+    // Determine the number of VkImage's to use in the swap chain.
+    // We need to acquire only 1 presentable image at at time.
+    // Asking for minImageCount images ensures that we can acquire
+    // 1 presentable image as long as we present it before attempting
+    // to acquire another.
+    uint32_t desiredNumberOfSwapChainImages = surfCapabilities.minImageCount;
 
     VkSurfaceTransformFlagBitsKHR preTransform;
     if (surfCapabilities.supportedTransforms &

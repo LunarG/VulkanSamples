@@ -233,7 +233,10 @@ since it is not used after the render pass is complete.
 
 The subpass definition is straightforward and would be more interesting
 if you were doing multiple subpasses.
-But the point of the subpass definition is to indicate which attachments
+And you might be interested in doing subpasses if you were doing
+some pre-processing or post-processing of your graphics data, perhaps
+for ambient occlusion or some other effect.
+But here, the subpass definition is useful for indicating which attachments
 are active during the subpass.
 
     VkAttachmentReference color_reference = {};

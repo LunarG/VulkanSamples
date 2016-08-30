@@ -93,6 +93,9 @@ set.
 This makes it possible for the hardware to process graphics
 workloads in parallel with blit workloads.
 
+Note that there is also a queue type for compute operations,
+which is not covered in this tutorial.
+
 Some simpler GPU hardware may advertise only a single queue family
 with multiple queue type flags set:
 

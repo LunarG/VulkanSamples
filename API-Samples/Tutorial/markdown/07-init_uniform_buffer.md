@@ -83,10 +83,10 @@ uniform buffer.
     res = vkAllocateMemory(info.device, &alloc_info, NULL,
                            &(info.uniform_data.mem));
 
-The VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT communicates that the memory
+The VK\_MEMORY\_PROPERTY\_HOST\_VISIBLE_BIT communicates that the memory
 should be mapped so that the CPU (host) can access it.
 
-The VK_MEMORY_PROPERTY_HOST_COHERENT_BIT requests that the writes
+The VK\_MEMORY\_PROPERTY\_HOST\_COHERENT_BIT requests that the writes
 to the memory by the host are visible to the device (and vice-versa)
 without the need to flush memory caches.
 This just makes it a bit simpler to program, since it isn't
@@ -126,7 +126,7 @@ And you are done.
 
 <table border="1" width="100%">
     <tr>
-        <td align="center" width="33%">Previous: <a href="05-init_swapchain.html" title="Prev">Swapchain</a></td>
+        <td align="center" width="33%">Previous: <a href="05-init_depth_buffer.html" title="Prev">Depth Buffer</a></td>
         <td align="center" width="33%">Back to: <a href="index.html" title="Index">Index</a></td>
         <td align="center" width="33%">Next: <a href="08-init_pipeline_layout.html" title="Next">Pipeline Layouts</a></td>
     </tr>

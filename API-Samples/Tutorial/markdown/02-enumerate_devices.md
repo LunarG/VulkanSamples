@@ -5,7 +5,7 @@
 Code file for this section is `02-enumerate_devices.cpp`
 
 The next step in the samples progression is determining the
-physical graphics devices present on the system.
+physical devices present on the system.
 
 After you have created an instance, the loader knows how many Vulkan
 physical devices are available, but your application doesn't know this yet.
