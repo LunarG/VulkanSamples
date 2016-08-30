@@ -17,6 +17,7 @@ cmake_minimum_required(VERSION 3.4.1)
   aux_source_directory( vulkan_wrapper                                 SRC_LIST)
   aux_source_directory( src/main/cpp                                   SRC_LIST)
   aux_source_directory( ../..                                          SRC_LIST)
+  aux_source_directory( ../../WSIWindow                                SRC_LIST)
 
 # Create native shared library
 add_library( native             # Sets the name of the library.

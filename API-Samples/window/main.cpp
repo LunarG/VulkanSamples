@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "WSIWindow.h"
+#include "WSIWindow/WSIWindow.h"
 
 using namespace std;
 

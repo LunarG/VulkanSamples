@@ -1,6 +1,8 @@
 project(window)
 cmake_minimum_required(VERSION 2.8)
 aux_source_directory(. SRC_LIST)
+aux_source_directory(WSIWindow SRC_LIST)
+
 add_executable(${PROJECT_NAME} ${SRC_LIST})
 
 include_directories("${PROJECT_SOURCE_DIR}")
@@ -24,9 +26,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         include_directories(${XCB_INCLUDE_DIRS})                 # /usr/include
         target_link_libraries(${PROJECT_NAME} ${XCB_LIBRARIES})  # /usr/lib/x86_64-linux-gnu/libxcb.so
         #find_library(XKB "xkbcommon")                            # /usr/lib/x86_64-linux-gnu/
-        #target_link_libraries(${PROJECT_NAME} ${XKB})            # keyboard support as static link library (adds 243Kb)
+        #target_link_libraries(${PROJECT_NAME} ${XKB})            # keyboard support as a static link library (adds 243Kb)
         LINK_DIRECTORIES("/usr/lib/x86_64-linux-gnu/")
-        TARGET_LINK_LIBRARIES(${PROJECT_NAME} "libxkbcommon.so")  #xkb keyboard support as shared library
+        TARGET_LINK_LIBRARIES(${PROJECT_NAME} "libxkbcommon.so")  #xkb keyboard support as a shared library
     endif()
 
     if (BUILD_WSI_XLIB_SUPPORT)
