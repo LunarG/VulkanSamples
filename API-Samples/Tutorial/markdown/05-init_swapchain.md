@@ -101,6 +101,9 @@ as instance extensions.
 * This sample uses the `init_device_extension_names()` function
 to load a swapchain extension as a device extension.
 
+You can learn more about instance and device extensions by visiting the
+documentation section on the [LunarXchange website](https://vulkan.lunarg.com).
+
 ## Queue Family and Present
 
 The "present" operation consists of getting one of the swapchain images
@@ -233,9 +236,7 @@ You then add the resulting surface to the swapchain create info structure:
 #### Device Surface Formats
 
 You also need to specify the format of the surface
-when creating the swap chain.
-You will use the same format to create the images in the
-swap chain.
+when creating the swapchain.
 In this context, the "format" refers to the pixel formats
 as described by the `VkFormat` enumeration, where
 `VK_FORMAT_B8G8R8A8_UNORM` is one common example for a
@@ -263,11 +264,27 @@ and `vkGetPhysicalDeviceSurfacePresentModesKHR()` to
 get the needed information.
 It can then fill in the following fields:
 
+    uint32_t desiredNumberOfSwapChainImages = surfCapabilities.minImageCount;
+
     swapchain_ci.minImageCount = desiredNumberOfSwapChainImages;
     swapchain_ci.imageExtent.width = swapChainExtent.width;
     swapchain_ci.imageExtent.height = swapChainExtent.height;
     swapchain_ci.preTransform = preTransform;
     swapchain_ci.presentMode = swapchainPresentMode;
+
+You should set the `minImageCount` member to a value that represents the
+buffering strategy that your application uses, double-buffering or
+triple-buffering for example.
+This sample queries the minimum number of images that can be in a
+swapchain using the `vkGetPhysicalDeviceSurfaceCapabilitiesKHR()`
+function, storing the result in `surfCapabilities`.
+Asking for this minimum number of images ensures that we can acquire
+one presentable image as long as we present it before attempting
+to acquire another.
+This represents a double-buffered configuration, since you will be able
+to acquire one image to render into, while the other image is being presented.
+If you wanted to triple-buffer, then you would ask for one more image and then
+be able to acquire two buffers to render into before you present them.
 
 ## Different Queue Families for Graphics and Present
 
@@ -292,7 +309,7 @@ images to  be shared between queue families.
     }
 
 The above fields supply more of the basic info needed to create
-the swap chain.
+the swapchain.
 You can inspect the rest of the code in the sample to see
 how this information was obtained and how the rest of
 the create info structure is filled out.
@@ -304,7 +321,7 @@ you can now create the swapchain:
 
     res = vkCreateSwapchainKHR(info.device, &swapchain_ci, NULL, &info.swap_chain);
 
-This call creates a set of images that make up the swap chain.
+This call creates a set of images that make up the swapchain.
 At some point, you need the handles to the individual images so that
 you can tell the GPU which images to use for rendering.
 The `vkCreateSwapchainKHR()` function creates the images itself

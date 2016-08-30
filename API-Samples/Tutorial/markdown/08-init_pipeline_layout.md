@@ -130,6 +130,11 @@ looks like:
     } myBufferVals;
 
 This maps the uniform buffer contents to the `myBufferVals` structure.
+"set=M" was not specified and defaults to 0.
+
+"std140" is a standard to describe how data is packed in uniform blocks.
+You may wish to refer to it if you wish to put more data in a uniform block.
+See [this doc](https://www.opengl.org/registry/specs/ARB/uniform_buffer_object.txt) for more information.
 
 <table border="1" width="100%">
     <tr>

@@ -7,7 +7,7 @@ Code file for this section is `06-init_depth_buffer.cpp`
 Depth buffers are optional, but you will need a depth buffer
 to render a 3D cube in the final sample.
 And you need only one for rendering each frame,
-even if the swap chain has more than one image.
+even if the swapchain has more than one image.
 This is because you can reuse the same depth buffer while using
 each image in the swapchain.
 
