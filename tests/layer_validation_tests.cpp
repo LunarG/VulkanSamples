@@ -3304,7 +3304,7 @@ TEST_F(VkLayerTest, InvalidUsageBits)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     VkImageObj image(m_device);
-    // Initialize image with USAGE_INPUT_ATTACHMENT
+    // Initialize image with USAGE_TRANSIENT_ATTACHMENT
     image.init(128, 128, VK_FORMAT_D24_UNORM_S8_UINT,
                VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL,
                0);
@@ -3356,6 +3356,37 @@ TEST_F(VkLayerTest, InvalidUsageBits)
                            image.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                            1, &region);
     m_errorMonitor->VerifyFound();
+}
+
+TEST_F(VkLayerTest, ValidUsage)
+{
+    TEST_DESCRIPTION(
+        "Verify that creating an image view from an image with valid usage "
+        "doesn't generate validation errors");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    m_errorMonitor->ExpectSuccess();
+    // Verify that we can create a view with usage INPUT_ATTACHMENT
+    VkImageObj image(m_device);
+    image.init(128, 128, VK_FORMAT_R8G8B8A8_UNORM,
+                VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL,
+                0);
+    ASSERT_TRUE(image.initialized());
+    VkImageView imageView;
+    VkImageViewCreateInfo ivci = {};
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.image = image.handle();
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ivci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ivci.subresourceRange.layerCount = 1;
+    ivci.subresourceRange.baseMipLevel = 0;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    vkCreateImageView(m_device->device(), &ivci, NULL, &imageView);
+    m_errorMonitor->VerifyNotFound();
+    vkDestroyImageView(m_device->device(), imageView, NULL);
 }
 #endif // MEM_TRACKER_TESTS
 
