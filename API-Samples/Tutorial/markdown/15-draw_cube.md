@@ -177,20 +177,43 @@ For example, the optimum GPU memory layout for rendering might be "tiled",
 as discussed in the render_pass section of this tutorial.
 But the display hardware may prefer a linear memory layout for scanning out the memory to the
 display hardware.
+You use the `VK_IMAGE_LAYOUT_PRESENT_SRC_KHR` layout to specify that the image is about to
+be presented to the display.
 
-Luckily, in Vulkan, there is a `VK_IMAGE_LAYOUT_PRESENT_SRC_KHR` layout, which is the most
-appropriate for presenting the image to the display.
+You already took care of this layout transition in the render_pass section by
+specifying different values for `initialLayout` and `finalLayout` in the
+description of the color image attachment:
 
-There are two ways to accomplish this transition.
-One way is with the memory barrier approach, which you used to transition image layouts
-before drawing.
-Another way is to program the layout transition as part of the render pass.
-Both are explained here.
+    VkAttachmentDescription attachments[2];
+    attachments[0].format = info.format;
+    attachments[0].samples = NUM_SAMPLES;
+    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    attachments[0].flags = 0;
 
 ### Memory barrier approach
 
-You need to perform this transition with another pipeline barrier, in much the same
-way the `set_image_layout()` performs layout transitions:
+Note that there is another way to accomplish this layout transition by recording another
+memory barrier command in the command buffer.
+This alternate approach may be useful in certain cases, such as in queue
+submissions that do not use a render pass.
+An example of this situation can be found in the `copy_blit_image` sample, which is
+not part of this tutorial, but can be found in the same folder as these
+tutorial samples.
+
+In this sample, you are using a render pass, but you can still use this alternate approach
+if you leave the `finalLayout` for the color attachment the same as `initialLayout`
+in the render_pass sample where you create the render pass:
+
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+This then requires you to perform this transition with another pipeline memory barrier,
+in much the same way the `set_image_layout()` performs layout transitions:
 
     VkImageMemoryBarrier prePresentBarrier = {};
     prePresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -211,39 +234,12 @@ way the `set_image_layout()` performs layout transitions:
                          VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0,
                          NULL, 1, &prePresentBarrier);
 
-Once this command executes, the image buffer is ready to display.
+The above code is not in this sample, but can be found in the `copy_blit_image`
+sample.
+
+Once this command executes after the end of the render pass,
+the image buffer is ready to display.
 And of course, you do not need to transition the depth buffer image layout.
-
-Whether or not this triggers any real activity depends on the GPU and display hardware.
-On some devices, the optimum GPU layout and the optimum present layout use the same
-memory access patterns, so these barriers would be no-ops.
-In the "worst case", these barriers might trigger some sort of memory copy
-operation to reformat the memory from one pattern to another.
-But in most devices that are "efficient", the display is able to read the optimum
-GPU layout.
-
-### Render pass approach
-
-For this approach, you need to go back to the render_pass section and change
-the description for the color attachment when you define the render pass:
-
-    VkAttachmentDescription attachments[2];
-    attachments[0].format = info.format;
-    attachments[0].samples = NUM_SAMPLES;
-    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;    //  <--- change
-    attachments[0].flags = 0;
-
-This just involves changing the final layout of the color attachment,
-which will be the layout after the render pass is complete.
-
-This render pass approach may be better than submitting another memory barrier command
-in the command buffer because it is easier to code and may be more efficient.
-The rest of the samples use this approach.
 
 ## Submit the Command Buffer
 
