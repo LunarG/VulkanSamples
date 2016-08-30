@@ -635,6 +635,9 @@ Section "uninstall"
         StrCpy $1 85
     ${Endif}
     Call un.CheckForError
+    IfFileExists "$TEMP\VulkanRT\configure_rt_uninstall.log" 0 endif_log_exists
+    Delete "$TEMP\VulkanRT\configure_rt_uninstall.log"
+    endif_log_exists:
     Rename "$IDir\configure_rt.log" "$TEMP\VulkanRT\configure_rt_uninstall.log"
 
     # If Ref Count is zero, remove install dir
