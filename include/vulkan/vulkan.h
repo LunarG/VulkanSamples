@@ -213,7 +213,6 @@ typedef enum VkStructureType {
     VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR = 1000008000,
     VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR = 1000009000,
     VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT = 1000011000,
-    VK_STRUCTURE_TYPE_DEBUG_REPORT_VALIDATION_FLAGS_EXT = 1000011002,
     VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_RASTERIZATION_ORDER_AMD = 1000018000,
     VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT = 1000022000,
     VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_TAG_INFO_EXT = 1000022001,
@@ -3735,7 +3734,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWin32PresentationSupportKHR(
 #define VK_EXT_debug_report 1
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDebugReportCallbackEXT)
 
-#define VK_EXT_DEBUG_REPORT_SPEC_VERSION  4
+#define VK_EXT_DEBUG_REPORT_SPEC_VERSION  3
 #define VK_EXT_DEBUG_REPORT_EXTENSION_NAME "VK_EXT_debug_report"
 #define VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT
 
@@ -3805,13 +3804,6 @@ typedef VkBool32 (VKAPI_PTR *PFN_vkDebugReportCallbackEXT)(
     const char*                                 pLayerPrefix,
     const char*                                 pMessage,
     void*                                       pUserData);
-
-
-typedef struct VkDebugReportLayerFlagsEXT {
-    VkStructureType    sType;
-    const void*        pNext;
-    uint64_t           enabledValidationFlags;
-} VkDebugReportLayerFlagsEXT;
 
 typedef struct VkDebugReportCallbackCreateInfoEXT {
     VkStructureType                 sType;
