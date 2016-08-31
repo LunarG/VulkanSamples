@@ -217,7 +217,7 @@ struct loader_icd {
 #endif
 #ifdef VK_USE_PLATFORM_MIR_KHR
     PFN_vkGetPhysicalDeviceMirPresentationSupportKHR
-        GetPhysicalDeviceMirPresentvationSupportKHR;
+        GetPhysicalDeviceMirPresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
     PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR
