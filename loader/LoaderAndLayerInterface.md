@@ -1481,12 +1481,19 @@ objects.  Two common methods to do this are hash maps and object wrapping.
 
 ###### Wrapping:
 
-The loader
-supports layers wrapping any Vulkan object including dispatchable objects.
-Layers which wrap objects should ensure they always unwrap objects before
-passing them down the chain. This implies the layer must intercept every Vulkan
-command which uses the object in question.  This includes adding support
-for all extensions with commands using any object the layer wraps.
+The loader supports layers wrapping any Vulkan object including dispatchable
+objects.
+For commands that return object handles, the layer saves the handle that is
+returned from a lower-level layer (possibly the ICD), and returns its own
+handle to the layer above it (possibly the application).  For commands that are
+given previously-returned handles, the layer unwraps the handle; that is it
+looks up the saved handle and gives that to the layer below it.
+
+Layers which wrap objects must ensure they always unwrap objects before passing
+them down the chain.  This means that the layer must intercept every Vulkan
+command which uses the object in question, and wrap or unwrap the object, as
+appropriate.  This includes adding support for all extensions with commands
+using any object the layer wraps.
 
 Layers above the object wrapping layer will see the wrapped object. Layers
 which wrap dispatchable objects must ensure that the first field in the wrapping
@@ -1505,6 +1512,33 @@ struct my_wrapped_instance_obj_ {
     // whatever data layer wants to add to this object
 };
 ```
+
+Layers that wrap dispatchable objects must follow the guidelines for creating
+new dispatchable objects (below).
+
+####### Cautions:
+
+Layers are generally discouraged from wrapping objects, because of the
+potential for incompatibilities with new extensions.  For example, let's say
+that a layer wraps VkImage objects, and properly wraps and unwraps VkImage
+object handles for all core commands.  If a new extension is created which has
+commands that take VkImage objects as parameters, and if the layer does not
+support those new commands, an application that uses both the layer and the new
+extension will have undefined behavior when those new commands are called (e.g.
+the application may crash).  This is becaues the lower-level layers and ICD
+won't receive the handle that they generated.  Instead, they will receive a
+handle that is only known by the layer that is wrapping the object.
+
+Because of the potential for incompatibilities with unsupported extensions,
+layers that wrap objects must check which extensions are being used by the
+application, and take appropriate action if the layer is used with unsupported
+extensions (e.g. disable layer functionality, stop wrapping objects, issue a
+message to the user).
+
+The reason that the validation layers wrap objects, is to track the proper use
+and destruction of each object.  They issue a validation error if used with
+unsupported extensions, alerting the user to the potential for undefined
+behavior.
 
 ###### Hash Maps:
 Alternatively, a layer may want to use a hash map to associate data with a
