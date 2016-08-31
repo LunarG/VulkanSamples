@@ -1,5 +1,11 @@
 echo off
 
+where msbuild.exe > nul 2>&1
+if not %errorlevel% equ 0 (
+    echo ERROR: Failed to find Visual Studio msbuild.exe in your path
+    exit /b 1
+)
+
 :: Check that cmake is configured
 cmake --version
 if not %errorlevel% equ 0 (
