@@ -429,7 +429,7 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
                         auto image_view_data = getImageViewData(device_data_, image_view);
                         assert(image_view_data);
 
-                        if (~reqs & (1 << image_view_data->viewType)) {
+                        if ((reqs & DESCRIPTOR_REQ_ALL_VIEW_TYPE_BITS) && (~reqs & (1 << image_view_data->viewType))) {
                             // bad view type
                             std::stringstream error_str;
                             error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i
