@@ -1477,16 +1477,21 @@ vkCreateDevice(
 #### Special Considerations
 ##### Associating private data with Vulkan objects within a layer
 A layer may want to associate it's own private data with one or more Vulkan
-objects.
-Two common methods to do this are hash maps  and object wrapping. The loader
+objects.  Two common methods to do this are hash maps and object wrapping. 
+
+###### Wrapping:
+
+The loader
 supports layers wrapping any Vulkan object including dispatchable objects.
 Layers which wrap objects should ensure they always unwrap objects before
 passing them down the chain. This implies the layer must intercept every Vulkan
-command which uses the object in question. Layers above the object wrapping
-layer will see the wrapped object. Layers which wrap dispatchable objects must
-ensure that the first field in the wrapping structure is a pointer to a dispatch table
-as defined in vk_layer.h. Specifically, an instance wrapped dispatchable object
-could be as follows:
+command which uses the object in question.  This includes adding support
+for all extensions with commands using any object the layer wraps.
+
+Layers above the object wrapping layer will see the wrapped object. Layers
+which wrap dispatchable objects must ensure that the first field in the wrapping
+structure is a pointer to a dispatch table as defined in vk_layer.h. Specifically, an
+instance wrapped dispatchable object could be as follows:
 ```
 struct my_wrapped_instance_obj_ {
     VkLayerInstanceDispatchTable *disp;
@@ -1501,6 +1506,7 @@ struct my_wrapped_instance_obj_ {
 };
 ```
 
+###### Hash Maps:
 Alternatively, a layer may want to use a hash map to associate data with a
 given object. The key to the map could be the object. Alternatively, for
 dispatchable objects at a given level (eg device or instance) the layer may
