@@ -477,7 +477,7 @@ Section
 
         # The program failed, and we don't know why.
         # Simply configure system to use our loader and vulkaninfo.
-        MessageBox MB_OK "Warning!$\n$\nPowershell script called by VulkanRT Installer failed with error $0. Is Powershell installed on your system?$\n$\nWill configure system with Vulkan $FileVersion." /SD IDOK
+        MessageBox MB_OK "Warning!$\n$\nConfigureRT program called by VulkanRT Installer failed with error $0. This may result in an incomplete installation.$\n$\nWill configure system with Vulkan $FileVersion." /SD IDOK
         ${If} ${RunningX64}
             Delete  $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
             Delete  $WINDIR\SysWow64\vulkaninfo.exe
@@ -623,7 +623,7 @@ Section "uninstall"
     ${If} $0 != 0
         SetOutPath "$IDir"
         Call un.DiagConfigLayersAndVulkanDLL
-        MessageBox MB_OK "Warning!$\n$\nPowershell script called by VulkanRT Uninstaller failed with error $0. Is Powershell installed on your system?$\n$\nVulkan $FileVersion has been uninstalled from your system." /SD IDOK
+        MessageBox MB_OK "Warning!$\n$\nConfigureRT program called by VulkanRT Installer failed with error $0. This may result in an incomplete uninstall.$\n$\nVulkan $FileVersion has been uninstalled from your system." /SD IDOK
         ${If} ${RunningX64}
             Delete  $WINDIR\SysWow64\vulkan-${VERSION_ABI_MAJOR}.dll
             Delete  $WINDIR\SysWow64\vulkaninfo.exe
