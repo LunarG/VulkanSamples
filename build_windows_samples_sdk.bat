@@ -1,25 +1,17 @@
 echo off
 
-where msbuild.exe > nul 2>&1
-if not %errorlevel% equ 0 (
-    echo ERROR: Failed to find Visual Studio msbuild.exe in your path
-    exit /b 1
-)
-
 :: Check that cmake is configured
-cmake --version
+where cmake.exe > nul 2>&1
 if not %errorlevel% equ 0 (
     echo ERROR: CMake was not found. Please install CMake or put cmake.exe in your PATH.
     exit /b 1
 )
 
-:: Check that msbuild is configured
-msbuild /version
+where msbuild.exe > nul 2>&1
 if not %errorlevel% equ 0 (
-    echo.
     echo ERROR: MSBuild was not found. Please use a visual studio developer console, or put MSBuild.exe in your PATH.
     exit /b 1
-) else echo.
+)
 
 :: Get the version of msbuild
 set cmd="msbuild /version | findstr /rxc:"[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*""
