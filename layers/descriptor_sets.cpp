@@ -323,14 +323,19 @@ cvdescriptorset::DescriptorSet::~DescriptorSet() {
 }
 
 
-static char const * string_descriptor_req_view_type(descriptor_req req) {
+static std::string string_descriptor_req_view_type(descriptor_req req) {
+    std::string result("");
     for (unsigned i = 0; i <= VK_IMAGE_VIEW_TYPE_END_RANGE; i++) {
         if (req & (1 << i)) {
-            return string_VkImageViewType(VkImageViewType(i));
+            if (result.size()) result += ", ";
+            result += string_VkImageViewType(VkImageViewType(i));
         }
     }
 
-    return "(none)";
+    if (!result.size())
+        result = "(none)";
+
+    return result;
 }
 
 
