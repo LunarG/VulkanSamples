@@ -14110,6 +14110,41 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
 }
 
+TEST_F(VkLayerTest, QueryPoolInUseDestroyedSignaled) {
+    TEST_DESCRIPTION("Delete in-use query pool.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkQueryPool query_pool;
+    VkQueryPoolCreateInfo query_pool_ci{};
+    query_pool_ci.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    query_pool_ci.queryType = VK_QUERY_TYPE_TIMESTAMP;
+    query_pool_ci.queryCount = 1;
+    vkCreateQueryPool(m_device->device(), &query_pool_ci, nullptr, &query_pool);
+    BeginCommandBuffer();
+    // Reset query pool to create binding with cmd buffer
+    vkCmdResetQueryPool(m_commandBuffer->handle(), query_pool, 0, 1);
+
+    EndCommandBuffer();
+
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    // Submit cmd buffer and then destroy query pool while in-flight
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Cannot delete query pool 0x");
+    vkDestroyQueryPool(m_device->handle(), query_pool, NULL);
+    m_errorMonitor->VerifyFound();
+
+    vkQueueWaitIdle(m_device->m_queue);
+    // Now that cmd buffer done we can safely destroy query_pool
+    vkDestroyQueryPool(m_device->handle(), query_pool, NULL);
+}
+
 TEST_F(VkLayerTest, QueueForwardProgressFenceWait) {
     TEST_DESCRIPTION("Call VkQueueSubmit with a semaphore that is already "
                      "signaled but not waited on by the queue. Wait on a "
