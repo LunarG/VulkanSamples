@@ -1514,7 +1514,7 @@ struct my_wrapped_instance_obj_ {
 Layers that wrap dispatchable objects must follow the guidelines for creating
 new dispatchable objects (below).
 
-####### Cautions:
+<u><b>Cautions</b></u>
 
 Layers are generally discouraged from wrapping objects, because of the
 potential for incompatibilities with new extensions.  For example, let's say
