@@ -1,9 +1,9 @@
 #include <stdio.h>
-#include "WSIWindow/WSIWindow.h"
+#include "WSIWindow.h"
 
 using namespace std;
 
-//-- USING VIRTUAL FUNCTION EVENT HANDLERS --
+//-- EVENT HANDLERS --
 class MyWindow : public WSIWindow{
     using WSIWindow::WSIWindow;     //Inherit base constructor
 
@@ -28,7 +28,6 @@ class MyWindow : public WSIWindow{
     void OnShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height){
         printf("Shape: x=%4d y=%4d width=%4d height=%4d\n",x,y,width, height);
     }
-
 };
 
 

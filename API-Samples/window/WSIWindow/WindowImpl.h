@@ -2,19 +2,6 @@
 #define WINDOWIMPL_H
 
 #include "WSIWindow.h"
-//#include <string.h>  //for strlen
-
-//#ifdef VK_USE_PLATFORM_XCB_KHR        // Linux XCB:
-//    #include <xcb/xcb.h>              //   window
-//    #include <xkbcommon/xkbcommon.h>  //   keyboard
-//#endif
-#ifdef VK_USE_PLATFORM_WIN32_KHR      // Windows:
-    #include <windowsx.h>             //   Mouse
-    //#pragma warning(disable:4996)
-#endif
-#ifdef VK_USE_PLATFORM_Android_KHR
-//TODO
-#endif
 
 #if defined(NDEBUG) && defined(__GNUC__)
 #define U_ASSERT_ONLY __attribute__((unused))

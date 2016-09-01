@@ -3,9 +3,8 @@ cmake_minimum_required(VERSION 2.8)
 add_definitions(-std=c++11)
 
 set(VULKAN_SDK $ENV{VULKAN_SDK})
-
-include_directories("${PROJECT_SOURCE_DIR}")
 include_directories("${VULKAN_SDK}/include")
+include_directories("${PROJECT_SOURCE_DIR}")
 
 aux_source_directory(. SRC_LIST)
 #aux_source_directory(WSIWindow SRC_LIST)

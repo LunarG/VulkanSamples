@@ -3,6 +3,9 @@
 //==========================Win32===============================
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 
+#include <windowsx.h>             //   Mouse
+//#pragma warning(disable:4996)
+
 // Convert native Win32 keyboard scancode to cross-platform USB HID code.
 const unsigned char WIN32_TO_HID[256] = {
       0,  0,  0,  0,  0,  0,  0,  0, 42, 43,  0,  0,  0, 40,  0,  0,

@@ -20,7 +20,6 @@
     #endif
 #endif
 
-
 //----------------------------------------------------------------------------------
 
 
@@ -29,19 +28,9 @@
 
 
 #include <cstdlib>
-#include <assert.h>
-
 #include <stdio.h>
+#include <assert.h>
 #include <vulkan/vulkan.h>
-/*
-#if defined(NDEBUG) && defined(__GNUC__)
-#define U_ASSERT_ONLY __attribute__((unused))
-#define ASSERT(VAL,MSG)
-#else
-#define U_ASSERT_ONLY
-#define ASSERT(VAL,MSG) if(!VAL){ printf(MSG); fflush(stdout); exit(1); }
-#endif
-*/
 
 typedef unsigned int uint;
 const char* VkResultStr(VkResult err);  //Convert vulkan result code to a string.
