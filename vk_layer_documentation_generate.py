@@ -323,7 +323,7 @@ class LayerDoc:
         core_api_names = [p.name for p in vulkan.core.protos]
         wsi_s_names = [p.name for p in vulkan.ext_khr_surface.protos]
         wsi_ds_names = [p.name for p in vulkan.ext_khr_device_swapchain.protos]
-        dbg_rpt_names = [p.name for p in vulkan.lunarg_debug_report.protos]
+        dbg_rpt_names = [p.name for p in vulkan.ext_debug_report.protos]
         api_names = core_api_names + wsi_s_names + wsi_ds_names + dbg_rpt_names
         for ln in self.layer_doc_dict:
             for chk in self.layer_doc_dict[ln]:
