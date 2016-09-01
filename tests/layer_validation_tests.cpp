@@ -14100,7 +14100,7 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
     vkDestroyFence(m_device->device(), fence, nullptr);
     m_errorMonitor->VerifyFound();
 
-    m_errorMonitor->SetDesiredFailureMsg(0, "");
+    vkQueueWaitIdle(m_device->m_queue);
     vkDestroySemaphore(m_device->device(), semaphore, nullptr);
     vkDestroyFence(m_device->device(), fence, nullptr);
     vkDestroyEvent(m_device->device(), event, nullptr);
