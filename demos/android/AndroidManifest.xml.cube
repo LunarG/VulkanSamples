@@ -1,6 +1,11 @@
 <?xml version="1.0"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.Cube" android:versionCode="1" android:versionName="1.0">
 
+    <!-- Allow this app to read and write files (for use by tracing libraries). -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <!-- This is the platform API where NativeActivity was introduced. -->
     <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="23"/>
 
