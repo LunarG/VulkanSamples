@@ -557,32 +557,26 @@ static size_t loader_platform_combine_path(char *dest, size_t len, ...) {
  * Given string of three part form "maj.min.pat" convert to a vulkan version
  * number.
  */
-static uint32_t loader_make_version(const char *vers_str) {
+static uint32_t loader_make_version(char *vers_str) {
     uint32_t vers = 0, major = 0, minor = 0, patch = 0;
-    char *minor_str = NULL;
-    char *patch_str = NULL;
-    char *cstr;
-    char *str;
+    char *vers_tok;
 
-    if (!vers_str)
+    if (!vers_str) {
         return vers;
-    cstr = loader_stack_alloc(strlen(vers_str) + 1);
-    strcpy(cstr, vers_str);
-    while ((str = strchr(cstr, '.')) != NULL) {
-        if (minor_str == NULL) {
-            minor_str = str + 1;
-            *str = '\0';
-            major = atoi(cstr);
-        } else if (patch_str == NULL) {
-            patch_str = str + 1;
-            *str = '\0';
-            minor = atoi(minor_str);
-        } else {
-            return vers;
-        }
-        cstr = str + 1;
     }
-    patch = atoi(patch_str);
+
+    vers_tok = strtok(vers_str, ".\"\n\r");
+    if (NULL != vers_tok) {
+        major = (uint16_t)atoi(vers_tok);
+        vers_tok = strtok(NULL, ".\"\n\r");
+        if (NULL != vers_tok) {
+            minor = (uint16_t)atoi(vers_tok);
+            vers_tok = strtok(NULL, ".\"\n\r");
+            if (NULL != vers_tok) {
+                patch = (uint16_t)atoi(vers_tok);
+            }
+        }
+    }
 
     return VK_MAKE_VERSION(major, minor, patch);
 }
