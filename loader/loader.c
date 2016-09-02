@@ -3254,7 +3254,7 @@ static void loader_init_dispatch_dev_ext_entry(struct loader_instance *inst,
         gdpa_value = dev->loader_dispatch.core_dispatch.GetDeviceProcAddr(
             dev->device, funcName);
         if (gdpa_value != NULL)
-            dev->loader_dispatch.ext_dispatch.DevExt[idx] =
+            dev->loader_dispatch.ext_dispatch.dev_ext[idx] =
                 (PFN_vkDevExt)gdpa_value;
     } else {
         for (uint32_t i = 0; i < inst->total_icd_count; i++) {
@@ -3265,7 +3265,7 @@ static void loader_init_dispatch_dev_ext_entry(struct loader_instance *inst,
                     ldev->loader_dispatch.core_dispatch.GetDeviceProcAddr(
                         ldev->device, funcName);
                 if (gdpa_value != NULL)
-                    ldev->loader_dispatch.ext_dispatch.DevExt[idx] =
+                    ldev->loader_dispatch.ext_dispatch.dev_ext[idx] =
                         (PFN_vkDevExt)gdpa_value;
                 ldev = ldev->next;
             }

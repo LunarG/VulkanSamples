@@ -45,7 +45,7 @@ loader_init_device_dispatch_table(struct loader_dev_dispatch_table *dev_table,
                                   PFN_vkGetDeviceProcAddr gpa, VkDevice dev) {
     VkLayerDispatchTable *table = &dev_table->core_dispatch;
     for (uint32_t i = 0; i < MAX_NUM_DEV_EXTS; i++)
-        dev_table->ext_dispatch.DevExt[i] = (PFN_vkDevExt)vkDevExtError;
+        dev_table->ext_dispatch.dev_ext[i] = (PFN_vkDevExt)vkDevExtError;
 
     table->GetDeviceProcAddr =
         (PFN_vkGetDeviceProcAddr)gpa(dev, "vkGetDeviceProcAddr");

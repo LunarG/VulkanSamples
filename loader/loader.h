@@ -144,9 +144,9 @@ struct loader_dispatch_hash_list {
 };
 
 #define MAX_NUM_DEV_EXTS 250
-// loader_dispatch_hash_entry and loader_dev_ext_dispatch_table.DevExt have one
-// to one
-// correspondence; one loader_dispatch_hash_entry for one DevExt dispatch entry.
+// loader_dispatch_hash_entry and loader_dev_ext_dispatch_table.dev_ext have
+// one to one correspondence; one loader_dispatch_hash_entry for one dev_ext
+// dispatch entry.
 // Also have a one to one correspondence with functions in dev_ext_trampoline.c
 struct loader_dispatch_hash_entry {
     char *func_name;
@@ -155,7 +155,7 @@ struct loader_dispatch_hash_entry {
 
 typedef void(VKAPI_PTR *PFN_vkDevExt)(VkDevice device);
 struct loader_dev_ext_dispatch_table {
-    PFN_vkDevExt DevExt[MAX_NUM_DEV_EXTS];
+    PFN_vkDevExt dev_ext[MAX_NUM_DEV_EXTS];
 };
 
 struct loader_dev_dispatch_table {
