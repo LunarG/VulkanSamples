@@ -858,14 +858,16 @@ VkResult loader_add_device_extensions(const struct loader_instance *inst,
 VkResult loader_init_generic_list(const struct loader_instance *inst,
                               struct loader_generic_list *list_info,
                               size_t element_size) {
-    list_info->capacity = 32 * element_size;
+    size_t capacity = 32 * element_size;
+    list_info->count = 0;
+    list_info->capacity = 0;
     list_info->list = loader_instance_heap_alloc(
-        inst, list_info->capacity, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        inst, capacity, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (list_info->list == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
-    memset(list_info->list, 0, list_info->capacity);
-    list_info->count = 0;
+    memset(list_info->list, 0, capacity);
+    list_info->capacity = capacity;
     return VK_SUCCESS;
 }
 
