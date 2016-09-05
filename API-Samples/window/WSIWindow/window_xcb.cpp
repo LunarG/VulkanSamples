@@ -1,11 +1,16 @@
-#include "WindowImpl.h"
-
 //============================XCB===============================
 #ifdef VK_USE_PLATFORM_XCB_KHR
 
+#include "WindowImpl.h"
 #include <xcb/xcb.h>              //  window
 #include <xkbcommon/xkbcommon.h>  //  keyboard
 #include <string.h>               //  for strlen
+
+#if defined(NDEBUG) && defined(__GNUC__)
+ #define U_ASSERT_ONLY __attribute__((unused))
+#else
+ #define U_ASSERT_ONLY
+#endif
 
 // Convert native EVDEV key-code to cross-platform USB HID code.
 const unsigned char EVDEV_TO_HID[256] = {
@@ -26,6 +31,9 @@ const unsigned char EVDEV_TO_HID[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 };
+
+#ifndef WINDOW_XCB
+#define WINDOW_XCB
 
 class Window_xcb : public WindowImpl{
     xcb_connection_t *xcb_connection;
@@ -50,6 +58,8 @@ public:
     //bool PollEvent();
     EventType GetEvent();
 };
+
+#endif
 //==============================================================
 //=======================XCB IMPLEMENTATION=====================
 Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint height){

@@ -1,8 +1,7 @@
-#include "WindowImpl.h"
-
 //==========================Win32===============================
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 
+#include "WindowImpl.h"
 #include <windowsx.h>             //   Mouse
 //#pragma warning(disable:4996)
 
@@ -25,6 +24,8 @@ const unsigned char WIN32_TO_HID[256] = {
       0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
       0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 };
+#ifndef WINDOW_WIN32
+#define WINDOW_WIN32
 
 class Window_win32 : public WindowImpl{
     HINSTANCE hInstance;
@@ -37,6 +38,8 @@ public:
     virtual ~Window_win32();
     EventType Window_win32::GetEvent();
 };
+
+#endif
 //==============================================================
 //=====================Win32 IMPLEMENTATION=====================
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

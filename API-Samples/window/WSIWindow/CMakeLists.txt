@@ -47,9 +47,9 @@ endif()
 #=================================================================
 #=============================ANDROID=============================
 # Note: Android currently has its own CMakeLists.txt in the Android/app folder.
-#if(ANDROID)
-#    add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
-#endif()
+if(ANDROID)
+    add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
+endif()
 #=================================================================
 
 #=========================Find Vulkan SDK=========================        # Get Path from the VULKAN_SDK environment variable.

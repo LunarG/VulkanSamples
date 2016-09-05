@@ -1,4 +1,4 @@
-#include <stdio.h>
+//#include <stdio.h>
 #include "WSIWindow.h"
 
 using namespace std;

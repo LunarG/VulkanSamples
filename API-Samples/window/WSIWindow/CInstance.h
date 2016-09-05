@@ -3,9 +3,11 @@
     #ifndef VK_USE_PLATFORM_WIN32_KHR
     #define VK_USE_PLATFORM_WIN32_KHR
     #endif
-
 #elif __ANDROID__
-
+    #ifndef VK_USE_PLATFORM_ANDROID_KHR
+    #define VK_USE_PLATFORM_ANDROID_KHR
+    #endif
+    #include <native.h>
 #elif __gnu_linux__
 //    #if !defined(VK_USE_PLATFORM_XCB_KHR)  && \
 //        !defined(VK_USE_PLATFORM_XLIB_KHR) && \
@@ -14,10 +16,6 @@
 //        #define VK_USE_PLATFORM_XCB_KHR        //On Linux, default to XCB
 //    #endif
     #include <xkbcommon/xkbcommon.h>
-#elif
-    #ifndef VK_USE_PLATFORM_ANDROID_KHR
-    #define VK_USE_PLATFORM_ANDROID_KHR
-    #endif
 #endif
 
 //----------------------------------------------------------------------------------
@@ -25,7 +23,6 @@
 
 #ifndef CINSTANCE_H
 #define CINSTANCE_H
-
 
 #include <cstdlib>
 #include <stdio.h>

@@ -7,6 +7,10 @@
 // Multi-window support
 // Documentation
 
+#ifdef ANDROID
+  #include <native.h>
+#endif
+
 #include <stdio.h>
 #include <vulkan/vulkan.h>
 

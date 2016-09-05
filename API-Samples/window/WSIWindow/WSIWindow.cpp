@@ -1,6 +1,9 @@
 #include "WSIWindow.h"
+#include "WindowImpl.h"
+
 #include "window_xcb.cpp"
 #include "window_win32.cpp"
+#include "window_android.cpp"
 
 //==============================================================
 
@@ -15,7 +18,7 @@ WSIWindow::WSIWindow(CInstance& inst,const char* title,uint width,uint height){
 #endif
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
     printf("PLATFORM: ANDROID\n");
-    //pimpl = new Window_android(inst, title, width, height);
+    pimpl = new Window_android(inst, title, width, height);
 #endif
 /*
 #ifdef VK_USE_PLATFORM_XLIB_KHR

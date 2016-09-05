@@ -3,12 +3,6 @@
 
 #include "WSIWindow.h"
 
-#if defined(NDEBUG) && defined(__GNUC__)
-#define U_ASSERT_ONLY __attribute__((unused))
-#else
-#define U_ASSERT_ONLY
-#endif
-
 //==========================Event Message=======================
 struct EventType{
     enum{NONE, MOUSE, KEY, TEXT, SHAPE} tag;
@@ -47,37 +41,6 @@ public:
 
     virtual EventType GetEvent()=0; //fetch one event from the queue
 };
-
-EventType WindowImpl::MouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn) {
-    mousepos={x,y};
-    switch(action) {
-    case mDOWN:  btnstate[btn]=true;   break;
-    case mUP  :  btnstate[btn]=false;  break;
-    }
-    EventType e={EventType::MOUSE,{action,x,y,btn}};
-    return e;
-}
-
-EventType WindowImpl::KeyEvent(eKeyAction action, uint8_t key) {
-    keystate[key] = (action==keyDOWN);
-    EventType e={EventType::KEY};
-    e.key={action,key};
-    return e;
-}
-
-EventType WindowImpl::TextEvent(const char* str) {
-    EventType e={EventType::TEXT};
-    e.text.str=str;
-    return e;
-}
-
-EventType WindowImpl::ShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t height) {
-    shape={x,y,width,height};
-    EventType e={EventType::SHAPE};
-    e.shape={x,y,width,height};
-    return e;
-}
-
 //==============================================================
 
 #endif

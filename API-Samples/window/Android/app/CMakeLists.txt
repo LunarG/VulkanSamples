@@ -4,18 +4,21 @@
 
 cmake_minimum_required(VERSION 3.4.1)
 
+add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
+
 # Set path to Vulkan SDK
-  set(VULKAN_SDK "/home/rene/VulkanSDK/1.0.21.1/x86_64")
+  #set(VULKAN_SDK "/home/rene/VulkanSDK/1.0.24.0/x86_64")
+  set(VULKAN_SDK $ENV{VULKAN_SDK})
 
 # Set path to header files.
   include_directories( ${ANDROID_NDK}/sources/android/native_app_glue )
   include_directories( ${VULKAN_SDK}/include                          )
-  include_directories( vulkan_wrapper                                 )
+  include_directories( src/cpp                                        )
+  include_directories( ../../WSIWindow                                )
 
 # Set path to source files.
   aux_source_directory( ${ANDROID_NDK}/sources/android/native_app_glue SRC_LIST)
-  aux_source_directory( vulkan_wrapper                                 SRC_LIST)
-  aux_source_directory( src/main/cpp                                   SRC_LIST)
+  aux_source_directory( src/cpp                                        SRC_LIST)
   aux_source_directory( ../..                                          SRC_LIST)
   aux_source_directory( ../../WSIWindow                                SRC_LIST)
 
