@@ -11104,6 +11104,26 @@ TEST_F(VkLayerTest, ClearColorAttachmentsOutsideRenderPass) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, RenderPassExcessiveNextSubpass) {
+    TEST_DESCRIPTION("Test that an error is produced when CmdNextSubpass is "
+                     "called too many times in a renderpass instance");
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "vkCmdNextSubpass(): Attempted to advance "
+                                         "beyond final subpass");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    BeginCommandBuffer();
+
+    // error here.
+    vkCmdNextSubpass(m_commandBuffer->GetBufferHandle(), VK_SUBPASS_CONTENTS_INLINE);
+    m_errorMonitor->VerifyFound();
+
+    EndCommandBuffer();
+}
+
 TEST_F(VkLayerTest, BufferMemoryBarrierNoBuffer) {
     // Try to add a buffer memory barrier with no buffer.
     m_errorMonitor->SetDesiredFailureMsg(
