@@ -4121,7 +4121,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
             // If out of memory, bail immediately.
             goto out;
         } else if (VK_SUCCESS != res) {
-            // Keep trying if there was some other error.
+            // Something bad happened with this ICD, so free it and try the
+            // next.
+            ptr_instance->icds = icd->next;
+            loader_icd_destroy(ptr_instance, icd, pAllocator);
             continue;
         }
 
@@ -4133,7 +4136,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
             // If out of memory, bail immediately.
             goto out;
         } else if (VK_SUCCESS != res) {
-            // Keep trying if there was some other error.
+            // Something bad happened with this ICD, so free it and try the
+            // next.
+            ptr_instance->icds = icd->next;
+            loader_icd_destroy(ptr_instance, icd, pAllocator);
             continue;
         }
 
@@ -4157,9 +4163,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
             // If out of memory, bail immediately.
             goto out;
         } else if (VK_SUCCESS != res) {
-            // Keep trying if there was some other error.
             loader_log(ptr_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "ICD ignored: failed to CreateInstance in ICD %d", i);
+            ptr_instance->icds = icd->next;
+            loader_icd_destroy(ptr_instance, icd, pAllocator);
             continue;
         }
 
