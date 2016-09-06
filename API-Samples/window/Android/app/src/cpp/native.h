@@ -1,5 +1,7 @@
-//--- On Android, re-direct printf output to the Android Monitor (LogCat) ---
+#ifndef NATIVE_H
+#define NATIVE_H
 
+//--- On Android, re-direct printf output to the Android Monitor (LogCat) ---
 #include <jni.h>
 #include <stdlib.h>
 #include <stdio.h>          //include, and then override printf with logcat macro
@@ -14,3 +16,7 @@
 #include <vulkan_wrapper.h>
 
 //#include "android_fopen.h"  //redirect fopen, to read files from asset folder
+
+extern android_app* Android_App;
+
+#endif
