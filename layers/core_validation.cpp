@@ -10069,14 +10069,21 @@ VKAPI_ATTR void VKAPI_CALL CmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpa
     if (pCB) {
         skip_call |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdNextSubpass");
         skip_call |= addCmd(dev_data, pCB, CMD_NEXTSUBPASS, "vkCmdNextSubpass()");
-        pCB->activeSubpass++;
-        pCB->activeSubpassContents = contents;
-        TransitionSubpassLayouts(dev_data, pCB, &pCB->activeRenderPassBeginInfo, pCB->activeSubpass);
         skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdNextSubpass");
     }
     lock.unlock();
-    if (!skip_call)
-        dev_data->device_dispatch_table->CmdNextSubpass(commandBuffer, contents);
+
+    if (skip_call)
+        return;
+
+    dev_data->device_dispatch_table->CmdNextSubpass(commandBuffer, contents);
+
+    if (pCB) {
+      lock.lock();
+      pCB->activeSubpass++;
+      pCB->activeSubpassContents = contents;
+      TransitionSubpassLayouts(dev_data, pCB, &pCB->activeRenderPassBeginInfo, pCB->activeSubpass);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
