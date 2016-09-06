@@ -10968,7 +10968,7 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
                                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,
                                         reinterpret_cast<uint64_t &>(queue), __LINE__, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                         "Images passed to present must be in layout "
-                                        "PRESENT_SOURCE_KHR but is in %s",
+                                        "VK_IMAGE_LAYOUT_PRESENT_SRC_KHR but is in %s",
                                         string_VkImageLayout(layout));
                     }
                 }
