@@ -1354,12 +1354,13 @@ static struct loader_icd *
 loader_icd_create(const struct loader_instance *inst) {
     struct loader_icd *icd;
 
-    icd = loader_instance_heap_alloc(inst, sizeof(*icd),
+    icd = loader_instance_heap_alloc(inst, sizeof(struct loader_icd),
                                      VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    if (!icd)
+    if (!icd) {
         return NULL;
+    }
 
-    memset(icd, 0, sizeof(*icd));
+    memset(icd, 0, sizeof(struct loader_icd));
 
     return icd;
 }
@@ -1370,8 +1371,9 @@ loader_icd_add(struct loader_instance *ptr_inst,
     struct loader_icd *icd;
 
     icd = loader_icd_create(ptr_inst);
-    if (!icd)
+    if (!icd) {
         return NULL;
+    }
 
     icd->this_icd_lib = icd_lib;
     icd->this_instance = ptr_inst;
@@ -4124,6 +4126,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
             // Something bad happened with this ICD, so free it and try the
             // next.
             ptr_instance->icds = icd->next;
+            icd->next = NULL;
             loader_icd_destroy(ptr_instance, icd, pAllocator);
             continue;
         }
@@ -4132,15 +4135,20 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
             ptr_instance,
             icd->this_icd_lib->EnumerateInstanceExtensionProperties,
             icd->this_icd_lib->lib_name, &icd_exts);
-        if (VK_ERROR_OUT_OF_HOST_MEMORY == res) {
-            // If out of memory, bail immediately.
-            goto out;
-        } else if (VK_SUCCESS != res) {
-            // Something bad happened with this ICD, so free it and try the
-            // next.
-            ptr_instance->icds = icd->next;
-            loader_icd_destroy(ptr_instance, icd, pAllocator);
-            continue;
+        if (VK_SUCCESS != res) {
+            loader_destroy_generic_list(ptr_instance,
+                (struct loader_generic_list *)&icd_exts);
+            if (VK_ERROR_OUT_OF_HOST_MEMORY == res) {
+                // If out of memory, bail immediately.
+                goto out;
+            } else {
+                // Something bad happened with this ICD, so free it and try
+                // the next.
+                ptr_instance->icds = icd->next;
+                icd->next = NULL;
+                loader_icd_destroy(ptr_instance, icd, pAllocator);
+                continue;
+            }
         }
 
         for (uint32_t j = 0; j < pCreateInfo->enabledExtensionCount; j++) {
@@ -4166,6 +4174,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
             loader_log(ptr_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "ICD ignored: failed to CreateInstance in ICD %d", i);
             ptr_instance->icds = icd->next;
+            icd->next = NULL;
             loader_icd_destroy(ptr_instance, icd, pAllocator);
             continue;
         }
