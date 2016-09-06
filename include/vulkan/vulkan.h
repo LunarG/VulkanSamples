@@ -43,7 +43,7 @@ extern "C" {
 #define VK_VERSION_MINOR(version) (((uint32_t)(version) >> 12) & 0x3ff)
 #define VK_VERSION_PATCH(version) ((uint32_t)(version) & 0xfff)
 // Version of this file
-#define VK_HEADER_VERSION 25
+#define VK_HEADER_VERSION 26
 
 
 #define VK_NULL_HANDLE 0
@@ -3805,6 +3805,7 @@ typedef VkBool32 (VKAPI_PTR *PFN_vkDebugReportCallbackEXT)(
     const char*                                 pMessage,
     void*                                       pUserData);
 
+
 typedef struct VkDebugReportCallbackCreateInfoEXT {
     VkStructureType                 sType;
     const void*                     pNext;
@@ -4014,6 +4015,7 @@ typedef enum VkExternalMemoryHandleTypeFlagBitsNV {
     VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D11_IMAGE_KMT_BIT_NV = 0x00000008,
     VK_EXTERNAL_MEMORY_HANDLE_TYPE_FLAG_BITS_MAX_ENUM_NV = 0x7FFFFFFF
 } VkExternalMemoryHandleTypeFlagBitsNV;
+typedef VkFlags VkExternalMemoryHandleTypeFlagsNV;
 
 typedef enum VkExternalMemoryFeatureFlagBitsNV {
     VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT_NV = 0x00000001,
@@ -4021,8 +4023,6 @@ typedef enum VkExternalMemoryFeatureFlagBitsNV {
     VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT_NV = 0x00000004,
     VK_EXTERNAL_MEMORY_FEATURE_FLAG_BITS_MAX_ENUM_NV = 0x7FFFFFFF
 } VkExternalMemoryFeatureFlagBitsNV;
-
-typedef VkFlags VkExternalMemoryHandleTypeFlagsNV;
 typedef VkFlags VkExternalMemoryFeatureFlagsNV;
 
 typedef struct VkExternalImageFormatPropertiesNV {
