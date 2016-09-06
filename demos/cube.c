@@ -404,7 +404,7 @@ struct demo {
     PFN_vkDebugReportMessageEXT DebugReportMessage;
 
     uint32_t current_buffer;
-    uint32_t queue_count;
+    uint32_t queue_family_count;
 };
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
@@ -2725,22 +2725,15 @@ static void demo_init_vk(struct demo *demo) {
     vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
 
     /* Call with NULL data to get count */
-    vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count,
-                                             NULL);
-    assert(demo->queue_count >= 1);
+    vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu,
+                                             &demo->queue_family_count, NULL);
+    assert(demo->queue_family_count >= 1);
 
     demo->queue_props = (VkQueueFamilyProperties *)malloc(
-        demo->queue_count * sizeof(VkQueueFamilyProperties));
-    vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count,
-                                             demo->queue_props);
-    // Find a queue that supports gfx
-    uint32_t gfx_queue_idx = 0;
-    for (gfx_queue_idx = 0; gfx_queue_idx < demo->queue_count;
-         gfx_queue_idx++) {
-        if (demo->queue_props[gfx_queue_idx].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            break;
-    }
-    assert(gfx_queue_idx < demo->queue_count);
+        demo->queue_family_count * sizeof(VkQueueFamilyProperties));
+    vkGetPhysicalDeviceQueueFamilyProperties(
+        demo->gpu, &demo->queue_family_count, demo->queue_props);
+
     // Query fine-grained feature support for this device.
     //  If app has specific feature requirements it should check supported
     //  features based on this query
@@ -2844,36 +2837,51 @@ static void demo_init_vk_swapchain(struct demo *demo) {
 
     // Iterate over each queue to learn whether it supports presenting:
     VkBool32 *supportsPresent =
-        (VkBool32 *)malloc(demo->queue_count * sizeof(VkBool32));
-    for (i = 0; i < demo->queue_count; i++) {
+        (VkBool32 *)malloc(demo->queue_family_count * sizeof(VkBool32));
+    for (i = 0; i < demo->queue_family_count; i++) {
         demo->fpGetPhysicalDeviceSurfaceSupportKHR(demo->gpu, i, demo->surface,
                                                    &supportsPresent[i]);
     }
 
     // Search for a graphics and a present queue in the array of queue
     // families, try to find one that supports both
-    uint32_t graphicsQueueNodeIndex = UINT32_MAX;
-    uint32_t presentQueueNodeIndex = UINT32_MAX;
-    for (i = 0; i < demo->queue_count; i++) {
-        if ((demo->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0
-                && graphicsQueueNodeIndex == UINT32_MAX) {
-            graphicsQueueNodeIndex = i;
-        }
+    uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
+    uint32_t presentQueueFamilyIndex = UINT32_MAX;
+    for (i = 0; i < demo->queue_family_count; i++) {
+        if ((demo->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
+            if (graphicsQueueFamilyIndex == UINT32_MAX) {
+                graphicsQueueFamilyIndex = i;
+            }
 
-        if (supportsPresent[i] == VK_TRUE && presentQueueNodeIndex == UINT32_MAX) {
-            presentQueueNodeIndex = i;
+            if (supportsPresent[i] == VK_TRUE) {
+                graphicsQueueFamilyIndex = i;
+                presentQueueFamilyIndex = i;
+                break;
+            }
+        }
+    }
+
+    if (presentQueueFamilyIndex == UINT32_MAX) {
+        // If didn't find a queue that supports both graphics and present, then
+        // find a separate present queue.
+        for (size_t i = 0; i < demo->queue_family_count; ++i) {
+            if (supportsPresent[i] == VK_TRUE) {
+                presentQueueFamilyIndex = i;
+                break;
+            }
         }
     }
 
     // Generate error if could not find both a graphics and a present queue
-    if (graphicsQueueNodeIndex == UINT32_MAX ||
-        presentQueueNodeIndex == UINT32_MAX) {
+    if (graphicsQueueFamilyIndex == UINT32_MAX ||
+        presentQueueFamilyIndex == UINT32_MAX) {
         ERR_EXIT("Could not find both graphics and present queues\n",
                  "Swapchain Initialization Failure");
     }
 
-    demo->graphics_queue_family_index = graphicsQueueNodeIndex;
-    demo->present_queue_family_index = presentQueueNodeIndex;
+    demo->graphics_queue_family_index = graphicsQueueFamilyIndex;
+    demo->present_queue_family_index = presentQueueFamilyIndex;
+    free(supportsPresent);
 
     demo_create_device(demo);
 
