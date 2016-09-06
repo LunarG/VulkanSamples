@@ -10070,6 +10070,14 @@ VKAPI_ATTR void VKAPI_CALL CmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpa
         skip_call |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdNextSubpass");
         skip_call |= addCmd(dev_data, pCB, CMD_NEXTSUBPASS, "vkCmdNextSubpass()");
         skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdNextSubpass");
+
+        auto subpassCount = pCB->activeRenderPass->pCreateInfo->subpassCount;
+        if (pCB->activeSubpass == subpassCount - 1) {
+            skip_call |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        reinterpret_cast<uint64_t>(commandBuffer), __LINE__, DRAWSTATE_INVALID_SUBPASS_INDEX, "DS",
+                        "vkCmdNextSubpass(): Attempted to advance beyond final subpass");
+        }
     }
     lock.unlock();
 

@@ -111,6 +111,7 @@ The Draw State portion of the core validation layer tracks state leading into Dr
 | NA | Enum used for informational messages | NONE | | TODO | None |
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | TODO | None |
 | NA | Enum used when VK_LAYER_LUNARG_core_validation attempts to allocate memory for its own internal use and is unable to. | OUT_OF_MEMORY | | TODO | None |
+| Bad subpass indexing | Must not step beyond last subpass in a renderpass instance, and must reach the last subpass before CmdEndRenderPass. | INVALID_SUBPASS_INDEX | vkCmdNextSubpass | RenderPassExcessiveNextSubpass | NA |
 
 ### VK_LAYER_LUNARG_core_validation Draw State Pending Work
 

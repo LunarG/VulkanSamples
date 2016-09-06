@@ -226,6 +226,7 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_IMAGE_TRANSFER_GRANULARITY,    // Violation of queue family's image transfer
                                              // granularity
     DRAWSTATE_PUSH_CONSTANTS_ERROR,          // Push constants exceed maxPushConstantSize
+    DRAWSTATE_INVALID_SUBPASS_INDEX,         // Stepping beyond last subpass, or not reaching it
 };
 
 // Shader Checker ERROR codes
