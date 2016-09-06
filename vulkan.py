@@ -1382,7 +1382,7 @@ if sys.argv[1] == 'AllPlatforms':
                              ext_khr_display_swapchain, ext_debug_report, ext_debug_marker]
 else :
     if len(sys.argv) > 3:
-        if sys.platform.startswith('win32') and sys.argv[1] != 'Android':
+        if (sys.platform.startswith('win32') or sys.platform.startswith('msys')) and sys.argv[1] != 'Android':
             extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface,
                                  ext_khr_display, ext_amd_extension_draw_indirect_count,
                                  ext_nv_external_memory_capabilities, ext_nv_external_memory_win32,
@@ -1409,7 +1409,7 @@ else :
                                       ext_amd_extension_draw_indirect_count, ext_nv_external_memory_capabilities,
                                       ext_khr_display_swapchain, ext_debug_report, ext_debug_marker]
     else :
-        if sys.argv[1] == 'Win32':
+        if sys.argv[1] == 'Win32' or sys.argv[1] == 'msys':
             extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface,
                                  ext_khr_display, ext_amd_extension_draw_indirect_count,
                                  ext_nv_external_memory_capabilities, ext_nv_external_memory_win32,
