@@ -569,6 +569,7 @@ public:
         eInvalidMemoryOffset,
         eBindNullBuffer,
         eFreeInvalidHandle,
+        eNone,
     };
 
     enum eTestConditions {
@@ -592,7 +593,7 @@ public:
 
             vkCreateBuffer(aVulkanDevice->device(), &buffer_create_info, nullptr,
                            &vulkanBuffer);
-            VkMemoryRequirements memory_reqs = {0};
+            VkMemoryRequirements memory_reqs = {};
 
             vkGetBufferMemoryRequirements(aVulkanDevice->device(),
                                           vulkanBuffer, &memory_reqs);
@@ -619,7 +620,7 @@ public:
     // A constructor which performs validation tests within construction.
     VkBufferTest(VkDeviceObj *aVulkanDevice,
                  VkBufferUsageFlags aBufferUsage,
-                 eTestEnFlags aTestFlag)
+                 eTestEnFlags aTestFlag = eNone)
         : AllocateCurrent(false), BoundCurrent(false),
         CreateCurrent(false), VulkanDevice(aVulkanDevice->device()) {
 
@@ -13858,10 +13859,10 @@ TEST_F(VkLayerTest, SimultaneousUse) {
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     const char *simultaneous_use_message1 =
+            "w/o VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!";
+    const char *simultaneous_use_message2 =
             "does not have VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set and "
             "will cause primary command buffer";
-    const char *simultaneous_use_message2 =
-            "w/o VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT set!";
 
     VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
     command_buffer_allocate_info.sType =
@@ -13886,36 +13887,45 @@ TEST_F(VkLayerTest, SimultaneousUse) {
     command_buffer_begin_info.pInheritanceInfo = &command_buffer_inheritance_info;
 
     vkBeginCommandBuffer(secondary_command_buffer, &command_buffer_begin_info);
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &renderPassBeginInfo(),
+                         VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    vkCmdExecuteCommands(m_commandBuffer->handle(), 1,
+                         &secondary_command_buffer);
+    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
     vkEndCommandBuffer(secondary_command_buffer);
-
-    command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-    vkBeginCommandBuffer(m_commandBuffer->handle(), &command_buffer_begin_info);
-
-    vkEndCommandBuffer(m_commandBuffer->handle());
 
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers =&m_commandBuffer->handle();
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
+    vkBeginCommandBuffer(m_commandBuffer->handle(), &command_buffer_begin_info);
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &renderPassBeginInfo(),
+                         VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          simultaneous_use_message1);
     vkCmdExecuteCommands(m_commandBuffer->handle(), 1,
                          &secondary_command_buffer);
     m_errorMonitor->VerifyFound();
+    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
+    vkEndCommandBuffer(m_commandBuffer->handle());
 
     m_errorMonitor->SetDesiredFailureMsg(0, "");
-    vkResetCommandBuffer(m_commandBuffer->handle(), 0);
-
-    submit_info.pCommandBuffers = &secondary_command_buffer;
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
 
+    command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
     vkBeginCommandBuffer(m_commandBuffer->handle(), &command_buffer_begin_info);
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+    vkCmdBeginRenderPass(m_commandBuffer->handle(), &renderPassBeginInfo(),
+                         VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARNING_BIT_EXT,
                                          simultaneous_use_message2);
     vkCmdExecuteCommands(m_commandBuffer->handle(), 1,
                          &secondary_command_buffer);
     m_errorMonitor->VerifyFound();
+    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
+    vkEndCommandBuffer(m_commandBuffer->handle());
 }
 
 TEST_F(VkLayerTest, InUseDestroyedSignaled) {
@@ -13974,7 +13984,7 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
                                     nullptr, &fence));
 
     VkDescriptorPoolSize descriptor_pool_type_count = {};
-    descriptor_pool_type_count.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    descriptor_pool_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     descriptor_pool_type_count.descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo descriptor_pool_create_info = {};
@@ -13991,7 +14001,7 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
                                              nullptr, &descriptorset_pool));
 
     VkDescriptorSetLayoutBinding descriptorset_layout_binding = {};
-    descriptorset_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    descriptorset_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     descriptorset_layout_binding.descriptorCount = 1;
     descriptorset_layout_binding.stageFlags = VK_SHADER_STAGE_ALL;
 
@@ -14017,6 +14027,23 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
     ASSERT_VK_SUCCESS(vkAllocateDescriptorSets(m_device->device(),
                                                &descriptorset_allocate_info,
                                                &descriptorset));
+
+    VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+
+    VkDescriptorBufferInfo buffer_info = {};
+    buffer_info.buffer = buffer_test.GetBuffer();
+    buffer_info.offset = 0;
+    buffer_info.range = 1024;
+
+    VkWriteDescriptorSet write_descriptor_set = {};
+    write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_descriptor_set.dstSet = descriptorset;
+    write_descriptor_set.descriptorCount = 1;
+    write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    write_descriptor_set.pBufferInfo = &buffer_info;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &write_descriptor_set, 0,
+                           nullptr);
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT,
                    this);
@@ -14050,6 +14077,7 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(),
                             VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0,
                             1, &descriptorset, 0, NULL);
+    vkCmdDraw(m_commandBuffer->handle(), 3, 1, 0, 0);
 
     EndCommandBuffer();
 
@@ -14131,7 +14159,7 @@ TEST_F(VkLayerTest, QueueForwardProgressFenceWait) {
     vkWaitForFences(m_device->device(), 1, &fence, VK_TRUE, UINT64_MAX);
     m_errorMonitor->VerifyFound();
 
-    m_errorMonitor->SetDesiredFailureMsg(0, "");
+    vkDeviceWaitIdle(m_device->device());
     vkDestroyFence(m_device->device(), fence, nullptr);
     vkDestroySemaphore(m_device->device(), semaphore, nullptr);
 }
