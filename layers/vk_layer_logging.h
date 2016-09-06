@@ -209,11 +209,9 @@ static inline PFN_vkVoidFunction debug_report_get_instance_proc_addr(debug_repor
     if (!strcmp(funcName, "vkDestroyDebugReportCallbackEXT")) {
         return (PFN_vkVoidFunction)vkDestroyDebugReportCallbackEXT;
     }
-
     if (!strcmp(funcName, "vkDebugReportMessageEXT")) {
         return (PFN_vkVoidFunction)vkDebugReportMessageEXT;
     }
-
     return NULL;
 }
 

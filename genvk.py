@@ -18,6 +18,7 @@ import sys, time, pdb, string, cProfile
 from reg import *
 from generator import write, CGeneratorOptions, COutputGenerator, DocGeneratorOptions, DocOutputGenerator, PyOutputGenerator, ValidityOutputGenerator, HostSynchronizationOutputGenerator, ThreadGeneratorOptions, ThreadOutputGenerator
 from generator import ParamCheckerGeneratorOptions, ParamCheckerOutputGenerator
+from generator import UniqueObjectsGeneratorOptions, UniqueObjectsOutputGenerator
 
 # debug - start header generation in debugger
 # dump - dump registry after loading
@@ -299,6 +300,28 @@ buildList = [
         prefixText        = prefixStrings + vkPrefixStrings,
         genFuncPointers   = True,
         protectFile       = protectFile,
+        protectFeature    = False,
+        protectProto      = None,
+        protectProtoStr   = 'VK_NO_PROTOTYPES',
+        apicall           = 'VKAPI_ATTR ',
+        apientry          = 'VKAPI_CALL ',
+        apientryp         = 'VKAPI_PTR *',
+        alignFuncParam    = 48,
+        genDirectory      = outDir)
+    ],
+    [ UniqueObjectsOutputGenerator,
+      UniqueObjectsGeneratorOptions(
+        filename          = 'unique_objects_wrappers.h',
+        apiname           = 'vulkan',
+        profile           = None,
+        versions          = allVersions,
+        emitversions      = allVersions,
+        defaultExtensions = 'vulkan',
+        addExtensions     = None,
+        removeExtensions  = None,
+        prefixText        = prefixStrings + vkPrefixStrings,
+        genFuncPointers   = True,
+        protectFile       = False,
         protectFeature    = False,
         protectProto      = None,
         protectProtoStr   = 'VK_NO_PROTOTYPES',

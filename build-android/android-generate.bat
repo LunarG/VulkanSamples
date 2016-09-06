@@ -24,11 +24,10 @@ python ../vk-generate.py Android dispatch-table-ops layer > generated/include/vk
 python ../vk_helper.py --gen_enum_string_helper ../include/vulkan/vulkan.h --abs_out_dir generated/include
 python ../vk_helper.py --gen_struct_wrappers ../include/vulkan/vulkan.h --abs_out_dir generated/include
 
-python ../vk-layer-generate.py Android unique_objects ../include/vulkan/vulkan.h > generated/include/unique_objects.cpp
-
 cd generated/include
 python ../../../genvk.py threading -registry ../../../vk.xml thread_check.h
 python ../../../genvk.py paramchecker -registry ../../../vk.xml parameter_validation.h
+python ../../../genvk.py unique_objects -registry ../../../vk.xml unique_objects_wrappers.h
 cd ../..
 
 copy /Y ..\layers\vk_layer_config.cpp   generated\common\
@@ -51,10 +50,7 @@ for %%G in (core_validation image object_tracker parameter_validation swapchain 
     copy ..\layers\%%G.cpp   generated\layer-src\%%G
     echo apply from: "../common.gradle"  > generated\gradle-build\%%G\build.gradle
 )
-copy generated\include\unique_objects.cpp generated\layer-src\unique_objects
 copy generated\common\descriptor_sets.cpp generated\layer-src\core_validation\descriptor_sets.cpp
 copy generated\include\vk_safe_struct.cpp generated\layer-src\core_validation\vk_safe_struct.cpp
 move generated\include\vk_safe_struct.cpp generated\layer-src\unique_objects\vk_safe_struct.cpp
 echo apply from: "../common.gradle"  > generated\gradle-build\unique_objects\build.gradle
-
-del  /f /q generated\include\unique_objects.cpp

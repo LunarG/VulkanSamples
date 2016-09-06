@@ -7,13 +7,6 @@ macro(run_vk_helper subcmd)
     )
 endmacro()
 
-macro(run_vk_layer_generate subcmd output)
-    add_custom_command(OUTPUT ${output}
-        COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-layer-generate.py ${DisplayServer} ${subcmd} ${PROJECT_SOURCE_DIR}/include/vulkan/vulkan.h > ${output}
-        DEPENDS ${PROJECT_SOURCE_DIR}/vk-layer-generate.py ${PROJECT_SOURCE_DIR}/include/vulkan/vulkan.h ${PROJECT_SOURCE_DIR}/vulkan.py
-    )
-endmacro()
-
 macro(run_vk_layer_xml_generate subcmd output)
     add_custom_command(OUTPUT ${output}
         COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/genvk.py -registry ${PROJECT_SOURCE_DIR}/vk.xml ${output}
@@ -181,8 +174,8 @@ add_custom_target(generate_vk_layer_helpers DEPENDS
 )
 
 run_vk_layer_xml_generate(Threading thread_check.h)
-run_vk_layer_generate(unique_objects unique_objects.cpp)
 run_vk_layer_xml_generate(ParamChecker parameter_validation.h)
+run_vk_layer_xml_generate(UniqueObjects unique_objects_wrappers.h)
 
 # Layer Utils Library
 # For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search
@@ -200,7 +193,7 @@ add_vk_layer(image image.cpp vk_layer_table.cpp)
 add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
 # generated
 add_vk_layer(threading threading.cpp thread_check.h vk_layer_table.cpp)
-add_vk_layer(unique_objects unique_objects.cpp vk_layer_table.cpp vk_safe_struct.cpp)
+add_vk_layer(unique_objects unique_objects.cpp unique_objects_wrappers.h vk_layer_table.cpp vk_safe_struct.cpp)
 add_vk_layer(parameter_validation parameter_validation.cpp parameter_validation.h vk_layer_table.cpp)
 
 # Core validation has additional dependencies
