@@ -12,6 +12,7 @@ struct EventType{
         struct {const char* str;}text;                                          //Text entered
         struct {int16_t x; int16_t y; uint16_t width; uint16_t height;}shape;   //Window move/resize
     };
+    void Clear(){tag=NONE;}
 };
 //==============================================================
 

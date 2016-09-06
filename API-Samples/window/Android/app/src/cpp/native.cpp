@@ -1,9 +1,8 @@
 #include "native.h"
 
 android_app* Android_App=0;                //Android native-actvity state
-//int32_t      Android_cmd=0;
 
-
+/*
 //--Window event handler--
 static void handle_cmd(struct android_app* app, int32_t cmd) {
     //printf(" -> handle_cmd");
@@ -31,28 +30,24 @@ static void handle_cmd(struct android_app* app, int32_t cmd) {
 //--Input event handler--
 static int32_t handle_input(struct android_app* app, AInputEvent* event) {
     //printf(" -> handle_input\n");
-
     int32_t type=AInputEvent_getType(event);
-    //printf("type=%d",type);
     if (type == AINPUT_EVENT_TYPE_MOTION) {
         float mx = AMotionEvent_getX(event, 0);
         float my = AMotionEvent_getY(event, 0);
         printf("%f x %f\n",mx,my);
         return 1;
     }
-
-
     return 0;
 }
-
+*/
 //====================Main====================
 int main(int argc, char *argv[]);          //Forward declaration of main function
 
 void android_main(struct android_app* state) {
     printf("Native Activity\n");
     app_dummy();                           // Make sure glue isn't stripped
-    state->onAppCmd     = handle_cmd;      // Register window event callback
-    state->onInputEvent = handle_input;    // Register input event callback
+    //state->onAppCmd     = handle_cmd;      // Register window event callback
+    //state->onInputEvent = handle_input;    // Register input event callback
     Android_App=state;                     // Pass android app state to window_andoid.cpp
 
     int success=InitVulkan();
