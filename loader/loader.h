@@ -158,18 +158,25 @@ struct loader_dev_ext_dispatch_table {
     PFN_vkDevExt dev_ext[MAX_NUM_DEV_EXTS];
 };
 
+union loader_device_extension_enables {
+    struct {
+        uint8_t ext_debug_marker            : 1;
+        uint8_t amd_draw_indirect_count     : 1;
+        uint8_t nv_external_memory_win32    : 1;
+    };
+    uint64_t padding[4];
+};
+
 struct loader_dev_dispatch_table {
     VkLayerDispatchTable core_dispatch;
     struct loader_dev_ext_dispatch_table ext_dispatch;
+    union loader_device_extension_enables enabled_known_extensions;
 };
 
-/* per CreateDevice structure */
+// per CreateDevice structure
 struct loader_device {
     struct loader_dev_dispatch_table loader_dispatch;
     VkDevice device; // device object from the icd
-
-    uint32_t app_extension_count;
-    VkExtensionProperties *app_extension_props;
 
     struct loader_layer_list activated_layer_list;
 
@@ -245,14 +252,22 @@ struct loader_icd {
     struct loader_icd *next;
 };
 
-/* per ICD library structure */
+// per ICD library structure
 struct loader_icd_libs {
     size_t capacity;
     uint32_t count;
     struct loader_scanned_icds *list;
 };
 
-/* per instance structure */
+union loader_instance_extension_enables {
+    struct {
+        uint8_t ext_debug_report                : 1;
+        uint8_t nv_external_memory_capabilities : 1;
+    };
+    uint64_t padding[4];
+};
+
+// per instance structure
 struct loader_instance {
     VkLayerInstanceDispatchTable *disp; // must be first entry in structure
 
@@ -264,6 +279,7 @@ struct loader_instance {
     struct loader_icd *icds;
     struct loader_instance *next;
     struct loader_extension_list ext_list; // icds and loaders extensions
+    union loader_instance_extension_enables enabled_known_extensions;
     struct loader_icd_libs icd_libs;
     struct loader_layer_list instance_layer_list;
     struct loader_dispatch_hash_entry disp_hash[MAX_NUM_DEV_EXTS];
@@ -274,7 +290,6 @@ struct loader_instance {
     bool activated_layers_are_std_val;
     VkInstance instance; // layers/ICD instance returned to trampoline
 
-    bool debug_report_enabled;
     VkLayerDbgFunctionNode *DbgFunctionHead;
     uint32_t num_tmp_callbacks;
     VkDebugReportCallbackCreateInfoEXT *tmp_dbg_create_infos;

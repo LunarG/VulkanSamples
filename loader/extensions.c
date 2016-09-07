@@ -27,13 +27,62 @@
 #include "extensions.h"
 #include <vulkan/vk_icd.h>
 
- // Definitions for the VK_NV_external_memory_capabilities extension
+// Definitions for EXT_debug_marker extension
 
-static const VkExtensionProperties
-    nv_external_memory_capabilities_extension_info = {
-        .extensionName = VK_NV_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
-        .specVersion = VK_NV_EXTERNAL_MEMORY_CAPABILITIES_SPEC_VERSION,
-};
+VKAPI_ATTR VkResult VKAPI_CALL vkDebugMarkerSetObjectTagEXT(
+    VkDevice device, VkDebugMarkerObjectTagInfoEXT *pTagInfo) {
+    struct loader_dev_dispatch_table *disp = loader_get_dev_dispatch(device);
+    if (0 == disp->enabled_known_extensions.ext_debug_marker ||
+        NULL == disp->core_dispatch.DebugMarkerSetObjectTagEXT) {
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
+    } else {
+        return disp->core_dispatch.DebugMarkerSetObjectTagEXT(device, pTagInfo);
+    }
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkDebugMarkerSetObjectNameEXT(
+    VkDevice device, VkDebugMarkerObjectNameInfoEXT *pNameInfo) {
+    struct loader_dev_dispatch_table *disp = loader_get_dev_dispatch(device);
+    if (0 == disp->enabled_known_extensions.ext_debug_marker ||
+        NULL == disp->core_dispatch.DebugMarkerSetObjectNameEXT) {
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
+    } else {
+        return disp->core_dispatch.DebugMarkerSetObjectNameEXT(device,
+                                                               pNameInfo);
+    }
+}
+
+VKAPI_ATTR void VKAPI_CALL vkCmdDebugMarkerBeginEXT(
+    VkCommandBuffer commandBuffer, VkDebugMarkerMarkerInfoEXT *pMarkerInfo) {
+    struct loader_dev_dispatch_table *disp =
+        loader_get_dev_dispatch(commandBuffer);
+    if (1 == disp->enabled_known_extensions.ext_debug_marker &&
+        NULL != disp->core_dispatch.CmdDebugMarkerBeginEXT) {
+        disp->core_dispatch.CmdDebugMarkerBeginEXT(commandBuffer, pMarkerInfo);
+    }
+}
+
+VKAPI_ATTR void VKAPI_CALL
+vkCmdDebugMarkerEndEXT(VkCommandBuffer commandBuffer) {
+    struct loader_dev_dispatch_table *disp =
+        loader_get_dev_dispatch(commandBuffer);
+    if (1 == disp->enabled_known_extensions.ext_debug_marker &&
+        NULL != disp->core_dispatch.CmdDebugMarkerEndEXT) {
+        disp->core_dispatch.CmdDebugMarkerEndEXT(commandBuffer);
+    }
+}
+
+VKAPI_ATTR void VKAPI_CALL vkCmdDebugMarkerInsertEXT(
+    VkCommandBuffer commandBuffer, VkDebugMarkerMarkerInfoEXT *pMarkerInfo) {
+    struct loader_dev_dispatch_table *disp =
+        loader_get_dev_dispatch(commandBuffer);
+    if (1 == disp->enabled_known_extensions.ext_debug_marker &&
+        NULL != disp->core_dispatch.CmdDebugMarkerInsertEXT) {
+        disp->core_dispatch.CmdDebugMarkerInsertEXT(commandBuffer, pMarkerInfo);
+    }
+}
+
+// Definitions for the VK_NV_external_memory_capabilities extension
 
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkGetPhysicalDeviceExternalImageFormatPropertiesNV(
@@ -43,13 +92,25 @@ vkGetPhysicalDeviceExternalImageFormatPropertiesNV(
     VkExternalImageFormatPropertiesNV *pExternalImageFormatProperties) {
 
     const VkLayerInstanceDispatchTable *disp;
+    struct loader_physical_device_tramp *phys_dev =
+        (struct loader_physical_device_tramp *)physicalDevice;
+    struct loader_instance *inst = phys_dev->this_instance;
     VkPhysicalDevice unwrapped_phys_dev =
         loader_unwrap_physical_device(physicalDevice);
     disp = loader_get_instance_dispatch(physicalDevice);
 
-    return disp->GetPhysicalDeviceExternalImageFormatPropertiesNV(
-        unwrapped_phys_dev, format, type, tiling, usage, flags,
-        externalHandleType, pExternalImageFormatProperties);
+    if (0 == inst->enabled_known_extensions.nv_external_memory_capabilities ||
+        NULL == disp->GetPhysicalDeviceExternalImageFormatPropertiesNV) {
+        loader_log(
+            inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
+            "vkGetPhysicalDeviceExternalImageFormatPropertiesNV called without"
+            " NV_external_memory_capabilities extension being enabled");
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
+    } else {
+        return disp->GetPhysicalDeviceExternalImageFormatPropertiesNV(
+            unwrapped_phys_dev, format, type, tiling, usage, flags,
+            externalHandleType, pExternalImageFormatProperties);
+    }
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL
@@ -87,50 +148,49 @@ terminator_GetPhysicalDeviceExternalImageFormatPropertiesNV(
 
 // Definitions for the VK_AMD_draw_indirect_count extension
 
-static const VkExtensionProperties amd_draw_indirect_count_extension_info = {
-    .extensionName = VK_AMD_EXTENSION_DRAW_INDIRECT_COUNT_EXTENSION_NAME,
-    .specVersion = VK_AMD_EXTENSION_DRAW_INDIRECT_COUNT_SPEC_VERSION,
-};
-
 VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndirectCountAMD(
     VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset,
     VkBuffer countBuffer, VkDeviceSize countBufferOffset, uint32_t maxDrawCount,
     uint32_t stride) {
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(commandBuffer);
-    disp->CmdDrawIndirectCountAMD(commandBuffer, buffer, offset, countBuffer,
-                                  countBufferOffset, maxDrawCount, stride);
+    struct loader_dev_dispatch_table *disp =
+        loader_get_dev_dispatch(commandBuffer);
+    if (1 == disp->enabled_known_extensions.amd_draw_indirect_count &&
+        NULL != disp->core_dispatch.CmdDrawIndirectCountAMD) {
+        disp->core_dispatch.CmdDrawIndirectCountAMD(
+            commandBuffer, buffer, offset, countBuffer, countBufferOffset,
+            maxDrawCount, stride);
+    }
 }
 
 VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexedIndirectCountAMD(
     VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset,
     VkBuffer countBuffer, VkDeviceSize countBufferOffset, uint32_t maxDrawCount,
     uint32_t stride) {
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(commandBuffer);
-    disp->CmdDrawIndexedIndirectCountAMD(commandBuffer, buffer, offset,
-                                         countBuffer, countBufferOffset,
-                                         maxDrawCount, stride);
+    struct loader_dev_dispatch_table *disp =
+        loader_get_dev_dispatch(commandBuffer);
+    if (1 == disp->enabled_known_extensions.amd_draw_indirect_count &&
+        NULL != disp->core_dispatch.CmdDrawIndexedIndirectCountAMD) {
+        disp->core_dispatch.CmdDrawIndexedIndirectCountAMD(
+            commandBuffer, buffer, offset, countBuffer, countBufferOffset,
+            maxDrawCount, stride);
+    }
 }
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 
 // Definitions for the VK_NV_external_memory_win32 extension
 
-static const VkExtensionProperties nv_external_memory_win32_extension_info = {
-    .extensionName = VK_NV_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME,
-    .specVersion = VK_NV_EXTERNAL_MEMORY_WIN32_SPEC_VERSION,
-};
-
 VKAPI_ATTR VkResult VKAPI_CALL vkGetMemoryWin32HandleNV(
     VkDevice device, VkDeviceMemory memory,
     VkExternalMemoryHandleTypeFlagsNV handleType, HANDLE *pHandle) {
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-    return disp->GetMemoryWin32HandleNV(device, memory, handleType, pHandle);
+    struct loader_dev_dispatch_table *disp = loader_get_dev_dispatch(device);
+    if (0 == disp->enabled_known_extensions.nv_external_memory_win32 ||
+        NULL == disp->core_dispatch.GetMemoryWin32HandleNV) {
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
+    } else {
+        return disp->core_dispatch.GetMemoryWin32HandleNV(device, memory,
+                                                          handleType, pHandle);
+    }
 }
 
 #endif // VK_USE_PLATFORM_WIN32_KHR
@@ -141,10 +201,36 @@ bool extension_instance_gpa(struct loader_instance *ptr_instance,
                             const char *name, void **addr) {
     *addr = NULL;
 
+    // Functions for the EXT_debug_marker extension
+
+    if (!strcmp("vkDebugMarkerSetObjectTagEXT", name)) {
+        *addr = (void *)vkDebugMarkerSetObjectTagEXT;
+        return true;
+    }
+    if (!strcmp("vkDebugMarkerSetObjectNameEXT", name)) {
+        *addr = (void *)vkDebugMarkerSetObjectNameEXT;
+        return true;
+    }
+    if (!strcmp("vkCmdDebugMarkerBeginEXT", name)) {
+        *addr = (void *)vkCmdDebugMarkerBeginEXT;
+        return true;
+    }
+    if (!strcmp("vkCmdDebugMarkerEndEXT", name)) {
+        *addr = (void *)vkCmdDebugMarkerEndEXT;
+        return true;
+    }
+    if (!strcmp("vkCmdDebugMarkerInsertEXT", name)) {
+        *addr = (void *)vkCmdDebugMarkerInsertEXT;
+        return true;
+    }
+
     // Functions for the VK_NV_external_memory_capabilities extension
 
     if (!strcmp("vkGetPhysicalDeviceExternalImageFormatPropertiesNV", name)) {
-        *addr = (void *)vkGetPhysicalDeviceExternalImageFormatPropertiesNV;
+        *addr = (ptr_instance->enabled_known_extensions
+                     .nv_external_memory_capabilities == 1)
+                    ? (void *)vkGetPhysicalDeviceExternalImageFormatPropertiesNV
+                    : NULL;
         return true;
     }
 
@@ -176,24 +262,43 @@ bool extension_instance_gpa(struct loader_instance *ptr_instance,
 
 void extensions_create_instance(struct loader_instance *ptr_instance,
                                 const VkInstanceCreateInfo *pCreateInfo) {
+    ptr_instance->enabled_known_extensions.nv_external_memory_capabilities = 0;
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
                    VK_NV_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME) == 0) {
-            // Nothing to do;
+            ptr_instance->enabled_known_extensions
+                .nv_external_memory_capabilities = 1;
+            return;
+        }
+    }
+}
+
+void extensions_create_device(struct loader_device *dev,
+                              const VkDeviceCreateInfo *pCreateInfo) {
+    dev->loader_dispatch.enabled_known_extensions.ext_debug_marker = 0;
+    dev->loader_dispatch.enabled_known_extensions.amd_draw_indirect_count = 0;
+    dev->loader_dispatch.enabled_known_extensions.nv_external_memory_win32 = 0;
+
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
+                   VK_EXT_DEBUG_MARKER_EXTENSION_NAME) == 0) {
+            dev->loader_dispatch.enabled_known_extensions.ext_debug_marker = 1;
             return;
         }
 
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
                    VK_AMD_EXTENSION_DRAW_INDIRECT_COUNT_EXTENSION_NAME) == 0) {
-            // Nothing to do;
+            dev->loader_dispatch.enabled_known_extensions
+                .amd_draw_indirect_count = 1;
             return;
         }
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
                    VK_NV_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME) == 0) {
-            // Nothing to do;
+            dev->loader_dispatch.enabled_known_extensions
+                .nv_external_memory_win32 = 1;
             return;
         }
 #endif // VK_USE_PLATFORM_WIN32_KHR

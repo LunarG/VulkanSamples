@@ -49,12 +49,12 @@ void debug_report_add_instance_extensions(
 
 void debug_report_create_instance(struct loader_instance *ptr_instance,
                                   const VkInstanceCreateInfo *pCreateInfo) {
-    ptr_instance->debug_report_enabled = false;
+    ptr_instance->enabled_known_extensions.ext_debug_report = 0;
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
                    VK_EXT_DEBUG_REPORT_EXTENSION_NAME) == 0) {
-            ptr_instance->debug_report_enabled = true;
+            ptr_instance->enabled_known_extensions.ext_debug_report = 1;
             return;
         }
     }
@@ -97,9 +97,10 @@ util_CreateDebugReportCallback(struct loader_instance *inst,
     return VK_SUCCESS;
 }
 
-static VKAPI_ATTR VkResult VKAPI_CALL debug_report_CreateDebugReportCallback(
-    VkInstance instance, VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
-    VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pCallback) {
+static VKAPI_ATTR VkResult VKAPI_CALL debug_report_CreateDebugReportCallbackEXT(
+    VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator,
+    VkDebugReportCallbackEXT *pCallback) {
     struct loader_instance *inst = loader_get_instance(instance);
     loader_platform_thread_lock_mutex(&loader_lock);
     VkResult result = inst->disp->CreateDebugReportCallbackEXT(
@@ -275,9 +276,9 @@ void util_DestroyDebugReportCallbacks(struct loader_instance *inst,
 }
 
 static VKAPI_ATTR void VKAPI_CALL
-debug_report_DestroyDebugReportCallback(VkInstance instance,
-                                        VkDebugReportCallbackEXT callback,
-                                        VkAllocationCallbacks *pAllocator) {
+debug_report_DestroyDebugReportCallbackEXT(
+    VkInstance instance, VkDebugReportCallbackEXT callback,
+    const VkAllocationCallbacks *pAllocator) {
     struct loader_instance *inst = loader_get_instance(instance);
     loader_platform_thread_lock_mutex(&loader_lock);
 
@@ -288,7 +289,7 @@ debug_report_DestroyDebugReportCallback(VkInstance instance,
     loader_platform_thread_unlock_mutex(&loader_lock);
 }
 
-static VKAPI_ATTR void VKAPI_CALL debug_report_DebugReportMessage(
+static VKAPI_ATTR void VKAPI_CALL debug_report_DebugReportMessageEXT(
     VkInstance instance, VkDebugReportFlagsEXT flags,
     VkDebugReportObjectTypeEXT objType, uint64_t object, size_t location,
     int32_t msgCode, const char *pLayerPrefix, const char *pMsg) {
@@ -467,20 +468,20 @@ bool debug_report_instance_gpa(struct loader_instance *ptr_instance,
     *addr = NULL;
 
     if (!strcmp("vkCreateDebugReportCallbackEXT", name)) {
-        *addr = ptr_instance->debug_report_enabled
-                    ? (void *)debug_report_CreateDebugReportCallback
+        *addr = (ptr_instance->enabled_known_extensions.ext_debug_report == 1)
+                    ? (void *)debug_report_CreateDebugReportCallbackEXT
                     : NULL;
         return true;
     }
     if (!strcmp("vkDestroyDebugReportCallbackEXT", name)) {
-        *addr = ptr_instance->debug_report_enabled
-                    ? (void *)debug_report_DestroyDebugReportCallback
+        *addr = (ptr_instance->enabled_known_extensions.ext_debug_report == 1)
+                    ? (void *)debug_report_DestroyDebugReportCallbackEXT
                     : NULL;
         return true;
     }
     if (!strcmp("vkDebugReportMessageEXT", name)) {
-        *addr = ptr_instance->debug_report_enabled
-                    ? (void *)debug_report_DebugReportMessage
+        *addr = (ptr_instance->enabled_known_extensions.ext_debug_report == 1)
+                    ? (void *)debug_report_DebugReportMessageEXT
                     : NULL;
         return true;
     }

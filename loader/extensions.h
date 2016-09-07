@@ -23,10 +23,13 @@
 #include "loader.h"
 
 bool extension_instance_gpa(struct loader_instance *ptr_instance,
-    const char *name, void **addr);
+                            const char *name, void **addr);
 
 void extensions_create_instance(struct loader_instance *ptr_instance,
                                 const VkInstanceCreateInfo *pCreateInfo);
+
+void extensions_create_device(struct loader_device *dev,
+                              const VkDeviceCreateInfo *pCreateInfo);
 
 // Definitions for the VK_NV_external_memory_capabilities extension
 

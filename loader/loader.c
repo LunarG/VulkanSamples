@@ -1268,9 +1268,6 @@ void loader_destroy_logical_device(const struct loader_instance *inst,
     if (pAllocator) {
         dev->alloc_callbacks = *pAllocator;
     }
-    if (NULL != dev->app_extension_props) {
-        loader_device_heap_free(dev, dev->app_extension_props);
-    }
     if (NULL != dev->activated_layer_list.list) {
         loader_deactivate_layers(inst, dev, &dev->activated_layer_list);
     }
@@ -4326,6 +4323,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(
             localCreateInfo.enabledExtensionCount++;
         }
     }
+
+    extensions_create_device(dev, pCreateInfo);
 
     // TODO: Why does fpCreateDevice behave differently than
     // this_icd->CreateDevice?
