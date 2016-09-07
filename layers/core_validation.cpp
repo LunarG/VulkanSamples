@@ -439,16 +439,45 @@ static void add_mem_obj_info(layer_data *my_data, void *object, const VkDeviceMe
 
     my_data->memObjMap[mem] = unique_ptr<DEVICE_MEM_INFO>(new DEVICE_MEM_INFO(object, mem, pAllocateInfo));
 }
+
+// Helper function to print lowercase string of object type
+//  TODO: Unify string helper functions, this should really come out of a string helper if not there already
+static const char *object_type_to_string(VkDebugReportObjectTypeEXT type) {
+    switch (type) {
+    case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:
+        return "image";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
+        return "buffer";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT:
+        return "swapchain";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT:
+        return "descriptor set";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT:
+        return "buffer";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT:
+        return "event";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT:
+        return "query pool";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT:
+        return "pipeline";
+    case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT:
+        return "sampler";
+    default:
+        return "unknown";
+    }
+}
+
 // For given bound_object_handle, bound to given mem allocation, verify that the range for the bound object is valid
 static bool ValidateMemoryIsValid(layer_data *dev_data, VkDeviceMemory mem, uint64_t bound_object_handle,
-                                  const char *functionName) {
+                                  VkDebugReportObjectTypeEXT type, const char *functionName) {
     DEVICE_MEM_INFO *mem_info = getMemObjInfo(dev_data, mem);
     if (mem_info) {
         if (!mem_info->bound_ranges[bound_object_handle].valid) {
             return log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,
                            reinterpret_cast<uint64_t &>(mem), __LINE__, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
-                           "%s: Cannot read invalid memory 0x%" PRIx64 ", please fill the memory before using.", functionName,
-                           reinterpret_cast<uint64_t &>(mem));
+                           "%s: Cannot read invalid region of memory allocation 0x%" PRIx64 " for bound %s object 0x%" PRIx64
+                           ", please fill the memory before using.",
+                           functionName, reinterpret_cast<uint64_t &>(mem), object_type_to_string(type), bound_object_handle);
         }
     }
     return false;
@@ -465,13 +494,15 @@ static bool ValidateImageMemoryIsValid(layer_data *dev_data, IMAGE_NODE *image_n
                            functionName, reinterpret_cast<uint64_t &>(image_node->image));
         }
     } else {
-        return ValidateMemoryIsValid(dev_data, image_node->mem, reinterpret_cast<uint64_t &>(image_node->image), functionName);
+        return ValidateMemoryIsValid(dev_data, image_node->mem, reinterpret_cast<uint64_t &>(image_node->image),
+                                     VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, functionName);
     }
     return false;
 }
 // For given buffer_node, verify that the range it's bound to is valid
 static bool ValidateBufferMemoryIsValid(layer_data *dev_data, BUFFER_NODE *buffer_node, const char *functionName) {
-    return ValidateMemoryIsValid(dev_data, buffer_node->mem, reinterpret_cast<uint64_t &>(buffer_node->buffer), functionName);
+    return ValidateMemoryIsValid(dev_data, buffer_node->mem, reinterpret_cast<uint64_t &>(buffer_node->buffer),
+                                 VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, functionName);
 }
 // For the given memory allocation, set the range bound by the given handle object to the valid param value
 static void SetMemoryValid(layer_data *dev_data, VkDeviceMemory mem, uint64_t handle, bool valid) {
@@ -648,31 +679,6 @@ static bool freeMemObjInfo(layer_data *dev_data, void *object, VkDeviceMemory me
                             reinterpret_cast<uint64_t &>(mem));
     }
     return skip_call;
-}
-
-static const char *object_type_to_string(VkDebugReportObjectTypeEXT type) {
-    switch (type) {
-    case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:
-        return "image";
-    case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
-        return "buffer";
-    case VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT:
-        return "swapchain";
-    case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT:
-        return "descriptor set";
-    case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT:
-        return "buffer";
-    case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT:
-        return "event";
-    case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT:
-        return "query pool";
-    case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT:
-        return "pipeline";
-    case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT:
-        return "sampler";
-    default:
-        return "unknown";
-    }
 }
 
 // Remove object binding performs 3 tasks:
