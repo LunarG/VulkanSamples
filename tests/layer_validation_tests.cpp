@@ -14200,6 +14200,176 @@ TEST_F(VkLayerTest, PipelineInUseDestroyedSignaled) {
     vkDestroyPipelineLayout(m_device->handle(), pipeline_layout, nullptr);
 }
 
+TEST_F(VkLayerTest, SamplerInUseDestroyedSignaled) {
+    TEST_DESCRIPTION("Delete in-use sampler.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkDescriptorPoolSize ds_type_count;
+    ds_type_count.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    ds_type_count.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    ds_pool_ci.maxSets = 1;
+    ds_pool_ci.poolSizeCount = 1;
+    ds_pool_ci.pPoolSizes = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    VkResult err =
+        vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkSamplerCreateInfo sampler_ci = {};
+    sampler_ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_ci.pNext = NULL;
+    sampler_ci.magFilter = VK_FILTER_NEAREST;
+    sampler_ci.minFilter = VK_FILTER_NEAREST;
+    sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_ci.mipLodBias = 1.0;
+    sampler_ci.anisotropyEnable = VK_FALSE;
+    sampler_ci.maxAnisotropy = 1;
+    sampler_ci.compareEnable = VK_FALSE;
+    sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
+    sampler_ci.minLod = 1.0;
+    sampler_ci.maxLod = 1.0;
+    sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    sampler_ci.unnormalizedCoordinates = VK_FALSE;
+    VkSampler sampler;
+
+    err = vkCreateSampler(m_device->device(), &sampler_ci, NULL, &sampler);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding layout_binding;
+    layout_binding.binding = 0;
+    layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    layout_binding.descriptorCount = 1;
+    layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    layout_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+    ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    ds_layout_ci.bindingCount = 1;
+    ds_layout_ci.pBindings = &layout_binding;
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL,
+                                      &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    VkDescriptorSet descriptor_set;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info,
+                                   &descriptor_set);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.pNext = NULL;
+    pipeline_layout_ci.setLayoutCount = 1;
+    pipeline_layout_ci.pSetLayouts = &ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL,
+                                 &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkImageObj image(m_device);
+    image.init(128, 128, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT,
+               VK_IMAGE_TILING_OPTIMAL, 0);
+    ASSERT_TRUE(image.initialized());
+
+    VkImageView view;
+    VkImageViewCreateInfo ivci = {};
+    ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ivci.image = image.handle();
+    ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ivci.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ivci.subresourceRange.layerCount = 1;
+    ivci.subresourceRange.baseMipLevel = 0;
+    ivci.subresourceRange.levelCount = 1;
+    ivci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    err = vkCreateImageView(m_device->device(), &ivci, NULL, &view);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorImageInfo image_info{};
+    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    image_info.imageView = view;
+    image_info.sampler = sampler;
+
+    VkWriteDescriptorSet descriptor_write = {};
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstSet = descriptor_set;
+    descriptor_write.dstBinding = 0;
+    descriptor_write.descriptorCount = 1;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptor_write.pImageInfo = &image_info;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+    // Create PSO to use the sampler
+    char const *vsSource = "#version 450\n"
+                           "\n"
+                           "out gl_PerVertex { \n"
+                           "    vec4 gl_Position;\n"
+                           "};\n"
+                           "void main(){\n"
+                           "   gl_Position = vec4(1);\n"
+                           "}\n";
+    char const *fsSource = "#version 450\n"
+                           "\n"
+                           "layout(set=0, binding=0) uniform sampler2D s;\n"
+                           "layout(location=0) out vec4 x;\n"
+                           "void main(){\n"
+                           "   x = texture(s, vec2(1));\n"
+                           "}\n";
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Cannot delete sampler 0x");
+
+    BeginCommandBuffer();
+    // Bind pipeline to cmd buffer
+    vkCmdBindPipeline(m_commandBuffer->handle(),
+                      VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(),
+                            VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0,
+                            1, &descriptor_set, 0, nullptr);
+    Draw(1, 0, 0, 0);
+    EndCommandBuffer();
+    // Submit cmd buffer then destroy sampler
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
+    // Submit cmd buffer and then destroy sampler while in-flight
+    vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+
+    vkDestroySampler(m_device->device(), sampler, nullptr);
+    m_errorMonitor->VerifyFound();
+    vkQueueWaitIdle(m_device->m_queue);
+    // Now we can actually destroy sampler
+    vkDestroySampler(m_device->device(), sampler, nullptr);
+    vkDestroyImageView(m_device->device(), view, NULL);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+}
+
 TEST_F(VkLayerTest, QueueForwardProgressFenceWait) {
     TEST_DESCRIPTION("Call VkQueueSubmit with a semaphore that is already "
                      "signaled but not waited on by the queue. Wait on a "
