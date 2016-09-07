@@ -4924,6 +4924,9 @@ QueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo *pSubmits, V
                 pCBNode->submitCount++; // increment submit count
                 skip_call |= validatePrimaryCommandBufferState(dev_data, pCBNode);
                 skip_call |= validateQueueFamilyIndices(dev_data, pCBNode, queue);
+                // Potential early exit here as bad object state may crash in delayed function calls
+                if (skip_call)
+                    return result;
                 // Call submit-time functions to validate/update state
                 for (auto &function : pCBNode->validate_functions) {
                     skip_call |= function();
@@ -6722,6 +6725,14 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                             }
                             // Connect this framebuffer to this cmdBuffer
                             framebuffer->cb_bindings.insert(pCB);
+                            for (auto attach : framebuffer->attachments) {
+                                auto img_node = getImageNode(dev_data, attach.image);
+                                if (img_node) {
+                                    addCommandBufferBinding(
+                                        &img_node->cb_bindings,
+                                        {reinterpret_cast<uint64_t &>(attach.image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT}, pCB);
+                                }
+                            }
                         }
                     }
                 }
@@ -10046,7 +10057,14 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
             pCB->framebuffers.insert(pRenderPassBegin->framebuffer);
             // Connect this framebuffer to this cmdBuffer
             framebuffer->cb_bindings.insert(pCB);
-
+            for (auto attach : framebuffer->attachments) {
+                auto img_node = getImageNode(dev_data, attach.image);
+                if (img_node) {
+                    addCommandBufferBinding(&img_node->cb_bindings,
+                                            {reinterpret_cast<uint64_t &>(attach.image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT},
+                                            pCB);
+                }
+            }
             // transition attachments to the correct layouts for the first subpass
             TransitionSubpassLayouts(dev_data, pCB, &pCB->activeRenderPassBeginInfo, pCB->activeSubpass);
         } else {
