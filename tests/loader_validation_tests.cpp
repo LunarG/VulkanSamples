@@ -31,285 +31,222 @@
 #include <string>
 #include <vector>
 
-#include <vulkan/vulkan.h>
 #include "test_common.h"
+#include <vulkan/vulkan.h>
 
-namespace VK
-{
+namespace VK {
 
-struct InstanceCreateInfo
-{
-    InstanceCreateInfo() :
-        info // MSVC can't handle list initialization, thus explicit construction herein.
-        (
-            VkInstanceCreateInfo
-            {
-                VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // sType
-                nullptr, // pNext
-                0, // flags
-                nullptr, // pApplicationInfo
-                0, // enabledLayerCount
-                nullptr, // ppEnabledLayerNames
-                0, //enabledExtensionCount
-                nullptr // ppEnabledExtensionNames
-            }
-        )
-    {
-    }
+struct InstanceCreateInfo {
+    InstanceCreateInfo()
+        : info // MSVC can't handle list initialization, thus explicit construction herein.
+          (VkInstanceCreateInfo{
+              VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // sType
+              nullptr,                                // pNext
+              0,                                      // flags
+              nullptr,                                // pApplicationInfo
+              0,                                      // enabledLayerCount
+              nullptr,                                // ppEnabledLayerNames
+              0,                                      // enabledExtensionCount
+              nullptr                                 // ppEnabledExtensionNames
+          }) {}
 
-    InstanceCreateInfo& sType(VkStructureType const& sType)
-    {
+    InstanceCreateInfo &sType(VkStructureType const &sType) {
         info.sType = sType;
 
         return *this;
     }
 
-    InstanceCreateInfo& pNext(void const*const pNext)
-    {
+    InstanceCreateInfo &pNext(void const *const pNext) {
         info.pNext = pNext;
 
         return *this;
     }
 
-    InstanceCreateInfo& flags(VkInstanceCreateFlags const& flags)
-    {
+    InstanceCreateInfo &flags(VkInstanceCreateFlags const &flags) {
         info.flags = flags;
 
         return *this;
     }
 
-    InstanceCreateInfo& pApplicationInfo(VkApplicationInfo const*const pApplicationInfo)
-    {
+    InstanceCreateInfo &pApplicationInfo(VkApplicationInfo const *const pApplicationInfo) {
         info.pApplicationInfo = pApplicationInfo;
 
         return *this;
     }
 
-    InstanceCreateInfo& enabledLayerCount(uint32_t const& enabledLayerCount)
-    {
+    InstanceCreateInfo &enabledLayerCount(uint32_t const &enabledLayerCount) {
         info.enabledLayerCount = enabledLayerCount;
 
         return *this;
     }
 
-    InstanceCreateInfo& ppEnabledLayerNames(char const*const*const ppEnabledLayerNames)
-    {
+    InstanceCreateInfo &ppEnabledLayerNames(char const *const *const ppEnabledLayerNames) {
         info.ppEnabledLayerNames = ppEnabledLayerNames;
 
         return *this;
     }
 
-    InstanceCreateInfo& enabledExtensionCount(uint32_t const& enabledExtensionCount)
-    {
+    InstanceCreateInfo &enabledExtensionCount(uint32_t const &enabledExtensionCount) {
         info.enabledExtensionCount = enabledExtensionCount;
 
         return *this;
     }
 
-    InstanceCreateInfo& ppEnabledExtensionNames(char const*const*const ppEnabledExtensionNames)
-    {
+    InstanceCreateInfo &ppEnabledExtensionNames(char const *const *const ppEnabledExtensionNames) {
         info.ppEnabledExtensionNames = ppEnabledExtensionNames;
 
         return *this;
     }
 
-    operator VkInstanceCreateInfo const*() const
-    {
-        return &info;
-    }
+    operator VkInstanceCreateInfo const *() const { return &info; }
 
-    operator VkInstanceCreateInfo*()
-    {
-        return &info;
-    }
+    operator VkInstanceCreateInfo *() { return &info; }
 
     VkInstanceCreateInfo info;
 };
 
-struct DeviceQueueCreateInfo
-{
-    DeviceQueueCreateInfo() :
-        info // MSVC can't handle list initialization, thus explicit construction herein.
-        (
-            VkDeviceQueueCreateInfo
-            {
-                VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, // sType
-                nullptr, // pNext
-                0, // flags
-                0, // queueFamilyIndex
-                0, // queueCount
-                nullptr // pQueuePriorities
-            }
-        )
-    {
-    }
+struct DeviceQueueCreateInfo {
+    DeviceQueueCreateInfo()
+        : info // MSVC can't handle list initialization, thus explicit construction herein.
+          (VkDeviceQueueCreateInfo{
+              VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, // sType
+              nullptr,                                    // pNext
+              0,                                          // flags
+              0,                                          // queueFamilyIndex
+              0,                                          // queueCount
+              nullptr                                     // pQueuePriorities
+          }) {}
 
-    DeviceQueueCreateInfo& sType(VkStructureType const& sType)
-    {
+    DeviceQueueCreateInfo &sType(VkStructureType const &sType) {
         info.sType = sType;
 
         return *this;
     }
 
-    DeviceQueueCreateInfo& pNext(void const*const pNext)
-    {
+    DeviceQueueCreateInfo &pNext(void const *const pNext) {
         info.pNext = pNext;
 
         return *this;
     }
 
-    DeviceQueueCreateInfo& flags(VkDeviceQueueCreateFlags const& flags)
-    {
+    DeviceQueueCreateInfo &flags(VkDeviceQueueCreateFlags const &flags) {
         info.flags = flags;
 
         return *this;
     }
 
-    DeviceQueueCreateInfo& queueFamilyIndex(uint32_t const& queueFamilyIndex)
-    {
+    DeviceQueueCreateInfo &queueFamilyIndex(uint32_t const &queueFamilyIndex) {
         info.queueFamilyIndex = queueFamilyIndex;
 
         return *this;
     }
 
-    DeviceQueueCreateInfo& queueCount(uint32_t const& queueCount)
-    {
+    DeviceQueueCreateInfo &queueCount(uint32_t const &queueCount) {
         info.queueCount = queueCount;
 
         return *this;
     }
 
-    DeviceQueueCreateInfo& pQueuePriorities(float const*const pQueuePriorities)
-    {
+    DeviceQueueCreateInfo &pQueuePriorities(float const *const pQueuePriorities) {
         info.pQueuePriorities = pQueuePriorities;
 
         return *this;
     }
 
-    operator VkDeviceQueueCreateInfo()
-    {
-        return info;
-    }
+    operator VkDeviceQueueCreateInfo() { return info; }
 
     VkDeviceQueueCreateInfo info;
 };
 
-struct DeviceCreateInfo
-{
-    DeviceCreateInfo() :
-        info // MSVC can't handle list initialization, thus explicit construction herein.
-        (
-            VkDeviceCreateInfo
-            {
-                VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, // sType
-                nullptr, // pNext
-                0, // flags
-                0, // queueCreateInfoCount
-                nullptr, // pQueueCreateInfos
-                0, // enabledLayerCount
-                nullptr, // ppEnabledLayerNames
-                0, // enabledExtensionCount
-                nullptr, // ppEnabledExtensionNames
-                nullptr // pEnabledFeatures
-            }
-        )
-    {
-    }
+struct DeviceCreateInfo {
+    DeviceCreateInfo()
+        : info // MSVC can't handle list initialization, thus explicit construction herein.
+          (VkDeviceCreateInfo{
+              VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, // sType
+              nullptr,                              // pNext
+              0,                                    // flags
+              0,                                    // queueCreateInfoCount
+              nullptr,                              // pQueueCreateInfos
+              0,                                    // enabledLayerCount
+              nullptr,                              // ppEnabledLayerNames
+              0,                                    // enabledExtensionCount
+              nullptr,                              // ppEnabledExtensionNames
+              nullptr                               // pEnabledFeatures
+          }) {}
 
-    DeviceCreateInfo& sType(VkStructureType const& sType)
-    {
+    DeviceCreateInfo &sType(VkStructureType const &sType) {
         info.sType = sType;
 
         return *this;
     }
 
-    DeviceCreateInfo& pNext(void const*const pNext)
-    {
+    DeviceCreateInfo &pNext(void const *const pNext) {
         info.pNext = pNext;
 
         return *this;
     }
 
-    DeviceCreateInfo& flags(VkDeviceQueueCreateFlags const& flags)
-    {
+    DeviceCreateInfo &flags(VkDeviceQueueCreateFlags const &flags) {
         info.flags = flags;
 
         return *this;
     }
 
-    DeviceCreateInfo& queueCreateInfoCount(uint32_t const& queueCreateInfoCount)
-    {
+    DeviceCreateInfo &queueCreateInfoCount(uint32_t const &queueCreateInfoCount) {
         info.queueCreateInfoCount = queueCreateInfoCount;
 
         return *this;
     }
 
-    DeviceCreateInfo& pQueueCreateInfos(VkDeviceQueueCreateInfo const*const pQueueCreateInfos)
-    {
+    DeviceCreateInfo &pQueueCreateInfos(VkDeviceQueueCreateInfo const *const pQueueCreateInfos) {
         info.pQueueCreateInfos = pQueueCreateInfos;
 
         return *this;
     }
 
-    DeviceCreateInfo& enabledLayerCount(uint32_t const& enabledLayerCount)
-    {
+    DeviceCreateInfo &enabledLayerCount(uint32_t const &enabledLayerCount) {
         info.enabledLayerCount = enabledLayerCount;
 
         return *this;
     }
 
-    DeviceCreateInfo& ppEnabledLayerNames(char const*const*const ppEnabledLayerNames)
-    {
+    DeviceCreateInfo &ppEnabledLayerNames(char const *const *const ppEnabledLayerNames) {
         info.ppEnabledLayerNames = ppEnabledLayerNames;
 
         return *this;
     }
 
-    DeviceCreateInfo& enabledExtensionCount(uint32_t const& enabledExtensionCount)
-    {
+    DeviceCreateInfo &enabledExtensionCount(uint32_t const &enabledExtensionCount) {
         info.enabledExtensionCount = enabledExtensionCount;
 
         return *this;
     }
 
-    DeviceCreateInfo& ppEnabledExtensionNames(char const*const*const ppEnabledExtensionNames)
-    {
+    DeviceCreateInfo &ppEnabledExtensionNames(char const *const *const ppEnabledExtensionNames) {
         info.ppEnabledExtensionNames = ppEnabledExtensionNames;
 
         return *this;
     }
 
-    DeviceCreateInfo& pEnabledFeatures(VkPhysicalDeviceFeatures const*const pEnabledFeatures)
-    {
+    DeviceCreateInfo &pEnabledFeatures(VkPhysicalDeviceFeatures const *const pEnabledFeatures) {
         info.pEnabledFeatures = pEnabledFeatures;
 
         return *this;
     }
 
-    operator VkDeviceCreateInfo const*() const
-    {
-        return &info;
-    }
+    operator VkDeviceCreateInfo const *() const { return &info; }
 
-    operator VkDeviceCreateInfo*()
-    {
-        return &info;
-    }
+    operator VkDeviceCreateInfo *() { return &info; }
 
     VkDeviceCreateInfo info;
 };
-
 }
 
-struct CommandLine : public ::testing::Test
-{
-    static void Initialize(int argc, char **argv)
-    {
-        arguments.assign(argv, argv + argc);
-    };
+struct CommandLine : public ::testing::Test {
+    static void Initialize(int argc, char **argv) { arguments.assign(argv, argv + argc); };
 
-    static void SetUpTestCase() {};
-    static void TearDownTestCase() {};
+    static void SetUpTestCase(){};
+    static void TearDownTestCase(){};
 
     static std::vector<std::string> arguments;
 };
@@ -324,19 +261,8 @@ struct ImplicitLayer : public CommandLine {};
 // LVLGH = loader and validation github
 // LVLGL = lodaer and validation gitlab
 
-TEST(LX435, InstanceCreateInfoConst)
-{
-    VkInstanceCreateInfo const info =
-    {
-        VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        nullptr,
-        0,
-        nullptr,
-        0,
-        nullptr,
-        0,
-        nullptr
-    };
+TEST(LX435, InstanceCreateInfoConst) {
+    VkInstanceCreateInfo const info = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, nullptr, 0, nullptr, 0, nullptr, 0, nullptr};
 
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(&info, VK_NULL_HANDLE, &instance);
@@ -345,22 +271,13 @@ TEST(LX435, InstanceCreateInfoConst)
     vkDestroyInstance(instance, nullptr);
 }
 
-TEST(LX475, DestroyInstanceNullHandle)
-{
-    vkDestroyInstance(VK_NULL_HANDLE, nullptr);
-}
+TEST(LX475, DestroyInstanceNullHandle) { vkDestroyInstance(VK_NULL_HANDLE, nullptr); }
 
-TEST(LX475, DestroyDeviceNullHandle)
-{
-    vkDestroyDevice(VK_NULL_HANDLE, nullptr);
-}
+TEST(LX475, DestroyDeviceNullHandle) { vkDestroyDevice(VK_NULL_HANDLE, nullptr); }
 
-TEST(CreateInstance, ExtensionNotPresent)
-{
-    char const*const names[] = {"NotPresent"}; // Temporary required due to MSVC bug.
-    auto const info = VK::InstanceCreateInfo().
-        enabledExtensionCount(1).
-        ppEnabledExtensionNames(names);
+TEST(CreateInstance, ExtensionNotPresent) {
+    char const *const names[] = {"NotPresent"}; // Temporary required due to MSVC bug.
+    auto const info = VK::InstanceCreateInfo().enabledExtensionCount(1).ppEnabledExtensionNames(names);
 
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
@@ -369,12 +286,9 @@ TEST(CreateInstance, ExtensionNotPresent)
     // It's not necessary to destroy the instance because it will not be created successfully.
 }
 
-TEST(CreateInstance, LayerNotPresent)
-{
-    char const*const names[] = {"NotPresent"}; // Temporary required due to MSVC bug.
-    auto const info = VK::InstanceCreateInfo().
-        enabledLayerCount(1).
-        ppEnabledLayerNames(names);
+TEST(CreateInstance, LayerNotPresent) {
+    char const *const names[] = {"NotPresent"}; // Temporary required due to MSVC bug.
+    auto const info = VK::InstanceCreateInfo().enabledLayerCount(1).ppEnabledLayerNames(names);
 
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
@@ -384,12 +298,9 @@ TEST(CreateInstance, LayerNotPresent)
 }
 
 // Used by run_loader_tests.sh to test for layer insertion.
-TEST(CreateInstance, LayerPresent)
-{
-    char const*const names[] = {"VK_LAYER_LUNARG_parameter_validation"}; // Temporary required due to MSVC bug.
-    auto const info = VK::InstanceCreateInfo().
-        enabledLayerCount(1).
-        ppEnabledLayerNames(names);
+TEST(CreateInstance, LayerPresent) {
+    char const *const names[] = {"VK_LAYER_LUNARG_parameter_validation"}; // Temporary required due to MSVC bug.
+    auto const info = VK::InstanceCreateInfo().enabledLayerCount(1).ppEnabledLayerNames(names);
 
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
@@ -398,8 +309,7 @@ TEST(CreateInstance, LayerPresent)
     vkDestroyInstance(instance, nullptr);
 }
 
-TEST(CreateDevice, ExtensionNotPresent)
-{
+TEST(CreateDevice, ExtensionNotPresent) {
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
     ASSERT_EQ(result, VK_SUCCESS);
@@ -414,8 +324,7 @@ TEST(CreateDevice, ExtensionNotPresent)
     ASSERT_EQ(result, VK_SUCCESS);
     ASSERT_GT(physicalCount, 0u);
 
-    for(uint32_t p = 0; p < physicalCount; ++p)
-    {
+    for (uint32_t p = 0; p < physicalCount; ++p) {
         uint32_t familyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, nullptr);
         ASSERT_EQ(result, VK_SUCCESS);
@@ -426,28 +335,21 @@ TEST(CreateDevice, ExtensionNotPresent)
         ASSERT_EQ(result, VK_SUCCESS);
         ASSERT_GT(familyCount, 0u);
 
-        for(uint32_t q = 0; q < familyCount; ++q)
-        {
-            if(~family[q].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            {
+        for (uint32_t q = 0; q < familyCount; ++q) {
+            if (~family[q].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 continue;
             }
 
             float const priorities[] = {0.0f}; // Temporary required due to MSVC bug.
-            VkDeviceQueueCreateInfo const queueInfo[1]
-            {
-                VK::DeviceQueueCreateInfo().
-                    queueFamilyIndex(q).
-                    queueCount(1).
-                    pQueuePriorities(priorities)
-            };
+            VkDeviceQueueCreateInfo const queueInfo[1]{
+                VK::DeviceQueueCreateInfo().queueFamilyIndex(q).queueCount(1).pQueuePriorities(priorities)};
 
-            char const*const names[] = {"NotPresent"}; // Temporary required due to MSVC bug.
-            auto const deviceInfo = VK::DeviceCreateInfo().
-                queueCreateInfoCount(1).
-                pQueueCreateInfos(queueInfo).
-                enabledExtensionCount(1).
-                ppEnabledExtensionNames(names);
+            char const *const names[] = {"NotPresent"}; // Temporary required due to MSVC bug.
+            auto const deviceInfo = VK::DeviceCreateInfo()
+                                        .queueCreateInfoCount(1)
+                                        .pQueueCreateInfos(queueInfo)
+                                        .enabledExtensionCount(1)
+                                        .ppEnabledExtensionNames(names);
 
             VkDevice device;
             result = vkCreateDevice(physical[p], deviceInfo, nullptr, &device);
@@ -463,8 +365,7 @@ TEST(CreateDevice, ExtensionNotPresent)
 // LX535 / MI-76: Device layers are deprecated.
 // For backwards compatibility, they are allowed, but must be ignored.
 // Ensure that no errors occur if a bogus device layer list is passed to vkCreateDevice.
-TEST(CreateDevice, LayersNotPresent)
-{
+TEST(CreateDevice, LayersNotPresent) {
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
     ASSERT_EQ(result, VK_SUCCESS);
@@ -479,8 +380,7 @@ TEST(CreateDevice, LayersNotPresent)
     ASSERT_EQ(result, VK_SUCCESS);
     ASSERT_GT(physicalCount, 0u);
 
-    for(uint32_t p = 0; p < physicalCount; ++p)
-    {
+    for (uint32_t p = 0; p < physicalCount; ++p) {
         uint32_t familyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, nullptr);
         ASSERT_EQ(result, VK_SUCCESS);
@@ -491,28 +391,21 @@ TEST(CreateDevice, LayersNotPresent)
         ASSERT_EQ(result, VK_SUCCESS);
         ASSERT_GT(familyCount, 0u);
 
-        for(uint32_t q = 0; q < familyCount; ++q)
-        {
-            if(~family[q].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            {
+        for (uint32_t q = 0; q < familyCount; ++q) {
+            if (~family[q].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 continue;
             }
 
             float const priorities[] = {0.0f}; // Temporary required due to MSVC bug.
-            VkDeviceQueueCreateInfo const queueInfo[1]
-            {
-                VK::DeviceQueueCreateInfo().
-                    queueFamilyIndex(q).
-                    queueCount(1).
-                    pQueuePriorities(priorities)
-            };
+            VkDeviceQueueCreateInfo const queueInfo[1]{
+                VK::DeviceQueueCreateInfo().queueFamilyIndex(q).queueCount(1).pQueuePriorities(priorities)};
 
-            char const*const names[] = {"NotPresent"}; // Temporary required due to MSVC bug.
-            auto const deviceInfo = VK::DeviceCreateInfo().
-                queueCreateInfoCount(1).
-                pQueueCreateInfos(queueInfo).
-                enabledLayerCount(1).
-                ppEnabledLayerNames(names);
+            char const *const names[] = {"NotPresent"}; // Temporary required due to MSVC bug.
+            auto const deviceInfo = VK::DeviceCreateInfo()
+                                        .queueCreateInfoCount(1)
+                                        .pQueueCreateInfos(queueInfo)
+                                        .enabledLayerCount(1)
+                                        .ppEnabledLayerNames(names);
 
             VkDevice device;
             result = vkCreateDevice(physical[p], deviceInfo, nullptr, &device);
@@ -525,15 +418,13 @@ TEST(CreateDevice, LayersNotPresent)
     vkDestroyInstance(instance, nullptr);
 }
 
-TEST_F(EnumerateInstanceLayerProperties, PropertyCountLessThanAvailable)
-{
+TEST_F(EnumerateInstanceLayerProperties, PropertyCountLessThanAvailable) {
     uint32_t count = 0u;
     VkResult result = vkEnumerateInstanceLayerProperties(&count, nullptr);
     ASSERT_EQ(result, VK_SUCCESS);
 
     // We need atleast two for the test to be relevant.
-    if(count < 2u)
-    {
+    if (count < 2u) {
         return;
     }
 
@@ -543,8 +434,7 @@ TEST_F(EnumerateInstanceLayerProperties, PropertyCountLessThanAvailable)
     ASSERT_EQ(result, VK_INCOMPLETE);
 }
 
-TEST(EnumerateDeviceLayerProperties, PropertyCountLessThanAvailable)
-{
+TEST(EnumerateDeviceLayerProperties, PropertyCountLessThanAvailable) {
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
     ASSERT_EQ(result, VK_SUCCESS);
@@ -559,15 +449,13 @@ TEST(EnumerateDeviceLayerProperties, PropertyCountLessThanAvailable)
     ASSERT_EQ(result, VK_SUCCESS);
     ASSERT_GT(physicalCount, 0u);
 
-    for(uint32_t p = 0; p < physicalCount; ++p)
-    {
+    for (uint32_t p = 0; p < physicalCount; ++p) {
         uint32_t count = 0u;
         result = vkEnumerateDeviceLayerProperties(physical[p], &count, nullptr);
         ASSERT_EQ(result, VK_SUCCESS);
 
         // We need atleast two for the test to be relevant.
-        if(count < 2u)
-        {
+        if (count < 2u) {
             continue;
         }
 
@@ -580,23 +468,19 @@ TEST(EnumerateDeviceLayerProperties, PropertyCountLessThanAvailable)
     vkDestroyInstance(instance, nullptr);
 }
 
-TEST_F(EnumerateInstanceLayerProperties, Count)
-{
+TEST_F(EnumerateInstanceLayerProperties, Count) {
     uint32_t count = 0u;
     VkResult result = vkEnumerateInstanceLayerProperties(&count, nullptr);
     ASSERT_EQ(result, VK_SUCCESS);
 
-    if(std::find(arguments.begin(), arguments.end(), "count") != arguments.end())
-    {
+    if (std::find(arguments.begin(), arguments.end(), "count") != arguments.end()) {
         std::cout << "count=" << count << '\n';
     }
 }
 
-TEST_F(EnumerateInstanceLayerProperties, OnePass)
-{
+TEST_F(EnumerateInstanceLayerProperties, OnePass) {
     // Count required for this test.
-    if(std::find(arguments.begin(), arguments.end(), "count") == arguments.end())
-    {
+    if (std::find(arguments.begin(), arguments.end(), "count") == arguments.end()) {
         return;
     }
 
@@ -606,21 +490,15 @@ TEST_F(EnumerateInstanceLayerProperties, OnePass)
     VkResult result = vkEnumerateInstanceLayerProperties(&count, properties.get());
     ASSERT_EQ(result, VK_SUCCESS);
 
-    if(std::find(arguments.begin(), arguments.end(), "properties") != arguments.end())
-    {
-        for(uint32_t p = 0; p < count; ++p)
-        {
-            std::cout << "properties[" << p << "] ="
-                << ' ' << properties[p].layerName
-                << ' ' << properties[p].specVersion
-                << ' ' << properties[p].implementationVersion
-                << ' ' << properties[p].description << '\n';
+    if (std::find(arguments.begin(), arguments.end(), "properties") != arguments.end()) {
+        for (uint32_t p = 0; p < count; ++p) {
+            std::cout << "properties[" << p << "] =" << ' ' << properties[p].layerName << ' ' << properties[p].specVersion << ' '
+                      << properties[p].implementationVersion << ' ' << properties[p].description << '\n';
         }
     }
 }
 
-TEST_F(EnumerateInstanceLayerProperties, TwoPass)
-{
+TEST_F(EnumerateInstanceLayerProperties, TwoPass) {
     uint32_t count = 0u;
     VkResult result = vkEnumerateInstanceLayerProperties(&count, nullptr);
     ASSERT_EQ(result, VK_SUCCESS);
@@ -629,28 +507,21 @@ TEST_F(EnumerateInstanceLayerProperties, TwoPass)
     result = vkEnumerateInstanceLayerProperties(&count, properties.get());
     ASSERT_EQ(result, VK_SUCCESS);
 
-    if(std::find(arguments.begin(), arguments.end(), "properties") != arguments.end())
-    {
-        for(uint32_t p = 0; p < count; ++p)
-        {
-            std::cout << "properties[" << p << "] ="
-                << ' ' << properties[p].layerName
-                << ' ' << properties[p].specVersion
-                << ' ' << properties[p].implementationVersion
-                << ' ' << properties[p].description << '\n';
+    if (std::find(arguments.begin(), arguments.end(), "properties") != arguments.end()) {
+        for (uint32_t p = 0; p < count; ++p) {
+            std::cout << "properties[" << p << "] =" << ' ' << properties[p].layerName << ' ' << properties[p].specVersion << ' '
+                      << properties[p].implementationVersion << ' ' << properties[p].description << '\n';
         }
     }
 }
 
-TEST_F(EnumerateInstanceExtensionProperties, PropertyCountLessThanAvailable)
-{
+TEST_F(EnumerateInstanceExtensionProperties, PropertyCountLessThanAvailable) {
     uint32_t count = 0u;
     VkResult result = vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
     ASSERT_EQ(result, VK_SUCCESS);
 
     // We need atleast two for the test to be relevant.
-    if(count < 2u)
-    {
+    if (count < 2u) {
         return;
     }
 
@@ -660,8 +531,7 @@ TEST_F(EnumerateInstanceExtensionProperties, PropertyCountLessThanAvailable)
     ASSERT_EQ(result, VK_INCOMPLETE);
 }
 
-TEST(EnumerateDeviceExtensionProperties, PropertyCountLessThanAvailable)
-{
+TEST(EnumerateDeviceExtensionProperties, PropertyCountLessThanAvailable) {
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
     ASSERT_EQ(result, VK_SUCCESS);
@@ -676,15 +546,13 @@ TEST(EnumerateDeviceExtensionProperties, PropertyCountLessThanAvailable)
     ASSERT_EQ(result, VK_SUCCESS);
     ASSERT_GT(physicalCount, 0u);
 
-    for(uint32_t p = 0; p < physicalCount; ++p)
-    {
+    for (uint32_t p = 0; p < physicalCount; ++p) {
         uint32_t count = 0u;
         result = vkEnumerateDeviceExtensionProperties(physical[p], nullptr, &count, nullptr);
         ASSERT_EQ(result, VK_SUCCESS);
 
         // We need atleast two for the test to be relevant.
-        if(count < 2u)
-        {
+        if (count < 2u) {
             continue;
         }
 
@@ -697,23 +565,19 @@ TEST(EnumerateDeviceExtensionProperties, PropertyCountLessThanAvailable)
     vkDestroyInstance(instance, nullptr);
 }
 
-TEST_F(EnumerateInstanceExtensionProperties, Count)
-{
+TEST_F(EnumerateInstanceExtensionProperties, Count) {
     uint32_t count = 0u;
     VkResult result = vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
     ASSERT_EQ(result, VK_SUCCESS);
 
-    if(std::find(arguments.begin(), arguments.end(), "count") != arguments.end())
-    {
+    if (std::find(arguments.begin(), arguments.end(), "count") != arguments.end()) {
         std::cout << "count=" << count << '\n';
     }
 }
 
-TEST_F(EnumerateInstanceExtensionProperties, OnePass)
-{
+TEST_F(EnumerateInstanceExtensionProperties, OnePass) {
     // Count required for this test.
-    if(std::find(arguments.begin(), arguments.end(), "count") == arguments.end())
-    {
+    if (std::find(arguments.begin(), arguments.end(), "count") == arguments.end()) {
         return;
     }
 
@@ -723,19 +587,15 @@ TEST_F(EnumerateInstanceExtensionProperties, OnePass)
     VkResult result = vkEnumerateInstanceExtensionProperties(nullptr, &count, properties.get());
     ASSERT_EQ(result, VK_SUCCESS);
 
-    if(std::find(arguments.begin(), arguments.end(), "properties") != arguments.end())
-    {
-        for(uint32_t p = 0; p < count; ++p)
-        {
-            std::cout << "properties[" << p << "] ="
-                << ' ' << properties[p].extensionName
-                << ' ' << properties[p].specVersion << '\n';
+    if (std::find(arguments.begin(), arguments.end(), "properties") != arguments.end()) {
+        for (uint32_t p = 0; p < count; ++p) {
+            std::cout << "properties[" << p << "] =" << ' ' << properties[p].extensionName << ' ' << properties[p].specVersion
+                      << '\n';
         }
     }
 }
 
-TEST_F(EnumerateInstanceExtensionProperties, TwoPass)
-{
+TEST_F(EnumerateInstanceExtensionProperties, TwoPass) {
     uint32_t count = 0u;
     VkResult result = vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
     ASSERT_EQ(result, VK_SUCCESS);
@@ -744,19 +604,15 @@ TEST_F(EnumerateInstanceExtensionProperties, TwoPass)
     result = vkEnumerateInstanceExtensionProperties(nullptr, &count, properties.get());
     ASSERT_EQ(result, VK_SUCCESS);
 
-    if(std::find(arguments.begin(), arguments.end(), "properties") != arguments.end())
-    {
-        for(uint32_t p = 0; p < count; ++p)
-        {
-            std::cout << "properties[" << p << "] ="
-                << ' ' << properties[p].extensionName
-                << ' ' << properties[p].specVersion << '\n';
+    if (std::find(arguments.begin(), arguments.end(), "properties") != arguments.end()) {
+        for (uint32_t p = 0; p < count; ++p) {
+            std::cout << "properties[" << p << "] =" << ' ' << properties[p].extensionName << ' ' << properties[p].specVersion
+                      << '\n';
         }
     }
 }
 
-TEST_F(EnumerateInstanceExtensionProperties, InstanceExtensionEnumerated)
-{
+TEST_F(EnumerateInstanceExtensionProperties, InstanceExtensionEnumerated) {
     uint32_t count = 0u;
     VkResult result = vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
     ASSERT_EQ(result, VK_SUCCESS);
@@ -766,17 +622,12 @@ TEST_F(EnumerateInstanceExtensionProperties, InstanceExtensionEnumerated)
     ASSERT_EQ(result, VK_SUCCESS);
 
     ASSERT_NE(std::find_if(
-        &properties[0],
-        &properties[count],
-        [](VkExtensionProperties const& properties)
-        {
-            return strcmp(properties.extensionName, "VK_KHR_surface") == 0;
-        }),
-        &properties[count]);
+                  &properties[0], &properties[count],
+                  [](VkExtensionProperties const &properties) { return strcmp(properties.extensionName, "VK_KHR_surface") == 0; }),
+              &properties[count]);
 }
 
-TEST(EnumerateDeviceExtensionProperties, DeviceExtensionEnumerated)
-{
+TEST(EnumerateDeviceExtensionProperties, DeviceExtensionEnumerated) {
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
     ASSERT_EQ(result, VK_SUCCESS);
@@ -791,8 +642,7 @@ TEST(EnumerateDeviceExtensionProperties, DeviceExtensionEnumerated)
     ASSERT_EQ(result, VK_SUCCESS);
     ASSERT_GT(physicalCount, 0u);
 
-    for(uint32_t p = 0; p < physicalCount; ++p)
-    {
+    for (uint32_t p = 0; p < physicalCount; ++p) {
         uint32_t count = 0u;
         result = vkEnumerateDeviceExtensionProperties(physical[p], nullptr, &count, nullptr);
         ASSERT_EQ(result, VK_SUCCESS);
@@ -801,21 +651,17 @@ TEST(EnumerateDeviceExtensionProperties, DeviceExtensionEnumerated)
         result = vkEnumerateDeviceExtensionProperties(physical[p], nullptr, &count, properties.get());
         ASSERT_EQ(result, VK_SUCCESS);
 
-        ASSERT_NE(std::find_if(
-            &properties[0],
-            &properties[count],
-            [](VkExtensionProperties const& properties)
-            {
-                return strcmp(properties.extensionName, "VK_KHR_swapchain") == 0;
-            }),
-            &properties[count]);
+        ASSERT_NE(std::find_if(&properties[0], &properties[count],
+                               [](VkExtensionProperties const &properties) {
+                                   return strcmp(properties.extensionName, "VK_KHR_swapchain") == 0;
+                               }),
+                  &properties[count]);
     }
 
     vkDestroyInstance(instance, nullptr);
 }
 
-TEST_F(ImplicitLayer, Present)
-{
+TEST_F(ImplicitLayer, Present) {
     auto const info = VK::InstanceCreateInfo();
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(info, VK_NULL_HANDLE, &instance);
@@ -824,8 +670,7 @@ TEST_F(ImplicitLayer, Present)
     vkDestroyInstance(instance, nullptr);
 }
 
-TEST(WrapObjects, Insert)
-{
+TEST(WrapObjects, Insert) {
     VkInstance instance = VK_NULL_HANDLE;
     VkResult result = vkCreateInstance(VK::InstanceCreateInfo(), VK_NULL_HANDLE, &instance);
     ASSERT_EQ(result, VK_SUCCESS);
@@ -840,8 +685,7 @@ TEST(WrapObjects, Insert)
     ASSERT_EQ(result, VK_SUCCESS);
     ASSERT_GT(physicalCount, 0u);
 
-    for(uint32_t p = 0; p < physicalCount; ++p)
-    {
+    for (uint32_t p = 0; p < physicalCount; ++p) {
         uint32_t familyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physical[p], &familyCount, nullptr);
         ASSERT_EQ(result, VK_SUCCESS);
@@ -852,25 +696,16 @@ TEST(WrapObjects, Insert)
         ASSERT_EQ(result, VK_SUCCESS);
         ASSERT_GT(familyCount, 0u);
 
-        for(uint32_t q = 0; q < familyCount; ++q)
-        {
-            if(~family[q].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            {
+        for (uint32_t q = 0; q < familyCount; ++q) {
+            if (~family[q].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 continue;
             }
 
             float const priorities[] = {0.0f}; // Temporary required due to MSVC bug.
-            VkDeviceQueueCreateInfo const queueInfo[1]
-            {
-                VK::DeviceQueueCreateInfo().
-                    queueFamilyIndex(q).
-                    queueCount(1).
-                    pQueuePriorities(priorities)
-            };
+            VkDeviceQueueCreateInfo const queueInfo[1]{
+                VK::DeviceQueueCreateInfo().queueFamilyIndex(q).queueCount(1).pQueuePriorities(priorities)};
 
-            auto const deviceInfo = VK::DeviceCreateInfo().
-                queueCreateInfoCount(1).
-                pQueueCreateInfos(queueInfo);
+            auto const deviceInfo = VK::DeviceCreateInfo().queueCreateInfoCount(1).pQueueCreateInfos(queueInfo);
 
             VkDevice device;
             result = vkCreateDevice(physical[p], deviceInfo, nullptr, &device);
@@ -883,14 +718,12 @@ TEST(WrapObjects, Insert)
     vkDestroyInstance(instance, nullptr);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     int result;
 
     ::testing::InitGoogleTest(&argc, argv);
 
-    if(argc > 0)
-    {
+    if (argc > 0) {
         CommandLine::Initialize(argc, argv);
     }
 
