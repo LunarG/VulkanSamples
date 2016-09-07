@@ -453,7 +453,7 @@ static const char *object_type_to_string(VkDebugReportObjectTypeEXT type) {
     case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT:
         return "descriptor set";
     case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT:
-        return "buffer";
+        return "framebuffer";
     case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT:
         return "event";
     case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT:
