@@ -47,7 +47,7 @@ At the end of the tutorial, you will have a complete Vulkan program
 that you can use as a starting point for learning more about Vulkan.
 
 To get an idea of what this samples progression looks like, please visit the
-[LunarG Samples Progression Index](https://vulkan.lunarg.com/app/doc/latest/windows/samples_index.html).
+<a href="https://vulkan.lunarg.com/app/doc/latest/windows/samples_index.html" target="_blank">LunarG Samples Progression Index</a>.
 
 ### How to use the Samples Tutorial
 
@@ -55,7 +55,7 @@ This tutorial is most effective when it is used side-by-side
 with the code in the samples progression.
 We suggest that you set up your development environment to enable you
 to download and build the
-[LunarG Vulkan Samples GitHub repository](https://github.com/LunarG/VulkanSamples).
+<a href="https://github.com/LunarG/VulkanSamples" target="_blank">LunarG Vulkan Samples GitHub repository</a>.
 Please use the instructions in the top-level README file in
 that repository to install the necessary tools and packages to build
 the samples.
@@ -68,8 +68,8 @@ This file can be found in the Samples repository, under the `include` directory.
 
 The Vulkan specification document is an invaluable source for Vulkan information.
 You can find the specification at the
-[LunarG LunarXchange website](https://vulkan.lunarg.com)
-or in the [Khronos Vulkan Registry](https://www.khronos.org/registry/vulkan/).
+<a href="https://vulkan.lunarg.com" target="_blank">LunarG LunarXchange website</a>
+or in the <a href="https://www.khronos.org/registry/vulkan/" target="_blank">Khronos Vulkan Registry</a>.
 Although it is not strictly required to refer to the specification as you
 work through the samples, you may find the specification useful to get
 a deeper understanding of Vulkan.

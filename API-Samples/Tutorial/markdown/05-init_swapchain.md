@@ -25,8 +25,8 @@ WSI (Window System Integration) extensions.
 You can find the documentation for these extensions in a Vulkan
 specification document that was prepared with the WSI content enabled.
 The Vulkan specification found on the
-[LunarG LunarXchange website](https://vulkan.lunarg.com)
-and in the [Khronos Vulkan registry](https://www.khronos.org/registry/vulkan/)
+<a href="https://vulkan.lunarg.com" target="_blank">LunarG LunarXchange website</a>
+and in the <a href="https://www.khronos.org/registry/vulkan/" target="_blank">Khronos Vulkan Registry</a>
 is built with this content.
 
 The WSI extensions contain support for various platforms.
@@ -102,7 +102,7 @@ as instance extensions.
 to load a swapchain extension as a device extension.
 
 You can learn more about instance and device extensions by visiting the
-documentation section on the [LunarXchange website](https://vulkan.lunarg.com).
+documentation section on the <a href="https://vulkan.lunarg.com" target="_blank">LunarG LunarXchange website</a>.
 
 ## Queue Family and Present
 

@@ -43,7 +43,7 @@ Vulkan layers are outside the scope of this tutorial
 and of the samples progression.
 So this tutorial does not cover the layers further.
 Further information about layers can be found on the
-[LunarG LunarXchange website](https://vulkan.lunarg.com).
+<a href="https://vulkan.lunarg.com" target="_blank">LunarG LunarXchange website</a>.
 
 ## `vkCreateInstance`
 
