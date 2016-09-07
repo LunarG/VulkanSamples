@@ -5969,7 +5969,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateQueryPool(VkDevice device, const VkQueryPoo
         std::lock_guard<std::mutex> lock(global_lock);
         QUERY_POOL_NODE *qp_node = &dev_data->queryPoolMap[*pQueryPool];
         qp_node->createInfo = *pCreateInfo;
-        qp_node->in_use.store(0);
     }
     return result;
 }
@@ -10961,7 +10960,6 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateSemaphore(VkDevice device, const VkSemaphor
         sNode->signaler.first = VK_NULL_HANDLE;
         sNode->signaler.second = 0;
         sNode->signaled = false;
-        sNode->in_use.store(0);
     }
     return result;
 }
@@ -10973,7 +10971,6 @@ CreateEvent(VkDevice device, const VkEventCreateInfo *pCreateInfo, const VkAlloc
     if (result == VK_SUCCESS) {
         std::lock_guard<std::mutex> lock(global_lock);
         dev_data->eventMap[*pEvent].needsSignaled = false;
-        dev_data->eventMap[*pEvent].in_use.store(0);
         dev_data->eventMap[*pEvent].write_in_use = 0;
         dev_data->eventMap[*pEvent].stageMask = VkPipelineStageFlags(0);
     }

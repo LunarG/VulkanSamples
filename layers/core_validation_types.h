@@ -71,6 +71,8 @@ class BASE_NODE {
     //  binding removed when command buffer is reset or destroyed
     // When an object is destroyed, any bound cbs are set to INVALID
     std::unordered_set<GLOBAL_CB_NODE *> cb_bindings;
+
+    BASE_NODE() { in_use.store(0); };
 };
 
 // Generic wrapper for vulkan objects
@@ -152,23 +154,17 @@ class BUFFER_NODE : public BASE_NODE {
     VkBufferCreateInfo createInfo;
     BUFFER_NODE() : buffer(VK_NULL_HANDLE), mem(VK_NULL_HANDLE), memOffset(0), memSize(0), createInfo{} { in_use.store(0); };
     BUFFER_NODE(VkBuffer buff, const VkBufferCreateInfo *pCreateInfo)
-        : buffer(buff), mem(VK_NULL_HANDLE), memOffset(0), memSize(0), createInfo(*pCreateInfo) {
-        in_use.store(0);
-    };
+        : buffer(buff), mem(VK_NULL_HANDLE), memOffset(0), memSize(0), createInfo(*pCreateInfo){};
     BUFFER_NODE(const BUFFER_NODE &rh_obj)
-        : buffer(rh_obj.buffer), mem(rh_obj.mem), memOffset(rh_obj.memOffset),
-          memSize(rh_obj.memSize), createInfo(rh_obj.createInfo) {
-        in_use.store(0);
-    };
+        : buffer(rh_obj.buffer), mem(rh_obj.mem), memOffset(rh_obj.memOffset), memSize(rh_obj.memSize),
+          createInfo(rh_obj.createInfo){};
 };
 
 struct SAMPLER_NODE : public BASE_NODE {
     VkSampler sampler;
     VkSamplerCreateInfo createInfo;
 
-    SAMPLER_NODE(const VkSampler *ps, const VkSamplerCreateInfo *pci) : sampler(*ps), createInfo(*pci){
-        in_use.store(0);
-    };
+    SAMPLER_NODE(const VkSampler *ps, const VkSamplerCreateInfo *pci) : sampler(*ps), createInfo(*pci){};
 };
 
 class IMAGE_NODE : public BASE_NODE {
@@ -180,11 +176,9 @@ class IMAGE_NODE : public BASE_NODE {
     bool valid; // If this is a swapchain image backing memory track valid here as it doesn't have DEVICE_MEM_INFO
     VkDeviceSize memOffset;
     VkDeviceSize memSize;
-    IMAGE_NODE() : image(VK_NULL_HANDLE), createInfo{}, mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0) { in_use.store(0); };
+    IMAGE_NODE() : image(VK_NULL_HANDLE), createInfo{}, mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0){};
     IMAGE_NODE(VkImage img, const VkImageCreateInfo *pCreateInfo)
-        : image(img), createInfo(*pCreateInfo), mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0) {
-        in_use.store(0);
-    };
+        : image(img), createInfo(*pCreateInfo), mem(VK_NULL_HANDLE), valid(false), memOffset(0), memSize(0){};
     IMAGE_NODE(const IMAGE_NODE &rh_obj)
         : image(rh_obj.image), createInfo(rh_obj.createInfo), mem(rh_obj.mem), valid(rh_obj.valid), memOffset(rh_obj.memOffset),
           memSize(rh_obj.memSize) {
@@ -507,7 +501,7 @@ class PIPELINE_NODE : public BASE_NODE {
     PIPELINE_NODE()
         : pipeline{}, graphicsPipelineCI{}, computePipelineCI{}, active_shaders(0), duplicate_shaders(0), active_slots(),
           vertexBindingDescriptions(), vertexAttributeDescriptions(), attachments(), blendConstantsEnabled(false), render_pass_ci(),
-          pipeline_layout() { in_use.store(0); }
+          pipeline_layout() {}
 
     void initGraphicsPipeline(const VkGraphicsPipelineCreateInfo *pCreateInfo) {
         graphicsPipelineCI.initialize(pCreateInfo);
