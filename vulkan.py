@@ -1057,7 +1057,7 @@ ext_nv_external_memory_capabilities = Extension(
              Param("VkImageTiling", "tiling"),
              Param("VkImageUsageFlags", "usage"),
              Param("VkImageCreateFlags", "flags"),
-             Param("vkExternalMemoryHandleTypeFlagsNV", "externalHandleType"),
+             Param("VkExternalMemoryHandleTypeFlagsNV", "externalHandleType"),
              Param("VkExternalImageFormatPropertiesNV*", "pExternalImageFormatProperties")]),
     ],
 )
