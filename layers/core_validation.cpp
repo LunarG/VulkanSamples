@@ -6666,8 +6666,8 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
     // Validate command buffer level
-    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
-    if (pCB) {
+    GLOBAL_CB_NODE *cb_node = getCBNode(dev_data, commandBuffer);
+    if (cb_node) {
         // This implicitly resets the Cmd Buffer so make sure any fence is done and then clear memory references
         if (dev_data->globalInFlightCmdBuffers.count(commandBuffer)) {
             skip_call |=
@@ -6677,8 +6677,8 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                         "You must check CB fence before this call.",
                         commandBuffer);
         }
-        clear_cmd_buf_and_mem_references(dev_data, pCB);
-        if (pCB->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
+        clear_cmd_buf_and_mem_references(dev_data, cb_node);
+        if (cb_node->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
             // Secondary Command Buffer
             const VkCommandBufferInheritanceInfo *pInfo = pBeginInfo->pInheritanceInfo;
             if (!pInfo) {
@@ -6724,13 +6724,13 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                                     reinterpret_cast<uint64_t &>(framebuffer->createInfo.renderPass), errorString.c_str());
                             }
                             // Connect this framebuffer to this cmdBuffer
-                            framebuffer->cb_bindings.insert(pCB);
+                            framebuffer->cb_bindings.insert(cb_node);
                             for (auto attach : framebuffer->attachments) {
                                 auto img_node = getImageNode(dev_data, attach.image);
                                 if (img_node) {
-                                    addCommandBufferBinding(
-                                        &img_node->cb_bindings,
-                                        {reinterpret_cast<uint64_t &>(attach.image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT}, pCB);
+                                    addCommandBufferBinding(&img_node->cb_bindings, {reinterpret_cast<uint64_t &>(attach.image),
+                                                                                     VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT},
+                                                            cb_node);
                                 }
                             }
                         }
@@ -6762,15 +6762,15 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                 }
             }
         }
-        if (CB_RECORDING == pCB->state) {
+        if (CB_RECORDING == cb_node->state) {
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                         (uint64_t)commandBuffer, __LINE__, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
                         "vkBeginCommandBuffer(): Cannot call Begin on CB (0x%" PRIxLEAST64
                         ") in the RECORDING state. Must first call vkEndCommandBuffer().",
                         (uint64_t)commandBuffer);
-        } else if (CB_RECORDED == pCB->state || (CB_INVALID == pCB->state && CMD_END == pCB->cmds.back().type)) {
-            VkCommandPool cmdPool = pCB->createInfo.commandPool;
+        } else if (CB_RECORDED == cb_node->state || (CB_INVALID == cb_node->state && CMD_END == cb_node->cmds.back().type)) {
+            VkCommandPool cmdPool = cb_node->createInfo.commandPool;
             auto pPool = getCommandPoolNode(dev_data, cmdPool);
             if (!(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT & pPool->createFlags)) {
                 skip_call |=
@@ -6784,17 +6784,17 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
             resetCB(dev_data, commandBuffer);
         }
         // Set updated state here in case implicit reset occurs above
-        pCB->state = CB_RECORDING;
-        pCB->beginInfo = *pBeginInfo;
-        if (pCB->beginInfo.pInheritanceInfo) {
-            pCB->inheritanceInfo = *(pCB->beginInfo.pInheritanceInfo);
-            pCB->beginInfo.pInheritanceInfo = &pCB->inheritanceInfo;
+        cb_node->state = CB_RECORDING;
+        cb_node->beginInfo = *pBeginInfo;
+        if (cb_node->beginInfo.pInheritanceInfo) {
+            cb_node->inheritanceInfo = *(cb_node->beginInfo.pInheritanceInfo);
+            cb_node->beginInfo.pInheritanceInfo = &cb_node->inheritanceInfo;
             // If we are a secondary command-buffer and inheriting.  Update the items we should inherit.
-            if ((pCB->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) &&
-                (pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
-                pCB->activeRenderPass = getRenderPass(dev_data, pCB->beginInfo.pInheritanceInfo->renderPass);
-                pCB->activeSubpass = pCB->beginInfo.pInheritanceInfo->subpass;
-                pCB->framebuffers.insert(pCB->beginInfo.pInheritanceInfo->framebuffer);
+            if ((cb_node->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) &&
+                (cb_node->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
+                cb_node->activeRenderPass = getRenderPass(dev_data, cb_node->beginInfo.pInheritanceInfo->renderPass);
+                cb_node->activeSubpass = cb_node->beginInfo.pInheritanceInfo->subpass;
+                cb_node->framebuffers.insert(cb_node->beginInfo.pInheritanceInfo->framebuffer);
             }
         }
     } else {
@@ -9986,13 +9986,13 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
     bool skip_call = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     std::unique_lock<std::mutex> lock(global_lock);
-    GLOBAL_CB_NODE *pCB = getCBNode(dev_data, commandBuffer);
+    GLOBAL_CB_NODE *cb_node = getCBNode(dev_data, commandBuffer);
     auto renderPass = pRenderPassBegin ? getRenderPass(dev_data, pRenderPassBegin->renderPass) : nullptr;
     auto framebuffer = pRenderPassBegin ? getFramebuffer(dev_data, pRenderPassBegin->framebuffer) : nullptr;
-    if (pCB) {
+    if (cb_node) {
         if (renderPass) {
             uint32_t clear_op_size = 0; // Make sure pClearValues is at least as large as last LOAD_OP_CLEAR
-            pCB->activeFramebuffer = pRenderPassBegin->framebuffer;
+            cb_node->activeFramebuffer = pRenderPassBegin->framebuffer;
             for (size_t i = 0; i < renderPass->attachments.size(); ++i) {
                 MT_FB_ATTACHMENT_INFO &fb_info = framebuffer->attachments[i];
                 VkFormat format = renderPass->pCreateInfo->pAttachments[renderPass->attachments[i].attachment].format;
@@ -10004,7 +10004,7 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                         SetImageMemoryValid(dev_data, getImageNode(dev_data, fb_info.image), true);
                         return false;
                     };
-                    pCB->validate_functions.push_back(function);
+                    cb_node->validate_functions.push_back(function);
                 } else if (FormatSpecificLoadAndStoreOpSettings(format, renderPass->attachments[i].load_op,
                                                                 renderPass->attachments[i].stencil_load_op,
                                                                 VK_ATTACHMENT_LOAD_OP_DONT_CARE)) {
@@ -10012,7 +10012,7 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                         SetImageMemoryValid(dev_data, getImageNode(dev_data, fb_info.image), false);
                         return false;
                     };
-                    pCB->validate_functions.push_back(function);
+                    cb_node->validate_functions.push_back(function);
                 } else if (FormatSpecificLoadAndStoreOpSettings(format, renderPass->attachments[i].load_op,
                                                                 renderPass->attachments[i].stencil_load_op,
                                                                 VK_ATTACHMENT_LOAD_OP_LOAD)) {
@@ -10020,14 +10020,14 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                         return ValidateImageMemoryIsValid(dev_data, getImageNode(dev_data, fb_info.image),
                                                           "vkCmdBeginRenderPass()");
                     };
-                    pCB->validate_functions.push_back(function);
+                    cb_node->validate_functions.push_back(function);
                 }
                 if (renderPass->attachment_first_read[renderPass->attachments[i].attachment]) {
                     std::function<bool()> function = [=]() {
                         return ValidateImageMemoryIsValid(dev_data, getImageNode(dev_data, fb_info.image),
                                                           "vkCmdBeginRenderPass()");
                     };
-                    pCB->validate_functions.push_back(function);
+                    cb_node->validate_functions.push_back(function);
                 }
             }
             if (clear_op_size > pRenderPassBegin->clearValueCount) {
@@ -10044,29 +10044,29 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
                             clear_op_size, clear_op_size - 1);
             }
             skip_call |= VerifyRenderAreaBounds(dev_data, pRenderPassBegin);
-            skip_call |= VerifyFramebufferAndRenderPassLayouts(dev_data, pCB, pRenderPassBegin);
-            skip_call |= insideRenderPass(dev_data, pCB, "vkCmdBeginRenderPass");
+            skip_call |= VerifyFramebufferAndRenderPassLayouts(dev_data, cb_node, pRenderPassBegin);
+            skip_call |= insideRenderPass(dev_data, cb_node, "vkCmdBeginRenderPass");
             skip_call |= ValidateDependencies(dev_data, framebuffer, renderPass);
-            skip_call |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdBeginRenderPass");
-            skip_call |= addCmd(dev_data, pCB, CMD_BEGINRENDERPASS, "vkCmdBeginRenderPass()");
-            pCB->activeRenderPass = renderPass;
+            skip_call |= validatePrimaryCommandBuffer(dev_data, cb_node, "vkCmdBeginRenderPass");
+            skip_call |= addCmd(dev_data, cb_node, CMD_BEGINRENDERPASS, "vkCmdBeginRenderPass()");
+            cb_node->activeRenderPass = renderPass;
             // This is a shallow copy as that is all that is needed for now
-            pCB->activeRenderPassBeginInfo = *pRenderPassBegin;
-            pCB->activeSubpass = 0;
-            pCB->activeSubpassContents = contents;
-            pCB->framebuffers.insert(pRenderPassBegin->framebuffer);
+            cb_node->activeRenderPassBeginInfo = *pRenderPassBegin;
+            cb_node->activeSubpass = 0;
+            cb_node->activeSubpassContents = contents;
+            cb_node->framebuffers.insert(pRenderPassBegin->framebuffer);
             // Connect this framebuffer to this cmdBuffer
-            framebuffer->cb_bindings.insert(pCB);
+            framebuffer->cb_bindings.insert(cb_node);
             for (auto attach : framebuffer->attachments) {
                 auto img_node = getImageNode(dev_data, attach.image);
                 if (img_node) {
                     addCommandBufferBinding(&img_node->cb_bindings,
                                             {reinterpret_cast<uint64_t &>(attach.image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT},
-                                            pCB);
+                                            cb_node);
                 }
             }
             // transition attachments to the correct layouts for the first subpass
-            TransitionSubpassLayouts(dev_data, pCB, &pCB->activeRenderPassBeginInfo, pCB->activeSubpass);
+            TransitionSubpassLayouts(dev_data, cb_node, &cb_node->activeRenderPassBeginInfo, cb_node->activeSubpass);
         } else {
             skip_call |=
                 log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
