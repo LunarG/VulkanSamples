@@ -89,8 +89,7 @@ void Environment::SetUp() {
     instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 #ifdef _WIN32
-    instance_extension_names.push_back(
-        VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
     instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
@@ -103,21 +102,18 @@ void Environment::SetUp() {
     for (uint32_t i = 0; i < instance_extension_names.size(); i++) {
         extFound = 0;
         for (uint32_t j = 0; j < instance_extensions.size(); j++) {
-            if (!strcmp(instance_extension_names[i],
-                        instance_extensions[j].extensionName)) {
+            if (!strcmp(instance_extension_names[i], instance_extensions[j].extensionName)) {
                 extFound = 1;
             }
         }
-        ASSERT_EQ(extFound, 1) << "ERROR: Cannot find extension named "
-                               << instance_extension_names[i]
+        ASSERT_EQ(extFound, 1) << "ERROR: Cannot find extension named " << instance_extension_names[i]
                                << " which is necessary to pass this test";
     }
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_info.pNext = NULL;
     inst_info.pApplicationInfo = &app_;
     inst_info.enabledExtensionCount = instance_extension_names.size();
-    inst_info.ppEnabledExtensionNames =
-        (instance_extension_names.size()) ? &instance_extension_names[0] : NULL;
+    inst_info.ppEnabledExtensionNames = (instance_extension_names.size()) ? &instance_extension_names[0] : NULL;
     inst_info.enabledLayerCount = 0;
     inst_info.ppEnabledLayerNames = NULL;
     err = vkCreateInstance(&inst_info, NULL, &inst);
@@ -135,13 +131,11 @@ void Environment::SetUp() {
     for (uint32_t i = 0; i < device_extension_names.size(); i++) {
         extFound = 0;
         for (uint32_t j = 0; j < device_extensions.size(); j++) {
-            if (!strcmp(device_extension_names[i],
-                        device_extensions[j].extensionName)) {
+            if (!strcmp(device_extension_names[i], device_extensions[j].extensionName)) {
                 extFound = 1;
             }
         }
-        ASSERT_EQ(extFound, 1) << "ERROR: Cannot find extension named "
-                               << device_extension_names[i]
+        ASSERT_EQ(extFound, 1) << "ERROR: Cannot find extension named " << device_extension_names[i]
                                << " which is necessary to pass this test";
     }
 
@@ -157,8 +151,7 @@ void Environment::SetUp() {
 
 void Environment::TearDown() {
     // destroy devices first
-    for (std::vector<Device *>::iterator it = devs_.begin(); it != devs_.end();
-         it++)
+    for (std::vector<Device *>::iterator it = devs_.begin(); it != devs_.end(); it++)
         delete *it;
     devs_.clear();
 
