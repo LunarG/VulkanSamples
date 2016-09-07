@@ -10127,14 +10127,21 @@ VKAPI_ATTR void VKAPI_CALL CmdEndRenderPass(VkCommandBuffer commandBuffer) {
         skip_call |= outsideRenderPass(dev_data, pCB, "vkCmdEndRenderpass");
         skip_call |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdEndRenderPass");
         skip_call |= addCmd(dev_data, pCB, CMD_ENDRENDERPASS, "vkCmdEndRenderPass()");
+    }
+    lock.unlock();
+
+    if (skip_call)
+        return;
+
+    dev_data->device_dispatch_table->CmdEndRenderPass(commandBuffer);
+
+    if (pCB) {
+        lock.lock();
         TransitionFinalSubpassLayouts(dev_data, pCB, &pCB->activeRenderPassBeginInfo);
         pCB->activeRenderPass = nullptr;
         pCB->activeSubpass = 0;
         pCB->activeFramebuffer = VK_NULL_HANDLE;
     }
-    lock.unlock();
-    if (!skip_call)
-        dev_data->device_dispatch_table->CmdEndRenderPass(commandBuffer);
 }
 
 static bool logInvalidAttachmentMessage(layer_data *dev_data, VkCommandBuffer secondaryBuffer, uint32_t primaryAttach,
