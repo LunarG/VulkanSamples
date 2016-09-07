@@ -4493,7 +4493,7 @@ static bool ValidateCmdBufImageLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB
 
 // Loop through bound objects and increment their in_use counts
 //  For any unknown objects, flag an error
-static bool ValidateAndIncrementBoundObjects(layer_data const *dev_data, GLOBAL_CB_NODE const *cb_node) {
+static bool ValidateAndIncrementBoundObjects(layer_data *dev_data, GLOBAL_CB_NODE const *cb_node) {
     bool skip_call = false;
     for (auto obj : cb_node->object_bindings) {
         switch (obj.type) {
@@ -4517,6 +4517,61 @@ static bool ValidateAndIncrementBoundObjects(layer_data const *dev_data, GLOBAL_
                                      "Cannot submit cmd buffer using deleted sampler 0x%" PRIx64 ".", obj.handle);
             } else {
                 sampler_node->in_use.fetch_add(1);
+            }
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT: {
+            auto qp_node = getQueryPoolNode(dev_data, reinterpret_cast<VkQueryPool &>(obj.handle));
+            if (!qp_node) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                     VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, obj.handle, __LINE__, MEMTRACK_INVALID_OBJECT,
+                                     "DS", "Cannot submit cmd buffer using deleted query pool 0x%" PRIx64 ".", obj.handle);
+            } else {
+                qp_node->in_use.fetch_add(1);
+            }
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT: {
+            auto pipe_node = getPipeline(dev_data, reinterpret_cast<VkPipeline &>(obj.handle));
+            if (!pipe_node) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                                     obj.handle, __LINE__, DRAWSTATE_INVALID_PIPELINE, "DS",
+                                     "Cannot submit cmd buffer using deleted pipeline 0x%" PRIx64 ".", obj.handle);
+            } else {
+                pipe_node->in_use.fetch_add(1);
+            }
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
+            auto buff_node = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
+            if (!buff_node) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                                     obj.handle, __LINE__, DRAWSTATE_INVALID_BUFFER, "DS",
+                                     "Cannot submit cmd buffer using deleted buffer 0x%" PRIx64 ".", obj.handle);
+            } else {
+                buff_node->in_use.fetch_add(1);
+            }
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
+            auto image_node = getImageNode(dev_data, reinterpret_cast<VkImage &>(obj.handle));
+            if (!image_node) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                                     obj.handle, __LINE__, DRAWSTATE_INVALID_IMAGE, "DS",
+                                     "Cannot submit cmd buffer using deleted image 0x%" PRIx64 ".", obj.handle);
+            } else {
+                image_node->in_use.fetch_add(1);
+            }
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT: {
+            auto event_node = getEventNode(dev_data, reinterpret_cast<VkEvent &>(obj.handle));
+            if (!event_node) {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT,
+                                     obj.handle, __LINE__, DRAWSTATE_INVALID_EVENT, "DS",
+                                     "Cannot submit cmd buffer using deleted event 0x%" PRIx64 ".", obj.handle);
+            } else {
+                event_node->in_use.fetch_add(1);
             }
             break;
         }
@@ -4550,17 +4605,6 @@ static bool validateAndIncrementResources(layer_data *dev_data, GLOBAL_CB_NODE *
             } else {
                 buffer_node->in_use.fetch_add(1);
             }
-        }
-    }
-    for (auto event : cb_node->events) {
-        auto event_node = getEventNode(dev_data, event);
-        if (!event_node) {
-            skip_call |=
-                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                        reinterpret_cast<uint64_t &>(event), __LINE__, DRAWSTATE_INVALID_EVENT, "DS",
-                        "Cannot submit cmd buffer using deleted event 0x%" PRIx64 ".", reinterpret_cast<uint64_t &>(event));
-        } else {
-            event_node->in_use.fetch_add(1);
         }
     }
     for (auto event : cb_node->writeEventsBeforeWait) {
@@ -4605,7 +4649,7 @@ static inline void removeInFlightCmdBuffer(layer_data *dev_data, VkCommandBuffer
 }
 
 // Decrement in-use count for objects bound to command buffer
-static void DecrementBoundResources(layer_data const *dev_data, GLOBAL_CB_NODE const *cb_node) {
+static void DecrementBoundResources(layer_data *dev_data, GLOBAL_CB_NODE const *cb_node) {
     for (auto obj : cb_node->object_bindings) {
         switch (obj.type) {
         case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT: {
@@ -4619,6 +4663,41 @@ static void DecrementBoundResources(layer_data const *dev_data, GLOBAL_CB_NODE c
             auto sampler_node = getSamplerNode(dev_data, reinterpret_cast<VkSampler &>(obj.handle));
             if (sampler_node) {
                 sampler_node->in_use.fetch_sub(1);
+            }
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT: {
+            auto qp_node = getQueryPoolNode(dev_data, reinterpret_cast<VkQueryPool &>(obj.handle));
+            if (qp_node) {
+                qp_node->in_use.fetch_sub(1);
+            }
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT: {
+            auto pipe_node = getPipeline(dev_data, reinterpret_cast<VkPipeline &>(obj.handle));
+            if (pipe_node) {
+                pipe_node->in_use.fetch_sub(1);
+            }
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
+            auto buff_node = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
+            if (buff_node) {
+                buff_node->in_use.fetch_sub(1);
+            }
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
+            auto image_node = getImageNode(dev_data, reinterpret_cast<VkImage &>(obj.handle));
+            if (image_node) {
+                image_node->in_use.fetch_sub(1);
+            }
+            break;
+        }
+        case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT: {
+            auto event_node = getEventNode(dev_data, reinterpret_cast<VkEvent &>(obj.handle));
+            if (event_node) {
+                event_node->in_use.fetch_sub(1);
             }
             break;
         }
@@ -4660,12 +4739,6 @@ static bool RetireWorkOnQueue(layer_data *dev_data, QUEUE_NODE *pQueue, uint64_t
                     if (buffer_node) {
                         buffer_node->in_use.fetch_sub(1);
                     }
-                }
-            }
-            for (auto event : cb_node->events) {
-                auto eventNode = dev_data->eventMap.find(event);
-                if (eventNode != dev_data->eventMap.end()) {
-                    eventNode->second.in_use.fetch_sub(1);
                 }
             }
             for (auto event : cb_node->writeEventsBeforeWait) {

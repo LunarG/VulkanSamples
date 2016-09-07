@@ -61,7 +61,9 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_INVALID_COMMAND_BUFFER,        // Invalid CommandBuffer referenced
     DRAWSTATE_INVALID_BARRIER,               // Invalid Barrier
     DRAWSTATE_INVALID_BUFFER,                // Invalid Buffer
+    DRAWSTATE_INVALID_IMAGE,                 // Invalid Image
     DRAWSTATE_INVALID_QUERY,                 // Invalid Query
+    DRAWSTATE_INVALID_QUERY_POOL,            // Invalid QueryPool
     DRAWSTATE_INVALID_FENCE,                 // Invalid Fence
     DRAWSTATE_INVALID_EVENT,                 // Invalid Event
     DRAWSTATE_INVALID_SAMPLER,               // Invalid Sampler
