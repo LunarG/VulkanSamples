@@ -5256,7 +5256,7 @@ bool ValidateObjectNotInUse(const layer_data *dev_data, BASE_NODE *obj_node, VK_
     bool skip = false;
     if (obj_node->in_use.load()) {
         skip |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj_struct.type, obj_struct.handle, __LINE__,
-                        DRAWSTATE_OBJECT_INUSE, "DS", "Cannot delete %s 0x%" PRIx64 " which is in use by a command buffer.",
+                        DRAWSTATE_OBJECT_INUSE, "DS", "Cannot delete %s 0x%" PRIx64 " that is currently in use by a command buffer.",
                         object_type_to_string(obj_struct.type), obj_struct.handle);
     }
     return skip;
