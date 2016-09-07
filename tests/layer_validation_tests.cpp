@@ -14145,6 +14145,61 @@ TEST_F(VkLayerTest, QueryPoolInUseDestroyedSignaled) {
     vkDestroyQueryPool(m_device->handle(), query_pool, NULL);
 }
 
+TEST_F(VkLayerTest, PipelineInUseDestroyedSignaled) {
+    TEST_DESCRIPTION("Delete in-use pipeline.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    // Empty pipeline layout used for binding PSO
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+    pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_ci.setLayoutCount = 0;
+    pipeline_layout_ci.pSetLayouts = NULL;
+
+    VkPipelineLayout pipeline_layout;
+    VkResult err = vkCreatePipelineLayout(
+        m_device->handle(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "Cannot delete pipeline 0x");
+    // Create PSO to be used for draw-time errors below
+    VkShaderObj vs(m_device, bindStateVertShaderText,
+                   VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText,
+                   VK_SHADER_STAGE_FRAGMENT_BIT, this);
+    // Store pipeline handle so we can actually delete it before test finishes
+    VkPipeline delete_this_pipeline;
+    { // Scope pipeline so it will be auto-deleted
+        VkPipelineObj pipe(m_device);
+        pipe.AddShader(&vs);
+        pipe.AddShader(&fs);
+        pipe.AddColorAttachment();
+        pipe.CreateVKPipeline(pipeline_layout, renderPass());
+        delete_this_pipeline = pipe.handle();
+
+        BeginCommandBuffer();
+        // Bind pipeline to cmd buffer
+        vkCmdBindPipeline(m_commandBuffer->handle(),
+                          VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+
+        EndCommandBuffer();
+
+        VkSubmitInfo submit_info = {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &m_commandBuffer->handle();
+        // Submit cmd buffer and then pipeline destroyed while in-flight
+        vkQueueSubmit(m_device->m_queue, 1, &submit_info, VK_NULL_HANDLE);
+    } // Pipeline deletion triggered here
+    m_errorMonitor->VerifyFound();
+    // Make sure queue finished and then actually delete pipeline
+    vkQueueWaitIdle(m_device->m_queue);
+    vkDestroyPipeline(m_device->handle(), delete_this_pipeline, nullptr);
+    vkDestroyPipelineLayout(m_device->handle(), pipeline_layout, nullptr);
+}
+
 TEST_F(VkLayerTest, QueueForwardProgressFenceWait) {
     TEST_DESCRIPTION("Call VkQueueSubmit with a semaphore that is already "
                      "signaled but not waited on by the queue. Wait on a "
