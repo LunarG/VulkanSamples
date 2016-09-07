@@ -23,20 +23,20 @@
 #define VKTESTFRAMEWORK_H
 
 //#include "gtest-1.7.0/include/gtest/gtest.h"
-#include "glslang/Public/ShaderLang.h"
 #include "SPIRV/GLSL.std.450.h"
+#include "glslang/Public/ShaderLang.h"
 #include "icd-spv.h"
 #include "test_common.h"
-#include "vktestbinding.h"
 #include "test_environment.h"
+#include "vktestbinding.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <list>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -68,8 +68,7 @@ class VkTestFramework : public ::testing::Test {
     static void InitArgs(int *argc, char *argv[]);
     static void Finish();
 
-    bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader,
-                   std::vector<unsigned int> &spv);
+    bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spv);
     static bool m_use_glsl;
     static bool m_canonicalize_spv;
     static bool m_strip_spv;
