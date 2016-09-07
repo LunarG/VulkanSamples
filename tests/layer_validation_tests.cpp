@@ -11124,6 +11124,66 @@ TEST_F(VkLayerTest, RenderPassExcessiveNextSubpass) {
     EndCommandBuffer();
 }
 
+TEST_F(VkLayerTest, RenderPassEndedBeforeFinalSubpass) {
+    TEST_DESCRIPTION("Test that an error is produced when CmdEndRenderPass is "
+                     "called before the final subpass has been reached");
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                         "vkCmdEndRenderPass(): Called before reaching "
+                                         "final subpass");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkSubpassDescription sd[2] = {
+        {
+            0, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            0, nullptr, 0, nullptr, nullptr,
+            nullptr, 0, nullptr
+        },
+        {
+            0, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            0, nullptr, 0, nullptr, nullptr,
+            nullptr, 0, nullptr
+        }
+    };
+
+    VkRenderPassCreateInfo rcpi = {
+        VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+        nullptr, 0, 0, nullptr,
+        2, sd, 0, nullptr
+    };
+
+    VkRenderPass rp;
+    VkResult err = vkCreateRenderPass(m_device->device(), &rcpi, nullptr, &rp);
+    ASSERT_VK_SUCCESS(err);
+
+    VkFramebufferCreateInfo fbci = {
+        VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr,
+        0, rp, 0, nullptr, 16, 16, 1
+    };
+
+    VkFramebuffer fb;
+    err = vkCreateFramebuffer(m_device->device(), &fbci, nullptr, &fb);
+    ASSERT_VK_SUCCESS(err);
+
+    m_commandBuffer->BeginCommandBuffer();  // no implicit RP begin
+
+    VkRenderPassBeginInfo rpbi = {
+        VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        nullptr, rp, fb, { { 0, 0 }, { 16, 16 } },
+        0, nullptr
+    };
+
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+
+    // Error here.
+    vkCmdEndRenderPass(m_commandBuffer->GetBufferHandle());
+    m_errorMonitor->VerifyFound();
+
+    // Clean up.
+    vkDestroyFramebuffer(m_device->device(), fb, nullptr);
+    vkDestroyRenderPass(m_device->device(), rp, nullptr);
+}
+
 TEST_F(VkLayerTest, BufferMemoryBarrierNoBuffer) {
     // Try to add a buffer memory barrier with no buffer.
     m_errorMonitor->SetDesiredFailureMsg(
