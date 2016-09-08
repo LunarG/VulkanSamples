@@ -2855,6 +2855,11 @@ static bool validate_and_capture_pipeline_shader_state(debug_report_data *report
                                                enabledFeatures, shaderModuleMap);
     }
 
+    // if the shader stages are no good individually, cross-stage validation is
+    // pointless.
+    if (!pass)
+        return false;
+
     vi = pCreateInfo->pVertexInputState;
 
     if (vi) {
