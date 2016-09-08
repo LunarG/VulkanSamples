@@ -92,6 +92,7 @@ struct layer_data {
     debug_report_data *report_data;
     std::vector<VkDebugReportCallbackEXT> logging_callback;
     bool wsi_enabled;
+    bool wsi_display_swapchain_enabled;
     bool objtrack_extensions_enabled;
 
     // The following are for keeping track of the temporary callbacks that can
@@ -112,8 +113,8 @@ struct layer_data {
     // Default constructor
     layer_data()
         : instance(nullptr), physical_device(nullptr), num_objects{}, num_total_objects(0), report_data(nullptr),
-          wsi_enabled(false), objtrack_extensions_enabled(false), num_tmp_callbacks(0), tmp_dbg_create_infos(nullptr),
-		  tmp_callbacks(nullptr), object_map{} {
+          wsi_enabled(false), wsi_display_swapchain_enabled(false), objtrack_extensions_enabled(false), num_tmp_callbacks(0),
+          tmp_dbg_create_infos(nullptr), tmp_callbacks(nullptr), object_map{} {
         object_map.resize(VK_DEBUG_REPORT_OBJECT_TYPE_RANGE_SIZE_EXT + 1);
     }
 };

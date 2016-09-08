@@ -27,6 +27,8 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
 
 void wsi_create_instance(struct loader_instance *ptr_instance,
                          const VkInstanceCreateInfo *pCreateInfo);
+void wsi_create_device(struct loader_device *dev,
+                       const VkDeviceCreateInfo *pCreateInfo);
 bool wsi_unsupported_instance_extension(const VkExtensionProperties *ext_prop);
 
 VKAPI_ATTR void VKAPI_CALL

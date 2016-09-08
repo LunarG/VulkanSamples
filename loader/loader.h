@@ -160,6 +160,7 @@ struct loader_dev_ext_dispatch_table {
 
 union loader_device_extension_enables {
     struct {
+        uint8_t khr_display_swapchain       : 1;
         uint8_t ext_debug_marker            : 1;
         uint8_t amd_draw_indirect_count     : 1;
         uint8_t nv_external_memory_win32    : 1;

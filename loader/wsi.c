@@ -158,6 +158,20 @@ void wsi_create_instance(struct loader_instance *ptr_instance,
     }
 }
 
+void wsi_create_device(struct loader_device *dev,
+    const VkDeviceCreateInfo *pCreateInfo) {
+    dev->loader_dispatch.enabled_known_extensions.khr_display_swapchain = 0;
+
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
+                   VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) == 0) {
+            dev->loader_dispatch.enabled_known_extensions
+                .khr_display_swapchain = 1;
+            return;
+        }
+    }
+}
+
 // Linux WSI surface extensions are not always compiled into the loader. (Assume
 // for Windows the KHR_win32_surface is always compiled into loader). A given
 // Linux build environment might not have the headers required for building one
@@ -403,9 +417,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchain) {
     const VkLayerDispatchTable *disp;
     disp = loader_get_dispatch(device);
-    VkResult res =
-        disp->CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
-    return res;
+    return disp->CreateSwapchainKHR(device, pCreateInfo, pAllocator,
+                                    pSwapchain);
 }
 
 // This is the trampoline entrypoint for DestroySwapchainKHR
@@ -424,9 +437,8 @@ vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain,
                         VkImage *pSwapchainImages) {
     const VkLayerDispatchTable *disp;
     disp = loader_get_dispatch(device);
-    VkResult res = disp->GetSwapchainImagesKHR(
+    return disp->GetSwapchainImagesKHR(
         device, swapchain, pSwapchainImageCount, pSwapchainImages);
-    return res;
 }
 
 // This is the trampoline entrypoint for AcquireNextImageKHR
@@ -436,9 +448,8 @@ vkAcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain,
                       uint32_t *pImageIndex) {
     const VkLayerDispatchTable *disp;
     disp = loader_get_dispatch(device);
-    VkResult res = disp->AcquireNextImageKHR(device, swapchain, timeout,
-                                             semaphore, fence, pImageIndex);
-    return res;
+    return disp->AcquireNextImageKHR(device, swapchain, timeout,
+        semaphore, fence, pImageIndex);
 }
 
 // This is the trampoline entrypoint for QueuePresentKHR
@@ -446,8 +457,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo) {
     const VkLayerDispatchTable *disp;
     disp = loader_get_dispatch(queue);
-    VkResult res = disp->QueuePresentKHR(queue, pPresentInfo);
-    return res;
+    return disp->QueuePresentKHR(queue, pPresentInfo);
 }
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
@@ -1268,10 +1278,14 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSharedSwapchainsKHR(
     VkDevice device, uint32_t swapchainCount,
     const VkSwapchainCreateInfoKHR *pCreateInfos,
     const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchains) {
-    const VkLayerDispatchTable *disp;
-    disp = loader_get_dispatch(device);
-    return disp->CreateSharedSwapchainsKHR(
-        device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
+    struct loader_dev_dispatch_table *disp = loader_get_dev_dispatch(device);
+    if (0 == disp->enabled_known_extensions.khr_display_swapchain ||
+        NULL == disp->core_dispatch.CreateSharedSwapchainsKHR) {
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
+    } else {
+        return disp->core_dispatch.CreateSharedSwapchainsKHR(
+            device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
+    }
 }
 
 bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,

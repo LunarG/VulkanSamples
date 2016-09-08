@@ -73,10 +73,11 @@ struct layer_data {
     VkPhysicalDevice physical_device;
 
     bool wsi_enabled;
+    bool wsi_display_swapchain_enabled;
 
     layer_data()
         : report_data(nullptr), num_tmp_callbacks(0), tmp_dbg_create_infos(nullptr), tmp_callbacks(nullptr), device_limits{},
-          physical_device_features{}, physical_device{}, wsi_enabled(false){};
+          physical_device_features{}, physical_device{}, wsi_enabled(false), wsi_display_swapchain_enabled(false) {};
 };
 
 static std::unordered_map<void *, struct instance_extension_enables> instance_extension_map;
@@ -1633,10 +1634,14 @@ static void CheckInstanceRegisterExtensions(const VkInstanceCreateInfo *pCreateI
 static void CheckDeviceRegisterExtensions(const VkDeviceCreateInfo *pCreateInfo, VkDevice device) {
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     device_data->wsi_enabled = false;
+    device_data->wsi_display_swapchain_enabled = false;
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
             device_data->wsi_enabled = true;
+        }
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) == 0) {
+            device_data->wsi_display_swapchain_enabled = true;
         }
     }
 }
@@ -5051,6 +5056,27 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateAndroidSurfaceKHR(VkInstance instance, cons
 }
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
+VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32_t swapchainCount,
+                                                         const VkSwapchainCreateInfoKHR *pCreateInfos,
+                                                         const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchains) {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
+    bool skip_call = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    assert(my_data != NULL);
+
+    skip_call |= parameter_validation_vkCreateSharedSwapchainsKHR(my_data->report_data, swapchainCount, pCreateInfos, pAllocator,
+                                                                  pSwapchains);
+
+    if (!skip_call) {
+        result = get_dispatch_table(pc_device_table_map, device)
+                     ->CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
+
+        validate_result(my_data->report_data, "vkCreateSharedSwapchainsKHR", result);
+    }
+
+    return result;
+}
+
 static PFN_vkVoidFunction intercept_core_instance_command(const char *name);
 
 static PFN_vkVoidFunction intercept_core_device_command(const char *name);
@@ -5285,13 +5311,19 @@ static PFN_vkVoidFunction InterceptWsiEnabledCommand(const char *name, VkDevice 
 
     if (device) {
         layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-        if (!device_data->wsi_enabled)
-            return nullptr;
-    }
 
-    for (size_t i = 0; i < ARRAY_SIZE(wsi_device_commands); i++) {
-        if (!strcmp(wsi_device_commands[i].name, name))
-            return wsi_device_commands[i].proc;
+        if (device_data->wsi_enabled) {
+            for (size_t i = 0; i < ARRAY_SIZE(wsi_device_commands); i++) {
+                if (!strcmp(wsi_device_commands[i].name, name))
+                    return wsi_device_commands[i].proc;
+            }
+        }
+
+        if (device_data->wsi_display_swapchain_enabled) {
+            if (!strcmp("vkCreateSharedSwapchainsKHR", name)) {
+                return reinterpret_cast<PFN_vkVoidFunction>(CreateSharedSwapchainsKHR);
+            }
+        }
     }
 
     return nullptr;
