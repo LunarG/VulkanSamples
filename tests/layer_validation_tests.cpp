@@ -12644,7 +12644,6 @@ TEST_F(VkLayerTest, InUseDestroyedSignaled) {
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1,
                             &descriptorset, 0, NULL);
-    vkCmdDraw(m_commandBuffer->handle(), 3, 1, 0, 0);
 
     EndCommandBuffer();
 
