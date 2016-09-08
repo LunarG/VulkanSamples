@@ -3425,6 +3425,20 @@ static bool verifyPipelineCreateState(layer_data *my_data, const VkDevice device
                 }
             }
         }
+
+        // If rasterization is not disabled, and subpass uses a depth/stencil
+        // attachment, pDepthStencilState must be a pointer to a valid structure
+        auto subpass_desc = renderPass ? &renderPass->pCreateInfo->pSubpasses[pPipeline->graphicsPipelineCI.subpass] : nullptr;
+        if (subpass_desc && subpass_desc->pDepthStencilAttachment &&
+            subpass_desc->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+            if (!pPipeline->graphicsPipelineCI.pDepthStencilState) {
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT, 0,
+                                     __LINE__, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+                                     "Invalid Pipeline CreateInfo State: "
+                                     "pDepthStencilState is NULL when rasterization is enabled and subpass uses a "
+                                     "depth/stencil attachment");
+            }
+        }
     }
     return skip_call;
 }
