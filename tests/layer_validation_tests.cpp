@@ -14260,6 +14260,492 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed) {
     m_errorMonitor->VerifyFound();
 }
 
+TEST_F(VkLayerTest, CreatePipelineCheckShaderBadSpecialization) {
+    TEST_DESCRIPTION("Challenge core_validation with shader validation issues related to vkCreateGraphicsPipelines.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    const char *bad_specialization_message =
+            "Specialization entry 0 (for constant id 0) references memory outside provided specialization data ";
+
+    char const *vsSource =
+            "#version 450\n"
+            "\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
+            "void main(){\n"
+            "   gl_Position = vec4(1);\n"
+            "}\n";
+
+    char const *fsSource =
+            "#version 450\n"
+            "\n"
+            "layout (constant_id = 0) const float r = 0.0f;\n"
+            "layout(location = 0) out vec4 uFragColor;\n"
+            "void main(){\n"
+            "   uFragColor = vec4(r,1,0,1);\n"
+            "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
+    pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+    VkPipelineLayout pipeline_layout;
+    ASSERT_VK_SUCCESS(vkCreatePipelineLayout(m_device->device(), &pipeline_layout_create_info, nullptr, &pipeline_layout));
+
+    VkPipelineViewportStateCreateInfo vp_state_create_info = {};
+    vp_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    vp_state_create_info.viewportCount = 1;
+    VkViewport viewport = {};
+    vp_state_create_info.pViewports = &viewport;
+    vp_state_create_info.scissorCount = 1;
+    VkRect2D scissors = {};
+    vp_state_create_info.pScissors = &scissors;
+
+    VkDynamicState scissor_state = VK_DYNAMIC_STATE_SCISSOR;
+
+    VkPipelineDynamicStateCreateInfo pipeline_dynamic_state_create_info = {};
+    pipeline_dynamic_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    pipeline_dynamic_state_create_info.dynamicStateCount = 1;
+    pipeline_dynamic_state_create_info.pDynamicStates = &scissor_state;
+
+    VkPipelineShaderStageCreateInfo shader_stage_create_info[2] = {
+        vs.GetStageCreateInfo(),
+        fs.GetStageCreateInfo()
+    };
+
+    VkPipelineVertexInputStateCreateInfo vertex_input_create_info = {};
+    vertex_input_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    VkPipelineInputAssemblyStateCreateInfo input_assembly_create_info = {};
+    input_assembly_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    input_assembly_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
+    VkPipelineRasterizationStateCreateInfo rasterization_state_create_info = {};
+    rasterization_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterization_state_create_info.pNext = nullptr;
+    rasterization_state_create_info.lineWidth = 1.0f;
+    rasterization_state_create_info.rasterizerDiscardEnable = true;
+
+    VkPipelineColorBlendAttachmentState color_blend_attachment_state = {};
+    color_blend_attachment_state.blendEnable = VK_FALSE;
+    color_blend_attachment_state.colorWriteMask = 0xf;
+
+    VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {};
+    color_blend_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    color_blend_state_create_info.attachmentCount = 1;
+    color_blend_state_create_info.pAttachments = &color_blend_attachment_state;
+
+    VkGraphicsPipelineCreateInfo graphicspipe_create_info = {};
+    graphicspipe_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    graphicspipe_create_info.stageCount = 2;
+    graphicspipe_create_info.pStages = shader_stage_create_info;
+    graphicspipe_create_info.pVertexInputState = &vertex_input_create_info;
+    graphicspipe_create_info.pInputAssemblyState = &input_assembly_create_info;
+    graphicspipe_create_info.pViewportState = &vp_state_create_info;
+    graphicspipe_create_info.pRasterizationState = &rasterization_state_create_info;
+    graphicspipe_create_info.pColorBlendState = &color_blend_state_create_info;
+    graphicspipe_create_info.pDynamicState = &pipeline_dynamic_state_create_info;
+    graphicspipe_create_info.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+    graphicspipe_create_info.layout = pipeline_layout;
+    graphicspipe_create_info.renderPass = renderPass();
+
+    VkPipelineCacheCreateInfo pipeline_cache_create_info = {};
+    pipeline_cache_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+
+    VkPipelineCache pipelineCache;
+    ASSERT_VK_SUCCESS(vkCreatePipelineCache(m_device->device(), &pipeline_cache_create_info, nullptr, &pipelineCache));
+
+    // This structure maps constant ids to data locations.
+    const VkSpecializationMapEntry entry =
+        // id,  offset,                size
+        {0, 4, sizeof(uint32_t)};  // Challenge core validation by using a bogus offset.
+
+    uint32_t data = 1;
+
+    // Set up the info describing spec map and data
+    const VkSpecializationInfo specialization_info = {
+        1,
+        &entry,
+        1 * sizeof(float),
+        &data,
+    };
+    shader_stage_create_info[0].pSpecializationInfo = &specialization_info;
+
+    VkPipeline pipeline;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, bad_specialization_message);
+    vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &graphicspipe_create_info, nullptr, &pipeline);
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyPipelineCache(m_device->device(), pipelineCache, nullptr);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
+}
+
+TEST_F(VkLayerTest, CreatePipelineCheckShaderDescriptorTypeMismatch) {
+    TEST_DESCRIPTION("Challenge core_validation with shader validation issues related to vkCreateGraphicsPipelines.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    const char *descriptor_type_mismatch_message = "Type mismatch on descriptor slot 0.0 (used as type ";
+
+    VkDescriptorPoolSize descriptor_pool_type_count[2] = {};
+    descriptor_pool_type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptor_pool_type_count[0].descriptorCount = 1;
+    descriptor_pool_type_count[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    descriptor_pool_type_count[1].descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo descriptor_pool_create_info = {};
+    descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptor_pool_create_info.maxSets = 1;
+    descriptor_pool_create_info.poolSizeCount = 2;
+    descriptor_pool_create_info.pPoolSizes = descriptor_pool_type_count;
+    descriptor_pool_create_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+    VkDescriptorPool descriptorset_pool;
+    ASSERT_VK_SUCCESS(vkCreateDescriptorPool(m_device->device(), &descriptor_pool_create_info, nullptr, &descriptorset_pool));
+
+    VkDescriptorSetLayoutBinding descriptorset_layout_binding = {};
+    descriptorset_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    descriptorset_layout_binding.descriptorCount = 1;
+    descriptorset_layout_binding.stageFlags = VK_SHADER_STAGE_ALL;
+
+    VkDescriptorSetLayoutCreateInfo descriptorset_layout_create_info = {};
+    descriptorset_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptorset_layout_create_info.bindingCount = 1;
+    descriptorset_layout_create_info.pBindings = &descriptorset_layout_binding;
+
+    VkDescriptorSetLayout descriptorset_layout;
+    ASSERT_VK_SUCCESS(vkCreateDescriptorSetLayout(m_device->device(), &descriptorset_layout_create_info, nullptr, &descriptorset_layout));
+
+    VkDescriptorSetAllocateInfo descriptorset_allocate_info = {};
+    descriptorset_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    descriptorset_allocate_info.descriptorSetCount = 1;
+    descriptorset_allocate_info.descriptorPool = descriptorset_pool;
+    descriptorset_allocate_info.pSetLayouts = &descriptorset_layout;
+    VkDescriptorSet descriptorset;
+    ASSERT_VK_SUCCESS(vkAllocateDescriptorSets(m_device->device(), &descriptorset_allocate_info, &descriptorset));
+
+    // Challenge core_validation with a non uniform buffer type.
+    VkBufferTest storage_buffer_test(m_device, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+
+    VkDescriptorBufferInfo buffer_info = {};
+    buffer_info.buffer = storage_buffer_test.GetBuffer();
+    buffer_info.range = 1024;
+
+    char const *vsSource =
+            "#version 450\n"
+            "\n"
+            "layout (std140, set = 0, binding = 0) uniform buf {\n"
+            "    mat4 mvp;\n"
+            "} ubuf;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
+            "void main(){\n"
+            "   gl_Position = ubuf.mvp * vec4(1);\n"
+            "}\n";
+
+    char const *fsSource =
+            "#version 450\n"
+            "\n"
+            "layout(location = 0) out vec4 uFragColor;\n"
+            "void main(){\n"
+            "   uFragColor = vec4(0,1,0,1);\n"
+            "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
+    pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_create_info.setLayoutCount = 1;
+    pipeline_layout_create_info.pSetLayouts = &descriptorset_layout;
+
+    VkPipelineLayout pipeline_layout;
+    ASSERT_VK_SUCCESS(vkCreatePipelineLayout(m_device->device(), &pipeline_layout_create_info, nullptr, &pipeline_layout));
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, descriptor_type_mismatch_message);
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
+    vkDestroyDescriptorPool(m_device->device(), descriptorset_pool, nullptr);
+    vkDestroyDescriptorSetLayout(m_device->device(), descriptorset_layout, nullptr);
+}
+
+TEST_F(VkLayerTest, CreatePipelineCheckShaderDescriptorNotAccessible) {
+    TEST_DESCRIPTION(
+        "Create a pipeline in which a descriptor used by a shader stage does not include that stage in its stageFlags.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    const char *descriptor_not_accessible_message = "Shader uses descriptor slot 0.0 (used as type ";
+
+    VkDescriptorPoolSize descriptor_pool_type_count = {};
+    descriptor_pool_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptor_pool_type_count.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo descriptor_pool_create_info = {};
+    descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptor_pool_create_info.maxSets = 1;
+    descriptor_pool_create_info.poolSizeCount = 1;
+    descriptor_pool_create_info.pPoolSizes = &descriptor_pool_type_count;
+    descriptor_pool_create_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+    VkDescriptorPool descriptorset_pool;
+    ASSERT_VK_SUCCESS(vkCreateDescriptorPool(m_device->device(), &descriptor_pool_create_info, nullptr, &descriptorset_pool));
+
+    VkDescriptorSetLayoutBinding descriptorset_layout_binding = {};
+    descriptorset_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptorset_layout_binding.descriptorCount = 1;
+    // Intentionally make the uniform buffer inaccessible to the vertex shader to challenge core_validation
+    descriptorset_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkDescriptorSetLayoutCreateInfo descriptorset_layout_create_info = {};
+    descriptorset_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptorset_layout_create_info.bindingCount = 1;
+    descriptorset_layout_create_info.pBindings = &descriptorset_layout_binding;
+
+    VkDescriptorSetLayout descriptorset_layout;
+    ASSERT_VK_SUCCESS(vkCreateDescriptorSetLayout(m_device->device(), &descriptorset_layout_create_info,
+                                                  nullptr, &descriptorset_layout));
+
+    VkDescriptorSetAllocateInfo descriptorset_allocate_info = {};
+    descriptorset_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    descriptorset_allocate_info.descriptorSetCount = 1;
+    descriptorset_allocate_info.descriptorPool = descriptorset_pool;
+    descriptorset_allocate_info.pSetLayouts = &descriptorset_layout;
+    VkDescriptorSet descriptorset;
+    ASSERT_VK_SUCCESS(vkAllocateDescriptorSets(m_device->device(), &descriptorset_allocate_info, &descriptorset));
+
+    VkBufferTest buffer_test(m_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+
+    VkDescriptorBufferInfo buffer_info = {};
+    buffer_info.buffer = buffer_test.GetBuffer();
+    buffer_info.offset = 0;
+    buffer_info.range = 1024;
+
+    char const *vsSource =
+            "#version 450\n"
+            "\n"
+            "layout (std140, set = 0, binding = 0) uniform buf {\n"
+            "    mat4 mvp;\n"
+            "} ubuf;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
+            "void main(){\n"
+            "   gl_Position = ubuf.mvp * vec4(1);\n"
+            "}\n";
+
+    char const *fsSource =
+            "#version 450\n"
+            "\n"
+            "layout(location = 0) out vec4 uFragColor;\n"
+            "void main(){\n"
+            "   uFragColor = vec4(0,1,0,1);\n"
+            "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
+    pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_create_info.setLayoutCount = 1;
+    pipeline_layout_create_info.pSetLayouts = &descriptorset_layout;
+
+    VkPipelineLayout pipeline_layout;
+    ASSERT_VK_SUCCESS(vkCreatePipelineLayout(m_device->device(), &pipeline_layout_create_info, nullptr, &pipeline_layout));
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, descriptor_not_accessible_message);
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
+    vkDestroyDescriptorPool(m_device->device(), descriptorset_pool, nullptr);
+    vkDestroyDescriptorSetLayout(m_device->device(), descriptorset_layout, nullptr);
+}
+
+TEST_F(VkLayerTest, CreatePipelineCheckShaderPushConstantNotAccessible) {
+    TEST_DESCRIPTION("Create a graphics pipleine in which a push constant range containing a push constant block member is not "
+                     "accessible from the current shader stage.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    const char *push_constant_not_accessible_message =
+            "Push constant range covering variable starting at offset 0 not accessible from stage VK_SHADER_STAGE_VERTEX_BIT";
+
+    char const *vsSource =
+            "#version 450\n"
+            "\n"
+            "layout(push_constant, std430) uniform foo { float x; } consts;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
+            "void main(){\n"
+            "   gl_Position = vec4(consts.x);\n"
+            "}\n";
+
+    char const *fsSource =
+            "#version 450\n"
+            "\n"
+            "layout(location = 0) out vec4 uFragColor;\n"
+            "void main(){\n"
+            "   uFragColor = vec4(0,1,0,1);\n"
+            "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
+    pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+    // Set up a push constant range
+    VkPushConstantRange push_constant_ranges = {};
+    // Set to the wrong stage to challenge core_validation
+    push_constant_ranges.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    push_constant_ranges.size = 4;
+
+    pipeline_layout_create_info.pPushConstantRanges = &push_constant_ranges;
+    pipeline_layout_create_info.pushConstantRangeCount = 1;
+
+    VkPipelineLayout pipeline_layout;
+    ASSERT_VK_SUCCESS(vkCreatePipelineLayout(m_device->device(), &pipeline_layout_create_info, nullptr, &pipeline_layout));
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, push_constant_not_accessible_message);
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
+}
+
+TEST_F(VkLayerTest, CreatePipelineCheckShaderNotEnabled) {
+    TEST_DESCRIPTION(
+        "Create a graphics pipeline in which a capability declared by the shader requires a feature not enabled on the device.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    const char *feature_not_enabled_message =
+            "Shader requires VkPhysicalDeviceFeatures::shaderFloat64 but is not enabled on the device";
+
+    // Some awkward steps are required to test with custom device features.
+    std::vector<const char *> device_extension_names;
+    auto features = m_device->phy().features();
+    // Disable support for 64 bit floats
+    features.shaderFloat64 = false;
+    // The sacrificial device object
+    VkDeviceObj test_device(0, gpu(), device_extension_names, &features);
+
+    char const *vsSource = "#version 450\n"
+                           "\n"
+                           "out gl_PerVertex {\n"
+                           "    vec4 gl_Position;\n"
+                           "};\n"
+                           "void main(){\n"
+                           "   gl_Position = vec4(1);\n"
+                           "}\n";
+    char const *fsSource = "#version 450\n"
+                           "\n"
+                           "layout(location=0) out vec4 color;\n"
+                           "void main(){\n"
+                           "   dvec4 green = vec4(0.0, 1.0, 0.0, 1.0);\n"
+                           "   color = vec4(green);\n"
+                           "}\n";
+
+    VkShaderObj vs(&test_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(&test_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkRenderpassObj render_pass(&test_device);
+    VkPipelineRasterizationStateCreateInfo rasterization_state_create_info = {};
+    rasterization_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterization_state_create_info.lineWidth = 1.0f;
+    rasterization_state_create_info.rasterizerDiscardEnable = true;
+
+    VkPipelineObj pipe(&test_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
+    pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    VkPipelineLayout pipeline_layout;
+    ASSERT_VK_SUCCESS(vkCreatePipelineLayout(test_device.device(), &pipeline_layout_create_info, nullptr, &pipeline_layout));
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, feature_not_enabled_message);
+    pipe.CreateVKPipeline(pipeline_layout, render_pass.handle());
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyPipelineLayout(test_device.device(), pipeline_layout, nullptr);
+}
+
+TEST_F(VkLayerTest, CreatePipelineCheckShaderBadCapability) {
+    TEST_DESCRIPTION("Create a graphics pipeline in which a capability declared by the shader is not supported by Vulkan shaders.");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    const char *bad_capability_message = "Shader declares capability 53, not supported in Vulkan.";
+
+    char const *vsSource = "#version 450\n"
+                           "\n"
+                           "out gl_PerVertex {\n"
+                           "    vec4 gl_Position;\n"
+                           "};\n"
+                           "layout(xfb_buffer = 1) out;"
+                           "void main(){\n"
+                           "   gl_Position = vec4(1);\n"
+                           "}\n";
+    char const *fsSource = "#version 450\n"
+                           "\n"
+                           "layout(location=0) out vec4 color;\n"
+                           "void main(){\n"
+                           "   dvec4 green = vec4(0.0, 1.0, 0.0, 1.0);\n"
+                           "   color = vec4(green);\n"
+                           "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
+    pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    VkPipelineLayout pipeline_layout;
+    ASSERT_VK_SUCCESS(vkCreatePipelineLayout(m_device->device(), &pipeline_layout_create_info, nullptr, &pipeline_layout));
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, bad_capability_message);
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
+    m_errorMonitor->VerifyFound();
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, nullptr);
+}
+
 TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided) {
     TEST_DESCRIPTION("Test that an error is produced for a fragment shader input "
                      "which is not present in the outputs of the previous stage");
