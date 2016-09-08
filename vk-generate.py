@@ -131,69 +131,19 @@ class DispatchTableOpsSubcommand(Subcommand):
             stmts.append("    // Core device function pointers")
             stmts.append("    table->GetDeviceProcAddr = (PFN_vkGetDeviceProcAddr) gpa(device, \"vkGetDeviceProcAddr\");")
 
-            KHR_printed = False
-            EXT_printed = False
-            Win32_printed = False
-            XLIB_printed = False
-            XCB_printed = False
-            MIR_printed = False
-            WAY_printed = False
-            Android_printed = False
             for proto in self.protos:
                 if proto.name == "CreateInstance" or proto.name == "EnumerateInstanceExtensionProperties" or \
                   proto.name == "EnumerateInstanceLayerProperties" or proto.params[0].ty == "VkInstance" or \
                   proto.params[0].ty == "VkPhysicalDevice" or proto.name == "GetDeviceProcAddr":
                     continue
-                if Win32_printed and 'Win32' not in proto.name:
+                if proto.name == "GetMemoryWin32HandleNV":
+                    stmts.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
+                    stmts.append("    table->%s = (PFN_vk%s) gpa(device, \"vk%s\");" %
+                            (proto.name, proto.name, proto.name))
                     stmts.append("#endif // VK_USE_PLATFORM_WIN32_KHR")
-                    Win32_printed = False
-                if XLIB_printed and 'Xlib' not in proto.name:
-                    stmts.append("#endif // VK_USE_PLATFORM_XLIB_KHR")
-                    XLIB_printed = False
-                if XCB_printed and 'Xcb' not in proto.name:
-                    stmts.append("#endif // VK_USE_PLATFORM_XCB_KHR")
-                    XCB_printed = False
-                if MIR_printed and 'Mir' not in proto.name:
-                    stmts.append("#endif // VK_USE_PLATFORM_MIR_KHR")
-                    MIR_printed = False
-                if WAY_printed and 'Wayland' not in proto.name:
-                    stmts.append("#endif // VK_USE_PLATFORM_WAYLAND_KHR")
-                    WAY_printed = False
-                if Android_printed and 'Android' not in proto.name:
-                    stmts.append("#endif // VK_USE_PLATFORM_ANDROID_KHR")
-                    Android_printed = False
-                if 'KHR' in proto.name and 'Win32' in proto.name:
-                    if not Win32_printed:
-                        stmts.append("#ifdef VK_USE_PLATFORM_WIN32_KHR")
-                        Win32_printed = True
-                if 'KHR' in proto.name and 'Xlib' in proto.name:
-                    if not XLIB_printed:
-                        stmts.append("#ifdef VK_USE_PLATFORM_XLIB_KHR")
-                        XLIB_printed = True
-                if 'KHR' in proto.name and 'Xcb' in proto.name:
-                    if not XCB_printed:
-                        stmts.append("#ifdef VK_USE_PLATFORM_XCB_KHR")
-                        XCB_printed = True
-                if 'KHR' in proto.name and 'Mir' in proto.name:
-                    if not MIR_printed:
-                        stmts.append("#ifdef VK_USE_PLATFORM_MIR_KHR")
-                        MIR_printed = True
-                if 'KHR' in proto.name and 'Wayland' in proto.name:
-                    if not WAY_printed:
-                        stmts.append("#ifdef VK_USE_PLATFORM_WAYLAND_KHR")
-                        WAY_printed = True
-                if 'KHR' in proto.name and 'Android' in proto.name:
-                    if not Android_printed:
-                        stmts.append("#ifdef VK_USE_PLATFORM_ANDROID_KHR")
-                        Android_printed = True
-                if 'KHR' in proto.name and not KHR_printed:
-                    stmts.append("    // KHR device extension function pointers")
-                    KHR_printed = True
-                if 'EXT' in proto.name and not EXT_printed:
-                    stmts.append("    // EXT device extension function pointers")
-                    EXT_printed = True
-                stmts.append("    table->%s = (PFN_vk%s) gpa(device, \"vk%s\");" %
-                        (proto.name, proto.name, proto.name))
+                else:
+                    stmts.append("    table->%s = (PFN_vk%s) gpa(device, \"vk%s\");" %
+                            (proto.name, proto.name, proto.name))
             func.append("static inline void %s_init_device_dispatch_table(VkDevice device,"
                 % self.prefix)
             func.append("%s                                               VkLayerDispatchTable *table,"

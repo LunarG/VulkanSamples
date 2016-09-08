@@ -323,14 +323,19 @@ cvdescriptorset::DescriptorSet::~DescriptorSet() {
 }
 
 
-static char const * string_descriptor_req_view_type(descriptor_req req) {
+static std::string string_descriptor_req_view_type(descriptor_req req) {
+    std::string result("");
     for (unsigned i = 0; i <= VK_IMAGE_VIEW_TYPE_END_RANGE; i++) {
         if (req & (1 << i)) {
-            return string_VkImageViewType(VkImageViewType(i));
+            if (result.size()) result += ", ";
+            result += string_VkImageViewType(VkImageViewType(i));
         }
     }
 
-    return "(none)";
+    if (!result.size())
+        result = "(none)";
+
+    return result;
 }
 
 
@@ -429,7 +434,7 @@ bool cvdescriptorset::DescriptorSet::ValidateDrawState(const std::map<uint32_t, 
                         auto image_view_data = getImageViewData(device_data_, image_view);
                         assert(image_view_data);
 
-                        if (~reqs & (1 << image_view_data->viewType)) {
+                        if ((reqs & DESCRIPTOR_REQ_ALL_VIEW_TYPE_BITS) && (~reqs & (1 << image_view_data->viewType))) {
                             // bad view type
                             std::stringstream error_str;
                             error_str << "Descriptor in binding #" << binding << " at global descriptor index " << i

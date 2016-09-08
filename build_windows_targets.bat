@@ -34,7 +34,7 @@ if %do_cmake%==0 (
     if %do_32%==0 (
         if %do_64%==0 (
             echo No valid parameters specified.
-            exit 1
+            exit /b 1
         )
     )
 )
@@ -82,8 +82,8 @@ if %do_64%==1 (
        echo.
        echo 64-bit Debug build failed!
        popd
-       exit /B 1
-    )
+       exit /b 1
+    )   
    
     echo Building 64-bit Release
     REM msbuild doesn't seem to see the dependency between the Overlay sample and layer_utils
@@ -96,9 +96,8 @@ if %do_64%==1 (
        echo.
        echo 64-bit Release build failed!
        popd
-       exit /B 1
-    )
-
+       exit /b 1
+    )   
     popd
 )
  
@@ -119,9 +118,9 @@ if %do_32%==1 (
        echo.
        echo 32-bit Debug build failed!
        popd
-       exit /B 1
-    )
-   
+       exit /b 1
+    )   
+
     echo Building 32-bit Release
     REM msbuild doesn't seem to see the dependency between the Overlay sample and layer_utils
     pushd layers
@@ -133,10 +132,8 @@ if %do_32%==1 (
        echo.
        echo 32-bit Release build failed!
        popd
-       exit /B 1
-    )
-
+       exit /b 1
+    )   
     popd
 )
-
 exit /b 0

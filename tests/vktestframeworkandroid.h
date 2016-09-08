@@ -32,11 +32,10 @@
 // Can be used by tests to record additional details / description of test
 #define TEST_DESCRIPTION(desc) RecordProperty("description", desc)
 
-#define ICD_SPV_MAGIC   0x07230203
+#define ICD_SPV_MAGIC 0x07230203
 
-class VkTestFramework : public ::testing::Test
-{
-public:
+class VkTestFramework : public ::testing::Test {
+  public:
     VkTestFramework();
     ~VkTestFramework();
 
@@ -44,19 +43,16 @@ public:
     static void Finish();
 
     VkFormat GetFormat(VkInstance instance, vk_testing::Device *device);
-    bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
-                   const char *pshader,
-                   std::vector<unsigned int> &spv);
+    bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spv);
 
     static bool m_use_glsl;
 };
 
-class TestEnvironment : public ::testing::Environment
-{
- public:
-  void SetUp();
+class TestEnvironment : public ::testing::Environment {
+  public:
+    void SetUp();
 
-  void TearDown();
+    void TearDown();
 };
 
 #endif

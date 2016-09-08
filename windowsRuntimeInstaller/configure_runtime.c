@@ -270,6 +270,7 @@ int add_explicit_layers(FILE* log, const char* install_path, enum Platform platf
 
 int compare_versions(const struct SDKVersion* a, const struct SDKVersion* b)
 {
+    // Compare numerical versions
     for(int i = 0; i < 4; ++i) {
         long* a_current = ((long*) a) + i;
         long* b_current = ((long*) b) + i;
@@ -281,6 +282,14 @@ int compare_versions(const struct SDKVersion* a, const struct SDKVersion* b)
         }
     }
     
+    // An empty string should be considered greater (and therefore more recent) than one with test
+    if(a->extended[0] == '\0' && b->extended[0] != '\0') {
+        return 1;
+    } else if(b->extended[0] == '\0' && a->extended[0] != '\0') {
+        return -1;
+    }
+
+    // Otherwise, just do a strncmp
     return strncmp(a->extended, b->extended, SDK_VERSION_BUFFER_SIZE);
 }
 

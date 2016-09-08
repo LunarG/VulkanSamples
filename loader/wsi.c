@@ -21,7 +21,6 @@
  * Author: Mark Lobodzinski <mark@lunarg.com>
  */
 
-//#define _ISOC11_SOURCE /* for aligned_alloc() */
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -158,16 +157,30 @@ void wsi_create_instance(struct loader_instance *ptr_instance,
         }
     }
 }
-/*
- * Linux WSI surface extensions are not always compiled into the loader. (Assume
- * for Windows the KHR_win32_surface is always compiled into loader). A given
- * Linux build environment might not have the headers required for building one
- * of the four extensions  (Xlib, Xcb, Mir, Wayland).  Thus, need to check if
- * the built loader actually supports the particular Linux surface extension.
- * If not supported by the built loader it will not be included in the list of
- * enumerated instance extensions.  This solves the issue where an ICD or layer
- * advertises support for a given Linux surface extension but the loader was not
- * built to support the extension. */
+
+void wsi_create_device(struct loader_device *dev,
+    const VkDeviceCreateInfo *pCreateInfo) {
+    dev->loader_dispatch.enabled_known_extensions.khr_display_swapchain = 0;
+
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
+                   VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) == 0) {
+            dev->loader_dispatch.enabled_known_extensions
+                .khr_display_swapchain = 1;
+            return;
+        }
+    }
+}
+
+// Linux WSI surface extensions are not always compiled into the loader. (Assume
+// for Windows the KHR_win32_surface is always compiled into loader). A given
+// Linux build environment might not have the headers required for building one
+// of the four extensions  (Xlib, Xcb, Mir, Wayland).  Thus, need to check if
+// the built loader actually supports the particular Linux surface extension.
+// If not supported by the built loader it will not be included in the list of
+// enumerated instance extensions.  This solves the issue where an ICD or layer
+// advertises support for a given Linux surface extension but the loader was not
+// built to support the extension.
 bool wsi_unsupported_instance_extension(const VkExtensionProperties *ext_prop) {
 #ifndef VK_USE_PLATFORM_MIR_KHR
     if (!strcmp(ext_prop->extensionName, "VK_KHR_mir_surface"))
@@ -188,14 +201,10 @@ bool wsi_unsupported_instance_extension(const VkExtensionProperties *ext_prop) {
 
     return false;
 }
-/*
- * Functions for the VK_KHR_surface extension:
- */
 
-/*
- * This is the trampoline entrypoint
- * for DestroySurfaceKHR
- */
+// Functions for the VK_KHR_surface extension:
+
+// This is the trampoline entrypoint for DestroySurfaceKHR
 LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkDestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
                     const VkAllocationCallbacks *pAllocator) {
@@ -205,10 +214,8 @@ vkDestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
 }
 
 // TODO probably need to lock around all the loader_get_instance() calls.
-/*
- * This is the instance chain terminator function
- * for DestroySurfaceKHR
- */
+
+// This is the instance chain terminator function for DestroySurfaceKHR
 VKAPI_ATTR void VKAPI_CALL
 terminator_DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
                              const VkAllocationCallbacks *pAllocator) {
@@ -217,10 +224,7 @@ terminator_DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
     loader_instance_heap_free(ptr_instance, (void *)surface);
 }
 
-/*
- * This is the trampoline entrypoint
- * for GetPhysicalDeviceSurfaceSupportKHR
- */
+// This is the trampoline entrypoint for GetPhysicalDeviceSurfaceSupportKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkGetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice,
                                      uint32_t queueFamilyIndex,
@@ -235,15 +239,11 @@ vkGetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice,
     return res;
 }
 
-/*
- * This is the instance chain terminator function
- * for GetPhysicalDeviceSurfaceSupportKHR
- */
-VKAPI_ATTR VkResult VKAPI_CALL
-terminator_GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice,
-                                              uint32_t queueFamilyIndex,
-                                              VkSurfaceKHR surface,
-                                              VkBool32 *pSupported) {
+// This is the instance chain terminator function for
+// GetPhysicalDeviceSurfaceSupportKHR
+VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceSupportKHR(
+    VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
+    VkSurfaceKHR surface, VkBool32 *pSupported) {
     // First, check to ensure the appropriate extension was enabled:
     struct loader_physical_device *phys_dev =
         (struct loader_physical_device *)physicalDevice;
@@ -270,10 +270,7 @@ terminator_GetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice,
         phys_dev->phys_dev, queueFamilyIndex, surface, pSupported);
 }
 
-/*
- * This is the trampoline entrypoint
- * for GetPhysicalDeviceSurfaceCapabilitiesKHR
- */
+// This is the trampoline entrypoint for GetPhysicalDeviceSurfaceCapabilitiesKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
     VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
@@ -288,10 +285,8 @@ vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
     return res;
 }
 
-/*
- * This is the instance chain terminator function
- * for GetPhysicalDeviceSurfaceCapabilitiesKHR
- */
+// This is the instance chain terminator function for
+// GetPhysicalDeviceSurfaceCapabilitiesKHR
 VKAPI_ATTR VkResult VKAPI_CALL
 terminator_GetPhysicalDeviceSurfaceCapabilitiesKHR(
     VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
@@ -321,10 +316,8 @@ terminator_GetPhysicalDeviceSurfaceCapabilitiesKHR(
         phys_dev->phys_dev, surface, pSurfaceCapabilities);
 }
 
-/*
- * This is the trampoline entrypoint
- * for GetPhysicalDeviceSurfaceFormatsKHR
- */
+
+// This is the trampoline entrypoint for GetPhysicalDeviceSurfaceFormatsKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkGetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice,
                                      VkSurfaceKHR surface,
@@ -339,10 +332,8 @@ vkGetPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice physicalDevice,
     return res;
 }
 
-/*
- * This is the instance chain terminator function
- * for GetPhysicalDeviceSurfaceFormatsKHR
- */
+
+// This is the instance chain terminator function for GetPhysicalDeviceSurfaceFormatsKHR
 VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceFormatsKHR(
     VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
     uint32_t *pSurfaceFormatCount, VkSurfaceFormatKHR *pSurfaceFormats) {
@@ -372,10 +363,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceFormatsKHR(
         phys_dev->phys_dev, surface, pSurfaceFormatCount, pSurfaceFormats);
 }
 
-/*
- * This is the trampoline entrypoint
- * for GetPhysicalDeviceSurfacePresentModesKHR
- */
+// This is the trampoline entrypoint for GetPhysicalDeviceSurfacePresentModesKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkGetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice,
                                           VkSurfaceKHR surface,
@@ -390,10 +378,8 @@ vkGetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice physicalDevice,
     return res;
 }
 
-/*
- * This is the instance chain terminator function
- * for GetPhysicalDeviceSurfacePresentModesKHR
- */
+// This is the instance chain terminator function for
+// GetPhysicalDeviceSurfacePresentModesKHR
 VKAPI_ATTR VkResult VKAPI_CALL
 terminator_GetPhysicalDeviceSurfacePresentModesKHR(
     VkPhysicalDevice physicalDevice, VkSurfaceKHR surface,
@@ -423,28 +409,19 @@ terminator_GetPhysicalDeviceSurfacePresentModesKHR(
         phys_dev->phys_dev, surface, pPresentModeCount, pPresentModes);
 }
 
-/*
- * Functions for the VK_KHR_swapchain extension:
- */
+// Functions for the VK_KHR_swapchain extension:
 
-/*
- * This is the trampoline entrypoint
- * for CreateSwapchainKHR
- */
+// This is the trampoline entrypoint for CreateSwapchainKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkDevice device, const VkSwapchainCreateInfoKHR *pCreateInfo,
     const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchain) {
     const VkLayerDispatchTable *disp;
     disp = loader_get_dispatch(device);
-    VkResult res =
-        disp->CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
-    return res;
+    return disp->CreateSwapchainKHR(device, pCreateInfo, pAllocator,
+                                    pSwapchain);
 }
 
-/*
- * This is the trampoline entrypoint
- * for DestroySwapchainKHR
- */
+// This is the trampoline entrypoint for DestroySwapchainKHR
 LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL
 vkDestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain,
                       const VkAllocationCallbacks *pAllocator) {
@@ -453,58 +430,42 @@ vkDestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain,
     disp->DestroySwapchainKHR(device, swapchain, pAllocator);
 }
 
-/*
- * This is the trampoline entrypoint
- * for GetSwapchainImagesKHR
- */
+// This is the trampoline entrypoint for GetSwapchainImagesKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain,
                         uint32_t *pSwapchainImageCount,
                         VkImage *pSwapchainImages) {
     const VkLayerDispatchTable *disp;
     disp = loader_get_dispatch(device);
-    VkResult res = disp->GetSwapchainImagesKHR(
+    return disp->GetSwapchainImagesKHR(
         device, swapchain, pSwapchainImageCount, pSwapchainImages);
-    return res;
 }
 
-/*
- * This is the trampoline entrypoint
- * for AcquireNextImageKHR
- */
+// This is the trampoline entrypoint for AcquireNextImageKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkAcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain,
                       uint64_t timeout, VkSemaphore semaphore, VkFence fence,
                       uint32_t *pImageIndex) {
     const VkLayerDispatchTable *disp;
     disp = loader_get_dispatch(device);
-    VkResult res = disp->AcquireNextImageKHR(device, swapchain, timeout,
-                                             semaphore, fence, pImageIndex);
-    return res;
+    return disp->AcquireNextImageKHR(device, swapchain, timeout,
+        semaphore, fence, pImageIndex);
 }
 
-/*
- * This is the trampoline entrypoint
- * for QueuePresentKHR
- */
+// This is the trampoline entrypoint for QueuePresentKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo) {
     const VkLayerDispatchTable *disp;
     disp = loader_get_dispatch(queue);
-    VkResult res = disp->QueuePresentKHR(queue, pPresentInfo);
-    return res;
+    return disp->QueuePresentKHR(queue, pPresentInfo);
 }
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 
-/*
- * Functions for the VK_KHR_win32_surface extension:
- */
 
-/*
- * This is the trampoline entrypoint
- * for CreateWin32SurfaceKHR
- */
+// Functions for the VK_KHR_win32_surface extension:
+
+// This is the trampoline entrypoint for CreateWin32SurfaceKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
     VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
@@ -517,10 +478,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
     return res;
 }
 
-/*
- * This is the instance chain terminator function
- * for CreateWin32SurfaceKHR
- */
+// This is the instance chain terminator function for CreateWin32SurfaceKHR
 VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWin32SurfaceKHR(
     VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
@@ -552,10 +510,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWin32SurfaceKHR(
     return VK_SUCCESS;
 }
 
-/*
- * This is the trampoline entrypoint
- * for GetPhysicalDeviceWin32PresentationSupportKHR
- */
+// This is the trampoline entrypoint for
+// GetPhysicalDeviceWin32PresentationSupportKHR
 LOADER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL
 vkGetPhysicalDeviceWin32PresentationSupportKHR(VkPhysicalDevice physicalDevice,
                                                uint32_t queueFamilyIndex) {
@@ -568,10 +524,8 @@ vkGetPhysicalDeviceWin32PresentationSupportKHR(VkPhysicalDevice physicalDevice,
     return res;
 }
 
-/*
- * This is the instance chain terminator function
- * for GetPhysicalDeviceWin32PresentationSupportKHR
- */
+// This is the instance chain terminator function for
+// GetPhysicalDeviceWin32PresentationSupportKHR
 VKAPI_ATTR VkBool32 VKAPI_CALL
 terminator_GetPhysicalDeviceWin32PresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex) {
@@ -602,14 +556,9 @@ terminator_GetPhysicalDeviceWin32PresentationSupportKHR(
 
 #ifdef VK_USE_PLATFORM_MIR_KHR
 
-/*
- * Functions for the VK_KHR_mir_surface extension:
- */
+// Functions for the VK_KHR_mir_surface extension:
 
-/*
- * This is the trampoline entrypoint
- * for CreateMirSurfaceKHR
- */
+// This is the trampoline entrypoint for CreateMirSurfaceKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
     VkInstance instance, const VkMirSurfaceCreateInfoKHR *pCreateInfo,
     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
@@ -622,10 +571,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
     return res;
 }
 
-/*
- * This is the instance chain terminator function
- * for CreateMirSurfaceKHR
- */
+// This is the instance chain terminator function for CreateMirSurfaceKHR
 VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateMirSurfaceKHR(
     VkInstance instance, const VkMirSurfaceCreateInfoKHR *pCreateInfo,
     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
@@ -657,10 +603,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateMirSurfaceKHR(
     return VK_SUCCESS;
 }
 
-/*
- * This is the trampoline entrypoint
- * for GetPhysicalDeviceMirPresentationSupportKHR
- */
+// This is the trampoline entrypoint for
+// GetPhysicalDeviceMirPresentationSupportKHR
 LOADER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL
 vkGetPhysicalDeviceMirPresentationSupportKHR(VkPhysicalDevice physicalDevice,
                                              uint32_t queueFamilyIndex,
@@ -674,10 +618,8 @@ vkGetPhysicalDeviceMirPresentationSupportKHR(VkPhysicalDevice physicalDevice,
     return res;
 }
 
-/*
- * This is the instance chain terminator function
- * for GetPhysicalDeviceMirPresentationSupportKHR
- */
+// This is the instance chain terminator function for
+// GetPhysicalDeviceMirPresentationSupportKHR
 VKAPI_ATTR VkBool32 VKAPI_CALL
 terminator_GetPhysicalDeviceMirPresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
@@ -709,14 +651,10 @@ terminator_GetPhysicalDeviceMirPresentationSupportKHR(
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 
-/*
- * Functions for the VK_KHR_wayland_surface extension:
- */
 
-/*
- * This is the trampoline entrypoint
- * for CreateWaylandSurfaceKHR
- */
+// Functions for the VK_KHR_wayland_surface extension:
+
+// This is the trampoline entrypoint for CreateWaylandSurfaceKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkCreateWaylandSurfaceKHR(VkInstance instance,
                           const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
@@ -731,10 +669,7 @@ vkCreateWaylandSurfaceKHR(VkInstance instance,
     return res;
 }
 
-/*
- * This is the instance chain terminator function
- * for CreateWaylandSurfaceKHR
- */
+// This is the instance chain terminator function for CreateWaylandSurfaceKHR
 VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWaylandSurfaceKHR(
     VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
@@ -766,10 +701,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateWaylandSurfaceKHR(
     return VK_SUCCESS;
 }
 
-/*
- * This is the trampoline entrypoint
- * for GetPhysicalDeviceWaylandPresentationSupportKHR
- */
+
+// This is the trampoline entrypoint for
+// GetPhysicalDeviceWaylandPresentationSupportKHR
 LOADER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL
 vkGetPhysicalDeviceWaylandPresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
@@ -783,10 +717,8 @@ vkGetPhysicalDeviceWaylandPresentationSupportKHR(
     return res;
 }
 
-/*
- * This is the instance chain terminator function
- * for GetPhysicalDeviceWaylandPresentationSupportKHR
- */
+// This is the instance chain terminator function for
+// GetPhysicalDeviceWaylandPresentationSupportKHR
 VKAPI_ATTR VkBool32 VKAPI_CALL
 terminator_GetPhysicalDeviceWaylandPresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
@@ -818,14 +750,10 @@ terminator_GetPhysicalDeviceWaylandPresentationSupportKHR(
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
 
-/*
- * Functions for the VK_KHR_xcb_surface extension:
- */
 
-/*
- * This is the trampoline entrypoint
- * for CreateXcbSurfaceKHR
- */
+// Functions for the VK_KHR_xcb_surface extension:
+
+// This is the trampoline entrypoint for CreateXcbSurfaceKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
@@ -838,10 +766,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     return res;
 }
 
-/*
- * This is the instance chain terminator function
- * for CreateXcbSurfaceKHR
- */
+// This is the instance chain terminator function for CreateXcbSurfaceKHR
 VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXcbSurfaceKHR(
     VkInstance instance, const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
@@ -873,10 +798,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXcbSurfaceKHR(
     return VK_SUCCESS;
 }
 
-/*
- * This is the trampoline entrypoint
- * for GetPhysicalDeviceXcbPresentationSupportKHR
- */
+// This is the trampoline entrypoint for
+// GetPhysicalDeviceXcbPresentationSupportKHR
 LOADER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL
 vkGetPhysicalDeviceXcbPresentationSupportKHR(VkPhysicalDevice physicalDevice,
                                              uint32_t queueFamilyIndex,
@@ -891,10 +814,8 @@ vkGetPhysicalDeviceXcbPresentationSupportKHR(VkPhysicalDevice physicalDevice,
     return res;
 }
 
-/*
- * This is the instance chain terminator function
- * for GetPhysicalDeviceXcbPresentationSupportKHR
- */
+// This is the instance chain terminator function for
+// GetPhysicalDeviceXcbPresentationSupportKHR
 VKAPI_ATTR VkBool32 VKAPI_CALL
 terminator_GetPhysicalDeviceXcbPresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex,
@@ -926,14 +847,9 @@ terminator_GetPhysicalDeviceXcbPresentationSupportKHR(
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
 
-/*
- * Functions for the VK_KHR_xlib_surface extension:
- */
+// Functions for the VK_KHR_xlib_surface extension:
 
-/*
- * This is the trampoline entrypoint
- * for CreateXlibSurfaceKHR
- */
+// This is the trampoline entrypoint for CreateXlibSurfaceKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
     VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
@@ -946,10 +862,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
     return res;
 }
 
-/*
- * This is the instance chain terminator function
- * for CreateXlibSurfaceKHR
- */
+// This is the instance chain terminator function for CreateXlibSurfaceKHR
 VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXlibSurfaceKHR(
     VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
@@ -981,10 +894,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateXlibSurfaceKHR(
     return VK_SUCCESS;
 }
 
-/*
- * This is the trampoline entrypoint
- * for GetPhysicalDeviceXlibPresentationSupportKHR
- */
+// This is the trampoline entrypoint for GetPhysicalDeviceXlibPresentationSupportKHR
 LOADER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL
 vkGetPhysicalDeviceXlibPresentationSupportKHR(VkPhysicalDevice physicalDevice,
                                               uint32_t queueFamilyIndex,
@@ -998,10 +908,8 @@ vkGetPhysicalDeviceXlibPresentationSupportKHR(VkPhysicalDevice physicalDevice,
     return res;
 }
 
-/*
- * This is the instance chain terminator function
- * for GetPhysicalDeviceXlibPresentationSupportKHR
- */
+// This is the instance chain terminator function for
+// GetPhysicalDeviceXlibPresentationSupportKHR
 VKAPI_ATTR VkBool32 VKAPI_CALL
 terminator_GetPhysicalDeviceXlibPresentationSupportKHR(
     VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, Display *dpy,
@@ -1033,14 +941,10 @@ terminator_GetPhysicalDeviceXlibPresentationSupportKHR(
 
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
 
-/*
- * Functions for the VK_KHR_android_surface extension:
- */
 
-/*
- * This is the trampoline entrypoint
- * for CreateAndroidSurfaceKHR
- */
+// Functions for the VK_KHR_android_surface extension:
+
+// This is the trampoline entrypoint for CreateAndroidSurfaceKHR
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
     VkInstance instance, ANativeWindow *window,
     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface) {
@@ -1052,10 +956,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
     return res;
 }
 
-/*
- * This is the instance chain terminator function
- * for CreateAndroidSurfaceKHR
- */
+// This is the instance chain terminator function for CreateAndroidSurfaceKHR
 VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateAndroidSurfaceKHR(
     VkInstance instance, Window window, const VkAllocationCallbacks *pAllocator,
     VkSurfaceKHR *pSurface) {
@@ -1089,9 +990,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateAndroidSurfaceKHR(
 
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
-/*
- * Functions for the VK_KHR_display instance extension:
- */
+
+// Functions for the VK_KHR_display instance extension:
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkGetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalDevice physicalDevice,
                                         uint32_t *pPropertyCount,
@@ -1372,13 +1272,27 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDisplayPlaneSurfaceKHR(
     return VK_SUCCESS;
 }
 
+// This is the trampoline entrypoint
+// for CreateSharedSwapchainsKHR
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSharedSwapchainsKHR(
+    VkDevice device, uint32_t swapchainCount,
+    const VkSwapchainCreateInfoKHR *pCreateInfos,
+    const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchains) {
+    struct loader_dev_dispatch_table *disp = loader_get_dev_dispatch(device);
+    if (0 == disp->enabled_known_extensions.khr_display_swapchain ||
+        NULL == disp->core_dispatch.CreateSharedSwapchainsKHR) {
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
+    } else {
+        return disp->core_dispatch.CreateSharedSwapchainsKHR(
+            device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
+    }
+}
+
 bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
                                 const char *name, void **addr) {
     *addr = NULL;
 
-    /*
-     * Functions for the VK_KHR_surface extension:
-     */
+    // Functions for the VK_KHR_surface extension:
     if (!strcmp("vkDestroySurfaceKHR", name)) {
         *addr = ptr_instance->wsi_surface_enabled ? (void *)vkDestroySurfaceKHR
                                                   : NULL;
@@ -1409,14 +1323,12 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
         return true;
     }
 
-    /*
-     * Functions for the VK_KHR_swapchain extension:
-     *
-     * Note: This is a device extension, and its functions are statically
-     * exported from the loader.  Per Khronos decisions, the the loader's GIPA
-     * function will return the trampoline function for such device-extension
-     * functions, regardless of whether the extension has been enabled.
-     */
+    // Functions for the VK_KHR_swapchain extension:
+
+    // Note: This is a device extension, and its functions are statically
+    // exported from the loader.  Per Khronos decisions, the loader's GIPA
+    // function will return the trampoline function for such device-extension
+    // functions, regardless of whether the extension has been enabled.
     if (!strcmp("vkCreateSwapchainKHR", name)) {
         *addr = (void *)vkCreateSwapchainKHR;
         return true;
@@ -1439,9 +1351,8 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
     }
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    /*
-     * Functions for the VK_KHR_win32_surface extension:
-     */
+
+    // Functions for the VK_KHR_win32_surface extension:
     if (!strcmp("vkCreateWin32SurfaceKHR", name)) {
         *addr = ptr_instance->wsi_win32_surface_enabled
                     ? (void *)vkCreateWin32SurfaceKHR
@@ -1456,9 +1367,8 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
     }
 #endif // VK_USE_PLATFORM_WIN32_KHR
 #ifdef VK_USE_PLATFORM_MIR_KHR
-    /*
-     * Functions for the VK_KHR_mir_surface extension:
-     */
+
+    // Functions for the VK_KHR_mir_surface extension:
     if (!strcmp("vkCreateMirSurfaceKHR", name)) {
         *addr = ptr_instance->wsi_mir_surface_enabled
                     ? (void *)vkCreateMirSurfaceKHR
@@ -1473,9 +1383,8 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
     }
 #endif // VK_USE_PLATFORM_MIR_KHR
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    /*
-     * Functions for the VK_KHR_wayland_surface extension:
-     */
+
+    // Functions for the VK_KHR_wayland_surface extension:
     if (!strcmp("vkCreateWaylandSurfaceKHR", name)) {
         *addr = ptr_instance->wsi_wayland_surface_enabled
                     ? (void *)vkCreateWaylandSurfaceKHR
@@ -1490,9 +1399,8 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
     }
 #endif // VK_USE_PLATFORM_WAYLAND_KHR
 #ifdef VK_USE_PLATFORM_XCB_KHR
-    /*
-     * Functions for the VK_KHR_xcb_surface extension:
-     */
+
+    // Functions for the VK_KHR_xcb_surface extension:
     if (!strcmp("vkCreateXcbSurfaceKHR", name)) {
         *addr = ptr_instance->wsi_xcb_surface_enabled
                     ? (void *)vkCreateXcbSurfaceKHR
@@ -1507,9 +1415,8 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
     }
 #endif // VK_USE_PLATFORM_XCB_KHR
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-    /*
-     * Functions for the VK_KHR_xlib_surface extension:
-     */
+
+    // Functions for the VK_KHR_xlib_surface extension:
     if (!strcmp("vkCreateXlibSurfaceKHR", name)) {
         *addr = ptr_instance->wsi_xlib_surface_enabled
                     ? (void *)vkCreateXlibSurfaceKHR
@@ -1524,9 +1431,8 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
     }
 #endif // VK_USE_PLATFORM_XLIB_KHR
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
-    /*
-     * Functions for the VK_KHR_android_surface extension:
-     */
+
+    // Functions for the VK_KHR_android_surface extension:
     if (!strcmp("vkCreateAndroidSurfaceKHR", name)) {
         *addr = ptr_instance->wsi_xlib_surface_enabled
                     ? (void *)vkCreateAndroidSurfaceKHR
@@ -1535,9 +1441,7 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
     }
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
-    /*
-     * Functions for VK_KHR_display extension:
-     */
+    // Functions for VK_KHR_display extension:
     if (!strcmp("vkGetPhysicalDeviceDisplayPropertiesKHR", name)) {
         *addr = ptr_instance->wsi_display_enabled
                     ? (void *)vkGetPhysicalDeviceDisplayPropertiesKHR
@@ -1580,5 +1484,12 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
                     : NULL;
         return true;
     }
+
+    // Functions for KHR_display_swapchain extension:
+    if (!strcmp("vkCreateSharedSwapchainsKHR", name)) {
+        *addr = (void *)vkCreateSharedSwapchainsKHR;
+        return true;
+    }
+
     return false;
 }

@@ -1505,7 +1505,7 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
         return addr;
 
     wrapped_inst_obj *inst;
-    auto vk_inst = unwrap_instance(instance, &inst);
+    (void)unwrap_instance(instance, &inst);
     VkLayerInstanceDispatchTable* pTable = &inst->layer_disp;
 
     // EXT_debug_report

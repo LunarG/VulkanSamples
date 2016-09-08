@@ -1,4 +1,4 @@
-﻿/*
+/*
  *
  * Copyright (c) 2014-2016 The Khronos Group Inc.
  * Copyright (c) 2014-2016 Valve Corporation
@@ -42,6 +42,7 @@
 #include "table_ops.h"
 #include "debug_report.h"
 #include "wsi.h"
+#include "extensions.h"
 #include "vulkan/vk_icd.h"
 #include "cJSON.h"
 #include "murmurhash.h"
@@ -117,6 +118,8 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .CreateDebugReportCallbackEXT = terminator_CreateDebugReportCallback,
     .DestroyDebugReportCallbackEXT = terminator_DestroyDebugReportCallback,
     .DebugReportMessageEXT = terminator_DebugReportMessage,
+    .GetPhysicalDeviceExternalImageFormatPropertiesNV =
+        terminator_GetPhysicalDeviceExternalImageFormatPropertiesNV,
 #ifdef VK_USE_PLATFORM_MIR_KHR
     .CreateMirSurfaceKHR = terminator_CreateMirSurfaceKHR,
     .GetPhysicalDeviceMirPresentationSupportKHR =
@@ -554,32 +557,26 @@ static size_t loader_platform_combine_path(char *dest, size_t len, ...) {
  * Given string of three part form "maj.min.pat" convert to a vulkan version
  * number.
  */
-static uint32_t loader_make_version(const char *vers_str) {
+static uint32_t loader_make_version(char *vers_str) {
     uint32_t vers = 0, major = 0, minor = 0, patch = 0;
-    char *minor_str = NULL;
-    char *patch_str = NULL;
-    char *cstr;
-    char *str;
+    char *vers_tok;
 
-    if (!vers_str)
+    if (!vers_str) {
         return vers;
-    cstr = loader_stack_alloc(strlen(vers_str) + 1);
-    strcpy(cstr, vers_str);
-    while ((str = strchr(cstr, '.')) != NULL) {
-        if (minor_str == NULL) {
-            minor_str = str + 1;
-            *str = '\0';
-            major = atoi(cstr);
-        } else if (patch_str == NULL) {
-            patch_str = str + 1;
-            *str = '\0';
-            minor = atoi(minor_str);
-        } else {
-            return vers;
-        }
-        cstr = str + 1;
     }
-    patch = atoi(patch_str);
+
+    vers_tok = strtok(vers_str, ".\"\n\r");
+    if (NULL != vers_tok) {
+        major = (uint16_t)atoi(vers_tok);
+        vers_tok = strtok(NULL, ".\"\n\r");
+        if (NULL != vers_tok) {
+            minor = (uint16_t)atoi(vers_tok);
+            vers_tok = strtok(NULL, ".\"\n\r");
+            if (NULL != vers_tok) {
+                patch = (uint16_t)atoi(vers_tok);
+            }
+        }
+    }
 
     return VK_MAKE_VERSION(major, minor, patch);
 }
@@ -861,14 +858,16 @@ VkResult loader_add_device_extensions(const struct loader_instance *inst,
 VkResult loader_init_generic_list(const struct loader_instance *inst,
                               struct loader_generic_list *list_info,
                               size_t element_size) {
-    list_info->capacity = 32 * element_size;
+    size_t capacity = 32 * element_size;
+    list_info->count = 0;
+    list_info->capacity = 0;
     list_info->list = loader_instance_heap_alloc(
-        inst, list_info->capacity, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        inst, capacity, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (list_info->list == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
-    memset(list_info->list, 0, list_info->capacity);
-    list_info->count = 0;
+    memset(list_info->list, 0, capacity);
+    list_info->capacity = capacity;
     return VK_SUCCESS;
 }
 
@@ -1269,9 +1268,6 @@ void loader_destroy_logical_device(const struct loader_instance *inst,
     if (pAllocator) {
         dev->alloc_callbacks = *pAllocator;
     }
-    if (NULL != dev->app_extension_props) {
-        loader_device_heap_free(dev, dev->app_extension_props);
-    }
     if (NULL != dev->activated_layer_list.list) {
         loader_deactivate_layers(inst, dev, &dev->activated_layer_list);
     }
@@ -1355,12 +1351,13 @@ static struct loader_icd *
 loader_icd_create(const struct loader_instance *inst) {
     struct loader_icd *icd;
 
-    icd = loader_instance_heap_alloc(inst, sizeof(*icd),
+    icd = loader_instance_heap_alloc(inst, sizeof(struct loader_icd),
                                      VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    if (!icd)
+    if (!icd) {
         return NULL;
+    }
 
-    memset(icd, 0, sizeof(*icd));
+    memset(icd, 0, sizeof(struct loader_icd));
 
     return icd;
 }
@@ -1371,8 +1368,9 @@ loader_icd_add(struct loader_instance *ptr_inst,
     struct loader_icd *icd;
 
     icd = loader_icd_create(ptr_inst);
-    if (!icd)
+    if (!icd) {
         return NULL;
+    }
 
     icd->this_icd_lib = icd_lib;
     icd->this_instance = ptr_inst;
@@ -1648,6 +1646,7 @@ static bool loader_icd_init_entrys(struct loader_icd *icd, VkInstance inst,
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
     LOOKUP_GIPA(GetPhysicalDeviceWaylandPresentationSupportKHR, false);
 #endif
+    LOOKUP_GIPA(GetPhysicalDeviceExternalImageFormatPropertiesNV, false);
 
 #undef LOOKUP_GIPA
 
@@ -3256,7 +3255,7 @@ static void loader_init_dispatch_dev_ext_entry(struct loader_instance *inst,
         gdpa_value = dev->loader_dispatch.core_dispatch.GetDeviceProcAddr(
             dev->device, funcName);
         if (gdpa_value != NULL)
-            dev->loader_dispatch.ext_dispatch.DevExt[idx] =
+            dev->loader_dispatch.ext_dispatch.dev_ext[idx] =
                 (PFN_vkDevExt)gdpa_value;
     } else {
         for (uint32_t i = 0; i < inst->total_icd_count; i++) {
@@ -3267,7 +3266,7 @@ static void loader_init_dispatch_dev_ext_entry(struct loader_instance *inst,
                     ldev->loader_dispatch.core_dispatch.GetDeviceProcAddr(
                         ldev->device, funcName);
                 if (gdpa_value != NULL)
-                    ldev->loader_dispatch.ext_dispatch.DevExt[idx] =
+                    ldev->loader_dispatch.ext_dispatch.dev_ext[idx] =
                         (PFN_vkDevExt)gdpa_value;
                 ldev = ldev->next;
             }
@@ -4121,7 +4120,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
             // If out of memory, bail immediately.
             goto out;
         } else if (VK_SUCCESS != res) {
-            // Keep trying if there was some other error.
+            // Something bad happened with this ICD, so free it and try the
+            // next.
+            ptr_instance->icds = icd->next;
+            icd->next = NULL;
+            loader_icd_destroy(ptr_instance, icd, pAllocator);
             continue;
         }
 
@@ -4129,12 +4132,20 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
             ptr_instance,
             icd->this_icd_lib->EnumerateInstanceExtensionProperties,
             icd->this_icd_lib->lib_name, &icd_exts);
-        if (VK_ERROR_OUT_OF_HOST_MEMORY == res) {
-            // If out of memory, bail immediately.
-            goto out;
-        } else if (VK_SUCCESS != res) {
-            // Keep trying if there was some other error.
-            continue;
+        if (VK_SUCCESS != res) {
+            loader_destroy_generic_list(ptr_instance,
+                (struct loader_generic_list *)&icd_exts);
+            if (VK_ERROR_OUT_OF_HOST_MEMORY == res) {
+                // If out of memory, bail immediately.
+                goto out;
+            } else {
+                // Something bad happened with this ICD, so free it and try
+                // the next.
+                ptr_instance->icds = icd->next;
+                icd->next = NULL;
+                loader_icd_destroy(ptr_instance, icd, pAllocator);
+                continue;
+            }
         }
 
         for (uint32_t j = 0; j < pCreateInfo->enabledExtensionCount; j++) {
@@ -4157,9 +4168,11 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(
             // If out of memory, bail immediately.
             goto out;
         } else if (VK_SUCCESS != res) {
-            // Keep trying if there was some other error.
             loader_log(ptr_instance, VK_DEBUG_REPORT_WARNING_BIT_EXT, 0,
                        "ICD ignored: failed to CreateInstance in ICD %d", i);
+            ptr_instance->icds = icd->next;
+            icd->next = NULL;
+            loader_icd_destroy(ptr_instance, icd, pAllocator);
             continue;
         }
 
@@ -4310,6 +4323,9 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(
             localCreateInfo.enabledExtensionCount++;
         }
     }
+
+    wsi_create_device(dev, pCreateInfo);
+    extensions_create_device(dev, pCreateInfo);
 
     // TODO: Why does fpCreateDevice behave differently than
     // this_icd->CreateDevice?

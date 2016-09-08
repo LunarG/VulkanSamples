@@ -40,6 +40,7 @@ enum MEM_TRACK_ERROR {
     MEMTRACK_INVALID_USAGE_FLAG,           // Usage flags specified at image/buffer create conflict w/ use of object
     MEMTRACK_INVALID_MAP,                  // Size flag specified at alloc is too small for mapping range
     MEMTRACK_INVALID_MEM_TYPE,             // Memory Type mismatch
+    MEMTRACK_INVALID_MEM_REGION,           // Memory region for object bound to an allocation is invalid
     MEMTRACK_OBJECT_NOT_BOUND,             // Image or Buffer used without having memory bound to it
 };
 
@@ -60,7 +61,9 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_INVALID_COMMAND_BUFFER,        // Invalid CommandBuffer referenced
     DRAWSTATE_INVALID_BARRIER,               // Invalid Barrier
     DRAWSTATE_INVALID_BUFFER,                // Invalid Buffer
+    DRAWSTATE_INVALID_IMAGE,                 // Invalid Image
     DRAWSTATE_INVALID_QUERY,                 // Invalid Query
+    DRAWSTATE_INVALID_QUERY_POOL,            // Invalid QueryPool
     DRAWSTATE_INVALID_FENCE,                 // Invalid Fence
     DRAWSTATE_INVALID_EVENT,                 // Invalid Event
     DRAWSTATE_INVALID_SAMPLER,               // Invalid Sampler
@@ -225,6 +228,7 @@ enum DRAW_STATE_ERROR {
     DRAWSTATE_IMAGE_TRANSFER_GRANULARITY,    // Violation of queue family's image transfer
                                              // granularity
     DRAWSTATE_PUSH_CONSTANTS_ERROR,          // Push constants exceed maxPushConstantSize
+    DRAWSTATE_INVALID_SUBPASS_INDEX,         // Stepping beyond last subpass, or not reaching it
 };
 
 // Shader Checker ERROR codes

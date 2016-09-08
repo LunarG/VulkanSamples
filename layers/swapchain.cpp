@@ -64,14 +64,17 @@ static void checkDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, const
     }
     my_device_data->deviceMap[device].device = device;
     my_device_data->deviceMap[device].swapchainExtensionEnabled = false;
+    my_device_data->deviceMap[device].displaySwapchainExtensionEnabled = false;
 
     // Record whether the WSI device extension was enabled for this VkDevice.
     // No need to check if the extension was advertised by
     // vkEnumerateDeviceExtensionProperties(), since the loader handles that.
     for (i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
-
             my_device_data->deviceMap[device].swapchainExtensionEnabled = true;
+        }
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) == 0) {
+            my_device_data->deviceMap[device].displaySwapchainExtensionEnabled = true;
         }
     }
 }
@@ -1386,7 +1389,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysica
         if ((result == VK_SUCCESS) && pPhysicalDevice) {
             // Record the result of this query:
             pPhysicalDevice->gotSurfaceCapabilities = true;
-            // FIXME: NEED TO COPY THIS DATA, BECAUSE pSurfaceCapabilities POINTS TO APP-ALLOCATED DATA
             pPhysicalDevice->surfaceCapabilities = *pSurfaceCapabilities;
         }
         lock.unlock();
@@ -2247,7 +2249,66 @@ VKAPI_ATTR VkResult VKAPI_CALL QueuePresentKHR(VkQueue queue, const VkPresentInf
     return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
-VKAPI_ATTR void VKAPI_CALL GetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue *pQueue) {
+VKAPI_ATTR VkResult VKAPI_CALL CreateSharedSwapchainsKHR(VkDevice device, uint32_t swapchainCount,
+                                                         const VkSwapchainCreateInfoKHR *pCreateInfos,
+                                                         const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchains) {
+    VkResult result = VK_SUCCESS;
+    bool skip_call = false;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    std::unique_lock<std::mutex> lock(global_lock);
+    SwpDevice *pDevice = nullptr;
+    {
+        auto it = my_data->deviceMap.find(device);
+        pDevice = (it == my_data->deviceMap.end()) ? nullptr : &it->second;
+    }
+
+    // Validate that the swapchain extension was enabled:
+    if (pDevice && !pDevice->displaySwapchainExtensionEnabled) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                             reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED, swapchain_layer_name,
+                             "vkCreateSharedSwapchainsKHR() called even though the %s extension was not enabled for this VkDevice.",
+                             VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME);
+    }
+    if (!pCreateInfos || !pSwapchains) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                             reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_NULL_POINTER, swapchain_layer_name,
+                             "vkCreateSharedSwapchainsKHR() called with NULL pointer");
+    }
+    if (swapchainCount == 0) {
+        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                             reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_INVALID_COUNT, swapchain_layer_name,
+                             "vkCreateSharedSwapchainsKHR() called with invalid swapchain count of %d.", swapchainCount);
+    } else {
+        SwpSwapchain *pSwapchain = nullptr;
+        for (uint32_t iii = 0; iii < swapchainCount; iii++) {
+            if (pCreateInfos[iii].sType != VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR) {
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                     reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_WRONG_STYPE, swapchain_layer_name,
+                                     "vkCreateSharedSwapchainsKHR() called with invalid stype in pCreateInfos[%d].", iii);
+            }
+            auto it = my_data->swapchainMap.find(pSwapchains[iii]);
+            pSwapchain = (it == my_data->swapchainMap.end()) ? nullptr : &it->second;
+            if (nullptr == pSwapchain) {
+                skip_call |=
+                    log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                            reinterpret_cast<uint64_t>(device), __LINE__, SWAPCHAIN_INVALID_HANDLE, swapchain_layer_name,
+                            "vkCreateSharedSwapchainsKHR() called with invalid Swapchain Handle in pCreateInfos[%d].", iii);
+            }
+        }
+    }
+    lock.unlock();
+
+    if (!skip_call) {
+        // Call down the call chain:
+        result = my_data->device_dispatch_table->CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator,
+                                                                           pSwapchains);
+        return result;
+    }
+    return VK_ERROR_VALIDATION_FAILED_EXT;
+}
+
+VKAPI_ATTR void VKAPI_CALL
+GetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue *pQueue) {
     bool skip_call = false;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 

@@ -116,11 +116,6 @@ VkJsonInstance VkJsonGetInstance() {
   if (!EnumerateExtensions(nullptr, &instance.extensions))
     return VkJsonInstance();
 
-  std::vector<const char*> layer_names;
-  layer_names.reserve(instance.layers.size());
-  for (auto& layer : instance.layers)
-    layer_names.push_back(layer.properties.layerName);
-
   const VkApplicationInfo app_info = {VK_STRUCTURE_TYPE_APPLICATION_INFO,
                                       nullptr,
                                       "vkjson_info",
@@ -133,8 +128,8 @@ VkJsonInstance VkJsonGetInstance() {
       nullptr,
       0,
       &app_info,
-      static_cast<uint32_t>(layer_names.size()),
-      layer_names.data(),
+      0,
+      nullptr,
       0,
       nullptr};
   VkInstance vkinstance;
