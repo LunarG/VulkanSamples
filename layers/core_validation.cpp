@@ -8109,6 +8109,13 @@ VKAPI_ATTR void VKAPI_CALL CmdClearAttachments(VkCommandBuffer commandBuffer, ui
                         "vkCmdClearAttachments() color attachment index %d out of range for active subpass %d; ignored",
                         attachment->colorAttachment, pCB->activeSubpass);
                 }
+                else if (pSD->pColorAttachments[attachment->colorAttachment].attachment == VK_ATTACHMENT_UNUSED) {
+                    skip_call |= log_msg(
+                        dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        (uint64_t)commandBuffer, __LINE__, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
+                        "vkCmdClearAttachments() color attachment index %d is VK_ATTACHMENT_UNUSED; ignored",
+                        attachment->colorAttachment);
+                }
             } else if (attachment->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
                 if (!pSD->pDepthStencilAttachment || // Says no DS will be used in active subpass
                     (pSD->pDepthStencilAttachment->attachment ==
