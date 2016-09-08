@@ -1359,7 +1359,7 @@ ext_debug_marker = Extension(
              Param("VkDebugMarkerMarkerInfoEXT*", "pMarkerInfo")]),
 
         Proto("void", "CmdDebugMarkerEndEXT",
-            [Param("VkCommandBuffer*", "commandBuffer")]),
+            [Param("VkCommandBuffer", "commandBuffer")]),
 
         Proto("void", "CmdDebugMarkerInsertEXT",
             [Param("VkCommandBuffer", "commandBuffer"),
