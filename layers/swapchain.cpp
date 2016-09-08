@@ -1389,7 +1389,6 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(VkPhysica
         if ((result == VK_SUCCESS) && pPhysicalDevice) {
             // Record the result of this query:
             pPhysicalDevice->gotSurfaceCapabilities = true;
-            // FIXME: NEED TO COPY THIS DATA, BECAUSE pSurfaceCapabilities POINTS TO APP-ALLOCATED DATA
             pPhysicalDevice->surfaceCapabilities = *pSurfaceCapabilities;
         }
         lock.unlock();
