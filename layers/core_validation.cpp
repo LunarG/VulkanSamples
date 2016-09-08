@@ -2719,7 +2719,6 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
     bool pass = true;
     auto module_it = shaderModuleMap.find(pStage->module);
     auto module = *out_module = module_it->second.get();
-    pass &= validate_specialization_offsets(report_data, pStage);
 
     /* find the entrypoint */
     auto entrypoint = *out_entrypoint = find_entrypoint(module, pStage->pName, pStage->stage);
@@ -2728,7 +2727,7 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
                     __LINE__, SHADER_CHECKER_MISSING_ENTRYPOINT, "SC",
                     "No entrypoint found named `%s` for stage %s", pStage->pName,
                     string_VkShaderStageFlagBits(pStage->stage))) {
-            pass = false;
+            return false;   // no point continuing beyond here, any analysis is just going to be garbage.
         }
     }
 
@@ -2744,6 +2743,7 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
     auto pipelineLayout = pipeline->pipeline_layout;
 
     /* validate push constant usage */
+    pass &= validate_specialization_offsets(report_data, pStage);
     pass &= validate_push_constant_usage(report_data, &pipelineLayout.push_constant_ranges, module, accessible_ids, pStage->stage);
 
     /* validate descriptor use */
