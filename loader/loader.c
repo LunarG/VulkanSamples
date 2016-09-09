@@ -2912,6 +2912,8 @@ VkResult loader_icd_scan(const struct loader_instance *inst,
             if (num_good_icds == 0) {
                 res = VK_ERROR_INITIALIZATION_FAILED;
             }
+            cJSON_Delete(json);
+            json = NULL;
             continue;
         }
         char *file_vers = cJSON_Print(item);
