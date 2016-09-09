@@ -1,5 +1,5 @@
-//#include <stdio.h>
 #include "WSIWindow.h"
+//#include <stdio.h>
 
 using namespace std;
 
@@ -37,6 +37,7 @@ int main(int argc, char *argv[]){
 
     CInstance Inst;                             //Create a Vulkan Instance
     MyWindow Window(Inst,"LunarG",640,480);     //Create a Vulkan window
+    Window.SetTextInput(true);                  //Show soft-keyboard on Android
 
     while(Window.ProcessEvents()){
         bool KeyPressed = Window.GetKeyState(KEY_LeftShift);

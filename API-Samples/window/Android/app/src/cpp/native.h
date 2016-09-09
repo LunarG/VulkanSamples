@@ -15,8 +15,9 @@
 #include <android_native_app_glue.h>
 #include <vulkan_wrapper.h>
 
-//#include "android_fopen.h"  //redirect fopen, to read files from asset folder
+//#include "android_fopen.h"   // redirect fopen, to read files from asset folder
 
-extern android_app* Android_App;
+extern android_app* Android_App;               // Native Activity state info
+void ShowKeyboard(bool visible, int flags=0);  // Show/hide Android keyboard
 
 #endif

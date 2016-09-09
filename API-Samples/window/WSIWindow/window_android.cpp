@@ -11,41 +11,32 @@
 #ifndef WINDOW_ANDROID
 #define WINDOW_ANDROID
 
-//======================MULTI-TOUCH=======================
-struct CPointer{bool active; int x; int y;};
+//======================MULTI-TOUCH=======================  TODO: Move MTouch to WindowImpl, and expose events.
+struct CPointer{bool active; float x; float y;};
+struct MTouchEvent{eMouseAction act; float x; float y; char id;};
 
 class CMTouch{
     static const int MAX_POINTERS=10;  //Max 10 fingers
 public:
+    int count;
     CPointer Pointers[MAX_POINTERS];
-    int Count(){  //Count number of active pointers
-        int cnt=0;
-        for(int i=0;i<MAX_POINTERS;i++) if(Pointers[i].active) cnt++;
-        return cnt;
-    }
+    MTouchEvent LastEvent;
 
-    //void Set(int inx,int active,int x,int y) {
-    void Set(int inx,eMouseAction act,int x,int y) {
-        const char* type[]={"move","down","up  "};
-        printf("MTouch(%d, %s, %5d, %5d)", inx, type[act], x, y);
-        if (inx >= MAX_POINTERS)return;  // Exit if too many fingers
-        CPointer P=Pointers[inx];
+    void Clear(){ memset(this,0,sizeof(this)); }
+
+    void Set(char id,eMouseAction act,float x,float y) {
+        if (id >= MAX_POINTERS)return;  // Exit if too many fingers
+        CPointer& P=Pointers[id];
         if(act) P.active=(act==mDOWN);
         P.x=x;  P.y=y;
+        LastEvent={act,x,y,id};
     }
-
-
 };
-
-static CMTouch MTouch;
-
-
-
 //========================================================
-
 
 class Window_android : public WindowImpl{
     android_app* app=0;
+    CMTouch MTouch;
 
     void SetTitle(const char* title){};  //TODO : Set window title?
 
@@ -60,23 +51,33 @@ class Window_android : public WindowImpl{
         printf("Surface created\n");
     }
 
-
 public:
-    Window_android(CInstance& inst, const char* title, uint width, uint height){
-        instance=&inst;
-        shape.width=width;
-        shape.height=height;
-        running=true;
+    Window_android(CInstance& inst, const char* title, uint width, uint height) {
+        instance = &inst;
+        shape.width = width;
+        shape.height = height;
+        running = true;
         //printf("Creating Android-Window...\n");
         app = Android_App;
+//return;
 
-        //--Wait for window to be created--
-        while(app->window==0) {
-            struct android_poll_source* source;
-            ALooper_pollOnce(100, NULL, NULL, (void**)&source);
-            if(source) source->process(app, source);
+        //---Wait for window to be created AND gain focus---
+        bool hasFocus = false;
+        while (!hasFocus) {
+            int events = 0;
+            struct android_poll_source *source;
+            int id = ALooper_pollOnce(100, NULL, &events, (void **) &source);
+            if (id == LOOPER_ID_MAIN) {
+                int8_t cmd = android_app_read_cmd(app);
+                android_app_pre_exec_cmd(app, cmd);
+                if (app->onAppCmd != NULL) app->onAppCmd(app, cmd);
+                if (cmd == APP_CMD_GAINED_FOCUS) hasFocus = true;
+                android_app_post_exec_cmd(app, cmd);
+            }
         }
-        //---------------------------------
+        ALooper_pollAll(10, NULL, NULL, NULL);  //for keyboard
+        //--------------------------------------------------
+
         CreateSurface(inst);
     };
 
@@ -84,6 +85,7 @@ public:
 
     EventType GetEvent(){
         EventType event={};
+//return {EventType::NONE};
 
         int events=0;
         struct android_poll_source* source;
@@ -98,9 +100,10 @@ public:
             int8_t cmd = android_app_read_cmd(app);
             android_app_pre_exec_cmd(app, cmd);
             if (app->onAppCmd != NULL) app->onAppCmd(app, cmd);
-        //    switch(cmd){
-        //        case APP_CMD_INIT_WINDOW: CreateSurface(*instance);  break;
-        //    }
+            //switch(cmd){
+                //case APP_CMD_INIT_WINDOW: CreateSurface(*instance);  break;
+                //case APP_CMD_GAINED_FOCUS: ShowKeyboard(textinput); break;
+            //}
             android_app_post_exec_cmd(app, cmd);
         }else if(id==LOOPER_ID_INPUT) {
             AInputEvent* a_event = NULL;
@@ -114,32 +117,56 @@ public:
 
 
                 int32_t type=AInputEvent_getType(a_event);
-                if (type == AINPUT_EVENT_TYPE_MOTION) {
-                    float x = AMotionEvent_getX(a_event, 0);
-                    float y = AMotionEvent_getY(a_event, 0);
+                if (type == AINPUT_EVENT_TYPE_KEY){  //KEYBOARD
+                    int32_t a_action = AKeyEvent_getAction (a_event);
+                    int32_t keycode  = AKeyEvent_getKeyCode(a_event);
+                    printf("key action:%d keycode=%d",a_action,keycode);
 
-                    //int32_t a_flags  = AMotionEvent_getFlags(a_event);  //Always 0?
+                }else
+                if (type == AINPUT_EVENT_TYPE_MOTION) {  //TOUCH-SCREEN
                     int32_t a_action = AMotionEvent_getAction(a_event);
-                    //printf("Action=%d  Flags=%d\n",a_action,a_flags);
-                    int  action=(a_action&255);
-                    int  inx =(a_action>>8);
-
-                    switch(action){
-                        case AMOTION_EVENT_ACTION_POINTER_DOWN:
-                        case AMOTION_EVENT_ACTION_DOWN  :         MTouch.Set(inx,mDOWN,x,y); break;
-                        case AMOTION_EVENT_ACTION_POINTER_UP:
-                        case AMOTION_EVENT_ACTION_UP    :         MTouch.Set(inx,mUP  ,x,y); break;
-                        case AMOTION_EVENT_ACTION_MOVE  :         MTouch.Set(inx,mMOVE,x,y); break;
-                        case AMOTION_EVENT_ACTION_CANCEL:         break;
-
+                    int  action=(a_action&255);   //get action-code from bottom 8 bits
+                    MTouch.count=AMotionEvent_getPointerCount(a_event);
+                    if(action==AMOTION_EVENT_ACTION_MOVE) {
+                        forCount(MTouch.count) {
+                            char id = AMotionEvent_getPointerId(a_event, i);
+                            float x = AMotionEvent_getX(a_event, i);
+                            float y = AMotionEvent_getY(a_event, i);
+                            MTouch.Set(id, mMOVE, x, y);
+                        }
+                    }else{
+                        int  inx =(a_action>>8); //get index from top 24 bits
+                        int  id  =AMotionEvent_getPointerId(a_event,inx);
+                        float x = AMotionEvent_getX(a_event, inx);
+                        float y = AMotionEvent_getY(a_event, inx);
+                        switch (action) {
+                            case AMOTION_EVENT_ACTION_POINTER_DOWN:
+                            case AMOTION_EVENT_ACTION_DOWN      :  MTouch.Set(id,mDOWN,x,y);  break;
+                            case AMOTION_EVENT_ACTION_POINTER_UP:
+                            case AMOTION_EVENT_ACTION_UP        :  MTouch.Set(id,mUP  ,x,y);  break;
+                            case AMOTION_EVENT_ACTION_CANCEL    :  MTouch.Clear();            break;
+                        }
                     }
+/*
+                    //--Test: check first 3 pointers--
+                    CPointer& P0=MTouch.Pointers[0];
+                    CPointer& P1=MTouch.Pointers[1];
+                    CPointer& P2=MTouch.Pointers[2];
+                    printf("0:%s %4.0fx%4.0f   1:%s %4.0fx%4.0f  2:%s %4.0fx%4.0f ...\n"
+                        ,P0.active?"*":" ",P0.x,P0.y
+                        ,P1.active?"*":" ",P1.x,P1.y
+                        ,P2.active?"*":" ",P2.x,P2.y);
+                    //--------------------------------
+*/
+                    //---Emulate mouse from MTouch---
+                    MTouchEvent te=MTouch.LastEvent;
+                    if(te.id==0){  //only use first pointer
+                        event=MouseEvent(te.act,te.x,te.y,1);
+                    }
+                    //-------------------------------
 
-
-                    printf("Action=%d  Index=%d\n",action,inx);
-
-
-                    //printf("%f x %f\n",mx,my);
-                    //event=MouseEvent(mMOVE,mx,my,1);
+                    //printf("%f x %f\n",x,y);
+                    //event=MouseEvent(mMOVE,x,y,1);
                     handled=0;
                 }
                 AInputQueue_finishEvent(app->inputQueue, a_event, handled);
@@ -149,7 +176,6 @@ public:
         }else if(id==LOOPER_ID_USER) {
 
         }
-
 
         // Check if we are exiting.
         if (app->destroyRequested){
@@ -162,7 +188,15 @@ public:
 
         return {EventType::NONE};
     };
+
+    //--Show / Hide keyboard--
+    void TextInput(bool enabled){
+        textinput=enabled;
+        ShowKeyboard(enabled);
+        printf("%s keyboard",enabled ? "Show" : "Hide");
+    }
 };
+
 
 #endif
 

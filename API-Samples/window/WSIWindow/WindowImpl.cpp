@@ -1,5 +1,6 @@
 #include "WindowImpl.h"
 
+//--Events--
 EventType WindowImpl::MouseEvent(eMouseAction action, int16_t x, int16_t y, uint8_t btn) {
     mousepos={x,y};
     if(action!=mMOVE) btnstate[btn]=(action==mDOWN);  //Keep track of button state
@@ -26,4 +27,5 @@ EventType WindowImpl::ShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t 
     e.shape={x,y,width,height};
     return e;
 }
-
+//----------
+void WindowImpl::TextInput(bool enabled){ textinput=enabled; }
