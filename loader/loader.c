@@ -4324,9 +4324,6 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(
         }
     }
 
-    wsi_create_device(dev, pCreateInfo);
-    extensions_create_device(dev, pCreateInfo);
-
     // TODO: Why does fpCreateDevice behave differently than
     // this_icd->CreateDevice?
     //    VkResult res = fpCreateDevice(phys_dev->phys_dev, &localCreateInfo,

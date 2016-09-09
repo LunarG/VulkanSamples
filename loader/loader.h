@@ -158,20 +158,9 @@ struct loader_dev_ext_dispatch_table {
     PFN_vkDevExt dev_ext[MAX_NUM_DEV_EXTS];
 };
 
-union loader_device_extension_enables {
-    struct {
-        uint8_t khr_display_swapchain       : 1;
-        uint8_t ext_debug_marker            : 1;
-        uint8_t amd_draw_indirect_count     : 1;
-        uint8_t nv_external_memory_win32    : 1;
-    };
-    uint64_t padding[4];
-};
-
 struct loader_dev_dispatch_table {
     VkLayerDispatchTable core_dispatch;
     struct loader_dev_ext_dispatch_table ext_dispatch;
-    union loader_device_extension_enables enabled_known_extensions;
 };
 
 // per CreateDevice structure
