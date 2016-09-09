@@ -158,20 +158,6 @@ void wsi_create_instance(struct loader_instance *ptr_instance,
     }
 }
 
-void wsi_create_device(struct loader_device *dev,
-    const VkDeviceCreateInfo *pCreateInfo) {
-    dev->loader_dispatch.enabled_known_extensions.khr_display_swapchain = 0;
-
-    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
-                   VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            dev->loader_dispatch.enabled_known_extensions
-                .khr_display_swapchain = 1;
-            return;
-        }
-    }
-}
-
 // Linux WSI surface extensions are not always compiled into the loader. (Assume
 // for Windows the KHR_win32_surface is always compiled into loader). A given
 // Linux build environment might not have the headers required for building one
@@ -1278,14 +1264,9 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSharedSwapchainsKHR(
     VkDevice device, uint32_t swapchainCount,
     const VkSwapchainCreateInfoKHR *pCreateInfos,
     const VkAllocationCallbacks *pAllocator, VkSwapchainKHR *pSwapchains) {
-    struct loader_dev_dispatch_table *disp = loader_get_dev_dispatch(device);
-    if (0 == disp->enabled_known_extensions.khr_display_swapchain ||
-        NULL == disp->core_dispatch.CreateSharedSwapchainsKHR) {
-        return VK_ERROR_EXTENSION_NOT_PRESENT;
-    } else {
-        return disp->core_dispatch.CreateSharedSwapchainsKHR(
-            device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
-    }
+    const VkLayerDispatchTable *disp;
+    disp = loader_get_dispatch(device);
+    return disp->CreateSharedSwapchainsKHR(device, swapchainCount, pCreateInfos, pAllocator, pSwapchains);
 }
 
 bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
