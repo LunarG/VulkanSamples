@@ -130,6 +130,29 @@ bool extension_instance_gpa(struct loader_instance *ptr_instance,
         return true;
     }
 
+    // Functions for the VK_AMD_draw_indirect_count extension
+
+    if (!strcmp("vkCmdDrawIndirectCountAMD", name)) {
+        *addr = (void *)vkCmdDrawIndirectCountAMD;
+        return true;
+    }
+
+    if (!strcmp("vkCmdDrawIndexedIndirectCountAMD", name)) {
+        *addr = (void *)vkCmdDrawIndexedIndirectCountAMD;
+        return true;
+    }
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+
+    // Functions for the VK_NV_external_memory_win32 extension
+
+    if (!strcmp("vkGetMemoryWin32HandleNV", name)) {
+        *addr = (void *)vkGetMemoryWin32HandleNV;
+        return true;
+    }
+
+#endif // VK_USE_PLATFORM_WIN32_KHR
+
     return false;
 }
 
