@@ -63,23 +63,23 @@ void android_main(struct android_app* state) {
 
 //========================UGLY JNI code for showing the Keyboard========================
 
-#define CALL_OBJ_METHOD( OBJ,METHOD,SIGNATURE, ...) JNIEnv->CallObjectMethod (OBJ, JNIEnv->GetMethodID(JNIEnv->GetObjectClass(OBJ),METHOD,SIGNATURE), __VA_ARGS__)
-#define CALL_BOOL_METHOD(OBJ,METHOD,SIGNATURE, ...) JNIEnv->CallBooleanMethod(OBJ, JNIEnv->GetMethodID(JNIEnv->GetObjectClass(OBJ),METHOD,SIGNATURE), __VA_ARGS__)
+#define CALL_OBJ_METHOD( OBJ,METHOD,SIGNATURE, ...) jniEnv->CallObjectMethod ( OBJ, jniEnv->GetMethodID( jniEnv->GetObjectClass(OBJ),METHOD,SIGNATURE ), __VA_ARGS__ )
+#define CALL_BOOL_METHOD(OBJ,METHOD,SIGNATURE, ...) jniEnv->CallBooleanMethod( OBJ, jniEnv->GetMethodID( jniEnv->GetObjectClass(OBJ),METHOD,SIGNATURE ), __VA_ARGS__ )
 
 void ShowKeyboard(bool visible,int flags){
     // Attach current thread to the JVM.
-    JavaVM* JavaVM = Android_App->activity->vm;
-    JNIEnv* JNIEnv = Android_App->activity->env;
+    JavaVM* javaVM = Android_App->activity->vm;
+    JNIEnv* jniEnv = Android_App->activity->env;
     JavaVMAttachArgs Args={JNI_VERSION_1_6, "NativeThread", NULL};
-    JavaVM->AttachCurrentThread(&JNIEnv, &Args);
+    javaVM->AttachCurrentThread(&jniEnv, &Args);
 
     // Retrieve NativeActivity.
     jobject lNativeActivity = Android_App->activity->clazz;
 
     // Retrieve Context.INPUT_METHOD_SERVICE.
-    jclass ClassContext = JNIEnv->FindClass("android/content/Context");
-    jfieldID FieldINPUT_METHOD_SERVICE =JNIEnv->GetStaticFieldID(ClassContext, "INPUT_METHOD_SERVICE", "Ljava/lang/String;");
-    jobject INPUT_METHOD_SERVICE =JNIEnv->GetStaticObjectField(ClassContext, FieldINPUT_METHOD_SERVICE);
+    jclass ClassContext = jniEnv->FindClass("android/content/Context");
+    jfieldID FieldINPUT_METHOD_SERVICE =jniEnv->GetStaticFieldID(ClassContext, "INPUT_METHOD_SERVICE", "Ljava/lang/String;");
+    jobject INPUT_METHOD_SERVICE =jniEnv->GetStaticObjectField(ClassContext, FieldINPUT_METHOD_SERVICE);
 
     // getSystemService(Context.INPUT_METHOD_SERVICE).
     jobject   lInputMethodManager = CALL_OBJ_METHOD(lNativeActivity, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;", INPUT_METHOD_SERVICE);
@@ -94,47 +94,32 @@ void ShowKeyboard(bool visible,int flags){
         jboolean lResult = CALL_BOOL_METHOD(lInputMethodManager, "hideSoftInputFromWindow", "(Landroid/os/IBinder;I)Z", lBinder, flags);
     }
     // Finished with the JVM.
-    JavaVM->DetachCurrentThread();
+    javaVM->DetachCurrentThread();
 }
 
 //======================================================================================
 
 //===============================Get Unicode from Keyboard==============================
 
-int GetUnicodeChar(struct android_app* app, int eventType, int keyCode, int metaState)
-{
-    JavaVM* javaVM = app->activity->vm;
-    JNIEnv* jniEnv = app->activity->env;
+int GetUnicodeChar(int eventType, int keyCode, int metaState){
+    JavaVM* javaVM = Android_App->activity->vm;
+    JNIEnv* jniEnv = Android_App->activity->env;
 
-    JavaVMAttachArgs attachArgs;
-    attachArgs.version = JNI_VERSION_1_6;
-    attachArgs.name = "NativeThread";
-    attachArgs.group = NULL;
-
-    jint result = javaVM->AttachCurrentThread(&jniEnv, &attachArgs);
+    JavaVMAttachArgs Args={JNI_VERSION_1_6, "NativeThread", NULL};
+    jint result = javaVM->AttachCurrentThread(&jniEnv, &Args);
     if(result == JNI_ERR) return 0;
 
-
     jclass class_key_event = jniEnv->FindClass("android/view/KeyEvent");
-    int unicodeKey;
 
-    if(metaState == 0){
-        jmethodID method_get_unicode_char = jniEnv->GetMethodID(class_key_event, "getUnicodeChar", "()I");
-        jmethodID eventConstructor = jniEnv->GetMethodID(class_key_event, "<init>", "(II)V");
-        jobject eventObj = jniEnv->NewObject(class_key_event, eventConstructor, eventType, keyCode);
-        unicodeKey = jniEnv->CallIntMethod(eventObj, method_get_unicode_char);
-    }else{
-        jmethodID method_get_unicode_char = jniEnv->GetMethodID(class_key_event, "getUnicodeChar", "(I)I");
-        jmethodID eventConstructor = jniEnv->GetMethodID(class_key_event, "<init>", "(II)V");
-        jobject eventObj = jniEnv->NewObject(class_key_event, eventConstructor, eventType, keyCode);
-        unicodeKey = jniEnv->CallIntMethod(eventObj, method_get_unicode_char, metaState);
-    }
+    jmethodID method_get_unicode_char = jniEnv->GetMethodID(class_key_event, "getUnicodeChar", "(I)I");
+    jmethodID eventConstructor = jniEnv->GetMethodID(class_key_event, "<init>", "(II)V");
+    jobject eventObj = jniEnv->NewObject(class_key_event, eventConstructor, eventType, keyCode);
+    int unicodeKey = jniEnv->CallIntMethod(eventObj, method_get_unicode_char, metaState);
 
     javaVM->DetachCurrentThread();
 
-    LOGI("Unicode key is: %d", unicodeKey);
+    LOGI("Keycode: %d  MetaState: %d Unicode: %d", keyCode, metaState, unicodeKey);
     return unicodeKey;
 }
-
 
 //======================================================================================

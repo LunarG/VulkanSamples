@@ -19,5 +19,6 @@
 
 extern android_app* Android_App;               // Native Activity state info
 void ShowKeyboard(bool visible, int flags=0);  // Show/hide Android keyboard
+int  GetUnicodeChar(int eventType, int keyCode, int metaState);
 
 #endif
