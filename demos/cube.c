@@ -66,6 +66,7 @@
 #endif
 
 #ifdef _WIN32
+bool in_callback = false;
 #define ERR_EXIT(err_msg, err_class)                                           \
     do {                                                                       \
         if (!demo->suppress_popups)                                            \
@@ -434,9 +435,11 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
     }
 
 #ifdef _WIN32
+    in_callback = true;
     struct demo *demo = (struct demo*) pUserData;
     if (!demo->suppress_popups)
         MessageBox(NULL, message, "Alert", MB_OK);
+    in_callback = false;
 #else
     printf("%s\n", message);
     fflush(stdout);
@@ -1993,7 +1996,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         PostQuitMessage(validation_error);
         break;
     case WM_PAINT:
-        demo_run(&demo);
+        // The validation callback calls MessageBox which can generate paint
+        // events - don't make more Vulkan calls if we got here from the
+        // callback
+        if (!in_callback) {
+            demo_run(&demo);
+        }
         break;
     case WM_GETMINMAXINFO:     // set window's minimum size
         ((MINMAXINFO*)lParam)->ptMinTrackSize = demo.minsize;
