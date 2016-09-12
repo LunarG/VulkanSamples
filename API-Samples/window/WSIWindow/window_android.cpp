@@ -34,6 +34,26 @@ public:
 };
 //========================================================
 
+// Convert native Android key-code to cross-platform USB HID code.
+const unsigned char ANDROID_TO_HID[256] = {
+  0,227,231,  0,  0,  0,  0, 39, 30, 31, 32, 33, 34, 35, 36, 37,
+ 38,  0,  0, 82, 81, 80, 79,  0,  0,  0,  0,  0,  0,  4,  5,  6,
+  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+ 23, 24, 25, 26, 27, 28, 29, 54, 55,226,230,225,229, 43, 44,  0,
+  0,  0, 40,  0, 53, 45, 46, 47, 48, 49, 51, 52, 56,  0,  0,  0,
+  0,  0,118,  0,  0,  0,  0,  0,  0,  0,  0,  0, 75, 78,  0,  0,
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+  0,  0,  0, 57, 71,  0,  0,  0,  0, 72, 74, 77, 73,  0,  0,  0,
+ 24, 25,  0, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 83,
+ 98, 89, 90, 91, 92, 93, 94, 95, 96, 97, 84, 85, 86, 87, 99,  0,
+ 88,103,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
+};
+
 class Window_android : public WindowImpl{
     android_app* app=0;
     CMTouch MTouch;
@@ -87,6 +107,13 @@ public:
         EventType event={};
 //return {EventType::NONE};
 
+        //--Char event--
+        static char buf[4]={};
+        static bool charEvent=false;
+        if(charEvent){ charEvent=false;  return TextEvent(buf); }
+        //--------------
+
+
         int events=0;
         struct android_poll_source* source;
         int id=ALooper_pollOnce(0, NULL,&events,(void**)&source);
@@ -120,7 +147,22 @@ public:
                 if (type == AINPUT_EVENT_TYPE_KEY){  //KEYBOARD
                     int32_t a_action = AKeyEvent_getAction (a_event);
                     int32_t keycode  = AKeyEvent_getKeyCode(a_event);
-                    printf("key action:%d keycode=%d",a_action,keycode);
+                    uint8_t hidcode  = ANDROID_TO_HID[keycode];
+                    //printf("key action:%d keycode=%d",a_action,keycode);
+                    switch(a_action) {
+                        case AKEY_EVENT_ACTION_DOWN:{
+                            //int32_t keycode  = AKeyEvent_getKeyCode(a_event);
+                            int metaState = AKeyEvent_getMetaState(a_event);
+                            int unicode = GetUnicodeChar(AKEY_EVENT_ACTION_DOWN, keycode, metaState);
+                            (int&)buf=unicode;
+                            event=KeyEvent(keyDOWN,hidcode);                                     //key pressed event
+                            charEvent=!!buf[0];                                                  //text typed event
+                            break;
+                        }
+                        case AKEY_EVENT_ACTION_UP:{
+                            event=KeyEvent(keyUP  ,hidcode);                                     //key released event
+                        }
+                    }
 
                 }else
                 if (type == AINPUT_EVENT_TYPE_MOTION) {  //TOUCH-SCREEN

@@ -1,7 +1,5 @@
 // NOTE: WSIWindow.h MUST be inculded BEFORE sdtio.h, for printf to work correctly on Android.
 
-
-
 // TODO:
 //
 // Message loop vsync
@@ -10,6 +8,9 @@
 // Clipboard and IME
 // Multi-window support
 // Documentation
+// Keyboard: function to get native keycode
+// Android: window resize events
+
 
 #ifdef ANDROID
   #include <native.h>

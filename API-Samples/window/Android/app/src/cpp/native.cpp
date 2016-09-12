@@ -118,7 +118,7 @@ int GetUnicodeChar(int eventType, int keyCode, int metaState){
 
     javaVM->DetachCurrentThread();
 
-    LOGI("Keycode: %d  MetaState: %d Unicode: %d", keyCode, metaState, unicodeKey);
+    //LOGI("Keycode: %d  MetaState: %d Unicode: %d", keyCode, metaState, unicodeKey);
     return unicodeKey;
 }
 
