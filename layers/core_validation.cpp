@@ -2742,7 +2742,6 @@ static bool validate_pipeline_shader_stage(debug_report_data *report_data,
 
     auto pipelineLayout = pipeline->pipeline_layout;
 
-    /* validate push constant usage */
     pass &= validate_specialization_offsets(report_data, pStage);
     pass &= validate_push_constant_usage(report_data, &pipelineLayout.push_constant_ranges, module, accessible_ids, pStage->stage);
 
@@ -2855,8 +2854,7 @@ static bool validate_and_capture_pipeline_shader_state(debug_report_data *report
                                                enabledFeatures, shaderModuleMap);
     }
 
-    // if the shader stages are no good individually, cross-stage validation is
-    // pointless.
+    // if the shader stages are no good individually, cross-stage validation is pointless.
     if (!pass)
         return false;
 
