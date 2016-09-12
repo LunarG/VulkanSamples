@@ -606,6 +606,10 @@ static void app_create_instance(struct app_instance *inst) {
         }
     }
 
+#if defined(VK_USE_PLATFORM_XCB_KHR)   || \
+    defined(VK_USE_PLATFORM_XLIB_KHR)  || \
+    defined(VK_USE_PLATFORM_WIN32_KHR) || \
+    defined(VK_USE_PLATFORM_ANDROID_KHR)
     if (ext_count)
         for (i = 0; ((i < inst->global_extension_count) &&
                      (ext_count < MAX_EXTENSIONS));
@@ -632,6 +636,7 @@ static void app_create_instance(struct app_instance *inst) {
             }
 #endif
         }
+#endif
     // If we don't find the KHR_SURFACE extension and at least one other
     // device-specific extension,
     // then give up on reporting presentable surface formats."
@@ -834,9 +839,13 @@ static void app_destroy_win32_window(struct app_instance *inst) {
 #endif //VK_USE_PLATFORM_WIN32_KHR
 //-----------------------------------------------------------
 
+#if defined(VK_USE_PLATFORM_XCB_KHR)  || \
+    defined(VK_USE_PLATFORM_XLIB_KHR) || \
+    defined(VK_USE_PLATFORM_WIN32_KHR)
 static void app_destroy_surface(struct app_instance *inst) { //same for all platforms
     vkDestroySurfaceKHR(inst->instance, inst->surface, NULL);
 }
+#endif
 
 //----------------------------XCB----------------------------
 
@@ -931,6 +940,9 @@ static void app_destroy_xlib_window(struct app_instance *inst) {
 #endif //VK_USE_PLATFORM_XLIB_KHR
 //-----------------------------------------------------------
 
+#if defined(VK_USE_PLATFORM_XCB_KHR)  || \
+    defined(VK_USE_PLATFORM_XLIB_KHR) || \
+    defined(VK_USE_PLATFORM_WIN32_KHR)
 static int app_dump_surface_formats(struct app_instance *inst, struct app_gpu *gpu){
     // Get the list of VkFormat's that are supported:
     VkResult U_ASSERT_ONLY err;
@@ -950,6 +962,7 @@ static int app_dump_surface_formats(struct app_instance *inst, struct app_gpu *g
     fflush(stdout);
     return formatCount;
 }
+#endif
 
 static void app_dev_dump_format_props(const struct app_dev *dev, VkFormat fmt)
 {
@@ -1251,6 +1264,9 @@ app_dump_extensions(const char *indent, const char *layer_name,
     fflush(stdout);
 }
 
+#if defined(VK_USE_PLATFORM_XCB_KHR)  || \
+    defined(VK_USE_PLATFORM_XLIB_KHR) || \
+    defined(VK_USE_PLATFORM_WIN32_KHR)
 // Returns true if the named extension is in the list of extensions.
 static bool has_extension(const char *extension_name,
                           const uint32_t extension_count,
@@ -1261,6 +1277,7 @@ static bool has_extension(const char *extension_name,
     }
     return false;
 }
+#endif
 
 static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id) {
     const VkQueueFamilyProperties *props = &gpu->queue_props[id];

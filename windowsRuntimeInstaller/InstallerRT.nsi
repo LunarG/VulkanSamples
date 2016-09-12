@@ -636,6 +636,9 @@ Section "uninstall"
         StrCpy $1 85
     ${Endif}
     Call un.CheckForError
+    
+    # Remove ConfigureRT regardless of the ref count
+    Delete /REBOOTOK "$IDir\ConfigureRT.exe"
 
     # If Ref Count is zero, remove install dir
     ${If} $IC <= 0
@@ -645,7 +648,6 @@ Section "uninstall"
         Delete /REBOOTOK "$IDir\LICENSE.txt"
         Delete /REBOOTOK "$IDir\Uninstall${PRODUCTNAME}.exe"
         Delete /REBOOTOK "$IDir\V.ico"
-        Delete /REBOOTOK "$IDir\ConfigureRT.exe"
         Delete /REBOOTOK "$IDir\vulkaninfo.exe"
 
         # If running on a 64-bit OS machine
