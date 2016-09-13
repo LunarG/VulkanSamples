@@ -2286,12 +2286,19 @@ TEST_F(VkLayerTest, EnableWsiBeforeUse) {
     ASSERT_TRUE(pass);
     m_errorMonitor->VerifyFound();
 
+    // Add a fence to avoid (justifiable) error about not providing fence OR semaphore
+    VkFenceCreateInfo fci = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0 };
+    VkFence fence;
+    err = vkCreateFence(m_device->device(), &fci, nullptr, &fence);
+
     // Try to acquire an image:
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, "extension was not enabled for this");
-    err = vkAcquireNextImageKHR(m_device->device(), swapchain, 0, VK_NULL_HANDLE, VK_NULL_HANDLE, &image_index);
+    err = vkAcquireNextImageKHR(m_device->device(), swapchain, 0, VK_NULL_HANDLE, fence, &image_index);
     pass = (err != VK_SUCCESS);
     ASSERT_TRUE(pass);
     m_errorMonitor->VerifyFound();
+
+    vkDestroyFence(m_device->device(), fence, nullptr);
 
     // Try to present an image:
     //
