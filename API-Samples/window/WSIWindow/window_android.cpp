@@ -82,8 +82,8 @@ public:
 //return;
 
         //---Wait for window to be created AND gain focus---
-        bool hasFocus = false;
-        while (!hasFocus) {
+        //bool hasFocus = false;
+        while (!has_focus) {
             int events = 0;
             struct android_poll_source *source;
             int id = ALooper_pollOnce(100, NULL, &events, (void **) &source);
@@ -91,7 +91,7 @@ public:
                 int8_t cmd = android_app_read_cmd(app);
                 android_app_pre_exec_cmd(app, cmd);
                 if (app->onAppCmd != NULL) app->onAppCmd(app, cmd);
-                if (cmd == APP_CMD_GAINED_FOCUS) hasFocus = true;
+                if (cmd == APP_CMD_GAINED_FOCUS) has_focus = true;
                 android_app_post_exec_cmd(app, cmd);
             }
         }

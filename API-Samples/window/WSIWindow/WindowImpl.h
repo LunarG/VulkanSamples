@@ -33,10 +33,13 @@ protected:
 public:
     bool running;
     bool textinput;
-    WindowImpl() : instance(0), running(false), textinput(false) {}
+    bool has_focus;
+    WindowImpl() : instance(0), running(false), textinput(false), has_focus(false){}
     virtual ~WindowImpl() {}
     virtual void Close() { running = false; }
     CInstance& Instance() { return *instance; }
+    bool HasFocus() { return has_focus; }                                  //returns true if window has focus
+
     bool KeyState(eKeycode key){ return keystate[key]; }                   //returns true if key is pressed
     bool BtnState(uint8_t  btn){ return (btn<5)  ? btnstate[btn]:0; }      //returns true if mouse btn is pressed
     void MousePos(int16_t& x, int16_t& y){x=mousepos.x; y=mousepos.y; }    //returns mouse x,y position

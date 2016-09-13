@@ -88,13 +88,14 @@ Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint heig
                     XCB_EVENT_MASK_KEY_RELEASE |        //2
                     XCB_EVENT_MASK_BUTTON_PRESS |       //4
                     XCB_EVENT_MASK_BUTTON_RELEASE |     //8
-                    XCB_EVENT_MASK_POINTER_MOTION |     //64      motion with no mouse button held
-                    XCB_EVENT_MASK_BUTTON_MOTION  |     //8192    motion with one or more mouse buttons held
+                    XCB_EVENT_MASK_POINTER_MOTION |     //64       motion with no mouse button held
+                    XCB_EVENT_MASK_BUTTON_MOTION  |     //8192     motion with one or more mouse buttons held
                   //XCB_EVENT_MASK_KEYMAP_STATE |       //16384
                   //XCB_EVENT_MASK_EXPOSURE |           //32768
                   //XCB_EVENT_MASK_VISIBILITY_CHANGE,   //65536,
-                    XCB_EVENT_MASK_STRUCTURE_NOTIFY;    //131072  Window move/resize events
+                    XCB_EVENT_MASK_STRUCTURE_NOTIFY |   //131072   Window move/resize events
                   //XCB_EVENT_MASK_RESIZE_REDIRECT |    //262144
+                    XCB_EVENT_MASK_FOCUS_CHANGE;        //2097152  Window focus
     //--
 
     xcb_window = xcb_generate_id(xcb_connection);
@@ -207,7 +208,9 @@ EventType Window_xcb::GetEvent(){
                 event=ShapeEvent(e.x,e.y,e.width,e.height);
                 break;
             }
-            default: break;
+            default:
+                printf("EVENT: %d",(x_event->response_type & ~0x80));
+                break;
         }
         free (x_event);
         return event;
