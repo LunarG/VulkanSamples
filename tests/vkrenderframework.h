@@ -413,7 +413,7 @@ class VkPipelineObj : public vk_testing::Pipeline {
     VkPipelineInputAssemblyStateCreateInfo m_ia_state;
     VkPipelineRasterizationStateCreateInfo m_rs_state;
     VkPipelineColorBlendStateCreateInfo m_cb_state;
-    VkPipelineDepthStencilStateCreateInfo m_ds_state;
+    VkPipelineDepthStencilStateCreateInfo const *m_ds_state;
     VkPipelineViewportStateCreateInfo m_vp_state;
     VkPipelineMultisampleStateCreateInfo m_ms_state;
     VkPipelineTessellationStateCreateInfo m_te_state;

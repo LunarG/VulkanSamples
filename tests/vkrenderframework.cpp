@@ -1171,24 +1171,7 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device) {
     m_vp_state.pViewports = NULL;
     m_vp_state.pScissors = NULL;
 
-    m_ds_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    m_ds_state.pNext = VK_NULL_HANDLE, m_ds_state.depthTestEnable = VK_FALSE;
-    m_ds_state.flags = 0;
-    m_ds_state.depthWriteEnable = VK_FALSE;
-    m_ds_state.depthBoundsTestEnable = VK_FALSE;
-    m_ds_state.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-    m_ds_state.back.depthFailOp = VK_STENCIL_OP_KEEP;
-    m_ds_state.back.failOp = VK_STENCIL_OP_KEEP;
-    m_ds_state.back.passOp = VK_STENCIL_OP_KEEP;
-    m_ds_state.back.compareOp = VK_COMPARE_OP_ALWAYS;
-    m_ds_state.stencilTestEnable = VK_FALSE;
-    m_ds_state.back.compareMask = 0xff;
-    m_ds_state.back.writeMask = 0xff;
-    m_ds_state.back.reference = 0;
-    m_ds_state.minDepthBounds = 0.f;
-    m_ds_state.maxDepthBounds = 1.f;
-
-    m_ds_state.front = m_ds_state.back;
+    m_ds_state = nullptr;
 };
 
 void VkPipelineObj::AddShader(VkShaderObj *shader) { m_shaderObjs.push_back(shader); }
@@ -1211,13 +1194,7 @@ void VkPipelineObj::AddColorAttachment(uint32_t binding, const VkPipelineColorBl
 }
 
 void VkPipelineObj::SetDepthStencil(const VkPipelineDepthStencilStateCreateInfo *ds_state) {
-    m_ds_state.depthTestEnable = ds_state->depthTestEnable;
-    m_ds_state.depthWriteEnable = ds_state->depthWriteEnable;
-    m_ds_state.depthBoundsTestEnable = ds_state->depthBoundsTestEnable;
-    m_ds_state.depthCompareOp = ds_state->depthCompareOp;
-    m_ds_state.stencilTestEnable = ds_state->stencilTestEnable;
-    m_ds_state.back = ds_state->back;
-    m_ds_state.front = ds_state->front;
+    m_ds_state = ds_state;
 }
 
 void VkPipelineObj::SetViewport(const vector<VkViewport> viewports) {
@@ -1306,7 +1283,7 @@ VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass r
     info.pViewportState = &m_vp_state;
     info.pRasterizationState = &m_rs_state;
     info.pMultisampleState = &m_ms_state;
-    info.pDepthStencilState = &m_ds_state;
+    info.pDepthStencilState = m_ds_state;
     info.pColorBlendState = &m_cb_state;
 
     if (m_ia_state.topology == VK_PRIMITIVE_TOPOLOGY_PATCH_LIST) {
