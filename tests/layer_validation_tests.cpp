@@ -152,6 +152,7 @@ class ErrorMonitor {
             m_msgFound = VK_TRUE;
             result = VK_TRUE;
         } else {
+            printf("Unexpected: %s\n", msgString);
             m_otherMsgs.push_back(errorString);
         }
         test_platform_thread_unlock_mutex(&m_mutex);
