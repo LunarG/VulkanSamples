@@ -2667,14 +2667,12 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit) {
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
     image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
     image_create_info.flags = 0;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
 
     VkMemoryAllocateInfo mem_alloc = {};
     mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     mem_alloc.pNext = NULL;
     mem_alloc.allocationSize = 0;
-    // Introduce failure, do NOT set memProps to
-    // VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-    mem_alloc.memoryTypeIndex = 1;
 
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
     ASSERT_VK_SUCCESS(err);
