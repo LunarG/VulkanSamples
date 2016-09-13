@@ -13037,7 +13037,12 @@ TEST_F(VkLayerTest, FramebufferIncompatible) {
     vkBeginCommandBuffer(sec_cb, &cbbi);
     vkEndCommandBuffer(sec_cb);
 
-    BeginCommandBuffer();
+    VkCommandBufferBeginInfo cbbi2 = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr,
+        0, nullptr
+    };
+    vkBeginCommandBuffer(m_commandBuffer->GetBufferHandle(), &cbbi2);
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &m_renderPassBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                          " that is not the same as the primaryCB's current active framebuffer ");
