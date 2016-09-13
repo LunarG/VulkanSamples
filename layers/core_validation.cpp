@@ -6513,7 +6513,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
     bool skip_call = false;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     // Push Constant Range checks
-    uint32_t i = 0;
+    uint32_t i, j;
     for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
         skip_call |= validatePushConstantRange(dev_data, pCreateInfo->pPushConstantRanges[i].offset,
                                                pCreateInfo->pPushConstantRanges[i].size, "vkCreatePipelineLayout()", i);
@@ -6522,28 +6522,26 @@ VKAPI_ATTR VkResult VKAPI_CALL CreatePipelineLayout(VkDevice device, const VkPip
                                  DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCreatePipelineLayout() call has no stageFlags set.");
         }
     }
+    if (skip_call)
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+
     // Each range has been validated.  Now check for overlap between ranges (if they are good).
-    if (!skip_call) {
-        uint32_t i, j;
-        for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
-            for (j = i + 1; j < pCreateInfo->pushConstantRangeCount; ++j) {
-                const uint32_t minA = pCreateInfo->pPushConstantRanges[i].offset;
-                const uint32_t maxA = minA + pCreateInfo->pPushConstantRanges[i].size;
-                const uint32_t minB = pCreateInfo->pPushConstantRanges[j].offset;
-                const uint32_t maxB = minB + pCreateInfo->pPushConstantRanges[j].size;
-                if ((minA <= minB && maxA > minB) || (minB <= minA && maxB > minA)) {
-                    skip_call |=
-                        log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
-                                DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCreatePipelineLayout() call has push constants with "
-                                                                      "overlapping ranges: %u:[%u, %u), %u:[%u, %u)",
-                                i, minA, maxA, j, minB, maxB);
-                }
+    // There's no explicit Valid Usage language against this, so issue a warning instead of an error.
+    for (i = 0; i < pCreateInfo->pushConstantRangeCount; ++i) {
+        for (j = i + 1; j < pCreateInfo->pushConstantRangeCount; ++j) {
+            const uint32_t minA = pCreateInfo->pPushConstantRanges[i].offset;
+            const uint32_t maxA = minA + pCreateInfo->pPushConstantRanges[i].size;
+            const uint32_t minB = pCreateInfo->pPushConstantRanges[j].offset;
+            const uint32_t maxB = minB + pCreateInfo->pPushConstantRanges[j].size;
+            if ((minA <= minB && maxA > minB) || (minB <= minA && maxB > minA)) {
+                skip_call |=
+                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARNING_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+                            DRAWSTATE_PUSH_CONSTANTS_ERROR, "DS", "vkCreatePipelineLayout() call has push constants with "
+                                                                  "overlapping ranges: %u:[%u, %u), %u:[%u, %u)",
+                            i, minA, maxA, j, minB, maxB);
             }
         }
     }
-
-    if (skip_call)
-        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkResult result = dev_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
     if (VK_SUCCESS == result) {
