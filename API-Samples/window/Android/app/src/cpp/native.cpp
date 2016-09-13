@@ -47,9 +47,11 @@ int main(int argc, char *argv[]);          //Forward declaration of main functio
 void android_main(struct android_app* state) {
     printf("Native Activity\n");
     app_dummy();                           // Make sure glue isn't stripped
-    state->onAppCmd     = handle_cmd;      // Register window event callback
-    //state->onInputEvent = handle_input;    // Register input event callback
+    state->onAppCmd     = handle_cmd;      // Register window event callback  (Temporary)
+    //state->onInputEvent = handle_input;    // Register input event callback   (Temporary)
     Android_App=state;                     // Pass android app state to window_andoid.cpp
+
+    android_fopen_set_asset_manager(state->activity->assetManager);  //Re-direct fopen to read assets from our APK.
 
     int success=InitVulkan();
     printf("InitVulkan : %s\n",success ? "SUCCESS" : "FAILED");

@@ -1,19 +1,19 @@
 # Sets the minimum version of CMake required to build the native
 # library. You should either keep the default value or only pass a
 # value of 3.4.0 or lower.
-
 cmake_minimum_required(VERSION 3.4.1)
 
 add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
 
 # Set path to Vulkan SDK
-  #set(VULKAN_SDK "/home/rene/VulkanSDK/1.0.24.0/x86_64")
+  #set(VULKAN_SDK "/home/rene/VulkanSDK/1.0.26.0/x86_64")
   set(VULKAN_SDK $ENV{VULKAN_SDK})
 
 # Set path to header files.
   include_directories( ${ANDROID_NDK}/sources/android/native_app_glue )
   include_directories( ${VULKAN_SDK}/include                          )
   include_directories( src/cpp                                        )
+  include_directories( ../..                                          )
   include_directories( ../../WSIWindow                                )
 
 # Set path to source files.
@@ -23,9 +23,7 @@ add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
   aux_source_directory( ../../WSIWindow                                SRC_LIST)
 
 # Create native shared library
-add_library( native             # Sets the name of the library.
-             SHARED             # Sets the library as a SHARED library.
-             ${SRC_LIST})       # List of source files
+add_library(native SHARED ${SRC_LIST})
 
 # Link to external libraries
 target_link_libraries(native log android)
