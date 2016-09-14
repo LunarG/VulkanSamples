@@ -2,9 +2,8 @@
 #include "WindowImpl.h"
 
 #include "window_xcb.cpp"
-#include "window_win32.cpp"
+#include "window_win32.h"
 #include "window_android.cpp"
-
 //==============================================================
 
 WSIWindow::WSIWindow(CInstance& inst,const char* title,uint width,uint height){
