@@ -25,6 +25,7 @@ const char* VkResultStr(VkResult err){
         STR(VK_ERROR_INCOMPATIBLE_DRIVER);   // -9
         STR(VK_ERROR_TOO_MANY_OBJECTS);      // -10
         STR(VK_ERROR_FORMAT_NOT_SUPPORTED);  // -11
+        STR(VK_ERROR_FRAGMENTED_POOL);       // -12
 
         STR(VK_ERROR_SURFACE_LOST_KHR);         // -1000000000
         STR(VK_ERROR_NATIVE_WINDOW_IN_USE_KHR); // -1000000001

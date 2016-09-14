@@ -27,5 +27,11 @@ EventType WindowImpl::ShapeEvent(int16_t x, int16_t y, uint16_t width, uint16_t 
     e.shape={x,y,width,height};
     return e;
 }
+
+EventType WindowImpl::FocusEvent(bool hasFocus) {
+    has_focus = hasFocus;
+    printf("has_focus=%s\n", has_focus ? "True" : "False");
+    return{ EventType::NONE };
+}
 //----------
 void WindowImpl::TextInput(bool enabled){ textinput=enabled; }

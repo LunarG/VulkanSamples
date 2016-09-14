@@ -35,6 +35,7 @@ const unsigned char EVDEV_TO_HID[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 };
 
+//=============================XCB==============================
 class Window_xcb : public WindowImpl{
     xcb_connection_t *xcb_connection;
     xcb_screen_t     *xcb_screen;
@@ -58,9 +59,9 @@ public:
     //bool PollEvent();
     EventType GetEvent();
 };
-
-#endif
 //==============================================================
+#endif
+
 //=======================XCB IMPLEMENTATION=====================
 Window_xcb::Window_xcb(CInstance& inst, const char* title, uint width, uint height){
     instance=&inst;
@@ -208,8 +209,11 @@ EventType Window_xcb::GetEvent(){
                 event=ShapeEvent(e.x,e.y,e.width,e.height);
                 break;
             }
+            case XCB_FOCUS_IN  : event=FocusEvent(true);   break;                    //window gained focus
+            case XCB_FOCUS_OUT : event=FocusEvent(false);  break;                    //window lost focus
+
             default:
-                printf("EVENT: %d",(x_event->response_type & ~0x80));
+                //printf("EVENT: %d",(x_event->response_type & ~0x80));  //get event numerical value
                 break;
         }
         free (x_event);

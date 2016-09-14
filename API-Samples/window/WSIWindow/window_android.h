@@ -22,7 +22,8 @@ public:
     CPointer Pointers[MAX_POINTERS];
     MTouchEvent LastEvent;
 
-    void Clear(){ memset(this,0,sizeof(this)); }
+    //void Clear(){ memset(this,0,sizeof(this)); }
+    void Clear(){ }
 
     void Set(char id,eMouseAction act,float x,float y) {
         if (id >= MAX_POINTERS)return;  // Exit if too many fingers
@@ -54,6 +55,7 @@ const unsigned char ANDROID_TO_HID[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 };
 
+//==========================Android=============================
 class Window_android : public WindowImpl{
     android_app* app=0;
     CMTouch MTouch;
@@ -91,7 +93,7 @@ public:
                 int8_t cmd = android_app_read_cmd(app);
                 android_app_pre_exec_cmd(app, cmd);
                 if (app->onAppCmd != NULL) app->onAppCmd(app, cmd);
-                if (cmd == APP_CMD_GAINED_FOCUS) has_focus = true;
+                if (cmd == APP_CMD_GAINED_FOCUS) FocusEvent(true);
                 android_app_post_exec_cmd(app, cmd);
             }
         }
@@ -127,10 +129,10 @@ public:
             int8_t cmd = android_app_read_cmd(app);
             android_app_pre_exec_cmd(app, cmd);
             if (app->onAppCmd != NULL) app->onAppCmd(app, cmd);
-            //switch(cmd){
-                //case APP_CMD_INIT_WINDOW: CreateSurface(*instance);  break;
-                //case APP_CMD_GAINED_FOCUS: ShowKeyboard(textinput); break;
-            //}
+            switch(cmd){
+                case APP_CMD_GAINED_FOCUS: event=FocusEvent(true);  break;
+                case APP_CMD_LOST_FOCUS  : event=FocusEvent(false); break;
+            }
             android_app_post_exec_cmd(app, cmd);
         }else if(id==LOOPER_ID_INPUT) {
             AInputEvent* a_event = NULL;
@@ -225,8 +227,6 @@ public:
             running=false;
             return {EventType::NONE};
         }
-
-
 
         return {EventType::NONE};
     };

@@ -28,6 +28,7 @@ const unsigned char WIN32_TO_HID[256] = {
       0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0     //256
 };
 
+//=============================Win32============================
 class Window_win32 : public WindowImpl{
     HINSTANCE hInstance;
     HWND      hWnd;
@@ -39,9 +40,9 @@ public:
     virtual ~Window_win32();
     EventType GetEvent();
 };
-
-#endif
 //==============================================================
+#endif
+
 //=====================Win32 IMPLEMENTATION=====================
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -180,6 +181,8 @@ EventType Window_win32::GetEvent(){
             //--Char event--
             case WM_CHAR: { strncpy_s(buf, (const char*)&msg.wParam, 4);  return TextEvent(buf); } //return UTF8 code of key pressed
             //--Window events--
+            case WM_ACTIVATE: return FocusEvent(msg.wParam != WA_INACTIVE);
+
             case WM_RESHAPE: { 
                 RECT r; GetWindowRect(hWnd, &r);
                 return ShapeEvent((int16_t)r.left, (int16_t)r.top, (uint16_t)(r.right - r.left), (uint16_t)(r.bottom - r.top));
@@ -231,6 +234,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
             }
             break;
         }
+        case WM_ACTIVATE: { PostMessage(hWnd, WM_ACTIVATE,wParam,lParam);  break; }
+
     default:
         break;
     }
