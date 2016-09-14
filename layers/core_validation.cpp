@@ -6749,6 +6749,31 @@ AllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo *pCrea
     return result;
 }
 
+// Add bindings between the given cmd buffer & framebuffer and the framebuffer's children
+static void AddFramebufferBinding(layer_data *dev_data, GLOBAL_CB_NODE *cb_state, FRAMEBUFFER_NODE *fb_state) {
+    fb_state->cb_bindings.insert(cb_state);
+    for (auto attachment : fb_state->attachments) {
+        auto view_state = attachment.view_state;
+        if (view_state) {
+            addCommandBufferBinding(
+                &view_state->cb_bindings,
+                {reinterpret_cast<uint64_t &>(view_state->image_view), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT}, cb_state);
+        }
+        auto img_node = getImageNode(dev_data, attachment.image);
+        if (img_node) {
+            addCommandBufferBinding(&img_node->cb_bindings,
+                                    {reinterpret_cast<uint64_t &>(img_node->image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT},
+                                    cb_state);
+        }
+        auto rp_state = getRenderPass(dev_data, fb_state->createInfo.renderPass);
+        if (rp_state) {
+            addCommandBufferBinding(
+                &rp_state->cb_bindings,
+                {reinterpret_cast<uint64_t &>(rp_state->renderPass), VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT}, cb_state);
+        }
+    }
+}
+
 VKAPI_ATTR VkResult VKAPI_CALL
 BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo *pBeginInfo) {
     bool skip_call = false;
@@ -6812,16 +6837,8 @@ BeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo
                                     reinterpret_cast<const uint64_t &>(pInfo->framebuffer),
                                     reinterpret_cast<uint64_t &>(framebuffer->createInfo.renderPass), errorString.c_str());
                             }
-                            // Connect this framebuffer to this cmdBuffer
-                            framebuffer->cb_bindings.insert(cb_node);
-                            for (auto attach : framebuffer->attachments) {
-                                auto img_node = getImageNode(dev_data, attach.image);
-                                if (img_node) {
-                                    addCommandBufferBinding(&img_node->cb_bindings, {reinterpret_cast<uint64_t &>(attach.image),
-                                                                                     VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT},
-                                                            cb_node);
-                                }
-                            }
+                            // Connect this framebuffer and its children to this cmdBuffer
+                            AddFramebufferBinding(dev_data, cb_node, framebuffer);
                         }
                     }
                 }
@@ -9294,6 +9311,7 @@ static void PostCallRecordCreateFramebuffer(layer_data *dev_data, const VkFrameb
         }
         MT_FB_ATTACHMENT_INFO fb_info;
         fb_info.mem = getImageNode(dev_data, view_state->create_info.image)->mem;
+        fb_info.view_state = view_state;
         fb_info.image = view_state->create_info.image;
         fb_node->attachments.push_back(fb_info);
     }
@@ -10213,16 +10231,8 @@ CmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *p
             cb_node->activeSubpass = 0;
             cb_node->activeSubpassContents = contents;
             cb_node->framebuffers.insert(pRenderPassBegin->framebuffer);
-            // Connect this framebuffer to this cmdBuffer
-            framebuffer->cb_bindings.insert(cb_node);
-            for (auto attach : framebuffer->attachments) {
-                auto img_node = getImageNode(dev_data, attach.image);
-                if (img_node) {
-                    addCommandBufferBinding(&img_node->cb_bindings,
-                                            {reinterpret_cast<uint64_t &>(attach.image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT},
-                                            cb_node);
-                }
-            }
+            // Connect this framebuffer and its children to this cmdBuffer
+            AddFramebufferBinding(dev_data, cb_node, framebuffer);
             // transition attachments to the correct layouts for the first subpass
             TransitionSubpassLayouts(dev_data, cb_node, &cb_node->activeRenderPassBeginInfo, cb_node->activeSubpass);
         } else {

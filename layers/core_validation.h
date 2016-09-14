@@ -94,6 +94,7 @@
 // TODO : Could potentially store a list of freed mem allocs to flag when they're incorrectly used
 
 struct MT_FB_ATTACHMENT_INFO {
+    IMAGE_VIEW_STATE *view_state;
     VkImage image;
     VkDeviceMemory mem;
 };
