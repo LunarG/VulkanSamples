@@ -4501,93 +4501,59 @@ static bool ValidateCmdBufImageLayouts(layer_data *dev_data, GLOBAL_CB_NODE *pCB
 // Loop through bound objects and increment their in_use counts
 //  For any unknown objects, flag an error
 static bool ValidateAndIncrementBoundObjects(layer_data *dev_data, GLOBAL_CB_NODE const *cb_node) {
-    bool skip_call = false;
+    bool skip = false;
+    DRAW_STATE_ERROR error_code = DRAWSTATE_NONE;
+    BASE_NODE *base_obj = nullptr;
     for (auto obj : cb_node->object_bindings) {
         switch (obj.type) {
         case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT: {
-            auto set_node = getSetNode(dev_data, reinterpret_cast<VkDescriptorSet &>(obj.handle));
-            if (!set_node) {
-                skip_call |=
-                    log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,
-                            obj.handle, __LINE__, DRAWSTATE_INVALID_DESCRIPTOR_SET, "DS",
-                            "Cannot submit cmd buffer using deleted descriptor set 0x%" PRIx64 ".", obj.handle);
-            } else {
-                set_node->in_use.fetch_add(1);
-            }
+            base_obj = getSetNode(dev_data, reinterpret_cast<VkDescriptorSet &>(obj.handle));
+            error_code = DRAWSTATE_INVALID_DESCRIPTOR_SET;
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT: {
-            auto sampler_node = getSamplerNode(dev_data, reinterpret_cast<VkSampler &>(obj.handle));
-            if (!sampler_node) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT,
-                                     obj.handle, __LINE__, DRAWSTATE_INVALID_SAMPLER, "DS",
-                                     "Cannot submit cmd buffer using deleted sampler 0x%" PRIx64 ".", obj.handle);
-            } else {
-                sampler_node->in_use.fetch_add(1);
-            }
+            base_obj = getSamplerNode(dev_data, reinterpret_cast<VkSampler &>(obj.handle));
+            error_code = DRAWSTATE_INVALID_SAMPLER;
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT: {
-            auto qp_node = getQueryPoolNode(dev_data, reinterpret_cast<VkQueryPool &>(obj.handle));
-            if (!qp_node) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                                     VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, obj.handle, __LINE__, MEMTRACK_INVALID_OBJECT,
-                                     "DS", "Cannot submit cmd buffer using deleted query pool 0x%" PRIx64 ".", obj.handle);
-            } else {
-                qp_node->in_use.fetch_add(1);
-            }
+            base_obj = getQueryPoolNode(dev_data, reinterpret_cast<VkQueryPool &>(obj.handle));
+            error_code = DRAWSTATE_INVALID_QUERY_POOL;
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT: {
-            auto pipe_node = getPipeline(dev_data, reinterpret_cast<VkPipeline &>(obj.handle));
-            if (!pipe_node) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                                     obj.handle, __LINE__, DRAWSTATE_INVALID_PIPELINE, "DS",
-                                     "Cannot submit cmd buffer using deleted pipeline 0x%" PRIx64 ".", obj.handle);
-            } else {
-                pipe_node->in_use.fetch_add(1);
-            }
+            base_obj = getPipeline(dev_data, reinterpret_cast<VkPipeline &>(obj.handle));
+            error_code = DRAWSTATE_INVALID_PIPELINE;
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT: {
-            auto buff_node = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
-            if (!buff_node) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                     obj.handle, __LINE__, DRAWSTATE_INVALID_BUFFER, "DS",
-                                     "Cannot submit cmd buffer using deleted buffer 0x%" PRIx64 ".", obj.handle);
-            } else {
-                buff_node->in_use.fetch_add(1);
-            }
+            base_obj = getBufferNode(dev_data, reinterpret_cast<VkBuffer &>(obj.handle));
+            error_code = DRAWSTATE_INVALID_BUFFER;
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT: {
-            auto image_node = getImageNode(dev_data, reinterpret_cast<VkImage &>(obj.handle));
-            if (!image_node) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                     obj.handle, __LINE__, DRAWSTATE_INVALID_IMAGE, "DS",
-                                     "Cannot submit cmd buffer using deleted image 0x%" PRIx64 ".", obj.handle);
-            } else {
-                image_node->in_use.fetch_add(1);
-            }
+            base_obj = getImageNode(dev_data, reinterpret_cast<VkImage &>(obj.handle));
+            error_code = DRAWSTATE_INVALID_IMAGE;
             break;
         }
         case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT: {
-            auto event_node = getEventNode(dev_data, reinterpret_cast<VkEvent &>(obj.handle));
-            if (!event_node) {
-                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT,
-                                     obj.handle, __LINE__, DRAWSTATE_INVALID_EVENT, "DS",
-                                     "Cannot submit cmd buffer using deleted event 0x%" PRIx64 ".", obj.handle);
-            } else {
-                event_node->in_use.fetch_add(1);
-            }
+            base_obj = getEventNode(dev_data, reinterpret_cast<VkEvent &>(obj.handle));
+            error_code = DRAWSTATE_INVALID_EVENT;
             break;
         }
         default:
             // TODO : Merge handling of other objects types into this code
             break;
         }
+        if (!base_obj) {
+            skip |=
+                log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, obj.type, obj.handle, __LINE__, error_code, "DS",
+                        "Cannot submit cmd buffer using deleted %s 0x%" PRIx64 ".", object_type_to_string(obj.type), obj.handle);
+        } else {
+            base_obj->in_use.fetch_add(1);
+        }
     }
-    return skip_call;
+    return skip;
 }
 
 // Track which resources are in-flight by atomically incrementing their "in_use" count
