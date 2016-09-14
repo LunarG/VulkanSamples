@@ -37,7 +37,7 @@ class Window_win32 : public WindowImpl{
 public:
     Window_win32(CInstance& inst, const char* title, uint width, uint height);
     virtual ~Window_win32();
-    EventType Window_win32::GetEvent();
+    EventType GetEvent();
 };
 
 #endif
@@ -71,7 +71,7 @@ Window_win32::Window_win32(CInstance& inst, const char* title, uint width, uint 
     win_class.hInstance = hInstance;
     win_class.hIconSm = LoadIcon(NULL, IDI_WINLOGO);
     // Register window class:
-    ATOM U_ASSERT_ONLY atom=RegisterClassEx(&win_class);
+    ATOM atom=RegisterClassEx(&win_class);
     assert(atom && "Failed to register the window class.");
     
     // Create window with the registered class:
@@ -97,14 +97,13 @@ Window_win32::~Window_win32(){
 }
 
 void Window_win32::CreateSurface(VkInstance instance){
-    VkResult U_ASSERT_ONLY err;
     VkWin32SurfaceCreateInfoKHR win32_createInfo;
     win32_createInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     win32_createInfo.pNext      = NULL;
     win32_createInfo.flags      = 0;
     win32_createInfo.hinstance  = hInstance;
     win32_createInfo.hwnd       = hWnd;
-    err = vkCreateWin32SurfaceKHR(instance, &win32_createInfo, NULL, &surface);
+    VkResult err = vkCreateWin32SurfaceKHR(instance, &win32_createInfo, NULL, &surface);
     VKERRCHECK(err);
     printf("Surface created\n"); fflush(stdout);
 }
